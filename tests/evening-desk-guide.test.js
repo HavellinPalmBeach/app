@@ -557,6 +557,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(code(fn('waiveAppraisal')), 'prompt(', 'Waive asks who decided, and why');
     has(code(fn('invAppraised')), "'Appraisal'", 'appraised means the report’s figure with the source Appraisal');
     has(SRC, 'Appraisal in progress', 'Appraisal in progress');
+    // Q93 (2026-10-24; Anthony: the appraiser an item is sent to is its source on every job, the figure typed is the appraisal, and
+    // the report goes to Drive). The page's three sentences, each held to the code that makes it true.
+    has(t, 'On every job the appraiser is then its source: Appraisal · their name · pending.', 'as the page says: the appraiser is the source from the link');
+    has(code(fn('invAppraisalSourceText')), "' · pending'", '…the line reads "Appraisal · <appraiser> · pending" (invAppraisalSourceText)');
+    ok(!/invFiduciaryMode/.test(code(fn('invAppraisalSourceText'))) && !/invFiduciaryMode/.test(code(fn('_avTakeValue'))), '…on every job: neither the namer nor the owner rule asks whether it is an estate');
+    has(t, 'When the report comes back, type its figure in Value: that is the appraisal, and the item leaves this list.', 'as the page says: the figure typed is the appraisal');
+    has(code(fn('_avTakeValue')), "(how === 'typed' && linked)", '…a figure typed on a linked line is the appraisal (_avTakeValue)');
+    has(t, 'Then File the report on the appraiser’s row (a PDF or a photo, to the client’s Drive). Until then the row says report not filed.', 'as the page says: File the report');
+    has(code(fn('_apprReportCellHtml')), "'File the report'", '…the appraiser’s row carries File the report');
+    has(code(fn('_apprReportCellHtml')), 'report not filed: ', '…and names a line owed one');
+    lacks(t, 'with the valuation source Appraisal', '⚠ never that the source must be set by hand (an estate’s rule until Q93)');
     const vs = code(fn('_renderValueSettings'));
     has(vs, 'invStatesEstateValues(job)', 'the valuation settings on an estate whose papers state values');
     has(vs, 'setValBasis(', 'the basis');

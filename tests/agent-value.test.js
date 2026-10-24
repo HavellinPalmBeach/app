@@ -111,7 +111,7 @@ const AV_FNS = ['_avValueButtonHtml', 'agentValueMode', 'agentValueInternal', '_
   '_avNoteFailure', 'agentValueApply', '_avTakeValue', '_avStampReviewed', '_invStampBy', 'deviceUser', 'agentValueRun', 'agentRevalue', '_avStart',
   '_avSendNext', '_avFinish', '_avRepaint', '_avStateHtml', '_avState', 'agentValueAccept', 'agentValueUseSale',
   'agentValueNotices', '_avNoticesHtml', '_deskShowBtnHtml', '_avSummary', '_avRowBadges', '_avAcceptButtonHtml', '_avPanelHtml',
-  'invValBasisWord', '_avUnreviewedStamp',
+  'invValBasisWord', '_avUnreviewedStamp', 'invAppraised', 'invLineAppraiser', '_invLinkedAppraiser', '_jobAppraisers', '_apprLabel', '_invHasAppraisal',
   // the real rules they read, never stubs of them
   '_getPhotoRef', '_setPhotoRef', '_jobInvRefs', '_invHasValue', 'roundCents', 'invIsIntrinsic', 'invCatMeta',
   'invFiduciaryMode', 'isDecedentJob', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep', 'estateValueDate',
@@ -492,10 +492,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const { ctx: c3 } = rig(ESTATE(), [Object.assign(agent(), { apprId: 'a1' })]);
     r = c3._getPhotoRef(7, 's1'); r.fmv = 5200; c3._avTakeValue(r, 'typed');
     eq([r.valuedBy, r.valSource, r.valHigh], ['appraiser', 'Appraisal', undefined], 'a value typed over the agent\'s on a line with an appraiser linked is the appraisal');
-    // The real handlers ask the one rule.
-    has(liveLines(fn('_invEdit')), "if (key === 'fmv') _avTakeValue(ref, 'typed');", '_invEdit asks it for a typed value');
-    has(liveLines(fn('_invEdit')), "else if (key === 'valSource' && ref.valSource === 'Appraisal') _avTakeValue(ref, 'appraisal');", 'and for a source set to Appraisal');
-    has(liveLines(fn('_invBulkApply')), "if (key === 'valSource' && value === 'Appraisal') _avTakeValue(ref, 'appraisal');", 'and so does the bulk bar');
+    // The real handlers ask the one rule, handing it the job (Q93, 2026-10-24: the roster decides whether the line is linked).
+    has(liveLines(fn('_invEdit')), "if (key === 'fmv') _avTakeValue(ref, 'typed', _invJob(jobId));", '_invEdit asks it for a typed value');
+    has(liveLines(fn('_invEdit')), "else if (key === 'valSource' && ref.valSource === 'Appraisal') _avTakeValue(ref, 'appraisal', _invJob(jobId));", 'and for a source set to Appraisal');
+    has(liveLines(fn('_invBulkApply')), "if (key === 'valSource' && value === 'Appraisal') _avTakeValue(ref, 'appraisal', job);", 'and so does the bulk bar');
   }
 
   group('⚠⚠ A7 · A RANGE THAT CROSSES THE THRESHOLD IS AN APPRAISAL (invNeedsAppraisal, spec §6)');
@@ -660,7 +660,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(liveLines(fn('printCourtInventory')), '_avUnreviewedStamp(onSched)', 'the Court Inventory counts its own lines');
     has(liveLines(fn('printTrustSchedule')), '_avUnreviewedStamp(onSched)', 'the Trust Schedule too');
     has(liveLines(fn('printEstateInventoryReport')), '_avUnreviewedStamp(all)', 'and the Estate Inventory Report');
-    const sec = sandbox({ fns: ['invConditionText', '_invScheduleSection', 'invValBasisWord', '_invHasValue', '_invMoney', 'fmt', 'roundCents'],
+    const sec = sandbox({ fns: ['invConditionText', '_invScheduleSection', 'invValBasisWord', 'invAppraised', 'invLineAppraiser', '_invHasValue', '_invMoney', 'fmt', 'roundCents'],
       stubs: { esc: (x) => String(x == null ? '' : x) } })._invScheduleSection('Tangible Personal Property',
       [ROW({ fmv: 640, valSource: 'Auction comps' }), ROW({ stableId: 'b', fmv: 40, valSource: 'General estimate', category: 'General/Household', qty: 60 })]);
     has(sec.html, '<th style="padding:2px 6px;">Basis</th>', 'the table has a Basis column');
@@ -710,9 +710,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     // The row and its record, rendered by the real functions (Agent One's row rig, with Agent Two's figure on the line).
     const rowRig = (row, job) => sandbox({
-      fns: ['invLineReviewed', '_renderInvRow', 'invOutForAppraisal', 'invPlanChannel', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', '_avAcceptButtonHtml',
+      fns: ['invLineReviewed', '_renderInvRow', 'invAppraisalSourceText', 'invLineAppraiser', '_invLinkedAppraiser', 'invAppraised', 'invAppraisalInProgress', '_invHasAppraisal', 'invOutForAppraisal', 'invPlanChannel', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', '_avAcceptButtonHtml',
             '_avHasFigure', '_invHasValue', '_avSummary', 'fmt', 'roundCents', 'agentValueInternal', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep',
-            'invAppraisalThreshold', 'gateDispute', '_gateYes', '_agNameKey', '_invRowDomId', '_invRecipientInput', '_renderInvPanel', '_agRecordNoticesHtml', '_avPanelHtml', '_invMoney', '_invDetailRefs',
+            'invAppraisalThreshold', 'gateDispute', '_gateYes', '_agNameKey', '_invRowDomId', '_invRecipientInput', '_renderInvPanel', '_invPanelAppraisalHtml', '_agRecordNoticesHtml', '_avPanelHtml', '_invMoney', '_invDetailRefs',
             '_invPhotoSiblings', '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef', '_invNamed', '_invItemNo',
             'invDealerRouteOffered', 'invDealerRoute', 'invDealerRouteText', '_invFirearmPanelHtml',
             'invBequestFor', 'jobListEntries', 'invApprovalGap', 'invReceiptOwed', '_invBenListAttr',

@@ -217,7 +217,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('court inventory: exempt property');
   {
     const COURT_FNS = INV_FNS.concat(['_invDocPartyHead', 'invConditionText', 
-      '_invMoney', '_invDocName', 'printCourtInventory', 'jobOnProbateTrack', '_avUnreviewedStamp', 'agentValueUnreviewed', '_invScheduleSection', 'invValBasisWord', 'isFormalDoc', 'resolveDocLevel',
+      '_invMoney', '_invDocName', 'printCourtInventory', 'jobOnProbateTrack', '_avUnreviewedStamp', 'agentValueUnreviewed', '_invScheduleSection', 'invValBasisWord', 'invLineAppraiser', '_invLinkedAppraiser', '_apprLabel', 'isFormalDoc', 'resolveDocLevel',
       'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'docLevelFloorReason', '_gate706', 'isDecedentJob',
       'resolveValBasis', 'estateValueDate', '_avdDate',
       '_invGuardrailItems', 'invAwaitingAppraisal', 'invAppraised', '_invHasValue', '_invHasAppraisal', '_jobAppraisers',
@@ -406,7 +406,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('the appraisal guardrail lets you link an appraiser from the panel');
   {
     const g = sandbox({
-      fns: ['_renderAppraisalGuardrail', 'invAppraisalInProgress', '_invGuardrailItems', 'invAwaitingAppraisal', 'invAppraised', '_invHasValue', '_invHasAppraisal',
+      fns: ['_renderAppraisalGuardrail', 'invLineAppraiser', '_invLinkedAppraiser', 'invAppraisalInProgress', '_invGuardrailItems', 'invAwaitingAppraisal', 'invAppraised', '_invHasValue', '_invHasAppraisal',
             '_jobAppraisers', '_apprLabel', '_jobInvRefs', 'invNeedsAppraisal', 'invFiduciaryMode', 'isDecedentJob',
             '_invJob', 'invAppraisalThreshold', 'gateDispute', '_gateYes',
             'invIsIntrinsic', 'invCatMeta', 'invAppraiserFor', 'isFormalDoc',
@@ -459,7 +459,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('appraisal worklist: the permanent item number, not the row position');
   {
     const WL_FNS = INV_FNS.concat(['_invDocPartyHead', 'invConditionText', 
-      '_lotSplitWorklistBlock', 'invLotSplitState', 'invLotArticleValue', 'invLotSplitSentence', 'invLotsToSplit', 'invLotsUntestable', 'printAppraisalWorklist', 'signedRecordsOf', 'invOutForAppraisal', 'jobOnProbateTrack', '_invDocName', '_apprTransport', 'invTransportBlocked', 'invTransportReason', '_apprEstimateFlags', 'collectionsAwaitingPhoto', '_invHasPhoto', '_collLinesOf', 'collectionLineId', '_invJob',
+      '_lotSplitWorklistBlock', 'invLotSplitState', 'invLotArticleValue', 'invLotSplitSentence', 'invLotsToSplit', 'invLotsUntestable', 'printAppraisalWorklist', 'invAppraisalInProgress', 'invAppraised', '_invHasAppraisal', 'invLineAppraiser', '_invLinkedAppraiser', '_jobAppraisers', '_apprLabel', 'signedRecordsOf', 'invOutForAppraisal', 'jobOnProbateTrack', '_invDocName', '_apprTransport', 'invTransportBlocked', 'invTransportReason', '_apprEstimateFlags', 'collectionsAwaitingPhoto', '_invHasPhoto', '_collLinesOf', 'collectionLineId', '_invJob',
       // P16: the gate reads the dealer route, and the flags count only what the import panel still offers.
       'invDealerRoute', 'invDealerRouteOffered', 'invDealerRouteText', 'invTransportDealer', 'invChannelLeftover', '_importableFromEstimate', '_importedSourceSet', '_invRoomName', '_invMoney',
       'maivAggregate', '_maivWorklistBlock', 'maivFilingApplies', 'maivStatement',
@@ -592,7 +592,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('a cleared value stays blank, and money shows as money');
   {
     const m = sandbox({ fns: ['_invEdit', '_avTakeValue', '_getPhotoRef', '_setPhotoRef', 'savePhotoRefs',
-                              '_warnPhotoStoreFull', '_invTouch', 'moneyToNumber', '_invHasVal'],
+                              '_warnPhotoStoreFull', '_invTouch', 'moneyToNumber', '_invHasVal', 'invAppraised', '_invHasValue', '_invJob'],
                         vars: ['INV_STICKY_FIELDS'],
                         // _invRefreshReleases with its sibling repaints: _invEdit runs it on every edit since the desk build's review (2026-10-23).
                         stubs: { _invRefreshSummary() {}, _invRefreshGuardrail() {}, _invRefreshFlagStrip() {}, _invRefreshRecords() {}, _invRefreshReleases() {},
@@ -882,7 +882,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // writes no source now, and unlinking leaves a source of Appraisal alone (an appraisal on the line stands without a link).
   group('linking an appraiser writes no valuation source (P25, Q36)');
   {
-    const a = sandbox({ fns: ['_invSetAppraiser', '_jobAppraisers', '_apprLabel', '_getPhotoRef',
+    const a = sandbox({ fns: ['_invSetAppraiser', 'invAppraised', '_invHasValue', '_jobAppraisers', '_apprLabel', '_getPhotoRef',
                               '_setPhotoRef', 'savePhotoRefs', '_warnPhotoStoreFull', '_invTouch'],
                         stubs: { renderInventoryTab() {}, _scheduleInventorySync() {},
                                  _invRefreshGuardrail() {}, _invRefreshSummary() {}, _invRefreshFlagStrip() {}, _invRefreshRecords() {} } });

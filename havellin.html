@@ -1431,7 +1431,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.24 · 1:31am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.24 · 11:04am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -17682,6 +17682,10 @@ function probatePackageMovedSince(job, st) {
     return Math.max(Number(r.updatedAt || r.ts) || 0, Number(r.deletedAt) || 0) > at;
   });
   if (moved) return true;
+  // An appraiser's report filed or voided after the draft (Q93): the draft does not link it as it should now.
+  if (jobListEntries(job, 'signedRecords', true).some(function (r) {
+    return r.kind === 'appraisal_report' && Math.max(Number(r.filedAt) || 0, Number(r.voidedAt) || 0) > at;
+  })) return true;
   return ((st.pkg && st.pkg.owed) || []).join(',') !== probatePackageDocs(job).join(',');
 }
 // The appraisal reports and offers filed to the estate's Drive folder (Upload Appraisal / Offer, on the Job Plan):
@@ -17689,14 +17693,23 @@ function probatePackageMovedSince(job, st) {
 // ⚠ EACH NAMED FOR WHAT IT IS (P22): an offer is linked as an offer and a receipt as a receipt (`docKind`, chosen at upload,
 // COLL_DOC_KINDS). Everything went out as "Appraisal report or offer", so counsel could not tell a dealer's bid from an
 // appraisal without opening it. A file uploaded before the choice existed has no kind and keeps the old, hedged name.
+// ⚠ AND THE REPORTS FILED FROM THE APPRAISERS' ROWS (Q93): every live `appraisal_report` copy with its Drive link, after the uploads,
+// named for its appraiser (the roster's label, or the name the copy was filed under once they have left the roster).
 function probatePackageReports(job) {
-  return ((typeof _photoRefs !== 'undefined' && job && _photoRefs[job.id]) || []).filter(function (r) {
+  var out = ((typeof _photoRefs !== 'undefined' && job && _photoRefs[job.id]) || []).filter(function (r) {
     return r && r.label === 'appraisal' && !r.deletedAt && r.status === 'uploaded' && !!r.driveFileUrl;
   }).map(function (r) {
     var K = COLL_DOC_KINDS[r.docKind] || null;
     return { name: r.objectName || r.filename || (K ? K.title : 'Appraisal report'), url: r.driveFileUrl,
              kind: K ? r.docKind : '', title: K ? K.title : 'Appraisal report or offer' };
   });
+  if (!job) return out;
+  signedRecordsOf(job, 'appraisal_report').filter(function (r) { return !!r.fileUrl; }).forEach(function (r) {
+    var a = (job.appraisers || []).filter(function (x) { return String(x.id) === String(r.ref); })[0];
+    out.push({ name: a ? _apprLabel(a) : (String(r.label || '').replace(/^Appraisal report \u00b7 /, '') || 'the appraiser'),
+               url: r.fileUrl, kind: 'appraisal', title: COLL_DOC_KINDS.appraisal.title });
+  });
+  return out;
 }
 
 // ⚠ THE SIGNED RELEASE APPROVALS AND THE CUSTODY LOG, AS ONE FILED RECORD. The package links to both and neither existed
@@ -25709,7 +25722,13 @@ var SIGNED_RECORD_KINDS = {
   // handed over for appraisal (ref the appraiser, stableIds the lines) and the same lines checked back in. A line is out
   // until a later return covers it (invOutForAppraisal); it is never "gone" (invRecordedGone reads neither kind).
   appraisal_out:  { label: 'Appraisal hand-off list' },
-  appraisal_back: { label: 'Appraisal items returned' }
+  appraisal_back: { label: 'Appraisal items returned' },
+  // The appraiser's formal report (Q93; Anthony, 2026-10-24: *"… and save the formal apraisal to the drive"*): a PDF or a
+  // photograph, filed from the appraiser's row on the roster (File the report), ref the appraiser's id, stableIds the lines linked
+  // to them when it was filed. ⚠ NOT TO SIGNED RECORDS: `folder` names the photo upload's label whose folder it files to
+  // (photoSubfolder), so a report lands in Estate Inventory beside the collections' Upload Appraisal and counsel finds every
+  // appraisal in one place. The estate package links it (probatePackageReports).
+  appraisal_report: { label: 'Appraisal report', folder: 'appraisal' }
 };
 var AGR_COSIGN_REF = 'agreement';   // signedRecords' ref for a co-signed agreement page — a stored value: never rename it
 var SIGNED_COPY_MAX_BYTES = 10 * 1024 * 1024;
@@ -25725,7 +25744,9 @@ function _signedCopyName(job, kind, meta, file, when) {
   var stamp = _ymdLocal(t) + ' ' + p2(t.getHours()) + p2(t.getMinutes()) + p2(t.getSeconds());
   var ext = /\.([A-Za-z0-9]{1,5})$/.exec(String((file && file.name) || ''));
   ext = ext ? '.' + ext[1].toLowerCase() : ((file && file.type === 'application/pdf') ? '.pdf' : '.jpg');
-  return [job.hvlId || ('job ' + job.id), SIGNED_RECORD_KINDS[kind].label, (meta && meta.ref) ? String(meta.ref) : '', stamp]
+  // `nameAs` names the file where the ref is an id nobody reads (an appraisal report: the appraiser's name, not their roster id).
+  var _tag = (meta && (meta.nameAs || meta.ref)) ? String(meta.nameAs || meta.ref) : '';
+  return [job.hvlId || ('job ' + job.id), SIGNED_RECORD_KINDS[kind].label, _tag, stamp]
     .filter(Boolean).join(' - ').replace(/[\\\/:*?"<>|]+/g, '-') + ext;
 }
 // cb(ok, message, record). Refuses by name, before anything is read: no client, an unknown kind, no file, a file
@@ -25742,19 +25763,21 @@ function fileSignedCopy(jobId, kind, meta, file, cb) {
   if (!SHEETS_SYNC_URL) return done(false, 'This device has no Apps Script URL in Settings, so it cannot file to Drive.');
   var key = jobId + '|' + kind + '|' + String(meta.ref || '');
   if (_signedFiling[key]) return done(false, 'This signed copy is being filed now. Give it a moment.');
+  // The client's Signed Records folder, or where the kind says its paper belongs (an appraisal report: Estate Inventory, Q93).
+  var _sub = SIGNED_RECORD_KINDS[kind].folder ? photoSubfolder(SIGNED_RECORD_KINDS[kind].folder) : SIGNED_RECORDS_SUBFOLDER;
   // ⚠ THE ONE WATCHDOG THE OTHER FILINGS HAVE (2026-10-13; found in P22, left open): `uploadToDrive` is a bare fetch with no
   // timeout, so a request that never answered left this flag set until the page was reloaded, and every later press of
   // File signed copy on that paper was refused as "being filed now". `release()` answers whether the flag is still this
   // request's; a late answer still records a copy that landed and says nothing about a failure already reported.
   var release = _armFiling(_signedFiling, key, function () {
     done(false, SIGNED_RECORD_KINDS[kind].label + ': no answer from Drive after ' + (FILING_WATCHDOG_MS / 60000)
-      + ' minutes. It may still have been filed: check the client\u2019s Signed Records folder, then file it again if it is not there.');
+      + ' minutes. It may still have been filed: check the client\u2019s ' + _sub + ' folder, then file it again if it is not there.');
   });
   var reader = new FileReader();
   reader.onerror = function () { if (release()) done(false, 'That file could not be read on this device.'); };
   reader.onload = function () {
     var dataUrl = reader.result;
-    resolveSubfolderId(job, SIGNED_RECORDS_SUBFOLDER, function (folderId) {
+    resolveSubfolderId(job, _sub, function (folderId) {
       var target = folderId || _jobRootFolderId(job);
       if (!target) { if (release()) done(false, 'This client has no Drive folder yet. Create the Drive folder on the client, then file the signed copy.'); return; }
       var name = _signedCopyName(job, kind, meta, file);
@@ -27805,6 +27828,32 @@ function invAppraised(ref) {
 function invAppraisalInProgress(ref, jobId) {
   return !!ref && !invAppraised(ref) && _invHasAppraisal(jobId, ref);
 }
+// ⚠⚠ THE APPRAISER IS THE SOURCE FROM THE MOMENT OF LINKING, ON EVERY JOB (Q93; Anthony, 2026-10-24: *"if we send an item to an
+// appraiser, listed in the vendor directory, shouldn't that person be on the record for all jobs, living & dead, as the source of
+// that value? when their appraisal comes back, they are already listed as the source and we just input the values and save the
+// formal apraisal to the drive?"*). Who appraised a line, one answer: the roster appraiser it is linked to (`_invLinkedAppraiser`,
+// the match `_invHasAppraisal` makes, held equal by a test), else the label the line keeps (`apprDoc`: the link writes it, and it
+// stays on a line whose appraisal figure landed when the link goes, or the appraiser leaves the roster). With no job, the label.
+function _invLinkedAppraiser(jobId, ref) {
+  if (!ref || !ref.apprId) return null;
+  return _jobAppraisers(jobId).filter(function(a){ return String(a.id) === String(ref.apprId); })[0] || null;
+}
+function invLineAppraiser(ref, jobId) {
+  if (!ref) return '';
+  var a = (jobId != null) ? _invLinkedAppraiser(jobId, ref) : null;
+  return a ? _apprLabel(a) : String(ref.apprDoc || '').trim();
+}
+// What the line and its record say of the source (Q93): "Appraisal · <appraiser> · pending" from the link until a figure arrives,
+// "Appraisal · <appraiser>" once the appraisal's figure is on the line (invAppraised, the one answer), '' otherwise. ⚠ LINKING WRITES
+// NO SOURCE (Q36's protection stands): a figure on the line before the link keeps its own source until the appraiser's replaces it,
+// so "pending" is read off the link, never written, and the earlier figure is never made the appraisal's.
+function invAppraisalSourceText(ref, jobId) {
+  if (!ref) return '';
+  var who = invLineAppraiser(ref, jobId);
+  if (invAppraised(ref)) return 'Appraisal' + (who ? ' · ' + who : '');
+  if (invAppraisalInProgress(ref, jobId)) return 'Appraisal' + (who ? ' · ' + who : '') + ' · pending';
+  return '';
+}
 function invAwaitingAppraisal(ref, jobId) {
   if (!ref) return false;
   // ⚠ NO JOB MEANS NO ANSWER, AND SILENCE IS THE SAFE ONE — a false positive here cries
@@ -29478,6 +29527,7 @@ function _invEdit(jobId, stableId, key, el) {
   var ref = _getPhotoRef(jobId, stableId);
   if (!ref) return;
   var _wasAgentValue = ref.valuedBy === 'agent';
+  var _wasAppraised = invAppraised(ref);   // the row's appraisal chip follows the figure landing (Q93), below
   // ⚠⚠ HAVELLIN'S PEOPLE NEVER BUY OR RECEIVE ESTATE PROPERTY (P19, call 6): asked of the line as it would be after
   // this write, before anything is written, and the control is put back to what the line still says. An estate only
   // (invStaffRefused): on a living client's job the same write goes through and is flagged (P20, Q25).
@@ -29520,8 +29570,9 @@ function _invEdit(jobId, stableId, key, el) {
   }
   // ⚠ WHO OWNS THE FIGURE (P23, `_avTakeValue`): a value typed is the desk's, or the appraisal's where it replaces the
   // agent's on a line with an appraiser linked; a source set to Appraisal takes the line from the agent outright.
-  if (key === 'fmv') _avTakeValue(ref, 'typed');
-  else if (key === 'valSource' && ref.valSource === 'Appraisal') _avTakeValue(ref, 'appraisal');
+  // ⚠⚠ AND ON EVERY JOB, A FIGURE TYPED AFTER AN APPRAISER IS LINKED IS THE APPRAISAL'S (Q93): the job names the roster.
+  if (key === 'fmv') _avTakeValue(ref, 'typed', _invJob(jobId));
+  else if (key === 'valSource' && ref.valSource === 'Appraisal') _avTakeValue(ref, 'appraisal', _invJob(jobId));
   // ⚠⚠ A PERSON TOUCHING THE NAME OR THE CATEGORY TAKES OWNERSHIP OF THE ROW. `namedBy` is
   // deliberately NOT on INV_STICKY_FIELDS: that list is for records of things that HAPPENED (a
   // signed release, a Drive id) which a merge must never lose, and a name is a judgement
@@ -29555,7 +29606,8 @@ function _invEdit(jobId, stableId, key, el) {
   }
   // ⚠ A FIGURE THAT STOPPED BEING THE AGENT'S REDRAWS ITS ROW (P23), so its badge and Accept go with it; and a name
   // edited under an agent's figure repaints the work bar's notices, where *made for an earlier name* is read first.
-  if ((_wasAgentValue && ref.valuedBy !== 'agent') || _planFilled) {
+  // And a line the appraisal's figure has just landed on (Q93): its "Appraisal · … · pending" becomes the appraisal it records.
+  if ((_wasAgentValue && ref.valuedBy !== 'agent') || _planFilled || invAppraised(ref) !== _wasAppraised) {
     var _rowEl = document.getElementById(_invRowDomId(stableId)), _rowJob = _invJob(jobId);
     if (_rowEl && _rowJob) _rowEl.outerHTML = _renderInvRow(_rowJob, ref);
   }
@@ -29569,8 +29621,9 @@ function _invEdit(jobId, stableId, key, el) {
   if (['fmv','gross','fees','flagExempt','flagBequest','flagDisputed','flagMAIV','maivCat','disposition','category','qty'].indexOf(key) >= 0) {
     _invRefreshSummary(jobId);
   }
-  // FMV / category / the flag itself can move an item in or out of the appraisal guardrail.
-  if (key === 'fmv' || key === 'category' || key === 'needsAppr') _invRefreshGuardrail(jobId);
+  // FMV / category / the flag itself can move an item in or out of the appraisal guardrail, and so can a source set to Appraisal
+  // over a figure (Q93: it is then appraised); the guardrail's repaint also repaints the roster's report cells.
+  if (key === 'fmv' || key === 'category' || key === 'needsAppr' || key === 'valSource') _invRefreshGuardrail(jobId);
   // Every one of the counts is derived from a field editable on this row, so the strip is
   // repainted whatever changed rather than on a list of keys that would fall out of step with
   // INV_WORK_FLAGS the first time a seventh count is added.
@@ -30781,7 +30834,8 @@ function printEstateInventoryReport(jobId, opt) {
 
   function itemRow(r) {
     var q = parseInt(r.qty, 10);
-    var src = r.valSource || '';
+    // An appraisal names its appraiser beside the word (Q93): "Appraisal · <appraiser>", through the line's one namer.
+    var src = invAppraised(r) ? invAppraisalSourceText(r, jobId) : (r.valSource || '');
     var note = r.valNote || '';
     return '<tr>'
       + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;width:52px;">' + _invPrintThumb(jobId, r, 44) + '</td>'
@@ -30834,7 +30888,9 @@ function printEstateInventoryReport(jobId, opt) {
   if (flagged.length) {
     var rows = flagged.map(function(r) {
       var a = (_jobAppraisers(jobId) || []).filter(function(x){ return String(x.id) === String(r.apprId); })[0];
-      var who = a ? (a.name + (a.firm ? ' · ' + a.firm : '') + (a.credential ? ' (' + a.credential + ')' : ''))
+      // The one namer (Q93): the roster appraiser, or, on a line whose appraisal landed before the link went, the appraiser it keeps.
+      var _whoName = (a || invAppraised(r)) ? invLineAppraiser(r, jobId) : '';
+      var who = _whoName ? _whoName
                   : (r.apprWaived ? 'Waived — ' + (r.apprWaiveReason || 'reason logged') : 'Not yet engaged');
       var due = a && a.dueDate ? fmtDate2(a.dueDate) : (a && a.reportDate ? 'report ' + fmtDate2(a.reportDate) : '—');
       return '<tr><td style="padding:3px 6px;border-bottom:1px solid #eee;">' + esc(_invItemNo(r)) + '</td>'
@@ -34977,6 +35033,8 @@ function printAppraisalWorklist(jobId, opt) {
         return '<tr>'
           + '<td style="padding:3px 6px;border-bottom:1px solid #eee;font-weight:700;color:#666;">' + esc(_invItemNo(r)) + '</td>'
           + '<td style="padding:3px 6px;border-bottom:1px solid #eee;">' + esc(r.objectName || '(unnamed)')
+            // The appraiser engaged, named (Q93): the item's source from the link until the report's figure is on it.
+            + (invAppraisalInProgress(r, jobId) ? ' <span style="color:#8a6d3b;">&middot; Appraisal in progress &middot; ' + esc(invLineAppraiser(r, jobId)) + '</span>' : '')
             + (function(){ var o = invOutForAppraisal(r, job); return o ? ' <span style="color:#8a6d3b;">&middot; with ' + esc(o.ref || 'the appraiser') + (o.signedOn ? ' since ' + esc(fmtDate2(o.signedOn)) : '') + '</span>' : ''; })() + '</td>'
           + '<td style="padding:3px 6px;border-bottom:1px solid #eee;">' + esc(r.category || '') + '</td>'
           + '<td style="padding:3px 6px;border-bottom:1px solid #eee;">' + esc(_invRoomName(jobId, r.roomIdx)) + '</td>'
@@ -35883,13 +35941,21 @@ function invToggleApprForm(jobId, open) {
 function removeAppraiser(jobId, apprId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job || !job.appraisers) return;
-  if (!window.confirm('Remove this appraiser? Items linked to them will lose the link.')) return;
+  if (!window.confirm('Remove this appraiser? Items linked to them will lose the link. An item whose appraisal figure is already on '
+      + 'the line keeps it, with the appraiser named; any report filed stays in Drive and on the record.')) return;
   job.appraisers = job.appraisers.filter(function(a){ return String(a.id) !== String(apprId); });
   // Stamped although the record is GONE — that is precisely what tells the merge this was
   // a removal rather than a device that never saw it. See _jobTouch.
   _jobTouch(job, 'appraisers', apprId);
-  // Unlink any items pointing at the removed appraiser.
-  (_photoRefs[jobId] || []).forEach(function(r){ if (String(r.apprId) === String(apprId)) { r.apprId = ''; r.apprDoc = ''; } });
+  // Unlink any items pointing at the removed appraiser. ⚠ AN APPRAISAL THAT LANDED STANDS (Q93): its figure and source are the
+  // appraisal's whatever the roster holds, so the line keeps the appraiser's name (apprDoc) and the schedules still say whose
+  // figure it is; a line still waiting loses the link and the name. Each line changed is touched, so the unlink wins the merge.
+  (_photoRefs[jobId] || []).forEach(function(r){
+    if (String(r.apprId) !== String(apprId)) return;
+    r.apprId = '';
+    if (!invAppraised(r)) r.apprDoc = '';
+    _invTouch(r);
+  });
   saveJobs(); syncJobToSheets(job); savePhotoRefs(jobId);
   renderInventoryTab();
   _scheduleInventorySync(jobId);
@@ -35899,11 +35965,15 @@ function _invSetAppraiser(jobId, stableId, apprId) {
   var ref = _getPhotoRef(jobId, stableId); if (!ref) return;
   var a = _jobAppraisers(jobId).find(function(x){ return String(x.id) === String(apprId); });
   ref.apprId = apprId || '';
-  ref.apprDoc = a ? _apprLabel(a) : '';
-  // ⚠⚠ THE LINK WRITES NO SOURCE (P25, Q36). It filled an empty source with "Appraisal", so linking an appraiser to a line
-  // carrying a figure from anybody made that figure the appraisal's, and a line is appraised once source Appraisal carries a
-  // value (invAppraised). The link is the appraisal in progress; the source and figure arrive with the report. Nor does
-  // unlinking clear a source of Appraisal: an appraisal whose report is on the line stands with or without a link.
+  // The name follows the link, and stays on a line whose appraisal figure has landed when the link goes (Q93): it is whose figure it is.
+  if (a) ref.apprDoc = _apprLabel(a);
+  else if (!invAppraised(ref)) ref.apprDoc = '';
+  // ⚠⚠ THE LINK WRITES NO SOURCE (P25, Q36; and still under Q93). It filled an empty source with "Appraisal", so linking an
+  // appraiser to a line carrying a figure from anybody made that figure the appraisal's, and a line is appraised once source
+  // Appraisal carries a value (invAppraised). Since Q93 (Anthony, 2026-10-24) the appraiser linked is the source from the moment of
+  // linking, on every job: the line reads "Appraisal · <appraiser> · pending" (invAppraisalSourceText, read off this link, never
+  // written), and the next figure typed on it is the appraisal's (_avTakeValue); a figure already on the line keeps its own source
+  // until then. Nor does unlinking clear a source of Appraisal: an appraisal whose figure is on the line stands with or without a link.
   _setPhotoRef(jobId, _invTouch(ref)); savePhotoRefs(jobId);
   // Full redraw: the link can be made from the guardrail panel OR from the Appraisal Doc
   // cell, and each has to reflect the other. It is a select change, not typing, so there
@@ -36046,8 +36116,46 @@ function _apprFormCellsHtml(jobId) {
     + '<td><input type="date" id="appr-effdate" title="Effective date of value (usually date of death)" style="font-size:11px;width:100%;"></td>'
     + '<td><input type="date" id="appr-rptdate" style="font-size:11px;width:100%;"></td>'
     + '<td><input type="date" id="appr-duedate" title="Expected turnaround \u2014 when the report is due back" style="font-size:11px;width:100%;"></td>'
+    + '<td></td>'
     + '<td><button class="icon-btn" style="display:block;white-space:nowrap;" onclick="addAppraiser(' + jobId + ')">Save appraiser</button>'
       + '<button class="icon-btn" style="display:block;margin-top:4px;" onclick="invToggleApprForm(' + jobId + ',false)">Cancel</button></td>';
+}
+// ⚠⚠ THE APPRAISER'S REPORT, FILED FROM THEIR ROW (Q93; Anthony, 2026-10-24: *"when their appraisal comes back, they are already
+// listed as the source and we just input the values and save the formal apraisal to the drive"*). File the report takes a PDF or a
+// photograph through the one filing path (fileSignedCopy, kind `appraisal_report`, ref the appraiser's id, stableIds the lines linked
+// to them now) into Estate Inventory; each copy is listed with its link and a Void, and more than one may be filed. A line whose
+// appraisal figure has landed with no report for its appraiser covering it is named on the row: a flag, never a refusal.
+function invAppraisalReportOwed(ref, job) {
+  if (!ref || !job || !invAppraised(ref) || !_invHasAppraisal(job.id, ref)) return false;
+  return !signedRecordsOf(job, 'appraisal_report', String(ref.apprId)).some(function (r) {
+    return (r.stableIds || []).map(String).indexOf(String(ref.stableId)) >= 0;
+  });
+}
+// The lines linked to one appraiser, and those owed a report, in item order: read by the row and the Values bar's line alike.
+function apprReportOwedLines(job, apprId) {
+  return _jobInvRefs(job.id).filter(function (r) { return String(r.apprId) === String(apprId) && invAppraisalReportOwed(r, job); });
+}
+function _apprReportCellHtml(job, a) {
+  var linked = _jobInvRefs(job.id).filter(function (r) { return String(r.apprId) === String(a.id); });
+  var owed = apprReportOwedLines(job, a.id);
+  return signedRecordLinksHtml(job.id, signedRecordsOf(job, 'appraisal_report', String(a.id)))
+    + (owed.length ? '<div class="appr-rpt-owed" style="color:#8a5a1e;font-size:10.5px;line-height:1.4;margin:2px 0;">&#9888; report not filed: '
+        + owed.map(function (r) { return esc(_invNamed(r)); }).join(', ') + '</div>' : '')
+    + signedCopyControlHtml(job.id, 'appraisal_report',
+        { ref: String(a.id), stableIds: linked.map(function (r) { return r.stableId; }), label: 'Appraisal report \u00b7 ' + a.name, nameAs: a.name },
+        'File the report');
+}
+// Each appraiser's report cell, repainted by id (an appraisal figure typed on a row, through _invRefreshGuardrail): never the
+// roster whole, whose add form may hold what somebody is typing.
+function _apprReportsRepaint(jobId) {
+  var job = _invJob(jobId);
+  if (!job || typeof document === 'undefined' || !document) return 0;
+  var n = 0;
+  (job.appraisers || []).forEach(function (a) {
+    var el = document.getElementById('appr-rpt-' + jobId + '-' + a.id);
+    if (el) { el.innerHTML = _apprReportCellHtml(job, a); n++; }
+  });
+  return n;
 }
 function _renderAppraiserRoster(job) {
   var apprs = job.appraisers || [];
@@ -36059,21 +36167,24 @@ function _renderAppraiserRoster(job) {
       + '<td style="font-size:11px;">' + (a.effectiveDate ? esc(fmtDate2(a.effectiveDate)) : '—') + '</td>'
       + '<td style="font-size:11px;">' + (a.reportDate ? esc(fmtDate2(a.reportDate)) : '—') + '</td>'
       + '<td style="font-size:11px;">' + (a.dueDate ? esc(fmtDate2(a.dueDate)) : '<span style="color:var(--gray);">not set</span>') + '</td>'
+      // The report (Q93): what is filed, what is owed, and File the report.
+      + '<td class="appr-rpt" id="appr-rpt-' + job.id + '-' + esc(String(a.id)) + '" style="font-size:11px;min-width:150px;">' + _apprReportCellHtml(job, a) + '</td>'
       + '<td><button class="icon-btn del" onclick="removeAppraiser(' + job.id + ',' + a.id + ')">Remove</button></td>'
       + '</tr>';
-  }).join('') : '<tr><td colspan="7" style="text-align:center;color:var(--gray);font-size:11px;font-style:italic;padding:8px;">No appraisers yet — add one to link Appraisal-sourced items to a named, credentialed record.</td></tr>';
+  }).join('') : '<tr><td colspan="8" style="text-align:center;color:var(--gray);font-size:11px;font-style:italic;padding:8px;">No appraisers yet — add one, then link each item you send them: they are its source from then on.</td></tr>';
   // The add form is the table's last row, hidden (never dropped) while shut; + Add an appraiser, under the table, shows it.
   var open = _apprFormIsOpen(job);
   return '<div class="card" style="margin-bottom:1rem;">'
-    + '<div class="sec" style="margin-bottom:4px;">Appraisers <span style="font-size:9px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(named &amp; credentialed — link to Appraisal items)</span></div>'
-    + '<div style="font-size:11px;color:var(--gray);margin-bottom:8px;">A defensible appraisal names an independent, credentialed appraiser with an effective date (the value date — usually the date of death) and a report date.</div>'
+    + '<div class="sec" style="margin-bottom:4px;">Appraisers <span style="font-size:9px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(named &amp; credentialed — link each item you send them)</span></div>'
+    + '<div style="font-size:11px;color:var(--gray);margin-bottom:8px;">A defensible appraisal names an independent, credentialed appraiser with an effective date (the value date — usually the date of death) and a report date. '
+      + 'The appraiser an item is linked to is its source from then on: when the report comes back, type its figure on the item&rsquo;s line and press File the report on their row.</div>'
     // ⚠ SEVEN COLUMNS, THREE OF THEM NATIVE DATE PICKERS — which carry a hard minimum
     // width no stylesheet can shrink. Measured at 874px: it dragged the whole document
     // 511px past a 390px phone and 133px past an iPad in PORTRAIT, so the header and nav
     // rendered at viewport width against a wider scrolled page. .tbl-scroll is the rule
     // for exactly this: the TABLE scrolls, the page does not.
     + '<div class="tbl-scroll">'
-    + '<table class="vtbl" style="font-size:11px;"><thead><tr><th>Appraiser</th><th>Credential</th><th>Independent</th><th>Effective (value) date</th><th>Report date</th><th>Due back</th><th></th></tr></thead>'
+    + '<table class="vtbl" style="font-size:11px;"><thead><tr><th>Appraiser</th><th>Credential</th><th>Independent</th><th>Effective (value) date</th><th>Report date</th><th>Due back</th><th>Report</th><th></th></tr></thead>'
     + '<tbody>' + rows + '</tbody>'
     + '<tfoot><tr id="appr-form-' + job.id + '"' + (open ? '' : ' style="display:none;"') + '>' + _apprFormCellsHtml(job.id)
     + '</tr></tfoot></table></div>'
@@ -36137,6 +36248,8 @@ function _invRefreshGuardrail(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   var el = document.getElementById('inv-guardrail');
   if (job && el) el.innerHTML = _renderAppraisalGuardrail(job);
+  // And the roster's report cells (Q93): an appraisal figure typed on a row may now be owed its report.
+  if (job && typeof _apprReportsRepaint === 'function') _apprReportsRepaint(jobId);
   if (typeof _deskFoldHeadsRepaint === 'function') _deskFoldHeadsRepaint(jobId);
 }
 function _renderAppraisalGuardrail(job) {
@@ -36162,8 +36275,10 @@ function _renderAppraisalGuardrail(job) {
       : '<span style="font-size:10px;color:var(--gray);font-style:italic;">Add an appraiser to the roster above first</span>';
     return '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 0;border-bottom:0.5px solid var(--border);font-size:11px;flex-wrap:wrap;">'
       + '<span style="min-width:0;flex:1 1 auto;">' + esc(r.objectName || '(unnamed)') + ' <span style="color:var(--gray);">· ' + esc(r.category || '') + ' · ' + fmv + ' · ' + esc(invAppraiserFor(r.category) || 'specialist') + '</span>'
-        // Linked, no figure yet (P25, Q36): the appraisal is in progress, and what clears it is the report's figure.
-        + (_inProg ? '<span class="inv-appr-prog" style="display:block;color:var(--bronze);">Appraisal in progress: type the report&rsquo;s figure on the line with source Appraisal when it lands.</span>' : '')
+        // Linked, no figure yet (P25, Q36): the appraisal is in progress, and what clears it is the report's figure. Since Q93 the
+        // appraiser is already the source: the figure typed on the line is recorded as the appraisal's, on every job.
+        + (_inProg ? '<span class="inv-appr-prog" style="display:block;color:var(--bronze);">Appraisal in progress &middot; ' + esc(invLineAppraiser(r, job.id))
+            + ': when the report comes back, type its figure on the line. It is recorded as the appraisal&rsquo;s, with the appraiser as its source.</span>' : '')
         + '</span>'
       // ⚠ THE PICKER MAY SHRINK (2026-10-22, the desk on a phone). `flex:0 0 auto` held this span at the width of its
       // longest appraiser's name, so on a 390 px phone the picker and Waive ran 124 px off the right edge and the whole
@@ -36175,8 +36290,8 @@ function _renderAppraisalGuardrail(job) {
       + '</div>';
   }).join('');
   var head = formal
-    ? '&#9888; <strong>Formal documentation:</strong> ' + items.length + ' item' + (items.length > 1 ? 's' : '') + ' need an appraisal before this estate&rsquo;s inventory is complete. Link each to an appraiser on its own row below, then put the report&rsquo;s figure on the line with source Appraisal; or Waive with a logged reason.'
-    : '&#9873; ' + items.length + ' item' + (items.length > 1 ? 's' : '') + ' flagged for a specialist appraisal ' + (items.length > 1 ? 'have' : 'has') + ' no appraisal figure yet. Link an appraiser on its own row below &mdash; add them to the roster above first if the roster is empty &mdash; then put the report&rsquo;s figure on the line with source Appraisal, or leave as reasonable estimates on a standard job.';
+    ? '&#9888; <strong>Formal documentation:</strong> ' + items.length + ' item' + (items.length > 1 ? 's' : '') + ' need an appraisal before this inventory is complete. Link each to an appraiser on its own row below, then type the report&rsquo;s figure on the line when it comes back; or Waive with a logged reason.'
+    : '&#9873; ' + items.length + ' item' + (items.length > 1 ? 's' : '') + ' flagged for a specialist appraisal ' + (items.length > 1 ? 'have' : 'has') + ' no appraisal figure yet. Link an appraiser on its own row below &mdash; add them to the roster above first if the roster is empty &mdash; then type the report&rsquo;s figure on the line when it comes back, or leave as reasonable estimates on a standard job.';
   return '<div class="card" style="margin-bottom:1rem;border:1px solid ' + (formal ? '#E3B7B7' : 'var(--border-md)') + ';">'
     + '<div class="alert ' + (formal ? 'a-err' : 'a-warn') + '" style="font-size:11.5px;margin-bottom:8px;">' + head + '</div>'
     + rows + '</div>';
@@ -36786,7 +36901,7 @@ function _invBulkApply(jobId, key, value) {
     } else {
       ref[key] = value;
       // The one ownership rule (P23): Appraisal set across a selection takes each line from the agent, as in the row.
-      if (key === 'valSource' && value === 'Appraisal') _avTakeValue(ref, 'appraisal');
+      if (key === 'valSource' && value === 'Appraisal') _avTakeValue(ref, 'appraisal', job);
     }
     if (key === 'disposition' && invNoteDispositionMove(ref, _prev)) _leftover.push(ref);
     if (key === 'channel') { delete ref.channelLeftover; delete ref.channelFrom; }
@@ -37832,19 +37947,29 @@ function agentValueApply(jobId, stableId, res, job, opts) {
 // to the attorney. Taken from the agent: the appraisal clears its sentence; a typed figure clears the source and the
 // sentence the agent wrote (AGENT_VALUE_SOURCES), so the line reads "not stated" until the desk names one. A source or a
 // sentence a person recorded is left alone.
-function _avTakeValue(ref, how) {
+// ⚠⚠ A FIGURE TYPED ON A LINE WITH AN APPRAISER LINKED IS THE APPRAISAL'S, ON EVERY JOB (Q93; Anthony, 2026-10-24: *"when their
+// appraisal comes back, they are already listed as the source and we just input the values"*). It was the appraisal's only where it
+// replaced Agent Two's figure, and a living job has no Valuation Source to set, so a living line linked to an appraiser whose figure
+// was typed by hand stayed *Appraisal in progress* until Waive. Now any figure typed after the link (`how` 'typed', `job` naming the
+// roster through _invHasAppraisal; with no job, the line's own link) is the appraisal's: source Appraisal, `valuedBy:'appraiser'`, the
+// agent's fields gone, and the valuation date the job's rule sets (_avValDate: the estate's value date, else the day it is recorded),
+// where the line has none of a person's own. ⚠ THE LINK ITSELF WRITES NOTHING (Q36's protection): a figure on the line before the
+// link keeps its own source until a figure typed after it replaces it. `how` 'sale' (a WorthPoint sale pasted, agentValueUseSale) is
+// the desk's, never the appraisal's, whatever the line is linked to: it is the desk's comparable, and the appraisal arm would delete it.
+function _avTakeValue(ref, how, job) {
   if (!ref) return;
   var wasAgent = ref.valuedBy === 'agent';
-  var appraisal = how === 'appraisal' || ref.valSource === 'Appraisal'
-    || (how === 'typed' && wasAgent && !!ref.apprId);
+  var linked = !!ref.apprId && (!job || _invHasAppraisal(job.id, ref));
+  var appraisal = how !== 'sale' && (how === 'appraisal' || ref.valSource === 'Appraisal' || (how === 'typed' && linked));
   if (appraisal) {
     ref.valuedBy = 'appraiser';
     ref.valSource = 'Appraisal';
     if (wasAgent) delete ref.valNote;
     AGENT_VALUE_OWN.forEach(function(k) { delete ref[k]; });
+    if (job && how === 'typed' && (!ref.valDate || wasAgent)) ref.valDate = _avValDate(job);
     return;
   }
-  if (how === 'typed') {
+  if (how === 'typed' || how === 'sale') {
     if (wasAgent && AGENT_VALUE_SOURCES.indexOf(ref.valSource) >= 0) { delete ref.valSource; delete ref.valNote; }
     ref.valuedBy = 'desk'; delete ref.valConf; delete ref.valFailed;
   }
@@ -38020,7 +38145,7 @@ function agentValueUseSale(jobId, stableId) {
   if (!_avHasFigure(ref) && !internal) {
     ref.fmv = comp.price;
     ref.valDate = _avValDate(job);
-    _avTakeValue(ref, 'typed');
+    _avTakeValue(ref, 'sale', job);   // the desk's comparable, never the appraisal's (Q93)
   }
   if (!internal) ref.valSource = 'WorthPoint comps';
   if (ref.valuedBy === 'agent') _avStampReviewed(ref, job);
@@ -38188,8 +38313,11 @@ function _avPanelHtml(job, ref) {
 // say what every figure rests on, in the reader's words. One word per source in INV_VAL_SOURCES (a test
 // asks it of every source on that list); a line with no value has no basis, and a source somebody typed
 // that is not on the list prints as typed.
-function invValBasisWord(ref) {
+// ⚠ AN APPRAISAL NAMES ITS APPRAISER (Q93): "appraisal · <appraiser>", the appraiser the line records (invLineAppraiser), so a
+// schedule says whose figure it is. `jobId`, where the caller has one, reads the roster; without it, the label the line keeps.
+function invValBasisWord(ref, jobId) {
   if (!_invHasValue(ref)) return '';
+  if (invAppraised(ref)) { var _who = invLineAppraiser(ref, jobId); return 'appraisal' + (_who ? ' \u00b7 ' + _who : ''); }
   var s = String((ref && ref.valSource) || '').trim();
   var words = { 'Appraisal': 'appraisal', 'Auction comps': 'auction comps', 'Dealer quote': 'dealer quote',
     'General estimate': 'general estimate', 'Online comps': 'online comps', 'PR estimate': 'PR estimate', 'WorthPoint comps': 'WorthPoint comps' };
@@ -38513,9 +38641,14 @@ function _renderInvRow(job, ref) {
   }
   var _pcRow = !String(ref.channel || '').trim() ? invPlanChannel(job, estimateStore[jid] && estimateStore[jid].estimate, ref.disposition) : null;
   if (_pcRow && _pcRow.many) warn.push('<span title="' + esc(_pcRow.many.join(', ')) + ' are all confirmed on the Job Plan: name the one this went to" style="color:var(--bronze);font-weight:700;">' + _pcRow.many.length + ' confirmed: name one</span>');
-  if (invAwaitingAppraisal(ref, jid)) warn.push(invAppraisalInProgress(ref, jid)
-    ? '<span title="An appraiser is linked; the line is appraised once the report\u2019s figure is on it with source Appraisal" style="color:var(--bronze);font-weight:700;">&#9873; appraisal in progress</span>'
-    : '<span title="Flagged for a specialist appraisal \u2014 no appraisal figure on the line yet" style="color:var(--bronze);font-weight:700;">&#9873; appraise</span>');
+  // ⚠⚠ THE APPRAISER IS THE SOURCE FROM THE LINK, ON EVERY JOB (Q93): "Appraisal · <appraiser> · pending" on any linked line with no
+  // appraisal figure yet (a living line need not be ticked for it), "Appraisal · <appraiser>" once the figure is on it, in grey, with
+  // "report not filed" while no report filed for its appraiser covers it (a flag, never a block). An unlinked line awaiting one: appraise.
+  var _apSrc = invAppraisalSourceText(ref, jid);
+  if (invAppraisalInProgress(ref, jid)) warn.push('<span class="inv-appr-src" title="An appraiser is linked: the appraisal in progress. When the report comes back, type its figure on the line; it is recorded as the appraisal\u2019s." style="color:var(--bronze);font-weight:700;">&#9873; ' + esc(_apSrc) + '</span>');
+  else if (invAwaitingAppraisal(ref, jid)) warn.push('<span title="Flagged for a specialist appraisal \u2014 no appraisal figure on the line yet" style="color:var(--bronze);font-weight:700;">&#9873; appraise</span>');
+  else if (_apSrc) warn.push('<span class="inv-appr-src" title="The appraisal\u2019s figure is on the line" style="color:var(--gray-dk);">' + esc(_apSrc) + '</span>'
+    + (invAppraisalReportOwed(ref, job) ? ' <span class="inv-appr-rpt" title="No report filed for this appraiser covers this item: File the report on the appraiser\u2019s row, under Values &amp; appraisals on Job Admin &amp; Inv" style="color:var(--bronze);font-weight:700;">report not filed</span>' : ''));
   // ⚠ A BEQUEST ON THE LIST NAMES ITS PERSON ON THE ROW (P19, call 7), and a matched line proposed to go elsewhere
   // carries the caution the release request prints, through invReleaseCautions (the one rule). A flag no bequest on
   // the list covers says so on an estate whose list has been started.
@@ -38742,6 +38875,7 @@ function _renderInvPanel(job, ref) {
     + _invFirearmPanelHtml(job, ref)
     + _invPanelCautionHtml(job, ref)
     + _invPanelLeftoverHtml(job, ref)
+    + _invPanelAppraisalHtml(job, ref)
     + _collPanelHtml(job, ref)
     + fieldHtml + _avPanelHtml(job, ref) + secs + '</div>';
 }
@@ -38758,6 +38892,18 @@ function _invPanelCautionHtml(job, ref) {
   }).join('');
 }
 
+// ⚠ THE APPRAISER AS THE SOURCE, IN THE LINE'S RECORD, ON EVERY JOB (Q93): a living record has no Valuation Source box, so this is
+// where its record says whose figure it is waiting for, or carries. Through the one namer, invAppraisalSourceText.
+function _invPanelAppraisalHtml(job, ref) {
+  var t = invAppraisalSourceText(ref, job.id);
+  if (!t) return '';
+  return '<div class="inv-panel-appr" style="margin-bottom:10px;font-size:11px;line-height:1.5;">'
+    + '<span style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;">Valuation source</span> '
+    + '<strong>' + esc(t) + '</strong>'
+    + (invAppraisalInProgress(ref, job.id) ? ' <span style="color:var(--gray);">&mdash; when the report comes back, type its figure on the line.</span>' : '')
+    + (invAppraisalReportOwed(ref, job) ? ' <span style="color:var(--bronze);font-weight:700;">&middot; report not filed</span>' : '')
+    + '</div>';
+}
 // ⚠ THE PERSON LEFT IN Channel / Recipient (P22), in the line's record, with the one press that says the name is right.
 function _invPanelLeftoverHtml(job, ref) {
   var t = invChannelLeftoverText(ref);
@@ -46943,6 +47089,12 @@ function deskFoldState(jobId, job, fold, all, today) {
     // The hand-offs stay in the one sign-out list, under Releases, where every other sign-out is.
     signoutGroups(job, all).forEach(function (g) {
       if (g.kind === 'appraisal_out' && g.ready.length) bit(g.ready.length + ' ready to hand to ' + g.taker + ' (under ' + DESK_FOLDS.releases.title + ')', 'grey');
+    });
+    // A report owed (Q93): an appraisal figure on a line with no report filed for its appraiser covering it, by the roster row's
+    // own rule (apprReportOwedLines). Amber, a flag: it opens nothing and refuses nothing.
+    _jobAppraisers(jobId).forEach(function (a) {
+      var owed = apprReportOwedLines(job, a.id).length;
+      if (owed) bit('report not filed: ' + a.name + ' (' + s(owed, 'item', 'items') + ')', 'amber');
     });
     var ap = _jobAppraisers(jobId).length;
     bit(ap ? s(ap, 'appraiser', 'appraisers') : 'no appraisers yet', 'grey');
