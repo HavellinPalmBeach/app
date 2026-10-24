@@ -1472,7 +1472,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.24 · 12:14pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.24 · 12:36pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -29686,6 +29686,13 @@ function _invEdit(jobId, stableId, key, el) {
   // FMV / category / the flag itself can move an item in or out of the appraisal guardrail, and so can a source set to Appraisal
   // over a figure (Q93: it is then appraised); the guardrail's repaint also repaints the roster's report cells.
   if (key === 'fmv' || key === 'category' || key === 'needsAppr' || key === 'valSource') _invRefreshGuardrail(jobId);
+  // ⚠ AND THE WORK BAR, ON A FIGURE (the Q93 review): its *Value N lines* counts the named lines with no figure, so a figure typed
+  // (the appraisal's as it lands, or the desk's) left the button offering the line until the next full render. Repainted by id, as
+  // _invSplitRepaint repaints it: it holds no field anybody types into, and More ▾ keeps its state (_renderInvWorkbar reads it).
+  if (key === 'fmv' && typeof _renderInvWorkbar === 'function') {
+    var _wbEl = document.getElementById('inv-workbar'), _wbJob = _invJob(jobId);
+    if (_wbEl && _wbJob) _wbEl.outerHTML = _renderInvWorkbar(_wbJob, _jobInvRefs(jobId));
+  }
   // Every one of the counts is derived from a field editable on this row, so the strip is
   // repainted whatever changed rather than on a list of keys that would fall out of step with
   // INV_WORK_FLAGS the first time a seventh count is added.
@@ -36004,7 +36011,7 @@ function removeAppraiser(jobId, apprId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job || !job.appraisers) return;
   if (!window.confirm('Remove this appraiser? Items linked to them will lose the link. An item whose appraisal figure is already on '
-      + 'the line keeps it, with the appraiser named; any report filed stays in Drive and on the record.')) return;
+      + 'the line keeps it, with the appraiser named; any report filed stays in Drive and on the record, listed under the roster.')) return;
   job.appraisers = job.appraisers.filter(function(a){ return String(a.id) !== String(apprId); });
   // Stamped although the record is GONE — that is precisely what tells the merge this was
   // a removal rather than a device that never saw it. See _jobTouch.
@@ -36015,7 +36022,7 @@ function removeAppraiser(jobId, apprId) {
   (_photoRefs[jobId] || []).forEach(function(r){
     if (String(r.apprId) !== String(apprId)) return;
     r.apprId = '';
-    if (!invAppraised(r)) r.apprDoc = '';
+    if (!invAppraised(r)) { r.apprDoc = ''; _invDropBareAppraisal(r); }
     _invTouch(r);
   });
   saveJobs(); syncJobToSheets(job); savePhotoRefs(jobId);
@@ -36026,10 +36033,33 @@ function removeAppraiser(jobId, apprId) {
 function _invSetAppraiser(jobId, stableId, apprId) {
   var ref = _getPhotoRef(jobId, stableId); if (!ref) return;
   var a = _jobAppraisers(jobId).find(function(x){ return String(x.id) === String(apprId); });
+  var redraw = function () {
+    if (typeof renderInventoryTab === 'function') renderInventoryTab();
+    else { _invRefreshGuardrail(jobId); _invRefreshSummary(jobId); }
+  };
+  // ⚠⚠ AN APPRAISAL ALREADY ON THE LINE IS ASKED ABOUT FIRST (the Q93 review). The appraiser a line names is its roster link, so
+  // relinking an appraised line to somebody else put the new appraiser's name on the earlier appraiser's figure (the schedules'
+  // basis, the row, the report owed); and on a living job, which has no Valuation Source box, a wrong link with a figure under it
+  // could never be taken off. Relinking to somebody else asks first, saying the figure will be named as theirs (Cancel leaves the
+  // link as it was); unlinking asks whether to keep the appraisal (OK, as before) or take it off (the figure stays, the desk's).
+  if (invAppraised(ref)) {
+    var _was = invLineAppraiser(ref, jobId), _item = _invNamed(ref);
+    if (a && String(a.id) !== String(ref.apprId || '') && _apprLabel(a) !== _was) {
+      if (!window.confirm(_item + ' already carries an appraisal figure' + (_was ? ', recorded as ' + _was + '\u2019s' : '') + '. Link it to '
+          + _apprLabel(a) + '?\n\nOK names ' + _apprLabel(a) + ' as the appraiser of the figure on the line: use it to correct a wrong link. If '
+          + a.name + ' is appraising it again, type their figure when their report comes back. Cancel leaves the link as it was.')) { redraw(); return; }
+    } else if (!a && ref.apprId) {
+      if (!window.confirm('Keep the appraisal on ' + _item + '?\n\nIts figure is recorded as ' + (_was ? _was + '\u2019s appraisal' : 'an appraisal')
+          + '. OK keeps it, with the appraiser named. Cancel takes the appraisal off: the figure stays on the line as the desk\u2019s estimate, with no source.')) {
+        delete ref.valSource; ref.valuedBy = 'desk';
+      }
+    }
+  }
   ref.apprId = apprId || '';
   // The name follows the link, and stays on a line whose appraisal figure has landed when the link goes (Q93): it is whose figure it is.
+  // A line not appraised loses the name with the link, and any source of Appraisal with no figure under it (the Q93 review).
   if (a) ref.apprDoc = _apprLabel(a);
-  else if (!invAppraised(ref)) ref.apprDoc = '';
+  else if (!invAppraised(ref)) { ref.apprDoc = ''; _invDropBareAppraisal(ref); }
   // ⚠⚠ THE LINK WRITES NO SOURCE (P25, Q36; and still under Q93). It filled an empty source with "Appraisal", so linking an
   // appraiser to a line carrying a figure from anybody made that figure the appraisal's, and a line is appraised once source
   // Appraisal carries a value (invAppraised). Since Q93 (Anthony, 2026-10-24) the appraiser linked is the source from the moment of
@@ -36040,9 +36070,18 @@ function _invSetAppraiser(jobId, stableId, apprId) {
   // Full redraw: the link can be made from the guardrail panel OR from the Appraisal Doc
   // cell, and each has to reflect the other. It is a select change, not typing, so there
   // is no half-typed input to destroy.
-  if (typeof renderInventoryTab === 'function') renderInventoryTab();
-  else { _invRefreshGuardrail(jobId); _invRefreshSummary(jobId); }
+  redraw();
   _scheduleInventorySync(jobId);
+}
+// ⚠ A SOURCE OF APPRAISAL WITH NO FIGURE UNDER IT, ON A LINE NO APPRAISER IS LINKED TO, IS NOBODY'S APPRAISAL (the Q93 review). It
+// stayed on the line when the link came off, unseen on a living job, and the next figure the desk typed was recorded as an
+// appraisal (_avTakeValue reads a source of Appraisal as the appraisal's). Taken off when a link comes off a line that is not
+// appraised, and when the appraiser leaves the roster; never on a figure, and never while a link stands.
+function _invDropBareAppraisal(ref) {
+  if (!ref || ref.valSource !== 'Appraisal' || _invHasValue(ref)) return false;
+  delete ref.valSource;
+  if (ref.valuedBy === 'appraiser') delete ref.valuedBy;
+  return true;
 }
 
 // ── Appraisers come from the Vendor Directory ─────────────────────────────────
@@ -36194,8 +36233,9 @@ function invAppraisalReportOwed(ref, job) {
   });
 }
 // The lines linked to one appraiser, and those owed a report, in item order: read by the row and the Values bar's line alike.
-function apprReportOwedLines(job, apprId) {
-  return _jobInvRefs(job.id).filter(function (r) { return String(r.apprId) === String(apprId) && invAppraisalReportOwed(r, job); });
+// `refs`, where the caller holds the lines (deskFoldState's `all`), so the bar's line counts the same set as the rest of the bar.
+function apprReportOwedLines(job, apprId, refs) {
+  return (refs || _jobInvRefs(job.id)).filter(function (r) { return String(r.apprId) === String(apprId) && invAppraisalReportOwed(r, job); });
 }
 function _apprReportCellHtml(job, a) {
   var linked = _jobInvRefs(job.id).filter(function (r) { return String(r.apprId) === String(a.id); });
@@ -36236,6 +36276,12 @@ function _renderAppraiserRoster(job) {
   }).join('') : '<tr><td colspan="8" style="text-align:center;color:var(--gray);font-size:11px;font-style:italic;padding:8px;">No appraisers yet — add one, then link each item you send them: they are its source from then on.</td></tr>';
   // The add form is the table's last row, hidden (never dropped) while shut; + Add an appraiser, under the table, shows it.
   var open = _apprFormIsOpen(job);
+  // ⚠ A REPORT WHOSE APPRAISER HAS LEFT THE ROSTER (the Q93 review) is still on the record and still linked in the estate package
+  // (probatePackageReports), and it was listed only on that appraiser's row, so it went from the desk with the row and its Void
+  // could not be reached. Listed under the table, with its Void, by the one list (signedRecordLinksHtml).
+  var _orphans = signedRecordsOf(job, 'appraisal_report').filter(function (r) {
+    return !apprs.some(function (a) { return String(a.id) === String(r.ref); });
+  });
   return '<div class="card" style="margin-bottom:1rem;">'
     + '<div class="sec" style="margin-bottom:4px;">Appraisers <span style="font-size:9px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(named &amp; credentialed — link each item you send them)</span></div>'
     + '<div style="font-size:11px;color:var(--gray);margin-bottom:8px;">A defensible appraisal names an independent, credentialed appraiser with an effective date (the value date — usually the date of death) and a report date. '
@@ -36250,6 +36296,8 @@ function _renderAppraiserRoster(job) {
     + '<tbody>' + rows + '</tbody>'
     + '<tfoot><tr id="appr-form-' + job.id + '"' + (open ? '' : ' style="display:none;"') + '>' + _apprFormCellsHtml(job.id)
     + '</tr></tfoot></table></div>'
+    + (_orphans.length ? '<div class="appr-rpt-orphans" style="font-size:11px;margin:6px 0;"><div style="color:var(--gray);">Reports filed for appraisers '
+        + 'no longer on the roster:</div>' + signedRecordLinksHtml(job.id, _orphans) + '</div>' : '')
     + '<div class="inv-add-ctl"><button class="btn-s" id="appr-add-' + job.id + '"' + (open ? ' style="display:none;"' : '')
       + ' onclick="invToggleApprForm(' + job.id + ',true)">+ Add an appraiser</button></div></div>';
 }
@@ -38043,27 +38091,47 @@ function agentValueApply(jobId, stableId, res, job, opts) {
 // replaced Agent Two's figure, and a living job has no Valuation Source to set, so a living line linked to an appraiser whose figure
 // was typed by hand stayed *Appraisal in progress* until Waive. Now any figure typed after the link (`how` 'typed', `job` naming the
 // roster through _invHasAppraisal; with no job, the line's own link) is the appraisal's: source Appraisal, `valuedBy:'appraiser'`, the
-// agent's fields gone, and the valuation date the job's rule sets (_avValDate: the estate's value date, else the day it is recorded),
-// where the line has none of a person's own. ⚠ THE LINK ITSELF WRITES NOTHING (Q36's protection): a figure on the line before the
+// agent's fields gone, and the appraisal's valuation date (_invAppraisalDate, since the review: the appraiser's effective date, else
+// the job's rule). ⚠ THE LINK ITSELF WRITES NOTHING (Q36's protection): a figure on the line before the
 // link keeps its own source until a figure typed after it replaces it. `how` 'sale' (a WorthPoint sale pasted, agentValueUseSale) is
 // the desk's, never the appraisal's, whatever the line is linked to: it is the desk's comparable, and the appraisal arm would delete it.
+// ⚠⚠ A BLANK IS NO FIGURE (the Q93 review): `figure` is a typed write that leaves a value on the line. Clearing the box on a linked
+// line took the appraisal arm with nothing under it, writing source Appraisal, valued by the appraiser and a date onto a line with
+// no figure, over a source a person had recorded (an estate's *Dealer quote*); and since nothing then took that source off, a desk
+// figure typed after the link came off was recorded as an appraisal and cleared a Formal guardrail. A blank is treated as it was
+// before Q93. The date an appraisal carries is _invAppraisalDate's, written only with a figure.
 function _avTakeValue(ref, how, job) {
   if (!ref) return;
   var wasAgent = ref.valuedBy === 'agent';
+  var wasAppraisal = ref.valSource === 'Appraisal';
+  var figure = how === 'typed' && _invHasValue(ref);
   var linked = !!ref.apprId && (!job || _invHasAppraisal(job.id, ref));
-  var appraisal = how !== 'sale' && (how === 'appraisal' || ref.valSource === 'Appraisal' || (how === 'typed' && linked));
+  var appraisal = how !== 'sale' && (how === 'appraisal' || wasAppraisal || (figure && linked));
   if (appraisal) {
     ref.valuedBy = 'appraiser';
     ref.valSource = 'Appraisal';
     if (wasAgent) delete ref.valNote;
     AGENT_VALUE_OWN.forEach(function(k) { delete ref[k]; });
-    if (job && how === 'typed' && (!ref.valDate || wasAgent)) ref.valDate = _avValDate(job);
+    if (job && figure) { var _apDate = _invAppraisalDate(job, ref, !wasAppraisal, wasAgent); if (_apDate) ref.valDate = _apDate; }
     return;
   }
   if (how === 'typed' || how === 'sale') {
     if (wasAgent && AGENT_VALUE_SOURCES.indexOf(ref.valSource) >= 0) { delete ref.valSource; delete ref.valNote; }
     ref.valuedBy = 'desk'; delete ref.valConf; delete ref.valFailed;
   }
+}
+
+// ⚠ THE VALUATION DATE AN APPRAISAL'S FIGURE CARRIES (the Q93 review): the date of value the roster records for its appraiser (their
+// *Effective (value) date*), else the job's rule (_avValDate: the estate's value date, else the day the figure is recorded). It is
+// written onto a line with no date or with the agent's, and, as the figure lands on a living job, over any date already there: a
+// living job has no Valuation Date box, so a date there came with an earlier figure (a WorthPoint sale) and is not the appraisal's.
+// An estate's Valuation Date box is a person's, so a date there stays. '' means leave the line's date as it is.
+function _invAppraisalDate(job, ref, landing, wasAgent) {
+  var a = _invLinkedAppraiser(job.id, ref);
+  var d = (a && a.effectiveDate) || _avValDate(job);
+  if (!ref.valDate || wasAgent) return d;
+  if (landing && !invFiduciaryMode(job)) return d;
+  return '';
 }
 
 function _avStampReviewed(ref, job) {
@@ -47314,7 +47382,7 @@ function deskFoldState(jobId, job, fold, all, today) {
     // A report owed (Q93): an appraisal figure on a line with no report filed for its appraiser covering it, by the roster row's
     // own rule (apprReportOwedLines). Amber, a flag: it opens nothing and refuses nothing.
     _jobAppraisers(jobId).forEach(function (a) {
-      var owed = apprReportOwedLines(job, a.id).length;
+      var owed = apprReportOwedLines(job, a.id, all).length;
       if (owed) bit('report not filed: ' + a.name + ' (' + s(owed, 'item', 'items') + ')', 'amber');
     });
     var ap = _jobAppraisers(jobId).length;

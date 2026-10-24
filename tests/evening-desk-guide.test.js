@@ -564,7 +564,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(code(fn('invAppraisalSourceText')), "' · pending'", '…the line reads "Appraisal · <appraiser> · pending" (invAppraisalSourceText)');
     ok(!/invFiduciaryMode/.test(code(fn('invAppraisalSourceText'))) && !/invFiduciaryMode/.test(code(fn('_avTakeValue'))), '…on every job: neither the namer nor the owner rule asks whether it is an estate');
     has(t, 'When the report comes back, type its figure in Value: that is the appraisal, and the item leaves this list.', 'as the page says: the figure typed is the appraisal');
-    has(code(fn('_avTakeValue')), "(how === 'typed' && linked)", '…a figure typed on a linked line is the appraisal (_avTakeValue)');
+    has(code(fn('_avTakeValue')), "(figure && linked)", '…a figure typed on a linked line is the appraisal (_avTakeValue)');
+    has(code(fn('_avTakeValue')), "var figure = how === 'typed' && _invHasValue(ref);", '…a figure: a blank typed is none (the Q93 review)');
     has(t, 'Then File the report on the appraiser’s row (a PDF or a photo, to the client’s Drive). Until then the row says report not filed.', 'as the page says: File the report');
     has(code(fn('_apprReportCellHtml')), "'File the report'", '…the appraiser’s row carries File the report');
     has(code(fn('_apprReportCellHtml')), 'report not filed: ', '…and names a line owed one');

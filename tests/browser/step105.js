@@ -39,7 +39,9 @@ const LABEL = 'Marie Wayland · Wayland Fine Art';
     const p = await ctx.newPage();
     p.setDefaultTimeout(10000);
     const errs = []; p.on('pageerror', (e) => errs.push(String(e)));
-    const said = []; p.on('dialog', async (d) => { said.push(d.message()); await d.accept(); });
+    // Every dialog is answered OK unless a section sets `answer` to false (the review's Cancel paths, section G).
+    const said = []; let answer = true;
+    p.on('dialog', async (d) => { said.push(d.message()); if (answer) await d.accept(); else await d.dismiss(); });
     await p.goto(APP); await p.waitForTimeout(1600);
     await p.evaluate((u) => {
       SHEETS_SYNC_URL = u;
@@ -142,7 +144,9 @@ const LABEL = 'Marie Wayland · Wayland Fine Art';
       await section(what + ' C. the report\'s figure typed on the row: the appraisal; off the guardrail and the bar\'s count; report not filed', async () => {
         const box = '#inv-row-p' + id + ' input[inputmode="decimal"]';
         ok(await vis(box), 'the row\'s Value box');
+        has(await text('#inv-workbar'), 'Value 1 line', 'fixture: the work bar offers the linked item for valuing while it has no figure');
         await p.fill(box, '18500'); await p.press(box, 'Tab'); await p.waitForTimeout(800);
+        lacks(await text('#inv-workbar'), 'Value 1 line', '⚠ the work bar repainted as the figure landed: Value 1 line gone (the review: it stayed until a full render)');
         const r = await line(id);
         eq([r.fmv, r.valSource, r.valuedBy], [18500, 'Appraisal', 'appraiser'], '⚠⚠ recorded as the appraisal: source Appraisal, valued by the appraiser');
         eq(r.valDate, id === EST ? '2026-04-02' : await p.evaluate(() => _todayStr()), 'the valuation date the job\'s rule sets');
@@ -190,14 +194,87 @@ const LABEL = 'Marie Wayland · Wayland Fine Art';
       has(html.replace(/<[^>]+>/g, ' '), 'appraisal · ' + LABEL, 'the basis: appraisal · <appraiser>');
     });
 
+    // ── G ── (the review, 2026-10-24: its own reproduction, through the real controls)
+    const LIVE2 = 10503;
+    await section('G. a living Formal job: a blank is no figure; a link off takes a bare source with it; relink and unlink ask first', async () => {
+      await p.evaluate(([id, live]) => {
+        const T = Date.now() - 5 * 86400000;
+        const src = jobs.find((j) => j.id === live);
+        const job = JSON.parse(JSON.stringify(src));
+        Object.assign(job, { id, hvlId: 'HVL-2610-A' + id, name: 'Joan Archer', addr: id + ' Via Bellaria', docLevel: 'formal', appraisers: [
+          { id: 1, name: 'Marie Wayland', firm: 'Wayland Fine Art', independent: true }, { id: 2, name: 'Tom Beck', firm: '', independent: true }],
+          signedRecords: [], at: {} });
+        jobs.unshift(job);
+        estimateStore[id] = JSON.parse(JSON.stringify(estimateStore[live])); estimateStore[id].estimate.jobId = id;
+        jobPlanStore[id] = { rooms: { 0: { status: 'locked' } }, tasks: {}, at: {} };
+        _photoRefs[id] = [{ stableId: 'p' + id, itemNo: 1, label: 'inventory', roomIdx: 0, status: 'uploaded', category: 'Art & Décor', needsAppr: true,
+          objectName: 'Watercolour, lighthouse', namedBy: 'desk', disposition: 'Keep', fmv: 900, valuedBy: 'desk', ts: T, updatedAt: T,
+          filename: 'HVL_' + id + '_INV_p.jpg', driveFileId: 'f-' + id, driveFileUrl: 'https://drive.google.com/file/d/f-' + id + '/view' }];
+        savePhotoRefs(id); _invCloudSeen[id] = true; saveJobs();
+      }, [LIVE2, LIVE]);
+      await toDesk(LIVE2);
+      if (!(await barOpen(LIVE2))) await press('#desk-hd-values-' + LIVE2, 'the Values & appraisals bar\'s header');
+      await p.selectOption('#inv-guardrail select', '1'); await p.waitForTimeout(800);
+      const box = '#inv-row-p' + LIVE2 + ' input[inputmode="decimal"]';
+      await p.fill(box, ''); await p.press(box, 'Tab'); await p.waitForTimeout(800);
+      let r = await line(LIVE2);
+      eq([r.fmv, r.valSource || '', r.valuedBy, r.valDate || ''], ['', '', 'desk', ''], '⚠⚠ the box cleared on a linked line: no source of Appraisal, no appraiser, no date');
+      has(await text('#inv-row-p' + LIVE2), 'Appraisal · Marie Wayland · Wayland Fine Art · pending', 'still pending on the link');
+      // Unlink through the record's Appraisal Doc, then a desk figure with no appraiser linked.
+      await press('#inv-row-p' + LIVE2 + ' button[title="Open the full record"]', 'the row\'s ▾');
+      const doc = '#inv-row-p' + LIVE2 + ' select[onchange^="_invSetAppraiser"]';
+      eq(await p.locator(doc).count(), 1, 'the record\'s Appraisal Doc picker');
+      said.length = 0;
+      await p.selectOption(doc, ''); await p.waitForTimeout(800);
+      eq(said.length, 0, 'unlinking a line not appraised asks nothing');
+      await p.fill(box, '650'); await p.press(box, 'Tab'); await p.waitForTimeout(800);
+      r = await line(LIVE2);
+      eq([r.fmv, r.valSource || '', r.valuedBy], [650, '', 'desk'], '⚠⚠ the figure typed with no appraiser linked is the desk\'s, never an appraisal');
+      has(await text('#inv-guardrail'), 'Formal documentation', '⚠ the Formal guardrail still holds the item (a desk estimate clears no appraisal)');
+      lacks((await barLine(LIVE2)).map((x) => x[0]).join(' | '), '✓ nothing needs an appraisal', 'and the bar does not say nothing needs one');
+      // Link again and let the appraisal land; then relink to somebody else, Cancel.
+      await p.selectOption('#inv-guardrail select', '1'); await p.waitForTimeout(800);
+      await p.fill(box, '18500'); await p.press(box, 'Tab'); await p.waitForTimeout(800);
+      eq((await line(LIVE2)).valSource, 'Appraisal', 'fixture: the appraisal landed');
+      said.length = 0; answer = false;
+      await p.selectOption(doc, '2'); await p.waitForTimeout(800);
+      has(said[0] || '', 'already carries an appraisal figure, recorded as Marie Wayland · Wayland Fine Art’s. Link it to Tom Beck?', '⚠⚠ relinking an appraised item asks first');
+      eq(String((await line(LIVE2)).apprId), '1', 'Cancel: the link stays Marie Wayland\'s');
+      eq(await p.inputValue(doc), '1', '…and the picker shows it again');
+      has(await text('#inv-row-p' + LIVE2), 'Appraisal · Marie Wayland · Wayland Fine Art', 'the row still names the appraiser the figure landed under');
+      // Unlink, Cancel: the appraisal comes off, the figure stays the desk's, back on the Formal guardrail.
+      said.length = 0;
+      await p.selectOption(doc, ''); await p.waitForTimeout(800);
+      has(said[0] || '', 'Keep the appraisal on #1 Watercolour, lighthouse?', '⚠⚠ unlinking an appraised item asks whether to keep the appraisal');
+      r = await line(LIVE2);
+      eq([r.fmv, r.valSource || '', r.valuedBy, r.apprDoc || ''], [18500, '', 'desk', ''], '⚠⚠ Cancel takes the appraisal off: the figure stays, the desk\'s');
+      has(await text('#inv-guardrail'), 'Formal documentation', 'back on the Formal guardrail: only an appraisal or a Waive clears it');
+      answer = true;
+      eq(errs, [], 'zero page errors so far');
+    });
+
+    // ── H ──
+    await section('H. a report whose appraiser leaves the roster: listed under the roster with its Void', async () => {
+      await toDesk(EST);
+      if (!(await barOpen(EST))) await press('#desk-hd-values-' + EST, 'the Values & appraisals bar\'s header');
+      said.length = 0;
+      await press('#desk-body-values-' + EST + ' .vtbl button.del', 'the appraiser\'s Remove');
+      has(said[0] || '', 'listed under the roster', 'the Remove confirm says where the report stays listed');
+      const o = '#desk-body-values-' + EST + ' .appr-rpt-orphans';
+      ok(await vis(o), '⚠⚠ the report listed under the roster once its appraiser has left it');
+      has(await text(o), 'Reports filed for appraisers no longer on the roster:', 'headed so');
+      ok(await vis(o + ' a[href*="drive.google.com/file/d/RPT"]'), 'with its link');
+      ok(await vis(o + ' button:has-text("Void")'), 'and its Void, reachable');
+    });
+
     // ── F ──
     await section('F. both widths: no horizontal overflow with the roster open; zero page errors', async () => {
-      for (const id of [LIVE, EST]) {
+      for (const id of [LIVE, EST, LIVE2]) {
         await toDesk(id);
         if (!(await barOpen(id))) await press('#desk-hd-values-' + id, 'the Values & appraisals bar\'s header');
         for (const w of [1440, 390]) {
           await p.setViewportSize({ width: w, height: 900 }); await p.waitForTimeout(500);
-          eq(await overflow(), 0, (id === LIVE ? 'living' : 'estate') + ' desk at ' + w + ' px: no horizontal overflow');
+          eq(await overflow(), 0, (id === EST ? 'estate' : 'living ' + id) + ' desk at ' + w + ' px: no horizontal overflow');
         }
         await p.setViewportSize({ width: 1440, height: 1000 }); await p.waitForTimeout(300);
       }

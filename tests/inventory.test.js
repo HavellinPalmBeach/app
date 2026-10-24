@@ -885,7 +885,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('linking an appraiser writes no valuation source (P25, Q36)');
   {
     const a = sandbox({ fns: ['_invSetAppraiser', 'invAppraised', '_invHasValue', '_jobAppraisers', '_apprLabel', '_getPhotoRef',
-                              '_setPhotoRef', 'savePhotoRefs', '_warnPhotoStoreFull', '_invTouch'],
+                              '_setPhotoRef', 'savePhotoRefs', '_warnPhotoStoreFull', '_invTouch', '_invDropBareAppraisal', 'invLineAppraiser',
+                              '_invLinkedAppraiser', '_invNamed', '_invItemNo'],
                         stubs: { renderInventoryTab() {}, _scheduleInventorySync() {},
                                  _invRefreshGuardrail() {}, _invRefreshSummary() {}, _invRefreshFlagStrip() {}, _invRefreshRecords() {} } });
     a.jobs.push({ id: 1, appraisers: [{ id: 7, name: 'Marie Wayland', firm: 'Appraisals by the Sea' }] });
@@ -901,10 +902,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(a._photoRefs[1][0].valSource, 'Dealer quote',
        'but it never overwrites a source somebody chose deliberately');
 
+    // ⚠ RESTATED (the Q93 review): the fixture carries the report's figure, as the label says. A source of Appraisal with no
+    // figure under it is nobody's appraisal and now comes off with the link (below); the default confirm keeps an appraisal.
     a._photoRefs[1][0].valSource = 'Appraisal';
+    a._photoRefs[1][0].fmv = 6500;
     a._invSetAppraiser(1, 'x', '');
     eq(a._photoRefs[1][0].valSource, 'Appraisal',
        '⚠ unlinking leaves an appraisal\'s source alone: the report on the line stands with or without a link');
+    a._photoRefs[1][0] = { stableId: 'x', label: 'inventory', collId: null, apprId: 7, valSource: 'Appraisal', valuedBy: 'appraiser', fmv: '' };
+    a._invSetAppraiser(1, 'x', '');
+    eq([a._photoRefs[1][0].valSource, a._photoRefs[1][0].valuedBy], [undefined, undefined],
+       '…but a source of Appraisal with no figure under it comes off with the link (the Q93 review)');
   }
 
   group('the firm is named once, not twice');

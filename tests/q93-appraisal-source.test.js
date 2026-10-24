@@ -103,7 +103,7 @@ const ROOTS = ['_invEdit', '_invBulkApply', '_invSetAppraiser', 'removeAppraiser
   '_renderAppraisalGuardrail', '_renderAppraiserRoster', '_invGuardrailItems', 'deskFoldState', 'fileSignedCopy', 'fileSignedCopyFromInput',
   'voidSignedRecord', 'probatePackageReports', 'probatePackageMovedSince', 'invValBasisWord', '_invScheduleSection', 'printEstateInventoryReport',
   'printAppraisalWorklist', 'invAppraisalReportOwed', 'apprReportOwedLines', '_apprReportsRepaint', '_invRefreshGuardrail', 'signedRecordsOf',
-  'signedRecordLinksHtml', 'photoSubfolder', 'invAwaitingAppraisal'];
+  'signedRecordLinksHtml', 'photoSubfolder', 'invAwaitingAppraisal', '_renderInvWorkbar'];
 let _cl = null;
 function desk(job, rows, o) {
   o = o || {};
@@ -408,8 +408,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══ 10 · ONE RULE, ONE READER ═══
   group('10 · one rule: _avTakeValue decides the owner, invAppraised what is appraised, _invLinkedAppraiser the link, the namer the words');
   {
-    has(code(fn('_avTakeValue')), "var appraisal = how !== 'sale' && (how === 'appraisal' || ref.valSource === 'Appraisal' || (how === 'typed' && linked));",
+    has(code(fn('_avTakeValue')), "var appraisal = how !== 'sale' && (how === 'appraisal' || wasAppraisal || (figure && linked));",
       'the one ownership rule: a typed figure on a linked line is the appraisal, on every job (no wasAgent condition)');
+    has(code(fn('_avTakeValue')), "var figure = how === 'typed' && _invHasValue(ref);", '…and a figure is a value left on the line: a blank is none (the Q93 review)');
+    has(code(fn('_avTakeValue')), "var wasAppraisal = ref.valSource === 'Appraisal';", '…a source of Appraisal read before anything is written');
     has(code(fn('_avTakeValue')), 'var linked = !!ref.apprId && (!job || _invHasAppraisal(job.id, ref));', 'linked: the roster, through _invHasAppraisal');
     has(code(fn('_invEdit')), "if (key === 'fmv') _avTakeValue(ref, 'typed', _invJob(jobId));", '_invEdit hands it the job');
     // The appraised test lives in invAppraised alone: the conjunction of the source and a value is written nowhere else.
@@ -428,5 +430,157 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       '_invLinkedAppraiser and _invHasAppraisal agree on every link');
     eq(attempt(() => C.invLineAppraiser({ apprId: 502 }, 7)).val, 'Tom Beck', 'the namer reads the roster\'s label');
     eq(attempt(() => C.invLineAppraiser({ apprId: 999, apprDoc: 'Kept Name' }, 7)).val, 'Kept Name', '…else the label the line keeps');
+  }
+  // ═══ 11 · THE REVIEW: A BLANK IS NO FIGURE, AND A BARE SOURCE OF APPRAISAL GOES WITH THE LINK ═══
+  // The review reproduced it in the real page: a living Formal job, a desk figure of $900, the appraiser linked, the box cleared
+  // (Tab) wrote ['', 'Appraisal', 'appraiser', a date]; unlinked; 650 typed with no appraiser linked read [650, 'Appraisal',
+  // 'appraiser'], appraised, the Formal guardrail empty. On an estate the clear overwrote a recorded Dealer quote.
+  group('11 · the Q93 review: a blank typed on a linked line is no figure; a link off a line not appraised takes a bare source of Appraisal with it');
+  [['a living Home Transition', LIVING, { needsAppr: true, fmv: 900, valuedBy: 'desk' }],
+   ['a probate estate', ESTATE, { fmv: 5000, valuedBy: 'desk', valSource: 'Dealer quote' }]].forEach(([what, J, earlier]) => {
+    const C = desk(J(), [LINE(earlier)]);
+    attempt(() => C._invSetAppraiser(7, 's1', '501'));
+    const t = typeFigure(C, '');
+    ok(t.ok, what + ': the box is cleared (' + (t.err || 'ok') + ')');
+    let r = ref(C);
+    eq([r.fmv, r.valSource, r.valuedBy, r.valDate], ['', earlier.valSource, 'desk', undefined],
+      what + ': ⚠⚠ cleared on a linked line: no source of Appraisal, no appraiser, no date written, and a source a person recorded stands');
+    eq(attempt(() => C.invAppraised(r)).val, false, what + ': not appraised');
+    eq(attempt(() => C.invAppraisalSourceText(r, 7)).val, 'Appraisal · ' + LABEL + ' · pending', what + ': still pending on the link');
+    // The review's path on: the link comes off, then a figure is typed with no appraiser linked.
+    attempt(() => C._invSetAppraiser(7, 's1', ''));
+    typeFigure(C, '650');
+    r = ref(C);
+    eq([r.fmv, r.valSource, r.valuedBy], [650, earlier.valSource, 'desk'], what + ': ⚠⚠ a figure typed once the link is off is the desk\'s, never an appraisal');
+    eq(attempt(() => C.invAppraised(r)).val, false, what + ': and the line is not appraised');
+    if (J === LIVING) {
+      eq(attempt(() => C._invGuardrailItems(7).length).val, 1, what + ': ⚠ so it stays on the guardrail (a desk estimate clears no appraisal)');
+      const bar = attempt(() => C.deskFoldState(7, C.jobs[0], 'values', C._photoRefs[7], '2026-10-24')).val || { bits: [] };
+      lacks(bar.bits.map((b) => b.text).join(' | '), '✓ nothing needs an appraisal', what + ': and the Values bar does not say nothing needs one');
+    }
+  });
+  {
+    // A source of Appraisal with no figure under it (an estate's box set ahead of the report, or a figure cleared on an appraised line):
+    // it stays while a link stands, and goes with the link, so the next desk figure is the desk's.
+    const BARE = () => LINE({ needsAppr: true, apprId: 501, apprDoc: LABEL, valSource: 'Appraisal', valuedBy: 'appraiser', fmv: '' });
+    const C = desk(LIVING(), [BARE()]);
+    attempt(() => C._invSetAppraiser(7, 's1', '502'));
+    eq([ref(C).valSource, String(ref(C).apprId)], ['Appraisal', '502'], 'a bare source of Appraisal stays while a link stands (relinked, nothing asked: not appraised)');
+    attempt(() => C._invSetAppraiser(7, 's1', ''));
+    eq([ref(C).valSource, ref(C).valuedBy, ref(C).apprDoc], [undefined, undefined, ''], '⚠⚠ and comes off with the link');
+    typeFigure(C, '650');
+    eq([ref(C).valSource, ref(C).valuedBy], [undefined, 'desk'], '…so the next figure typed is the desk\'s');
+    const D = desk(LIVING(), [BARE()]);
+    attempt(() => D.removeAppraiser(7, 501));
+    eq([ref(D).valSource, ref(D).valuedBy, ref(D).apprId, ref(D).apprDoc], [undefined, undefined, '', ''],
+      '⚠⚠ removing the appraiser takes a bare source of Appraisal off each line it unlinks');
+    // A cleared figure on an appraised line keeps the appraisal's source while linked (as before Q93): the next figure is the appraisal's.
+    const E = desk(LIVING(), [LINE({ needsAppr: true, apprId: 501, apprDoc: LABEL, valSource: 'Appraisal', valuedBy: 'appraiser', fmv: 18500, valDate: '2026-10-20' })]);
+    typeFigure(E, '');
+    eq([ref(E).valSource, ref(E).valDate], ['Appraisal', '2026-10-20'], 'a figure cleared on an appraised, linked line: the source as before, and no date written');
+    const E2 = desk(LIVING(), [LINE({ needsAppr: true, apprId: 501, apprDoc: LABEL, valSource: 'Appraisal', valuedBy: 'appraiser', fmv: 18500 })]);
+    typeFigure(E2, '');
+    eq(ref(E2).valDate, undefined, '⚠ …nor onto one with no date: a date is written only with a figure');
+  }
+
+  group('12 · the Q93 review: relinking or unlinking a line whose appraisal figure has landed asks first');
+  JOBS.forEach(([what, J, extra]) => {
+    const C = desk(J(), [LINE(extra)]);
+    attempt(() => C._invSetAppraiser(7, 's1', '501'));
+    typeFigure(C, '18500');
+    const said = []; let answer = false;
+    C.window.confirm = (m) => { said.push(m); return answer; };
+    const r0 = C.log.renders;
+    attempt(() => C._invSetAppraiser(7, 's1', '502'));
+    eq(said.length, 1, what + ': ⚠⚠ relinking an appraised line to somebody else asks first');
+    has(said[0] || '', '#12 Oil on canvas, harbour scene already carries an appraisal figure, recorded as ' + LABEL + '’s. Link it to Tom Beck?',
+      what + ': naming the item, whose figure it is, and who it would go to');
+    has(said[0] || '', 'OK names Tom Beck as the appraiser of the figure on the line: use it to correct a wrong link.', what + ': and what OK does');
+    eq(String(ref(C).apprId), '501', what + ': ⚠ Cancel leaves the link as it was');
+    eq(attempt(() => C.invValBasisWord(ref(C), 7)).val, 'appraisal · ' + LABEL, what + ': …and the figure still names the appraiser it landed under');
+    ok(C.log.renders > r0, what + ': and the desk is redrawn, so the picker shows the link it kept');
+    answer = true;
+    attempt(() => C._invSetAppraiser(7, 's1', '502'));
+    eq([String(ref(C).apprId), attempt(() => C.invValBasisWord(ref(C), 7)).val], ['502', 'appraisal · Tom Beck'], what + ': OK relinks: a correction, the figure named for Tom Beck');
+    // Unlinking: OK keeps the appraisal (as before), Cancel takes it off.
+    said.length = 0;
+    attempt(() => C._invSetAppraiser(7, 's1', ''));
+    has(said[0] || '', 'Keep the appraisal on #12 Oil on canvas, harbour scene?', what + ': ⚠⚠ unlinking an appraised line asks whether to keep the appraisal');
+    has(said[0] || '', 'Its figure is recorded as Tom Beck’s appraisal. OK keeps it, with the appraiser named. Cancel takes the appraisal off: the figure stays on the line as the desk’s estimate, with no source.',
+      what + ': saying what each answer does');
+    eq([ref(C).apprId, ref(C).apprDoc, ref(C).valSource], ['', 'Tom Beck', 'Appraisal'], what + ': OK: the appraisal stands, named');
+    // Relinking it to the appraiser it already names asks nothing.
+    said.length = 0;
+    attempt(() => C._invSetAppraiser(7, 's1', '502'));
+    eq([said.length, String(ref(C).apprId)], [0, '502'], what + ': relinked to the appraiser it already names: nothing asked');
+    answer = false;
+    attempt(() => C._invSetAppraiser(7, 's1', ''));
+    const r = ref(C);
+    eq([r.fmv, r.valSource, r.valuedBy, r.apprId, r.apprDoc], [18500, undefined, 'desk', '', ''],
+      what + ': ⚠⚠ Cancel takes the appraisal off: the figure stays as the desk\'s, with no source and no appraiser');
+    eq(attempt(() => C.invAppraised(r)).val, false, what + ': not appraised');
+    eq(attempt(() => C._invGuardrailItems(7).length).val, 1, what + ': ⚠ and back on the guardrail: only an appraisal or a Waive clears it');
+  });
+
+  group('13 · the Q93 review: the appraisal\'s date, the work bar, the Values bar\'s lines, a report whose appraiser left the roster');
+  {
+    const EFF = (J) => J({ appraisers: [Object.assign({}, AP, { effectiveDate: '2026-09-30' }), Object.assign({}, AP2)] });
+    // A living line carrying a date from an earlier figure (a WorthPoint sale): the appraisal's own date replaces it.
+    const C = desk(EFF(LIVING), [LINE({ needsAppr: true, valDate: '2026-08-01' })]);
+    attempt(() => C._invSetAppraiser(7, 's1', '501'));
+    typeFigure(C, '18500');
+    eq(ref(C).valDate, '2026-09-30', '⚠⚠ the appraisal carries its appraiser\'s effective (value) date from the roster, over a date an earlier figure left');
+    typeFigure(C, '19000');
+    eq(ref(C).valDate, '2026-09-30', 'a figure retyped on the appraisal keeps its date');
+    const D = desk(LIVING(), [LINE({ needsAppr: true, valDate: '2026-08-01' })]);
+    attempt(() => D._invSetAppraiser(7, 's1', '501'));
+    typeFigure(D, '18500');
+    eq(D._photoRefs[7][0].valDate, '2026-10-24', '⚠ with none recorded, a living appraisal is dated the day it is recorded, not the earlier figure\'s date');
+    const D2 = desk(LIVING(), [LINE({ needsAppr: true, apprId: 501, apprDoc: LABEL, valSource: 'Appraisal', valuedBy: 'appraiser', fmv: 18500, valDate: '2026-10-20' })]);
+    typeFigure(D2, '19000');
+    eq(D2._photoRefs[7][0].valDate, '2026-10-20', '⚠ a figure retyped on a living appraisal that landed on an earlier day keeps that day (only the landing dates it)');
+    const E = desk(EFF(ESTATE), [LINE()]);
+    attempt(() => E._invSetAppraiser(7, 's1', '501'));
+    typeFigure(E, '18500');
+    eq(E._photoRefs[7][0].valDate, '2026-09-30', 'an estate line with no date of its own: the appraiser\'s effective date');
+    const F = desk(EFF(ESTATE), [LINE({ apprId: 501, apprDoc: LABEL, valDate: '2026-07-01' })]);
+    typeFigure(F, '9000');
+    eq(F._photoRefs[7][0].valDate, '2026-07-01', 'an estate\'s Valuation Date box is a person\'s: a date there stays (as group 2)');
+  }
+  {
+    // The work bar's Value N lines goes as the figure lands, repainted by id (it was left offering the line until a full render).
+    const C = desk(LIVING(), [LINE({ needsAppr: true })]);
+    attempt(() => C._invSetAppraiser(7, 's1', '501'));
+    const wb = C.dom.getElementById('inv-workbar');
+    wb.outerHTML = attempt(() => C._renderInvWorkbar(C.jobs[0], C._photoRefs[7])).val || '';
+    has(wb.outerHTML, '>Value 1 line</button>', 'fixture: the work bar offers the linked line for valuing while it has no figure');
+    typeFigure(C, '18500');
+    lacks(String(wb.outerHTML || ''), 'Value 1 line', '⚠⚠ the figure typed repaints the work bar: Value 1 line is gone');
+    has(String(wb.outerHTML || ''), 'id="inv-workbar"', '…the work bar itself redrawn in place');
+  }
+  {
+    // The Values bar's report line reads the lines it is handed (deskFoldState's `all`), as the rest of the bar does.
+    const C = desk(ESTATE(), [LINE({ apprId: 501, apprDoc: LABEL, fmv: 18500, valSource: 'Appraisal', valuedBy: 'appraiser' })]);
+    const on = (all) => (attempt(() => C.deskFoldState(7, C.jobs[0], 'values', all, '2026-10-24')).val || { bits: [] }).bits.map((b) => b.text).join(' | ');
+    has(on(C._photoRefs[7]), 'report not filed: Marie Wayland (1 item)', 'fixture: the lines handed in owe a report');
+    lacks(on([]), 'report not filed', '⚠ handed no lines, the bar names none owed (it read the job\'s lines whatever it was handed)');
+    has(code(fn('deskFoldState')), 'apprReportOwedLines(job, a.id, all)', 'deskFoldState hands it `all`');
+  }
+  {
+    // A report filed for an appraiser who then leaves the roster: listed under the roster with its Void, never lost with the row.
+    const C = desk(ESTATE({ signedRecords: [
+      { id: 'sr1', kind: 'appraisal_report', ref: '501', stableIds: ['s1'], label: 'Appraisal report · Marie Wayland', fileUrl: 'https://drive.google.com/file/d/R1/view', filedAt: 2000 }] }),
+      [LINE({ apprId: 501, apprDoc: LABEL, fmv: 18500, valSource: 'Appraisal', valuedBy: 'appraiser' })]);
+    let roster = attempt(() => C._renderAppraiserRoster(C.jobs[0])).val || '';
+    lacks(roster, 'no longer on the roster', 'fixture: a report whose appraiser is on the roster is listed on their row only');
+    eq((roster.match(/file\/d\/R1\/view/g) || []).length, 1, '…once');
+    const said = []; C.window.confirm = (m) => { said.push(m); return true; };
+    attempt(() => C.removeAppraiser(7, 501));
+    has(said[0] || '', 'any report filed stays in Drive and on the record, listed under the roster.', 'the Remove confirm says where the report stays listed');
+    roster = attempt(() => C._renderAppraiserRoster(C.jobs[0])).val || '';
+    has(textOf(roster), 'Reports filed for appraisers no longer on the roster:', '⚠⚠ listed under the roster once the appraiser has left it');
+    has(roster, 'href="https://drive.google.com/file/d/R1/view"', '…with its link');
+    has(roster, 'voidSignedRecord(7,\'sr1\')', '…and its Void, reachable');
+    eq((attempt(() => C.probatePackageReports(C.jobs[0])).val || []).map((x) => x.url), ['https://drive.google.com/file/d/R1/view'], 'the package still links it, as the desk lists it');
   }
 };

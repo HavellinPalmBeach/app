@@ -940,11 +940,13 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
     eq(await apF(APR), { bar: false, form: false, add: false }, 'fixture: the bar shut, so neither the form nor its button is on screen');
     const fmvBox = '#inv-row-p1 input[onchange="_invEdit(' + APR + ',\'p1\',\'fmv\',this)"]';
     if (!(await p.locator(fmvBox).isVisible())) await press('#panel-inventory button[onclick="setInvWhen(\'all\')"]', 'All');
-    await p.evaluate(() => { document.getElementById('inv-workbar').__mark6b = 'still here'; });
+    // ⚠ RESTATED (the Q93 review): a figure typed now repaints the work bar by id (its Value N lines), so the marker that the tab was
+    // not redrawn sits on the history bar's wrapper, which only a full render replaces.
+    await p.evaluate((id) => { document.getElementById('desk-fold-history-' + id).__mark6b = 'still here'; }, APR);
     ok(await p.locator(fmvBox).isVisible(), 'fixture: the portrait\'s value box on screen');
     await p.fill(fmvBox, '9000'); await p.press(fmvBox, 'Tab'); await p.waitForTimeout(600);
     eq(await p.evaluate((id) => (_photoRefs[id].find((r) => r.stableId === 'p1') || {}).fmv, APR), 9000, 'the value typed on the row is on the line');
-    eq(await p.evaluate(() => document.getElementById('inv-workbar').__mark6b), 'still here', 'fixture: by id, the tab not redrawn');
+    eq(await p.evaluate((id) => document.getElementById('desk-fold-history-' + id).__mark6b, APR), 'still here', 'fixture: by id, the tab not redrawn');
     has(await p.evaluate(() => (document.getElementById('inv-guardrail') || {}).textContent || ''), 'Add an appraiser to the roster above first',
       'the guardrail now sends the person to the roster');
     eq(await apF(APR), { bar: true, form: true, add: false }, '⚠⚠ the bar opened by its rule, and the appraisers\' form under it with it, its button aside');
