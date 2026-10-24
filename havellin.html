@@ -1472,7 +1472,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.24 · 10:49am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.24 · 11:05am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -27657,6 +27657,8 @@ function discardShot(jobId, stableId) {
   // counting them: "3 lines" invites a yes, "#12 Banksy · #13 hutch" is the work you are about
   // to lose and stops the tap. Every one of them is tombstoned, so Restore brings the lot back.
   var derived = ref.label === 'inventory' ? _invDerivedRefs(jobId, stableId) : [];
+  // ⚠ AND THE CLOSE-UPS ADDED TO THOSE LINES FROM THEIR RECORDS (2026-10-24), each filed under its own line (invAddCloseUp).
+  derived.forEach(function(d){ dets = dets.concat(_invDetailRefs(jobId, d.stableId)); });
   var inDrive = [ref].concat(dets).filter(function(r){ return !!_invFileId(r); });
   var msg = 'Delete ' + _shotDesc(ref) + '?';
   if (dets.length) msg += '\n\nIts ' + dets.length + ' detail shot'
@@ -27676,7 +27678,8 @@ function discardShot(jobId, stableId) {
     r.deletedAt = Date.now();
     // ⚠ A DETAIL SHOT TAKEN WITH ITS ITEM SAYS SO (P22), so Restore gives it back with the item and never brings back a
     // detail shot somebody binned on its own.
-    if (r !== ref && r.label === 'detail') r.deletedWith = ref.stableId;
+    // A close-up of a line split off this photograph is taken with THAT line, so restoring the line gives it back.
+    if (r !== ref && r.label === 'detail') r.deletedWith = r.groupId || ref.stableId;
     // ⚠ SO THE UNDO BUFFER CAN TELL THE TRUTH. Restore gives the ROW back — name, value,
     // disposition, custody — and it cannot give the photograph back, because that is in
     // Google's own bin. Stamped here rather than in the Drive callback: an async write back
@@ -37792,7 +37795,7 @@ function _avItemPayload(jobId, ref) {
     condition: ref.condition || '', fieldNote: ref.fieldNote || '', agentBasis: ref.agentBasis || '',
     fileId: mode === 'comps' ? _invFileId(ref) : '',
     details: mode === 'comps'
-      ? _agDetailRefs(jobId, ref.derivedFrom || ref.stableId).map(function(d) { return { fileId: _invFileId(d) }; })
+      ? invLineCloseUps(jobId, ref).map(function(d) { return { fileId: _invFileId(d) }; })
       : []
   };
 }
@@ -38795,17 +38798,13 @@ function _renderInvPanel(job, ref) {
   // What the field recorded over this shot. The note is the concierge's own words ("signed on
   // the base", "Mom's from Italy", "promised to Karen") and the agent's first input; the
   // detail shots are the close-ups linked to this line at capture, never lines of their own.
-  var det = _invDetailRefs(jid, ref.stableId);
   var sibs = _invPhotoSiblings(jid, ref);
   var fieldHtml = (ref.manual ? '' : '<div style="margin-bottom:10px;">'
     + '<div style="font-size:10px;font-weight:700;color:var(--bronze);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;">From the field</div>'
     + '<div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;">Field note</div>'
     + '<textarea rows="2" style="width:100%;font-size:11px;padding:5px 7px;box-sizing:border-box;" '
       + 'onchange="_invEdit(' + jid + ',\'' + ref.stableId + '\',\'fieldNote\',this)">' + esc(ref.fieldNote || '') + '</textarea>'
-    + (det.length
-        ? '<div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin:6px 0 2px;">Detail shots \u00b7 ' + det.length + '</div>'
-          + '<div style="display:flex;gap:6px;flex-wrap:wrap;">' + det.map(function(d){ return _invThumbHTML(jid, d, 120); }).join('') + '</div>'
-        : '')
+    + _invCloseUpsHtml(jid, ref)
     // What Agent One noticed in this photograph, every notice: a Look at this off the list above the rows is read here (Q90).
     + _agRecordNoticesHtml(job, ref)
     + '</div>');
@@ -38823,6 +38822,12 @@ function _renderInvPanel(job, ref) {
                       : '<button class="btn-s" onclick="invSplitItemClick(' + jid + ',\'' + ref.stableId + '\')" '
                         + 'title="Another object is in this same photograph — add it as its own line, sharing the image">'
                         + '&#10133; Another item in this photo</button>')
+        // ⚠ A CLOSE-UP AFTER THE FACT (2026-10-24): one of THIS line, from the iPad's camera or a photograph already taken.
+        // Offered wherever the line has a photograph to be a close-up of (invCloseUpRefusal, asked again by the handler).
+        + (invCloseUpRefusal(ref) ? ''
+            : '<label class="btn-s inv-cu-add" title="A close-up of this item: the back, a mark, a label. It is filed with this line and never adds one">'
+              + '<input type="file" accept="image/*" style="display:none;" onchange="invAddCloseUp(' + jid + ',\'' + ref.stableId + '\',this)">'
+              + '&#10133; Close-up</label>')
         // ⚠ ONE REMOVE FOR EVERY LINE (P16): typed, photographed or split. It takes the LINE, never
         // the photograph — the room's 🗑 is the only thing that deletes an image.
         + '<button class="btn-s" onclick="invRemoveLine(' + jid + ',\'' + ref.stableId + '\')" style="color:#c0392b;" '
@@ -39609,6 +39614,96 @@ function _invDetailRefs(jobId, stableId) {
   return (_photoRefs[jobId] || []).filter(function(r){
     return r.label === 'detail' && r.groupId === stableId && !r.deletedAt;
   }).sort(function(a, b){ return (a.ts || 0) - (b.ts || 0); });
+}
+
+// ⚠⚠ A CLOSE-UP AFTER THE FACT (2026-10-24; Anthony, off a line Agent One flagged *Look at this* for a blurred mark under a
+// stack of plates: *"is there a workflow for taking a detail photo after the fact and attaching it to [the] item … saying
+// this is the same item?"*; asked, he took **+ Close-up** on the line). The camera's Close-up files under the last item
+// shot in that session and nothing else, so a close-up missed in the house could be had only as a new line, with the old
+// one removed and its number spent. **+ Close-up** in a line's record takes one (the iPad's camera, or a photograph already
+// taken) and files it through the one writer, `_captureShot`, as a close-up of THAT LINE: `groupId` is the line itself, a
+// line split off a photograph included, so it shows on the line it was added to. It adds no line, names nothing and
+// touches nothing on the line; Agent Two reads it with the line (`invLineCloseUps`), and the room's bin takes it with the
+// photograph its line comes from (`discardShot`).
+function invCloseUpRefusal(ref) {
+  if (!ref || ref.label !== 'inventory') return 'That line is not on this job.';
+  if (ref.deletedAt) return 'That line has been removed. Give it back under Removed items first.';
+  if (ref.manual || !_invHasPhoto(ref)) return 'This line has no photograph yet. Photograph the item in its room first; a close-up goes with that photograph.';
+  return '';
+}
+function invAddCloseUp(jobId, stableId, input) {
+  var file = input && input.files && input.files[0];
+  if (!file) return false;
+  var why = invCloseUpRefusal(_getPhotoRef(jobId, stableId));
+  if (!why && file.type && !/^image\//.test(file.type)) why = 'That file is not a photograph. Choose a photo, or take one.';
+  if (why) { input.value = ''; alert(why); return false; }
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    // Asked again once the bytes are in: the line can have gone while the photo was being chosen.
+    var ref = _getPhotoRef(jobId, stableId), again = invCloseUpRefusal(ref);
+    if (again) { alert(again); return; }
+    var src = _invPhotoSource(jobId, ref) || ref;
+    _captureShot(jobId, ref.roomIdx != null ? ref.roomIdx : src.roomIdx, 'detail', ev.target.result, {
+      groupId: ref.stableId,
+      // A press just made, so the whole desk is drawn (the row's count of close-ups too); the upload's answers come
+      // later, under whatever is being typed by then, and repaint the record's close-ups alone, by id.
+      onRef: function() { renderInventoryTab(); },
+      onThumb: function() { _invCloseUpsRepaint(jobId, stableId); },
+      onDone: function() { _invCloseUpsRepaint(jobId, stableId); }
+    });
+  };
+  reader.readAsDataURL(file);
+  input.value = '';   // so the same photograph can be chosen again
+  return true;
+}
+// The close-ups that go to Agent Two with a line: the ones added to it from its record first, then its photograph's (the
+// Close-up shutter files under the photograph, so a line split off one reads those too). Capped as Agent One's are.
+function invLineCloseUps(jobId, ref) {
+  if (!ref) return [];
+  var own = ref.derivedFrom ? _agDetailRefs(jobId, ref.stableId) : [];
+  return own.concat(_agDetailRefs(jobId, ref.derivedFrom || ref.stableId)).slice(0, AGENT_MAX_DETAILS);
+}
+// The close-ups in a line's record, under From the field, each with its state. Its own host, so the upload's answers
+// repaint it alone (_invCloseUpsRepaint); a tile still on its way, or not saved, says so, with Retry.
+function _invCloseUpsHtml(jobId, ref) {
+  var det = _invDetailRefs(jobId, ref.stableId);
+  return '<div id="inv-cu-' + esc(ref.stableId) + '">' + (det.length
+    ? '<div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin:6px 0 2px;">Detail shots \u00b7 ' + det.length + '</div>'
+      + '<div style="display:flex;gap:6px;flex-wrap:wrap;">' + det.map(function(d){ return _invCloseUpTileHtml(jobId, d); }).join('') + '</div>'
+    : '') + '</div>';
+}
+function _invCloseUpTileHtml(jobId, d) {
+  var state = d.status === 'failed'
+      ? '<div class="inv-cu-state" style="font-size:10px;color:#c0392b;margin-top:3px;">&#9888; Not saved '
+        + '<button class="btn-s" onclick="invRetryCloseUp(' + jobId + ',\'' + d.stableId + '\')" style="font-size:9px;padding:1px 5px;">Retry</button></div>'
+    : d.status === 'uploading' ? '<div class="inv-cu-state" style="font-size:10px;color:var(--gray);margin-top:3px;">Uploading&hellip;</div>'
+    : '';
+  return '<div data-cu-id="' + esc(d.stableId) + '">' + _invThumbHTML(jobId, d, 120) + state + '</div>';
+}
+function _invCloseUpsRepaint(jobId, stableId) {
+  var el = document.getElementById('inv-cu-' + stableId), ref = _getPhotoRef(jobId, stableId);
+  if (!el || !ref) return false;
+  el.outerHTML = _invCloseUpsHtml(jobId, ref);
+  var host = document.getElementById('inv-cu-' + stableId);
+  if (!host) return true;
+  // The photograph just taken draws at once, off this device's copy, until Drive's thumbnail is in the cache.
+  Array.prototype.forEach.call(host.querySelectorAll('[data-cu-id]'), function(t) {
+    var small = _localShotThumbs[t.getAttribute('data-cu-id')], tile = t.firstChild;
+    if (!small || !tile || !tile.style) return;
+    tile.style.backgroundImage = 'url("' + small + '")';
+    tile.style.backgroundSize = 'cover';
+    tile.style.backgroundPosition = 'center';
+    for (var i = tile.childNodes.length - 1; i >= 0; i--) { if (tile.childNodes[i].nodeType === 3) tile.removeChild(tile.childNodes[i]); }
+  });
+  _invPaintThumbs(jobId, host);
+  return true;
+}
+function invRetryCloseUp(jobId, detailId) {
+  var d = _getPhotoRef(jobId, detailId);
+  if (!d || d.label !== 'detail') return false;
+  retryPhotoUpload(jobId, detailId, function() { _invCloseUpsRepaint(jobId, d.groupId); });
+  _invCloseUpsRepaint(jobId, d.groupId);
+  return true;
 }
 
 // ═════════════════════════ THE IN-APP CAMERA (2026-09-19) ═════════════════════════
@@ -40523,7 +40618,7 @@ function _doPhotoUpload(jobId, dataUrl, filename, stableId, subfolderName, onUpd
   });
 }
 
-function retryPhotoUpload(jobId, stableId) {
+function retryPhotoUpload(jobId, stableId, after) {
   var ref = _getPhotoRef(jobId, stableId);
   if (!ref) return;
   var dataUrl = _photoRetryData[stableId];
@@ -40556,6 +40651,7 @@ function retryPhotoUpload(jobId, stableId) {
       _updatePhotoStatusEl(jobId, ref.roomIdx, ref.label);
       _invCacheLocalThumb(jobId, stableId, dataUrl);
       if (ref.label === 'inventory' || ref.label === 'detail') _scheduleInventorySync(jobId);
+      if (after) after();   // the desk's close-ups (invRetryCloseUp)
     });
   }
 }

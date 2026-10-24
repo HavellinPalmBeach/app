@@ -469,7 +469,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(sandbox({ vars: ['INV_SALE_DISPOSITIONS'] }).INV_SALE_DISPOSITIONS.slice().sort(), ['Auction', 'Consign', 'Sell'], 'Auction and Consign sell, as Sell does');
     eq(Object.keys(sandbox({ vars: ['INV_PLAN_CHANNEL_KINDS'] }).INV_PLAN_CHANNEL_KINDS), ['Donate', 'Junk', 'Auction', 'Sell'], 'the kinds that fill themselves in from the one confirmed vendor');
     has(t, 'With one vendor of that kind confirmed on the Job Plan, it fills itself in.', 'as the page says');
-    ['&#10133; Another item in this photo</button>', 'Remove line</button>', '>Open photo in Drive</a>'].forEach((w) => has(code(fn('_renderInvPanel')), w, 'the record carries ' + decode(w.replace(/<[^>]+>/g, ''))));
+    // 2026-10-24: + Close-up, a close-up missed in the house, is a label over the record's chooser (closeup-later.test.js).
+    ['&#10133; Another item in this photo</button>', '&#10133; Close-up</label>', 'Remove line</button>', '>Open photo in Drive</a>'].forEach((w) => has(code(fn('_renderInvPanel')), w, 'the record carries ' + decode(w.replace(/<[^>]+>/g, ''))));
     has(SRC, 'IN PROGRESS</strong> stamp until every line is ticked &mdash; they are never withheld.', 'papers print marked IN PROGRESS, never withheld');
     has(t, 'Papers print marked IN PROGRESS until every item is reviewed; they are never held back.', 'as the page says');
     has(code(fn('_renderInvWorkbar')), "'+ Add line item'", '+ Add line item');
@@ -625,10 +626,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(row, '_invRowPhotoHtml(jid, ref)', 'the row draws its photograph through the link');
     has(photo, '\'<a class="inv-c-photo inv-photo-link" href="\' + esc(ref.driveFileUrl) + \'" target="_blank"', '…a link to its file in Drive');
     has(photo, '_invThumbHTML(jid, ref, 72)', '…round the photo box, whether or not its thumbnail came');
-    has(t, 'Photo Opens the photo in Drive.', 'as the page says');
+    has(t, 'Photo Opens it in Drive.', 'as the page says');
     has(t, 'No thumbnails Nothing is lost. Reload, or tap the box for Drive.', '…and its tricky spot');
     has(row, "+ '\\',\\'qty\\',this)\">", 'the count is a box on the row, written through the one writer');
-    has(t, 'Correct the name and count, choose where it goes, type who takes it if it is leaving, accept or type the value.', 'as the page says');
+    has(t, 'Correct the name and count, choose where it goes, type who takes it if it leaves, accept or type the value.', 'as the page says');
     const S = sandbox({ fns: ['invSplitItemN', '_invPhotoSource', '_getPhotoRef', '_setPhotoRef', '_invFileId', '_photoUid'],
       vars: ['_photoUidSeq', 'INV_DEFAULT_CATEGORY', 'INV_SPLIT_MAX'],
       stubs: { _photoRefs: { 7: [{ stableId: 'p', label: 'inventory', roomIdx: 1, ts: 1, driveFileId: 'F', driveFileUrl: 'u', disposition: 'Donate', channel: 'Habitat for Humanity' }] },
