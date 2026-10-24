@@ -1,0 +1,671 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Evening Desk &middot; Havellin Palm Beach</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;0,700;1,400&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --paper:#faf8f4;
+  --surface:#f3efe6;
+  --ink:#2a241d;
+  --ink-soft:#5c5347;
+  --grey:#8a8078;
+  --bronze:#7a5a2e;
+  --bronze-bright:#a67c45;
+  --red:#8f2323;
+  --red-ground:#f7eaea;
+  --green:#4f6b2a;
+  --green-ground:#eef2e4;
+  --rule:#e3ddd1;
+  --rule-strong:#cec5b4;
+
+  --ff-display:'Spectral', Georgia, 'Times New Roman', serif;
+  --ff-body:'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --ff-mono:'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#17140f;
+    --surface:#211c16;
+    --ink:#ece5d9;
+    --ink-soft:#b5aa99;
+    --grey:#8d8375;
+    --bronze:#c9a36a;
+    --bronze-bright:#dbb987;
+    --red:#e89393;
+    --red-ground:#33191a;
+    --green:#a6c478;
+    --green-ground:#1e2516;
+    --rule:#332c23;
+    --rule-strong:#4a4034;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#17140f;
+  --surface:#211c16;
+  --ink:#ece5d9;
+  --ink-soft:#b5aa99;
+  --grey:#8d8375;
+  --bronze:#c9a36a;
+  --bronze-bright:#dbb987;
+  --red:#e89393;
+  --red-ground:#33191a;
+  --green:#a6c478;
+  --green-ground:#1e2516;
+  --rule:#332c23;
+  --rule-strong:#4a4034;
+}
+
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--ff-body);
+  font-size:16px;
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{
+  max-width:760px;
+  margin:0 auto;
+  padding-inline:22px;
+  padding-block:56px 96px;
+}
+
+/* ---- masthead ---- */
+.mast{border-bottom:2px solid var(--bronze);padding-bottom:26px;}
+.eyebrow{
+  font-size:11px;letter-spacing:.16em;text-transform:uppercase;
+  font-weight:600;color:var(--bronze);margin:0 0 14px;
+}
+h1{
+  font-family:var(--ff-display);
+  font-size:clamp(34px,6.5vw,50px);
+  line-height:1.06;font-weight:700;margin:0;
+  text-wrap:balance;letter-spacing:-.015em;
+}
+.standfirst{
+  font-family:var(--ff-display);
+  font-size:18px;font-style:italic;line-height:1.55;
+  color:var(--ink-soft);margin:16px 0 0;max-width:60ch;
+}
+.meta{
+  display:flex;flex-wrap:wrap;gap:8px 26px;
+  margin-top:22px;font-size:12px;color:var(--grey);
+}
+.meta b{color:var(--ink-soft);font-weight:600;}
+
+/* ---- shared blocks ---- */
+section{margin-top:52px;}
+h2{
+  font-family:var(--ff-display);
+  font-size:26px;font-weight:600;line-height:1.2;
+  margin:0 0 6px;text-wrap:balance;letter-spacing:-.01em;
+}
+h3{
+  font-size:13px;letter-spacing:.1em;text-transform:uppercase;
+  font-weight:700;color:var(--bronze);margin:30px 0 10px;
+}
+p{margin:0 0 14px;max-width:66ch;}
+.lede{color:var(--ink-soft);margin-bottom:26px;max-width:64ch;}
+strong{font-weight:700;}
+a{color:var(--bronze);}
+.btn{
+  font-family:var(--ff-body);font-size:.88em;font-weight:600;white-space:nowrap;
+  border:1px solid var(--rule-strong);border-radius:4px;padding:0 5px;background:var(--surface);
+}
+ul.plain{margin:0;padding-left:0;list-style:none;}
+ul.plain li{
+  position:relative;padding-left:20px;margin-bottom:9px;
+  font-size:15px;line-height:1.55;max-width:64ch;
+}
+ul.plain li::before{
+  content:'';position:absolute;left:3px;top:9px;
+  width:5px;height:5px;border-radius:50%;background:var(--bronze-bright);
+}
+ul.plain li.crit::before{background:var(--red);}
+
+/* ---- the three rules ---- */
+.rules{
+  margin-top:44px;
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:1px;
+  background:var(--rule-strong);border:1px solid var(--rule-strong);
+}
+.rule-card{background:var(--surface);padding:20px 22px;}
+.rule-card .tag{
+  font-family:var(--ff-mono);font-size:10px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--bronze);font-weight:500;
+  display:block;margin-bottom:8px;
+}
+.rule-card h4{
+  font-family:var(--ff-display);font-size:19px;font-weight:600;
+  margin:0 0 8px;line-height:1.25;
+}
+.rule-card p{font-size:13.5px;margin:0;color:var(--ink-soft);line-height:1.55;}
+
+/* ---- tables ---- */
+.tbl{width:100%;border-collapse:collapse;margin-top:8px;font-size:14.5px;}
+.tbl th{
+  text-align:left;font-size:10.5px;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--grey);font-weight:700;padding:0 12px 8px 0;
+  border-bottom:1px solid var(--rule-strong);
+}
+.tbl td{padding:11px 12px 11px 0;border-bottom:1px solid var(--rule);vertical-align:top;}
+.tbl td:first-child{font-weight:600;width:26%;}
+.tbl td.how{color:var(--ink-soft);font-size:13.5px;width:24%;}
+.tbl th:last-child,.tbl td:last-child{padding-right:0;}
+@media screen{ .tbl-scroll{overflow-x:auto;} }
+
+/* ---- the four colours ---- */
+.tones{list-style:none;margin:0 0 22px;padding:0;display:flex;flex-wrap:wrap;gap:8px 24px;font-size:14px;color:var(--ink-soft);}
+.tones b{color:var(--ink);font-weight:700;}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:7px;vertical-align:0;}
+.dot.grey{background:var(--grey);}
+.dot.amber{background:var(--bronze-bright);}
+.dot.red{background:var(--red);}
+.dot.green{background:var(--green);}
+.opens{font-size:14px;color:var(--ink-soft);margin:-4px 0 10px;max-width:64ch;}
+.opens b{color:var(--ink);}
+.test{
+  margin-top:18px;font-family:var(--ff-display);font-size:18px;font-style:italic;line-height:1.5;
+  color:var(--bronze);max-width:60ch;
+}
+
+/* ---- staged sequence ---- */
+.stages{margin-top:10px;}
+.stage{
+  position:relative;
+  padding-left:52px;
+  padding-bottom:34px;
+  border-left:2px solid var(--rule-strong);
+  margin-left:14px;
+}
+.stage:last-child{border-left-color:transparent;padding-bottom:4px;}
+.stage::before{
+  content:attr(data-n);
+  position:absolute;left:-15px;top:0;
+  width:28px;height:28px;border-radius:50%;
+  background:var(--bronze);color:var(--paper);
+  font-family:var(--ff-mono);font-size:12px;font-weight:500;
+  display:flex;align-items:center;justify-content:center;
+}
+.stage-h{
+  font-family:var(--ff-display);font-size:21px;font-weight:600;
+  margin:0 0 3px;line-height:1.25;
+}
+.stage-when{
+  font-size:11px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--grey);font-weight:600;margin:0 0 14px;
+}
+.stage ul{margin:0;padding-left:0;list-style:none;}
+.stage li{
+  position:relative;padding-left:20px;margin-bottom:9px;
+  font-size:15px;line-height:1.55;max-width:62ch;
+}
+.stage li::before{
+  content:'';position:absolute;left:3px;top:9px;
+  width:5px;height:5px;border-radius:50%;background:var(--bronze-bright);
+}
+.stage li.crit::before{background:var(--red);}
+
+/* ---- estate, living, prep ---- */
+.split{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:1px;
+  background:var(--rule-strong);border:1px solid var(--rule-strong);margin-top:6px;
+}
+.side{background:var(--paper);padding:18px 20px 10px;min-width:0;}
+/* Three columns on a page two wide: the third runs full width rather than leaving a bare cell beside it. */
+.split .side:nth-child(3){grid-column:1 / -1;}
+.side h4{font-family:var(--ff-display);font-size:19px;font-weight:600;margin:0 0 12px;line-height:1.25;}
+.side.own h4{color:var(--bronze);}
+
+/* ---- tricky spots ---- */
+.tricky{margin:6px 0 0;}
+.tricky dt{font-weight:700;font-size:15px;margin-top:16px;}
+.tricky dd{margin:4px 0 0;font-size:14.5px;line-height:1.6;color:var(--ink-soft);max-width:64ch;}
+
+/* ---- tonight's items, in order ---- */
+ol.desk{margin:6px 0 0;padding-left:0;list-style:none;counter-reset:d;}
+ol.desk li{
+  counter-increment:d;position:relative;padding-left:40px;
+  margin-bottom:14px;font-size:15px;line-height:1.55;max-width:64ch;
+}
+ol.desk li::before{
+  content:counter(d);
+  position:absolute;left:0;top:0;width:26px;height:26px;border-radius:50%;
+  border:1.5px solid var(--bronze);color:var(--bronze);
+  font-family:var(--ff-mono);font-size:12px;font-weight:500;
+  display:flex;align-items:center;justify-content:center;
+}
+
+/* ---- the rules that never bend ---- */
+.gaps{
+  margin-top:52px;background:var(--surface);border-left:3px solid var(--bronze);
+  padding:22px 24px 12px;
+}
+.gaps h2{font-size:22px;margin-bottom:12px;}
+.gaps li{font-size:14.5px;}
+
+/* ---- pocket card ---- */
+.card{
+  margin-top:56px;border:2px solid var(--ink);padding:24px 26px 14px;background:var(--paper);
+}
+.card .eyebrow{margin-bottom:6px;}
+.card h2{font-size:28px;margin-bottom:16px;}
+.card ol{margin:0;padding-left:0;list-style:none;counter-reset:c;}
+.card li{
+  counter-increment:c;position:relative;padding-left:38px;
+  margin-bottom:11px;font-size:15.5px;line-height:1.45;
+}
+.card li::before{
+  content:counter(c,decimal-leading-zero);
+  position:absolute;left:0;top:2px;
+  font-family:var(--ff-mono);font-size:12px;font-weight:500;color:var(--bronze);
+}
+.card li b{font-weight:700;}
+
+/* ---- footer ---- */
+footer{
+  margin-top:64px;padding-top:22px;border-top:1px solid var(--rule-strong);
+  font-size:12.5px;color:var(--grey);line-height:1.65;
+}
+footer p{max-width:66ch;}
+
+/* The phone block is scoped to the screen: Chrome lays Letter out at about 739 px, and an unscoped rule
+   at this width would reach the printed page. */
+@media screen and (max-width:820px){
+  .wrap{padding-inline:16px;padding-block:38px 64px;}
+  .stage{padding-left:36px;margin-left:10px;}
+  .stage::before{left:-14px;width:26px;height:26px;font-size:11px;}
+  .tbl td:first-child{width:34%;}
+  .card{padding:20px 18px 10px;}
+  .gaps{padding:20px 18px 10px;}
+  .btn{white-space:normal;}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important;}
+}
+
+@media print{
+  @page{margin:.6in .6in;}
+  :root{--paper:#fff;--surface:#f4f1ec;--ink:#1a1a1a;--ink-soft:#333;--grey:#555;
+        --rule:#ccc;--rule-strong:#999;--red-ground:#f6eded;--green-ground:#f1f4ea;}
+  body{background:#fff;}
+  .wrap{max-width:100%;padding-block:0;padding-inline:0;}
+  h1{font-size:28px;}
+  h2,h3,.stage-h,.rule-card h4,.side h4{page-break-after:avoid;break-after:avoid;}
+  /* Keep a note (a rule, a stage, a side, the rules box) and a table row whole; never a long list. */
+  .rule-card,.stage,.side,.tbl tr,.gaps{page-break-inside:avoid;break-inside:avoid;}
+  .card{page-break-before:always;break-before:page;page-break-inside:avoid;break-inside:avoid;}
+  p,li{orphans:3;widows:3;}
+  .tbl{font-size:11.5px;}
+  footer{page-break-before:avoid;break-before:avoid;}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="mast">
+    <p class="eyebrow">Havellin Palm Beach &middot; Desk Guide</p>
+    <h1>The Evening Desk</h1>
+    <p class="standfirst">How we work the Job Admin &amp; Inv tab after a day in a client&rsquo;s house. Start at the top,
+      work down, and stop when the bars under the items are grey.</p>
+    <div class="meta">
+      <span><b>For</b> Anthony and Ashley, at the laptop</span>
+      <span><b>In the app</b> The top of the Job Admin &amp; Inv tab</span>
+      <span><b>Status</b> Draft for Anthony</span>
+      <span><b>Issued</b> 23 Oct 2026</span>
+    </div>
+  </header>
+
+  <section>
+    <h2>How it works</h2>
+    <p>The tab runs in the order of an evening: what is urgent and the money step at the top, tonight&rsquo;s items in the
+      middle, four bars at the foot.</p>
+  </section>
+
+  <div class="rules">
+    <div class="rule-card">
+      <span class="tag">Rule 1</span>
+      <h4>Red first, then money, then items</h4>
+      <p>Anything red at the top comes first, then the brown band&rsquo;s one step, then tonight&rsquo;s items. The bars come
+        last.</p>
+    </div>
+    <div class="rule-card">
+      <span class="tag">Rule 2</span>
+      <h4>The row is the work</h4>
+      <p>An item&rsquo;s row holds its name, where it goes, who takes it and its value. Open its
+        <span class="btn">&#9662;</span> record only for the exceptions.</p>
+    </div>
+    <div class="rule-card">
+      <span class="tag">Rule 3</span>
+      <h4>Grey can wait</h4>
+      <p>Amber needs you tonight; red needs you now. Grey is for your information.</p>
+    </div>
+  </div>
+
+  <section>
+    <h2>Before you sit down</h2>
+    <ul class="plain">
+      <li>No room on the Job Plan should say <em>&#9888; not saved</em>. If one does, tap <span class="btn">Retry</span> there
+        first.</li>
+      <li>Leave field mode (<span class="btn">Field &middot; exit</span>): it hides this tab.</li>
+      <li>Pick the client under <strong>CLIENT</strong>. The client open on the Job Plan is already picked.</li>
+      <li>On a phone the timeline under the brown band folds to one summary (<em>Timeline &middot; 3 of 8 done</em>); tap it
+        to open. The selection bar shrinks to <em>2 selected</em>, <span class="btn">Actions &#9662;</span> and
+        <span class="btn">Clear</span>, its buttons under Actions.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>1. The top of the page</h2>
+    <p>The schedule says where the job stands: <em>Working day 6 of 14 &middot; 40% of the work done</em>.</p>
+
+    <h3>Anything urgent</h3>
+    <p>Under it, only when something cannot wait, a strip of warnings, each with its button. Each goes once it is dealt
+      with.</p>
+    <ul class="plain">
+      <li class="crit"><strong>CALL ANTHONY IMMEDIATELY</strong> after an injury, a missing item or a worry about an older
+        person: make the call, then press <span class="btn">I called Anthony</span>
+        (<a href="incident-guide.html">Reporting an Incident</a>). An open injury or hazard stays red until resolved; other
+        open incidents show in amber.</li>
+      <li class="crit">An original will or cash found on site, until it is handed over and receipted:
+        <span class="btn">Open Found on site</span>.</li>
+      <li class="crit">A key or access item marked lost: <span class="btn">Open Keys &amp; access</span>.</li>
+      <li class="crit"><em>Firearms flagged on this job &mdash; photograph in place, nothing moves</em>, where intake flagged
+        firearms, with a link to the Protocol.</li>
+      <li>An incident still owing one of its promises, red once its day has passed: <span class="btn">Open Incidents</span>.</li>
+      <li>In amber, an estate with no matter type recorded: set it in Edit Client.</li>
+    </ul>
+
+    <h3>The brown band</h3>
+    <p>One step and one filled button, such as <span class="btn">&#9993; Send midpoint invoice</span>. Press it when it is
+      due. The answer to a send or a filing appears in the band, so look up after you press.</p>
+
+    <h3>Must find</h3>
+    <p>Press <span class="btn">Found it</span> as the photos turn each one up. Once all are found the list shrinks to
+      <em>&#10003; All 3 must-finds found</em>; <span class="btn">Show found</span> brings it back.</p>
+  </section>
+
+  <section>
+    <h2>2. Job Admin</h2>
+    <p><strong>Job Admin &mdash; desk paperwork</strong> is the closing checklist. Leave it shut mid-job: anything urgent in it is already in the strip above. Open it at the close: it
+      lists what the app recorded by itself (rooms cleared, hours, the final invoice, the signed papers) and the few boxes only
+      a person ticks. On Home Prep it starts open.</p>
+  </section>
+
+  <section>
+    <h2>3. Tonight&rsquo;s items</h2>
+    <p class="lede">Always open. The <strong>Inventory Review</strong> bar carries the buttons in the order you press them.
+      The list opens on <strong>Today</strong> when something was photographed today.</p>
+    <ol class="desk">
+      <li><span class="btn">Name N shots</span>. Agent One names each photo: what it is, its category, how many; never a value
+        or a destination. The room check follows by itself and flags anything photographed twice in a room;
+        <span class="btn">Check N rooms</span> runs it again.</li>
+      <li><strong>Agent One&rsquo;s notes</strong>, under <em>Agent One raised 3 things to look at</em>. <em>Must find</em>,
+        <em>Firearm</em> and <em>Possible NFA item</em> in red, and they stay (a Must find goes quiet once every must-find is
+        found); <em>Look at this</em> in amber, gone once you review the item. Quiet notes stay in the item&rsquo;s record.
+        <span class="btn">Show the item</span> jumps to it and opens it.</li>
+      <li><strong>Possible duplicates.</strong> Compare the photos, then <span class="btn">Remove</span> the extra, or
+        <span class="btn">Not duplicates</span> if they really are two things.</li>
+      <li><span class="btn">Value N lines</span>. Agent Two values the named items. Each figure stays unreviewed until you
+        press <span class="btn">Accept value</span>.</li>
+      <li><strong><em>Not yet decided</em>, room by room.</strong> Correct the name, choose where it goes, type who takes it if
+        it is leaving, accept or type the value. Tick <strong>Reviewed</strong> to confirm a name Agent One gave. A name you
+        typed, with a destination chosen, counts as reviewed by itself.</li>
+      <li><strong>A drawer photographed piece by piece.</strong> Tick the rows (or <span class="btn">Select all</span> on the
+        group) and a selection bar appears at the foot. <span class="btn">Remove lines</span> takes them off the list and keeps
+        the photos; <span class="btn">Set disposition&hellip;</span> gives them all one destination, such as Donate.</li>
+      <li><strong>The Needs you counts</strong> cover every day. While Today is on, the filter row names what earlier days left
+        undecided (<em>1 from earlier days still undecided: press All</em>): press <span class="btn">All</span> and finish
+        them.</li>
+    </ol>
+
+    <h3>The row</h3>
+    <div class="tbl-scroll"><table class="tbl">
+      <thead><tr><th>Box</th><th>What goes in it</th></tr></thead>
+      <tbody>
+        <tr><td>Where it goes</td><td>The camera&rsquo;s words, three of them renamed: <em>New home</em> is
+          <strong>Move</strong>, <em>To a person</em> is <strong>Distribute</strong>, <em>Remove</em> is
+          <strong>Junk</strong>.</td></tr>
+        <tr><td>Who takes it</td><td>Shown once an item is leaving or moving. On an estate the beneficiaries are offered as
+          you type. With one vendor of that kind confirmed on the Job Plan, it fills itself in.</td></tr>
+        <tr><td>Value</td><td>Fair market value; on an estate, as of the date of death.</td></tr>
+        <tr><td>&#9662;</td><td>The rest: category, condition, serial number, appraiser, chain of custody,
+          <span class="btn">&#10133; Another item in this photo</span>, <span class="btn">Remove line</span>.</td></tr>
+      </tbody>
+    </table></div>
+    <p style="margin-top:14px;">Papers print marked <strong>IN PROGRESS</strong> until every item is reviewed; they are never
+      held back. <span class="btn">+ Add line item</span> adds anything with no photo. A car or boat from the walkthrough
+      waits under the Inventory Review bar (<em>From the Estimate Walkthrough</em>) until you press
+      <span class="btn">Add &rarr;</span>.</p>
+  </section>
+
+  <section>
+    <h2>4. The four bars</h2>
+    <p class="lede">Each bar says in a few words whether anything inside needs you. It opens by itself when its work is due
+      and never shuts by itself; what you open or shut stays that way until you reload.</p>
+    <ul class="tones">
+      <li><span class="dot grey"></span><b>Grey</b> for your information</li>
+      <li><span class="dot amber"></span><b>Amber</b> needs you</li>
+      <li><span class="dot red"></span><b>Red</b> needs you now</li>
+      <li><span class="dot green"></span><b>&#10003; Green</b> all done</li>
+    </ul>
+
+    <h3>Releases &amp; signed papers</h3>
+    <p class="opens"><b>Opens by itself</b> when items wait for written approval that no request has carried (<em>3 items need
+      written approval: send a request</em>), when a drafted request waits for <span class="btn">I&rsquo;ve sent it</span>, or
+      when a signed approval has no copy filed.</p>
+    <ul class="plain">
+      <li><strong>Approval request.</strong> <span class="btn">Send request</span> makes a Gmail draft with the request as a
+        PDF: to every representative with an email, the estate attorney copied, or to the client on living work. Send it from
+        Gmail, then press <span class="btn">I&rsquo;ve sent it</span>. From then on
+        <span class="btn">Record the signed request</span> waits here for the signed copy.</li>
+      <li><strong>Leaving the property &middot; sign out on the iPad.</strong> One row for each person, vendor, charity or
+        appraiser taking things away, with the item numbers. <span class="btn">Sign out N to &hellip;</span> opens the sheet;
+        they sign with a finger and <span class="btn">Sign and file</span> puts it in Drive. Back from an appraiser:
+        <span class="btn">Check N back in from &hellip;</span>. On an estate, <span class="btn">Print receipt</span> prints a
+        paper receipt for a person instead.</li>
+      <li><strong>Signed release approvals.</strong> One row for each day signatures were recorded, with
+        <span class="btn">File signed copy</span>.</li>
+      <li><strong>Beneficiaries &amp; specific bequests</strong>, on an estate: the list counsel or the representative gives
+        you (<span class="btn">+ Add a beneficiary</span>, <span class="btn">+ Add a specific bequest</span>). When a promised
+        item turns up, type its item number and press <span class="btn">Match</span>.</li>
+    </ul>
+
+    <h3>Values &amp; appraisals</h3>
+    <p class="opens"><b>Opens by itself</b> when an item needs an appraisal and has no appraiser linked. Red on a Formal job,
+      whose record is not complete without it; amber otherwise.</p>
+    <ul class="plain">
+      <li><span class="btn">+ Add an appraiser</span>, from the Vendor Directory or typed in. A firm that also buys is marked
+        not independent.</li>
+      <li>Link each waiting item to its appraiser, or <span class="btn">Waive</span> (it asks who decided, and why). On an
+        estate the item reads <em>Appraisal in progress</em> until the report&rsquo;s figure is on it, with the valuation source
+        Appraisal. Handing it over is a sign-out, under Releases.</li>
+      <li>On an estate whose papers state values: the valuation basis and the date values are as of. Set them once, as
+        counsel says.</li>
+    </ul>
+
+    <h3>Closing the job</h3>
+    <p class="opens"><b>Grey before the close</b>; amber mid-job only when something has left with its paper owed (a donated
+      item with no receipt, a sold item on no statement) or a statement waits to be filed. <b>Opens by itself</b> at the
+      close (the Job Plan at Close-out, the work handed over, the job closed or lost), when Close job refuses, or when a
+      proceeds statement disagrees with its items (red).</p>
+    <ul class="plain">
+      <li>The satisfaction call (a call, not a text), <span class="btn">&#9993; Draft review request</span>, the referral ask,
+        and stars for every vendor used.</li>
+      <li>The Disposition Ledger on an estate, the Contents Record on living work: print it (the Contents Record prints from
+        the Inventory Review bar), have it signed, then <span class="btn">File signed copy</span>. On an estate whose papers
+        state values, the signed Court Inventory or Trust Schedule is filed here too.</li>
+      <li>Proceeds statements: <span class="btn">+ Record a statement</span>, then <span class="btn">File the statement</span>.
+        Donations: <span class="btn">File charity receipt</span> for each charity.</li>
+    </ul>
+    <p><span class="btn">Close job</span>, in the band, refuses until every vendor used is rated, every key is returned or
+      recorded lost, and no incident is open. It names, without refusing, an unsigned ledger, rooms not cleared and items
+      leaving with nobody named.</p>
+
+    <h3>Removed items &amp; snapshots</h3>
+    <p>Opens by itself only when you take a snapshot. <span class="btn">Restore</span> gives back anything taken off the
+      list. A snapshot (More &#9662;, on an estate) is a dated copy of the whole list; <span class="btn">Compare with now</span>
+      shows what changed. The totals (<span class="btn">Show summary &amp;
+      rollups</span>, in More &#9662;) appear under this bar, at the very foot.</p>
+  </section>
+
+  <section>
+    <h2>Estate, living work, Home Prep</h2>
+    <div class="split">
+      <div class="side own">
+        <h4>An estate</h4>
+        <ul class="plain">
+          <li>Every representative signs every release; each item released to a person needs a signed receipt.</li>
+          <li>The representative signs the Disposition Ledger at the close.</li>
+        </ul>
+      </div>
+      <div class="side">
+        <h4>Living work</h4>
+        <ul class="plain">
+          <li>The client approves what leaves, on the same request. No receipts, no bequests.</li>
+          <li>The Contents Record is the one paper the client signs.</li>
+        </ul>
+      </div>
+      <div class="side">
+        <h4>Home Prep</h4>
+        <ul class="plain">
+          <li>No items and no bars: the top of the page (the band says <span class="btn">&#9654; Book the vendors</span> until
+            every vendor is confirmed), Job Admin open, and the close-out under it.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>The week of a job</h2>
+    <div class="stages">
+      <div class="stage" data-n="1">
+        <p class="stage-h">The first evening</p>
+        <p class="stage-when">After the first day of photos</p>
+        <ul>
+          <li>Bring in any car or boat from the walkthrough. On an estate, add the beneficiaries and bequests if you have the
+            list, and an appraiser if one is needed. Then the evening as above.</li>
+        </ul>
+      </div>
+      <div class="stage" data-n="2">
+        <p class="stage-h">The night the signed request comes back</p>
+        <p class="stage-when">Releases &amp; signed papers</p>
+        <ul>
+          <li><span class="btn">Record the signed request</span> opens on the items that request carried and that still wait for
+            a signature, each ticked. Untick any the signed copy struck out, tick who signed, set the date on the paper, press
+            <span class="btn">Record approval</span>, then <span class="btn">File the signed request</span>.</li>
+          <li>Only one of two representatives signed? Record it anyway. Those items stay on the next request until everyone
+            has signed.</li>
+        </ul>
+      </div>
+      <div class="stage" data-n="3">
+        <p class="stage-h">A pickup day</p>
+        <p class="stage-when">In the house, on the iPad</p>
+        <ul>
+          <li>Out of field mode, open this tab and Releases. <span class="btn">Sign out N to &hellip;</span>, hand over the
+            iPad, <span class="btn">Sign and file</span>. Or <span class="btn">Photograph a signed sheet instead</span>.</li>
+          <li class="crit">On an estate only items with everyone&rsquo;s written approval are offered. A firearm never goes on
+            a sheet.</li>
+        </ul>
+      </div>
+      <div class="stage" data-n="4">
+        <p class="stage-h">The closing evening</p>
+        <p class="stage-when">Closing the job opens by itself</p>
+        <ul>
+          <li>Work down Closing the job, then press <span class="btn">Close job</span> in the band. Closing files the closing
+            papers to Drive by itself.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="gaps">
+    <h2>Rules that never bend</h2>
+    <ul class="plain">
+      <li class="crit"><strong>Nothing leaves an estate without written approval from every representative.</strong> Verbal
+        approval never counts. Anything that left early goes on the next request <em>for ratification</em>, approved after the
+        fact; it is never undone.</li>
+      <li class="crit"><strong>Firearms:</strong> nothing moves without written authority, and none goes on a sign-out sheet.
+        Only Anthony drives one to a licensed dealer, never an NFA item. The <a href="firearms-protocol.html">Firearms
+        Protocol</a> is the procedure.</li>
+      <li><strong>Havellin&rsquo;s people never buy or receive estate property.</strong> The app refuses it on an estate; in a
+        client&rsquo;s own home it is flagged for the client to initial.</li>
+      <li><strong>Nothing is deleted.</strong> <span class="btn">Remove line</span> keeps the photo; a paper filed in error is
+        voided with a reason.</li>
+      <li><strong>The app flags far more than it refuses.</strong> Amber means read it, not stop.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Tricky spots</h2>
+    <dl class="tricky">
+      <dt>An item jumps away when I choose where it goes.</dt>
+      <dd>It moves into its group. Keep working <em>Not yet decided</em> from the top; it shrinks as you go.</dd>
+      <dt>There is no delete beside an item.</dt>
+      <dd>Open its <span class="btn">&#9662;</span> and press <span class="btn">Remove line</span>. Removed items gives it
+        back.</dd>
+      <dt>A family member took something before the paper was signed.</dt>
+      <dd>Record it as it happened: Distribute, who took it, and the date it left in its <span class="btn">&#9662;</span>
+        record. It goes on the next request for ratification.</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Something went wrong</h2>
+    <div class="tbl-scroll"><table class="tbl">
+      <thead><tr><th>What you see</th><th>What to do</th></tr></thead>
+      <tbody>
+        <tr><td>I can&rsquo;t find Releases, the ledger or Removed items</td><td>They are in the bars under the last item.
+          Tap a bar to open it.</td></tr>
+        <tr><td>A bar says <em>loading&hellip;</em></td><td>This device has not yet read the client&rsquo;s items from the
+          sheet, and the bar claims nothing until it has. If it stays, check the connection and reload.</td></tr>
+        <tr><td>A bar says <em>sheet unreachable: this device&rsquo;s copy</em></td><td>The sheet did not answer: the bar shows
+          what this device holds and opens nothing by itself, and the tab asks again every 15 seconds. Check the
+          connection.</td></tr>
+        <tr><td>No thumbnails</td><td>The items are all there. Reload, or use <span class="btn">Open photo in Drive</span> in
+          the record.</td></tr>
+        <tr><td>No Send request</td><td>Nothing is waiting, a drafted request is waiting for
+          <span class="btn">I&rsquo;ve sent it</span>, or the card says in red what is missing.</td></tr>
+        <tr><td>I pressed something and nothing happened</td><td>Look at the brown band at the top: the answer is
+          there.</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section class="card">
+    <p class="eyebrow">Pocket card &middot; keep it by the laptop</p>
+    <h2>Tonight, in order</h2>
+    <ol>
+      <li><b>Red first.</b> Then the brown band&rsquo;s one step.</li>
+      <li><b>Found it</b> for each must-find the photos turn up.</li>
+      <li><b>Name N shots,</b> then Possible duplicates, then <b>Value N lines</b>.</li>
+      <li><b>Not yet decided, room by room:</b> name, where it goes, who takes it, value, Reviewed.</li>
+      <li><b>A drawer piece by piece:</b> tick the rows, Remove lines.</li>
+      <li><b>Earlier days still undecided?</b> Press All.</li>
+      <li><b>Amber bars: open them.</b> Releases: Send request, then I&rsquo;ve sent it.</li>
+      <li><b>Grey bars stay shut.</b> You are done.</li>
+      <li><b>Nothing leaves an estate</b> without every representative&rsquo;s written approval.</li>
+    </ol>
+  </section>
+
+  <footer>
+    <p><strong>Draft for Anthony, 23 October 2026.</strong> Linked from the top of the Job Admin &amp; Inv tab. It picks up
+      where <a href="photography-guide.html">Photographing a House</a> ends, beside <a href="incident-guide.html">Reporting an
+      Incident</a>, <a href="sorting-guide.html">Sorting a House</a>, <a href="packing-guide.html">Packing a House</a>,
+      <a href="move-day-guide.html">Move Day</a>, <a href="first-night-guide.html">The First Night</a> and the
+      <a href="firearms-protocol.html">Firearms Protocol</a>. The <a href="concierge-guide.html">Concierge Guide</a> explains
+      each screen and button.</p>
+  </footer>
+
+</div>
+</body>
+</html>

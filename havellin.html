@@ -1428,7 +1428,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.23 · 6:44pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.23 · 8:49pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2467,6 +2467,10 @@ body.no-smf .smf-col{display:none;}
       <div>
         <div style="font-size:13px;font-weight:600;">Job Admin &amp; Inventory</div>
         <div style="font-size:11px;color:var(--gray);margin-top:2px;" id="inv-subtitle">Start at the top: anything flagged above the brown band, then the band&rsquo;s next step, the must-finds and Job Admin&rsquo;s desk paperwork. On every service but Home Prep, tonight&rsquo;s items come next, then the bars below them, each saying in one line what it holds: amber or red means it needs you.</div>
+        <!-- The Evening Desk (2026-10-23; Anthony: "embed a link at the top of the tab like the photography field guide"): on every
+             service and with no client chosen, so it is static: the one opener's markup for DESK_GUIDE_DOC, byte for byte (a test holds
+             it), opening over the app through openGuidePage, never a new tab. -->
+        <div class="plan-proc-doc" id="inv-guide-link" style="font-size:11px;margin-top:5px;font-weight:600;"><a href="evening-desk-guide.html" rel="noopener" onclick="return openGuidePage(event, this.getAttribute('href'), this.textContent)">Read The Evening Desk &rarr;</a></div>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <span style="font-size:11px;font-weight:600;color:var(--gray);letter-spacing:.04em;">CLIENT</span>
@@ -45979,6 +45983,7 @@ var INCIDENT_HOTLINE = '1-800-962-2873'; // the Florida Abuse Hotline (1-800-96-
 var INCIDENT_SUBFOLDER = 'Incident Reports';
 var PHOTO_GUIDE_DOC = 'photography-guide.html';   // the field method, Photographing a House: linked from the In the house stage and the room workspace (2026-10-19)
 var INCIDENT_GUIDE_DOC = 'incident-guide.html';   // the field page, Reporting an Incident (2026-10-19): linked from the card through guideLinkHtml, opening over the app
+var DESK_GUIDE_DOC = 'evening-desk-guide.html';   // the desk's page, The Evening Desk (2026-10-23): linked at the top of Job Admin & Inv, opening over the app
 var INCIDENT_DOC_KEY = 'incidentRecord';   // docState key for the filed Incident Record: a stored key, never rename it
 var INCIDENT_RECORD_TITLE = 'Incident Record';
 var INCIDENT_INTERNAL_TITLE = 'Internal Incident Record';
