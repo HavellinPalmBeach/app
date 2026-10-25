@@ -55,7 +55,7 @@ const ITEM = (id, over) => Object.assign({
 const PRINT_FNS = ['_invDocPartyHead', 'invLineReviewed', 'invInitialGroupWords', 'invOwnInitial', 'invInitialGroupKey', 'invDocContractBlock',
   'printContentsRecord', 'contentsRecordSignoff', 'dispositionRecord', 'printApprovalRequest', 'invDispDocWord', 'printCourtInventory', 'jobOnProbateTrack', '_avUnreviewedStamp',
   'agentShotGroups', 'agentNameableRefs', '_agState', '_agStateHtml', '_agNoticesHtml', 'agentNotices',
-  'printDispositionLedger', 'referralFeeVendorsNote', 'vendorPaysReferral', '_vendorByName', '_vendorNameKey', '_andJoin', '_renderInvWorkbar', '_arCheckButtonHtml', '_arState', 'agentRoomsToCheck', '_arCheckable', '_arStateHtml', '_avValueButtonHtml', 'agentValueableRefs', '_avHasFigure', '_invHasValue', '_avStateHtml', '_avState', '_avNoticesHtml', 'agentValueNotices', 'agentValueInternal', 'agentValueUnreviewed', 'agentValueStale', 'agentValueSpecialistWorth', 'invPrimaryDoc', '_invReviewStats', '_invProgressStamp',
+  'printDispositionLedger', 'referralFeeVendorsNote', 'vendorPaysReferral', '_vendorByName', '_vendorNameKey', '_andJoin', '_renderInvWorkbar', '_arCheckButtonHtml', '_arState', 'agentRoomsToCheck', '_arCheckable', '_arStateHtml', '_avValueButtonHtml', 'agentValueableRefs', '_avHasFigure', '_invHasValue', '_avStateHtml', '_avState', '_avNoticesHtml', 'agentValueNotices', '_avNoticeKinds', '_avNoticeLabel', 'agentValueInternal', 'agentValueUnreviewed', 'agentValueStale', 'agentValueSpecialistWorth', 'invPrimaryDoc', '_invReviewStats', '_invProgressStamp',
   '_invDocName', '_invDocHead', '_invPrintThumb', '_invRecipient', '_jobDestLabel',
   '_jobHasDestination', 'invFiduciaryMode', 'isDecedentJob', '_invJob', '_jobInvRefs',
   '_invAssignItemNos', '_invItemNo', '_invNamed', '_invRoomName', '_invDispLabel',
@@ -87,8 +87,8 @@ const PRINT_FNS = ['_invDocPartyHead', 'invLineReviewed', 'invInitialGroupWords'
   // The job-flow audit (2026-10-08): the Contents Record says every line was photographed, and shared, only where it was.
   '_invHasPhoto', 'photoShareLive',
   // 2026-10-22: the signed schedules, beside the ledger in the close-out papers.
-  '_renderSignedSchedulesCard', 'signedScheduleRows', 'invLineDone', '_deskAwaitsAgents', 'deskLookReasons', '_deskNameConf', '_deskAgentFigure', '_agNameKey', 'deskNeedsLook'];
-const PRINT_VARS = ['AGENT_VALUE_NOTICE_ORDER', 'DESK_LOOK_REASONS', 'INV_LINE_INITIAL_MIN', 'INV_DISP_DOC_WORDS', 'CONTENTS_SIGNED_REF',  'INV_CONTRACT_DOCS',
+  '_renderSignedSchedulesCard', 'signedScheduleRows'];
+const PRINT_VARS = ['INV_LINE_INITIAL_MIN', 'INV_DISP_DOC_WORDS', 'CONTENTS_SIGNED_REF',  'INV_CONTRACT_DOCS',
   '_agRun', '_avRun', '_arRun', 'AGENT_NOTICE_KINDS', 
   'INV_DISPOSITIONS', 'INV_GROUP_ORDER', 'INV_RELEASE_DISPOSITIONS', 'INV_RELEASE_CAUTIONS',
   'INVENTORY_COLUMNS', 'INV_PANEL_SECTIONS', 'INV_WORK_FLAGS', 'FIELD_DISPOSITIONS',

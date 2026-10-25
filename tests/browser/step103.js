@@ -133,7 +133,7 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
         const L = await lineUp();
         eq(L.map((x) => x.group), ['', 'Keep', 'Donate'], w + ' px: a row of headings over each open group (Not yet decided, Keep, Donate)');
         L.forEach((x) => {
-          eq(x.words, ['Photo', '#', 'Item', 'Qty', 'Value', 'Where it goes'].concat(x.group === 'Donate' ? ['Who takes it'] : []),
+          eq(x.words, ['Photo', '#', 'Item', 'Qty', 'Each', 'Total', 'Where it goes'].concat(x.group === 'Donate' ? ['Who takes it'] : []),
              w + ' px, ' + (x.group || 'Not yet decided') + ': the headings name every box, Who takes it only where something leaves');
           ok(x.worst <= 1, w + ' px, ' + (x.group || 'Not yet decided') + ': ⚠ each heading starts where its box starts (worst ' + x.worst + ' px)');
         });
@@ -167,7 +167,7 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
          'on the desk: all three under Donate, their counts in the Qty boxes, Habitat for Humanity in Who takes it');
       const L = await lineUp();
       const d = L.find((x) => x.group === 'Donate');
-      eq(d && d.words, ['Photo', '#', 'Item', 'Qty', 'Value', 'Where it goes', 'Who takes it'], 'the Donate group heads Who takes it, over the box Anthony asked about');
+      eq(d && d.words, ['Photo', '#', 'Item', 'Qty', 'Each', 'Total', 'Where it goes', 'Who takes it'], 'the Donate group heads Who takes it, over the box Anthony asked about');
       ok(d && d.worst <= 1, '…each heading over its box (worst ' + (d && d.worst) + ' px)');
       eq(L.find((x) => x.group === '') ? 'still' : 'gone', 'still', 'Not yet decided still holds the family photograph');
     });
@@ -228,9 +228,9 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
       eq(await p.evaluate(() => [...document.querySelectorAll('.inv-colhead')].filter((h) => h.checkVisibility()).length), 0, 'no headings on a phone');
       const caps = await p.evaluate(() => {
         const row = document.getElementById('inv-row-k80');
-        return ['qty', 'val', 'disp', 'who'].map((c) => { const el = row && row.querySelector('.inv-c-' + c); return el ? getComputedStyle(el, '::before').content : null; });
+        return ['qty', 'each', 'val', 'disp', 'who'].map((c) => { const el = row && row.querySelector('.inv-c-' + c); return el ? getComputedStyle(el, '::before').content : null; });
       });
-      eq(caps, ['"Qty"', '"Value"', '"Where it goes"', '"Who takes it"'], 'each box names itself above it');
+      eq(caps, ['"Qty"', '"Each"', '"Total"', '"Where it goes"', '"Who takes it"'], 'each box names itself above it (Each and Total since 2026-10-25b)');
       eq(await overflow(), 0, 'nothing past the right edge at 390');
       const t = await p.evaluate(() => { const x = document.querySelector('#inv-row-a91 textarea'); return x ? [x.clientHeight, x.scrollHeight] : null; });
       ok(t && t[1] <= t[0] + 1, 'the long name still shows whole at 390 (' + (t && t.join(' / ')) + ')');

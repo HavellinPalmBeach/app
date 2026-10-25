@@ -127,13 +127,13 @@ function rig(refs, over) {
           // The duplicate flag. ⚠ LIFTED, NEVER STUBBED — a stub of the grouping rule is
           // exactly what would let the block above the rows and the chip on the row come to
           // disagree about which lines are contested.
-          '_agNameKey', '_agDupEligible', 'agentDuplicateGroups', '_agDupIndex', '_agDupHtml',
+          '_agNameKey', '_agDupEligible', 'agentDuplicateGroups', 'agentNamedTwice', '_agDupIndex', '_agDupHtml',
           '_agDupHandle', '_agDupUnhandle', 'agentDropDuplicate', 'agentNotDuplicate', '_invItemNo',
           // P16: the desk's one removal writer, which records who removed the line.
           '_invTombstoneLine', '_invStampBy', 'deviceUser', '_invJob',
           // P24: the room check's links join the same-name rule in one grouping.
-          '_arDupEligible', 'invLineDone', '_deskAwaitsAgents', 'deskLookReasons', '_deskNameConf', '_deskAgentFigure', 'agentValueUnreviewed', '_avHasFigure', '_invHasValue', 'agentValueStale'],
-    vars: ['DESK_LOOK_REASONS', 'INV_LINE_INITIAL_MIN', '_agRun', '_avRun', 'AGENT_NOTICE_KINDS', 'AGENT_BATCH', 'AGENT_MAX_DETAILS', 'AGENT_LISTED_MAX', '_agDupSet', 'AGENT_ROOM_CONF_RANK', 'AGENT_ROOM_CONF_WORDS',
+          '_arDupEligible', 'agentValueUnreviewed', '_avHasFigure'],
+    vars: ['_agRun', '_avRun', 'AGENT_NOTICE_KINDS', 'AGENT_BATCH', 'AGENT_MAX_DETAILS', 'AGENT_LISTED_MAX', '_agDupSet', 'AGENT_ROOM_CONF_RANK', 'AGENT_ROOM_CONF_WORDS', 'AGENT_PASS_GAP_MS',
            'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY', 'INV_SPLIT_MAX', '_photoUidSeq'],
     stubs: Object.assign({
       jobs: [{ id: 7, hvlId: 'HVL-0007', svc: 'cleanout' }],
@@ -401,18 +401,18 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(back.crop.length, 4, 'and so does the crop box');
   }
 
-  // ⚠ SINCE 2026-10-24b (the one review) the row says what a line needs from a person, not that an agent named it: one *check:*
-  // badge, read off deskNeedsLook / deskLookReasons (an agent unsure is one of its reasons). agents-together.test.js drives it.
-  group('⚠ THE ROW SAYS WHAT A LINE NEEDS FROM A PERSON, IN BRONZE');
+  // Since 2026-10-25b the row's one hint is *unsure*, where the agents were guessing and nobody has looked (invLineUnsure,
+  // driven in agents-together.test.js A6); it replaced the *agent* badge that stood on every unchecked agent name.
+  group('⚠ THE ROW SAYS WHERE THE AGENTS WERE GUESSING AND NOBODY HAS CHECKED IT');
   {
     const row = liveLines(fn('_renderInvRow', 'invOutForAppraisal'));
-    has(row, 'var _look = deskNeedsLook(ref, job) ? deskLookReasons(ref, job) : [];', 'the badge is on a line a person must look at');
-    lacks(row, "ref.namedBy === 'agent' && !ref.reviewed", 'never on every line an agent named');
+    has(row, 'if (invLineUnsure(ref))', 'the hint is on an unchecked guess');
+    has(row, 'var(--bronze)', 'and it is bronze');
     // ⚠ NEVER RED. Red on this strip means "stop, do not touch" — a held firearm — and a
     // second red would cost the first one its meaning.
-    const at = row.indexOf('var _look = '), seg = row.slice(at, at + 700);
-    ok(at > 0, 'fixture: the badge found');
-    has(seg, 'var(--bronze)', 'and it is bronze');
+    const at = row.indexOf('if (invLineUnsure(ref))');
+    ok(at > 0, 'anchored');
+    const seg = row.slice(at, at + 600);
     lacks(seg, '#c0392b', 'a second red on this strip would cost the firearms badge its meaning');
   }
 
@@ -792,7 +792,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // GREEN. A source check cannot tell a rendered control from a disabled one; this reads the
     // markup the function actually returns. CLAUDE.md records that shape more than any other.
     const rowRig = (dupSet, over) => sandbox({
-      fns: ['invLineReviewed', '_renderInvRow', '_invRowPhotoHtml', '_invRowHasWho', 'invOutForAppraisal', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', 'invLineDone', 'deskLookReasons', 'deskNeedsLook', '_deskNameConf', '_deskAgentFigure', '_deskAwaitsAgents', '_invEachInput', 'invUnitValue', 'invLineQty', '_invInputStyle', '_invCtrlMinW', 'invPickupRecord', 'signedRecordsOf', '_invRowDomId', '_invRecipientInput', 'invPlanChannel', '_renderInvPanel', 'invCloseUpRefusal', '_invCloseUpsHtml', '_invCloseUpTileHtml', '_avPanelHtml', '_invDetailRefs', 'invAppraisalSourceText', 'invLineAppraiser', '_invLinkedAppraiser', 'invAppraised', 'invAppraisalInProgress', '_invHasAppraisal', '_invHasValue', '_invPanelAppraisalHtml',
+      fns: ['invLineReviewed', '_renderInvRow', '_invRowPhotoHtml', '_invRowHasWho', 'invOutForAppraisal', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', 'invPickupRecord', 'signedRecordsOf', '_invRowDomId', '_invRecipientInput', 'invPlanChannel', '_renderInvPanel', 'invCloseUpRefusal', '_invCloseUpsHtml', '_invCloseUpTileHtml', '_avPanelHtml', '_avNoticeLabel', '_avNoticeKinds', '_invDetailRefs', 'invAppraisalSourceText', 'invLineAppraiser', '_invLinkedAppraiser', 'invAppraised', 'invAppraisalInProgress', '_invHasAppraisal', '_invHasValue', '_invPanelAppraisalHtml',
             '_invPhotoSiblings', '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef',
             '_invNamed', '_invItemNo',
             // P16: the row names a firearm's dealer route and the panel carries the firearm block.
@@ -800,8 +800,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             // P19: the row names a bequest, an incomplete approval and a receipt owed; the recipient box offers the roster.
             'invBequestFor', 'jobListEntries', 'invApprovalGap', 'invReceiptOwed', '_invBenListAttr',
             // P20: the row says a ratification is owed apart from an incomplete approval, and flags a living client's line going to one of ours.
-            'invRatificationOwed', 'invFiduciaryMode', 'isDecedentJob', 'invReleaseCautions', '_invJob', 'invHavellinRecipient', 'invChannelLeftover', 'invChannelLeftoverText', '_avHasFigure', '_agNameKey'],
-      vars: ['DESK_LOOK_REASONS', 'INV_LINE_INITIAL_MIN', 'INV_PLAN_CHANNEL_KINDS', 'INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick', '_agDupSet',
+            'invRatificationOwed', 'invFiduciaryMode', 'isDecedentJob', 'invReleaseCautions', '_invJob', 'invHavellinRecipient', 'invChannelLeftover', 'invChannelLeftoverText', '_avHasFigure', 'invLineUnsure', '_invEachInput', 'invUnitValue', 'invLineQty', '_agNameKey', '_invInputStyle', '_invCtrlMinW'],
+      vars: ['INV_PLAN_CHANNEL_KINDS', 'INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick', '_agDupSet',
              // P20 vars: the catalogues the row's new questions read.
              'DECEDENT_SERVICES', 'INV_RELEASE_CAUTIONS'],
       stubs: {
@@ -818,14 +818,18 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(html, 'possible duplicate', 'a contested row really RENDERS the chip');
     has(html, 'var(--bronze)', 'in bronze — red on this strip is a held firearm');
     has(html, 'off different photographs', 'and the tooltip says what it is about');
-    // Since 2026-10-24b the row carries no *agent* badge on every line an agent named (the one review: a *check:* badge only
-    // where a person must look, agents-together.test.js); the duplicate chip stands alone.
-    lacks(html, '>agent<', 'and no agent badge beside it (2026-10-24b)');
+    // 2026-10-25b: a confident agent name carries no *agent* badge; a guess carries the row's one hint, *unsure*, which is a
+    // different claim from the duplicate's and sits beside it.
+    lacks(html, '>agent<', 'a confident agent name wears no badge of its own');
+    const guess = rowRig(null, { agentConf: 'low' }); guess._agDupSet = { p: 2 };
+    const html3 = guess._renderInvRow({ id: 1 }, guess._photoRefs[1][0]);
+    has(html3, '>unsure<', 'a guess says unsure…');
+    has(html3, 'possible duplicate', '…beside the duplicate chip, a different claim');
 
     const quiet = rowRig(); quiet._agDupSet = {};
     const html2 = quiet._renderInvRow({ id: 1 }, quiet._photoRefs[1][0]);
     lacks(html2, 'possible duplicate', 'and an uncontested row renders none');
-    lacks(html2, '>agent<', 'nor an agent badge (2026-10-24b)');
+    lacks(html2, '>agent<', 'and no agent badge either');
 
     const rowSrc = liveLines(fn('_renderInvRow', 'invOutForAppraisal'));
     // ⚠⚠ O(n) INSIDE O(n). The grouper is a full pass over the manifest; calling it per row on

@@ -146,7 +146,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const ctx = sandbox({
       fns: ['_renderInvPanel', 'invCloseUpRefusal', '_invHasPhoto', '_invCloseUpsHtml', '_invCloseUpTileHtml', '_invDetailRefs',
             '_invPhotoSiblings', '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef', '_agRecordNoticesHtml', 'agentNoticeQuiet', 'invLineReviewed',
-            '_invPanelAppraisalHtml', '_invHasAppraisal', 'invAppraisalInProgress', 'invAppraised', '_invLinkedAppraiser', 'invLineAppraiser', 'invAppraisalSourceText'],
+            '_invPanelAppraisalHtml', '_invHasAppraisal', 'invAppraisalInProgress', 'invAppraised', '_invLinkedAppraiser', 'invLineAppraiser', 'invAppraisalSourceText', 'agentValueUnreviewed', '_avHasFigure'],
       vars: ['AGENT_NOTICE_KINDS'],
       stubs: {
         _photoRefs: { 1: PLATES().concat([
@@ -263,8 +263,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(text(read('concierge-guide.html')), 'A close-up missed in the house (new 2026-10-24): in that ▾, press ➕ Close-up', 'the playbook says how');
     has(read('CONCIERGE_GUIDE.md'), '**A close-up missed in the house** (new 2026-10-24): in that ▾, press **➕ Close-up**', 'and its markdown copy');
     // What the pages claim, held to the code: the Look at this is quieted by the review, never by a close-up.
-    // Since 2026-10-24b it goes quiet once its line is done (reviewed, or nothing on it needs a person: invLineDone).
-    has(liveLines(fn('agentNoticeQuiet')), "if (kind === 'other') return invLineDone(ref, job);", 'a Look at this goes quiet once its line is done, which the pages say');
+    has(liveLines(fn('agentNoticeQuiet')), "if (kind === 'other') return invLineReviewed(ref);", 'a Look at this goes quiet on review, which the pages say');
     lacks(liveLines(fn('invAddCloseUp')), 'reviewed', 'and adding a close-up reviews nothing');
     ok(source().indexOf('function invAddCloseUp(') > 0, 'the handler is in the app');
   }

@@ -126,9 +126,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('B · every stamp writer reads _invStampBy or _actor, and no `job.tc` stamp is left');
   {
     const want = {
-      // Since 2026-10-24b the row's tick and Mark reviewed are one look, written by one stamp (_invStampLineReviewed).
+      // 2026-10-25b: one writer of a line's review, which stamps its value's too (agents-together.test.js A5).
       _invStampLineReviewed: 'ref.reviewedBy = _invStampBy(job)',
-      _invSetReviewed: '_invStampLineReviewed(ref, job)',
+      _invSetReviewed: 'if (on) _invStampLineReviewed(ref, job);',
       _invBulkApply: '_invStampLineReviewed(ref, job)',
       _avStampReviewed: 'ref.valReviewedBy = _invStampBy(job)',
       setRoomFoundDone: 'by: _invStampBy(_invJob(jobId))',
@@ -177,7 +177,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('C · the desk: a line reviewed and a value accepted are stamped with the device\'s user');
   {
     const stubs = BASE();
-    const C = lift(['_invSetReviewed', '_avStampReviewed', 'deviceUser'], STOP, stubs);
+    const C = lift(['_invSetReviewed', '_invStampLineReviewed', '_avStampReviewed', '_avHasFigure', 'deviceUser'], STOP, stubs);
     C.jobs = [JOB()];
     C._photoRefs = { 7: [{ stableId: 'a1', label: 'inventory', objectName: 'Walnut desk', updatedAt: 1 }] };
     C.localStorage.setItem(KEY, 'Anthony Graziano');

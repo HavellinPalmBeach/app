@@ -109,19 +109,17 @@ const CTXP = { estate: true, basis: 'Fair Market Value', valuationDate: '2026-06
 const AV_FNS = ['_avValueButtonHtml', 'agentValueMode', 'agentValueInternal', '_avHasFigure', 'agentValueableRefs', 'agentValueUnreviewed',
   'agentValueStale', 'agentValueSpecialistWorth', '_avValDate', '_avContext', '_avItemPayload', '_avComp', '_avWrite',
   '_avNoteFailure', 'agentValueApply', '_avTakeValue', '_avStampReviewed', '_invStampBy', 'deviceUser', 'agentValueRun', 'agentRevalue', '_avStart',
-  '_avSendNext', '_avFinish', '_avRepaint', '_avStateHtml', '_avState', 'agentValueUseSale', '_avNameIsAgents', 'agentValueAuto', 'agentValueAfterRename',
-  'agentValueNotices', '_avNoticesHtml', '_deskShowBtnHtml', '_avSummary', '_avRowBadges', '_avPanelHtml',
-  // the one review (2026-10-24b): Accept is gone; the line's tick covers the figure
-  'invLineDone', '_deskAwaitsAgents', 'deskLookReasons', '_deskNameConf', '_deskAgentFigure', 'invLineReviewed', '_invStampLineReviewed', 'invIsFirearm',
+  '_avSendNext', '_avFinish', '_avRepaint', '_avStateHtml', '_avState', 'agentValueUseSale',
+  'agentValueNotices', '_avNoticeKinds', '_avNoticeLabel', '_avRename', '_avNoticesHtml', '_deskShowBtnHtml', '_avSummary', '_avRowBadges', '_avPanelHtml',
   'invValBasisWord', '_avUnreviewedStamp', 'invAppraised', 'invLineAppraiser', '_invLinkedAppraiser', '_jobAppraisers', '_apprLabel', '_invHasAppraisal',
   // the real rules they read, never stubs of them
   '_getPhotoRef', '_setPhotoRef', '_jobInvRefs', '_invHasValue', 'roundCents', 'invIsIntrinsic', 'invCatMeta',
   'invFiduciaryMode', 'isDecedentJob', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep', 'estateValueDate',
   '_avdDate', '_ymdLocal', 'resolveValBasis', '_agNameKey', '_agDetailRefs', 'invLineCloseUps', '_invFileId', 'invAppraisalThreshold',
   'gateDispute', '_gateYes', 'invNeedsAppraisal', 'fmt', '_invMoney', '_invNamed', '_invItemNo', '_andJoin',
-  'moneyToNumber', '_readAppsScriptJson', '_invJob', 'deskNeedsLook'];
-const AV_VARS = ['_avRun', '_avForceComps', '_avAfter', 'AGENT_VALUE_NOTICE_ORDER', 'DESK_LOOK_REASONS', 'INV_LINE_INITIAL_MIN', '_agDupSet', 'AGENT_VALUE_BATCH', 'AGENT_VALUE_GENERAL_CEILING', 'AGENT_VALUE_MAX_COMPS',
-  'AGENT_VALUE_MARK_RE', 'AGENT_VALUE_CONFS', 'AGENT_VALUE_SOURCES', 'AGENT_VALUE_OWN', 'AGENT_VALUE_SALE_DATE_RE',
+  'moneyToNumber', '_readAppsScriptJson', '_invJob', '_avNameIsAgents', '_invStampLineReviewed', '_invRenderWhenIdle'];
+const AV_VARS = ['_avRun', '_avForceComps', '_avAfter', 'AGENT_VALUE_BATCH', 'AGENT_VALUE_GENERAL_CEILING', 'AGENT_VALUE_MAX_COMPS',
+  'AGENT_VALUE_MARK_RE', 'AGENT_VALUE_NO_MARK_RE', 'AGENT_VALUE_CONFS', 'AGENT_VALUE_SOURCES', 'AGENT_VALUE_OWN', 'AGENT_VALUE_SALE_DATE_RE',
   'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'DECEDENT_SERVICES', 'DOC_TIERS',
   'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'AGENT_MAX_DETAILS', 'INV_VAL_SOURCES'];
 
@@ -355,14 +353,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(none.error, 'missing Script Property: ANTHROPIC_API_KEY', 'naming the property');
   }
 
-  group('⚠ S9 · the model is never told a threshold, never asked to rename a name a person checked, decide or advise');
+  group('⚠ S9 · the model is never told a threshold, and never asked to rename, decide or advise');
   {
     const g = gsCtx();
     const sys = g._avSystem(CTXP) + g._avSystem({ estate: false });
     ['3,000', '3000', '$500', 'threshold'].forEach((w) => lacks(sys, w, 'the prompt carries no threshold: ' + w));
-    // RESTATED 2026-10-24b: a better name for a line another agent named is written (`name`, agents-together.test.js B2); a
-    // name a person checked is left alone.
-    has(sys, 'never rename a line whose name a person checked', 'a name a person checked is never renamed');
+    // 2026-10-25 (Anthony: "agent 2 confirm or update upon pricing. No need to flag"): the name comes back with the value,
+    // and the category and the count stay the line's (agent-named-twice.test.js E, E2).
+    has(sys, 'Never change a line\'s category or its quantity.', 'its category and count are never its to change');
     has(sys, 'never set the value on asking prices alone', 'asking prices are not sales');
     has(sys, 'Copy its URL exactly', 'the evidence rule is stated to the model as well as enforced');
     has(g._avSystem(CTXP), 'Value as of 2026-06-14, the valuation date for this estate', 'the estate\'s valuation date');
@@ -422,11 +420,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(r.valReviewed, undefined, '⚠ unreviewed: the desk accepts it');
     eq([r.objectName, r.category, r.qty], ['Herend Rothschild Bird dinner plates, set of 8', 'Antiques', 8], 'the name, category and quantity are untouched');
     const body = liveLines(fn('_avWrite'));
-    // ⚠ THE NAME ONLY WHILE THE AGENTS HAVE IT (2026-10-24b): Agent Two's better reading replaces Agent One's, never a person's
-    // (agents-together.test.js A1 drives it); with no better name in the answer, as here, it stands.
-    has(body, '_better && _avNameIsAgents(ref) && _agNameKey(_better) !== _agNameKey(ref.objectName)', 'the name is written only on a name the agents still have');
-    eq((body.match(/ref\.objectName = /g) || []).length, 1, 'in that one place');
-    ['category =', 'qty =', 'disposition', 'channel', 'flagNFA', 'flagBequest', 'flagDisputed', 'flagExempt',
+    ['objectName =', 'category =', 'qty =', 'disposition', 'channel', 'flagNFA', 'flagBequest', 'flagDisputed', 'flagExempt',
      'assetTrack', 'needsAppr', 'authBy', 'approvalDate', 'receiptDoc', 'gross', 'fees', 'itemNo', 'apprId'].forEach((k) => lacks(body, k, 'the writer never touches ' + k));
     ok(!/\bref\.reviewed\b/.test(body), 'nor the line\'s own review tick');
 
@@ -534,8 +528,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(ctx.agentValueStale(r), false, 'spacing, case and a trailing stop are the same name');
     r.objectName = 'Banksy, Girl with Balloon, reproduction print';
     eq(ctx.agentValueStale(r), true, 'renamed a reproduction at the desk: the figure was made for something else');
-    // Since 2026-10-24b the row's one check: badge says it, off deskLookReasons (and a name changed is valued again by itself).
-    has(ctx.deskLookReasons(r, ESTATE()).map((k) => k.word).join(' '), 'value made for an earlier name', 'the row says so');
+    has(ctx._avRowBadges(ESTATE(), r).join(' '), 'value made for an earlier name', 'the row says so');
     has(ctx._avNoticesHtml(ESTATE(), [r]), 'Value made for an earlier name', 'and so does the work bar, first');
     has(ctx._avPanelHtml(ESTATE(), r), 'Re-value', 'the line\'s record offers Re-value');
   }
@@ -584,7 +577,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const F = rig(ESTATE(), [ROW()], { answer: () => ({ ok: true, results: {}, failed: { s1: 'no sold comparables found' } }) });
     F.ctx.agentValueRun(7);
     eq(F.ctx._getPhotoRef(7, 's1').valFailed, 'no sold comparables found', 'a failure is recorded on the line, with its reason');
-    has(F.ctx.deskLookReasons(F.ctx._getPhotoRef(7, 's1'), ESTATE()).map((k) => k.word).join(' '), 'could not be valued', 'and the row says so (its check: badge, 2026-10-24b)');
+    has(F.ctx._avRowBadges(ESTATE(), F.ctx._getPhotoRef(7, 's1')).join(' '), 'not valued', 'and the row says so');
     const N = rig(ESTATE(), [ROW({ objectName: '' })]);
     N.ctx.agentValueRun(7);
     has(N.alerts[0], 'no name yet', 'nothing named: it says to name the lines first');
@@ -604,20 +597,22 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(R.ctx._getPhotoRef(7, 's1').valReviewed, undefined, 'unreviewed again');
   }
 
-  // ⚠ RESTATED 2026-10-24b (the one review; Anthony: *"we are supposed to be making this easy, with one review"*): Accept, one
-  // line or a selection, is gone. The line's Reviewed tick, and Mark reviewed across a selection, is the one look, and it covers
-  // Agent Two's figure (agents-together.test.js A6).
-  group('A12 · no Accept: the line\'s tick reviews the figure with the line; a desk figure carries no agent review');
+  // RESTATED 2026-10-25b: Accept value and Accept values are gone. The line's one tick (Reviewed, or Mark reviewed across a
+  // selection) is the look at its name, its count and Agent Two's figure together (agents-together.test.js A5).
+  group('A12 · the line\'s one tick accepts its value; a desk figure has nothing to accept');
   {
     const R = rig(ESTATE(), [ROW({ fmv: 640, valuedBy: 'agent', valHigh: 800 }), ROW({ stableId: 'd', fmv: 900, valuedBy: 'desk', updatedAt: 50 })]);
-    R.ctx._invStampLineReviewed(R.ctx._getPhotoRef(7, 's1'), ESTATE());
     const r = R.ctx._getPhotoRef(7, 's1');
-    eq([r.reviewed, r.valReviewed, r.valReviewedBy], [true, true, 'Ashley Jerome'], 'reviewed with the line, by the job\'s concierge (as the line\'s own review is)');
+    R.ctx._invStampLineReviewed(r, R.ctx._invJob(7));
+    eq([r.reviewed, r.valReviewed, r.valReviewedBy], [true, true, 'Ashley Jerome'], 'the tick reviews the line and accepts its figure, by the job\'s concierge');
     eq(R.ctx.agentValueUnreviewed(r), false, 'no longer unreviewed');
-    R.ctx._invStampLineReviewed(R.ctx._getPhotoRef(7, 'd'), ESTATE());
-    eq([R.ctx._getPhotoRef(7, 'd').reviewed, R.ctx._getPhotoRef(7, 'd').valReviewed], [true, undefined], 'a desk figure: the line reviewed, no agent review written');
-    eq(typeof R.ctx.agentValueAccept, 'undefined', '⚠ Accept is gone');
-    lacks(liveLines(fn('_renderInvBulk')), "'valReviewed'", 'and the bar offers no Accept values');
+    const d = R.ctx._getPhotoRef(7, 'd');
+    R.ctx._invStampLineReviewed(d, R.ctx._invJob(7));
+    eq([d.reviewed, d.valReviewed], [true, undefined], 'a desk figure: the line reviewed, no agent figure stamped');
+    const bulk = liveLines(fn('_invBulkApply'));
+    has(bulk, "if (key === 'reviewed') {", 'Mark reviewed across a selection…');
+    has(bulk, '_invStampLineReviewed(ref, job);', '…is the same one look');
+    lacks(liveLines(fn('_renderInvBulk')), 'agentValueUnreviewed', 'and the bar offers no second Accept');
   }
 
   group('A13 · a WorthPoint sale pasted at the desk (spec §4a)');
@@ -662,17 +657,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        ['appraisal', 'auction comps', 'general estimate', 'WorthPoint comps'], 'Anthony\'s four, in the reader\'s words');
     eq(ctx.invValBasisWord({ fmv: '', valSource: 'Appraisal' }), '', 'no value, no basis');
     eq(ctx.invValBasisWord({ fmv: 5, valSource: 'Sotheby\'s estimate' }), 'Sotheby\'s estimate', 'a source typed off the list prints as typed');
-    // RESTATED 2026-10-24b (the one review): it counts the agent figures a person must still look at (deskNeedsLook: here the
-    // $640, past $500), never one the line's tick covers or one the agents are sure of under $500; *still to check*, never a claim
-    // of review.
-    const lines = [ROW({ fmv: 640, valuedBy: 'agent', valHigh: 800, valConf: 'high' }), ROW({ stableId: 'b', fmv: 90, valuedBy: 'agent', valHigh: 100, valConf: 'high', reviewed: true, valReviewed: true }),
-      ROW({ stableId: 'c', fmv: 50, valuedBy: 'desk' }), ROW({ stableId: 'd', valuedBy: 'agent', valHigh: 100 }), ROW({ stableId: 'e', fmv: 90, valuedBy: 'agent', valHigh: 100, valConf: 'high' })];
-    has(ctx._avUnreviewedStamp(lines, ESTATE()), '1 value still to check', 'one figure to check on the page (an internal range prints nowhere; a sure $90 asks nobody)');
-    eq(ctx._avUnreviewedStamp([lines[1], lines[2], lines[4]], ESTATE()), '', 'none: no stamp');
+    const lines = [ROW({ fmv: 640, valuedBy: 'agent', valHigh: 800 }), ROW({ stableId: 'b', fmv: 90, valuedBy: 'agent', valHigh: 100, valReviewed: true }),
+      ROW({ stableId: 'c', fmv: 50, valuedBy: 'desk' }), ROW({ stableId: 'd', valuedBy: 'agent', valHigh: 100 })];
+    has(ctx._avUnreviewedStamp(lines), '1 value not yet reviewed', 'one unreviewed figure on the page (an internal range prints nowhere)');
+    eq(ctx._avUnreviewedStamp([lines[1], lines[2]]), '', 'none: no stamp');
     // The real schedules carry it, beside the status, and the shared table names the basis.
-    has(liveLines(fn('printCourtInventory')), '_avUnreviewedStamp(onSched, job)', 'the Court Inventory counts its own lines');
-    has(liveLines(fn('printTrustSchedule')), '_avUnreviewedStamp(onSched, job)', 'the Trust Schedule too');
-    has(liveLines(fn('printEstateInventoryReport')), '_avUnreviewedStamp(all, job)', 'and the Estate Inventory Report');
+    has(liveLines(fn('printCourtInventory')), '_avUnreviewedStamp(onSched)', 'the Court Inventory counts its own lines');
+    has(liveLines(fn('printTrustSchedule')), '_avUnreviewedStamp(onSched)', 'the Trust Schedule too');
+    has(liveLines(fn('printEstateInventoryReport')), '_avUnreviewedStamp(all)', 'and the Estate Inventory Report');
     const sec = sandbox({ fns: ['invConditionText', '_invScheduleSection', 'invValBasisWord', 'invAppraised', 'invLineAppraiser', '_invHasValue', '_invMoney', 'fmt', 'roundCents'],
       stubs: { esc: (x) => String(x == null ? '' : x) } })._invScheduleSection('Tangible Personal Property',
       [ROW({ fmv: 640, valSource: 'Auction comps' }), ROW({ stableId: 'b', fmv: 40, valSource: 'General estimate', category: 'General/Household', qty: 60 })]);
@@ -687,15 +679,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const { ctx } = rig(ESTATE(), []);
     const unrev = ROW({ fmv: 640, valuedBy: 'agent', valLow: 480, valHigh: 800, valConf: 'low', valSource: 'Auction comps', valNote: 'Median of 4', valNotices: [{ kind: 'appraiser', text: 'signed and numbered' }] });
-    // Since 2026-10-24b the row's one check: badge carries what a person must see (deskLookReasons), and there is no Accept.
-    const words = ctx.deskLookReasons(unrev, ESTATE()).map((k) => k.word);
-    eq(words, ['agent unsure', 'appraisal advised', '$500 or more'], 'an unsure agent figure says so on the row, with its other reasons');
+    const badges = ctx._avRowBadges(ESTATE(), unrev).join(' ');
+    // 2026-10-25b: no *agent value* badge on every line and no Accept under the figure; the row's one hint is *unsure*
+    // (invLineUnsure, agents-together.test.js A6), and the line's tick accepts the figure.
+    lacks(badges, 'agent value', 'no agent-value badge on the row');
     has(ctx._avNoticesHtml(ESTATE(), [unrev]), 'Appraisal advised', 'its notice reaches the work bar');
-    eq(ctx._avNoticesHtml(ESTATE(), [Object.assign({}, unrev, { reviewed: true, valReviewed: true })]), '', 'a line a person has looked at: its notices go quiet');
+    eq(ctx._avNoticesHtml(ESTATE(), [Object.assign({}, unrev, { valReviewed: true })]), '', 'an accepted value has had its look: its notices go quiet');
     const internal = ctx._avRowBadges(ESTATE({ docTier: 'contents' }), ROW({ valuedBy: 'agent', valLow: 480, valHigh: 800 })).join(' ');
     has(internal, 'agent $480&ndash;$800 &middot; internal', 'on the contents tier the range shows on the desk, marked internal');
     has(ctx._avPanelHtml(ESTATE({ docTier: 'contents' }), ROW({ valuedBy: 'agent', valLow: 480, valHigh: 800 })), 'no document prints it', 'and its record says why');
-    has(ctx.deskLookReasons(ROW({ fmv: 2800, valuedBy: 'agent', valHigh: 9000, valConf: 'high' }), LIVING()).map((k) => k.word).join(' '), 'worth a specialist', 'a living job\'s range over the threshold');
+    has(ctx._avRowBadges(LIVING(), ROW({ fmv: 2800, valuedBy: 'agent', valHigh: 9000 })).join(' '), 'worth a specialist', 'a living job\'s range over the threshold');
     eq(ctx._avPanelHtml(ESTATE(), ROW()), '', '⚠ nothing on a line Agent Two has not touched');
     const panel = ctx._avPanelHtml(ESTATE(), Object.assign({}, unrev, { valComps: [COMP(), COMP({ kind: 'asking', url: 'https://x.example/1' })], valLookup: 'Herend Rothschild',
       driveFileUrl: 'https://drive.google.com/file/d/FID/view' }));
@@ -703,11 +696,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(panel, 'WorthPoint search: <code>Herend Rothschild</code>', 'the WorthPoint lookup');
     has(panel, 'Use this sale', 'the paste form');
     has(panel, 'href="https://drive.google.com', 'or the photograph link when the line carries one');
-    // To check replaced Unreviewed values (2026-10-24b), beside Unnamed shots, counting deskNeedsLook.
-    const flags = sandbox({ vars: ['INV_WORK_FLAGS', 'DESK_LOOK_REASONS', 'INV_LINE_INITIAL_MIN'], fns: ['deskNeedsLook', 'deskLookReasons', 'invLineReviewed', '_deskAwaitsAgents', '_deskNameConf', '_deskAgentFigure',
-      'agentValueUnreviewed', '_avHasFigure', '_invHasValue', 'agentValueStale', '_agNameKey', 'invIsFirearm'], stubs: { agentValueSpecialistWorth: () => false } }).INV_WORK_FLAGS;
-    eq(flags[1].key, 'tocheck', 'the To check chip sits beside Unnamed shots');
-    eq(flags[1].test(unrev, ESTATE()), true, 'and counts the one test');
+    const flags = sandbox({ vars: ['INV_WORK_FLAGS'], fns: ['invLineReviewed', 'agentValueUnreviewed', '_avHasFigure', '_invHasValue'] }).INV_WORK_FLAGS;
+    eq(flags[1].key, 'unreviewed', 'the Not reviewed chip sits beside Unnamed shots (2026-10-25b: it replaced Unreviewed values)');
+    eq(flags[1].test(Object.assign({}, unrev, { reviewed: true })), true, 'and counts a line whose agent figure is not yet looked at, its name ticked or not');
     const bar = liveLines(fn('_renderInvWorkbar'));
     has(bar, '+ _avValueButtonHtml(job)', 'the work bar draws Value N lines');
     const VB = rig(ESTATE(), [ROW({ stableId: 'a' }), ROW({ stableId: 'b', category: 'Furniture' }), ROW({ stableId: 'c', fmv: 5 }), ROW({ stableId: 'd', objectName: '' })]);
@@ -724,7 +715,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     // The row and its record, rendered by the real functions (Agent One's row rig, with Agent Two's figure on the line).
     const rowRig = (row, job) => sandbox({
-      fns: ['invLineReviewed', '_renderInvRow', '_invRowPhotoHtml', '_invRowHasWho', 'invOutForAppraisal', 'invPlanChannel', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', 'invLineDone', 'deskLookReasons', 'deskNeedsLook', '_deskNameConf', '_deskAgentFigure', '_deskAwaitsAgents', '_invEachInput', 'invUnitValue', 'invLineQty', '_invInputStyle', '_invCtrlMinW', 'invAppraisalSourceText', 'invLineAppraiser', '_invLinkedAppraiser', 'invAppraised', 'invAppraisalInProgress', '_invHasAppraisal',
+      fns: ['invLineReviewed', '_renderInvRow', '_invRowPhotoHtml', '_invRowHasWho', 'invOutForAppraisal', 'invPlanChannel', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', 'invAppraisalSourceText', 'invLineAppraiser', '_invLinkedAppraiser', 'invAppraised', 'invAppraisalInProgress', '_invHasAppraisal',
             '_avHasFigure', '_invHasValue', '_avSummary', 'fmt', 'roundCents', 'agentValueInternal', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep',
             'invAppraisalThreshold', 'gateDispute', '_gateYes', '_agNameKey', '_invRowDomId', '_invRecipientInput', '_renderInvPanel', 'invCloseUpRefusal', '_invCloseUpsHtml', '_invCloseUpTileHtml', '_agRecordNoticesHtml', '_avPanelHtml', '_invMoney', '_invDetailRefs', '_invPanelAppraisalHtml',
             '_invPhotoSiblings', '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef', '_invNamed', '_invItemNo',
@@ -732,8 +723,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             'invBequestFor', 'jobListEntries', 'invApprovalGap', 'invReceiptOwed', '_invBenListAttr',
             'invRatificationOwed', 'invFiduciaryMode', 'isDecedentJob', 'invReleaseCautions', '_invJob', 'invHavellinRecipient',
             // P22 (merged): the row reads a pickup record and a name left on a line moved off To a person.
-            'invPickupRecord', 'signedRecordsOf', 'invChannelLeftover', 'invChannelLeftoverText', '_invPanelLeftoverHtml'],
-      vars: ['DESK_LOOK_REASONS', 'INV_LINE_INITIAL_MIN', 'AGENT_VALUE_NOTICE_ORDER', 'INV_PLAN_CHANNEL_KINDS', 'INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick', '_agDupSet', 'DECEDENT_SERVICES', 'INV_RELEASE_CAUTIONS',
+            'invPickupRecord', 'signedRecordsOf', 'invChannelLeftover', 'invChannelLeftoverText', '_invPanelLeftoverHtml', 'invLineUnsure', '_invEachInput', 'invUnitValue', 'invLineQty', '_invInputStyle', '_invCtrlMinW'],
+      vars: ['INV_PLAN_CHANNEL_KINDS', 'INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick', '_agDupSet', 'DECEDENT_SERVICES', 'INV_RELEASE_CAUTIONS',
              'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED'],
       stubs: {
         jobs: [job], _invInput: () => '<input>', _invThumbHTML: () => '<div></div>', _invRoomName: () => 'Dining Room',
@@ -747,9 +738,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       valComps: [COMP()], valLookup: 'Herend Rothschild', driveFileUrl: 'https://drive.google.com/file/d/FID/view' });
     let R = rowRig(agentRow, ESTATE());
     let html = R._renderInvRow(ESTATE(), R._photoRefs[7][0]);
-    // Since 2026-10-24b: the row's one check: badge ($640 is past $500) and no Accept under the value (the tick covers it).
-    has(html, 'check: $500 or more', 'the real row says what a person must look at');
-    lacks(html, 'agentValueAccept', 'and hangs no Accept under the value');
+    lacks(html, '>agent value<', 'the real row carries no agent-value badge (2026-10-25b)');
+    lacks(html, 'agentValueAccept', 'and no Accept under the value');
     lacks(html, 'Agent Two</div>', 'a closed row draws no record');
     R._invOpen.s1 = 1;
     html = R._renderInvRow(ESTATE(), R._photoRefs[7][0]);
@@ -762,19 +752,18 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     R = rowRig(ROW({ stableId: 's1', valuedBy: 'agent', valLow: 480, valHigh: 800 }), ESTATE({ docTier: 'contents' }));
     has(R._renderInvRow(ESTATE({ docTier: 'contents' }), R._photoRefs[7][0]), 'agent $480&ndash;$800 &middot; internal', 'an internal range on the row');
 
-    // The bulk bar's Mark reviewed (2026-10-24b, the one look): the line and Agent Two's figure together; a desk figure gets the
-    // line's review and no agent review; the sentence says what it did.
+    // The bulk bar's Mark reviewed: the one look across the selection, the agent figure accepted with the line (2026-10-25b).
     const picks = [ROW({ stableId: 'a', fmv: 640, valuedBy: 'agent', valHigh: 800 }), ROW({ stableId: 'd', fmv: 900, valuedBy: 'desk', updatedAt: 9 })];
     const B = sandbox({
-      fns: ['_invBulkApply', 'agentValueUnreviewed', '_avHasFigure', '_invHasValue', '_avStampReviewed', '_invStampLineReviewed', '_invStampBy', 'deviceUser', '_avTakeValue', '_invKeyOnJob', '_invColOnJob',
-            '_getPhotoRef', '_setPhotoRef', '_invJob', 'invFiduciaryMode', 'isDecedentJob'],
+      fns: ['_invBulkApply', 'agentValueUnreviewed', '_avHasFigure', '_invHasValue', '_avStampReviewed', '_invStampBy', 'deviceUser', '_avTakeValue', '_invKeyOnJob', '_invColOnJob',
+            '_getPhotoRef', '_setPhotoRef', '_invJob', 'invFiduciaryMode', 'isDecedentJob', '_invStampLineReviewed'],
       vars: ['INVENTORY_COLUMNS', 'DECEDENT_SERVICES', 'AGENT_VALUE_OWN'],
       stubs: { jobs: [ESTATE()], _photoRefs: { 7: picks }, _invPicked: (j) => picks, _invTouch(r) { r.updatedAt = (r.updatedAt || 0) + 1; return r; },
                savePhotoRefs() {}, _scheduleInventorySync() {}, showSyncBadge() {}, renderInventoryTab() {}, _invMatchesFilter: () => true, _invBulkLast: null },
     });
-    B._invBulkApply(7, 'reviewed', 1);
-    eq([picks[0].reviewed, picks[0].valReviewed], [true, true], '⚠ the agent figure is reviewed with its line, in the one look');
-    eq([picks[1].reviewed, picks[1].valReviewed], [true, undefined], 'the desk figure\'s line is reviewed, no agent review written');
+    B._invBulkApply(7, 'reviewed', true);
+    eq([picks[0].reviewed, picks[0].valReviewed], [true, true], 'the agent-valued line reviewed, its figure accepted with it');
+    eq([picks[1].reviewed, picks[1].valReviewed], [true, undefined], 'the desk-valued line reviewed, nothing of the agent\'s stamped');
     eq(B._invBulkLast.msg, '2 items marked reviewed.', 'the bar says what it did');
     B._invBulkApply(7, 'valSource', 'Appraisal');
     eq([picks[0].valuedBy, picks[0].valHigh], ['appraiser', undefined], 'Appraisal set across a selection takes the agent\'s line outright');
@@ -785,7 +774,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const store = {};
     const W = sandbox({ fns: ['savePhotoRefs'], stubs: { localStorage: { setItem: (k, v) => { store[k] = v; } }, _warnPhotoStoreFull() {}, _invReclaimSpace: () => ({ bytes: 0, jobs: [], thumbs: 0 }), _invNoteReclaim() {} } });
     const full = { valLow: 1, valHigh: 2, valComps: [COMP()], valLookup: 'l', valConf: 'low', valNotices: [{ kind: 'name', text: 't' }],
-      valuedBy: 'agent', valAgentAt: 3, valNameAt: 'n', valNameWas: 'w', unitVal: 25, valFailed: 'f', valReviewed: true, valReviewedBy: 'Ashley Jerome', valReviewedAt: 4 };
+      valuedBy: 'agent', valAgentAt: 3, valNameAt: 'n', valFailed: 'f', valReviewed: true, valReviewedBy: 'Ashley Jerome', valReviewedAt: 4 };
     W._photoRefs = { 7: [Object.assign(ROW(), full)] };
     W.savePhotoRefs(7);
     const back = JSON.parse(store.hav_media_7)[0];

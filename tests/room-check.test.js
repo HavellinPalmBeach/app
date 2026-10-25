@@ -94,7 +94,7 @@ const ROW = (over) => Object.assign({
 
 const APP_FNS = ['agentRoomsToCheck', '_arCheckable', '_arRoomPayload', 'agentRoomCheckRun', '_arSendNext', '_arWrite',
   '_arFinish', '_arRepaint', '_arStateHtml', '_arState', '_arCheckButtonHtml', '_arDupEligible',
-  'agentDuplicateGroups', '_agDupEligible', '_agNameKey', '_agDupHtml', '_agDupHandle', '_agDupUnhandle', 'agentNotDuplicate',
+  'agentDuplicateGroups', 'agentNamedTwice', '_agDupEligible', '_agNameKey', '_agDupHtml', '_agDupHandle', '_agDupUnhandle', 'agentNotDuplicate',
   '_jobInvRefs', '_getPhotoRef', '_setPhotoRef', '_invFileId', '_invRoomName', '_invItemNo', '_invJob',
   // the collections
   'collectionLinesEnsure', '_collLinesOf', 'collectionLineId', 'collectionOf', 'collectionLineUnshot', '_invHasPhoto',
@@ -102,8 +102,8 @@ const APP_FNS = ['agentRoomsToCheck', '_arCheckable', '_arRoomPayload', 'agentRo
   '_collPanelHtml', '_collLineStatusHtml', '_roomCollectionsHtml', '_pushInvLine', '_collDispToInv', '_collDispNeedsAppr',
   '_guessCategory', '_numOrBlank', '_invNamed', '_invTombstoneLine', '_avHasFigure', '_invHasValue', 'fieldDispToInv',
   '_importableFromEstimate', '_importedSourceSet', '_apprEstimateFlags', '_renderInventoryImportPanel', '_vehicleLineName',
-  '_renderCollPhotoCapture'];
-const APP_VARS = ['_arRun', 'AGENT_ROOM_BATCH_SHOTS', 'AGENT_ROOM_CONF_RANK', 'AGENT_ROOM_CONF_WORDS', 'COLL_LINE_WEAK_STAMP',
+  '_renderCollPhotoCapture', '_invRenderWhenIdle'];
+const APP_VARS = ['_arRun', 'AGENT_ROOM_BATCH_SHOTS', 'AGENT_ROOM_CONF_RANK', 'AGENT_ROOM_CONF_WORDS', 'AGENT_PASS_GAP_MS', 'COLL_LINE_WEAK_STAMP',
   'INV_DEFAULT_CATEGORY', 'FIELD_DISPOSITIONS', 'FIELD_DISP_DEFAULT', 'INV_TAXONOMY', 'INV_CATEGORIES', 'COLL_DOC_KINDS'];
 
 const EST = (colls, vehicles) => ({ estimate: { rooms: [{ idx: 4, name: 'Bedroom', note: '' }, { idx: 5, name: 'Study', note: '' }],
@@ -117,6 +117,7 @@ function app(refs, over) {
     fns: APP_FNS.concat(over.fns || []),
     vars: APP_VARS.concat(over.vars || []),
     stubs: Object.assign({
+      agentValueAuto() { return false; },   // Agent Two after the check: agents-together.test.js A3
       jobs: [Object.assign({ id: 7, hvlId: 'HVL-0007', svc: 'cleanout', name: 'Adler Estate' }, over.job || {})],
       _photoRefs: { 7: refs || [] },
       estimateStore: { 7: over.est || EST() },
@@ -127,9 +128,6 @@ function app(refs, over) {
       savePhotoRefs: () => { log.saved++; },
       _scheduleInventorySync: () => { log.synced++; },
       renderInventoryTab: () => { log.renders++; },
-      // Agent Two follows the room check's tail by itself (2026-10-24b); the chain is driven in agents-together.test.js, so
-      // here the tail is only counted.
-      agentValueAuto: () => { log.valued = (log.valued || 0) + 1; return false; },
       _invTouch: (r) => { r.updatedAt = 99; return r; },
       _invStampBy: () => 'Ashley Jerome',
       esc: (x) => String(x == null ? '' : x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'),
@@ -462,7 +460,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        'between Name N shots and Value N lines: a line counted twice is a line valued twice');
     // The naming run's tail.
     const calls = [];
-    const s = sandbox({ fns: ['_agFinish', '_agState'], vars: ['_agRun'],
+    const s = sandbox({ fns: ['_agFinish', '_agState', '_invRenderWhenIdle'], vars: ['_agRun'],
       stubs: { savePhotoRefs() {}, _scheduleInventorySync() {}, renderInventoryTab() {}, agentRoomCheckRun: (j, o) => calls.push([j, o]) } });
     s._agFinish(7);
     eq(calls, [[7, { auto: true }]], 'a naming run that finished hands on to the room check by itself');

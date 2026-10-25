@@ -65,7 +65,7 @@ function rig(refs, stubs) {
     fns: ['agentShotGroups', 'agentNameableRefs', '_agDetailRefs', '_agShotPayload', 'agentListedOff', '_agWrite',
           'agentApplyResult', '_agState', 'invSplitItemN', '_getPhotoRef', '_setPhotoRef', '_jobInvRefs',
           '_invFileId', '_photoUid', '_invPhotoSource', '_invRoomName', '_invDetailRefs',
-          '_agNameKey', '_agDupEligible', 'agentDuplicateGroups', '_arDupEligible', '_arWrite',
+          '_agNameKey', '_agDupEligible', 'agentDuplicateGroups', 'agentNamedTwice', '_arDupEligible', '_arWrite',
           '_importableFromEstimate', '_importedSourceSet', '_pushInvLine',
           '_collDispToInv', '_collDispNeedsAppr', '_guessCategory', '_numOrBlank',
           // P24: the walkthrough's collections join the inventory by themselves and wait for a photograph.
@@ -73,7 +73,7 @@ function rig(refs, stubs) {
           'collectionsAwaitingPhoto', 'collectionLineWithPhoto', 'collectionUseLine', '_invJob', 'fieldDispToInv',
           '_invTombstoneLine', '_invItemNo', '_invNamed', '_avHasFigure', '_invHasValue'],
     vars: ['_agRun', 'AGENT_MAX_DETAILS', 'AGENT_LISTED_MAX', 'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY',
-           'INV_SPLIT_MAX', '_photoUidSeq', 'AGENT_ROOM_CONF_RANK', 'COLL_LINE_WEAK_STAMP',
+           'INV_SPLIT_MAX', '_photoUidSeq', 'AGENT_ROOM_CONF_RANK', 'AGENT_PASS_GAP_MS', 'COLL_LINE_WEAK_STAMP',
            'FIELD_DISPOSITIONS', 'FIELD_DISP_DEFAULT'],
     stubs: Object.assign({
       jobs: [{ id: 7, hvlId: 'HVL-0007', svc: 'cleanout' }],

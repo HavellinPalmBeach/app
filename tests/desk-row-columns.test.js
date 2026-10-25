@@ -18,7 +18,7 @@
 //
 // So:
 //   A. the row draws its boxes in column classes (Photo · # · Item · Qty · Each · Total · Where it goes · Who takes it; Each
-//      since 2026-10-24b, Each × Qty = Total, agents-together.test.js), the
+//      and Total since 2026-10-25b, Anthony: "the total value needs to be multiplied by the number in the group"), the
 //      photograph a link to its file in Drive, the name a wrapping box, the count a box of its own;
 //   B. each open group draws one row of headings in the same classes, Who takes it exactly where its rows carry the box
 //      (one answer, _invRowHasWho), none on a folded group;
@@ -52,14 +52,13 @@ function callersOf(name) {
 
 // The row, lifted as photo-split.test.js lifts it, with the two helpers it reads since 2026-10-24.
 const ROW_FNS = ['invLineReviewed', '_renderInvRow', '_invRowPhotoHtml', '_invRowHasWho', 'invOutForAppraisal', 'collectionLineUnshot',
-  '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth',
-  'invLineDone', 'deskLookReasons', 'deskNeedsLook', '_deskNameConf', '_deskAgentFigure', '_deskAwaitsAgents', '_invEachInput', 'invUnitValue', 'invLineQty', '_invInputStyle', '_invCtrlMinW', 'invPickupRecord', 'signedRecordsOf', '_invRowDomId', '_invRecipientInput', 'invPlanChannel', '_invDetailRefs',
+  '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', 'invPickupRecord', 'signedRecordsOf', '_invRowDomId', '_invRecipientInput', 'invPlanChannel', '_invDetailRefs',
   '_invPhotoSiblings', '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef', '_invItemNo', 'invDealerRouteOffered', 'invDealerRoute',
   'invDealerRouteText', 'invBequestFor', 'jobListEntries', 'invApprovalGap', 'invReceiptOwed', '_invBenListAttr', 'invRatificationOwed',
   'invFiduciaryMode', 'isDecedentJob', 'invReleaseCautions', '_invJob', 'invHavellinRecipient', 'invChannelLeftover', 'invChannelLeftoverText',
   '_invPanelCautionHtml', '_invPanelLeftoverHtml', '_jobDestLabel', 'invAppraisalSourceText', 'invLineAppraiser', '_invLinkedAppraiser',
-  'invAppraised', 'invAppraisalInProgress', '_invHasAppraisal', '_invHasValue', '_avHasFigure', '_agNameKey'];
-const ROW_VARS = ['DESK_LOOK_REASONS', 'INV_LINE_INITIAL_MIN', 'INV_PLAN_CHANNEL_KINDS', 'INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick', '_agDupSet',
+  'invAppraised', 'invAppraisalInProgress', '_invHasAppraisal', '_invHasValue', '_avHasFigure', 'invLineUnsure', '_invEachInput', 'invUnitValue', 'invLineQty', '_agNameKey', '_invInputStyle', '_invCtrlMinW'];
+const ROW_VARS = ['INV_PLAN_CHANNEL_KINDS', 'INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick', '_agDupSet',
   'DECEDENT_SERVICES', 'INV_RELEASE_CAUTIONS'];
 const LINE = (o) => Object.assign({ stableId: 'k80', label: 'inventory', roomIdx: 1, ts: 1, itemNo: 80, category: 'General/Household',
   objectName: 'White ceramic salad/dessert plates, coupe form, unmarked in frame', disposition: 'Donate', qty: 8,
@@ -103,7 +102,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(row, "oninput=\"this.parentNode.setAttribute('data-v',this.value)\"", '…and the hidden copy follows the typing, so the box grows as the name does');
     lacks(row, "<input type=\"text\" value=\"White ceramic", 'never the one-line box that cut a long name off');
     // The boxes in their columns, each naming itself for the phone.
-    has(row, '<div class="inv-c inv-c-val" data-cap="Total"><i data-col="fmv">', 'the value box in the Total column (Each beside it since 2026-10-24b)');
+    has(row, '<div class="inv-c inv-c-each" data-cap="Each"><input type="text" inputmode="decimal" id="inv-each-k80" class="inv-each"', 'one article\'s value in the Each column…');
+    has(row, "onchange=\"_invEdit(7,'k80','unitVal',this)\"", '…written through _invEdit, which multiplies it by the count (agents-together.test.js A8)');
+    has(row, '<div class="inv-c inv-c-val" data-cap="Total"><i data-col="fmv">', 'the line\'s value box in the Total column');
     has(row, '<div class="inv-c inv-c-disp" data-cap="Where it goes"><i data-col="disposition">', 'the disposition in Where it goes');
     has(row, '<div class="inv-c inv-c-who" data-cap="Who takes it"><input type="text"', 'the recipient in Who takes it');
     has(row, 'class="inv-recip"', '…the recipient box itself');
@@ -141,7 +142,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(head.ok, 'the headings render (' + (head.err || 'ok') + ')');
     const words = (h) => String(h).replace(/<[^>]+>/g, '|').split('|').map((s) => s.trim()).filter(Boolean);
     eq(words(head.ok ? head.val : ''), ['Photo', '#', 'Item', 'Qty', 'Each', 'Total', 'Where it goes', 'Who takes it'],
-       '⚠ the headings name every box, the two Anthony asked about included: the value (Each and Total since 2026-10-24b) and Who takes it');
+       '⚠ the headings name every box, the two Anthony asked about included: the value (Each and Total since 2026-10-25b) and Who takes it');
     eq(cols(head.ok ? head.val : ''), ['pick', 'photo', 'no', 'item', 'qty', 'each', 'val', 'disp', 'who', 'rev', 'open'],
        '…each in the column class of the box under it');
     const R = rowRig([LINE()]);

@@ -11,7 +11,7 @@ const FNS = ['scheduleSignLines', '_invDocPartyHead', 'invLineReviewed', 'invCon
   'printEstateInventoryReport', 'jobOnProbateTrack', 'printCourtInventory', '_avUnreviewedStamp', 'printContentsList', 'contentsList',
   'printContentsRecord', '_invHasPhoto', 'photoShareLive', 'photoSharesOf', 'printApprovalRequest', '_lotSplitWorklistBlock', 'invLotSplitState', 'invLotArticleValue', 'invLotSplitSentence', 'invLotsToSplit', 'invLotsUntestable', 'printAppraisalWorklist', 'printDispositionLedger',
   'agentShotGroups', 'agentNameableRefs', '_agState', '_agStateHtml', '_agNoticesHtml', 'agentNotices',
-  '_clFlags', '_renderInvWorkbar', '_arCheckButtonHtml', '_arState', 'agentRoomsToCheck', '_arCheckable', '_arStateHtml', '_avValueButtonHtml', 'agentValueableRefs', '_avHasFigure', '_avStateHtml', '_avState', '_avNoticesHtml', 'agentValueNotices', 'agentValueInternal', 'agentValueUnreviewed', 'agentValueStale', 'agentValueSpecialistWorth', 'invPrimaryDoc', '_invProgressBar', 'invWorkFlags', '_invNeedsValue',
+  '_clFlags', '_renderInvWorkbar', '_arCheckButtonHtml', '_arState', 'agentRoomsToCheck', '_arCheckable', '_arStateHtml', '_avValueButtonHtml', 'agentValueableRefs', '_avHasFigure', '_avStateHtml', '_avState', '_avNoticesHtml', 'agentValueNotices', '_avNoticeKinds', '_avNoticeLabel', 'agentValueInternal', 'agentValueUnreviewed', 'agentValueStale', 'agentValueSpecialistWorth', 'invPrimaryDoc', '_invProgressBar', 'invWorkFlags', '_invNeedsValue',
   '_invAssignItemNos', '_jobInvRefs', '_invItemNo', '_invRoomName', '_planRooms', '_invFileId',
   '_invTouch', 'savePhotoRefs', '_warnPhotoStoreFull', '_invDocHead', '_invDocName',
   '_invPrintThumb', '_invProgressStamp', '_invReviewStats', '_invThumbFor', '_invThumbCache',
@@ -37,8 +37,8 @@ const FNS = ['scheduleSignLines', '_invDocPartyHead', 'invLineReviewed', 'invCon
   '_ymdLocal', 'invDonationReceipted', '_jobDestLabel', 'photoSharesLine', 'photoSharesOf',
   // 2026-10-22: the signed schedules, beside the ledger in the close-out papers.
   '_renderSignedSchedulesCard', 'signedScheduleRows'
-, 'invLineDone', '_deskAwaitsAgents', 'deskLookReasons', '_deskNameConf', '_deskAgentFigure', '_agNameKey', 'deskNeedsLook'];
-const VARS = ['AGENT_VALUE_NOTICE_ORDER', 'DESK_LOOK_REASONS', 'INV_LINE_INITIAL_MIN', 
+];
+const VARS = [
   '_agRun', '_avRun', '_arRun', 'AGENT_NOTICE_KINDS', 
   'INV_CONTRACT_DOCS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DECEDENT_SERVICES',
   'SVC_ORDER', 'SVC_LABELS', 'INV_CAT_GLYPH', 'estimateStore', 'INV_APPRAISAL_THRESHOLD',

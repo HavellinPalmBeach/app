@@ -22,7 +22,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('grouping — disposition first, undecided at the top, rooms in walkthrough order');
   {
     const ctx = sandbox({
-      fns: ['invLineReviewed', '_invDispLabel', '_invGroupItems', 'invLineDone', '_deskAwaitsAgents', 'deskLookReasons', '_deskNameConf', '_deskAgentFigure', 'agentValueUnreviewed', '_avHasFigure', '_invHasValue', 'agentValueStale', '_agNameKey', 'deskNeedsLook'],
+      fns: ['invLineReviewed', '_invDispLabel', '_invGroupItems', 'agentValueUnreviewed', '_avHasFigure'],
       vars: ['INV_GROUP_ORDER', 'INV_UNDECIDED'],
       stubs: { _invRoomName: (jobId, idx) => (idx == null ? 'Unassigned / estate-wide' : 'Room ' + idx) },
     });
@@ -56,7 +56,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('review state gates nothing and locks nothing');
   {
-    const ctx = sandbox({ fns: ['invLineReviewed', '_invReviewStats', '_invProgressStamp', 'invLineDone', '_deskAwaitsAgents', 'deskLookReasons', '_deskNameConf', '_deskAgentFigure', 'agentValueUnreviewed', '_avHasFigure', '_invHasValue', 'agentValueStale', '_agNameKey', 'deskNeedsLook'] });
+    const ctx = sandbox({ fns: ['invLineReviewed', '_invReviewStats', '_invProgressStamp', 'agentValueUnreviewed', '_avHasFigure'] });
 
     eq(ctx._invReviewStats([{ reviewed: true }, {}, {}]), { done: 1, total: 3, complete: false },
        'progress is counted');
@@ -72,7 +72,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(partial, 'may still change', 'and warns which lines are provisional');
 
     const done = ctx._invProgressStamp([{ reviewed: true }, { reviewed: true }]);
-    has(done, 'COMPLETE', 'a finished review says so (COMPLETE since 2026-10-24b: no paper claims a person reviewed every line)');
+    has(done, 'REVIEWED', 'a finished review says so');
     lacks(done, 'IN PROGRESS', 'and drops the stamp');
 
     // No caller may refuse to produce a document because the review is unfinished.
@@ -190,8 +190,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const at = src.indexOf('function _invBulkApply(');
     const body = src.slice(at, src.indexOf('\n}\n', at));
     // Selecting the placeholder must never blank the field across the whole selection.
-    // RESTATED 2026-10-24b: Accept values is gone (the one review), so Mark reviewed is again the one act that carries no value
-    // of its own and passes the guard; every field the bar sets still refuses the placeholder.
+    // RESTATED 2026-10-06 (P23): Accept values (`valReviewed`) was the second act that carries no value of its own. Since
+    // 2026-10-25b Mark reviewed is the one (it covers the line's value too), and every field the bar sets still refuses the
+    // placeholder.
     has(body, "if (key !== 'reviewed' && (value === '' || value == null)) return;",
         'the placeholder is not a value and cannot wipe forty items');
     has(body, "(value === '__none') ? null : parseInt(value, 10)",

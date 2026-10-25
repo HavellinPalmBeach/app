@@ -134,7 +134,8 @@ Written by the agent:
   lines*. A per-row **Re-value** handles a correction.
 - **Review** is its own flag (`valReviewed`, with who and when), separate from the name's `reviewed`:
   a line can have a confirmed name and an unconfirmed value. The desk gets an *Unreviewed values*
-  chip beside *Unnamed shots*, and **Accept** on the row.
+  chip beside *Unnamed shots*, and **Accept** on the row. *(Built so in P23; since 2026-10-25b the line's
+  one Reviewed tick sets both, and Accept, Accept values and the chip are gone: §13.)*
 
 ### 5a · A value made against a name that changed
 
@@ -273,7 +274,8 @@ Measure on the first real estate before tuning. Cost does not drive the model ch
 1. `main-sync.gs`: `agentValue`, `testAgentValue()`, version bump. **Redeploy.**
 2. App: `agentValueMode`, the caller, the writer, the whitelist, the provenance fields, §5a.
 3. `invNeedsAppraisal`'s range read; the living notice.
-4. Desk: *Value the unvalued lines*, *Unreviewed values*, Accept, Re-value, the WorthPoint lookup and paste.
+4. Desk: *Value the unvalued lines*, *Unreviewed values*, Accept, Re-value, the WorthPoint lookup and paste
+   (Accept and *Unreviewed values* went in 2026-10-25b: §13).
 5. Tests and the browser step.
 6. Manual §10a and the playbook; the counsel bundle (§8, and the client-facing basis wording).
 
@@ -284,7 +286,8 @@ Measure on the first real estate before tuning. Cost does not drive the model ch
 1. **§8:** internal figures only where counsel values, used for routing and to recommend appraisals
    without a figure.
 2. **An unreviewed agent value counts as valued** for FINAL; the schedule says *N values not yet
-   reviewed*, as the *IN PROGRESS* stamp does, and nothing is withheld.
+   reviewed*, as the *IN PROGRESS* stamp does, and nothing is withheld. (Since 2026-10-25b a value is
+   reviewed by its line's one tick: §13.)
 3. **The Court Inventory and the Trust Schedule name the basis on each line** (*auction comps*,
    *general estimate*, *WorthPoint comps*, *appraisal*).
 4. **An appraisal replaces the agent's figures** rather than sitting beside them (§2.3).
@@ -323,7 +326,8 @@ and browser step 69.
   nothing is written, and the run goes on. A slice is started only within 120 seconds of the call's start. Measure with
   `testAgentValue()`, which prints the elapsed time.
 - **The desk.** *Value N lines* on the work bar, after *Name N shots*; *Unreviewed values* chip; *Accept value* under the
-  figure; *Accept values* on the bulk bar (only lines with an unreviewed agent figure are touched); the line's record carries
+  figure; *Accept values* on the bulk bar (only lines with an unreviewed agent figure are touched; all three gone since
+  2026-10-25b, below); the line's record carries
   the comparables, the WorthPoint search with Copy, *Use a WorthPoint sale* and Re-value, and nothing on a line Agent Two has
   not touched. Re-value researches one line and replaces only the agent's own figure.
 - **The appraisal (§2.3)** takes the line when its source is set to Appraisal (on the line or the bulk bar), or when a figure
@@ -333,4 +337,50 @@ and browser step 69.
   line whose earlier agent figure predates a tier change clears it. A source somebody recorded is left alone.
 - **§12.2 and §12.3:** `_avUnreviewedStamp` on the Court Inventory, the Trust Schedule and the Estate Inventory PDF (it counts
   printed figures only); the Basis column lives in `_invScheduleSection`, the table both schedules share.
-
+- **Agent Two confirms or corrects the name (2026-10-25):** Anthony, off the Ellison plates (Agent One's *likely
+  Italian*, flagged *Name may be wrong* on every line): *"Why doesn't agent 1 guess and agent 2 confirm or update upon
+  pricing. No need to flag inconsistencies. Just update the the best of their ability and if I see something that is
+  off on the desk review, I'll change it."* `record_values` carries a required `name`, the name given or its correction
+  under Agent One's naming rules; `_avRename` writes it with the figure (never without one) over a name that is still
+  Agent One's and unreviewed, never over a name a person typed or ticked, keeps the replaced one as `valNameFrom` (the
+  record reads *Name updated from "…"*), and the line stays unreviewed. §2.1's "it never renames" is overruled for that
+  case only; the category and the quantity stay the line's. The notice kinds are `appraiser`, `specialist` and `other`:
+  no notice for a name, unrecorded condition, an approximate count, a search that ran short, or a WorthPoint check (the
+  row's confidence and the record's WorthPoint terms say it); at most one a line. Condition is read off the photograph
+  on a research line and assumed ordinary on an ordinary lot; the count is valued as given. A mark Agent One could not
+  read (*illegible*, *no visible maker's mark*) no longer sends a line to research (`AGENT_VALUE_NO_MARK_RE`). The list
+  above the rows is one entry per line (*Agent Two noted N lines to look at*), and each line's record lists its notes,
+  which the list's *N more* sentence had pointed to before any screen drew them.
+- **The agents in a line, one look per item, and Each × Qty (2026-10-25b):** Anthony: *"we are supposed to be making this
+  easy, with one review. not a multi tiered review"*; *"I want the two agents working in concert to get the best possible
+  information first … I don't want them conflicting with each other and sending up a bunch of flags that need to be
+  cleared"*; *"just figure out the best way for the agents to work together and to most accurately identify, describe,
+  name, and price or value each item and minimize the work for the transition concierge."* Where the build departs from
+  the spec above:
+  - **It runs by itself** (§11's button is no longer the only way in): `agentValueAuto` follows a naming run with no room
+    to check (`_agFinish`) and a room check that did not fail (`_arFinish`), on every photographed, named line with no
+    figure that it has not already failed on (`_invHasPhoto`, `valFailed`). *Value N lines* and Re-value still send the
+    rest. A run's tail redraw waits while a box on the desk has focus, and keeps waiting as focus moves box to box
+    (`_invRenderWhenIdle`).
+  - **It researches Agent One's guesses:** `agentValueMode` sends a line Agent One named with low confidence, while the
+    name is still Agent One's (`_avNameIsAgents`), to research, the depth that reads the photograph, so its correction of
+    the name rests on sold comparables.
+  - **A person's name is marked and given back:** `_avItemPayload` sends `nameChecked` on a name a person typed or
+    reviewed; the line text says *Name checked by a person*, and the prompt asks for that name back exactly and the line
+    valued as named (the Restoration Hardware mirror). §2.1's "never renames" now holds for those names in the prompt as
+    well as in `_avRename`.
+  - **A name changed on the desk is valued again by itself** (`agentValueAfterRename` from `_invEdit`, researched through
+    `_avForceComps`; a run already out takes it at its tail, `_avAfter`), and a figure accepted for the old name is no
+    longer accepted (§5a's badge stands only where the re-value cannot run). Anthony: *"maybe it's worth $1500 new, and then
+    not $25 used, that's the point"*. A brand goes in the name (his answer: *"Type it in the name"*), and the prompt prices
+    the brand on an ordinary lot; Agent One puts a maker the crew names into the name.
+  - **One look per line:** §5's separate value review is gone. The line's Reviewed tick (`_invStampLineReviewed`, the
+    row and the bulk bar's Mark reviewed) stamps `valReviewed` with the line's review, and `invLineReviewed` reads an
+    unaccepted agent figure as not reviewed. *Accept value*, *Accept values* and the *Unreviewed values* chip are gone;
+    the chip is *Not reviewed*. The schedules' *N values not yet reviewed* is unchanged.
+  - **One hint:** the row's *agent value* badge (and Agent One's *agent*) are gone; `invLineUnsure` marks *unsure* where
+    Agent Two's figure is low confidence, or Agent One was unsure and Agent Two has not yet valued the line under that name.
+  - **Each × Qty = Total:** the row's value is two boxes, Each and Total (`invUnitValue`, `unitVal` on the manifest's save
+    list). The figure Agent Two writes stays the line's whole value at its Quantity (`fmv`), Each is read off it, and a
+    count corrected at the desk carries Each across (`_invQtyCarriesValue`, the agent's range scaled with it; an appraised
+    line never moved). The prompt says the desk reads one article's value as the line's over its Quantity.

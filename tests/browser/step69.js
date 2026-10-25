@@ -2,8 +2,9 @@
 // save time, not have a human re-enter numbers where we don't have to."
 //
 // Drives the REAL page through its own controls: + Add New Client typed into and saved, the Job Admin & Inv tab, the
-// work bar's Value N lines, the row's Accept value, the line's record (▾) with its comparables, WorthPoint search and
-// Use this sale, the row's name box, the bulk bar's Accept values, the More menu's Court Inventory. The valuing service
+// work bar's Value N lines, the row's Reviewed tick (Accept value until 2026-10-25b), the line's record (▾) with its
+// comparables, WorthPoint search and Use this sale, the row's name box, the bulk bar's Mark reviewed (Accept values until
+// 2026-10-25b), the More menu's Court Inventory. The valuing service
 // is stubbed at the network edge (window.fetch, action agentValue), so everything between the press and the manifest is
 // the shipping code. What is seeded is state a person could not type in one sitting: an estimate behind each client and
 // inventory lines already named by Agent One.
@@ -12,11 +13,12 @@
 //      unnamed one), confirms, posts each line with its depth (the Antiques line researched with its photograph, the
 //      ordinary lots as text), writes the figures unreviewed, re-sends the ordinary lot that came back over $250 to be
 //      researched, and records the line it could not value with its reason
-//   B. the desk: agent-value badges, Accept under the value, the Unreviewed values chip, Agent Two's notices, the
-//      "not valued" line; Accept pressed on a row
+//   B. the desk: no agent-value badge and no Accept (2026-10-25b: the line's one tick), the Not reviewed chip, Agent
+//      Two's notices, the "not valued" line; the row's Reviewed tick pressed, the value accepted with it
 //   C. the line's record: the comparables, the WorthPoint search, a WorthPoint sale pasted and used
-//   D. a name changed under an agent's figure: "made for an earlier name", on the row and at the top
-//   E. the bulk bar's Accept values touches only the lines with an unreviewed agent figure
+//   D. a name changed under an agent's figure: "made for an earlier name", on the row and at the top, and the line sent
+//      to Agent Two again by itself, researched, as named by a person (2026-10-25b)
+//   E. the bulk bar's Mark reviewed: the one look across a selection, an agent figure accepted with its line
 //   F. the Court Inventory printed from the More menu: a Basis column naming each line's basis, the count of values not
 //      yet reviewed beside the status, and FINAL withheld from nothing on their account
 //   G. a contents-tier estate: the figure stays internal (no value written, the range on the desk, marked internal)
@@ -159,21 +161,20 @@ const COMP = { title: 'Herend Rothschild Bird dinner plates, set of 8', venue: '
 
     // ── B · what the desk shows ────────────────────────────────────────────────
     const rowText = (sid) => p.evaluate((sid) => { const el = document.getElementById('inv-row-' + sid); return el ? el.textContent : ''; }, sid);
-    ok(/agent value/.test(await rowText('a')), 'the plates\' row says agent value');
-    ok(/Accept value/.test(await rowText('a')), 'with Accept under it');
-    ok(!/Accept value/.test(await rowText('d')), 'the desk\'s tray has no Accept');
+    ok(!/agent value/.test(await rowText('a')), 'the plates\' row wears no agent-value badge (2026-10-25b)');
+    ok(!/Accept value/.test(await p.evaluate(() => document.getElementById('panel-inventory').textContent)), '⚠ and no Accept value anywhere on the desk');
+    ok(!/unsure/.test(await rowText('a')), 'Agent Two researched the plates under their name, sure: no unsure hint');
     ok(/not valued/.test(await rowText('f')), 'the lamp\'s row says not valued');
-    const chip = () => p.evaluate(() => { const el = Array.from(document.querySelectorAll('#panel-inventory button')).find(x => /^Unreviewed values/.test(x.textContent.trim())); return el ? el.textContent.trim() : ''; });
-    eq(await chip(), 'Unreviewed values 3', 'the chip counts three unreviewed figures');
+    const chip = () => p.evaluate(() => { const el = Array.from(document.querySelectorAll('#panel-inventory button')).find(x => /^Not reviewed/.test(x.textContent.trim())); return el ? el.textContent.trim() : ''; });
+    eq(await chip(), 'Not reviewed 6', 'the one chip counts every line not yet looked at, its value included');
     const top = await p.evaluate(() => (document.getElementById('inv-value-notices') || {}).textContent || '');
     ok(/Appraisal advised/.test(top), 'Agent Two\'s notice is at the top');
     ok(/3 valued/.test(await p.evaluate(() => (document.getElementById('inv-value-state') || {}).textContent || '')), 'and the line under the button says what happened');
-    await p.click('#inv-row-a button:has-text("Accept value")');
+    await p.click('#inv-row-a input[type="checkbox"][onchange*="_invSetReviewed"]');
     await p.waitForTimeout(400);
-    const acc = await p.evaluate((id) => { const r = _photoRefs[id].find(x => x.stableId === 'a'); return [r.valReviewed, r.valReviewedBy]; }, J);
-    eq(acc[0], true, 'Accept pressed on the row accepts the plates\' value');
-    eq(await chip(), 'Unreviewed values 2', 'and the chip falls to two');
-    ok(!/Accept value/.test(await rowText('a')), 'and the button goes');
+    const acc = await p.evaluate((id) => { const r = _photoRefs[id].find(x => x.stableId === 'a'); return [r.reviewed, r.valReviewed]; }, J);
+    eq(acc, [true, true], '⚠ the row\'s Reviewed tick reviews the plates and accepts their value with it');
+    eq(await chip(), 'Not reviewed 5', 'and the chip falls by one');
 
     // ── C · the line's record ──────────────────────────────────────────────────
     await p.click('#inv-row-c button[title="Open the full record"]');
@@ -205,19 +206,21 @@ const COMP = { title: 'Herend Rothschild Bird dinner plates, set of 8', venue: '
     ok(/Value made for an earlier name/.test(staleTop), '⚠ a rename under an agent\'s figure is named at the top at once');
     await p.evaluate(() => renderInventoryTab()); await p.waitForTimeout(300);
     ok(/value made for an earlier name/.test(await rowText('b')), 'and on the row');
+    const re = await p.evaluate(() => window.__avPosts.slice(-1)[0] || {});
+    eq((re.items || []).map(i => [i.stableId, i.mode, i.nameChecked]), [['b', 'comps', true]], '⚠ and the line goes to Agent Two again by itself, researched, as a person named it (2026-10-25b)');
 
-    // ── E · Accept values across a selection ───────────────────────────────────
+    // ── E · Mark reviewed across a selection (Accept values until 2026-10-25b) ─
     await p.click('#inv-row-b input[title="Select for a bulk change"]');
     await p.click('#inv-row-d input[title="Select for a bulk change"]');
     await p.waitForTimeout(300);
-    const dBefore = await p.evaluate((id) => _photoRefs[id].find(x => x.stableId === 'd').updatedAt, J);
-    await p.click('button:has-text("Accept values")');
+    ok(!/Accept values/.test(await p.evaluate(() => (document.getElementById('m-bulk') || document.getElementById('panel-inventory')).textContent)), 'the bar offers no second Accept');
+    await p.click('#panel-inventory button:has-text("Mark reviewed")');
     await p.waitForTimeout(400);
-    const bulk = await p.evaluate((id) => ({ b: !!_photoRefs[id].find(x => x.stableId === 'b').valReviewed, dAt: _photoRefs[id].find(x => x.stableId === 'd').updatedAt,
-      d: _photoRefs[id].find(x => x.stableId === 'd').valReviewed }), J);
-    eq(bulk.b, true, 'the flatware\'s agent figure is accepted');
-    eq([bulk.d, bulk.dAt === dBefore], [undefined, true], '⚠ the desk\'s tray in the same selection is left exactly as it was, its clock included');
-    ok(/1 value accepted \(1 of the 2 selected carried no unreviewed agent value/.test(await p.evaluate(() => document.getElementById('panel-inventory').textContent)), 'and the bar says so');
+    const bulk = await p.evaluate((id) => { const g = (s) => _photoRefs[id].find(x => x.stableId === s);
+      return { b: [!!g('b').reviewed, !!g('b').valReviewed], d: [!!g('d').reviewed, g('d').valReviewed] }; }, J);
+    eq(bulk.b, [true, true], '⚠ the flatware reviewed, its agent figure accepted with it');
+    eq(bulk.d, [true, undefined], 'the desk\'s tray reviewed, nothing of the agent\'s stamped on it');
+    ok(/2 items marked reviewed/.test(await p.evaluate(() => document.getElementById('panel-inventory').textContent)), 'and the bar says so');
     await p.evaluate(() => _invClearPicks()); await p.waitForTimeout(200);
 
     // ── F · the Court Inventory, from the More menu ────────────────────────────

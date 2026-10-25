@@ -124,7 +124,11 @@ function decl(name) {
   let i = re.lastIndex;
   // Walk to the terminating semicolon at depth 0, using the same skip rules.
   let depth = 0;
-  let prevSignificant = '';
+  // ⚠ THE `=` IS THE PREVIOUS SIGNIFICANT CHARACTER (2026-10-25). It started as '', and `')]}'.includes('')` is true, so a
+  // declaration whose value is a regex literal was never read as one: its quotes (`maker's`) opened strings that ran on
+  // into the next lines, and the walk ended wherever their count happened to balance. AGENT_VALUE_MARK_RE was read that
+  // way until a comment with an apostrophe below it left the count odd and the declaration "unterminated".
+  let prevSignificant = '=';
   let word = '';
   while (i < s.length) {
     const c = s[i];

@@ -114,6 +114,20 @@ job."*
   name … I took the picture of the top of a stack of plates, and it only registered as 1, but there were 7 more
   underneath it."* How many is `qty` alone, taken from the crew's note when it gives one (*"set of 8"*), else what
   the frame shows; a name like *"… approx. 7 in stack"* contradicts the Qty box the moment a person corrects it.
+- **Everyday dishes are household goods (2026-10-25):** the Ellison kitchen's hand-painted plates came back as
+  *Collectibles*, which sent them to Agent Two's research (five searches for sold comparables of $50 plates, none found,
+  three notes a line). Everyday dishes, glassware, cookware, kitchen tools and table linens are General/Household however
+  decorative, unless a maker's mark, signature or hallmark is readable; Collectibles is for things collected as such. A
+  name is one short line (about fifteen words), a group line naming its kind and contents in a few words, never every
+  piece. The hedged guess stays (Anthony: *"Why doesn't agent 1 guess and agent 2 confirm or update upon pricing"*):
+  Agent Two now confirms or corrects the name as it values (AGENT_TWO_SPEC §13). And a photograph Agent One read twice
+  (two namings neither told what was listed: two devices at once, or any naming before the `2026-10-24` backend) shows
+  under *Possible duplicates* as *One photograph named twice* (`agentNamedTwice`): every line one answer writes carries
+  one `agentAt` and the count of lines its request listed (`agentListed`).
+- **A maker the crew names goes into the name (2026-10-25b):** when the crew's note names the maker or brand (*"Crate &
+  Barrel coffee table"*), the name carries it as they said it, unless the photograph plainly shows something else, so
+  Agent Two prices that brand (Anthony, of the brand: *"Type it in the name"*). Agent Two now follows the naming and the
+  room check by itself and researches a line named with low confidence (AGENT_TWO_SPEC §13).
 - The confirming is Havellin's job and the app already carries the state for it: `namedBy:'agent'`
   plus `reviewed:false` plus the *IN PROGRESS — N of M items reviewed* stamp on every client
   document. An attribution nobody has confirmed is visibly unconfirmed.

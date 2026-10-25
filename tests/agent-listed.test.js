@@ -171,17 +171,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(gsFn('testAgentIdentify'), 'AGENT_COUNT_IN_NAME_RE.test(', 'testAgentIdentify says so on the first run after the redeploy');
   }
 
-  group('E · the deployment: 2026-10-24, the app relies on it, and the banner names what an older one gets wrong');
+  // Restated 2026-10-25 (agent-named-twice.test.js): a later build leads the banner; this one's gap is named by its vintage.
+  group('E · the deployment: at least 2026-10-24, the app relies on it, and the banner names what an older one gets wrong');
   {
     const bv = /var BACKEND_VERSION = '([^']+)'/.exec(GS)[1];
     const mv = /var BACKEND_MIN_VERSION = '([^']+)'/.exec(SRC)[1];
-    // RESTATED 2026-10-24b (Agent Two's better name, agents-together.test.js B5): this build's backend is carried by every later
-    // one, and the banner names its gap by its vintage, after the newer one.
     ok(bv >= '2026-10-24', 'main-sync.gs is 2026-10-24 or later (' + bv + ')');
     ok(mv >= '2026-10-24', 'and the app relies on it (' + mv + ')');
     const C = sandbox({ vars: ['BACKEND_FEATURE_COST'] });
     has(C.BACKEND_FEATURE_COST.version, 'on a deployment older than 2026-10-24, a blank line added to a photograph already named (Another item in this photo) makes Agent One read the whole photograph again',
-       'the banner names this gap by its vintage, by consequence');
+       'the banner names this build\'s gap, by consequence and vintage');
     has(C.BACKEND_FEATURE_COST.version, 'on a deployment older than 2026-10-19b, a client', 'and the inventory reset\'s gap after it, by its vintage');
   }
 
