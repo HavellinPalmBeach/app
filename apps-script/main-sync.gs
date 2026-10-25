@@ -82,7 +82,12 @@
 // the whole photograph; and its names carry no count (the count is qty's, taken from the crew's note where it gives one).
 // No action or type changes; until it is live a blank line on a named photograph puts every object in it on the list
 // twice, and a stack photographed from the top is named "approx. 7 in stack". The app names it by version.
-var BACKEND_VERSION = '2026-10-24';
+// ⚠ 2026-10-25: Agent Two hands back the name it values each line under (`name` in record_values), the name given or its
+// correction, where it flagged "Name may be wrong" before; values the count as given; reads condition off the photograph;
+// and raises a notice only for something to do ("name" and "worthpoint" are gone from its kinds). Agent One keeps a name
+// to one short line and files everyday dishes, glassware and kitchen things under General/Household unless a mark is
+// readable. No action or type changes; it carries 2026-10-24's. The app names it by version.
+var BACKEND_VERSION = '2026-10-25';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive',
@@ -3161,9 +3166,13 @@ function _agSystem(ctx) {
     + 'State flatly only what is READABLE in the frame. When you are inferring from form, style '
     + 'or proportion, hedge in the words themselves: "appears to be", "likely", "in the style '
     + 'of". Both are useful; only one of them is a claim.\n'
+    // 2026-10-25 (Anthony, the Ellison kitchen: one line listed fifteen utensils by kind and ran off the desk's row).
+    + 'Keep a name to one short line, about fifteen words at most: what it is first, then what tells it '
+    + 'apart. A group line names the kind and what it holds in a few words, never every piece.\n'
     + '  Good: "Bang & Olufsen Beolab 8000 speakers" (qty 2) when the badge is legible.\n'
     + '  Good: "appears to be Bang & Olufsen, floor-standing column speakers" (qty 2) when it is the shape.\n'
     + '  Good: "Banksy print, likely a reproduction" when the image is recognisable but the edition is not.\n'
+    + '  Good: "Kitchen utensils: wooden spoons, spatulas, whisks, tongs" for a crock of them.\n'
     + '  Bad:  "Speakers." Bad: "Banksy original." Bad: "Tiffany lamp" on an unmarked leaded shade.\n'
     + 'Some photographs are close-ups of a maker\'s mark, signature or hallmark belonging to an '
     + 'object in the main frame. Read them and use them. They are why they were taken.\n'
@@ -3176,7 +3185,13 @@ function _agSystem(ctx) {
     + 'gives a count ("set of 8", "twelve of them"), use it for qty; otherwise qty is what you can see.\n\n'
 
     + 'CATEGORY — pick exactly one from this list for every object:\n  - ' + cats + '\n'
-    + 'Use General/Household when nothing else fits. Do not invent a category.\n\n'
+    + 'Use General/Household when nothing else fits. Do not invent a category.\n'
+    // 2026-10-25 (the Ellison kitchen: decorative plates filed as Collectibles were researched against sold comparables,
+    // found none and came back with three notes each). Everyday table and kitchen things are household goods.
+    + 'Everyday dishes, glassware, cookware, kitchen tools and table linens are General/Household, however '
+    + 'decorative or hand-painted, unless a maker\'s mark, signature or hallmark is readable on them. '
+    + 'Collectibles is for things people collect as such: figurines, coins, stamps, memorabilia, toys, '
+    + 'limited editions.\n\n'
 
     + 'WHAT YOU MUST NEVER DO\n'
     + '- Never state or estimate a value, a price, a range or a worth. Not in the name, not in '
@@ -3842,7 +3857,9 @@ var AGENT_VALUE_TIME_BUDGET = 120000;
 // request is sent again without it (`_avReadResult`, `noFallbacks`) rather than the button dying.
 var AGENT_VALUE_FALLBACK_BETA = 'server-side-fallback-2026-07-01';
 var AGENT_VALUE_SOURCES = { comps: ['Auction comps', 'Online comps'], general: ['General estimate'] };
-var AGENT_VALUE_NOTICE_KINDS = ['appraiser', 'specialist', 'worthpoint', 'name', 'other'];
+// "worthpoint" and "name" went on 2026-10-25: the desk shows the confidence and the WorthPoint terms beside every
+// figure, and a name Agent Two would change it now changes (`name` in the answer; Anthony: "No need to flag").
+var AGENT_VALUE_NOTICE_KINDS = ['appraiser', 'specialist', 'other'];
 
 // Money to the cent, half away from zero, read at fifteen significant digits so 1.005 is 1.01: the
 // app's `roundCents`, which this file cannot lift. A test holds the two to the same answers.
@@ -3880,9 +3897,10 @@ function _avTool(mode) {
           items: {
             type: 'object',
             additionalProperties: false,
-            required: ['line', 'value', 'low', 'high', 'confidence', 'source', 'basis', 'comps', 'lookup', 'notices'],
+            required: ['line', 'name', 'value', 'low', 'high', 'confidence', 'source', 'basis', 'comps', 'lookup', 'notices'],
             properties: {
               line:       { type: 'string', description: 'The label the line was given, for example L1.' },
+              name:       { type: 'string', description: 'The line\'s name as you value it: the name given where it is right, else your corrected name. One short line, never with a count.' },
               value:      { type: 'number', description: 'Your point value for the WHOLE line, in US dollars: every article on it together, never a per-piece price.' },
               low:        { type: 'number', description: 'The low end of the range it would realistically sell for, whole line, US dollars.' },
               high:       { type: 'number', description: 'The high end of that range, whole line, US dollars.' },
@@ -3958,8 +3976,9 @@ function _avSystem(ctx) {
   var s = ''
     + 'You are putting a value on the contents of a home so that a concierge can complete '
     + (estate ? 'an estate inventory' : 'an inventory for a client who is moving or clearing their home')
-    + '. Each line has already been named by someone else. Your job is to say what each line is WORTH, '
-    + 'show the sales that figure rests on, and say plainly when you cannot tell.\n\n'
+    + '. Each line has already been named by someone else from the photograph. Your job is to confirm or '
+    + 'correct that name, say what each line is WORTH, show the sales that figure rests on, and say plainly '
+    + 'when you cannot tell.\n\n'
 
     + 'WHAT A VALUE MEANS HERE\n'
     + 'The basis is ' + basis + '.'
@@ -3981,7 +4000,13 @@ function _avSystem(ctx) {
     + 'The property is in Palm Beach County, Florida. Bulky furniture usually sells locally, so its market '
     + 'is regional; small valuable things sell nationally.\n'
     + 'A line is a whole lot. "Sterling flatware, service for 12, 72 pieces" is ONE figure for all 72 '
-    + 'pieces, never a per-piece price. Adjust for the condition recorded on the line.\n\n'
+    + 'pieces, never a per-piece price. Value the quantity on the line as given: a stack or a box hides '
+    + 'what is under the top one, so never question the count from the photograph.\n'
+    // 2026-10-25 (the Ellison kitchen: "Condition not recorded" on nearly every line it valued). The crew photographs rather
+    // than writes, and every document prints a line with no condition as photographed.
+    + 'Condition is usually not written on the line, because the crew photographs rather than writes. Read '
+    + 'it from the photograph on a research line, assume ordinary used condition on an ordinary lot, and '
+    + 'adjust for any condition that is recorded.\n\n'
 
     + 'THE TWO DEPTHS\n'
     + 'A request marked RESEARCH is one line that may be worth real money: art, antiques, jewellery, '
@@ -4014,17 +4039,34 @@ function _avSystem(ctx) {
     + 'For a research line, write in lookup the words a person would type into WorthPoint\'s price guide to '
     + 'check it: maker, pattern, mark, form, period. Leave it empty for an ordinary lot.\n\n'
 
+    // 2026-10-25 (Anthony, the Ellison plates, named "likely Italian" and flagged "Name may be wrong" on every line: "Why
+    // doesn't agent 1 guess and agent 2 confirm or update upon pricing. No need to flag inconsistencies. Just update to the
+    // best of their ability and if I see something that is off on the desk review, I'll change it.").
+    + 'THE NAME\n'
+    + 'Give every line\'s name back in name, as you value it: the same words where they are right, or the '
+    + 'name your research and the photograph support ("Hand-painted tin-glazed plates, yellow bird pattern, '
+    + 'likely Spanish, Puente del Arzobispo type"). Keep what was right, keep it one short line, never put a '
+    + 'count in it (how many is the Quantity), and hedge an attribution you are inferring rather than reading '
+    + '("likely", "appears to be"). Value the line as you name it. On an ordinary lot, which you see only as '
+    + 'text, give the name back as it was unless it is plainly wrong. Never write that a name was wrong: '
+    + 'correct it, and a person checks it at the desk.\n\n'
+
     + 'NOTICES\n'
+    // 2026-10-25 (Anthony, the Ellison kitchen: "Agent Two raised 23 things to look at", nine lines' worth, most of them
+    // the name, the condition, the count, a search that ran short or a WorthPoint check the desk already offers).
+    + 'A notice is for something a person must DO about the line. Most lines need none; never give a line '
+    + 'more than one.\n'
     + 'kind "appraiser": a qualified appraisal is advisable - the piece is signed, marked, rare, or the '
     + 'comparables disagree widely.\n'
     + 'kind "specialist": it should sell through a specialist auction house or dealer, not a general sale.\n'
-    + 'kind "worthpoint": a WorthPoint check would be worth a person\'s time.\n'
-    + 'kind "name": the photograph or the sales suggest the line is something other than its name says. Say '
-    + 'what you think it is. Do NOT rename it and still value the line as named, saying so.\n'
-    + 'kind "other": anything else a person must see. Use notices sparingly.\n\n'
+    + 'kind "other": anything else a person must see before relying on the figure. Rarely.\n'
+    + 'Never raise a notice about the name (correct it instead), because the condition is not recorded, '
+    + 'because a count is approximate, because your search ran out or found no sold comparable, or to '
+    + 'suggest a WorthPoint check: the desk already shows your confidence and the WorthPoint terms beside '
+    + 'the figure.\n\n'
 
     + 'WHAT YOU MUST NEVER DO\n'
-    + '- Never change what a line is called or what category it is in. A disagreement is a notice.\n'
+    + '- Never change a line\'s category or its quantity.\n'
     + '- Never say what should happen to a line (keep, sell, donate, junk) beyond the notices above. That '
     + 'is the family\'s decision.\n'
     + '- Never give legal or tax advice, and never describe a person.\n'
@@ -4047,7 +4089,7 @@ function _avLineText(label, it) {
   var t = label + '. ' + String(it.name || '').slice(0, 300)
         + ' | Category: ' + String(it.category || 'not recorded')
         + ' | Quantity: ' + (parseInt(it.qty, 10) > 1 ? parseInt(it.qty, 10) : 1)
-        + ' | Condition: ' + String(it.condition || 'not recorded');
+        + ' | Condition: ' + String(it.condition || 'not written down');
   if (it.fieldNote)  t += ' | The crew noted: "' + String(it.fieldNote).slice(0, 300) + '"';
   if (it.agentBasis) t += ' | Named from: ' + String(it.agentBasis).slice(0, 200);
   return t;
@@ -4237,6 +4279,7 @@ function _avLineResult(v, mode, seen) {
     basis: String(v.basis || '').slice(0, 300),
     comps: kept,
     lookup: mode === 'comps' ? String(v.lookup || '').slice(0, 160) : '',
+    name: String(v.name || '').replace(/\s+/g, ' ').trim().slice(0, 300),
     notices: notices,
     dropped: dropped,
     mode: mode

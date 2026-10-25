@@ -333,4 +333,17 @@ and browser step 69.
   line whose earlier agent figure predates a tier change clears it. A source somebody recorded is left alone.
 - **§12.2 and §12.3:** `_avUnreviewedStamp` on the Court Inventory, the Trust Schedule and the Estate Inventory PDF (it counts
   printed figures only); the Basis column lives in `_invScheduleSection`, the table both schedules share.
-
+- **Agent Two confirms or corrects the name (2026-10-25):** Anthony, off the Ellison plates (Agent One's *likely
+  Italian*, flagged *Name may be wrong* on every line): *"Why doesn't agent 1 guess and agent 2 confirm or update upon
+  pricing. No need to flag inconsistencies. Just update the the best of their ability and if I see something that is
+  off on the desk review, I'll change it."* `record_values` carries a required `name`, the name given or its correction
+  under Agent One's naming rules; `_avRename` writes it with the figure (never without one) over a name that is still
+  Agent One's and unreviewed, never over a name a person typed or ticked, keeps the replaced one as `valNameFrom` (the
+  record reads *Name updated from "…"*), and the line stays unreviewed. §2.1's "it never renames" is overruled for that
+  case only; the category and the quantity stay the line's. The notice kinds are `appraiser`, `specialist` and `other`:
+  no notice for a name, unrecorded condition, an approximate count, a search that ran short, or a WorthPoint check (the
+  row's confidence and the record's WorthPoint terms say it); at most one a line. Condition is read off the photograph
+  on a research line and assumed ordinary on an ordinary lot; the count is valued as given. A mark Agent One could not
+  read (*illegible*, *no visible maker's mark*) no longer sends a line to research (`AGENT_VALUE_NO_MARK_RE`). The list
+  above the rows is one entry per line (*Agent Two noted N lines to look at*), and each line's record lists its notes,
+  which the list's *N more* sentence had pointed to before any screen drew them.

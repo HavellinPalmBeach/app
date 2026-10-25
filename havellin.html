@@ -1472,7 +1472,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.24 · 12:36pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.25 · 10:33am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6446,7 +6446,11 @@ var BACKEND_NEEDS_TYPES = ['saveMedia', 'saveInventory', 'job', 'saveAllJobs', '
 // 2026-10-24: Agent One reads the lines already listed off a photograph (`listed`, from `agentListedOff`) and names only
 // what is not among them, and its names carry no count. An older deployment ignores `listed` and reads the whole
 // photograph again into a blank line added to it, so every object in it goes on the list twice.
-var BACKEND_MIN_VERSION = '2026-10-24';
+// 2026-10-25: Agent Two hands back the name it values under and the app writes it over an unreviewed Agent One name
+// (`_avRename`), raises a notice only for something to do, and Agent One files everyday dishes as household goods. An
+// older deployment sends no name, so a name it disagrees with stays as Agent One gave it, flagged *Name may be wrong*,
+// beside a note about unrecorded condition on nearly every line it values.
+var BACKEND_MIN_VERSION = '2026-10-25';
 var _backendVersion = null;
 
 function checkBackendVersion() {
@@ -6504,7 +6508,7 @@ var BACKEND_FEATURE_COST = {
   deleteJob:     'a client deleted here comes back from the other device',
   // One line for any deployment older than BACKEND_MIN_VERSION, so it names the newest gap first and says
   // which vintage the older one belongs to (the banner's title prints the version that answered).
-  version:       'a blank line added to a photograph already named (Another item in this photo) makes Agent One read the whole photograph again, so every object in it goes on the list a second time, and its names carry a count (\u201capprox. 7 in stack\u201d) that the Qty box contradicts once corrected; on a deployment older than 2026-10-19b, a client\u2019s inventory reset in the Apps Script editor (resetInventoryConfirm) is undone by the first device that saves a line from before it, unless every device reloads first; on a deployment older than 2026-10-16, an incident reported on one device, or a key or fob received there while another device records a handoff, can be dropped when the sheet merges the job (the Incidents and Keys & access cards\u2019 lists are not yet merged entry by entry); on a deployment older than 2026-10-06, two devices\u2019 release signers are not merged and the client\u2019s workbook rounds its money; on a deployment older than 2026-10-05, a co-executor or co-trustee is not put on the DocuSign envelope beside the client, so they sign a printed copy of the agreement and the page they signed has to be filed from the timeline; on a deployment older than 2026-10-03, a co-trustee, a beneficiary, a signed copy filed to Drive, a find on site or a proceeds statement added on one device can be dropped by another device saving an older copy of the job, and the client\u2019s inventory workbook heads a trust\u2019s net proceeds \u201cNet to Estate\u201d; on a deployment older than 2026-10-01, File signed copy adds a second copy of the signed agreement to the client\u2019s Agreement folder instead of replacing the one there; on a deployment older than 2026-09-30b, a payment voided or marked cleared on one device can come back as it was from another device that changed the same payment before reloading, and count again; a firearm\u2019s serial, recipient or dealer route, recorded on one device, can be dropped from the sheet by another device\u2019s older copy of the item, until the first device next saves the inventory; and on a deployment older than 2026-09-30, two people editing different parts of one job (a vendor quote here, the team there) can also undo each other\u2019s work, a damaged store tab is emptied by the next save instead of refused, and Agent One can stop mid-answer on a busy photograph',
+  version:       'Agent Two flags a name it disagrees with (\u201cName may be wrong\u201d) instead of correcting it, puts a note on nearly every item it values (no condition recorded, a rough count, a search that ran short), and Agent One files everyday dishes as collectibles; on a deployment older than 2026-10-24, a blank line added to a photograph already named (Another item in this photo) makes Agent One read the whole photograph again, so every object in it goes on the list a second time, and its names carry a count (\u201capprox. 7 in stack\u201d) that the Qty box contradicts once corrected; on a deployment older than 2026-10-19b, a client\u2019s inventory reset in the Apps Script editor (resetInventoryConfirm) is undone by the first device that saves a line from before it, unless every device reloads first; on a deployment older than 2026-10-16, an incident reported on one device, or a key or fob received there while another device records a handoff, can be dropped when the sheet merges the job (the Incidents and Keys & access cards\u2019 lists are not yet merged entry by entry); on a deployment older than 2026-10-06, two devices\u2019 release signers are not merged and the client\u2019s workbook rounds its money; on a deployment older than 2026-10-05, a co-executor or co-trustee is not put on the DocuSign envelope beside the client, so they sign a printed copy of the agreement and the page they signed has to be filed from the timeline; on a deployment older than 2026-10-03, a co-trustee, a beneficiary, a signed copy filed to Drive, a find on site or a proceeds statement added on one device can be dropped by another device saving an older copy of the job, and the client\u2019s inventory workbook heads a trust\u2019s net proceeds \u201cNet to Estate\u201d; on a deployment older than 2026-10-01, File signed copy adds a second copy of the signed agreement to the client\u2019s Agreement folder instead of replacing the one there; on a deployment older than 2026-09-30b, a payment voided or marked cleared on one device can come back as it was from another device that changed the same payment before reloading, and count again; a firearm\u2019s serial, recipient or dealer route, recorded on one device, can be dropped from the sheet by another device\u2019s older copy of the item, until the first device next saves the inventory; and on a deployment older than 2026-09-30, two people editing different parts of one job (a vendor quote here, the team there) can also undo each other\u2019s work, a damaged store tab is emptied by the next save instead of refused, and Agent One can stop mid-answer on a busy photograph',
   preVersion:    'it predates the version check itself (2026-09-09), so client PDFs, photographs, DocuSign, Stripe and Agent One may all be missing as well'
 };
 
@@ -27503,13 +27507,13 @@ function savePhotoRefs(jobId) {
                // ⚠ AGENT ONE'S FIELDS. A new manifest key missing from this whitelist is
                // dropped silently on every save — this file records that exact failure three
                // separate times (fieldNote/groupId, serial, clearedAt).
-               namedBy:r.namedBy, agentAt:r.agentAt, agentConf:r.agentConf,
+               namedBy:r.namedBy, agentAt:r.agentAt, agentConf:r.agentConf, agentListed:r.agentListed,
                agentBasis:r.agentBasis, agentNotices:r.agentNotices, crop:r.crop,
                dupOK:r.dupOK,
                // ⚠ AGENT TWO'S FIELDS (P23): its figure's range, comparables, WorthPoint lookup, confidence, notices,
                // who valued the line and when, the name it valued, a failure's reason, and the desk's acceptance.
                valLow:r.valLow, valHigh:r.valHigh, valComps:r.valComps, valLookup:r.valLookup, valConf:r.valConf,
-               valNotices:r.valNotices, valuedBy:r.valuedBy, valAgentAt:r.valAgentAt, valNameAt:r.valNameAt,
+               valNotices:r.valNotices, valuedBy:r.valuedBy, valAgentAt:r.valAgentAt, valNameAt:r.valNameAt, valNameFrom:r.valNameFrom,
                valFailed:r.valFailed, valReviewed:r.valReviewed, valReviewedBy:r.valReviewedBy, valReviewedAt:r.valReviewedAt,
                // ⚠ THE ROOM CHECK'S FIELDS (P24): the lines a room's photographs say are this one thing, why, how sure, and
                // when the room was last read together.
@@ -35738,7 +35742,7 @@ function collectionsAwaitingPhoto(jobId) {
 // note for it to read. A chip tapped other than Undecided, and ⚑ Appraise, are the field's newer answers.
 function collectionLineWithPhoto(line, shot, opts) {
   var out = JSON.parse(JSON.stringify(line));
-  ['manual', 'driveFileId', 'namedBy', 'agentAt', 'agentConf', 'agentBasis', 'reviewed', 'reviewedAt', 'reviewedBy']
+  ['manual', 'driveFileId', 'namedBy', 'agentAt', 'agentConf', 'agentListed', 'agentBasis', 'reviewed', 'reviewedAt', 'reviewedBy']
     .forEach(function(k) { delete out[k]; });
   ['roomIdx', 'label', 'seq', 'collId', 'filename', 'driveFileUrl', 'status', 'ts'].forEach(function(k) { out[k] = shot[k]; });
   var q = parseInt(line.qty, 10);
@@ -37237,7 +37241,7 @@ function _agContext(job) {
 // ─── WRITING WHAT CAME BACK ────────────────────────────────────────────────────
 // ⚠⚠ THE ONE WRITER, and the only three fields it is allowed to touch. A test asserts this
 // function never mentions fmv, disposition, flagNFA, needsAppr, authBy or assetTrack.
-function _agWrite(jobId, stableId, obj) {
+function _agWrite(jobId, stableId, obj, pass) {
   var ref = _getPhotoRef(jobId, stableId);
   if (!ref) return false;
   ref.objectName = String(obj.name || '').slice(0, 300);
@@ -37247,7 +37251,11 @@ function _agWrite(jobId, stableId, obj) {
   var q = parseInt(obj.qty, 10);
   if (q > 1) ref.qty = q;          // a lot. qty 1 is the default and writing it says nothing
   ref.namedBy    = 'agent';
-  ref.agentAt    = Date.now();
+  // ⚠ ONE STAMP FOR ONE ANSWER (2026-10-25): every line one photograph's answer writes carries the same `agentAt`, and how
+  // many lines that request was told were listed already (`agentListed`; none on a first naming). That is how
+  // `agentNamedTwice` tells a photograph read twice from one asked only for what was new.
+  ref.agentAt    = (pass && pass.at) || Date.now();
+  if (pass && pass.listed > 0) ref.agentListed = pass.listed; else delete ref.agentListed;
   ref.agentConf  = (['high','medium','low'].indexOf(obj.confidence) >= 0) ? obj.confidence : 'low';
   ref.agentBasis = String(obj.basis || '').slice(0, 200);
   if (obj.crop && obj.crop.length === 4) ref.crop = obj.crop;
@@ -37286,7 +37294,10 @@ function agentApplyResult(jobId, group, result) {
 
   var rows = group.rows.slice();
   var n = Math.min(objects.length, rows.length);
-  for (var i = 0; i < n; i++) { if (_agWrite(jobId, rows[i], objects[i])) st.named++; }
+  // One naming of one photograph: its time, and how many lines the request carried as listed (`_agSendNext` records it
+  // off the payload it sent, never recounted here, where a merge may have landed another device's lines meanwhile).
+  var pass = { at: Date.now(), listed: group.listedN || 0 };
+  for (var i = 0; i < n; i++) { if (_agWrite(jobId, rows[i], objects[i], pass)) st.named++; }
 
   // More objects than blank rows: split the photograph for the remainder. invSplitItemN mints
   // them sharing this image, blank, and was written for exactly this caller.
@@ -37294,7 +37305,7 @@ function agentApplyResult(jobId, group, result) {
     var made = invSplitItemN(jobId, group.srcId, objects.length - rows.length);
     if (typeof made !== 'string') {
       made.forEach(function(ref, k) {
-        if (_agWrite(jobId, ref.stableId, objects[rows.length + k])) { st.named++; st.split++; }
+        if (_agWrite(jobId, ref.stableId, objects[rows.length + k], pass)) { st.named++; st.split++; }
       });
     }
   }
@@ -37331,7 +37342,7 @@ function _agSendNext(jobId, job, groups, from) {
   var byId = {}, shots = [];
   slice.forEach(function(g) {
     var payload = _agShotPayload(jobId, g);
-    if (payload) { shots.push(payload); byId[g.srcId] = g; }
+    if (payload) { g.listedN = (payload.listed || []).length; shots.push(payload); byId[g.srcId] = g; }
   });
   if (!shots.length) { _agSendNext(jobId, job, groups, from + slice.length); return; }
 
@@ -37481,11 +37492,53 @@ function _agDupEligible(r) {
       && !!_agNameKey(r.objectName) && r.roomIdx != null;
 }
 
+// ─── ONE PHOTOGRAPH NAMED TWICE (2026-10-25) ─────────────────────────────────────────────────────────────────────────
+// Anthony, the Ellison kitchen: one photograph of two stacks of plates carried four lines, #73 and #81 from one naming
+// and #87 and #88 from a second that read the whole photograph again, and *Possible duplicates* showed nothing, because
+// lines off one photograph are things seen at once. Since the 2026-10-24 backend a photograph already named is sent with
+// what is listed off it (`agentListedOff`), so a second reading asks only for what is new; two devices naming the same
+// unnamed photograph before either has the other's answer still read it twice, and so did every naming before that build.
+// A naming is the lines one answer wrote: one `agentAt` (`_agWrite`'s `pass`), and on a line written before that stamp,
+// lines within `AGENT_PASS_GAP_MS` of each other (one answer writes its lines in milliseconds). A naming told what was
+// listed (`agentListed`) is a reading of what was new; two namings that were told nothing each listed the photograph
+// whole. DOM-free: the live, named lines of an Items photograph, a line a person said is separate (`dupOK`) aside.
+var AGENT_PASS_GAP_MS = 2000;
+function agentNamedTwice(all) {
+  var by = {}, order = [];
+  (all || []).forEach(function(r) {
+    if (!r || r.deletedAt || r.label !== 'inventory' || r.collId || r.dupOK || r.roomIdx == null) return;
+    if (!String(r.objectName || '').trim() || !(Number(r.agentAt) > 0) || r.agentConf === 'none') return;
+    var src = r.derivedFrom || r.stableId;
+    if (!by[src]) { by[src] = []; order.push(src); }
+    by[src].push(r);
+  });
+  var out = [];
+  order.forEach(function(src) {
+    var lines = by[src];
+    if (lines.length < 2) return;
+    var passes = [], cur = null, last = 0;
+    lines.slice().sort(function(a, b) { return Number(a.agentAt) - Number(b.agentAt); }).forEach(function(r) {
+      var at = Number(r.agentAt);
+      if (!cur || at - last > AGENT_PASS_GAP_MS) { cur = []; passes.push(cur); }
+      cur.push(r);
+      last = at;
+    });
+    var blind = passes.filter(function(p) { return !p.some(function(r) { return Number(r.agentListed) > 0; }); });
+    if (blind.length < 2) return;
+    // In the order the desk draws them (the lines handed in), so the first naming's lines lead.
+    var keep = {};
+    blind.forEach(function(p) { p.forEach(function(r) { keep[r.stableId] = 1; }); });
+    out.push({ srcId: src, rows: lines.filter(function(r) { return keep[r.stableId]; }) });
+  });
+  return out;
+}
+
 // ⚠⚠ THE ROWS MUST COME FROM DIFFERENT PHOTOGRAPHS, and dropping that test would make this
 // block contradict the cue sitting two inches away on the row. Two matching lamps split off
 // ONE frame are two real objects the agent saw at once — the row already reads *1 of 2 in
 // this photo* — whereas two frames of one object is the failure mode. Same name, same room,
 // two separate pieces of evidence.
+// EXCEPT ONE PHOTOGRAPH NAMED TWICE (2026-10-25, `agentNamedTwice`): there the two readings are the two pieces of evidence.
 function agentDuplicateGroups(jobId, all) {
   var rows = all || _jobInvRefs(jobId);
   var byId = {};
@@ -37519,6 +37572,11 @@ function agentDuplicateGroups(jobId, all) {
       checked[r.stableId] = 1; checked[o] = 1;
     });
   });
+  // The third evidence (2026-10-25): one photograph read twice by Agent One, its two readings joined.
+  var twice = {};
+  agentNamedTwice(rows).forEach(function(t) {
+    t.rows.forEach(function(r) { join(t.rows[0].stableId, r.stableId); twice[r.stableId] = 1; });
+  });
   var comps = {}, order = [];
   rows.forEach(function(r) {
     if (!(r.stableId in parent)) return;
@@ -37531,7 +37589,9 @@ function agentDuplicateGroups(jobId, all) {
     var photos = {};
     g.forEach(function(r) { photos[r.derivedFrom || r.stableId] = 1; });
     // ⚠⚠ STILL OFF DIFFERENT PHOTOGRAPHS, whichever evidence joined them: two objects split off one frame were seen at once.
-    if (g.length < 2 || Object.keys(photos).length < 2) return null;
+    // The one exception is a photograph Agent One read twice (`agentNamedTwice`), each reading listing it whole.
+    var isTwice = g.some(function(r) { return !!twice[r.stableId]; });
+    if (g.length < 2 || (Object.keys(photos).length < 2 && !isTwice)) return null;
     var best = null, sameName = null;
     g.forEach(function(r) {
       if (checked[r.stableId] && (!best || (AGENT_ROOM_CONF_RANK[r.dupConf] || 0) > (AGENT_ROOM_CONF_RANK[best.dupConf] || 0))) best = r;
@@ -37542,6 +37602,7 @@ function agentDuplicateGroups(jobId, all) {
       roomIdx: g[0].roomIdx,
       name: sameName != null ? sameName : g[0].objectName,
       sameName: sameName != null,
+      twice: isTwice,
       why: best ? String(best.dupWhy || '') : '',
       conf: best ? (best.dupConf || 'low') : '',
       rows: g
@@ -37615,7 +37676,10 @@ function _agDupHtml(jobId, all) {
   var lines = shown.map(function(g) {
     // A room-check group leads with what the pictures showed and names each line under its photograph, because the
     // names were written separately and often differ; a same-name group leads with the name, as it always did.
-    var head = g.why
+    var head = g.twice
+      ? '<strong style="font-size:11.5px;">One photograph named twice</strong> '
+        + '<span style="font-size:10.5px;color:var(--gray);">Agent One read it twice, so the later lines may repeat the earlier ones &middot; '
+      : g.why
       ? '<strong style="font-size:11.5px;">' + esc(g.why) + '</strong> '
         + '<span style="font-size:10.5px;color:var(--gray);">room check: ' + esc(AGENT_ROOM_CONF_WORDS[g.conf] || AGENT_ROOM_CONF_WORDS.low) + ' &middot; '
       : '<strong style="font-size:11.5px;">' + esc(g.name) + '</strong> '
@@ -37627,7 +37691,7 @@ function _agDupHtml(jobId, all) {
           return '<span style="display:flex;align-items:center;gap:5px;">'
             + _invThumbHTML(jobId, r, 72)
             + '<span style="font-size:10px;color:var(--gray);font-weight:700;">#' + esc(_invItemNo(r)) + '</span>'
-            + (g.why ? '<span style="font-size:10px;color:var(--gray-dk);max-width:170px;">' + esc(r.objectName || '') + '</span>' : '')
+            + (g.why || g.twice ? '<span style="font-size:10px;color:var(--gray-dk);max-width:170px;">' + esc(r.objectName || '') + '</span>' : '')
             + '<button class="btn-s" style="font-size:10px;color:#c0392b;" '
             + 'onclick="agentDropDuplicate(' + jobId + ',\'' + r.stableId + '\')" '
             + 'title="Take this line off the inventory. The photograph stays in Drive and Removed items, under Removed items &amp; snapshots on Job Admin &amp; Inv, gives the line back.">'
@@ -37640,7 +37704,7 @@ function _agDupHtml(jobId, all) {
   }).join('');
   return '<div class="alert a-warn" style="font-size:11px;line-height:1.5;margin-bottom:10px;">'
     + '&#9888; <strong>Possible duplicates.</strong> Lines in one room that may be one thing counted twice: Agent One gave '
-    + 'them the same name off different photographs, or the room check saw one thing in two of the room’s photographs — '
+    + 'them the same name off different photographs, or the room check saw one thing in two of the room’s photographs, or Agent One read one photograph twice — '
     + groups.length + ' group' + (groups.length === 1 ? '' : 's') + '. Two shots of one credenza make two sets of lines; '
     + 'two matching nightstands make two real ones. <strong>Look at both photographs before you choose.</strong>'
     + lines
@@ -37901,6 +37965,9 @@ var AGENT_VALUE_MAX_COMPS = 6;           // the server keeps six; a WorthPoint s
 // Agent One's basis naming a maker, a model, a signature or a mark sends a line to research (spec §3):
 // the mark is what makes a comparable a match.
 var AGENT_VALUE_MARK_RE = /\b(?:makers?|maker's|marks?|marked|hallmarks?|hallmarked|signatures?|signed|backstamps?|stamped|badges?|models?|labels?|labell?ed|monogram(?:med)?|serial)\b/i;
+// ⚠ A MARK NOBODY COULD READ IS NOT A MARK (2026-10-25; the Ellison plates' "illegible painted script mark on underside"
+// sent everyday plates to research, five searches for nothing and a note on each). Struck from the basis before the test.
+var AGENT_VALUE_NO_MARK_RE = /\b(?:no|illegible|unreadable|unread|indistinct|undecipherable|blurred|without(?:\s+an?)?)\s+(?:[a-z-]+\s+){0,2}?(?:maker'?s?\s+)?(?:marks?|marked|hallmarks?|signatures?|backstamps?|stamps?|labels?|badges?|monograms?)\b|\b(?:marks?|signatures?|labels?|backstamps?|hallmarks?)\s+(?:is|are)\s+(?:not\s+legible|illegible|unreadable|indistinct)\b/gi;
 var AGENT_VALUE_CONFS = ['high', 'medium', 'low'];
 var AGENT_VALUE_SOURCES = ['Auction comps', 'Online comps', 'General estimate'];
 var _avRun = {};          // jobId -> the run on screen (session only, like Agent One's)
@@ -37919,7 +37986,7 @@ function agentValueMode(ref) {
   if (_avForceComps[ref.stableId]) return 'comps';
   if (ref.needsAppr) return 'comps';
   if (invIsIntrinsic(ref.category)) return 'comps';
-  if (AGENT_VALUE_MARK_RE.test(String(ref.agentBasis || ''))) return 'comps';
+  if (AGENT_VALUE_MARK_RE.test(String(ref.agentBasis || '').replace(AGENT_VALUE_NO_MARK_RE, ' '))) return 'comps';
   return 'general';
 }
 
@@ -38038,6 +38105,7 @@ function _avWrite(jobId, stableId, res, job, opts) {
     .map(function(n) { return { kind: String(n.kind || 'other'), text: String(n.text).slice(0, 300) }; });
   ref.valuedBy = 'agent';
   ref.valAgentAt = Date.now();
+  _avRename(ref, res.name);
   ref.valNameAt = String(ref.objectName || '');
   delete ref.valFailed; delete ref.valReviewed; delete ref.valReviewedBy; delete ref.valReviewedAt;
   if (agentValueInternal(job)) {
@@ -38051,6 +38119,22 @@ function _avWrite(jobId, stableId, res, job, opts) {
     ref.valNote = String(res.basis || '').slice(0, 300);
   }
   _setPhotoRef(jobId, _invTouch(ref));
+  return true;
+}
+
+// ⚠⚠ AGENT TWO CONFIRMS OR CORRECTS AGENT ONE'S NAME, NEVER A PERSON'S (2026-10-25; Anthony, off the Ellison plates, named
+// "likely Italian" by Agent One and flagged *Name may be wrong* by Agent Two on every line: *"Why doesn't agent 1 guess and
+// agent 2 confirm or update upon pricing. No need to flag inconsistencies. Just update the the best of their ability and
+// if I see something that is off on the desk review, I'll change it."*). The name it values under is written, with its
+// figure and only then, where the name is still Agent One's and nobody has reviewed it (`namedBy` agent, no `reviewed`):
+// a name a person typed or ticked stands. The name it replaced stays on the line (`valNameFrom`, the first one, Agent
+// One's), read by the line's record; the line stays unreviewed, so the desk's review is the check.
+function _avRename(ref, name) {
+  var n = String(name || '').replace(/\s+/g, ' ').trim().slice(0, 300);
+  if (!ref || !n || ref.namedBy !== 'agent' || ref.reviewed) return false;
+  if (_agNameKey(n) === _agNameKey(ref.objectName)) return false;
+  if (!ref.valNameFrom) ref.valNameFrom = String(ref.objectName || '');
+  ref.objectName = n;
   return true;
 }
 
@@ -38158,7 +38242,7 @@ function agentValueRun(jobId) {
   var research = refs.filter(function(r) { return agentValueMode(r) === 'comps'; }).length;
   if (!confirm('Value ' + refs.length + ' line' + (refs.length === 1 ? '' : 's') + ' on this job?\n\n'
       + (research ? research + ' researched against sold comparables, ' : '') + (refs.length - research) + ' valued as everyday lots. '
-      + 'Each comes back marked unreviewed for you to accept or correct. Nothing else on the line changes.'
+      + 'Each comes back marked unreviewed for you to accept or correct, and a name Agent One gave that nobody has reviewed may come back corrected. Nothing else on the line changes.'
       + (agentValueInternal(job) ? '\n\nCounsel values the property on this engagement, so the figures stay on the desk for routing and appraisal advice. No document prints them.' : '')
       + (unnamed ? '\n\n' + unnamed + ' unnamed line' + (unnamed === 1 ? ' is' : 's are') + ' left out: name ' + (unnamed === 1 ? 'it' : 'them') + ' first.' : ''))) return;
   _avStart(jobId, job, refs.map(function(r) { return r.stableId; }), {});
@@ -38315,6 +38399,20 @@ function agentValueUseSale(jobId, stableId) {
 }
 
 // ─── WHAT THE DESK SEES ─────────────────────────────────────────────────────────
+// The desk's words for each kind of Agent Two notice, in the order a person should read them; a kind the server sends that
+// is not here reads as *Look at this*. Read by the list above the rows and by the line's record. *Name may be wrong* and
+// *Check WorthPoint* stay for the notes already on lines: the backend stopped sending both on 2026-10-25 (Agent Two now
+// corrects the name, `_avRename`; the row's confidence and the record's WorthPoint terms say the other).
+function _avNoticeKinds() {
+  return [{ kind: 'stale', label: 'Value made for an earlier name' }, { kind: 'name', label: 'Name may be wrong' },
+          { kind: 'appraiser', label: 'Appraisal advised' }, { kind: 'specialist', label: 'Worth a specialist' },
+          { kind: 'worthpoint', label: 'Check WorthPoint' }, { kind: 'other', label: 'Look at this' }];
+}
+function _avNoticeLabel(kind) {
+  var hit = _avNoticeKinds().filter(function(k) { return k.kind === kind; })[0];
+  return hit ? hit.label : 'Look at this';
+}
+
 // Everything Agent Two raised that a person has not yet looked at: its notices on unreviewed values, a
 // value made for an earlier name, and on a living job a range worth a specialist. ⚠ AN ACCEPTED VALUE
 // HAS HAD ITS LOOK, so its notices go quiet; a stale value never does, because the name moved after.
@@ -38328,9 +38426,7 @@ function agentValueNotices(job, all) {
     if (agentValueSpecialistWorth(r, job)) out.push({ kind: 'specialist', ref: r, text: 'its range reaches ' + fmt(r.valHigh) + ': worth a specialist or an auction house' });
   });
   // In the order a person should read them; a kind the server sends that is not here reads as *Look at this*.
-  var order = [{ kind: 'stale', label: 'Value made for an earlier name' }, { kind: 'name', label: 'Name may be wrong' },
-               { kind: 'appraiser', label: 'Appraisal advised' }, { kind: 'specialist', label: 'Worth a specialist' },
-               { kind: 'worthpoint', label: 'Check WorthPoint' }, { kind: 'other', label: 'Look at this' }];
+  var order = _avNoticeKinds();
   var known = order.map(function(k) { return k.kind; });
   return order.reduce(function(acc, k) {
     return acc.concat(out.filter(function(n) { return n.kind === k.kind || (k.kind === 'other' && known.indexOf(n.kind) < 0); })
@@ -38341,15 +38437,30 @@ function agentValueNotices(job, all) {
 function _avNoticesHtml(job, all) {
   var list = agentValueNotices(job, all);
   if (!list.length) return '';
-  var shown = list.slice(0, 12);
+  // ⚠ ONE ENTRY PER LINE (2026-10-25; Anthony, the Ellison kitchen: *Agent Two raised 23 things to look at*, the plates
+  // three times each). A line's notes sit under its name, in the order the list reads them; the twelve lines shown are
+  // the first by the most pressing note, and the rest are in each line's record (`_avPanelHtml`), which this sentence says.
+  var by = {}, lines = [];
+  list.forEach(function(n) {
+    var id = n.ref.stableId;
+    if (!by[id]) { by[id] = { ref: n.ref, notes: [] }; lines.push(by[id]); }
+    by[id].notes.push(n);
+  });
+  var shown = lines.slice(0, 12);
   return '<div style="margin-top:9px;border-top:1px solid var(--border);padding-top:8px;">'
     + '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--gray);margin-bottom:5px;">'
-    + 'Agent Two raised ' + list.length + ' thing' + (list.length === 1 ? '' : 's') + ' to look at</div>'
-    + shown.map(function(n) {
-        return '<div class="a-warn" style="font-size:11px;margin-bottom:4px;"><strong>' + esc(n.label) + '</strong> &middot; '
-          + esc(_invNamed(n.ref)) + ' &mdash; ' + esc(n.text) + _deskShowBtnHtml(job.id, n.ref.stableId) + '</div>';
+    + 'Agent Two noted ' + lines.length + ' line' + (lines.length === 1 ? '' : 's') + ' to look at</div>'
+    + shown.map(function(l) {
+        return '<div class="a-warn av-note-line" style="font-size:11px;margin-bottom:4px;">'
+          + '<div><strong>' + esc(_invNamed(l.ref)) + '</strong>' + _deskShowBtnHtml(job.id, l.ref.stableId) + '</div>'
+          + l.notes.map(function(n) {
+              return '<div style="margin-top:2px;"><strong>' + esc(n.label) + '</strong> &middot; ' + esc(n.text) + '</div>';
+            }).join('')
+          + '</div>';
       }).join('')
-    + (list.length > shown.length ? '<div style="font-size:10.5px;color:var(--gray);">' + (list.length - shown.length) + ' more on the lines themselves.</div>' : '')
+    + (lines.length > shown.length
+        ? '<div style="font-size:10.5px;color:var(--gray);">' + (lines.length - shown.length) + ' more line'
+          + (lines.length - shown.length === 1 ? '' : 's') + ': each one\u2019s notes are in its record, under Agent Two.</div>' : '')
     + '</div>';
 }
 
@@ -38435,7 +38546,17 @@ function _avPanelHtml(job, ref) {
       + (ref.valReviewed ? ' &middot; <span style="color:var(--ok-tx);">accepted' + (ref.valReviewedBy ? ' by ' + esc(ref.valReviewedBy) : '') + '</span>' : '')
       + '</div>'
       + (!internal && ref.valNote ? '<div style="font-size:10.5px;color:var(--gray-dk);margin-top:2px;">' + esc(ref.valNote) + '</div>' : '')
+      + (ref.valNameFrom && _agNameKey(ref.valNameFrom) !== _agNameKey(ref.objectName)
+          ? '<div class="av-renamed" style="font-size:10.5px;color:var(--gray);margin-top:2px;">Name updated from \u201c' + esc(ref.valNameFrom) + '\u201d</div>' : '')
       + (agentValueStale(ref) ? '<div style="font-size:10.5px;color:var(--bronze);font-weight:700;margin-top:2px;">Made for an earlier name: “' + esc(ref.valNameAt) + '”. Re-value it.</div>' : '');
+  }
+  // What Agent Two noted on the line (2026-10-25), accepted or not: the list above the rows names twelve lines and sends
+  // the rest here, and until this the notes were drawn nowhere else, so that sentence pointed at nothing.
+  var notes = (ref.valNotices || []).filter(function(n) { return n && String(n.text || '').trim(); });
+  if (notes.length) {
+    body += '<div class="av-notes" style="margin-top:4px;font-size:10.5px;">' + notes.map(function(n) {
+      return '<div style="color:var(--bronze);"><strong>' + esc(_avNoticeLabel(n.kind)) + '</strong> &middot; ' + esc(n.text) + '</div>';
+    }).join('') + '</div>';
   }
   var comps = ref.valComps || [];
   if (comps.length) {

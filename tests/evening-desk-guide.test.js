@@ -662,7 +662,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       .forEach(([what, re]) => { const m = words.match(re); ok(!m, 'no ' + what + (m ? ' ("…' + words.slice(Math.max(0, m.index - 30), m.index + 30) + '…")' : '')); });
     // Agent One and Agent Two are named because the tab names them on screen.
     has(code(fn('_agNoticesHtml')), "'Agent One raised '", 'the tab says Agent One…');
-    has(code(fn('_avNoticesHtml')), "'Agent Two raised '", '…and Agent Two');
+    has(code(fn('_avNoticesHtml')), "'Agent Two noted '", '…and Agent Two (its heading counts lines since 2026-10-25)');
   }
 
   // ═══ THE OTHER GUIDES ═══

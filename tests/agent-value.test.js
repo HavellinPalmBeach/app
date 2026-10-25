@@ -110,7 +110,7 @@ const AV_FNS = ['_avValueButtonHtml', 'agentValueMode', 'agentValueInternal', '_
   'agentValueStale', 'agentValueSpecialistWorth', '_avValDate', '_avContext', '_avItemPayload', '_avComp', '_avWrite',
   '_avNoteFailure', 'agentValueApply', '_avTakeValue', '_avStampReviewed', '_invStampBy', 'deviceUser', 'agentValueRun', 'agentRevalue', '_avStart',
   '_avSendNext', '_avFinish', '_avRepaint', '_avStateHtml', '_avState', 'agentValueAccept', 'agentValueUseSale',
-  'agentValueNotices', '_avNoticesHtml', '_deskShowBtnHtml', '_avSummary', '_avRowBadges', '_avAcceptButtonHtml', '_avPanelHtml',
+  'agentValueNotices', '_avNoticeKinds', '_avNoticeLabel', '_avRename', '_avNoticesHtml', '_deskShowBtnHtml', '_avSummary', '_avRowBadges', '_avAcceptButtonHtml', '_avPanelHtml',
   'invValBasisWord', '_avUnreviewedStamp', 'invAppraised', 'invLineAppraiser', '_invLinkedAppraiser', '_jobAppraisers', '_apprLabel', '_invHasAppraisal',
   // the real rules they read, never stubs of them
   '_getPhotoRef', '_setPhotoRef', '_jobInvRefs', '_invHasValue', 'roundCents', 'invIsIntrinsic', 'invCatMeta',
@@ -119,7 +119,7 @@ const AV_FNS = ['_avValueButtonHtml', 'agentValueMode', 'agentValueInternal', '_
   'gateDispute', '_gateYes', 'invNeedsAppraisal', 'fmt', '_invMoney', '_invNamed', '_invItemNo', '_andJoin',
   'moneyToNumber', '_readAppsScriptJson', '_invJob'];
 const AV_VARS = ['_avRun', '_avForceComps', 'AGENT_VALUE_BATCH', 'AGENT_VALUE_GENERAL_CEILING', 'AGENT_VALUE_MAX_COMPS',
-  'AGENT_VALUE_MARK_RE', 'AGENT_VALUE_CONFS', 'AGENT_VALUE_SOURCES', 'AGENT_VALUE_OWN', 'AGENT_VALUE_SALE_DATE_RE',
+  'AGENT_VALUE_MARK_RE', 'AGENT_VALUE_NO_MARK_RE', 'AGENT_VALUE_CONFS', 'AGENT_VALUE_SOURCES', 'AGENT_VALUE_OWN', 'AGENT_VALUE_SALE_DATE_RE',
   'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'DECEDENT_SERVICES', 'DOC_TIERS',
   'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'AGENT_MAX_DETAILS', 'INV_VAL_SOURCES'];
 
@@ -358,7 +358,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const g = gsCtx();
     const sys = g._avSystem(CTXP) + g._avSystem({ estate: false });
     ['3,000', '3000', '$500', 'threshold'].forEach((w) => lacks(sys, w, 'the prompt carries no threshold: ' + w));
-    has(sys, 'Never change what a line is called', 'a disagreement with the name is a notice');
+    // 2026-10-25 (Anthony: "agent 2 confirm or update upon pricing. No need to flag"): the name comes back with the value,
+    // and the category and the count stay the line's (agent-named-twice.test.js E, E2).
+    has(sys, 'Never change a line\'s category or its quantity.', 'its category and count are never its to change');
     has(sys, 'never set the value on asking prices alone', 'asking prices are not sales');
     has(sys, 'Copy its URL exactly', 'the evidence rule is stated to the model as well as enforced');
     has(g._avSystem(CTXP), 'Value as of 2026-06-14, the valuation date for this estate', 'the estate\'s valuation date');

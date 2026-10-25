@@ -94,7 +94,7 @@ const ROW = (over) => Object.assign({
 
 const APP_FNS = ['agentRoomsToCheck', '_arCheckable', '_arRoomPayload', 'agentRoomCheckRun', '_arSendNext', '_arWrite',
   '_arFinish', '_arRepaint', '_arStateHtml', '_arState', '_arCheckButtonHtml', '_arDupEligible',
-  'agentDuplicateGroups', '_agDupEligible', '_agNameKey', '_agDupHtml', '_agDupHandle', '_agDupUnhandle', 'agentNotDuplicate',
+  'agentDuplicateGroups', 'agentNamedTwice', '_agDupEligible', '_agNameKey', '_agDupHtml', '_agDupHandle', '_agDupUnhandle', 'agentNotDuplicate',
   '_jobInvRefs', '_getPhotoRef', '_setPhotoRef', '_invFileId', '_invRoomName', '_invItemNo', '_invJob',
   // the collections
   'collectionLinesEnsure', '_collLinesOf', 'collectionLineId', 'collectionOf', 'collectionLineUnshot', '_invHasPhoto',
@@ -103,7 +103,7 @@ const APP_FNS = ['agentRoomsToCheck', '_arCheckable', '_arRoomPayload', 'agentRo
   '_guessCategory', '_numOrBlank', '_invNamed', '_invTombstoneLine', '_avHasFigure', '_invHasValue', 'fieldDispToInv',
   '_importableFromEstimate', '_importedSourceSet', '_apprEstimateFlags', '_renderInventoryImportPanel', '_vehicleLineName',
   '_renderCollPhotoCapture'];
-const APP_VARS = ['_arRun', 'AGENT_ROOM_BATCH_SHOTS', 'AGENT_ROOM_CONF_RANK', 'AGENT_ROOM_CONF_WORDS', 'COLL_LINE_WEAK_STAMP',
+const APP_VARS = ['_arRun', 'AGENT_ROOM_BATCH_SHOTS', 'AGENT_ROOM_CONF_RANK', 'AGENT_ROOM_CONF_WORDS', 'AGENT_PASS_GAP_MS', 'COLL_LINE_WEAK_STAMP',
   'INV_DEFAULT_CATEGORY', 'FIELD_DISPOSITIONS', 'FIELD_DISP_DEFAULT', 'INV_TAXONOMY', 'INV_CATEGORIES', 'COLL_DOC_KINDS'];
 
 const EST = (colls, vehicles) => ({ estimate: { rooms: [{ idx: 4, name: 'Bedroom', note: '' }, { idx: 5, name: 'Study', note: '' }],
