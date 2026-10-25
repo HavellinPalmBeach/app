@@ -126,8 +126,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('B · every stamp writer reads _invStampBy or _actor, and no `job.tc` stamp is left');
   {
     const want = {
-      _invSetReviewed: "ref.reviewedBy = on ? _invStampBy(job) : ''",
-      _invBulkApply: 'ref.reviewedBy = _invStampBy(job)',
+      // Since 2026-10-24b the row's tick and Mark reviewed are one look, written by one stamp (_invStampLineReviewed).
+      _invStampLineReviewed: 'ref.reviewedBy = _invStampBy(job)',
+      _invSetReviewed: '_invStampLineReviewed(ref, job)',
+      _invBulkApply: '_invStampLineReviewed(ref, job)',
       _avStampReviewed: 'ref.valReviewedBy = _invStampBy(job)',
       setRoomFoundDone: 'by: _invStampBy(_invJob(jobId))',
       toggleMustFound: 'by: _invStampBy(job)',

@@ -242,7 +242,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             '_invTouch', 'moneyToNumber', '_invHasVal', 'invStickyValue',
             // P22: the Authorized By box saves the stored form (invApprovalBoxToStored), asked of the job.
             'invApprovalBoxToStored', 'invApprovalBoxText', 'invApprovalSigners', 'invApprovalSignedText', 'invRecipientName',
-            '_invReadableDay', '_invJob'],
+            '_invReadableDay', '_invJob', 'invUnitValue', 'invLineQty', '_invQtyCarriesValue', '_invPaintFigures'],
       vars: ['INV_STICKY_FIELDS'],
       // _invRefreshReleases: stubbed with its sibling repaints since _invEdit runs it on every edit (the desk build's review, 2026-10-23).
       stubs: { jobs: [], fmtDate2: (d) => String(d || ''), _invRefreshSummary() {}, _invRefreshGuardrail() {}, _invRefreshFlagStrip() {}, _invRefreshRecords() {}, _invRefreshReleases() {}, _scheduleInventorySync() {},

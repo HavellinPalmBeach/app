@@ -127,6 +127,9 @@ function app(refs, over) {
       savePhotoRefs: () => { log.saved++; },
       _scheduleInventorySync: () => { log.synced++; },
       renderInventoryTab: () => { log.renders++; },
+      // Agent Two follows the room check's tail by itself (2026-10-24b); the chain is driven in agents-together.test.js, so
+      // here the tail is only counted.
+      agentValueAuto: () => { log.valued = (log.valued || 0) + 1; return false; },
       _invTouch: (r) => { r.updatedAt = 99; return r; },
       _invStampBy: () => 'Ashley Jerome',
       esc: (x) => String(x == null ? '' : x).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'),

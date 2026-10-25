@@ -413,7 +413,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(code(fn('_avTakeValue')), "var figure = how === 'typed' && _invHasValue(ref);", '…and a figure is a value left on the line: a blank is none (the Q93 review)');
     has(code(fn('_avTakeValue')), "var wasAppraisal = ref.valSource === 'Appraisal';", '…a source of Appraisal read before anything is written');
     has(code(fn('_avTakeValue')), 'var linked = !!ref.apprId && (!job || _invHasAppraisal(job.id, ref));', 'linked: the roster, through _invHasAppraisal');
-    has(code(fn('_invEdit')), "if (key === 'fmv') _avTakeValue(ref, 'typed', _invJob(jobId));", '_invEdit hands it the job');
+    has(code(fn('_invEdit')), "if (key === 'fmv' || key === 'unitVal') _avTakeValue(ref, 'typed', _invJob(jobId));", '_invEdit hands it the job');
     // The appraised test lives in invAppraised alone: the conjunction of the source and a value is written nowhere else.
     eq(fnsWhere(/valSource === 'Appraisal' && _invHasValue\(/), ['invAppraised'], '⚠⚠ "source Appraisal with a value" is asked in invAppraised alone');
     // Every comparison of a source with 'Appraisal' in live code is in one of the four places that set or name it, never a second "appraised".

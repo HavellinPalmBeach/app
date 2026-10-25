@@ -28,8 +28,8 @@ const FNS = ['invLineReviewed', '_invDocPartyHead', 'invConditionText',
   'weArrangeAppraisals', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', 'jobAppraisalDuty', 'approvedEstimateFor', 'estimateDocScope', 'docScopeDef', '_agrOtherAppraisalsBy',
   'photoSubfolder',   // P16: the share button names both photo folders by the rule that files them
   'roundCents', 'fmt',
-  'trustInstrumentTitle', 'scheduleSigners', 'jobFiduciaries', 'jobListEntries', '_agrCounsel', 'photoSharesLine', 'photoSharesOf'];
-const VARS = [
+  'trustInstrumentTitle', 'scheduleSigners', 'jobFiduciaries', 'jobListEntries', '_agrCounsel', 'photoSharesLine', 'photoSharesOf', 'invLineDone', '_deskAwaitsAgents', 'deskLookReasons', 'deskNeedsLook', '_deskNameConf', '_deskAgentFigure', '_agNameKey'];
+const VARS = ['AGENT_VALUE_NOTICE_ORDER', 'DESK_LOOK_REASONS', 'INV_LINE_INITIAL_MIN', 
   '_agRun', '_avRun', '_arRun', 'AGENT_NOTICE_KINDS', 
   'INV_CONTRACT_DOCS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DECEDENT_SERVICES',
   'MATTER_TYPES', 'INV_ASSET_TRACKS', 'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD',

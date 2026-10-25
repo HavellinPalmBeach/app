@@ -21,8 +21,8 @@ const FNS = ['invLineReviewed', '_invDocPartyHead', 'invConditionText', 'matterD
   'printEstateInventoryReport', 'invAppraised', '_invHasValue', 'invAppraisalSourceText', 'invLineAppraiser', '_invLinkedAppraiser', 'invAppraisalInProgress', '_apprLabel', 'jobOnProbateTrack', '_avUnreviewedStamp', 'agentValueUnreviewed', '_invGroupItems', '_invDispLabel', '_invIsExempt',
   '_invIsProbateAsset', '_invTrack', '_invHasAppraisal', '_jobAppraisers', 'invAppraiserFor',
   'resolveValBasis',
-];
-const VARS = ['MATTER_TYPES',  'INV_CONTRACT_DOCS',
+, 'invLineDone', '_deskAwaitsAgents', 'deskLookReasons', '_deskNameConf', '_deskAgentFigure', '_avHasFigure', 'agentValueStale', '_agNameKey', 'deskNeedsLook'];
+const VARS = ['AGENT_VALUE_NOTICE_ORDER', 'DESK_LOOK_REASONS', 'INV_LINE_INITIAL_MIN', 'MATTER_TYPES',  'INV_CONTRACT_DOCS',
   '_agRun', '_avRun', '_arRun', 'AGENT_NOTICE_KINDS', 
   'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DECEDENT_SERVICES', 'SVC_ORDER',
   'INV_CAT_GLYPH', 'estimateStore', 'INV_APPRAISAL_THRESHOLD',
@@ -245,18 +245,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ───────────────────────────────────────────────────────────────────────────
   group('⚠ THE PROGRESS STAMP NAMES WHAT THIS DOCUMENT CARRIES');
   {
-    const p = sandbox({ fns: ['_invProgressStamp', '_invReviewStats', 'invLineReviewed'] });
+    const p = sandbox({ fns: ['_invProgressStamp', '_invReviewStats', 'invLineReviewed', 'invLineDone', '_deskAwaitsAgents', 'deskLookReasons', '_deskNameConf', '_deskAgentFigure', 'agentValueUnreviewed', '_avHasFigure', '_invHasValue', 'agentValueStale', '_agNameKey', 'deskNeedsLook'] });
     const plain = p._invProgressStamp([{ reviewed: true }, {}]);
     const noVal = p._invProgressStamp([{ reviewed: true }, {}], { noValues: true });
-    has(plain, 'Values and dispositions on unreviewed lines may still change',
+    // The words since 2026-10-24b (the one review): "lines not yet complete", since a line the agents are sure of is done without
+    // a person's look and no paper claims a person reviewed it (agents-together.test.js A7).
+    has(plain, 'Values and dispositions on lines not yet complete may still change',
         'the default sentence is untouched — six other documents carry it');
-    has(noVal, 'Descriptions and conditions on unreviewed lines may still change',
+    has(noVal, 'Descriptions and conditions on lines not yet complete may still change',
         'and the no-values caller gets one about what it actually states');
     lacks(noVal, 'Values and dispositions',
           '⚠ it must not promise to revise a value it never stated');
     // Both arms still stamp. The option changes the caveat, never the stamp.
     has(noVal, 'IN PROGRESS', 'the stamp itself is unchanged');
-    has(p._invProgressStamp([{ reviewed: true }], { noValues: true }), 'REVIEWED', 'REVIEWED on a complete set');
+    has(p._invProgressStamp([{ reviewed: true }], { noValues: true }), 'COMPLETE', 'COMPLETE on a complete set (it read REVIEWED before 2026-10-24b)');
   }
 
   group('and the Contents List asks for it');
@@ -264,8 +266,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const { ctx, last } = rig(ESTATE, [IT('a'), IT('b', { reviewed: true })]);
     ctx.printContentsList(7);
     const t = text(last().html);
-    has(t, 'IN PROGRESS — 1 of 2 items reviewed', 'stamped like every other client document');
-    has(t, 'Descriptions and conditions on unreviewed lines', 'with the caveat that fits it');
+    has(t, 'IN PROGRESS — 1 of 2 items complete', 'stamped like every other client document');
+    has(t, 'Descriptions and conditions on lines not yet complete', 'with the caveat that fits it');
     lacks(t, 'Values and dispositions', '⚠ and not the one that does not');
   }
 

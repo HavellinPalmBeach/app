@@ -82,7 +82,14 @@
 // the whole photograph; and its names carry no count (the count is qty's, taken from the crew's note where it gives one).
 // No action or type changes; until it is live a blank line on a named photograph puts every object in it on the list
 // twice, and a stack photographed from the top is named "approx. 7 in stack". The app names it by version.
-var BACKEND_VERSION = '2026-10-24';
+// ⚠ 2026-10-24b: Agent Two has the last word on what a thing is (Anthony, off the Ellison plates: *"if agent 2 gets a better
+// read of what the item is, why doesn't it change the name?"*). `record_values` carries `name`: the better name where the
+// photograph, close-ups or sales show the line is something else, or where the name carries a count, and the line is
+// valued as that; empty where the name stands. A name a person typed or checked at the desk is sent as such (`nameChecked`)
+// and treated as right.
+// The `name` notice kind is gone. No action or type changes; until it is live Agent Two values a wrong name as named and
+// says so in a notice, and the app names it by version.
+var BACKEND_VERSION = '2026-10-24b';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive',
@@ -3812,6 +3819,10 @@ function testAgentRoomCheck() {
 // a comparable must cite a page a tool actually returned (§4b), because only this end sees the
 // tool results.
 //
+// ⚠ SINCE 2026-10-24b IT ALSO SAYS WHAT A LINE IS: on a line another agent named it returns the better name (`name`) and
+// values the line as that, because it alone has the close-ups and the sales. Whether the name is written is the app's
+// (`_avWrite`: never over a name a person typed).
+//
 // ⚠ AND IT IS NEVER TOLD A THRESHOLD (§6). It values; the app's rules decide. A figure taught to the
 // model is a second copy of `invAppraisalThreshold`, the drift this codebase keeps paying for.
 
@@ -3842,7 +3853,8 @@ var AGENT_VALUE_TIME_BUDGET = 120000;
 // request is sent again without it (`_avReadResult`, `noFallbacks`) rather than the button dying.
 var AGENT_VALUE_FALLBACK_BETA = 'server-side-fallback-2026-07-01';
 var AGENT_VALUE_SOURCES = { comps: ['Auction comps', 'Online comps'], general: ['General estimate'] };
-var AGENT_VALUE_NOTICE_KINDS = ['appraiser', 'specialist', 'worthpoint', 'name', 'other'];
+// ⚠ NO `name` KIND SINCE 2026-10-24b: a better name is written, in `name`, never raised as a notice for a person to act on.
+var AGENT_VALUE_NOTICE_KINDS = ['appraiser', 'specialist', 'worthpoint', 'other'];
 
 // Money to the cent, half away from zero, read at fifteen significant digits so 1.005 is 1.01: the
 // app's `roundCents`, which this file cannot lift. A test holds the two to the same answers.
@@ -3880,9 +3892,10 @@ function _avTool(mode) {
           items: {
             type: 'object',
             additionalProperties: false,
-            required: ['line', 'value', 'low', 'high', 'confidence', 'source', 'basis', 'comps', 'lookup', 'notices'],
+            required: ['line', 'name', 'value', 'low', 'high', 'confidence', 'source', 'basis', 'comps', 'lookup', 'notices'],
             properties: {
               line:       { type: 'string', description: 'The label the line was given, for example L1.' },
+              name:       { type: 'string', description: 'The better name for the line when your research shows it is something other than its name says, or when its name carries a count; never a count in it. Empty when the name stands, and always empty for a line whose name a person checked.' },
               value:      { type: 'number', description: 'Your point value for the WHOLE line, in US dollars: every article on it together, never a per-piece price.' },
               low:        { type: 'number', description: 'The low end of the range it would realistically sell for, whole line, US dollars.' },
               high:       { type: 'number', description: 'The high end of that range, whole line, US dollars.' },
@@ -3958,8 +3971,21 @@ function _avSystem(ctx) {
   var s = ''
     + 'You are putting a value on the contents of a home so that a concierge can complete '
     + (estate ? 'an estate inventory' : 'an inventory for a client who is moving or clearing their home')
-    + '. Each line has already been named by someone else. Your job is to say what each line is WORTH, '
-    + 'show the sales that figure rests on, and say plainly when you cannot tell.\n\n'
+    + '. Each line has already been named, most of them by another agent working from one photograph and no '
+    + 'research. Your job is to say what each line IS and what it is WORTH, show the sales that figure rests on, '
+    + 'and say plainly when you cannot tell.\n\n'
+
+    + 'THE NAME\n'
+    + 'You see the close-ups and the sales, so on a line named by the other agent you have the last word on what '
+    + 'it is. When the photograph, a mark or the comparables show the line is something other than its name says '
+    + '(another maker, origin, period, material, pattern or kind), write the better name in name and value the '
+    + 'line as what you say it is. Name it the way the other agent was told to: as specific as the evidence '
+    + 'supports, stating flatly only what is readable and hedging what you infer ("appears to be", "likely", "in '
+    + 'the style of"). Write name too when the name carries a count ("set of 8", "pair", "approx. 7 in stack", '
+    + '"30 pieces"): the same name without it. Never put how many there are in a name; the count is the '
+    + 'Quantity, and a person corrects it there. Leave name empty when the name stands.\n'
+    + 'A line marked "Name checked by a person at the desk" was named or checked by someone who saw the thing '
+    + 'itself. Treat that name as right, value it as named and leave name empty.\n\n'
 
     + 'WHAT A VALUE MEANS HERE\n'
     + 'The basis is ' + basis + '.'
@@ -3981,7 +4007,10 @@ function _avSystem(ctx) {
     + 'The property is in Palm Beach County, Florida. Bulky furniture usually sells locally, so its market '
     + 'is regional; small valuable things sell nationally.\n'
     + 'A line is a whole lot. "Sterling flatware, service for 12, 72 pieces" is ONE figure for all 72 '
-    + 'pieces, never a per-piece price. Adjust for the condition recorded on the line.\n\n'
+    + 'pieces, never a per-piece price. Adjust for the condition recorded on the line.\n'
+    + 'Value the line at the Quantity given: for a group of like things, that many of them. The desk reads one '
+    + 'article\'s value as the line\'s value divided by its Quantity, and multiplies it again when a person '
+    + 'corrects the count, so a stack of eight plates is valued as eight plates, never as one.\n\n'
 
     + 'THE TWO DEPTHS\n'
     + 'A request marked RESEARCH is one line that may be worth real money: art, antiques, jewellery, '
@@ -3994,7 +4023,8 @@ function _avSystem(ctx) {
     + 'A request marked ORDINARY is a batch of everyday lots: kitchenware, linens, books, everyday '
     + 'furniture and decor. One quick search for the going resale rate of that kind of lot is enough, '
     + 'and you need not cite a comparable. This is a figure for a schedule, not research: "Stainless '
-    + 'flatware, service for 12, everyday brand, $40 to $60" is the whole job.\n\n'
+    + 'flatware, service for 12, everyday brand, $40 to $60" is the whole job. A maker or brand in the name is part '
+    + 'of what the lot is: price that brand ("Henckels kitchen shears"), never the generic kind ("kitchen shears").\n\n'
 
     + 'EVIDENCE\n'
     + '- A comparable must be a page your search or fetch actually returned. Copy its URL exactly. A sale '
@@ -4019,12 +4049,11 @@ function _avSystem(ctx) {
     + 'comparables disagree widely.\n'
     + 'kind "specialist": it should sell through a specialist auction house or dealer, not a general sale.\n'
     + 'kind "worthpoint": a WorthPoint check would be worth a person\'s time.\n'
-    + 'kind "name": the photograph or the sales suggest the line is something other than its name says. Say '
-    + 'what you think it is. Do NOT rename it and still value the line as named, saying so.\n'
-    + 'kind "other": anything else a person must see. Use notices sparingly.\n\n'
+    + 'kind "other": anything else a person must see. Use notices sparingly: a better name is written in name, '
+    + 'never raised as a notice.\n\n'
 
     + 'WHAT YOU MUST NEVER DO\n'
-    + '- Never change what a line is called or what category it is in. A disagreement is a notice.\n'
+    + '- Never change a line\'s category or quantity, and never rename a line whose name a person checked.\n'
     + '- Never say what should happen to a line (keep, sell, donate, junk) beyond the notices above. That '
     + 'is the family\'s decision.\n'
     + '- Never give legal or tax advice, and never describe a person.\n'
@@ -4050,6 +4079,8 @@ function _avLineText(label, it) {
         + ' | Condition: ' + String(it.condition || 'not recorded');
   if (it.fieldNote)  t += ' | The crew noted: "' + String(it.fieldNote).slice(0, 300) + '"';
   if (it.agentBasis) t += ' | Named from: ' + String(it.agentBasis).slice(0, 200);
+  // ⚠ WHO NAMED IT (2026-10-24b): a person's name is the one Agent Two leaves alone (the prompt's THE NAME).
+  if (it.nameChecked) t += ' | Name checked by a person at the desk';
   return t;
 }
 
@@ -4231,7 +4262,10 @@ function _avLineResult(v, mode, seen) {
   var notices = (v.notices || []).filter(function (n) {
     return n && AGENT_VALUE_NOTICE_KINDS.indexOf(n.kind) >= 0 && String(n.text || '').trim();
   }).slice(0, 4).map(function (n) { return { kind: n.kind, text: String(n.text).slice(0, 300) }; });
+  // ⚠ THE BETTER NAME (2026-10-24b), trimmed and capped; the app decides whether it is written (never over a person's name).
+  var name = String(v.name || '').replace(/\s+/g, ' ').trim().slice(0, 300);
   return {
+    name: name,
     fmv: fmv, low: low, high: high, confidence: conf,
     source: sources.indexOf(v.source) >= 0 ? v.source : sources[0],
     basis: String(v.basis || '').slice(0, 300),
@@ -4378,6 +4412,7 @@ function testAgentValue() {
   var out = agentValueLines({
     context: { estate: true, basis: 'Fair Market Value', valuationDate: '2026-06-14' },
     items: [
+      // A count in the probe's first name on purpose (2026-10-24b): it should come back renamed without one.
       { stableId: 'probe-comps', mode: 'comps', name: 'Herend Rothschild Bird dinner plates, set of 8',
         category: 'Antiques', qty: 8, condition: 'Good' },
       { stableId: 'probe-flatware', mode: 'general', name: 'Stainless steel flatware, service for 12, everyday brand',
@@ -4392,6 +4427,10 @@ function testAgentValue() {
   Object.keys(out.results).forEach(function (id) {
     var r = out.results[id];
     Logger.log('  ' + id + ': $' + r.fmv + ' ($' + r.low + '–$' + r.high + ', ' + r.confidence + ', ' + r.source + ') — ' + r.basis);
+    if (r.name) {
+      Logger.log('      renamed: ' + r.name);
+      if (AGENT_COUNT_IN_NAME_RE.test(r.name)) Logger.log('      WARNING: a count in the name; the count belongs in qty alone.');
+    }
     (r.comps || []).forEach(function (c) { Logger.log('      [' + c.kind + '] ' + c.title + ' · ' + c.venue + ' · ' + c.saleDate + ' · $' + c.price + ' · ' + c.url); });
     if (r.dropped) Logger.log('      ' + r.dropped + ' comparable(s) dropped: no tool returned their link');
     if (r.lookup) Logger.log('      WorthPoint: ' + r.lookup);

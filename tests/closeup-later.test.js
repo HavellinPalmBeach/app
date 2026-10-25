@@ -196,7 +196,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(many.invLineCloseUps(1, many._getPhotoRef(1, 's')).length, many.AGENT_MAX_DETAILS, 'capped as Agent One\'s are');
     has(liveLines(fn('_avItemPayload')), 'invLineCloseUps(jobId, ref)', 'and it is what Agent Two\'s payload sends');
     // Driven: the payload Agent Two is sent for the salad plates, researched, carries their own close-up first.
-    const pay = sandbox({ fns: ['_avItemPayload', 'invLineCloseUps', '_agDetailRefs', '_invFileId', '_getPhotoRef'], vars: ['AGENT_MAX_DETAILS'],
+    const pay = sandbox({ fns: ['_avItemPayload', 'invLineCloseUps', '_agDetailRefs', '_invFileId', '_getPhotoRef', '_avNameIsAgents'], vars: ['AGENT_MAX_DETAILS'],
       stubs: { agentValueMode: () => 'comps', _photoRefs: ctx._photoRefs } });
     const sent = pay._avItemPayload(1, pay._getPhotoRef(1, 's'));
     eq(sent && sent.details, [{ fileId: 'FID_DS' }, { fileId: 'FID_DP' }], '⚠ Agent Two is sent the salad plates\' own close-up, then the photograph\'s');
@@ -263,7 +263,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(text(read('concierge-guide.html')), 'A close-up missed in the house (new 2026-10-24): in that ▾, press ➕ Close-up', 'the playbook says how');
     has(read('CONCIERGE_GUIDE.md'), '**A close-up missed in the house** (new 2026-10-24): in that ▾, press **➕ Close-up**', 'and its markdown copy');
     // What the pages claim, held to the code: the Look at this is quieted by the review, never by a close-up.
-    has(liveLines(fn('agentNoticeQuiet')), "if (kind === 'other') return invLineReviewed(ref);", 'a Look at this goes quiet on review, which the pages say');
+    // Since 2026-10-24b it goes quiet once its line is done (reviewed, or nothing on it needs a person: invLineDone).
+    has(liveLines(fn('agentNoticeQuiet')), "if (kind === 'other') return invLineDone(ref, job);", 'a Look at this goes quiet once its line is done, which the pages say');
     lacks(liveLines(fn('invAddCloseUp')), 'reviewed', 'and adding a close-up reviews nothing');
     ok(source().indexOf('function invAddCloseUp(') > 0, 'the handler is in the app');
   }

@@ -1807,7 +1807,8 @@ function groupI({ group, ok, eq, has, lacks }) {
     C._photoRefs[7] = rows();
     C.jobs[0] = PROBATE({ mustFind: 'Grandmother’s ring', mustFound: { [C._mustFindKey('Grandmother’s ring')]: { at: '2026-10-21', by: 'Ashley Jerome' } } });
     const rec = (id) => readOf(C._agRecordNoticesHtml(C.jobs[0], C._photoRefs[7].filter((r) => r.stableId === id)[0]));
-    eq(rec('o2'), 'Agent One noted Look at this — the drawer pulls do not match · off the list above the rows: the line is reviewed', '⚠⚠ the reviewed line\'s record keeps its note, and says why it is off the list');
+    // Since 2026-10-24b a Look at this goes quiet once its line is done (invLineDone: reviewed, or nothing on it needs a person).
+    eq(rec('o2'), 'Agent One noted Look at this — the drawer pulls do not match · off the list above the rows: the line is done', '⚠⚠ the reviewed line\'s record keeps its note, and says why it is off the list');
     eq(rec('m1'), 'Agent One noted Must find — a ring box on the dresser · off the list above the rows: every must-find is recorded found', 'the Must find\'s too');
     eq(rec('o1'), 'Agent One noted Look at this — a crack along the top rail', 'a note still listed above reads plainly in the record');
     eq(rec('f1'), 'Agent One noted Possible NFA item — a tube that may be a suppressor Firearm — a long gun in the closet', 'every notice on the line, in the order that matters');
@@ -1820,7 +1821,10 @@ function groupI({ group, ok, eq, has, lacks }) {
       LINE('o1', { itemNo: 1, objectName: 'Chest of drawers', namedBy: 'agent', reviewed: false, disposition: 'Donate', agentNotices: [{ kind: 'other', text: 'the drawer pulls do not match' }] }),
       LINE('m1', { itemNo: 2, objectName: 'Ring box', namedBy: 'agent', reviewed: true, disposition: 'Keep', agentNotices: [{ kind: 'mustfind', text: 'a ring box on the dresser' }] })];
     const job = PROBATE({ mustFind: 'Grandmother’s ring', mustFound: {}, at: {} });
-    const D = tonight(job, rows());
+    // A name typed on a line with no figure is valued by itself since 2026-10-24b (agentValueAfterRename): the request goes and
+    // is never answered here, so nothing it would write moves the desk under the test.
+    const pending = { then() { return pending; }, catch() { return pending; } };
+    const D = tonight(job, rows(), { stubs: { fetch: () => pending } });
     D.C._invOpen.o1 = 1;
     const h0 = D.render();
     has(readOf(inner(h0, 'inv-agent-notices')), 'the drawer pulls do not match', 'fixture: the unreviewed line\'s note is above the rows');
@@ -1834,7 +1838,7 @@ function groupI({ group, ok, eq, has, lacks }) {
     eq(D.log.renders, n0, 'repainted by id: no full render under the person typing');
     const full = D.render();
     eq(partial, inner(full, 'inv-agent-notices'), '⚠ equal to what a full render writes');
-    has(readOf(inner(full, 'inv-row-o1')), 'the drawer pulls do not match · off the list above the rows: the line is reviewed', '⚠⚠ and present in its record, saying why');
+    has(readOf(inner(full, 'inv-row-o1')), 'the drawer pulls do not match · off the list above the rows: the line is done', '⚠⚠ and present in its record, saying why');
     // The last Found it quiets the Must find on the desk, by id; Undo brings it back.
     D.dom.html = D.dom.html + '<div id="sf-host-desk" data-job="7"></div>';
     has(readOf(inner(D.dom.html, 'inv-agent-notices')), 'a ring box on the dresser', 'fixture: the Must find is above the rows while the ring is missing');

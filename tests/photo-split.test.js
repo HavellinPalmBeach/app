@@ -282,15 +282,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠ THE RENDERED ROW SAYS HOW MANY OBJECTS SHARE THE FRAME');
   {
     const rowCtx = sandbox({
-      fns: ['invLineReviewed', '_renderInvRow', '_invRowPhotoHtml', '_invRowHasWho', 'invOutForAppraisal', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', '_avAcceptButtonHtml', 'invPickupRecord', 'signedRecordsOf', '_invRowDomId', '_invRecipientInput', 'invPlanChannel', '_renderInvPanel', 'invCloseUpRefusal', '_invCloseUpsHtml', '_invCloseUpTileHtml', '_agRecordNoticesHtml', '_avPanelHtml', '_invDetailRefs', '_invPhotoSiblings', 'invAppraisalSourceText', 'invLineAppraiser', '_invLinkedAppraiser', 'invAppraised', 'invAppraisalInProgress', '_invHasAppraisal', '_invHasValue', '_invPanelAppraisalHtml',
+      fns: ['invLineReviewed', '_renderInvRow', '_invRowPhotoHtml', '_invRowHasWho', 'invOutForAppraisal', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', 'invLineDone', 'deskLookReasons', 'deskNeedsLook', '_deskNameConf', '_deskAgentFigure', '_deskAwaitsAgents', '_invEachInput', 'invUnitValue', 'invLineQty', '_invInputStyle', '_invCtrlMinW', 'invPickupRecord', 'signedRecordsOf', '_invRowDomId', '_invRecipientInput', 'invPlanChannel', '_renderInvPanel', 'invCloseUpRefusal', '_invCloseUpsHtml', '_invCloseUpTileHtml', '_agRecordNoticesHtml', '_avPanelHtml', '_invDetailRefs', '_invPhotoSiblings', 'invAppraisalSourceText', 'invLineAppraiser', '_invLinkedAppraiser', 'invAppraised', 'invAppraisalInProgress', '_invHasAppraisal', '_invHasValue', '_invPanelAppraisalHtml',
             '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef', '_invNamed', '_invItemNo',
             // P16: the row names a firearm's dealer route and the panel carries the firearm block.
             'invDealerRouteOffered', 'invDealerRoute', 'invDealerRouteText', '_invFirearmPanelHtml',
             // P19: the row names a bequest, an incomplete approval and a receipt owed; the recipient box offers the roster.
             'invBequestFor', 'jobListEntries', 'invApprovalGap', 'invReceiptOwed', '_invBenListAttr',
             // P20: the row says a ratification is owed apart from an incomplete approval, and flags a living client's line going to one of ours.
-            'invRatificationOwed', 'invFiduciaryMode', 'isDecedentJob', 'invReleaseCautions', '_invJob', 'invHavellinRecipient', 'invChannelLeftover', 'invChannelLeftoverText', '_invPanelCautionHtml', '_invPanelLeftoverHtml'],
-      vars: ['INV_PLAN_CHANNEL_KINDS', 'INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick', '_agDupSet',
+            'invRatificationOwed', 'invFiduciaryMode', 'isDecedentJob', 'invReleaseCautions', '_invJob', 'invHavellinRecipient', 'invChannelLeftover', 'invChannelLeftoverText', '_invPanelCautionHtml', '_invPanelLeftoverHtml', '_avHasFigure', '_agNameKey'],
+      vars: ['DESK_LOOK_REASONS', 'INV_LINE_INITIAL_MIN', 'INV_PLAN_CHANNEL_KINDS', 'INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick', '_agDupSet',
              // P20 vars: the catalogues the row's new questions read.
              'DECEDENT_SERVICES', 'INV_RELEASE_CAUTIONS'],
       stubs: {
@@ -316,12 +316,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // The converse, or the cue is noise on every ordinary row in the manifest.
     const loneCtx = sandbox({
-      fns: ['invLineReviewed', '_renderInvRow', '_invRowPhotoHtml', '_invRowHasWho', 'invOutForAppraisal', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', '_avAcceptButtonHtml', 'invPickupRecord', 'signedRecordsOf', '_invRowDomId', '_invRecipientInput', 'invPlanChannel', '_invDetailRefs', '_invPhotoSiblings', '_invPhotoSource', 'invAppraisalSourceText', 'invLineAppraiser', '_invLinkedAppraiser', 'invAppraised', 'invAppraisalInProgress', '_invHasAppraisal', '_invHasValue',
+      fns: ['invLineReviewed', '_renderInvRow', '_invRowPhotoHtml', '_invRowHasWho', 'invOutForAppraisal', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', 'invLineDone', 'deskLookReasons', 'deskNeedsLook', '_deskNameConf', '_deskAgentFigure', '_deskAwaitsAgents', '_invEachInput', 'invUnitValue', 'invLineQty', '_invInputStyle', '_invCtrlMinW', 'invPickupRecord', 'signedRecordsOf', '_invRowDomId', '_invRecipientInput', 'invPlanChannel', '_invDetailRefs', '_invPhotoSiblings', '_invPhotoSource', 'invAppraisalSourceText', 'invLineAppraiser', '_invLinkedAppraiser', 'invAppraised', 'invAppraisalInProgress', '_invHasAppraisal', '_invHasValue',
             '_invDerivedRefs', '_getPhotoRef', '_invItemNo', 'invDealerRouteOffered', 'invDealerRoute', 'invDealerRouteText',
             'invBequestFor', 'jobListEntries', 'invApprovalGap', 'invReceiptOwed', '_invBenListAttr',
             // P20: the row says a ratification is owed apart from an incomplete approval, and flags a living client's line going to one of ours.
-            'invRatificationOwed', 'invFiduciaryMode', 'isDecedentJob', 'invReleaseCautions', '_invJob', 'invHavellinRecipient', 'invChannelLeftover', 'invChannelLeftoverText', '_invPanelCautionHtml', '_invPanelLeftoverHtml'],
-      vars: ['INV_PLAN_CHANNEL_KINDS', 'INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick', '_agDupSet',
+            'invRatificationOwed', 'invFiduciaryMode', 'isDecedentJob', 'invReleaseCautions', '_invJob', 'invHavellinRecipient', 'invChannelLeftover', 'invChannelLeftoverText', '_invPanelCautionHtml', '_invPanelLeftoverHtml', '_avHasFigure', '_agNameKey'],
+      vars: ['DESK_LOOK_REASONS', 'INV_LINE_INITIAL_MIN', 'INV_PLAN_CHANNEL_KINDS', 'INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick', '_agDupSet',
              // P20 vars: the catalogues the row's new questions read.
              'DECEDENT_SERVICES', 'INV_RELEASE_CAUTIONS'],
       stubs: {

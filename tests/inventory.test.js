@@ -592,7 +592,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('a cleared value stays blank, and money shows as money');
   {
     const m = sandbox({ fns: ['_invEdit', '_avTakeValue', '_getPhotoRef', '_setPhotoRef', 'savePhotoRefs',
-                              '_warnPhotoStoreFull', '_invTouch', 'moneyToNumber', '_invHasVal', 'invAppraised', '_invHasValue', '_invJob'],
+                              '_warnPhotoStoreFull', '_invTouch', 'moneyToNumber', '_invHasVal', 'invAppraised', '_invHasValue', '_invJob', 'invUnitValue', 'invLineQty', '_invQtyCarriesValue', '_invPaintFigures'],
                         vars: ['INV_STICKY_FIELDS'],
                         // _invRefreshReleases with its sibling repaints: _invEdit runs it on every edit since the desk build's review (2026-10-23).
                         stubs: { _invRefreshSummary() {}, _invRefreshGuardrail() {}, _invRefreshFlagStrip() {}, _invRefreshRecords() {}, _invRefreshReleases() {},

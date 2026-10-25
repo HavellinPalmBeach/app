@@ -25,7 +25,7 @@ const count = (hay, needle) => String(hay).split(needle).length - 1;
 const code = (t) => String(t).split('\n').filter((l) => !l.trim().startsWith('//')).map((l) => l.replace(/\s\/\/\s.*$/, '')).join('\n');
 // Comments off and strings blanked: for walking which functions and vars a function reaches.
 const bare = (t) => code(t).replace(/'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"/g, "''");
-const NAMED = { nbsp: ' ', amp: '&', rsquo: '’', lsquo: '‘', ldquo: '“', rdquo: '”', middot: '·', sect: '§', mdash: '—', ndash: '–', hellip: '…', rarr: '→', lt: '<', gt: '>', quot: '"' };
+const NAMED = { times: '×', nbsp: ' ', amp: '&', rsquo: '’', lsquo: '‘', ldquo: '“', rdquo: '”', middot: '·', sect: '§', mdash: '—', ndash: '–', hellip: '…', rarr: '→', lt: '<', gt: '>', quot: '"' };
 const decode = (s) => String(s).replace(/&#(\d+);/g, (m, n) => String.fromCodePoint(+n)).replace(/&([a-z]+);/g, (m, n) => (NAMED[n] != null ? NAMED[n] : m));
 const text = (html) => decode(String(html)
   .replace(/<!--[\s\S]*?-->/g, ' ').replace(/<(style|script)\b[^>]*>[\s\S]*?<\/\1>/gi, ' ').replace(/<[^>]+>/g, ' '))
@@ -413,29 +413,42 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const AK = sandbox({ vars: ['AGENT_NOTICE_KINDS'] }).AGENT_NOTICE_KINDS;
     eq(AK.map((k) => [k.label, k.cls]), [['Must find', 'a-err'], ['Possible NFA item', 'a-err'], ['Firearm', 'a-err'], ['Look at this', 'a-warn']], 'three notes in red, Look at this in amber');
     has(code(fn('_agNoticesHtml')), "'Agent One raised '", 'under Agent One raised N things to look at');
-    const Q = sandbox({ fns: ['agentNoticeQuiet'], stubs: { invLineReviewed: (r) => !!(r && r.rev), mustFindAllFound: (j) => !!(j && j.allFound) } });
-    eq([Q.agentNoticeQuiet('other', { rev: false }, {}), Q.agentNoticeQuiet('other', { rev: true }, {})], [false, true], 'Look at this: gone once the item is reviewed');
+    // Since 2026-10-24b a Look at this goes quiet once its item is done (invLineDone: reviewed, or nothing on it needs a person).
+    const Q = sandbox({ fns: ['agentNoticeQuiet'], stubs: { invLineDone: (r) => !!(r && r.rev), mustFindAllFound: (j) => !!(j && j.allFound) } });
+    eq([Q.agentNoticeQuiet('other', { rev: false }, {}), Q.agentNoticeQuiet('other', { rev: true }, {})], [false, true], 'Look at this: gone once the item is done');
     eq([Q.agentNoticeQuiet('mustfind', { rev: true }, { allFound: false }), Q.agentNoticeQuiet('mustfind', {}, { allFound: true })], [false, true], 'a Must find: stays until every must-find is found');
     eq([Q.agentNoticeQuiet('firearm', { rev: true }, { allFound: true }), Q.agentNoticeQuiet('nfa', { rev: true }, { allFound: true })], [false, false], 'Firearm and Possible NFA item: always stay');
-    has(t, 'Must find, Firearm and Possible NFA item in red, and they stay (a Must find goes quiet once every must-find is found); Look at this in amber, gone once you review the item. Quiet notes stay in the item’s record.', 'as the page says');
+    has(t, 'Must find, Firearm and Possible NFA item in red, and they stay (a Must find goes quiet once every must-find is found); Look at this in amber, gone once the item is done. Quiet notes stay in the item’s record.', 'as the page says');
     has(code(fn('_agRecordNoticesHtml')), 'off the list above the rows', 'a quiet note is still read in the item’s record');
     has(SRC, '>Show the item</button>', 'Show the item');
     has(t, 'Show the item jumps to it and opens it.', 'as the page says');
     const dup = code(fn('_agDupHtml'));
     ['Possible duplicates', "'Remove</button>", '>Not duplicates</button>'].forEach((w) => has(dup, w, 'the duplicates block: ' + w));
     has(t, 'Possible duplicates. Compare the photos, then Remove the extra, or Not duplicates if they really are two things.', 'as the page says');
-    // The row's Accept value, the one the page means: anchored on its builder and the row that draws it, never the whole source
-    // (the item's record carries a second, so a needle on the source passed with the row's renamed; guide review, 2026-10-24).
-    has(code(fn('_avAcceptButtonHtml')), '>Accept value</button>', 'Accept value, the row’s button…');
-    has(code(fn('_renderInvRow')), '_avAcceptButtonHtml(jid, ref)', '…drawn under the row’s value box');
-    has(t, 'Each figure stays unreviewed until you press Accept value.', 'as the page says');
-    // Reviewed, read off the line.
-    const R = sandbox({ fns: ['invLineReviewed'] });
+    // ⚠ THE AGENTS TOGETHER AND THE ONE REVIEW (2026-10-24b; agents-together.test.js drives each rule). Agent Two follows Agent One
+    // by itself, corrects a name an agent gave, never one a person typed or ticked; only an item that needs a person asks.
+    has(code(fn('_agFinish')), 'agentValueAuto(jobId)', 'Agent Two follows a naming run by itself…');
+    has(code(fn('_arFinish')), 'agentValueAuto(jobId);', '…and the room check’s tail');
+    has(t, 'Agent Two values each named item by itself (Value N lines does any left) and fixes Agent One’s names.', 'as the page says');
+    has(code(fn('_avNameIsAgents')), "return !!ref && ref.namedBy !== 'desk' && !ref.reviewed;", 'it corrects only a name a person has not typed or ticked');
+    const RW = sandbox({ vars: ['DESK_LOOK_REASONS', 'INV_LINE_INITIAL_MIN'] }).DESK_LOOK_REASONS.map((k) => k.word);
+    eq(RW, ['firearm', 'possible NFA item', 'must-find', 'agent unsure', 'value made for an earlier name', 'could not be valued', 'appraisal advised', 'worth a specialist', '$500 or more'],
+       '⚠⚠ the reasons an item asks, every one of them');
+    has(code(fn('_renderInvRow')), "'\" style=\"color:var(--bronze);font-weight:700;\">check: '", 'the row’s check:, in bronze');
+    eq(sandbox({ vars: ['INV_WORK_FLAGS'] }).INV_WORK_FLAGS[1].label, 'To check', 'the To check count');
+    has(t, 'To check: an item needing you reads check: and why. One Reviewed tick covers its name, count and value.', 'as the page says');
+    has(code(fn('_invStampLineReviewed')), '_avStampReviewed(ref, job)', 'the tick reviews the value with the item');
+    lacks(SRC, 'function agentValueAccept(', 'and there is no Accept to press');
+    // Done without a tick, read off the item.
+    const R = sandbox({ fns: ['invLineReviewed', 'invLineDone', '_deskAwaitsAgents', 'deskLookReasons', '_deskNameConf', '_deskAgentFigure', 'agentValueUnreviewed', '_avHasFigure', '_invHasValue',
+      'agentValueStale', '_agNameKey', 'invIsFirearm'], vars: ['DESK_LOOK_REASONS', 'INV_LINE_INITIAL_MIN'], stubs: { agentValueSpecialistWorth: () => false } });
+    const sure = { namedBy: 'agent', agentConf: 'high', objectName: 'Lamp', disposition: 'Donate', fmv: 40, valHigh: 60, valuedBy: 'agent', valConf: 'high', valNameAt: 'Lamp' };
+    eq(R.invLineDone(sure, {}), true, 'both agents sure, under $500, a destination chosen: done by itself');
+    eq(R.invLineDone(Object.assign({}, sure, { fmv: 640, valHigh: 800 }), {}), false, '…but not at $500 or more');
     eq(R.invLineReviewed({ namedBy: 'desk', objectName: 'Lamp', disposition: 'Donate' }), true, 'a name typed with a destination chosen counts as reviewed by itself');
-    eq(R.invLineReviewed({ namedBy: 'agent', objectName: 'Lamp', disposition: 'Donate' }), false, 'a name Agent One gave needs the tick');
-    eq(R.invLineReviewed({ namedBy: 'agent', objectName: 'Lamp', reviewed: 1 }), true, '…which confirms it');
-    has(code(fn('_renderInvRow')), '>Reviewed</label>', 'the row’s Reviewed box');
-    has(t, 'Tick Reviewed to confirm a name Agent One gave. A name you typed, with a destination chosen, counts as reviewed by itself.', 'as the page says');
+    has(code(fn('_renderInvRow')), "(_rvDone && !_rvPerson ? 'Done' : 'Reviewed') + '</label>'", 'the row’s box reads Done or Reviewed');
+    has(t, 'Items needing nothing read Done; a renamed item is valued again.', 'as the page says');
+    has(code(fn('_invEdit')), "if (key === 'objectName') agentValueAfterRename(jobId, stableId);", 'a name changed is valued again by itself');
     // The selection.
     has(code(fn('_renderInvGroupHead')), '>Select all</button>', 'Select all on the group');
     const bulk = code(fn('_renderInvBulk'));
@@ -471,8 +484,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(t, 'With one vendor of that kind confirmed on the Job Plan, it fills itself in.', 'as the page says');
     // 2026-10-24: + Close-up, a close-up missed in the house, is a label over the record's chooser (closeup-later.test.js).
     ['&#10133; Another item in this photo</button>', '&#10133; Close-up</label>', 'Remove line</button>', '>Open photo in Drive</a>'].forEach((w) => has(code(fn('_renderInvPanel')), w, 'the record carries ' + decode(w.replace(/<[^>]+>/g, ''))));
-    has(SRC, 'IN PROGRESS</strong> stamp until every line is ticked &mdash; they are never withheld.', 'papers print marked IN PROGRESS, never withheld');
-    has(t, 'Papers print marked IN PROGRESS until every item is reviewed; they are never held back.', 'as the page says');
+    has(SRC, 'IN PROGRESS</strong> stamp until every line is done &mdash; they are never withheld.', 'papers print marked IN PROGRESS, never withheld');
+    has(SRC, ">COMPLETE &mdash; all ' + st.total + ' items</div>'", 'papers read COMPLETE once every item is done (since 2026-10-24b)');
+    has(t, 'Papers print marked IN PROGRESS until every item is done, then COMPLETE; they are never held back.', 'as the page says');
     has(code(fn('_renderInvWorkbar')), "'+ Add line item'", '+ Add line item');
     const imp = code(fn('_renderInventoryImportPanel'));
     has(imp, 'From the Estimate Walkthrough', 'the vehicles still to bring in…');
@@ -641,7 +655,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(t, 'Photo Opens it in Drive.', 'as the page says');
     has(t, 'No thumbnails Nothing is lost. Reload, or tap the box for Drive.', '…and its tricky spot');
     has(row, "+ '\\',\\'qty\\',this)\">", 'the count is a box on the row, written through the one writer');
-    has(t, 'Correct the name and count, choose where it goes, type who takes it if it leaves, accept or type the value.', 'as the page says');
+    has(t, 'Not yet decided, room by room. Choose where it goes and who takes it.', 'as the page says');
+    // Each × Qty = Total (2026-10-24b).
+    const head = code(fn('_renderInvColHead'));
+    ok(head.indexOf('>Qty<') > 0 && head.indexOf('>Qty<') < head.indexOf('>Each<') && head.indexOf('>Each<') < head.indexOf('>Total<'), 'Qty, Each and Total headed in that order');
+    has(code(fn('_invQtyCarriesValue')), 'ref.fmv = roundCents(unitWas * qNow);', 'a count changed moves the total');
+    has(t, 'Qty, Each, Total Each × Qty = Total.', 'as the page says');
     const S = sandbox({ fns: ['invSplitItemN', '_invPhotoSource', '_getPhotoRef', '_setPhotoRef', '_invFileId', '_photoUid'],
       vars: ['_photoUidSeq', 'INV_DEFAULT_CATEGORY', 'INV_SPLIT_MAX'],
       stubs: { _photoRefs: { 7: [{ stableId: 'p', label: 'inventory', roomIdx: 1, ts: 1, driveFileId: 'F', driveFileUrl: 'u', disposition: 'Donate', channel: 'Habitat for Humanity' }] },

@@ -43,8 +43,8 @@ const FNS = ['invLineReviewed', '_invDocPartyHead', 'invOwnInitial', 'invInitial
              '_invProgressStamp', '_invReviewStats', 'jobTakesProceedsStatements', 'proceedsReconciliation',
              '_jobDestLabel', '_agrApprover', 'signedRecordsOf',
              // P20: the request lists what left before every fiduciary approved apart, and prints who signed readably.
-             'invRatificationOwed', 'invRecordedGone', 'invPickupRecord', 'custodyEvents', 'invReceiptRecord', 'invViaDealer', 'invRecipientName', 'invApprovalSignedText', 'invApprovalSigners', 'invStaffRefused'];
-const VARS = ['INV_LINE_INITIAL_MIN', 'INV_DISP_DOC_WORDS', 'INV_PLAN_CHANNEL_KINDS', 'INV_UNDECIDED', 'INV_RELEASE_CAUTIONS', 'INV_RELEASE_DISPOSITIONS', 'INV_CAT_GLYPH',
+             'invRatificationOwed', 'invRecordedGone', 'invPickupRecord', 'custodyEvents', 'invReceiptRecord', 'invViaDealer', 'invRecipientName', 'invApprovalSignedText', 'invApprovalSigners', 'invStaffRefused', 'invLineDone', '_deskAwaitsAgents', 'deskLookReasons', '_deskNameConf', '_deskAgentFigure', 'agentValueUnreviewed', '_avHasFigure', 'agentValueStale', '_agNameKey', 'agentValueSpecialistWorth', 'deskNeedsLook'];
+const VARS = ['DESK_LOOK_REASONS', 'INV_LINE_INITIAL_MIN', 'INV_DISP_DOC_WORDS', 'INV_PLAN_CHANNEL_KINDS', 'INV_UNDECIDED', 'INV_RELEASE_CAUTIONS', 'INV_RELEASE_DISPOSITIONS', 'INV_CAT_GLYPH',
               'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
               'DECEDENT_SERVICES', 'INVENTORY_COLUMNS', 'MATTER_TYPES', 'INV_SALE_DISPOSITIONS'];
 
