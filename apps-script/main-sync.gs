@@ -3474,14 +3474,16 @@ function _agSystem(ctx) {
        + 'moment a frame shows one, or shows where one would be kept — a safe, a strongbox, a '
        + 'locked drawer, a filing cabinet:\n  - ' + must.join('\n  - ') + '\n';
   }
-  if ((ctx.conditions || []).length) {
-    s += '\nCONDITION\nGrade each line\'s condition from the photograph. ' + AGENT_CONDITION_TEXT + ' A scratch, chip, tear or '
-       + 'stain you can see goes in the grade, never in the name.\n\n';
-  }
   s += 'kind "other": anything else a person must see or do that the name cannot carry, such as a mark or label that is '
      + 'there but too small or blurred to read, or a frame too dark or blurred to name. Never to repeat a name, a hedge or '
-     + 'your confidence. Use sparingly.\n\n'
-    +  'Call record_contents exactly once with everything you found.';
+     + 'your confidence. Use sparingly.\n\n';
+  // After the notices, never inside them (2026-10-26b, on review: it split the list and left kind "other" under CONDITION, right
+  // after the sentence that keeps damage out of the name).
+  if ((ctx.conditions || []).length) {
+    s += 'CONDITION\nGrade each line\'s condition from the photograph. ' + AGENT_CONDITION_TEXT + ' A scratch, chip, tear or '
+       + 'stain you can see goes in the grade, never in the name.\n\n';
+  }
+  s += 'Call record_contents exactly once with everything you found.';
 
   if (ctx.fiduciary) {
     s += '\n\nThis is a decedent\'s estate. The inventory may be read by an attorney, a personal '
@@ -4149,11 +4151,20 @@ var AGENT_VALUE_NO_PRICE_RE = /\bprices?\s+(?:(?:is|was|were|are)\s+)?(?:not|(?:
 // cabbage-ware line's note that ended "Check whether this is": "it seems to be cut off at the end"). The basis prints on the Estate
 // Inventory Report the attorney reads. The last full stop past half the room is kept whole; failing one, the last space.
 var AGENT_VALUE_TEXT_MAX = 300;
+var AGENT_VALUE_ABBREV_RE = /^(?:[A-Za-z]|ca|co|no|nos|mfg|inc|ltd|st|jr|sr|approx|vs|etc|mr|mrs|ms|dr|est|ed|vol|fig|pp)$/i;
 function _avClip(x, max) {
   var t = String(x || '').replace(/\s+/g, ' ').trim(), n = max || AGENT_VALUE_TEXT_MAX;
   if (t.length <= n) return t;
-  var cut = t.slice(0, n - 1), end = -1, m, re = /[.!?](?=\s)/g;
-  while ((m = re.exec(cut + ' '))) end = m.index;
+  // A full stop is a point followed in the WHOLE text by a space and a capital (2026-10-26b, on review: "$12.50" cut at the point
+  // read as one, and so did "Gorham Mfg. Co." and "c. 1895"); a point closing an initial or a short abbreviation is not.
+  var cut = t.slice(0, n - 1), end = -1, m, re = /[.!?]/g;
+  while ((m = re.exec(cut))) {
+    var i = m.index, rest = t.slice(i + 1);
+    if (!/^ \S/.test(rest)) continue;
+    if (cut.charAt(i) === '.' && (/^ [a-z0-9]/.test(rest)
+        || AGENT_VALUE_ABBREV_RE.test((cut.slice(0, i).match(/(\S+)$/) || ['', ''])[1]))) continue;
+    end = i;
+  }
   if (end >= n / 2) return cut.slice(0, end + 1);
   var sp = cut.lastIndexOf(' ');
   if (sp > n / 2) cut = cut.slice(0, sp);
@@ -4368,7 +4379,8 @@ function _avSystem(ctx) {
     + ((ctx.conditions || []).length
         ? 'A condition on the line may be the first agent\'s grade from the same photograph. Give back the condition '
           + 'you see wherever you were sent the line\'s photograph, from these grades: ' + AGENT_CONDITION_TEXT + ' Leave it '
-          + 'empty on a lot sent as text alone.\n'
+          + 'empty on a lot sent as text alone. A condition set by a person stands, whatever the photograph shows: value the '
+          + 'line in it and give it back as given.\n'
         : '')
     // 2026-10-26: a line split off a photograph is sent the whole photograph and its close-ups, and nothing said the photograph
     // showed other lines; the line now says what else is listed off it (_avLineText).
@@ -4503,7 +4515,9 @@ function _avLineText(label, it) {
   var t = label + '. ' + String(it.name || '').slice(0, 300)
         + ' | Category: ' + String(it.category || 'not recorded')
         + ' | Quantity: ' + (parseInt(it.qty, 10) > 1 ? parseInt(it.qty, 10) : 1)
-        + ' | Condition: ' + String(it.condition || 'not written down');
+        + ' | Condition: ' + String(it.condition || 'not written down')
+        // Marked as a person's, as a checked name is (2026-10-26b, on review): a tear the photograph does not show is theirs to know.
+        + (it.conditionChecked && it.condition ? ' (set by a person: value it in this condition)' : '');
   // 2026-10-26: the room (Agent One had it, Agent Two did not), and on a photograph several lines share, the crew's note said over
   // it, marked as possibly about another thing, and what else is listed off it.
   if (it.room)       t += ' | Room: ' + String(it.room).slice(0, 60);

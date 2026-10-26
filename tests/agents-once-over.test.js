@@ -855,6 +855,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(['g', 'h', 'k'].map((id) => R.ctx._getPhotoRef(7, id).condition), ['Fair', 'Good', 'Good'], '⚠ written over a blank; a person\'s and a reviewed grade stand');
     eq(R.ctx._avContext(job).conditions, ['Excellent', 'Good', 'Fair', 'Poor'], 'Agent Two is sent the grades');
     eq(R.ctx.agentValueGradesCondition(ROW({ condition: '' })), true, 'an ungraded photographed line is sent with its photograph');
+    eq([R.ctx._avItemPayload(7, R.ctx._getPhotoRef(7, 'h')).conditionChecked, R.ctx._avItemPayload(7, R.ctx._getPhotoRef(7, 'g')).conditionChecked], [true, false],
+       '⚠ a person\'s grade is sent marked as theirs; the agents\' own is not (on review)');
     eq([R.ctx.agentValueGradesCondition(ROW({ condition: 'Good', condBy: 'agent' })), R.ctx.agentValueGradesCondition(ROW({ driveFileId: '', filename: '', driveFileUrl: '' }))],
        [false, false], 'one already graded, or with no photograph, is not');
   }
@@ -866,12 +868,22 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const t1 = g._agTool(CATS, conds).input_schema.properties.objects.items;
     eq([t1.properties.condition && t1.properties.condition.enum, t1.required.indexOf('condition') >= 0], [conds.concat(['']), true], 'Agent One: one of the grades, or empty');
     eq(g._agTool(CATS).input_schema.properties.objects.items.properties.condition, undefined, 'no grades sent, no field (an older app)');
+    // Driven through the request Agent One actually sends (a revert of its one argument stayed green until this).
+    const reqBody = JSON.parse(g._agRequestFor({ stableId: 's1', fileId: 'FID' }, { categories: CATS, conditions: conds, mustFind: [] }, 'sk-ant-test', 'claude-fable-5-1').payload);
+    eq(reqBody.tools[0].input_schema.properties.objects.items.properties.condition && reqBody.tools[0].input_schema.properties.objects.items.properties.condition.enum,
+       conds.concat(['']), '⚠ the naming request carries the grade field when the app sends the grades');
     has(g._agSystem({ categories: CATS, conditions: conds, mustFind: [] }), 'CONDITION\nGrade each line', 'Agent One is told how to grade');
     lacks(g._agSystem({ categories: CATS, mustFind: [] }), 'CONDITION\n', 'and not without the grades');
+    const sysOne = g._agSystem({ categories: CATS, conditions: conds, mustFind: ['a coin collection'] });
+    ok(sysOne.indexOf('kind "other"') >= 0 && sysOne.indexOf('kind "other"') < sysOne.indexOf('CONDITION\n') && sysOne.indexOf('CONDITION\n') < sysOne.indexOf('Call record_contents'),
+       '⚠ CONDITION comes after the notices, never inside them (on review: kind "other" sat under it)');
     has(g.AGENT_CONDITION_TEXT, 'leave it empty where it cannot show it', 'empty where the photograph cannot show it');
     const t2 = g._avTool('general', CATS, conds).input_schema.properties.values.items;
     eq([t2.properties.condition && t2.properties.condition.enum, t2.required.indexOf('condition') >= 0], [conds.concat(['']), true], 'Agent Two: the same field');
     has(g._avSystem(Object.assign({}, CTX2, { conditions: conds })), 'Leave it empty on a lot sent as text alone.', 'Agent Two is told where it may grade');
+    has(g._avSystem(Object.assign({}, CTX2, { conditions: conds })), 'A condition set by a person stands, whatever the photograph shows', '⚠ and that a person\'s grade stands (on review)');
+    has(g._avLineText('L1', LINE({ condition: 'Poor', conditionChecked: true })), 'Condition: Poor (set by a person: value it in this condition)', 'a person\'s grade travels marked');
+    lacks(g._avLineText('L1', LINE({ condition: 'Good' })), 'set by a person', 'an agent\'s does not');
     const h = gsAll({ reply: () => ({ code: 200, body: ANSWER2([VAL({ line: 'L1', condition: 'Fair' }), VAL({ line: 'L2', condition: 'Good' })]) }) });
     const out = h.agentValueLines({ context: Object.assign({}, CTX2, { conditions: conds }), items: [LINE({ stableId: 'txt' }), LINE({ stableId: 'pic', fileId: 'FID' })] });
     const res = (out && out.results) || {};

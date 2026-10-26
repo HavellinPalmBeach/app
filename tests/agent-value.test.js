@@ -46,7 +46,7 @@ const GS_VARS = ['AGENT_API', 'AGENT_API_VERSION', 'AGENT_MAX_IMG', 'AGENT_MODEL
   'AGENT_VALUE_MAX_TOKENS', 'AGENT_VALUE_PARALLEL', 'AGENT_VALUE_MAX_LINES', 'AGENT_VALUE_GENERAL_BATCH',
   'AGENT_VALUE_SEARCHES', 'AGENT_VALUE_FETCHES', 'AGENT_VALUE_CONTINUES', 'AGENT_VALUE_MAX_COMPS',
   'AGENT_VALUE_TIME_BUDGET', 'AGENT_VALUE_SOURCES', 'AGENT_VALUE_NOTICE_KINDS',
-  'AGENT_VALUE_CONF_DOWN', 'AGENT_VALUE_RESULTS_SEGMENTS', 'AGENT_VALUE_RESULTS_PARAMS', 'AGENT_VALUE_NO_PRICE_RE', 'AGENT_VALUE_TEXT_MAX'];
+  'AGENT_VALUE_CONF_DOWN', 'AGENT_VALUE_RESULTS_SEGMENTS', 'AGENT_VALUE_RESULTS_PARAMS', 'AGENT_VALUE_NO_PRICE_RE', 'AGENT_VALUE_TEXT_MAX', 'AGENT_VALUE_ABBREV_RE'];
 const GS_FNS = ['_agProp', '_agMissingProps', '_agImageBlock', '_avCents', '_avTool', '_avTools', '_avSystem',
   '_avLineText', '_avUserContent', '_avBody', '_avHttp', '_avEcho', '_avReadResult', '_avSeenUrls', '_avUrlKey', '_avResultsPage', '_avClip',
   '_avLineResult', 'agentValueLines', '_agModelVersion', '_agVerCmp', '_agNewestOf', '_agCache', '_agModelList', '_agDemoted', '_agDemote', '_agSlow', '_agModels', '_agSendAll', '_agHttpFailure'];
@@ -355,6 +355,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(basis.length <= 300 && /…$/.test(basis), 'a basis with no full stop to end on ends at a word, with an ellipsis: "' + basis.slice(-30) + '"');
     ok(!/\s…$|,…$/.test(basis) && /[a-z]…$/.test(basis), 'on a whole word, never after a space or a comma');
     eq(g._avClip('  A short   note.  '), 'A short note.', 'short text is only tidied');
+    // On review: a point is a full stop only before a space and a capital, in the whole text, and never closing an abbreviation.
+    const pad = (n) => 'word '.repeat(n);
+    const dec = g._avClip(pad(56) + 'Each sold near $12.50 at auction last spring.');   // the point falls at the cut
+    ok(dec.length <= 300 && dec.length > 250 && !/\$12\.$/.test(dec) && !/\$12$/.test(dec), '⚠ a decimal at the cut is never read as a full stop: "' + dec.slice(-20) + '"');
+    const abbr = g._avClip(pad(40) + 'One sale fits. Made by Gorham Mfg. Co. of Providence, c. 1895, with the lion anchor G hallmark read in close-up and a gilt wash.');
+    ok(abbr.length < 300 && /fits\.$/.test(abbr), '⚠ an abbreviation is never a sentence end; the last real one is: "' + abbr.slice(-24) + '"');
+    const init = g._avClip(pad(42) + 'Signed J. Smith on the back, a regional painter whose oils sell at small auctions for modest sums.');
+    ok(init.length <= 300 && !/J\.$/.test(init), 'an initial is not a sentence end either: "' + init.slice(-20) + '"');
     eq(g._avClip('x'.repeat(300)).length, 300, 'text that fits is never cut');
     has(String(g._avSystem(CTXP)), 'in one or two short sentences, under forty words', 'the prompt asks for a short note');
     has(JSON.stringify(g._avTool('comps')), 'One or two short sentences, under forty words.', 'and the note\'s field says so');

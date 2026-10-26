@@ -1476,7 +1476,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.26 · 9:44am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.26 · 10:23am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -28805,7 +28805,8 @@ function invSplitItem(jobId, stableId) {
 function invSplitItemClick(jobId, stableId) {
   var src = _invSplitSource(jobId, stableId);
   if (typeof src === 'string') { alert(src); return; }   // refused first: nothing to ask about a split that cannot go
-  var blank = _invPhotoSiblings(jobId, src).filter(function(r) { return !String(r.objectName || '').trim(); });
+  // A line Agent One read as nothing to list is not waiting for a name (Name shots never sends it again: agentNameableRefs).
+  var blank = _invPhotoSiblings(jobId, src).filter(function(r) { return !String(r.objectName || '').trim() && r.agentConf !== 'none'; });
   if (blank.length && !confirm('#' + _invItemNo(blank[0]) + ' on this photograph has no name yet. Add another blank line anyway?\n\n'
       + 'One is enough for Agent One: Name shots names everything else in the photograph and adds a line for each.')) return;
   var out = invSplitItem(jobId, stableId);
@@ -38397,6 +38398,7 @@ function _avItemPayload(jobId, ref) {
     stableId: ref.stableId, mode: mode,
     name: String(ref.objectName || ''), category: ref.category || '', qty: q > 1 ? q : 1,
     condition: ref.condition || '',
+    conditionChecked: !!String(ref.condition || '').trim() && !_invCondIsAgents(ref),   // a person's grade (2026-10-26b, on review)
     fieldNote: (pc.shared && !ref.derivedFrom) ? '' : (ref.fieldNote || ''),
     // ⚠ A NAME A PERSON TYPED TRAVELS WITHOUT AGENT ONE'S REASONS FOR ITS OWN (2026-10-26): the mirror retyped Restoration Hardware
     // went with "wood frame, no visible maker's mark", evidence against the name it is told to price as given.
@@ -40641,7 +40643,8 @@ function _invCloseUpsRepaint(jobId, stableId) {
   if (!host) return true;
   // The photograph just taken draws at once, off this device's copy, until Drive's thumbnail is in the cache.
   Array.prototype.forEach.call(host.querySelectorAll('[data-cu-id]'), function(t) {
-    // The tile is the thumbnail, inside its Drive link once the file is there (_invPhotoOpenHtml).
+    // The tile is the thumbnail, inside its Drive link once the file is there (_invPhotoOpenHtml). Belt and braces: Drive's own
+    // thumbnail paints the same element when it lands (_invPaintThumbs), so a revert stays green; this shows the shot meanwhile.
     var small = _localShotThumbs[t.getAttribute('data-cu-id')], tile = t.querySelector('[data-thumb-id]') || t.querySelector('.inv-photo-cell > div') || t.firstChild;
     if (!small || !tile || !tile.style) return;
     tile.style.backgroundImage = 'url("' + small + '")';

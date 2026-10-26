@@ -66,6 +66,31 @@ function rig(refs, over) {
 module.exports = function ({ group, ok, eq, has, lacks }) {
   const src = source();
 
+  // 2026-10-26b (Anthony: "I just hit that twice and all it did was create number 94 unnamed item, number 95"): the press says what
+  // it added, asks while a line on the photograph still waits for its name, and never counts one Agent One read as nothing to list.
+  group('⚠ the press: a toast, a question while a line waits for its name, never for a nothing-to-list line');
+  {
+    const asked = [], toasts = [];
+    const press = (refs, answer) => {
+      const R = rig(refs);
+      R.ctx.confirm = (m) => { asked.push(String(m)); return answer; };
+      R.ctx.showSyncBadge = (m) => toasts.push(String(m));
+      R.ctx._invSplitRepaint = () => true;   // the repaint is p14's to measure; here only what the press decides
+      R.ctx.invSplitItemClick(7, 's_bar');
+      return R;
+    };
+    let R = press([SRC({ objectName: 'Bar console' })], true);
+    eq([asked.length, R.ctx._photoRefs[7].length], [0, 2], 'a named photograph: one blank line, nothing asked');
+    has(toasts[0] || '', 'added for another thing in this photograph: type its name on its row, or press Name shots and Agent One names it', 'the toast says what it added');
+    R = press([SRC({ objectName: 'Bar console' }), SRC({ stableId: 'd1', derivedFrom: 's_bar', objectName: '', itemNo: 13 })], false);
+    eq([asked.length, R.ctx._photoRefs[7].length], [1, 2], '⚠ a blank line already waiting: it asks, and Cancel adds nothing');
+    has(asked[0], '#13 on this photograph has no name yet. Add another blank line anyway?', 'naming the waiting line');
+    R = press([SRC({ objectName: '', agentConf: 'none' })], false);
+    eq([asked.length, R.ctx._photoRefs[7].length], [1, 2], '⚠⚠ a photograph Agent One found nothing in takes its blank line without asking (Name shots never sends it again)');
+    R = press([SRC({ driveFileId: '', driveFileUrl: '' , objectName: '' })], true);
+    eq([asked.length, R.alerts.length], [1, 1], 'a split that cannot go is refused first, nothing asked');
+  }
+
   // ───────────────────────────────────────────────────────────────────────────
   group('⚠⚠ THE SPLIT COPIES THE IMAGE AND THE PHOTOGRAPH\u2019S DESTINATION, AND NOTHING ELSE');
   {

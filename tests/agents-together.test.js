@@ -47,7 +47,7 @@ function gsVar(name) {
 function gsCtx() {
   const ctx = { JSON, Math, Number, String, Object, Array, Error, parseInt, parseFloat, isFinite };
   vm.createContext(ctx);
-  vm.runInContext(['AGENT_VALUE_SOURCES', 'AGENT_VALUE_NOTICE_KINDS', 'AGENT_VALUE_CONF_DOWN', 'AGENT_VALUE_MAX_COMPS', 'AGENT_VALUE_RESULTS_SEGMENTS', 'AGENT_VALUE_RESULTS_PARAMS', 'AGENT_VALUE_NO_PRICE_RE', 'AGENT_VALUE_TEXT_MAX', 'BACKEND_VERSION'].map(gsVar)
+  vm.runInContext(['AGENT_VALUE_SOURCES', 'AGENT_VALUE_NOTICE_KINDS', 'AGENT_VALUE_CONF_DOWN', 'AGENT_VALUE_MAX_COMPS', 'AGENT_VALUE_RESULTS_SEGMENTS', 'AGENT_VALUE_RESULTS_PARAMS', 'AGENT_VALUE_NO_PRICE_RE', 'AGENT_VALUE_TEXT_MAX', 'AGENT_VALUE_ABBREV_RE', 'BACKEND_VERSION'].map(gsVar)
     .concat(['_avCents', '_avTool', '_avSystem', '_avLineText', '_avLineResult', '_avUrlKey', '_avResultsPage', '_avClip'].map(gsFn)).join('\n'), ctx);
   return ctx;
 }

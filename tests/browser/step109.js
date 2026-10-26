@@ -160,7 +160,8 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
       const before = await lines();
       await press(R + ' >> button:has-text("Another item in this photo")', '+ Another item in this photo');
       eq(await lines(), before + 1, 'one blank line added off the photograph');
-      const toast = await p.evaluate(() => (document.getElementById('sync-badge') || document.body).textContent);
+      // The toast itself (#sync-status, showSyncBadge's), shown: the page's text carries the app's script, so it could never fail (on review).
+      const toast = await p.evaluate(() => { const el = document.getElementById('sync-status'); return el && el.style.display !== 'none' ? el.textContent : ''; });
       has(toast, 'added for another thing in this photograph: type its name on its row, or press Name shots and Agent One names it', '⚠⚠ the toast says what the press did and what to do next');
       const geo = await p.evaluate(() => {
         const acts = document.querySelector('.inv-rec-acts'), cell = acts && acts.parentElement.querySelector('.inv-photo-cell');
