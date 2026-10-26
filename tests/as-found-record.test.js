@@ -94,7 +94,7 @@ function rig(over) {
       _invThumbCache: () => ({}),
       _invFileId: (r) => r.driveFileId || '',
       _invMoney: (v) => '$' + (v || 0),
-      _printDocument: (html, title) => { printed.push({ html, title }); return true; },
+      _printDocument: (html, title, opt) => { printed.push({ html, title, opt }); return true; },
       alert: (m) => printed.push({ alert: m }),
       document: domStub({}),
     },
@@ -179,6 +179,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ctx.printAsFoundRecord(7);
     eq(printed.length, 1, 'the document printed');
     const h = printed[0].html;
+    // ⚠ On screen first (2026-10-26; Anthony: "as soon as I cancel or I launch a printer ... it just disappears"): the viewer.
+    eq([!!(printed[0].opt || {}).view, (printed[0].opt || {}).label, ((printed[0].opt || {}).job || {}).id], [true, 'As-Found Record', 7], '⚠ it opens in the viewer, named, for its client');
 
     has(h, 'no as-found photographs', 'the gap block renders');
     has(h, 'Study', 'and names the room');

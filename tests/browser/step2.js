@@ -96,7 +96,9 @@ const eq = (a, b, m) => ok(a === b, m + '  (got ' + JSON.stringify(a) + ', want 
                             mk('i2','Dining suite','9000',track),
                             mk('i3','Bedroom set','6000',track) ];
       printCourtInventory(jobId);
+      printDocViewer();   // the paper opens on screen first (2026-10-26): printed from the viewer, which sets the page at once
       const h = document.getElementById('print-target').innerHTML;
+      closeDocViewer();
       const iBlock = h.indexOf('is the wrong instrument for it');
       const iTable = h.indexOf('Tangible Personal Property</div>');
       return { final: h.indexOf('#357a50') > 0, signed: h.indexOf('Reviewed and adopted by') > 0,

@@ -570,6 +570,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // A partial approval is recorded and the rest stay on the next request.
     has(dlg, 'the lines stay on the next request until all', 'one representative’s signature is kept, the items stay on the next request');
     has(t, 'Only one of two representatives signed? Record it anyway. Those items stay on the next request until everyone has signed.', 'as the page says');
+    // More ▾'s papers on screen first (2026-10-26): the viewer, its Print / Save PDF.
+    has(code(fn('printAsFoundRecord')), '{ view: true, job: job, label: ', 'a More ▾ paper opens in the viewer');
+    has(SRC, 'onclick="printDocViewer()">&#128424; Print / Save PDF</button>', 'its Print / Save PDF');
+    has(t, 'Those under More ▾ open on screen first: Print / Save PDF from there.', 'as the page says');
     // The letter, the hold for a taker and Discard draft (2026-10-26): each sentence on the code that makes it true.
     eq(sandbox({ vars: ['INV_LINE_INITIAL_MIN'] }).INV_LINE_INITIAL_MIN, 500, 'one initial per group under $500');
     has(code(fn('printApprovalRequest')), '!invReleaseRecipientNamed(r) && !invRatificationOwed(r, job)', 'an item with nobody to take it is held off the request');

@@ -81,6 +81,9 @@ const EST = 8001;
     if (String(cur) !== String(EST)) { await p.selectOption('#inv-job', String(EST)); await p.waitForTimeout(900); }
     if (!(await vis('button[onclick*="printAppraisalWorklist("]'))) await press('#inv-more > summary', 'More ▾');
     await press('button[onclick*="printAppraisalWorklist("]', 'Appraisal Worklist');
+    await press('#doc-viewer-print', 'Print / Save PDF, in the viewer');   // the paper opens on screen first (2026-10-26)
+    await p.waitForSelector('#doc-viewer-modal', { state: 'visible', timeout: 4000 }).catch(() => ok(false, 'the viewer comes back after the print dialog'));
+    await press('#doc-viewer-modal button[onclick="closeDocViewer()"]', 'Close the viewer');
     await p.waitForTimeout(800);
     const printed = await p.evaluate(() => window.__printed || '');
     ok(printed.length > 500, 'the worklist printed (' + printed.length + ' chars)');

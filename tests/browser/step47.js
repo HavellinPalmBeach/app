@@ -207,6 +207,9 @@ const T0 = Date.parse('2026-09-24T15:00:00Z');   // a past day, so each desk ope
       has(await txt('#inv-row-n1'), 'NFA item — never transported by Havellin', 'the NFA item is not, authority or no authority');
       await press('#inv-workbar details > summary', 'More');
       await press('#inv-workbar button[onclick="printAppraisalWorklist(4701)"]', 'Appraisal Worklist');
+      await press('#doc-viewer-print', 'Print / Save PDF, in the viewer');   // the paper opens on screen first (2026-10-26)
+      await p.waitForSelector('#doc-viewer-modal', { state: 'visible', timeout: 4000 }).catch(() => ok(false, 'the viewer comes back after the print dialog'));
+      await press('#doc-viewer-modal button[onclick="closeDocViewer()"]', 'Close the viewer');
       await p.waitForTimeout(400);
       const wl = await T((await lastPrint()).html);
       has(wl, '1 cleared to carry.', 'the worklist clears one firearm to carry');

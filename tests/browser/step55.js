@@ -218,6 +218,9 @@ const HOUSE = ['Living Room', 'Kitchen', 'Dining Room', 'Primary Suite', 'Bedroo
       await press('#inv-workbar details > summary', 'More');
       const before = await p.evaluate(() => (window.__prints || []).length);
       await press('#inv-workbar button[onclick="printTrustSchedule(' + TRUST_ID + ')"]', 'Trust Schedule');
+      await press('#doc-viewer-print', 'Print / Save PDF, in the viewer');   // the paper opens on screen first (2026-10-26)
+      await p.waitForSelector('#doc-viewer-modal', { state: 'visible', timeout: 4000 }).catch(() => ok(false, 'the viewer comes back after the print dialog'));
+      await press('#doc-viewer-modal button[onclick="closeDocViewer()"]', 'Close the viewer');
       for (let i = 0; i < 20 && (await p.evaluate(() => (window.__prints || []).length)) === before; i++) await p.waitForTimeout(150);
       const pr = await lastPrint();
       ok(pr.html.indexOf('Schedule of Tangible Personal Property Held in Trust') >= 0, 'fixture: the Trust Schedule printed');
@@ -233,9 +236,10 @@ const HOUSE = ['Living Room', 'Kitchen', 'Dining Room', 'Primary Suite', 'Bedroo
       await p.setViewportSize({ width: 816, height: 1056 });
       await p.emulateMedia({ media: 'print' });
       const b2 = await p.evaluate(() => (window.__prints || []).length);
-      await p.evaluate((id) => printTrustSchedule(id), TRUST_ID);
+      await p.evaluate((id) => { printTrustSchedule(id); printDocViewer(); }, TRUST_ID);   // from the viewer (2026-10-26)
       for (let i = 0; i < 20 && (await p.evaluate(() => (window.__prints || []).length)) === b2; i++) await p.waitForTimeout(150);
       const pp = await lastPrint();
+      await p.waitForTimeout(800); await p.evaluate(() => closeDocViewer());
       ok(pp.html.indexOf('The Adler Family Trust') >= 0 && pp.over <= 0, '⚠ it fits a Letter page in print (' + pp.over + ')');
       await p.emulateMedia({ media: 'screen' });
       await p.setViewportSize({ width: 1440, height: 1000 });
@@ -266,9 +270,13 @@ const HOUSE = ['Living Room', 'Kitchen', 'Dining Room', 'Primary Suite', 'Bedroo
         try { savePhotoRefs(id); } catch (e) {}
       }, PRO_ID);
       await toDesk(PRO_ID);
-      await press('#inv-workbar details > summary', 'More');
+      // ⚠ More ▾ keeps its open state across a redraw (2026-10-13), so it is opened only if shut: a press would shut it.
+      if (!(await vis('#inv-workbar button[onclick="printCourtInventory(' + PRO_ID + ')"]'))) await press('#inv-workbar details > summary', 'More');
       const before = await p.evaluate(() => (window.__prints || []).length);
       await press('#inv-workbar button[onclick="printCourtInventory(' + PRO_ID + ')"]', 'Court Inventory');
+      await press('#doc-viewer-print', 'Print / Save PDF, in the viewer');   // the paper opens on screen first (2026-10-26)
+      await p.waitForSelector('#doc-viewer-modal', { state: 'visible', timeout: 4000 }).catch(() => ok(false, 'the viewer comes back after the print dialog'));
+      await press('#doc-viewer-modal button[onclick="closeDocViewer()"]', 'Close the viewer');
       for (let i = 0; i < 20 && (await p.evaluate(() => (window.__prints || []).length)) === before; i++) await p.waitForTimeout(150);
       const pr = await lastPrint();
       ok(pr.html.indexOf('Estate Inventory — Tangible Personal Property') >= 0, 'fixture: the Court Inventory printed');

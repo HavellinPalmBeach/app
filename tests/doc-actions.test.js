@@ -178,7 +178,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // ⚠ `title` IS the PDF filename, and it is restored on the SAME nested timeout that
     // clears the print target — so a caller cannot leak its filename onto the next print.
     const pd = noComments(fn('_printDocument'));
-    has(pd, 'function _printDocument(html, title)', 'the one print path takes a title');
+    // ⚠ restated 2026-10-26: a third argument, `opt` (view in the viewer first; `after` once the dialog closes), is the More ▾ papers'.
+    has(pd, 'function _printDocument(html, title, opt)', 'the one print path takes a title');
     has(pd, 'var _origTitle = document.title;', 'it remembers the page title');
     has(pd, 'if (title) document.title = title;', 'sets the one it was given');
     const restore = pd.indexOf('document.title = _origTitle;');

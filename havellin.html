@@ -1476,7 +1476,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.26 · 2:13pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.26 · 2:44pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -22394,6 +22394,14 @@ function closeDocViewer() {
 function printDocViewer() {
   if (!_docViewerSpec) return;
   var s = _docViewerSpec;
+  // A desk paper opened through _printDocument's `view` (2026-10-26): it has no docAction behind it, so the page it holds is
+  // printed, and the viewer is out of the way while the dialog is up and back once it closes (Cancel included).
+  if (s.paper) {
+    var ov = document.getElementById('doc-viewer-modal');
+    if (ov) ov.style.display = 'none';
+    _printDocument(s.html, s.title, { after: function () { if (ov && _docViewerSpec === s) ov.style.display = 'flex'; } });
+    return;
+  }
   closeDocViewer();
   docAction(s.job.id, s.kind, 'print', { stage: s.stage });
 }
@@ -30547,10 +30555,19 @@ function custodyEvents(ref) {
 // Clients & Estimator — INTERNAL" in a client's downloads folder. printAgreement was
 // exactly that. It is restored on the SAME nested timeout that clears the target, so a
 // caller cannot leak its filename onto whatever is printed next.
-function _printDocument(html, title) {
+// ⚠ `opt.view` OPENS THE PAGE IN THE DOCUMENT VIEWER FIRST (2026-10-26; Anthony, on the desk's More ▾ papers: "as soon as I
+// cancel or I launch a printer ... it just disappears"): the page is read on screen, and the viewer's Print / Save PDF comes
+// back here with `opt.after`, which reopens the viewer once the dialog has closed. The callers that print straight away are
+// unchanged; a test's stub of this function still receives the page and its title.
+function _printDocument(html, title, opt) {
   var pt = document.getElementById('print-target');
   if (!pt) return false;
   if (!html) { alert('There is nothing to print on this document yet.'); return false; }
+  if (opt && opt.view) {
+    var job = opt.job || null;
+    return _openViewer(opt.label || title || 'Document', job ? (job.name || 'Client') + (job.addr ? ' · ' + job.addr : '') : '', html,
+      { paper: true, html: html, title: title || '' });
+  }
   var _origTitle = document.title;
   if (title) document.title = title;
   pt.innerHTML = html;
@@ -30570,6 +30587,7 @@ function _printDocument(html, title) {
         delete p.dataset.wasActive;
       });
       document.title = _origTitle;
+      if (opt && typeof opt.after === 'function') opt.after();
     }, 500);
   }, 150);
   return true;
@@ -34131,7 +34149,7 @@ function printCourtInventory(jobId, opt) {
   // ⚠ THE PROBATE PACKAGE ASKS FOR THE PAGE ITSELF (`opt.asHtml`, 2026-10-01, P17), so what counsel receives is byte for
   // byte what the desk prints, and every refusal above comes back as the same sentence instead of an alert.
   if (opt && opt.asHtml) return { html: html, title: _invDocName(job, 'Court Inventory') };
-  _printDocument(html, _invDocName(job, 'Court Inventory'));
+  _printDocument(html, _invDocName(job, 'Court Inventory'), { view: true, job: job, label: 'Court Inventory' });   // on screen first (2026-10-26)
 }
 
 // ── 02b · The trustee's schedule — the Chapter 736 variant ─────────────────────
@@ -34276,7 +34294,7 @@ function printTrustSchedule(jobId, opt) {
     + '</div>';
   // The probate package asks for the page itself (`opt.asHtml`, P17) — see printCourtInventory.
   if (opt && opt.asHtml) return { html: html, title: _invDocName(job, 'Trust Schedule') };
-  _printDocument(html, _invDocName(job, 'Trust Schedule'));
+  _printDocument(html, _invDocName(job, 'Trust Schedule'), { view: true, job: job, label: 'Trust Schedule' });   // on screen first (2026-10-26)
 }
 
 // ═══════════ THE DISPOSITION LEDGER — THE CLOSE-OUT SUMMARY THE CLIENT SIGNS (P19, 2026-10-03) ═══════════
@@ -35421,7 +35439,7 @@ function printAppraisalWorklist(jobId, opt) {
   html += '</div>';
   // The probate package asks for the page itself (`opt.asHtml`, P17) — see printCourtInventory.
   if (opt && opt.asHtml) return { html: html, title: _invDocName(job, 'Appraisal Worklist') };
-  _printDocument(html, _invDocName(job, 'Appraisal Worklist'));
+  _printDocument(html, _invDocName(job, 'Appraisal Worklist'), { view: true, job: job, label: 'Appraisal Worklist' });   // on screen first (2026-10-26)
 }
 
 // ── 04 · The Contents Record — the living-client deliverable ──────────────────
@@ -35784,7 +35802,7 @@ function printAsFoundRecord(jobId) {
         + (rec.unattested.length > 1 ? 'them' : 'it') + ' may not all have been opened.' : '')
     + '</div>';
   html += '</div>';
-  _printDocument(html, _invDocName(job, 'As-Found Record'));
+  _printDocument(html, _invDocName(job, 'As-Found Record'), { view: true, job: job, label: 'As-Found Record' });   // on screen first (2026-10-26)
 }
 
 // ── Collections / Vehicles → Inventory bridge ─────────────────────────────────
@@ -47916,7 +47934,7 @@ function printIncidentRecord(jobId, opt) {
     return false;
   }
   if (opt.asHtml) return { html: html, title: _invDocName(job, title) };
-  return _printDocument(html, _invDocName(job, title));
+  return _printDocument(html, _invDocName(job, title), { view: true, job: job, label: title });   // on screen first (2026-10-26)
 }
 function fileIncidentRecord(jobId, opt) { return _fileCloseoutPaper(jobId, opt, CLOSEOUT_PAPERS.incidents); }
 
