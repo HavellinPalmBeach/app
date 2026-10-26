@@ -18,7 +18,7 @@
 
 const { sandbox, source, fn } = require('./harness');
 
-const FNS = ['invLineReviewed', '_invDocPartyHead', 'invOwnInitial', 'invInitialGroupKey', 'estateDirectionWords', '_invDocName', 'printApprovalRequest', 'invDispDocWord', 'printDispositionLedger', 'referralFeeVendorsNote', 'vendorPaysReferral', '_vendorByName', '_vendorNameKey', '_andJoin', '_invBulkApply', '_invStampBy', 'deviceUser', 'invFillPlanChannel', 'invPlanChannel', 'invNoteDispositionMove',
+const FNS = ['invLineReviewed', 'invLineOpen', '_invDocPartyHead', 'invOwnInitial', 'invInitialGroupKey', 'estateDirectionWords', '_invDocName', 'printApprovalRequest', 'invDispDocWord', 'printDispositionLedger', 'referralFeeVendorsNote', 'vendorPaysReferral', '_vendorByName', '_vendorNameKey', '_andJoin', '_invBulkApply', '_invStampBy', 'deviceUser', 'invFillPlanChannel', 'invPlanChannel', 'invNoteDispositionMove',
              'invReleaseCautions', '_invCautionBadges', '_invCautionNotices', '_invNamed',
              '_invItemNo', '_invAwaitingApproval', '_jobInvRefs', '_invAssignItemNos',
              '_invTouch', '_invPrintThumb', '_invFileId', '_invRoomName', '_invMoney',
@@ -43,8 +43,8 @@ const FNS = ['invLineReviewed', '_invDocPartyHead', 'invOwnInitial', 'invInitial
              '_invProgressStamp', '_invReviewStats', 'jobTakesProceedsStatements', 'proceedsReconciliation',
              '_jobDestLabel', '_agrApprover', 'signedRecordsOf',
              // P20: the request lists what left before every fiduciary approved apart, and prints who signed readably.
-             'invRatificationOwed', 'invRecordedGone', 'invPickupRecord', 'custodyEvents', 'invReceiptRecord', 'invViaDealer', 'invRecipientName', 'invApprovalSignedText', 'invApprovalSigners', 'invStaffRefused', 'agentValueUnreviewed', '_avHasFigure', '_invStampLineReviewed', '_avStampReviewed', 'invLineAccepted', 'invLineHold', 'invLineAcceptedOnly', '_invAcceptedStampWords', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', 'invAcceptCtx', 'agentDuplicateGroups', '_agDupEligible', 'agentNamedTwice', 'invListRead'];
-const VARS = ['INV_LINE_INITIAL_MIN', 'INV_DISP_DOC_WORDS', 'INV_PLAN_CHANNEL_KINDS', 'INV_UNDECIDED', 'INV_RELEASE_CAUTIONS', 'INV_RELEASE_DISPOSITIONS', 'INV_CAT_GLYPH',
+             'invRatificationOwed', 'invRecordedGone', 'invPickupRecord', 'custodyEvents', 'invReceiptRecord', 'invViaDealer', 'invRecipientName', 'invApprovalSignedText', 'invApprovalSigners', 'invStaffRefused', 'agentValueUnreviewed', '_avHasFigure', '_invStampLineReviewed', '_avStampReviewed', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'agentValueSpecialistWorth', 'invLineAcceptedOnly', '_invAcceptedStampWords', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', 'invAcceptCtx', 'agentDuplicateGroups', '_agDupEligible', 'agentNamedTwice', 'invListRead'];
+const VARS = ['INV_LINE_INITIAL_MIN', 'INV_DISP_DOC_WORDS', 'INV_PLAN_CHANNEL_KINDS', 'INV_UNDECIDED', 'INV_RELEASE_CAUTIONS', 'INV_ACCEPT_AMMO_RE', 'INV_OPEN_HOLDS', 'INV_RELEASE_DISPOSITIONS', 'INV_CAT_GLYPH',
               'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
               'DECEDENT_SERVICES', 'INVENTORY_COLUMNS', 'MATTER_TYPES', 'INV_SALE_DISPOSITIONS', 'MAIV_OTHER', 'MAIV_BY_CATEGORY'];
 

@@ -553,11 +553,15 @@ valued it, untouched by a tick, and the stamp says how many: *"REVIEWED — 42 i
 PROGRESS — 30 of 42 items checked; 158 accepted as valued"*). On the papers that print no values (the Contents List, the
 Disposition Ledger and the Contents Record) the words are *"accepted as named"*. Where any line stands that way, REVIEWED waits
 on a recorded read of the whole list: one press on the desk, *I've read the list*, with who and when; the stamp then reads
-*"REVIEWED — read by Anthony Graziano, October 26, 2026; 42 items checked; 158 accepted as valued"*, and a change to any line
-after the read sends it back to *"IN PROGRESS — …; the list not yet read since it last changed"* (Anthony, Q107). The Court
-Inventory and the Trust Schedule, which a representative adopts or a trustee receives, carry the same words as a grey note beside
-their status: *"158 accepted as valued · list read by Anthony Graziano, October 26, 2026"* (or *"· list not yet read"*), and *"N
-values not yet reviewed"* for the values on lines that do not stand (flagged, or not yet decided). Each line's basis still prints (*general
+*"REVIEWED — read by Anthony Graziano, October 26, 2026; 42 items checked; 158 accepted as valued"*, and a change after the read
+to anything the papers print of a line (its name, count, value, destination, who takes it, condition or room, or its removal)
+sends it back to *"IN PROGRESS — …; the list not yet read since it last changed"*, with the caveat *"This is a working copy issued
+during the engagement. Every item needing a closer look has been checked; the list as a whole has not been read through since it
+last changed."* (Anthony, Q107). The Court Inventory and the Trust Schedule, which a representative adopts or a trustee receives,
+stay FINAL and carry the count beside their status: until the list is read, in bronze, *"158 values as Agent Two left them; list
+not yet read by Havellin"*; once read, in grey, *"158 accepted as valued · list read by Anthony Graziano, October 26, 2026"*
+(Anthony, Q109: *"Bronze until read"*); and *"N values not yet reviewed"* for the values on lines that do not stand (flagged, or
+not yet decided). Each line's basis still prints (*general
 estimate*, *auction comps*, *appraisal · <name>*).
 
 **Why.** Anthony, 2026-10-26: *"we will be obviously going back to the office and looking over the entire inventory list
@@ -565,7 +569,8 @@ ourselves to make sure everything looks right … this is our job at night. The 
 And then we go back and we go over the list and we make sure it makes sense. And we verify it with what we saw on site."* A tick
 stays where the app flags something for a person (an agent's note, a guess, a possible duplicate, a firearm, an appraisal, a
 bequest, a dispute, a disputed estate). He chose the schedules' wording himself (*"Same words as the stamp"*), over the
-recommendation *"valued by estimate, not checked one by one"*.
+recommendation *"valued by estimate, not checked one by one"*. Asked again when the unread list printed in grey above the
+representative's signature line, he chose bronze until the list is read (Q109).
 
 **The question.** (1) On a Court Inventory a personal representative adopts under §733.604, does *"accepted as valued"* read as
 a representation that Havellin examined each of those lines, and should it say who accepted them and on what basis? (2) Is

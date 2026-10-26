@@ -11,12 +11,14 @@
 // button, the client through its picker:
 //   A. Check 1 room pressed on the work bar; the room check answers no doubles and Agent Two values the kitchen by itself:
 //      one request, no confirm, the mirror sent to research, the plates and the shears as everyday lots. No Accept value
-//      anywhere; the chip reads Not reviewed; the mirror's row says unsure.
+//      anywhere; the chip reads Not reviewed 1, the mirror both agents guessed on (the plates and the shears stand, Q106);
+//      the mirror's row says unsure.
 //   B. The plates' row: Each $25 and Total $200 under the headings Qty · Each · Total, the boxes level with the count and
 //      under their own headings. Qty typed 12: Total $300. Each typed $30: Total $360. Total typed $240: Each $20.
 //   C. The mirror's name retyped "Restoration Hardware wall mirror, weathered oak frame": Agent Two values it again by itself,
 //      researched, the name sent as checked by a person; its answer offers the generic name back and the typed name stands,
-//      $450. The unsure hint goes. One tick on Reviewed and the Not reviewed count drops by one, the value accepted with it.
+//      $450. The unsure hint goes. It stands as it is (Q106, 2026-10-26): Not reviewed 0, its box ticked in grey; one tick on
+//      Reviewed records the person's own look, the value accepted with it.
 //   D. The shears renamed "Henckels kitchen shears" while Agent Two's answer is held back; the plates' name box is clicked
 //      and typed into before it lands. The answer lands and the box keeps its focus and every typed letter; leaving the box
 //      redraws, the shears' new figure on screen.
@@ -147,7 +149,14 @@ const RH = 'Restoration Hardware wall mirror, weathered oak frame';
       const desk = await txt('#panel-inventory');
       lacks(desk, 'Accept value', '⚠ no Accept value anywhere on the desk');
       lacks(desk, 'Unreviewed values', 'and no second-tier chip');
-      eq(await chipCount(), 3, 'the one chip: Not reviewed, 3');
+      // ⚠ RESTATED 2026-10-26 (Q106, Q101): only flagged lines keep a tick. The plates and the shears, named by Agent One and
+      // valued by Agent Two with a destination and nothing flagged, stand as they are; the mirror both agents were guessing on
+      // keeps its tick. The chip read 3 while every line took one.
+      eq(await chipCount(), 1, 'the one chip: Not reviewed, 1 (the mirror both agents guessed on)');
+      const tip = (id) => p.evaluate((id) => { const el = document.querySelector('#inv-row-' + id + ' input[type="checkbox"][onchange*="_invSetReviewed"]');
+        const lab = el && el.closest('label'); return el ? [el.checked, lab ? lab.getAttribute('title') : ''] : null; }, id);
+      eq(await tip('mir'), [false, 'Needs a look: both agents were guessing. Tick it once checked.'], 'the mirror waits for the tick, and its box says why');
+      eq((await tip('pl') || [])[0], true, 'the plates stand, ticked');
       has(await txt('#inv-row-mir'), 'unsure', 'the mirror\'s row says unsure, where the agents were guessing');
       lacks(await txt('#inv-row-pl'), 'unsure', 'the plates\' does not');
       lacks(await txt('#inv-row-pl'), 'agent value', 'and no agent-value badge on a figure');
@@ -191,11 +200,18 @@ const RH = 'Restoration Hardware wall mirror, weathered oak frame';
       eq([m.name, m.fmv, m.by], [RH, 450, 'agent'], '⚠⚠ the typed name stands (the generic one offered back is refused) and it is priced as that: $450');
       await p.evaluate(() => renderInventoryTab()); await p.waitForTimeout(500);
       lacks(await txt('#inv-row-mir'), 'unsure', 'the unsure hint has gone: a person has named it');
-      const n0 = await chipCount();
+      // ⚠ RESTATED 2026-10-26 (Q106): renamed by a person and valued again by Agent Two under that name, with a destination and
+      // nothing flagged, the mirror stands before anyone ticks it: Not reviewed is 0 (it dropped by one while every line took a
+      // tick), and its box is ticked in grey. The tick is still the person's own look: the line reviewed and its value with it.
+      const revBox = () => p.evaluate(() => { const el = document.querySelector('#inv-row-mir input[type="checkbox"][onchange*="_invSetReviewed"]');
+        const lab = el && el.closest('label'); return el ? [el.checked, el.disabled, lab ? lab.getAttribute('title') : ''] : null; });
+      eq(await chipCount(), 0, '⚠ the renamed mirror stands: nothing left on Not reviewed');
+      eq(await revBox(), [true, false, 'Nothing flagged: the name and Agent Two’s value stand. Tick it to record your own look.'], 'its box ticked in grey, saying why');
       await press('#inv-row-mir input[type="checkbox"][onchange*="_invSetReviewed"]', 'the mirror\'s Reviewed tick');
       const m2 = await line('mir');
       eq([m2.rev, m2.vrev], [true, true], '⚠ one tick: the line reviewed and its value accepted with it');
-      eq(await chipCount(), n0 - 1, 'Not reviewed drops by one');
+      eq(await revBox(), [true, false, 'Reviewed by Ashley Jerome'], 'and the box names who');
+      eq(await chipCount(), 0, 'Not reviewed stays at 0');
     });
 
     // ── D ─────────────────────────────────────────────────────────────────────────────────────

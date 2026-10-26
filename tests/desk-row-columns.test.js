@@ -51,15 +51,15 @@ function callersOf(name) {
 }
 
 // The row, lifted as photo-split.test.js lifts it, with the two helpers it reads since 2026-10-24.
-const ROW_FNS = ['invLineReviewed', '_renderInvRow', '_invRowPhotoHtml', '_invRowHasWho', 'invOutForAppraisal', 'collectionLineUnshot',
+const ROW_FNS = ['invLineReviewed', 'invLineOpen', '_renderInvRow', '_invRowPhotoHtml', '_invRowHasWho', 'invOutForAppraisal', 'collectionLineUnshot',
   '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', 'invPickupRecord', 'signedRecordsOf', '_invRowDomId', '_invRecipientInput', 'invPlanChannel', '_invDetailRefs',
   '_invPhotoSiblings', '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef', '_invItemNo', 'invDealerRouteOffered', 'invDealerRoute',
   'invDealerRouteText', 'invBequestFor', 'jobListEntries', 'invApprovalGap', 'invReceiptOwed', '_invBenListAttr', 'invRatificationOwed',
-  'invFiduciaryMode', 'isDecedentJob', 'invReleaseCautions', '_invJob', 'invHavellinRecipient', 'invChannelLeftover', 'invChannelLeftoverText',
+  'invFiduciaryMode', 'isDecedentJob', 'invReleaseCautions', 'invBequestElsewhere', '_invJob', 'invHavellinRecipient', 'invChannelLeftover', 'invChannelLeftoverText',
   '_invPanelCautionHtml', '_invPanelLeftoverHtml', '_jobDestLabel', 'invAppraisalSourceText', 'invLineAppraiser', '_invLinkedAppraiser',
-  'invAppraised', 'invAppraisalInProgress', '_invHasAppraisal', '_invHasValue', '_avHasFigure', 'invLineUnsure', '_invEachInput', 'invUnitValue', 'invLineQty', '_agNameKey', '_invInputStyle', '_invCtrlMinW', 'invLineAccepted', 'invLineHold', 'invLineAcceptedOnly', '_invRevBoxHtml', 'invIsMAIV', 'invMAIVDefaultCat', '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_jobInvRefs', '_agDupEligible', 'agentNamedTwice', 'gateDispute', '_gateYes'];
+  'invAppraised', 'invAppraisalInProgress', '_invHasAppraisal', '_invHasValue', '_avHasFigure', 'invLineUnsure', '_invEachInput', 'invUnitValue', 'invLineQty', '_agNameKey', '_invInputStyle', '_invCtrlMinW', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invNeedsAppraisal', 'invLineAcceptedOnly', '_invRevBoxHtml', 'invIsMAIV', 'invMAIVDefaultCat', '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_jobInvRefs', '_agDupEligible', 'agentNamedTwice', 'gateDispute', '_gateYes'];
 const ROW_VARS = ['INV_PLAN_CHANNEL_KINDS', 'INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick', '_agDupSet',
-  'DECEDENT_SERVICES', 'INV_RELEASE_CAUTIONS', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', '_agDupSetJob', 'INV_HOLD_WORDS'];
+  'DECEDENT_SERVICES', 'INV_RELEASE_CAUTIONS', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', '_agDupSetJob', 'INV_HOLD_WORDS', 'INV_OPEN_HOLDS', 'INV_ACCEPT_AMMO_RE'];
 const LINE = (o) => Object.assign({ stableId: 'k80', label: 'inventory', roomIdx: 1, ts: 1, itemNo: 80, category: 'General/Household',
   objectName: 'White ceramic salad/dessert plates, coupe form, unmarked in frame', disposition: 'Donate', qty: 8,
   driveFileId: 'FK80', driveFileUrl: 'https://drive.google.com/file/d/FK80/view' }, o || {});

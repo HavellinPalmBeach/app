@@ -8,7 +8,7 @@
 // one with no path through the app.
 const { sandbox, source, fn, domStub } = require('./harness.js');
 
-const FNS = ['invLineReviewed', '_invDocPartyHead', 'invConditionText', 
+const FNS = ['invLineReviewed', 'invLineOpen', '_invDocPartyHead', 'invConditionText', 
   'printTrustSchedule', 'printCourtInventory', '_avUnreviewedStamp', 'printEstateInventoryReport', 'jobOnProbateTrack', '_invScheduleSection', 'invValBasisWord',
   '_invTrack', '_invTrackDefault', '_invOnTrustSchedule', '_invOnProbateSchedule',
   '_invIsExempt', '_invIsProbateAsset', '_invExcludedTracks', '_invHasValue',
@@ -19,7 +19,7 @@ const FNS = ['invLineReviewed', '_invDocPartyHead', 'invConditionText',
   '_gateYes', '_gate706', '_invGuardrailItems', 'invAwaitingAppraisal', 'invAppraised', '_invJob',
   'invNeedsAppraisal', 'invIsIntrinsic', 'invCatMeta', 'invAppraisalThreshold',
   '_invHasAppraisal', '_jobAppraisers', 'resolveValBasis', 'estateValueDate', '_invMoney',
-  '_invDocName', '_invItemNo', '_invGroupItems', '_invDispLabel', '_invRoomName', '_planRooms',
+  '_invDocName', '_invItemNo', '_invGroupItems', 'invIsFirearm', '_invDispLabel', '_invRoomName', '_planRooms',
   '_invPrintThumb', '_invThumbFor', '_invThumbCache', '_invThumbKey', '_invProgressStamp',
   'agentShotGroups', 'agentNameableRefs', '_agState', '_agStateHtml', '_agNoticesHtml', 'agentNotices',
   '_invReviewStats', '_invDocHead', 'invAppraiserFor', '_renderInvWorkbar', '_arCheckButtonHtml', '_arState', 'agentRoomsToCheck', '_arCheckable', '_arStateHtml', '_avValueButtonHtml', 'agentValueableRefs', '_avHasFigure', '_avStateHtml', '_avState', '_avNoticesHtml', 'agentValueNotices', '_avNoticeKinds', '_avNoticeLabel', 'agentValueInternal', 'agentValueUnreviewed', 'agentValueStale', 'agentValueSpecialistWorth', 'invPrimaryDoc', '_invProgressBar',
@@ -28,14 +28,14 @@ const FNS = ['invLineReviewed', '_invDocPartyHead', 'invConditionText',
   'weArrangeAppraisals', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', 'jobAppraisalDuty', 'approvedEstimateFor', 'estimateDocScope', 'docScopeDef', '_agrOtherAppraisalsBy',
   'photoSubfolder',   // P16: the share button names both photo folders by the rule that files them
   'roundCents', 'fmt',
-  'trustInstrumentTitle', 'scheduleSigners', 'jobFiduciaries', 'jobListEntries', '_agrCounsel', 'photoSharesLine', 'photoSharesOf', 'invLineAccepted', 'invLineHold', 'invLineAcceptedOnly', '_invAcceptedStampWords', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', 'invAcceptCtx', 'agentDuplicateGroups', '_agDupEligible', 'agentNamedTwice', '_invAcceptCtxOf', '_invListReadHtml', 'invListRead'];
+  'trustInstrumentTitle', 'scheduleSigners', 'jobFiduciaries', 'jobListEntries', '_agrCounsel', 'photoSharesLine', 'photoSharesOf', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invReleaseCautions', '_invPhotoNoteOpen', 'invLineAcceptedOnly', '_invAcceptedStampWords', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', 'invAcceptCtx', 'agentDuplicateGroups', '_agDupEligible', 'agentNamedTwice', '_invAcceptCtxOf', 'agentNoticeLoud', '_invListReadHtml', '_invReadKey', 'invListRead'];
 const VARS = [
   '_agRun', '_avRun', '_arRun', 'AGENT_NOTICE_KINDS', 
   'INV_CONTRACT_DOCS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DECEDENT_SERVICES',
   'MATTER_TYPES', 'INV_ASSET_TRACKS', 'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD',
   'EXEMPT_CAP_732_402', 'AGR_NOT_AN_ACCOUNTING', 'INV_CATEGORIES', '_invShowRoll', 'INV_GROUP_ORDER', 'INV_CAT_GLYPH', 'INV_UNDECIDED', 'INV_DISPOSITIONS', 'INV_DEFAULT_CATEGORY', 'DOC_SCOPES',
   'AS_FOUND_SUBFOLDER', 'PHOTO_SUBFOLDER', 'MAIV_OTHER', 'MAIV_BY_CATEGORY'
-, '_agDupSetJob'];
+, '_agDupSetJob', 'INV_OPEN_HOLDS', 'INV_ACCEPT_AMMO_RE'];
 
 const ESTATE = {
   id: 7, hvlId: 'HVL-0007', name: 'Tripp Butler', svc: 'cleanout', gate706: 'no',

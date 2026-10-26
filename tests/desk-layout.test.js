@@ -1879,7 +1879,9 @@ function groupI({ group, ok, eq, has, lacks }) {
     eq(callersOf('_invFilterHides'), ['_invEarlierUndecided', '_invMatchesFilter', 'deskShowLine'], 'what hides a line: the filter, Show the item and the earlier-days hint');
     eq(noComments(fn('_invMatchesFilter')).replace(/\s+/g, ' ').trim(), 'function _invMatchesFilter(r, job) { return _invFilterHides(r, job).length === 0; }',
       '⚠ a line shows when no part hides it: no second copy of any part');
-    eq(callersOf('agentNoticeQuiet'), ['_agRecordNoticesHtml', '_invPhotoNoteOpen', 'agentNotices'], 'whether a notice is quiet: the list above the rows, the record, and a line held for its photograph\'s open note (Q106)');
+    // RESTATED IN THE REVIEWS' THIRD ROUND (2026-10-26): the rule is _invLineHolds now (invLineHold is its first reason and
+    // asks nothing of its own), so the line's own note is asked there; a removed photograph line's note is agentNoticeLoud's.
+    eq(callersOf('agentNoticeQuiet'), ['_agRecordNoticesHtml', '_invLineHolds', '_invPhotoNoteOpen', 'agentNotices'], 'whether a notice is quiet: the list above the rows, the record, and a line held for its own note or its photograph\'s open note (Q106; its own since the reviewers\' round, 2026-10-26)');
     eq(callersOf('mustFindAllFound'), ['agentNoticeQuiet', 'standingFlagsBlock'], 'every must-find found: the desk\'s brief and the Must find notices');
     has(noComments(fn('_invEarlierUndecided')), "INV_WORK_FLAGS.filter(function(x){ return x.key === 'undecided'; })[0]", 'the hint reads the Not yet decided chip\'s own test');
     lacks(noComments(fn('_invEarlierUndecided')), '!r.disposition', 'never a copy of it');
@@ -2118,8 +2120,10 @@ function groupJ({ group, ok, eq, has, lacks }) {
     eq(callersOf('_apprFormRepaint'), ['_deskFoldHeadsRepaint'], '…which the heads repaint runs, so every by-id repaint of a card in a bar reaches it');
     eq(callersOf('_apprFormCellsHtml'), ['_renderAppraiserRoster', 'invToggleApprForm'], 'the form\'s empty boxes: one markup, drawn by the render and by Cancel');
     // RESTATED ON THE BUILD'S REVIEW (2026-10-23): the read itself asks it too, to arm the retry after a failed read.
-    eq(callersOf('_invManifestUnread'), ['_apprFormIsOpen', '_invCloudRetryArm', '_invRefreshFromCloud', 'deskFoldState'],
-      '⚠ an unread manifest: one answer, read by the bars, the form, and the read that asks the sheet again');
+    // RESTATED IN THE REVIEWS' THIRD ROUND (2026-10-26): the list read (Q107) is pressed only on a copy that has read the sheet,
+    // so its refusal asks the same answer (invListReadRefusal: the press and the work bar's line read it, never a copy of it).
+    eq(callersOf('_invManifestUnread'), ['_apprFormIsOpen', '_invCloudRetryArm', '_invRefreshFromCloud', 'deskFoldState', 'invListReadRefusal'],
+      '⚠ an unread manifest: one answer, read by the bars, the form, the read that asks the sheet again, and the list read\'s refusal');
     eq(callersOf('_bqFormIsOpen'), ['_renderInvBequestCard'], 'the bequests card\'s two forms: the same');
     eq(callersOf('_invBqClear'), ['invSaveBeneficiary', 'invSaveBequest', 'invToggleBqForm'], 'the boxes a save and Cancel clear: one list (INV_BQ_FORM_FIELDS)');
     ['_apprFormIsOpen', 'invToggleApprForm', '_apprFormPaint', '_apprFormRepaint', '_bqFormIsOpen', 'invToggleBqForm', '_invBqFormPaint', '_renderValueSettings'].forEach((f) =>

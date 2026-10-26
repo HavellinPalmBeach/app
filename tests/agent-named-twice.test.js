@@ -147,7 +147,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const S = app([L('p', 73, 'Copper pans', { agentAt: T1, agentListed: 2 })], { stubs: { localStorage: { setItem: (k, v) => { stored = v; }, getItem: () => null, removeItem() {} } } });
     S.savePhotoRefs(7);
     eq(stored && JSON.parse(stored)[0].agentListed, 2, '⚠ driven: it survives the save (the whitelist has dropped a field three times)');
-    has(fn('collectionLineWithPhoto'), "'agentConf', 'agentListed', 'agentBasis'", 'a collection\'s line filled by a photograph drops it with the other naming stamps');
+    has(fn('collectionLineWithPhoto'), "'agentConf', 'agentListed', 'agentName', 'agentBasis'", 'a collection\'s line filled by a photograph drops it with the other naming stamps');
   }
 
   group('B · agentNamedTwice: two namings told nothing are one photograph read twice; anything else is not');

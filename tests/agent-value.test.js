@@ -117,7 +117,7 @@ const AV_FNS = ['_avValueButtonHtml', 'agentValueMode', 'agentValueInternal', '_
   'invFiduciaryMode', 'isDecedentJob', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep', 'estateValueDate',
   '_avdDate', '_ymdLocal', 'resolveValBasis', '_agNameKey', '_agDetailRefs', 'invLineCloseUps', '_invFileId', 'invAppraisalThreshold',
   'gateDispute', '_gateYes', 'invNeedsAppraisal', 'fmt', '_invMoney', '_invNamed', '_invItemNo', '_andJoin',
-  'moneyToNumber', '_readAppsScriptJson', '_invJob', '_avNameIsAgents', '_invStampLineReviewed', '_invRenderWhenIdle', 'invLineAccepted', 'invLineHold', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible'];
+  'moneyToNumber', '_readAppsScriptJson', '_invJob', '_avNameIsAgents', '_invStampLineReviewed', '_invRenderWhenIdle', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible'];
 const AV_VARS = ['_avRun', '_avForceComps', '_avAfter', 'AGENT_VALUE_BATCH', 'AGENT_VALUE_GENERAL_CEILING', 'AGENT_VALUE_MAX_COMPS',
   'AGENT_VALUE_MARK_RE', 'AGENT_VALUE_NO_MARK_RE', 'AGENT_VALUE_CONFS', 'AGENT_VALUE_SOURCES', 'AGENT_VALUE_OWN', 'AGENT_VALUE_SALE_DATE_RE',
   'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'DECEDENT_SERVICES', 'DOC_TIERS',
@@ -696,7 +696,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(panel, 'WorthPoint search: <code>Herend Rothschild</code>', 'the WorthPoint lookup');
     has(panel, 'Use this sale', 'the paste form');
     has(panel, 'href="https://drive.google.com', 'or the photograph link when the line carries one');
-    const flags = sandbox({ vars: ['INV_WORK_FLAGS', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', '_agDupSetJob', 'INV_HOLD_WORDS'], fns: ['agentValueStale', '_agNameKey', 'invLineReviewed', 'agentValueUnreviewed', '_avHasFigure', '_invHasValue', 'invLineAccepted', 'invLineHold', 'invLineAcceptedOnly', '_invAcceptCtxOf', '_arDupEligible', 'invAcceptCtx', 'agentDuplicateGroups', '_jobInvRefs', '_agDupEligible', 'agentNamedTwice'] }).INV_WORK_FLAGS;
+    const flags = sandbox({ vars: ['INV_WORK_FLAGS', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', '_agDupSetJob', 'INV_HOLD_WORDS', 'INV_OPEN_HOLDS', 'INV_ACCEPT_AMMO_RE'], fns: ['agentValueStale', '_agNameKey', 'invLineReviewed', 'invLineOpen', 'agentValueUnreviewed', '_avHasFigure', '_invHasValue', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invNeedsAppraisal', 'invIsIntrinsic', 'invCatMeta', 'invLineAcceptedOnly', '_invAcceptCtxOf', '_arDupEligible', 'invAcceptCtx', 'agentDuplicateGroups', '_jobInvRefs', '_agDupEligible', 'agentNamedTwice'] }).INV_WORK_FLAGS;
     eq(flags[1].key, 'unreviewed', 'the Not reviewed chip sits beside Unnamed shots (2026-10-25b: it replaced Unreviewed values)');
     eq(flags[1].test(Object.assign({}, unrev, { reviewed: true })), true, 'and counts a line whose agent figure is not yet looked at, its name ticked or not');
     const bar = liveLines(fn('_renderInvWorkbar'));
@@ -715,17 +715,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     // The row and its record, rendered by the real functions (Agent One's row rig, with Agent Two's figure on the line).
     const rowRig = (row, job) => sandbox({
-      fns: ['invLineReviewed', '_renderInvRow', '_invRowPhotoHtml', '_invRowHasWho', 'invOutForAppraisal', 'invPlanChannel', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', 'invAppraisalSourceText', 'invLineAppraiser', '_invLinkedAppraiser', 'invAppraised', 'invAppraisalInProgress', '_invHasAppraisal',
+      fns: ['invLineReviewed', 'invLineOpen', '_renderInvRow', '_invRowPhotoHtml', '_invRowHasWho', 'invOutForAppraisal', 'invPlanChannel', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', 'invAppraisalSourceText', 'invLineAppraiser', '_invLinkedAppraiser', 'invAppraised', 'invAppraisalInProgress', '_invHasAppraisal',
             '_avHasFigure', '_invHasValue', '_avSummary', 'fmt', 'roundCents', 'agentValueInternal', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep',
             'invAppraisalThreshold', 'gateDispute', '_gateYes', '_agNameKey', '_invRowDomId', '_invRecipientInput', '_renderInvPanel', 'invCloseUpRefusal', '_invCloseUpsHtml', '_invCloseUpTileHtml', '_agRecordNoticesHtml', '_avPanelHtml', '_invMoney', '_invDetailRefs', '_invPanelAppraisalHtml',
             '_invPhotoSiblings', '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef', '_invNamed', '_invItemNo',
             'invDealerRouteOffered', 'invDealerRoute', 'invDealerRouteText', '_invFirearmPanelHtml',
             'invBequestFor', 'jobListEntries', 'invApprovalGap', 'invReceiptOwed', '_invBenListAttr',
-            'invRatificationOwed', 'invFiduciaryMode', 'isDecedentJob', 'invReleaseCautions', '_invJob', 'invHavellinRecipient',
+            'invRatificationOwed', 'invFiduciaryMode', 'isDecedentJob', 'invReleaseCautions', 'invBequestElsewhere', '_invJob', 'invHavellinRecipient',
             // P22 (merged): the row reads a pickup record and a name left on a line moved off To a person.
-            'invPickupRecord', 'signedRecordsOf', 'invChannelLeftover', 'invChannelLeftoverText', '_invPanelLeftoverHtml', 'invLineUnsure', '_invEachInput', 'invUnitValue', 'invLineQty', '_invInputStyle', '_invCtrlMinW', 'invLineAccepted', 'invLineHold', 'invLineAcceptedOnly', '_invRevBoxHtml', 'invIsMAIV', 'invMAIVDefaultCat', '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_jobInvRefs', '_agDupEligible', 'agentNamedTwice'],
+            'invPickupRecord', 'signedRecordsOf', 'invChannelLeftover', 'invChannelLeftoverText', '_invPanelLeftoverHtml', 'invLineUnsure', '_invEachInput', 'invUnitValue', 'invLineQty', '_invInputStyle', '_invCtrlMinW', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invNeedsAppraisal', 'invIsIntrinsic', 'invCatMeta', 'invLineAcceptedOnly', '_invRevBoxHtml', 'invIsMAIV', 'invMAIVDefaultCat', '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_jobInvRefs', '_agDupEligible', 'agentNamedTwice'],
       vars: ['INV_PLAN_CHANNEL_KINDS', 'INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick', '_agDupSet', 'DECEDENT_SERVICES', 'INV_RELEASE_CAUTIONS',
-             'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', '_agDupSetJob', 'INV_HOLD_WORDS'],
+             'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'INV_APPRAISAL_THRESHOLD', 'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', '_agDupSetJob', 'INV_HOLD_WORDS', 'INV_OPEN_HOLDS', 'INV_ACCEPT_AMMO_RE'],
       stubs: {
         jobs: [job], _invInput: () => '<input>', _invThumbHTML: () => '<div></div>', _invRoomName: () => 'Dining Room',
         invIsFirearm: () => false, invReleaseBlocked: () => false, invAwaitingAppraisal: () => false,
@@ -755,7 +755,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The bulk bar's Mark reviewed: the one look across the selection, the agent figure accepted with the line (2026-10-25b).
     const picks = [ROW({ stableId: 'a', fmv: 640, valuedBy: 'agent', valHigh: 800 }), ROW({ stableId: 'd', fmv: 900, valuedBy: 'desk', updatedAt: 9 })];
     const B = sandbox({
-      fns: ['_invBulkApply', 'agentValueUnreviewed', '_avHasFigure', '_invHasValue', '_avStampReviewed', '_invStampBy', 'deviceUser', '_avTakeValue', '_invKeyOnJob', '_invColOnJob',
+      fns: ['_invBulkApply', 'invNeedsAppraisal', 'invIsIntrinsic', 'invCatMeta', 'agentValueUnreviewed', '_avHasFigure', '_invHasValue', '_avStampReviewed', '_invStampBy', 'deviceUser', '_avTakeValue', '_invKeyOnJob', '_invColOnJob',
             '_getPhotoRef', '_setPhotoRef', '_invJob', 'invFiduciaryMode', 'isDecedentJob', '_invStampLineReviewed'],
       vars: ['INVENTORY_COLUMNS', 'DECEDENT_SERVICES', 'AGENT_VALUE_OWN'],
       stubs: { jobs: [ESTATE()], _photoRefs: { 7: picks }, _invPicked: (j) => picks, _invTouch(r) { r.updatedAt = (r.updatedAt || 0) + 1; return r; },

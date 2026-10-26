@@ -53,7 +53,7 @@ function gsCtx() {
 }
 
 // ─── THE REAL APP SIDE ───────────────────────────────────────────────────────
-const AV_FNS = ['invHavellinRecipient', 'invAwaitingAppraisal', 'invBequestElsewhere', 'invReleaseCautions', '_invPhotoNoteOpen', '_gate706', 'maivFilingApplies', 'invLotSplitState', 'agentValueMode', 'agentValueInternal', '_avHasFigure', 'agentValueableRefs', 'agentValueUnreviewed',
+const AV_FNS = ['invHavellinRecipient', 'invAwaitingAppraisal', 'invBequestElsewhere', 'invReleaseCautions', '_invPhotoNoteOpen', 'invLineOpen', '_gate706', 'maivFilingApplies', 'invLotSplitState', 'agentValueMode', 'agentValueInternal', '_avHasFigure', 'agentValueableRefs', 'agentValueUnreviewed',
   'agentValueStale', 'agentValueSpecialistWorth', '_avValDate', '_avContext', '_avItemPayload', '_avComp', '_avWrite', '_avRename', '_avNameIsAgents',
   '_avNoteFailure', 'agentValueApply', '_avTakeValue', '_avStampReviewed', '_invStampBy', 'deviceUser', '_avStart',
   '_avSendNext', '_avFinish', '_avRepaint', '_avStateHtml', '_avState', 'agentValueAuto', 'agentValueAfterRename', 'agentValueUseSale',
@@ -66,8 +66,8 @@ const AV_FNS = ['invHavellinRecipient', 'invAwaitingAppraisal', 'invBequestElsew
   'invFiduciaryMode', 'isDecedentJob', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep', 'estateValueDate',
   '_avdDate', '_ymdLocal', 'resolveValBasis', '_agNameKey', '_agDetailRefs', 'invLineCloseUps', '_invFileId', 'invAppraisalThreshold',
   'gateDispute', '_gateYes', 'invNeedsAppraisal', 'fmt', '_invMoney', '_invNamed', '_invItemNo', '_andJoin',
-  'moneyToNumber', '_readAppsScriptJson', '_invJob', '_invRenderWhenIdle', '_invHasPhoto', 'invIsFirearm', 'invLineAccepted', 'invLineHold', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat'];
-const AV_VARS = ['INV_LOT_ARTICLE_CAP', 'INV_RELEASE_CAUTIONS', 'INV_ACCEPT_AMMO_RE', '_agDupSetJob', '_avRun', '_avForceComps', '_avAfter', 'AGENT_VALUE_BATCH', 'AGENT_VALUE_GENERAL_CEILING', 'AGENT_VALUE_MAX_COMPS',
+  'moneyToNumber', '_readAppsScriptJson', '_invJob', '_invRenderWhenIdle', '_invHasPhoto', 'invIsFirearm', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat'];
+const AV_VARS = ['INV_LOT_ARTICLE_CAP', 'INV_RELEASE_CAUTIONS', 'INV_ACCEPT_AMMO_RE', '_agDupSetJob', 'INV_OPEN_HOLDS', '_avRun', '_avForceComps', '_avAfter', 'AGENT_VALUE_BATCH', 'AGENT_VALUE_GENERAL_CEILING', 'AGENT_VALUE_MAX_COMPS',
   'AGENT_VALUE_MARK_RE', 'AGENT_VALUE_NO_MARK_RE', 'AGENT_VALUE_CONFS', 'AGENT_VALUE_SOURCES', 'AGENT_VALUE_OWN', 'AGENT_VALUE_SALE_DATE_RE',
   'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'DECEDENT_SERVICES', 'DOC_TIERS',
   'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'AGENT_MAX_DETAILS', 'INV_VAL_SOURCES', '_agDupSet', 'AGENT_ROOM_CONF_RANK', 'AGENT_PASS_GAP_MS', 'MAIV_OTHER', 'MAIV_BY_CATEGORY'];
@@ -273,7 +273,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(liveLines(fn('_invBulkApply')), "'valReviewed'", 'and Accept values\' key is gone from the bulk handler');
     has(liveLines(fn('agentValueUseSale')), '_invStampLineReviewed(ref, job);', 'a sale pasted is the person\'s look at the line');
     ['agentValueAccept', '>Accept value<', 'Accept values</button>', '_avAcceptButtonHtml', "'unrevval'"].forEach((w) => lacks(live, w, '⚠ no second tier: ' + w));
-    const F = sandbox({ vars: ['INV_WORK_FLAGS', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', '_agDupSetJob', 'INV_ACCEPT_AMMO_RE'], fns: ['invLineReviewed', 'agentValueUnreviewed', '_avHasFigure', '_invHasValue', 'invLineAccepted', 'invLineHold', 'invLineAcceptedOnly', '_invAcceptCtxOf', '_arDupEligible', 'invAcceptCtx', '_invListReadHtml', 'invListRead'] }).INV_WORK_FLAGS;
+    const F = sandbox({ vars: ['INV_WORK_FLAGS', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', '_agDupSetJob', 'INV_OPEN_HOLDS', 'INV_ACCEPT_AMMO_RE'], fns: ['invLineReviewed', 'invLineOpen', 'agentValueUnreviewed', '_avHasFigure', '_invHasValue', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invLineAcceptedOnly', '_invAcceptCtxOf', '_arDupEligible', 'invAcceptCtx', '_invListReadHtml', 'invListRead'] }).INV_WORK_FLAGS;
     eq([F[1].key, F[1].label], ['unreviewed', 'Not reviewed'], 'Not reviewed sits beside Unnamed shots');
     eq([F[1].test(SURE()), F[1].test(SURE({ reviewed: true, valReviewed: true }))], [true, false], 'and counts the one rule');
   }
@@ -288,7 +288,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(u({ agentConf: 'low', valNameAt: 'Plates, likely Italian' }), true, '…or Agent Two valued it under an earlier name');
     eq(u({ agentConf: 'low' }), false, '⚠ Agent Two researched it under this very name, sure: its look settles Agent One\'s guess');
     eq(u({ agentConf: 'low', valNameFrom: 'Plates, likely Italian', valNameAt: MAJOLICA }), false, '⚠ Agent Two renamed it, sure: its word is the last');
-    eq(u({ agentConf: 'low', valuedBy: 'desk' }), true, 'a figure a person typed says nothing of the name: Agent One\'s guess still stands');
+    // ⚠ A FIGURE A PERSON RECORDED IS THEIR LOOK AT THE LINE (Q105; the second review, 2026-10-26: the hint asked for a tick
+    // over a box already ticked and disabled, and nothing could clear it): typed on the desk, or the appraisal's.
+    eq(u({ agentConf: 'low', valuedBy: 'desk' }), false, '⚠ a figure a person typed is their look (Q105): the guess is settled');
+    eq(u({ agentConf: 'low', valuedBy: 'appraiser', valSource: 'Appraisal' }), false, '…and so is the appraisal\'s figure');
+    eq(u({ agentConf: 'low', valuedBy: 'desk', fmv: '' }), true, '…a figure, not the owner alone: a desk line with no figure is still Agent One\'s guess');
     eq(u({ agentConf: 'low', namedBy: 'desk' }), false, 'a name a person typed');
     eq(u({ valConf: 'low', reviewed: true, valReviewed: true }), false, '⚠ gone with the line\'s one tick');
     eq(R.ctx._avRowBadges(ESTATE(), SURE({ valConf: 'low' })), [], 'no agent value badge');
@@ -304,7 +308,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const b = SURE({ stableId: 'b', valNameFrom: MAJOLICA, objectName: 'Talavera-style bird plates', driveFileId: 'F2', agentAt: 9000 });
     const groups = R.ctx.agentDuplicateGroups(7, [a, b]);
     eq(groups.length, 1, '⚠ one group, joined on Agent One\'s own reading');
-    has(liveLines(fn('agentDuplicateGroups')), '_agNameKey(r.valNameFrom || r.objectName)', 'keyed there');
+    has(liveLines(fn('agentDuplicateGroups')), '_agNameKey(r.agentName || r.valNameFrom || r.objectName)', 'keyed there (Agent One\'s own reading first, since the second review)');
   }
 
   group('⚠⚠ A8 · Each × Qty = Total: one helper each, the count carries Each, a typed Each counts only while it makes the total');

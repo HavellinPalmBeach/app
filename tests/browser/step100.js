@@ -208,7 +208,8 @@ const EST = 9701, PREP = 9702, LIV = 9703;
           // The four bars' headings, read off the live app's own catalogue.
           const titles = await p.evaluate(() => Object.keys(DESK_FOLDS).map((k) => DESK_FOLDS[k].title));
           ok(titles.length === 4 && titles.every((t) => h3.indexOf(t) >= 0), 'the four bars by the app’s own titles: ' + titles.join(' / '));
-          eq(await g.locator('.card ol li').count(), 9, 'nine pocket-card items');
+          // Ten since 2026-10-26 (Q107): *Read the whole list, then I've read the list* joined the evening's order.
+          eq(await g.locator('.card ol li').count(), 10, 'ten pocket-card items');
           eq(await g.locator('input[type=checkbox]').count(), 0, '⚠ nothing to tick');
           for (const f of ['photography-guide.html', 'incident-guide.html', 'sorting-guide.html', 'packing-guide.html', 'move-day-guide.html', 'first-night-guide.html', 'firearms-protocol.html', 'concierge-guide.html'])
             ok(await g.locator('a[href="' + f + '"]').count() >= 1, 'links ' + f);

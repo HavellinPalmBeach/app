@@ -166,7 +166,14 @@ const COMP = { title: 'Herend Rothschild Bird dinner plates, set of 8', venue: '
     ok(!/unsure/.test(await rowText('a')), 'Agent Two researched the plates under their name, sure: no unsure hint');
     ok(/not valued/.test(await rowText('f')), 'the lamp\'s row says not valued');
     const chip = () => p.evaluate(() => { const el = Array.from(document.querySelectorAll('#panel-inventory button')).find(x => /^Not reviewed/.test(x.textContent.trim())); return el ? el.textContent.trim() : ''; });
-    eq(await chip(), 'Not reviewed 6', 'the one chip counts every line not yet looked at, its value included');
+    // ⚠ RESTATED 2026-10-26 (Q105, Q106): a figure typed on the desk is a person's look, and a line with a name, a destination
+    // and that figure stands with nothing flagged, so the desk's silver tray (d: $1,200 typed, Sell) is no longer counted. The
+    // chip counts the plates, the flatware and the table (Agent Two's figures, no destination yet), the unnamed line and the
+    // lamp it could not value: 5, where it read 6 while every line took a tick.
+    eq(await chip(), 'Not reviewed 5', 'the one chip counts every line still waiting for a look, its value included');
+    const trayBox = await p.evaluate(() => { const el = document.querySelector('#inv-row-d input[type="checkbox"][onchange*="_invSetReviewed"]');
+      const lab = el && el.closest('label'); return el ? [el.checked, el.disabled, lab ? lab.getAttribute('title') : ''] : null; });
+    eq(trayBox, [true, true, 'Reviewed: a figure recorded on the desk, nothing flagged'], 'the desk\'s tray stands: ticked by its figure, and its box says so');
     const top = await p.evaluate(() => (document.getElementById('inv-value-notices') || {}).textContent || '');
     ok(/Appraisal advised/.test(top), 'Agent Two\'s notice is at the top');
     ok(/3 valued/.test(await p.evaluate(() => (document.getElementById('inv-value-state') || {}).textContent || '')), 'and the line under the button says what happened');
@@ -174,7 +181,7 @@ const COMP = { title: 'Herend Rothschild Bird dinner plates, set of 8', venue: '
     await p.waitForTimeout(400);
     const acc = await p.evaluate((id) => { const r = _photoRefs[id].find(x => x.stableId === 'a'); return [r.reviewed, r.valReviewed]; }, J);
     eq(acc, [true, true], '⚠ the row\'s Reviewed tick reviews the plates and accepts their value with it');
-    eq(await chip(), 'Not reviewed 5', 'and the chip falls by one');
+    eq(await chip(), 'Not reviewed 4', 'and the chip falls by one');
 
     // ── C · the line's record ──────────────────────────────────────────────────
     await p.click('#inv-row-c button[title="Open the full record"]');

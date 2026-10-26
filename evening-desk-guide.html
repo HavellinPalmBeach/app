@@ -355,7 +355,6 @@ footer p{max-width:66ch;}
     <ul class="plain">
       <li>If a room on the Job Plan says <em>&#9888; not saved</em>, tap <span class="btn">Retry</span> there first.</li>
       <li>Leave field mode (<span class="btn">Field &middot; exit</span>): it hides this tab.</li>
-      <li>Pick the client under <strong>CLIENT</strong>.</li>
       <li>On a phone the timeline under the brown band folds to one summary (<em>Timeline &middot; 3 of 8 done</em>); tap it
         to open. The selection bar shrinks to <em>2 selected</em>, <span class="btn">Actions &#9662;</span> and
         <span class="btn">Clear</span>, its buttons under Actions.</li>
@@ -410,20 +409,24 @@ footer p{max-width:66ch;}
         found); <em>Look at this</em> in amber, gone once you review the item. Quiet notes stay in the item&rsquo;s record.
         <span class="btn">Show the item</span> jumps to it and opens it.</li>
       <li><strong>Possible duplicates.</strong> Compare the photos, then <span class="btn">Remove</span> the extra, or
-        <span class="btn">Not duplicates</span> if they really are two things.</li>
+        <span class="btn">Not duplicates</span> if they really are two things. Ticking Reviewed does not settle it.</li>
       <li><strong>The values follow by themselves</strong>, Agent Two correcting Agent One&rsquo;s guesses;
         <span class="btn">Value N lines</span> does the rest.</li>
       <li><strong><em>Not yet decided</em>, room by room.</strong> Correct the name and count, choose where it goes, type who
         takes it if it leaves, check the value against what you saw. Nothing flagged? No tick, whatever its value: the box is
-        ticked in grey. Flagged? One <strong>Reviewed</strong> tick covers it all, <em>unsure</em> first: a note, a possible
-        duplicate, a firearm or ammunition, an appraisal, a bequest, a dispute, both agents unsure. On a disputed estate every
-        item takes it. A maker added to the name reprices it.</li>
+        ticked in grey. Flagged? One <strong>Reviewed</strong> tick covers it all: a note, a possible
+        duplicate, a firearm or ammunition, an appraisal, a bequest, a dispute, both agents unsure. Hover the box for why.
+        On a disputed estate every item either agent named or valued takes it. Bronze <em>unsure</em> marks any guess, even on
+        a grey tick: read those hardest. A maker added to the name reprices it.</li>
       <li><strong>A drawer photographed piece by piece.</strong> Tick the rows (or <span class="btn">Select all</span> on the
         group) and a selection bar appears at the foot. <span class="btn">Remove lines</span> takes them off the list and keeps
         the photos; <span class="btn">Set disposition&hellip;</span> gives them all one destination, such as Donate.</li>
       <li><strong>The Needs you counts</strong> cover every day. While Today is on, the filter row names what earlier days left
         undecided (<em>1 from earlier days still undecided: press All</em>): press <span class="btn">All</span> and finish
         them.</li>
+      <li><strong>Last, read the whole list</strong> against what you saw and press
+        <span class="btn">&#10003; I&rsquo;ve read the list</span> on the Inventory Review bar: it records who and when.
+        Change anything after, even a tick, and it says <em>changed since</em>: press it again.</li>
     </ol>
 
     <h3>The row</h3>
@@ -444,7 +447,9 @@ footer p{max-width:66ch;}
       </tbody>
     </table></div>
     <p style="margin-top:14px;">Papers print marked <strong>IN PROGRESS</strong> until every item is decided, valued and, where
-      flagged, ticked; they are never held back. <span class="btn">+ Add line item</span> adds anything with no photo. A car or boat from the walkthrough
+      flagged, ticked; they are never held back. Where an Agent Two value stands unticked, they also wait
+      for the list to be read, then print <em>REVIEWED &mdash; read by Anthony Graziano, October 26, 2026; 42 items
+      checked; 158 accepted as valued</em>. <span class="btn">+ Add line item</span> adds anything with no photo. A car or boat from the walkthrough
       waits under the Inventory Review bar (<em>From the Estimate Walkthrough</em>) until you press
       <span class="btn">Add &rarr;</span>.</p>
   </section>
@@ -476,9 +481,9 @@ footer p{max-width:66ch;}
         paper receipt for a person instead.</li>
       <li><strong>Signed release approvals.</strong> One row for each day signatures were recorded, with
         <span class="btn">File signed copy</span>.</li>
-      <li><strong>Beneficiaries &amp; specific bequests</strong>, on an estate: the list counsel or the representative gives
-        you (<span class="btn">+ Add a beneficiary</span>, <span class="btn">+ Add a specific bequest</span>). When a promised
-        item turns up, type its item number and press <span class="btn">Match</span>.</li>
+      <li><strong>Beneficiaries &amp; specific bequests</strong>, on an estate: the list counsel gives you
+        (<span class="btn">+ Add a beneficiary</span>, <span class="btn">+ Add a specific bequest</span>). When a promised
+        item turns up, type its number and press <span class="btn">Match</span>.</li>
     </ul>
 
     <h3>Values &amp; appraisals</h3>
@@ -517,7 +522,7 @@ footer p{max-width:66ch;}
 
     <h3>Removed items &amp; snapshots</h3>
     <p>Opens by itself only when you take a snapshot. <span class="btn">Restore</span> gives back anything taken off the
-      list. A snapshot (More &#9662;, on an estate) is a dated copy of the list; <span class="btn">Compare with now</span>
+      list. A snapshot (More &#9662;, on an estate) is a dated copy; <span class="btn">Compare with now</span>
       shows what changed. The totals (<span class="btn">Show summary &amp;
       rollups</span>, in More &#9662;) appear under this bar, at the very foot.</p>
   </section>
@@ -529,7 +534,6 @@ footer p{max-width:66ch;}
         <h4>An estate</h4>
         <ul class="plain">
           <li>Every representative signs every release; each item released to a person needs a signed receipt.</li>
-          <li>The representative signs the Disposition Ledger at the close.</li>
         </ul>
       </div>
       <div class="side">
@@ -605,7 +609,6 @@ footer p{max-width:66ch;}
         client&rsquo;s own home it is flagged for the client to initial.</li>
       <li><strong>No item or paper is deleted.</strong> <span class="btn">Remove line</span> keeps the photo; a paper filed in
         error is voided with a reason.</li>
-      <li><strong>The app flags far more than it refuses.</strong> Amber means read it, not stop.</li>
     </ul>
   </section>
 
@@ -614,9 +617,6 @@ footer p{max-width:66ch;}
     <dl class="tricky">
       <dt>An item jumps away when I choose its destination.</dt>
       <dd>It moves into its group. Keep working <em>Not yet decided</em> from the top; it shrinks as you go.</dd>
-      <dt>A family member took something before the paper was signed.</dt>
-      <dd>Record it as it happened: Distribute, who took it, and the date it left in its <span class="btn">&#9662;</span>
-        record.</dd>
     </dl>
   </section>
 
@@ -628,15 +628,11 @@ footer p{max-width:66ch;}
         <tr><td>I can&rsquo;t find Releases, the ledger or Removed items</td><td>They are in the bars under the last item.
           Tap a bar to open it.</td></tr>
         <tr><td>A bar says <em>loading&hellip;</em></td><td>This device has not yet read the client&rsquo;s items from the
-          sheet, and the bar claims nothing until it has. If it stays, check the connection and reload.</td></tr>
+          sheet, and the bar claims nothing until it has. If it stays, reload.</td></tr>
         <tr><td>A bar says <em>sheet unreachable: this device&rsquo;s copy</em></td><td>The sheet did not answer: the bar shows
           what this device holds and opens nothing by itself, and the tab asks again every 15 seconds. Check the
           connection.</td></tr>
         <tr><td>No thumbnails</td><td>Nothing is lost. Reload, or tap the box for Drive.</td></tr>
-        <tr><td>No Send request</td><td>Nothing is waiting, a drafted request is waiting for
-          <span class="btn">I&rsquo;ve sent it</span>, or the card says in red what is missing.</td></tr>
-        <tr><td>I pressed something and nothing happened</td><td>Look at the brown band at the top: the answer is
-          there.</td></tr>
       </tbody>
     </table></div>
   </section>
@@ -651,6 +647,7 @@ footer p{max-width:66ch;}
       <li><b>Not yet decided, room by room:</b> name, where it goes, who takes it, value; tick what is flagged.</li>
       <li><b>A drawer piece by piece:</b> tick the rows, Remove lines.</li>
       <li><b>Earlier days still undecided?</b> Press All.</li>
+      <li><b>Read the whole list,</b> then I&rsquo;ve read the list.</li>
       <li><b>Amber bars: open them.</b> Releases: Send request, then I&rsquo;ve sent it.</li>
       <li><b>Grey bars stay shut.</b> You are done.</li>
       <li><b>Nothing leaves an estate</b> without every representative&rsquo;s written approval.</li>

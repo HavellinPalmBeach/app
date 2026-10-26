@@ -22,7 +22,7 @@
 const { sandbox, domStub, source } = require('./harness');
 
 const BASE_FNS = [ 'invDocContractBlock', 'docTierProduces','matterTypeOf', 'matterDef', 'invFiduciaryMode', 'isDecedentJob'];
-const BASE_VARS = [ 'INV_CONTRACT_DOCS','MATTER_TYPES', 'DECEDENT_SERVICES'];
+const BASE_VARS = [ 'INV_CONTRACT_DOCS','MATTER_TYPES', 'DECEDENT_SERVICES', 'INV_ACCEPT_AMMO_RE', 'INV_OPEN_HOLDS'];
 
 module.exports = function ({ group, ok, eq, has, lacks }) {
   const src = source();
@@ -206,8 +206,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                  '_invOnProbateSchedule', '_invTrack', 'resolveValBasis', 'estateValueDate',
                  '_invMoney', '_invExcludedTracks', '_invDocName', '_invHasValue', '_invIsExempt',
                  'matterDef', 'matterTypeOf', 'invDocContractBlock',
-                 'docTierProduces', 'docTierOf', 'svcHasDocStep', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'estimateAppraiserNames', 'docScopeDef', 'roundCents', 'fmt', 'scheduleSigners', 'jobFiduciaries', 'jobListEntries', '_avHasFigure', 'invLineAccepted', 'invLineHold', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', 'invAcceptCtx', 'agentDuplicateGroups', '_agDupEligible', 'agentNamedTwice'];
-    const VARS = ['DECEDENT_SERVICES', 'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD',
+                 'docTierProduces', 'docTierOf', 'svcHasDocStep', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'estimateAppraiserNames', 'docScopeDef', 'roundCents', 'fmt', 'scheduleSigners', 'jobFiduciaries', 'jobListEntries', '_avHasFigure', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invIsFirearm', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', 'invAcceptCtx', 'agentDuplicateGroups', '_agDupEligible', 'agentNamedTwice'];
+    const VARS = ['DECEDENT_SERVICES', 'INV_ACCEPT_AMMO_RE', 'INV_OPEN_HOLDS', 'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD',
                   'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS',
                   'EXEMPT_CAP_732_402', 'MATTER_TYPES', 'INV_CONTRACT_DOCS', 'DOC_SCOPES', 'MAIV_OTHER', 'MAIV_BY_CATEGORY'];
     const item = (id, name, fmv, track) => ({ stableId: id, label: 'inventory', jobId: 7,

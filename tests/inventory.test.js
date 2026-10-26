@@ -22,7 +22,7 @@ const INV_FNS = ['invAppraised',  'invDocContractBlock', 'docTierProduces',
   // P19: written authority is every fiduciary's (invApprovalComplete).
   'invApprovalComplete',
 ];
-const INV_VARS = [ 'INV_CONTRACT_DOCS',
+const INV_VARS = [ 'INV_CONTRACT_DOCS', 'INV_ACCEPT_AMMO_RE', 'INV_OPEN_HOLDS',
   'INV_STICKY_FIELDS', 'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY',
   'INV_APPRAISAL_THRESHOLD', 'INV_ASSET_TRACKS', 'EXEMPT_CAP_732_402',
 ];
@@ -216,7 +216,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ── 3. Court inventory: exempt subtotal, cap, and the track/exempt overlap ──
   group('court inventory: exempt property');
   {
-    const COURT_FNS = INV_FNS.concat(['_invAcceptCtxOf', 'invLineAccepted', 'invLineHold', 'invLineAcceptedOnly', '_invDocPartyHead', 'invAcceptCtx', '_arDupEligible', 'agentDuplicateGroups', '_agDupEligible', 'agentNamedTwice', 'invConditionText', 
+    const COURT_FNS = INV_FNS.concat(['_invAcceptCtxOf', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invLineAcceptedOnly', '_invDocPartyHead', 'invAcceptCtx', '_arDupEligible', 'agentDuplicateGroups', '_agDupEligible', 'agentNamedTwice', 'invConditionText', 
       '_invMoney', '_invDocName', 'printCourtInventory', 'jobOnProbateTrack', '_avUnreviewedStamp', 'agentValueUnreviewed', '_invScheduleSection', 'invValBasisWord', 'invLineAppraiser', '_invLinkedAppraiser', '_apprLabel', 'isFormalDoc', 'resolveDocLevel',
       'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'docLevelFloorReason', '_gate706', 'isDecedentJob',
       'resolveValBasis', 'estateValueDate', '_avdDate',
@@ -591,9 +591,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('a cleared value stays blank, and money shows as money');
   {
-    const m = sandbox({ fns: ['_invEdit', '_invAcceptCtxOf', 'invLineReviewed', 'invLineAccepted', 'invLineHold', 'invLineAcceptedOnly', 'agentValueUnreviewed', '_avTakeValue', '_getPhotoRef', '_setPhotoRef', 'savePhotoRefs',
+    const m = sandbox({ fns: ['_invEdit', '_invAcceptCtxOf', 'invLineReviewed', 'invLineOpen', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invLineAcceptedOnly', 'agentValueUnreviewed', '_avTakeValue', '_getPhotoRef', '_setPhotoRef', 'savePhotoRefs',
                               '_warnPhotoStoreFull', '_invTouch', 'moneyToNumber', '_invHasVal', 'invAppraised', '_invHasValue', '_invJob', 'invUnitValue', 'invLineQty', '_invQtyCarriesValue', '_invPaintFigures', 'agentValueAfterRename', 'agentValueStale', '_avHasFigure', 'invAcceptCtx', '_arDupEligible'],
-                        vars: ['_agDupSetJob', 'INV_STICKY_FIELDS'],
+                        vars: ['_agDupSetJob', 'INV_ACCEPT_AMMO_RE', 'INV_STICKY_FIELDS'],
                         // _invRefreshReleases with its sibling repaints: _invEdit runs it on every edit since the desk build's review (2026-10-23).
                         stubs: { _invRefreshSummary() {}, _invRefreshGuardrail() {}, _invRefreshFlagStrip() {}, _invRefreshRecords() {}, _invRefreshReleases() {},
                                  _scheduleInventorySync() {}, _invNetDisplay: () => '' } });

@@ -22,8 +22,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('grouping — disposition first, undecided at the top, rooms in walkthrough order');
   {
     const ctx = sandbox({
-      fns: ['invLineReviewed', '_invDispLabel', '_invGroupItems', 'agentValueUnreviewed', '_avHasFigure', 'invLineAccepted', 'invLineHold', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_jobInvRefs', '_agDupEligible', 'agentNamedTwice', 'gateDispute', '_gateYes'],
-      vars: ['INV_GROUP_ORDER', 'INV_UNDECIDED', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', '_agDupSetJob'],
+      fns: ['invLineReviewed', 'invLineOpen', '_invDispLabel', '_invGroupItems', 'invIsFirearm', 'agentValueUnreviewed', '_avHasFigure', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invNeedsAppraisal', 'invFiduciaryMode', 'isDecedentJob', '_invHasValue', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_jobInvRefs', '_agDupEligible', 'agentNamedTwice', 'gateDispute', '_gateYes'],
+      vars: ['INV_GROUP_ORDER', 'INV_UNDECIDED', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', '_agDupSetJob', 'INV_OPEN_HOLDS', 'INV_ACCEPT_AMMO_RE'],
       stubs: { _invRoomName: (jobId, idx) => (idx == null ? 'Unassigned / estate-wide' : 'Room ' + idx) },
     });
     const job = { id: 1 };
@@ -31,7 +31,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const items = [
       item({ disposition: 'Junk', roomIdx: 9, fmv: 100 }),
       item({ disposition: '', roomIdx: 4 }),
-      item({ disposition: 'Auction', roomIdx: 9, fmv: 4200, reviewed: true }),
+      item({ disposition: 'Auction', roomIdx: 9, fmv: 4200, reviewed: true, objectName: 'Oil painting' }),   // named: a tick never settles a line with no name (the second reviews)
       item({ disposition: 'Keep', roomIdx: 1 }),
       item({ disposition: 'Auction', roomIdx: 1, fmv: 1800 }),
       item({ disposition: 'Auction', roomIdx: null }),
@@ -56,7 +56,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('review state gates nothing and locks nothing');
   {
-    const ctx = sandbox({ vars: ['MAIV_OTHER', 'MAIV_BY_CATEGORY'], fns: ['invLineReviewed', '_invReviewStats', '_invProgressStamp', 'agentValueUnreviewed', '_avHasFigure', 'invLineAccepted', 'invLineHold', 'invLineAcceptedOnly', '_invAcceptedStampWords', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible'] });
+    const ctx = sandbox({ vars: ['MAIV_OTHER', 'MAIV_BY_CATEGORY'], fns: ['invLineReviewed', 'invLineOpen', '_invReviewStats', '_invProgressStamp', 'agentValueUnreviewed', '_avHasFigure', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invNeedsAppraisal', 'invFiduciaryMode', 'isDecedentJob', '_invHasValue', 'invIsFirearm', 'invLineAcceptedOnly', '_invAcceptedStampWords', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible'] });
 
     eq(ctx._invReviewStats([{ reviewed: true }, {}, {}]), { done: 1, total: 3, complete: false, accepted: 0 },
        'progress is counted');
@@ -77,7 +77,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // No caller may refuse to produce a document because the review is unfinished.
     const src = APP();
-    ['printEstateInventoryReport', 'exportInventoryCSV', 'printApprovalRequest'].forEach((fn) => {
+    ['printEstateInventoryReport', 'invNeedsAppraisal', 'invFiduciaryMode', 'isDecedentJob', 'exportInventoryCSV', 'printApprovalRequest', 'invIsFirearm'].forEach((fn) => {
       const at = src.indexOf('function ' + fn + '(');
       const body = src.slice(at, src.indexOf('\nfunction ', at + 10));
       lacks(body, '_invReviewStats(', fn + ' does not consult the review state to decide whether to run');

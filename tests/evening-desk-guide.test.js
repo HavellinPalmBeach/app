@@ -423,7 +423,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(t, 'Show the item jumps to it and opens it.', 'as the page says');
     const dup = code(fn('_agDupHtml'));
     ['Possible duplicates', "'Remove</button>", '>Not duplicates</button>'].forEach((w) => has(dup, w, 'the duplicates block: ' + w));
-    has(t, 'Possible duplicates. Compare the photos, then Remove the extra, or Not duplicates if they really are two things.', 'as the page says');
+    has(t, 'Possible duplicates. Compare the photos, then Remove the extra, or Not duplicates if they really are two things. Ticking Reviewed does not settle it.', 'as the page says (the tick, driven below)');
     // 2026-10-25b (Anthony: "one review. not a multi tiered review"): the values follow the naming and the room check by
     // themselves, Agent Two correcting Agent One's unreviewed names, and Value N lines is for what is left. The row's Accept
     // value is gone (the page said "Each figure stays unreviewed until you press Accept value").
@@ -438,8 +438,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // name, destination and value and nothing flagged stands with no tick, whatever its value; a flagged one takes the one tick
     // for its name, count and value. The page's sentences on the real rule, with a real context (invAcceptCtx: the job and the
     // open duplicate groups), each flag the page names, and the box it describes. review-flagged.test.js holds the rule whole.
-    const RV = lift(['invLineAccepted', 'invLineHold', 'invAcceptCtx', 'invLineReviewed', 'invLineUnsure', '_invRevBoxHtml', '_invProgressStamp'],
-      { jobs: [], _photoRefs: {}, estimateStore: {}, vendors: [], vendorDirectory: [], contractors: [] });
+    const RV = lift(['invLineAccepted', 'invLineHold', 'invAcceptCtx', 'invLineReviewed', 'invLineUnsure', '_invRevBoxHtml', '_invProgressStamp',
+      'invMarkListRead', 'invListRead', 'invListChangedAt', '_invListReadHtml'],
+      { jobs: [], _photoRefs: {}, estimateStore: {}, vendors: [], vendorDirectory: [], contractors: [], document: { getElementById: () => null },
+        _saveJobEdit(job) { RV.__saved = (RV.__saved || 0) + 1; RV.__savedJob = job; }, _renderInvWorkbar: () => '' });
     const EST = (o) => Object.assign({ id: 7, hvlId: 'HVL-0007', name: 'Butler Estate', svc: 'cleanout', matterType: 'probate', docTier: 'values',
       deathDate: '2026-06-14', executor: 'Tripp Butler', tc: 'Ashley Jerome', won: true, status: 'won' }, o || {});
     // Agent One's name and Agent Two's figure, both fairly sure, a destination chosen, nothing flagged: the cutlery drawer. Each
@@ -486,7 +488,30 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       .forEach(([w, o, others]) => { const l = look(EST(), o, others); eq([l.stands, l.reviewed], [false, false], '⚠ flagged, it waits for the tick: ' + w + (l.err ? ' (' + l.err + ')' : '')); });
     eq(look(EST(), {}, [ITEM({ stableId: 'k2', driveFileId: 'Fk2', ts: 2, objectName: 'Brass table lamp' })]).stands, true, '…the duplicate\'s control: another thing in the room, the drawer stands');
     eq([look(EST(), { valConf: 'low' }).stands, look(EST(), { agentConf: 'low' }).stands], [true, true], '"both": either agent alone unsure, the line stands');
-    eq(look(EST(), { agentConf: 'low', valConf: 'low' }).unsure, true, '"unsure first": both unsure, the row reads unsure');
+    eq(look(EST(), { agentConf: 'low', valConf: 'low' }).unsure, true, 'both unsure, the row reads unsure');
+    // "Hover the box for why." A line that wants a tick names its reason in the box's tooltip (invLineHold, INV_HOLD_WORDS).
+    const why = (l) => { const m = /title="([^"]*)"/.exec(l.box || ''); return m ? decode(m[1]) : ''; };
+    eq(why(look(EST(), { agentNotices: [{ kind: 'other', text: 'a mark under the base' }] })), 'Needs a look: an agent’s note on it. Tick it once checked.', '⚠ "Hover the box for why": a note');
+    eq(why(look(EST(), { agentConf: 'low', valConf: 'low' })), 'Needs a look: both agents were guessing. Tick it once checked.', '…both guessing');
+    eq(why(look(EST(), {}, [TWIN])), 'Needs a look: a possible duplicate: answer it under Possible duplicates. Tick it once checked.', '…a possible duplicate');
+    // "Ticking Reviewed does not settle it": both halves ticked, the pair is still a group and still held; Not duplicates settles it.
+    const ticked = { reviewed: true, reviewedBy: 'Ashley Jerome', valReviewed: true };
+    const pairHeld = (o) => { const a = ITEM(Object.assign({}, ticked, o)), b = ITEM(Object.assign({ stableId: 'k2', driveFileId: 'Fk2', ts: 2 }, ticked, o));
+      RV.jobs.length = 0; RV.jobs.push(EST()); RV._photoRefs[7] = [a, b];
+      const r = attempt(() => { const fc = RV.invAcceptCtx(RV.jobs[0], [a, b]); return [!!fc.dup.k1, RV.invLineHold(a, fc)]; }); return r.ok ? r.val : r.err; };
+    eq(pairHeld({}), [true, 'duplicate'], '⚠⚠ "Ticking Reviewed does not settle it": both halves ticked, the pair stays a possible duplicate');
+    eq(pairHeld({ dupOK: true }), [false, ''], '…Not duplicates does');
+    // "On a disputed estate every item either agent named or valued takes it": a line named and decided on the desk is
+    // reviewed by that act; one Agent Two valued, or Agent One named, waits for the tick.
+    const DIS = EST({ gateDispute: 'yes' });
+    eq([look(DIS).reviewed, look(DIS, { namedBy: 'desk' }).reviewed, look(DIS, { namedBy: 'desk', valuedBy: 'desk', valLow: undefined, valHigh: undefined, valConf: undefined }).reviewed],
+      [false, false, true], '⚠ "every item either agent named or valued": Agent One\'s name, Agent Two\'s value, and the desk\'s own line reviewed by its act');
+    // "Bronze unsure marks any guess, even on a grey tick" (Q108, Anthony: "Show it, no tick"): on a line that stands, either
+    // agent's guess still shows; the tick takes it.
+    const g2 = look(EST(), { valConf: 'low' }), g1 = look(EST(), { agentConf: 'low', valuedBy: 'desk', valLow: undefined, valHigh: undefined, valConf: undefined });
+    eq([g2.stands, g2.unsure], [true, true], '⚠⚠ "even on a grey tick": Agent Two guessing alone, the line stands and reads unsure');
+    eq([g1.stands, g1.unsure], [true, true], '…Agent One\'s guess, a figure typed: stands, and reads unsure');
+    eq(look(EST(), Object.assign({ valConf: 'low' }, ticked)).unsure, false, '…until the tick');
     // "On a disputed estate every item takes it."
     eq([look(EST({ gateDispute: 'yes' })).stands, look(EST({ svc: 'contested_probate' })).stands], [false, false],
       '⚠ on a disputed estate, or a contested probate, even the drawer waits for the tick');
@@ -497,19 +522,56 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(code(fn('_renderInvRow')), 'if (invLineUnsure(ref))', 'unsure on the row where the agents were guessing');
     has(code(fn('_renderInvRow')), '>unsure</span>', '…in those words');
     has(code(fn('_invEdit')), "if (key === 'objectName') agentValueAfterRename(jobId, stableId);", 'a name changed is valued again by itself');
-    has(t, 'Correct the name and count, choose where it goes, type who takes it if it leaves, check the value against what you saw. Nothing flagged? No tick, whatever its value: the box is ticked in grey. Flagged? One Reviewed tick covers it all, unsure first: a note, a possible duplicate, a firearm or ammunition, an appraisal, a bequest, a dispute, both agents unsure. On a disputed estate every item takes it. A maker added to the name reprices it.', 'as the page says');
+    has(t, 'Correct the name and count, choose where it goes, type who takes it if it leaves, check the value against what you saw. Nothing flagged? No tick, whatever its value: the box is ticked in grey. Flagged? One Reviewed tick covers it all: a note, a possible duplicate, a firearm or ammunition, an appraisal, a bequest, a dispute, both agents unsure. Hover the box for why. On a disputed estate every item either agent named or valued takes it. Bronze unsure marks any guess, even on a grey tick: read those hardest. A maker added to the name reprices it.', 'as the page says');
     has(t, 'Not yet decided, room by room: name, where it goes, who takes it, value; tick what is flagged.', 'and the pocket card');
+    lacks(t, 'On a disputed estate every item takes it.', '⚠ never every item: a line named and decided on the desk is reviewed by that act');
     lacks(t, '$100 needs no tick', '⚠ the $100 line is gone from the page');
     lacks(t, 'counts as reviewed until Agent Two values it', '…and so is the name typed that waited for a tick once valued');
     // "Papers print marked IN PROGRESS until every item is decided, valued and, where flagged, ticked", on the real stamp.
     const stamp = (items, job) => { RV.jobs.length = 0; RV.jobs.push(job); RV._photoRefs[job.id] = items;
       const r = attempt(() => RV._invProgressStamp(items, { fc: RV.invAcceptCtx(job, items) })); return r.ok ? decode(r.val.replace(/<[^>]+>/g, ' ')) : 'threw: ' + r.err; };
     const two = (o) => [ITEM(), ITEM(Object.assign({ stableId: 'k3', driveFileId: 'Fk3', ts: 3, objectName: 'Brass table lamp' }, o || {}))];
-    has(stamp(two(), EST()), 'REVIEWED', 'every item decided, valued and nothing flagged: REVIEWED with no tick');
+    // Q107 (Anthony: "One 'List read' press"): where Agent Two's values stand unticked, REVIEWED waits for the list read since
+    // its last change, and names it. A fixed day (noon Eastern), never the clock.
+    const AT = Date.UTC(2026, 9, 26, 16, 0), READ = { invRead: { at: AT, by: 'Anthony Graziano' } };
+    const eastern = (f) => { const prev = process.env.TZ; process.env.TZ = 'America/New_York'; try { return f(); } finally { process.env.TZ = prev; } };
+    has(stamp(two(), EST()), 'IN PROGRESS — 2 accepted as valued; the list not yet read', '⚠⚠ every item decided, valued and nothing flagged, the list not read: IN PROGRESS');
+    has(eastern(() => stamp(two(), EST(READ))), 'REVIEWED — read by Anthony Graziano, October 26, 2026; 2 accepted as valued', '…and read: REVIEWED, naming the read');
+    has(eastern(() => stamp(two({ updatedAt: AT + 1000 }), EST(READ))), 'IN PROGRESS — 2 accepted as valued; the list not yet read since it last changed', '⚠ a change after the read: IN PROGRESS again');
+    has(stamp(two(ticked).map((r) => Object.assign(r, ticked)), EST()), 'REVIEWED — all 2 items', 'every value ticked, no value standing unticked: REVIEWED with no read');
+    const many = [];
+    for (let i = 0; i < 42; i++) many.push(ITEM(Object.assign({ stableId: 'c' + i, driveFileId: 'Fc' + i, ts: 10 + i, objectName: 'Checked thing ' + i }, ticked)));
+    for (let i = 0; i < 158; i++) many.push(ITEM({ stableId: 's' + i, driveFileId: 'Fs' + i, ts: 100 + i, objectName: 'Standing thing ' + i }));
+    has(eastern(() => stamp(many, EST(READ))), 'REVIEWED — read by Anthony Graziano, October 26, 2026; 42 items checked; 158 accepted as valued', '⚠⚠ the stamp the page quotes, word for word');
+    has(t, 'Where an Agent Two value stands unticked, they also wait for the list to be read, then print REVIEWED — read by Anthony Graziano, October 26, 2026; 42 items checked; 158 accepted as valued.', 'as the page says');
     has(stamp(two({ disposition: 'Undecided' }), EST()), 'IN PROGRESS', 'one item undecided: IN PROGRESS');
     has(stamp(two({ fmv: '', valLow: undefined, valHigh: undefined }), EST()), 'IN PROGRESS', 'one item not valued: IN PROGRESS');
     has(stamp(two({ flagDisputed: true }), EST()), 'IN PROGRESS', 'one flagged and unticked: IN PROGRESS');
-    has(stamp(two({ flagDisputed: true, reviewed: true, reviewedBy: 'Ashley Jerome', valReviewed: true }), EST()), 'REVIEWED', '…and ticked: REVIEWED');
+    has(eastern(() => stamp(two({ flagDisputed: true, reviewed: true, reviewedBy: 'Ashley Jerome', valReviewed: true }), EST(READ))), 'REVIEWED', '…and ticked, the list read: REVIEWED');
+    // "Last, read the whole list against what you saw and press ✓ I've read the list on the Inventory Review bar: it records who
+    // and when. Change anything after, even a tick, and it says changed since: press it again."
+    has(code(fn('_renderInvWorkbar')), '_invListReadHtml(job, st)', 'the press is on the Inventory Review bar');
+    const RJ = EST();
+    RV.jobs.length = 0; RV.jobs.push(RJ); RV._photoRefs[7] = two();
+    const fresh = attempt(() => decode(RV._invListReadHtml(RJ, { total: 2 }).replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim());
+    eq(fresh.ok ? fresh.val : fresh.err, 'List not read yet · ✓ I’ve read the list', 'unread: the line and the press, in its words');
+    RV.localStorage.setItem('hav_device_user', 'Anthony Graziano');
+    RV.__saved = 0;
+    const pressed = attempt(() => RV.invMarkListRead(7));
+    ok(pressed.ok, 'the press runs (' + (pressed.err || 'ok') + ')');
+    eq([RJ.invRead && RJ.invRead.by, typeof (RJ.invRead && RJ.invRead.at), RV.__saved, RV.__savedJob === RJ], ['Anthony Graziano', 'number', 1, true],
+      '⚠⚠ "it records who and when": the device\'s user and the time, on the job, saved as a person\'s edit');
+    RJ.invRead = { at: AT, by: 'Anthony Graziano' };
+    const done = eastern(() => attempt(() => decode(RV._invListReadHtml(RJ, { total: 2 }).replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim()));
+    eq(done.ok ? done.val : done.err, '✓ List read by Anthony Graziano, October 26, 2026', 'read: green, naming who and when, with no press');
+    RV._photoRefs[7] = two({ updatedAt: AT + 1000 });
+    const since = eastern(() => attempt(() => decode(RV._invListReadHtml(RJ, { total: 2 }).replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim()));
+    eq(since.ok ? since.val : since.err, 'List read by Anthony Graziano, October 26, 2026 · changed since · ✓ I’ve read the list', '⚠ a change after it: "changed since", and the press again');
+    RV._photoRefs[7] = two({ updatedAt: AT + 1000, deletedAt: AT + 1000 });
+    eq(attempt(() => RV.invListChangedAt(7)).val, AT + 1000, '…a removal is a change too');
+    has(code(fn('_invSetReviewed')), '_setPhotoRef(jobId, _invTouch(ref));', '"even a tick": the tick moves the line\'s clock, which the read is measured against');
+    has(t, 'Last, read the whole list against what you saw and press ✓ I’ve read the list on the Inventory Review bar: it records who and when. Change anything after, even a tick, and it says changed since: press it again.', 'as the page says');
+    has(t, 'Read the whole list, then I’ve read the list.', 'and the pocket card');
     // The selection.
     has(code(fn('_renderInvGroupHead')), '>Select all</button>', 'Select all on the group');
     const bulk = code(fn('_renderInvBulk'));
@@ -545,7 +607,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(t, 'With one vendor of that kind confirmed on the Job Plan, it fills itself in.', 'as the page says');
     // 2026-10-24: + Close-up, a close-up missed in the house, is a label over the record's chooser (closeup-later.test.js).
     ['&#10133; Another item in this photo</button>', '&#10133; Close-up</label>', 'Remove line</button>', '>Open photo in Drive</a>'].forEach((w) => has(code(fn('_renderInvPanel')), w, 'the record carries ' + decode(w.replace(/<[^>]+>/g, ''))));
-    has(SRC, 'IN PROGRESS</strong> stamp until every line is named, valued and decided and every flagged line ticked &mdash; they are never withheld.', 'papers print marked IN PROGRESS, never withheld (the work bar, 2026-10-26)');
+    has(SRC, 'IN PROGRESS</strong> stamp until every flagged item is ticked and the list is read since its last change &mdash; they are never withheld.', 'papers print marked IN PROGRESS, never withheld (the work bar, 2026-10-26, Q107)');
     has(t, 'Papers print marked IN PROGRESS until every item is decided, valued and, where flagged, ticked; they are never held back.', 'as the page says (the stamp itself is driven above)');
     has(code(fn('_renderInvWorkbar')), "'+ Add line item'", '+ Add line item');
     const imp = code(fn('_renderInventoryImportPanel'));

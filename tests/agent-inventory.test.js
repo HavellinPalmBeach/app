@@ -121,7 +121,7 @@ function rig(refs, over) {
   const saved = [], synced = [];
   const ctx = sandbox({
     fns: ['agentNameableRefs', 'agentShotGroups', '_agDetailRefs', '_agShotPayload', 'agentListedOff', '_agContext',
-          '_agWrite', 'agentApplyResult', '_agState', 'agentNotices', 'agentNoticeQuiet', 'mustFindAllFound', 'invLineReviewed', '_agStateHtml',
+          '_agWrite', 'agentApplyResult', '_agState', 'agentNotices', 'agentNoticeLoud', 'agentNoticeQuiet', 'mustFindAllFound', 'invLineReviewed', 'invLineOpen', '_agStateHtml',
           'invSplitItemN', 'invSplitItem', '_getPhotoRef', '_setPhotoRef', '_jobInvRefs',
           '_invFileId', '_photoUid', '_invPhotoSource', '_invRoomName', '_invDerivedRefs',
           // The duplicate flag. ⚠ LIFTED, NEVER STUBBED — a stub of the grouping rule is
@@ -132,7 +132,7 @@ function rig(refs, over) {
           // P16: the desk's one removal writer, which records who removed the line.
           '_invTombstoneLine', '_invStampBy', 'deviceUser', '_invJob',
           // P24: the room check's links join the same-name rule in one grouping.
-          '_arDupEligible', 'agentValueUnreviewed', '_avHasFigure', 'invLineAccepted', 'invLineHold', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat'],
+          '_arDupEligible', 'agentValueUnreviewed', '_avHasFigure', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invNeedsAppraisal', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat'],
     vars: ['_agRun', '_avRun', 'AGENT_NOTICE_KINDS', 'AGENT_BATCH', 'AGENT_MAX_DETAILS', 'AGENT_LISTED_MAX', '_agDupSet', 'AGENT_ROOM_CONF_RANK', 'AGENT_ROOM_CONF_WORDS', 'AGENT_PASS_GAP_MS',
            'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY', 'INV_SPLIT_MAX', '_photoUidSeq', 'MAIV_OTHER', 'MAIV_BY_CATEGORY'],
     stubs: Object.assign({
@@ -792,7 +792,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // GREEN. A source check cannot tell a rendered control from a disabled one; this reads the
     // markup the function actually returns. CLAUDE.md records that shape more than any other.
     const rowRig = (dupSet, over) => sandbox({
-      fns: ['invLineReviewed', '_renderInvRow', '_invRowPhotoHtml', '_invRowHasWho', 'invOutForAppraisal', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', 'invPickupRecord', 'signedRecordsOf', '_invRowDomId', '_invRecipientInput', 'invPlanChannel', '_renderInvPanel', 'invCloseUpRefusal', '_invCloseUpsHtml', '_invCloseUpTileHtml', '_avPanelHtml', '_avNoticeLabel', '_avNoticeKinds', '_invDetailRefs', 'invAppraisalSourceText', 'invLineAppraiser', '_invLinkedAppraiser', 'invAppraised', 'invAppraisalInProgress', '_invHasAppraisal', '_invHasValue', '_invPanelAppraisalHtml',
+      fns: ['invLineReviewed', 'invLineOpen', '_renderInvRow', '_invRowPhotoHtml', '_invRowHasWho', 'invOutForAppraisal', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', 'invPickupRecord', 'signedRecordsOf', '_invRowDomId', '_invRecipientInput', 'invPlanChannel', '_renderInvPanel', 'invCloseUpRefusal', '_invCloseUpsHtml', '_invCloseUpTileHtml', '_avPanelHtml', '_avNoticeLabel', '_avNoticeKinds', '_invDetailRefs', 'invAppraisalSourceText', 'invLineAppraiser', '_invLinkedAppraiser', 'invAppraised', 'invAppraisalInProgress', '_invHasAppraisal', '_invHasValue', '_invPanelAppraisalHtml',
             '_invPhotoSiblings', '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef',
             '_invNamed', '_invItemNo',
             // P16: the row names a firearm's dealer route and the panel carries the firearm block.
@@ -800,10 +800,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             // P19: the row names a bequest, an incomplete approval and a receipt owed; the recipient box offers the roster.
             'invBequestFor', 'jobListEntries', 'invApprovalGap', 'invReceiptOwed', '_invBenListAttr',
             // P20: the row says a ratification is owed apart from an incomplete approval, and flags a living client's line going to one of ours.
-            'invRatificationOwed', 'invFiduciaryMode', 'isDecedentJob', 'invReleaseCautions', '_invJob', 'invHavellinRecipient', 'invChannelLeftover', 'invChannelLeftoverText', '_avHasFigure', 'invLineUnsure', '_invEachInput', 'invUnitValue', 'invLineQty', '_agNameKey', '_invInputStyle', '_invCtrlMinW', 'invLineAccepted', 'invLineHold', 'invLineAcceptedOnly', '_invRevBoxHtml', 'invIsMAIV', 'invMAIVDefaultCat', '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_jobInvRefs', '_agDupEligible', 'agentNamedTwice', 'gateDispute', '_gateYes'],
+            'invRatificationOwed', 'invFiduciaryMode', 'isDecedentJob', 'invReleaseCautions', 'invBequestElsewhere', '_invJob', 'invHavellinRecipient', 'invChannelLeftover', 'invChannelLeftoverText', '_avHasFigure', 'invLineUnsure', '_invEachInput', 'invUnitValue', 'invLineQty', '_agNameKey', '_invInputStyle', '_invCtrlMinW', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invNeedsAppraisal', 'invLineAcceptedOnly', '_invRevBoxHtml', 'invIsMAIV', 'invMAIVDefaultCat', '_invAcceptCtxOf', 'agentNoticeLoud', 'invAcceptCtx', 'agentDuplicateGroups', '_jobInvRefs', '_agDupEligible', 'agentNamedTwice', 'gateDispute', '_gateYes'],
       vars: ['INV_PLAN_CHANNEL_KINDS', 'INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick', '_agDupSet',
              // P20 vars: the catalogues the row's new questions read.
-             'DECEDENT_SERVICES', 'INV_RELEASE_CAUTIONS', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', '_agDupSetJob', 'INV_HOLD_WORDS'],
+             'DECEDENT_SERVICES', 'INV_RELEASE_CAUTIONS', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', '_agDupSetJob', 'INV_HOLD_WORDS', 'INV_OPEN_HOLDS', 'INV_ACCEPT_AMMO_RE'],
       stubs: {
         _invInput: () => '', _invThumbHTML: () => '<div></div>', _invRoomName: () => 'Entry & Living',
         invIsFirearm: () => false, invReleaseBlocked: () => false, invAwaitingAppraisal: () => false,

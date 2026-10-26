@@ -52,7 +52,7 @@ const ITEM = (id, over) => Object.assign({
   driveFileId: 'f' + id, driveFileUrl: 'https://drive.google.com/file/d/f' + id + '/view',
 }, over || {});
 
-const PRINT_FNS = ['_invDocPartyHead', 'invLineReviewed', 'invInitialGroupWords', 'invOwnInitial', 'invInitialGroupKey', 'invDocContractBlock',
+const PRINT_FNS = ['_invDocPartyHead', 'invLineReviewed', 'invLineOpen', 'invInitialGroupWords', 'invOwnInitial', 'invInitialGroupKey', 'invDocContractBlock',
   'printContentsRecord', 'contentsRecordSignoff', 'dispositionRecord', 'printApprovalRequest', 'invDispDocWord', 'printCourtInventory', 'jobOnProbateTrack', '_avUnreviewedStamp',
   'agentShotGroups', 'agentNameableRefs', '_agState', '_agStateHtml', '_agNoticesHtml', 'agentNotices',
   'printDispositionLedger', 'referralFeeVendorsNote', 'vendorPaysReferral', '_vendorByName', '_vendorNameKey', '_andJoin', '_renderInvWorkbar', '_arCheckButtonHtml', '_arState', 'agentRoomsToCheck', '_arCheckable', '_arStateHtml', '_avValueButtonHtml', 'agentValueableRefs', '_avHasFigure', '_invHasValue', '_avStateHtml', '_avState', '_avNoticesHtml', 'agentValueNotices', '_avNoticeKinds', '_avNoticeLabel', 'agentValueInternal', 'agentValueUnreviewed', 'agentValueStale', 'agentValueSpecialistWorth', 'invPrimaryDoc', '_invReviewStats', '_invProgressStamp',
@@ -87,7 +87,7 @@ const PRINT_FNS = ['_invDocPartyHead', 'invLineReviewed', 'invInitialGroupWords'
   // The job-flow audit (2026-10-08): the Contents Record says every line was photographed, and shared, only where it was.
   '_invHasPhoto', 'photoShareLive',
   // 2026-10-22: the signed schedules, beside the ledger in the close-out papers.
-  '_renderSignedSchedulesCard', 'signedScheduleRows', 'invLineAccepted', 'invLineHold', 'invLineAcceptedOnly', '_invAcceptedStampWords', '_arDupEligible', '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_agDupEligible', 'agentNamedTwice', '_invListReadHtml', 'invListRead'];
+  '_renderSignedSchedulesCard', 'signedScheduleRows', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invLineAcceptedOnly', '_invAcceptedStampWords', 'invListReadRefusal', '_invManifestUnread', '_arDupEligible', '_invAcceptCtxOf', 'agentNoticeLoud', 'invAcceptCtx', 'agentDuplicateGroups', '_agDupEligible', 'agentNamedTwice', '_invListReadHtml', '_invReadKey', 'invListRead'];
 const PRINT_VARS = ['INV_LINE_INITIAL_MIN', 'INV_DISP_DOC_WORDS', 'CONTENTS_SIGNED_REF',  'INV_CONTRACT_DOCS',
   '_agRun', '_avRun', '_arRun', 'AGENT_NOTICE_KINDS', 
   'INV_DISPOSITIONS', 'INV_GROUP_ORDER', 'INV_RELEASE_DISPOSITIONS', 'INV_RELEASE_CAUTIONS',
@@ -100,7 +100,7 @@ const PRINT_VARS = ['INV_LINE_INITIAL_MIN', 'INV_DISP_DOC_WORDS', 'CONTENTS_SIGN
   'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DOC_SCOPES', 'AS_FOUND_SUBFOLDER', 'PHOTO_SUBFOLDER',
   'LEDGER_DOC_KEY', 'LEDGER_SIGNED_REF', 'SIGNED_RECORD_KINDS', 'INV_SALE_DISPOSITIONS', '_signedCopyKeys', '_signedCopySpecs', 'INV_NET_LABELS',
   // P20 vars: the names the living client's staff caution reads.
-  'PERSON_NAME_ALIASES', '_agDupSetJob'];
+  'PERSON_NAME_ALIASES', '_agDupSetJob', 'INV_OPEN_HOLDS', 'INV_ACCEPT_AMMO_RE'];
 
 function rig(job, refs) {
   const printed = [];

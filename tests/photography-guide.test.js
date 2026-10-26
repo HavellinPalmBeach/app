@@ -295,8 +295,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const asked = content.filter((b) => b.type === 'text').map((b) => b.text).join(' ');
     has(asked, 'is a close-up of something in it — a maker\'s mark, a signature, a hallmark. Read it and use it to name the object', '⚠ with the instruction to read the mark and name the group by it');
     has(gsFn('_agSystem'), 's mark, signature or hallmark is readable on them. ', 'everyday dishes stay household goods unless a mark is readable: the mark is what changes the name');
-    // The desk asks no tick of tableware for it (Q103): the review's rule names no silver, stainless, china or glass.
-    const rule = live(fn('invLineAccepted'));
+    // The desk asks no tick of tableware for it (Q103): the review's rule names no silver, stainless, china or glass. Since the
+    // reviewers' round (2026-10-26) the rule is invLineHold, which says why a line is held; invLineAccepted asks it.
+    has(live(fn('invLineAccepted')), 'return !invLineHold(ref, fc);', 'fixture: the rule is invLineHold');
+    // Since the second reviews (2026-10-26) invLineHold is the first of _invLineHolds' reasons, where the rule is written.
+    const rule = live(fn('invLineAccepted')) + live(fn('invLineHold')) + live(fn('_invLineHolds'));
     ok(rule.length > 400, 'fixture: the review rule read (' + rule.length + ' chars)');
     ok(!/stainless|sterling|flatware|china|glass|silver/i.test(rule), '⚠ no tableware rule in the review');
   }

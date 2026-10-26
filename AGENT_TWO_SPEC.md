@@ -386,28 +386,60 @@ and browser step 69.
     count corrected at the desk carries Each across (`_invQtyCarriesValue`, the agent's range scaled with it; an appraised
     line never moved). The prompt says the desk reads one article's value as the line's over its Quantity.
 - **Only flagged lines take a tick (2026-10-26, Q106; it replaced the $100 line of 2026-10-25, Q99, and carries Q100 to
-  Q105):** Anthony: *"we will be obviously going back to the office and looking over the entire inventory list ourselves to
-  make sure everything looks right … this is our job at night. The agent identifies everything and then values it. And then
-  we go back and we go over the list and we make sure it makes sense. And we verify it with what we saw on site"*; he took
-  *"Only flagged lines"*. There is no value limit: `INV_REVIEW_FLOOR`, `invLineUnderFloor` and `_invFloorStampWords` are
-  gone. One predicate, `invLineAccepted(ref, fc)`, asked first by `invLineReviewed`, with the job-wide facts in `fc`
-  (`invAcceptCtx(job, all)`: the job, and every line in an open `agentDuplicateGroups` group; the desk's paint reads its
-  cached index through `_invAcceptCtxOf`; with no context no line stands): a live line with a name, a destination (not
-  Undecided or Hold) and a figure, Agent Two's (`_avHasFigure`, the range alone where counsel values) or the desk's
-  (`valuedBy` desk with a value, Q105), stands with no tick unless it is flagged: any line on a disputed estate
-  (`gateDispute`, Q102); `agentValueStale`; Agent One's name and Agent Two's figure both low (Q101; either alone stands, so on a
-  decided, valued line `invLineUnsure`'s hint stays only where both were guessing); a firearm, `flagNFA` or ammunition in the name
-  (`INV_ACCEPT_AMMO_RE`); `needsAppr`, `apprId`, `invNeedsAppraisal(ref, job)` (the appraisal threshold in any category; an
-  intrinsic category with no value) or `agentValueSpecialistWorth` (living work); `flagBequest`, `flagDisputed`, a lot over
-  the Form 706 article cap (`invLotSplitState` `over`); its own `agentNotices` or `valNotices`, or an Agent One note still
-  open on its photograph's line (`_invPhotoNoteOpen`); `_arDupEligible` or an open duplicate group (`fc.dup`); any
-  `invReleaseCautions`. The intrinsic categories and MAIV are no longer flags of their own (the $100 line's were). Sterling
-  that looks like stainless is the photography guide's close-up of the mark (Q103), never a rule. Nothing is written to
-  the line: `invLineAcceptedOnly` (accepted, Agent Two's figure, no `valReviewed`; on a paper that prints no values also no
-  `reviewed` and not `namedBy` desk) is `_invReviewStats`' `accepted`, and every other reviewed line is "checked".
-  `_invProgressStamp` prints *REVIEWED — 42 items checked; 158 accepted as valued* (*accepted as named* on the Contents List,
-  the Disposition Ledger and the Contents Record; Q100), and `_avUnreviewedStamp` (§12.2's count) leaves those lines out of
-  *N values not yet reviewed* and prints a grey *N accepted as valued* beside it on the Court Inventory and the Trust
-  Schedule (Q104; the Estate Inventory Report's own stamp names them, `noAccepted`). The row's box is ticked in grey and
-  still pressable, and a press records the person's look (`_invStampLineReviewed`); the work bar reads *N of M reviewed ·
-  K accepted*. Agent Two is still never told a threshold, and no backend changed.
+  Q105):** Anthony: *"we will be obviously going back to the office and looking over the entire inventory list ourselves
+  to make sure everything looks right … this is our job at night. The agent identifies everything and then values it.
+  And then we go back and we go over the list and we make sure it makes sense. And we verify it with what we saw on
+  site"*; he took *"Only flagged lines"*. There is no value limit: `INV_REVIEW_FLOOR`, `invLineUnderFloor` and
+  `_invFloorStampWords` are gone. One predicate, `invLineAccepted(ref, fc)` (`!invLineHold(ref, fc)`, below), asked
+  first by `invLineReviewed`, with the job-wide facts in `fc` (`invAcceptCtx(job, all)`: the job, and every line in an
+  open `agentDuplicateGroups` group; the desk's paint reads its cached index through `_invAcceptCtxOf`; with no context
+  no line stands): a live line with a name, a destination (not Undecided or Hold) and a figure, Agent Two's
+  (`_avHasFigure`, the range alone only where counsel values, `agentValueInternal`; where the papers state values
+  `_invHasValue`), the desk's (`valuedBy` desk with a value, Q105) or an appraisal's typed from the report (`valuedBy`
+  appraiser and `invAppraised`), stands with no tick unless it is flagged: any line on a disputed estate (`gateDispute`,
+  Q102; a line named and decided on the desk is reviewed by that act there too); `agentValueStale`; Agent One's name and
+  Agent Two's figure both low (Q101; either alone stands, and `invLineUnsure`'s hint still shows on it, Q108, below); a
+  firearm, `flagNFA` or ammunition in the name or in `valNameFrom` (`INV_ACCEPT_AMMO_RE`: a round, cartridge or shell
+  beside a calibre or gauge, and the words ammunition, ammo, shotshells, shotgun shells, gunpowder, black and smokeless
+  powder, buckshot, birdshot, rimfire, centerfire, primers and reloading supplies; a bare gauge, as on a brad nailer or
+  an extension cord, stands); `needsAppr`, `apprId`, `invNeedsAppraisal(ref, job)` (the appraisal threshold in any
+  category; an intrinsic category with no value) or `agentValueSpecialistWorth` (living work), until the appraisal's
+  figure is on the line; `flagBequest`, `flagDisputed`; its own `agentNotices` while not quiet (`agentNoticeQuiet`), its
+  `valNotices` while the figure is Agent Two's, or an Agent One note still open on its photograph's line
+  (`_invPhotoNoteOpen`, never off a removed line); an open duplicate group (`fc.dup`; a tick never answers one, since
+  `_agDupEligible` no longer leaves out reviewed lines: only Remove or Not duplicates, `dupOK`); any
+  `invReleaseCautions`. A lot over the Form 706 article cap is not a hold (a tick does not split a lot; *Lots to split*
+  asks for it). The intrinsic categories and MAIV are no longer flags of their own (the $100 line's were). Sterling that
+  looks like stainless is the photography guide's close-up of the mark (Q103), never a rule. Nothing is written to the
+  line: `invLineAcceptedOnly` (accepted, Agent Two's figure, no `valReviewed`; on a paper that prints no values also no
+  `reviewed` and not `namedBy` desk) is `_invReviewStats`' `accepted`, and every other reviewed line is "checked" (a
+  tick before Agent Two's figure landed is not a look at the figure). `_invProgressStamp` prints *IN PROGRESS — 30 of 32
+  items checked; 158 accepted as valued* (*accepted as named* on the Contents List, the Disposition Ledger and the
+  Contents Record; Q100) and, once the list is read, *REVIEWED — read by Anthony Graziano, October 26, 2026; 42 items
+  checked; 158 accepted as valued* (Q107, below); `_avUnreviewedStamp` (§12.2's count) counts in *N values not yet
+  reviewed* only unreviewed agent values on lines that do not stand (flagged, or not yet decided) and prints a grey *N
+  accepted as valued* beside it on the Court Inventory and the Trust Schedule (Q104; the Estate Inventory Report's own
+  stamp names them, `noAccepted`). The row's box is ticked in grey and still pressable, and a press records the person's
+  look (`_invStampLineReviewed`); the work bar reads *N of M reviewed · K accepted*. Agent Two is still never told a
+  threshold, and no backend changed.
+- **The list read, the hint on any guess, and the reason a line is held (2026-10-26, Q107 and Q108):** the night's read
+  is the review (Q106), and the app cannot witness a read it is not told of: with the agents finishing by themselves, a
+  paper printed *REVIEWED* before anyone had opened the desk. Anthony took *"One 'List read' press"* (Q107): **✓ I've
+  read the list** on the work bar (`_invListReadHtml`, `#inv-read-<jobId>`) runs `invMarkListRead(jobId)`, which records
+  `job.invRead = {at, by}` (`_invStampBy`) as a person's edit (`_saveJobEdit`). `invListChangedAt(jobId)` is the newest
+  `updatedAt` (else `ts`) of the job's inventory lines, removed ones included; `invListRead(job)` answers `{at, by,
+  current}`, current while the read is not older than that change, so a later name, figure, destination, tick, removal
+  or Agent Two run makes it the read of an earlier list (*List read by … · changed since*). Where any line stands as the
+  agents left it (`accepted > 0`), `_invProgressStamp` prints *REVIEWED* only on a current read, naming it
+  (`invListReadWords`: *read by Anthony Graziano, October 26, 2026*); with every line checked or standing and no current
+  read it prints *IN PROGRESS — 42 items checked; 158 accepted as valued; the list not yet read* (*… since it last
+  changed* where an older read exists) with the caveat *Every item is named and decided; the list has not been read
+  through*. Where nothing stands that way the stamps read as before (*1 item* on a list of one). The schedules' grey
+  count carries it (`_avReadWords`: *· list read by …*, *· list not yet read*, *… since it changed*), and the work bar
+  says *until every flagged item is ticked and the list is read since its last change*. Q108 (*"Show it, no tick"*):
+  `invLineUnsure(ref)` takes no context again (`invLineReviewed(ref)` without one), so the bronze *unsure* shows
+  wherever either agent was guessing, on a line that stands too, until a person's look; the tick is still wanted only
+  where both guessed. `invLineHold(ref, fc)` answers why a line is held (`gone`, `nocontext`, `dispute`, `noname`,
+  `nodest`, `nofigure`, `stale`, `guess`, `firearm`, `appraisal`, `bequest`, `disputed`, `note`, `valnote`, `photonote`,
+  `duplicate`, `caution`) or `''`; `INV_HOLD_WORDS` gives the row's box its tooltip, *Needs a look:* and the reason,
+  then *Tick it once checked.* No backend changed.
