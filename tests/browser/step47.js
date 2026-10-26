@@ -153,7 +153,9 @@ const T0 = Date.parse('2026-09-24T15:00:00Z');   // a past day, so each desk ope
         L('lp', { itemNo: 6, objectName: 'Brass lamp', disposition: 'Donate', channel: 'Goodwill Palm Beach' }),
       ];
       _photoRefs[4703] = [
-        L('pt', { itemNo: 1, objectName: 'Oil painting', category: 'Art & Décor', disposition: 'Auction', channel: 'Christie’s', needsAppr: true }),
+        // A firearm since 2026-10-26: on a client's own home only a firearm, or an item going to someone who works with Havellin,
+        // reaches the request at all (Anthony: "Drop it, firearms aside"); the lamp to Goodwill goes on the client's word.
+        L('pt', { itemNo: 1, objectName: 'Purdey shotgun', category: 'Firearms', disposition: 'Auction', channel: 'Christie’s', needsAppr: true }),
         L('lm', { itemNo: 2, objectName: 'Floor lamp', disposition: 'Donate', channel: 'Goodwill Palm Beach' }),
       ];
       _photoRefs[4704] = [L('x1', { itemNo: 1, objectName: 'Dining table', disposition: 'Sell' })];
@@ -331,7 +333,8 @@ const T0 = Date.parse('2026-09-24T15:00:00Z');   // a past day, so each desk ope
       await press('#inv-workbar button[onclick="printApprovalRequest(4703)"]', 'Approval Request (living)');
       await p.waitForTimeout(400);
       const req = await T((await lastPrint()).html);
-      has(req, 'Oil painting', 'fixture: the painting is on the request');
+      has(req, 'Purdey shotgun', 'fixture: the shotgun is on the request');
+      lacks(req, 'Floor lamp', '⚠⚠ the lamp to Goodwill is not: the client\'s word approves it (2026-10-26)');
       lacks(req, 'reported under oath', '⚠⚠ no "reported under oath" on a living client\'s request');
       lacks(req, 'has not been valued yet', 'and no valuation notice at all');
     });

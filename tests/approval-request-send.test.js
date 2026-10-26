@@ -420,9 +420,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(via.last().m, 'No fiduciary has an email on file, so it is addressed to the estate attorney; Rex Hale sign through counsel or on the printed copy.', 'the notice says so');
     has(text(via.card()), 'Rex Hale had no email: it went through the estate attorney.', 'and the card');
 
+    // ⚠ restated 2026-10-26 (Anthony: "Drop it, firearms aside"): on a client's own home only a firearm, or a line going to
+    // someone who works with Havellin, is asked for in writing; the sofa to Habitat is approved by the client's word.
     const liv = rig({ job: LIVING(), rows: [
-      ROW('a', { itemNo: 1, objectName: 'Sofa', fmv: '', valSource: '', disposition: 'Donate', channel: 'Habitat ReStore' }),
-      ROW('b', { itemNo: 2, objectName: 'Desk', fmv: '', valSource: '', disposition: 'Keep' }) ] });
+      ROW('a', { itemNo: 1, objectName: 'Browning rifle', category: 'Firearms', fmv: '', valSource: '', disposition: 'Distribute', channel: 'Tom Ellis' }),
+      ROW('b', { itemNo: 2, objectName: 'Desk', fmv: '', valSource: '', disposition: 'Keep' }),
+      ROW('e', { itemNo: 3, objectName: 'Sofa', fmv: '', valSource: '', disposition: 'Donate', channel: 'Habitat ReStore' }) ] });
     eq(liv.c.sendApprovalRequest(7), true, 'a living client’s request goes too');
     const lm = liv.N.log.drafts[0];
     eq(headerOf(lm, 'To'), 'meg@ellis.example', 'to the client');
@@ -432,7 +435,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(lp.text, 'Release Approval Request for your property at 9 Dunbar Rd, Palm Beach, as of October 17, 2026: 1 line proposed to leave the property.', 'for their property, one line');
     lacks(lp.text, 'Estate of', 'never an estate');
     lacks(lp.text, 'co-representative', 'no fiduciary words');
-    eq(liv.st().req.stableIds, ['a'], 'the Donate line alone');
+    eq(liv.st().req.stableIds, ['a'], '⚠⚠ the firearm alone: the sofa to Habitat is not asked for (2026-10-26)');
+    // Only everyday lines leaving: refused by name with the rule, nothing drafted; a selection of them likewise.
+    const plain = rig({ job: LIVING(), rows: [ROW('e', { itemNo: 3, objectName: 'Sofa', fmv: '', valSource: '', disposition: 'Donate', channel: 'Habitat ReStore' })],
+      stubs: { _invPick: { e: 1 } } });
+    eq(plain.c.sendApprovalRequest(7), false, '⚠⚠ a living job with only everyday lines leaving: refused');
+    has(plain.last().m, 'Nothing is waiting on written approval. On a client’s own home only a firearm, or an item going to someone who works with Havellin, needs written approval: the client’s word approves the rest, and the Contents Record they sign at the close is the record.', 'with the rule');
+    eq(plain.c.sendApprovalRequest(7, true), false, 'a selection of them: refused');
+    has(plain.last().m, 'None of the lines selected needs written approval.', 'said so, not "select the lines first"');
+    eq(plain.N.log.drafts.length, 0, 'nothing drafted');
   });
 
   G('C · refused by name, nothing posted: nobody to send to, nothing waiting, busy, the sheet unread, a selection of nothing', () => {
@@ -739,7 +750,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   });
 
   G('G · on living work: the same press, the client\'s name asked, the request\'s lines with their unticks', () => {
-    const R = recRig({ job: LIVING() });
+    // ⚠ restated 2026-10-26: on living work the request carries a firearm (the protocol's written authority) or a line going
+    // to someone who works with Havellin; here two firearms, the shotgun to auction and the rifle to a son.
+    const R = recRig({ job: LIVING(), rows: INVENTORY().map((r) => r.stableId === 'a' ? Object.assign(r, { objectName: 'Purdey shotgun', category: 'Firearms' })
+      : r.stableId === 'b' ? Object.assign(r, { objectName: 'Browning rifle', qty: 1, category: 'Firearms', disposition: 'Distribute', channel: 'Tom Ellis' }) : r) });
     R.c.sendApprovalRequest(7); R.c.invMarkRequestSent(7);
     eq(R.recBtns(), 1, 'offered on living work');
     ok(R.c.invRecordRequestApproval(7), 'pressed');
@@ -750,8 +764,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     R.el('ia-signer').value = 'Margaret Ellis';
     R.el('ia-line-0').checked = false;
     ok(R.c.invSaveApproval(), 'recorded');
-    eq(R.row('a').authBy, undefined, 'the unticked portrait: nothing');
-    eq(R.row('b').authBy, 'Margaret Ellis', 'the chairs: the client');
+    eq(R.row('a').authBy, undefined, 'the unticked shotgun: nothing');
+    eq(R.row('b').authBy, 'Margaret Ellis', 'the rifle: the client');
     eq(R.c._invPick, { a: 1 }, 'the selection untouched');
   });
 

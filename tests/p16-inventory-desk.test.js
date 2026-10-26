@@ -302,19 +302,23 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   G('B10 · a living client\'s Approval Request prints no valuation caution; an estate\'s still does', () => {
     const printed = [];
-    const docRig = (job) => lift(['printApprovalRequest', '_invBulkApply'],
+    // ⚠ On a living job the two lines are firearms (2026-10-26, Anthony: "Drop it, firearms aside"): on a client's own home only
+    // a firearm, or a line going to someone who works with Havellin, reaches the request at all.
+    const docRig = (job, gun) => lift(['printApprovalRequest', '_invBulkApply'],
       ['_printDocument', '_invPrintThumb', 'showSyncBadge', 'renderInventoryTab', '_scheduleInventorySync'], {
         jobs: [Object.assign({}, job)],
         _photoRefs: { [job.id]: [
           // A buyer named: an item with nobody named to take it is held off the request (2026-10-26, "Hold them off").
-          LINE('a', { itemNo: 1, objectName: 'Oil painting', category: 'Art & Décor', disposition: 'Auction', channel: 'Christie’s', needsAppr: true }),
-          LINE('b', { itemNo: 2, objectName: 'Locket', category: 'Jewelry & Watches', disposition: 'Distribute', channel: 'Karen', flagBequest: true, fmv: '200' }),
+          LINE('a', Object.assign({ itemNo: 1, objectName: 'Oil painting', category: 'Art & Décor', disposition: 'Auction', channel: 'Christie’s', needsAppr: true },
+            gun ? { objectName: 'Purdey shotgun', category: 'Firearms' } : {})),
+          LINE('b', Object.assign({ itemNo: 2, objectName: 'Locket', category: 'Jewelry & Watches', disposition: 'Distribute', channel: 'Karen', flagBequest: true, fmv: '200' },
+            gun ? { objectName: 'Engraved pistol', category: 'Firearms' } : {})),
         ] },
         _printDocument: (html) => { printed.push(html); return true; }, _invPrintThumb: () => '',
         showSyncBadge: () => {}, renderInventoryTab: () => {}, _scheduleInventorySync: () => {},
         estimateStore: { [job.id]: { estimate: { rooms: ROOMS } } }, document: domStub({}),
       });
-    const L = docRig(LIVING);
+    const L = docRig(LIVING, true);
     const r = attempt(() => L.printApprovalRequest(2, false));
     ok(r.ok, 'the living request prints' + (r.ok ? '' : ': ' + r.err));
     const living = text(printed[printed.length - 1]);
@@ -323,7 +327,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(living, 'has not been appraised yet', 'no valuation notice at all above the table');
     lacks(living, 'NOT YET APPRAISED', 'and none on the row (as before)');
     has(living, 'Specific bequests on this request', 'the bequest caution is not fiduciary and still prints');
-    has(living, 'Oil painting', 'the line is on the request, going where the family said');
+    has(living, 'Purdey shotgun', 'the line is on the request, going where the family said');
     const E = docRig(ESTATE);
     E.printApprovalRequest(7, false);
     const estate = text(printed[printed.length - 1]);
@@ -437,9 +441,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // B22 (a) · ONE APPROVAL REQUEST BUTTON
   // ═══════════════════════════════════════════════════════════════════════════
   G('B22a · the workbar draws the Approval Request once, at every tier', () => {
-    const bar = (job) => {
+    const bar = (job, over) => {
       const s = lift(['_renderInvWorkbar'], [], {
-        jobs: [Object.assign({}, job)], _photoRefs: { [job.id]: [LINE('a')] },
+        jobs: [Object.assign({}, job)], _photoRefs: { [job.id]: [LINE('a', over || {})] },
         estimateStore: { [job.id]: { estimate: { rooms: ROOMS } } }, document: domStub({}),
       });
       return s._renderInvWorkbar(Object.assign({}, job), s._jobInvRefs(job.id));
@@ -450,7 +454,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ['contents', 'values', 'appraisals'].forEach((tier) => {
       eq(count(bar(Object.assign({}, ESTATE, { docTier: tier })), 'onclick="printApprovalRequest(7)"'), 1, tier + ': once');
     });
-    eq(count(bar(LIVING), 'onclick="printApprovalRequest(2)"'), 1, 'a living job: once');
+    // ⚠ restated 2026-10-26 (Anthony: "Drop it, firearms aside"): on a client's own home only while a line needs the client's
+    // written approval there (a firearm, or someone who works with Havellin); their word approves the rest.
+    eq(count(bar(LIVING, { disposition: 'Donate', channel: 'Goodwill' }), 'printApprovalRequest('), 0, '⚠⚠ a living job with a donation leaving: none');
+    const gun = bar(LIVING, { objectName: 'Browning rifle', category: 'Firearms', disposition: 'Distribute', channel: 'Tom Ellis' });
+    eq(count(gun, 'onclick="printApprovalRequest(2)"'), 1, 'a living job with a firearm leaving: once');
+    has(gun, 'Written approval of a firearm, or an item going to someone who works with Havellin, for the client to sign before it leaves.', 'titled for what it carries');
     // The Share w/ Counsel tooltip names both folders, by the rule that files the shots.
     has(bar(ESTATE), 'Read-only access to the Estate Inventory and As-Found Record Drive folders',
         'Share w/ Counsel names both photograph folders it shares');

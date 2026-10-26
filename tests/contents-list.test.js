@@ -491,7 +491,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       '_renderInvWorkbar', '_arCheckButtonHtml', '_arState', 'agentRoomsToCheck', '_arCheckable', '_arStateHtml', '_avValueButtonHtml', 'agentValueableRefs', '_avHasFigure', '_invHasValue', '_avStateHtml', '_avState', '_avNoticesHtml', 'agentValueNotices', '_avNoticeKinds', '_avNoticeLabel', 'agentValueInternal', 'agentValueUnreviewed', 'agentValueStale', 'agentValueSpecialistWorth', 'invPrimaryDoc', '_invProgressBar', 'invWorkFlags', '_invNeedsValue',
       'printEstateInventoryReport', '_avUnreviewedStamp', 'printContentsRecord', '_invHasPhoto', 'photoShareLive', 'photoSharesOf', '_invDispLabel',
       'invReleaseBlocked', 'invIsFirearm', 'invTransportBlocked', 'invFirearmAuthorized',
-      'invAwaitingAppraisal', '_invHasAppraisal', '_jobAppraisers', '_invAwaitingApproval',
+      'invAwaitingAppraisal', '_invHasAppraisal', '_jobAppraisers', '_invAwaitingApproval', 'invWrittenReleaseNeeded',
       'invProbateRows', 'matterDef', 'matterTypeOf', 'maivFilingApplies', '_gate706',
       // P16: the gate reads the dealer route; the share names both photo folders by the filing rule.
       'invDealerRoute', 'invDealerRouteOffered', 'invTransportDealer', 'invChannelLeftover', 'photoSubfolder', 'photoSharesLine', 'photoSharesOf', 'agentNoticesOn']);

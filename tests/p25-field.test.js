@@ -229,13 +229,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const line = (o) => Object.assign({ stableId: '7_col_c1', label: 'inventory', sourceCollId: 'c1', objectName: 'Coin collection', disposition: 'Auction' }, o || {});
     const CP = (refs, job) => lift(['collectionPartnerLines'], STATE, Object.assign(BASE(), { _photoRefs: { 7: refs }, jobs: [job] }))
       .collectionPartnerLines(7, job, { id: 'c1', name: 'Coin collection' });
-    let L = CP([line()], LIVING());
+    // ⚠ On an estate since 2026-10-26: the written release is every leaving line's there; on a client's own home it is a
+    // firearm's or a line going to someone who works with Havellin (Anthony: "Drop it, firearms aside"), below.
+    let L = CP([line()], PROBATE());
     eq(L.map((l) => l.ok), [false, false, false], 'nothing done: three open lines');
     eq(L.map((l) => l.key), ['coll_photo', 'coll_approved', 'coll_released'], 'the three facts');
-    L = CP([line({ filename: 'x.jpg', authBy: 'Jane Doe', approvalDate: '2026-10-08', dispDate: '2026-10-09' })], LIVING());
+    L = CP([line({ filename: 'x.jpg', authBy: 'Tripp Butler', approvalDate: '2026-10-08', dispDate: '2026-10-09' })], PROBATE());
     eq(L.map((l) => l.ok), [true, true, true], '⚠⚠ photographed, approved in writing and released on the record: all three green, no tick');
-    L = CP([line({ filename: 'x.jpg', disposition: 'Keep' })], LIVING());
+    L = CP([line({ filename: 'x.jpg', disposition: 'Keep' })], PROBATE());
     eq([L[1].ok, L[1].detail], [false, 'no line of it is set to leave yet'], 'a collection staying is never "approved"');
+    // A living client's coin collection to auction is approved by their word: no written-release line, two facts.
+    L = CP([line()], LIVING());
+    eq(L.map((l) => l.key), ['coll_photo', 'coll_released'], '⚠⚠ living work: no "Release approved in writing" for an everyday collection');
+    L = CP([line({ objectName: 'Gun collection', category: 'Firearms' })], LIVING());
+    eq(L.map((l) => [l.key, l.ok]), [['coll_photo', false], ['coll_approved', false], ['coll_released', false]], 'a firearms collection: the client\'s written approval is asked');
     has(fn('renderVendorSourcing'), 'collectionPartnerLines(jobId, job, c)', 'the Collection Partners card draws them');
     lacks(codeOnly(fn('renderVendorSourcing')), "'coll_' + c.id + '_2'", 'and the three boxes are gone');
     const prep = codeOnly(fn('renderPrepJobPlan'));

@@ -91,7 +91,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // so the rule is the one before P19). Line 'e' carried a date with no signer, which was never an approval: it now
     // carries both, and 'g' (a date alone) is back on the list, which is the stricter reading of the same promise.
     const ctx = sandbox({
-      fns: ['_invAwaitingApproval', '_invJob', 'invApprovalComplete', 'invApprovalMissing', 'jobFiduciaries',
+      fns: ['_invAwaitingApproval', 'invWrittenReleaseNeeded', '_invJob', 'invApprovalComplete', 'invApprovalMissing', 'jobFiduciaries',
             'jobListEntries', 'invFiduciaryMode', 'isDecedentJob'],
       vars: ['INV_RELEASE_DISPOSITIONS', 'DECEDENT_SERVICES'],
       stubs: { _jobInvRefs: () => ctx.__rows, jobs: [{ id: 1, svc: 'probate' }] },

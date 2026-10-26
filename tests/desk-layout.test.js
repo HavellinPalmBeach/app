@@ -793,10 +793,16 @@ function groupC({ group, ok, eq, has, lacks }) {
   {
     let B = bars(LIVING(), [LINE('a'), LINE('b', { disposition: 'Keep' })]);
     eq(B.releases.show, false, 'a living job with nothing leaving: no Releases bar');
+    // ⚠ restated 2026-10-26 (Anthony, on a living client: "they are going to approve things verbally to send"; he took "Drop
+    // it, firearms aside"): an everyday line leaving is approved by the client's word, so the bar is drawn for its sign-out
+    // and nothing is owed; a firearm (or a line going to someone who works with Havellin) still waits on their signature.
     B = bars(LIVING(), [LINE('a', { disposition: 'Donate', channel: 'Goodwill' })]);
-    eq([B.releases.show, B.releases.openByDefault], [true, true], 'a line leaving: drawn, and the client\'s approval is owed (Q89)');
-    eq(B.line('releases'), '1 item needs written approval: send a request · 1 ready to sign out', '⚠ and on living work a line may be signed out meanwhile, so both are said');
+    eq([B.releases.show, B.releases.openByDefault], [true, false], '⚠⚠ a donation leaving: drawn for its sign-out, and no written approval owed');
+    eq(B.line('releases'), '1 ready to sign out', 'so the line says only that');
     lacks(B.line('releases'), 'beneficiar', 'no estate words on living work');
+    B = bars(LIVING(), [LINE('f', { objectName: 'Browning rifle', category: 'Firearms', disposition: 'Distribute', channel: 'Tom Ellis' })]);
+    eq([B.releases.show, B.releases.openByDefault], [true, true], '⚠⚠ a firearm leaving: drawn, and the client\'s written approval is owed (Q89)');
+    eq(B.line('releases'), '1 item needs written approval: send a request', 'said');
   }
 }
 
@@ -967,10 +973,11 @@ function groupE({ group, ok, eq, has, lacks }) {
       _invRefreshSummary() {} } });
     D.render();
     // ⚠ restated 2026-10-26 (Anthony: "Hold them off"): with nobody named the line is not asked for, and the bar says what it waits on.
-    eq(line(heads(D.dom.html), 'releases'), '1 item waits for somebody to be named to take it', 'fixture: the donation waits for a taker');
+    // ⚠ restated 2026-10-26 again: on a client's own home a donation needs no written approval, so with nobody named it waits on nothing.
+    eq(line(heads(D.dom.html), 'releases'), '✓ nothing waiting', 'fixture: the donation waits on nothing yet');
     const s = settle(D, () => D.C._invEdit(7, 'a', 'channel', { value: 'Goodwill', type: 'text' }));
     ok(s.r.ok, 'the edit runs (' + (s.r.err || 'ok') + ')');
-    eq(line(s.partial, 'releases'), '1 item needs written approval: send a request · 1 ready to sign out', '⚠ the charity named: ready to sign out, said at once');
+    eq(line(s.partial, 'releases'), '1 ready to sign out', '⚠ the charity named: ready to sign out, said at once');
     eq(s.partial, s.full, '⚠⚠ every bar reads what a full render draws');
     eq(D.log.renders, 0, 'the edit drew no full render: it repainted by id');
   }

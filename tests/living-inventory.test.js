@@ -61,7 +61,7 @@ const PRINT_FNS = ['_invDocPartyHead', 'invReleaseRecipientNamed', 'invLineRevie
   '_invAssignItemNos', '_invItemNo', '_invNamed', '_invRoomName', '_invDispLabel',
   '_invCautionBadges', 'invReleaseCautions', '_invTouch', 'savePhotoRefs', '_warnPhotoStoreFull',
   '_invProgressBar', 'invIsFirearm', 'invTransportBlocked', 'invFirearmAuthorized',
-  '_invCautionNotices', '_invPicked', '_invAwaitingApproval',
+  '_invCautionNotices', '_invPicked', '_invAwaitingApproval', 'invWrittenReleaseNeeded',
   '_renderInventorySummary', '_maivWorklistBlock', '_invDateTime', 'maivStatement_', '_avdDate',
   // 2026-10-22: the summary states the basis and the value date as text; their controls head the desk's Values bar.
   'invStatesEstateValues', '_invValueAsOfHtml', '_renderValueSettings',
@@ -83,7 +83,7 @@ const PRINT_FNS = ['_invDocPartyHead', 'invReleaseRecipientNamed', 'invLineRevie
   'signedCopyControlHtml', '_localDateOf', 'signedRecordLinksHtml', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsReconciliation',
   'signedRecordsOf', '_reconFlagText', '_ledgerNames', 'donationGroups', '_ymdLocal', 'invDonationReceipted',
   // P20: a living client's line going to one of ours is flagged, and who signed prints readably.
-  'invHavellinRecipient', 'invRecipientName', 'havellinPeople', 'samePerson', 'canonPersonName', 'invRatificationOwed', 'invRecordedGone', 'invPickupRecord', 'custodyEvents', 'invReceiptRecord', 'invViaDealer', 'photoSharesLine', 'photoSharesOf',
+  'invHavellinRecipient', 'invRecipientName', 'havellinPeople', 'samePerson', 'canonPersonName', 'invRatificationOwed', 'invWrittenReleaseNeeded', 'invRecordedGone', 'invPickupRecord', 'custodyEvents', 'invReceiptRecord', 'invViaDealer', 'photoSharesLine', 'photoSharesOf',
   // The job-flow audit (2026-10-08): the Contents Record says every line was photographed, and shared, only where it was.
   '_invHasPhoto', 'photoShareLive',
   // 2026-10-22: the signed schedules, beside the ledger in the close-out papers.
@@ -100,7 +100,9 @@ const PRINT_VARS = ['INV_LINE_INITIAL_MIN', 'INV_DISP_DOC_WORDS', 'CONTENTS_SIGN
   'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DOC_SCOPES', 'AS_FOUND_SUBFOLDER', 'PHOTO_SUBFOLDER',
   'LEDGER_DOC_KEY', 'LEDGER_SIGNED_REF', 'SIGNED_RECORD_KINDS', 'INV_SALE_DISPOSITIONS', '_signedCopyKeys', '_signedCopySpecs', 'INV_NET_LABELS',
   // P20 vars: the names the living client's staff caution reads.
-  'PERSON_NAME_ALIASES'];
+  'PERSON_NAME_ALIASES',
+  // 2026-10-26: what a living client's request refuses with (only a firearm, or someone who works with Havellin, needs it).
+  'INV_LIVING_RELEASE_TXT'];
 
 function rig(job, refs) {
   const printed = [];
@@ -504,12 +506,24 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Representative:", "Basis: Fair Market Value as of date of death (—)", an Est. value column
     // of em dashes footed "estimated value $0", "authorized fiduciary", and a footer filing it
     // "with the estate record and retained for seven years". The button was never gated.
+    // ⚠ restated 2026-10-26 (Anthony, on a living client: "they are going to approve things verbally to send"; he took "Drop
+    // it, firearms aside"): a living request carries only what needs the client's written approval there, a firearm or a line
+    // going to someone who works with Havellin (invWrittenReleaseNeeded). The rowing machine to Goodwill is approved by their
+    // word and is not on it; the shotgun to the daughter is.
     const { ctx, last } = rig(LIVING, [
-      ITEM('a', { objectName: 'Tea service', disposition: 'Distribute', channel: 'Sarah Ellsworth (daughter)' }),
+      ITEM('a', { objectName: 'Remington shotgun', category: 'Firearms', disposition: 'Distribute', channel: 'Sarah Ellsworth (daughter)' }),
       ITEM('c', { objectName: 'Rowing machine', disposition: 'Donate', channel: 'Goodwill' }),
     ]);
     ctx.printApprovalRequest(2);
     const h = last().html;
+    lacks(h, 'Rowing machine', '⚠⚠ an everyday line approved by the client’s word is not on it (2026-10-26)');
+    has(h, 'Remington shotgun', 'the firearm is');
+    // Nothing but everyday lines: refused by name, with the rule (an alert off the desk; the page returns why).
+    const plain = rig(LIVING, [ITEM('c', { objectName: 'Rowing machine', disposition: 'Donate', channel: 'Goodwill' })]);
+    const pw = plain.ctx.printApprovalRequest(2, false, { asHtml: true }) || {};
+    has(pw.why || '', 'Nothing is waiting on written approval. On a client’s own home only a firearm, or an item going to someone who works with Havellin, needs written approval',
+      '⚠⚠ a living job with only everyday lines leaving: nothing to sign, and why');
+    eq(plain.printed.length, 0, 'and nothing printed');
 
     has(h, 'Dear <strong>Margaret Ellsworth</strong>,', 'it addresses the owner, who is standing there');
     lacks(h, 'Personal Representative', '⚠ not a representative they do not have');
@@ -547,7 +561,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // ⚠ AND A LIVING JOB THAT DOES CARRY A FIGURE KEEPS THE COLUMN — withholding it there would
     // hide real money, which is the opposite failure.
-    const v = rig(LIVING, [ITEM('m', { objectName: 'Chandelier', disposition: 'Auction', fmv: '4200', channel: 'Christie’s' })]);
+    const v = rig(LIVING, [ITEM('m', { objectName: 'Purdey shotgun', category: 'Firearms', disposition: 'Auction', fmv: '4200', channel: 'Christie’s' })]);
     v.ctx.printApprovalRequest(2);
     has(v.last().html, 'Est. value', 'a living job with a value recorded still shows the column');
   }

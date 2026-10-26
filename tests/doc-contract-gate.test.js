@@ -23,7 +23,7 @@ const FNS = ['scheduleSignLines', '_invDocPartyHead', 'invLineReviewed', 'invCon
   '_invHasValue', '_invOnProbateSchedule', '_invExcludedTracks', 'isFormalDoc', 'resolveDocLevel',
   'docLevelFloor', 'docLevelFloorReason', 'estimateDocScope', 'docScopeDef', '_invMoney',
   'invReleaseBlocked', 'invIsFirearm', 'invTransportBlocked', 'invFirearmAuthorized',
-  'invAwaitingAppraisal', 'invAppraised', '_invAwaitingApproval', 'invProbateRows', 'matterDef', 'matterTypeOf',
+  'invAwaitingAppraisal', 'invAppraised', '_invAwaitingApproval', 'invWrittenReleaseNeeded', 'invProbateRows', 'matterDef', 'matterTypeOf',
   'maivFilingApplies', 'invReleaseCautions', '_invCautionBadges', '_invCautionNotices',
   '_invNamed', '_invDateTime', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames',
   // P16: the dealer route, the import panel's own list, and the photo folders the share names.

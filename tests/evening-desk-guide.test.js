@@ -555,6 +555,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const liv = attempt(() => P.approvalRequestRecipients(LIVING()));
     eq(liv.ok ? liv.val.to : null, ['meg@ellis.example'], 'to the client on living work');
     has(t, 'Send request makes a Gmail draft with the request as a PDF: to every representative with an email, the estate attorney copied, or to the client on living work.', 'as the page says');
+    // What a living request carries (2026-10-26; Anthony: "Drop it, firearms aside"), on the real rule.
+    const W = lift(['invWrittenReleaseNeeded'], {});
+    const need = (o) => attempt(() => W.invWrittenReleaseNeeded(Object.assign({ stableId: 'x', label: 'inventory' }, o), LIVING({ tc: 'Ashley Jerome' }))).val;
+    eq([need({ disposition: 'Donate', channel: 'Goodwill' }), need({ disposition: 'Distribute', channel: 'Tom', category: 'Firearms' }),
+      need({ disposition: 'Sell', channel: 'Ashley Jerome' })], [false, true, true], 'living: the client’s word for a donation; a firearm and an item to the concierge on a request');
+    has(t, 'The client’s word approves what leaves. Only a firearm, or an item going to someone who works with Havellin, goes on a request for them to sign.', 'as the page says');
     // Record the signed request: offered once the request has gone; opens on that request's items still unsigned, each ticked.
     has(card, "var recBtn = !approvalRequestRecordRefusal(job, S) ?", 'offered by its one rule');
     has(code(fn('approvalRequestRecordRefusal')), "'The request has not gone yet: send the draft and tap I’ve sent it first.'", '…once the request has gone');

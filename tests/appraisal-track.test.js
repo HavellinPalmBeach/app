@@ -38,7 +38,7 @@ const APPR_FNS = ['invAwaitingAppraisal', 'invAppraised', '_invHasValue', 'invNe
                   'invApprovalComplete', 'invApprovalMissing', 'invApprovalGap', 'jobFiduciaries', '_andJoin',
                   'invPropertyNoun', 'estateProceedsHolder', 'matterDef', 'matterTypeOf', 'invHavellinRecipient',
                   // P20: the request lists what left before every fiduciary approved apart, and prints who signed readably.
-                  'invRatificationOwed', 'invRecordedGone', 'invPickupRecord', 'custodyEvents', 'invReceiptRecord', 'invViaDealer', 'invRecipientName', 'signedRecordsOf', 'invStaffRefused'];
+                  'invRatificationOwed', 'invWrittenReleaseNeeded', 'invRecordedGone', 'invPickupRecord', 'custodyEvents', 'invReceiptRecord', 'invViaDealer', 'invRecipientName', 'signedRecordsOf', 'invStaffRefused'];
 const APPR_VARS = ['INV_PLAN_CHANNEL_KINDS', 'INV_DISP_DOC_WORDS', 'INV_TRANSPORT_REASONS', 'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD',
                    'INV_APPRAISAL_THRESHOLD_DISPUTED', 'DECEDENT_SERVICES', 'INVENTORY_COLUMNS', 'MATTER_TYPES'];
 
@@ -435,7 +435,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ];
     const s = sandbox({
       fns: APPR_FNS.concat(['_invDocPartyHead', 'invOwnInitial', 'invInitialGroupKey', '_invDocName', 'printApprovalRequest', 'invReleaseRecipientNamed', 'invDispDocWord', 'invReleaseCautions', '_invCautionBadges',
-                            '_invCautionNotices', '_invNamed', '_invItemNo', '_invAwaitingApproval',
+                            '_invCautionNotices', '_invNamed', '_invItemNo', '_invAwaitingApproval', 'invWrittenReleaseNeeded',
                             '_jobInvRefs', '_invAssignItemNos', '_invTouch', '_invPrintThumb',
                             '_invFileId', '_invRoomName', '_invMoney', 'invIsFirearm',
                             '_invDocHead', 'resolveValBasis', 'estateValueDate', '_invPicked',
@@ -483,7 +483,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ];
     const s = sandbox({
       fns: APPR_FNS.concat(['_invDocPartyHead', 'invOwnInitial', 'invInitialGroupKey', '_invDocName', 'printApprovalRequest', 'invReleaseRecipientNamed', 'invDispDocWord', 'invReleaseCautions', '_invCautionBadges',
-                            '_invCautionNotices', '_invNamed', '_invItemNo', '_invAwaitingApproval',
+                            '_invCautionNotices', '_invNamed', '_invItemNo', '_invAwaitingApproval', 'invWrittenReleaseNeeded',
                             '_jobInvRefs', '_invAssignItemNos', '_invTouch', '_invPrintThumb',
                             '_invFileId', '_invRoomName', '_invMoney', 'invIsFirearm',
                             '_invDocHead', 'resolveValBasis', 'estateValueDate', '_invPicked',

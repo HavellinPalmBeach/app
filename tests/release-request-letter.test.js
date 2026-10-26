@@ -245,8 +245,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(l1, 'Dear Rex Hale, The item listed below is ready to leave the property. Before anything is moved, we ask for your written approval. '
       + 'Please initial where shown, then sign and date at the foot and return it to us. Nothing on this list will be moved, sold, donated or disposed of until it is back with us, signed by you. Thank you.',
       'one representative, one line: singular throughout');
-    // Living work: the client by name, the same promise.
-    const liv = rig2({ job: LIVING(), rows: INVENTORY().slice(0, 2) });
+    // Living work: the client by name, the same promise. (Firearms since 2026-10-26: on a client's own home only a firearm, or
+    // a line going to someone who works with Havellin, is asked for in writing; Anthony, "Drop it, firearms aside".)
+    const liv = rig2({ job: LIVING(), rows: INVENTORY().slice(0, 2).map((r) => Object.assign(r, { category: 'Firearms' })) });
     const ll = liv.letter(liv.page().html);
     has(ll, 'Dear Margaret Ellis,', 'a living client is addressed by name');
     has(ll, 'signed by you.', 'and signs for themself');
@@ -323,10 +324,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(only.card(), 'sendApprovalRequest(7)', 'with no send: there is nothing to ask for');
     const ob = attempt(() => only.c.deskFoldState(7, only.job(), 'releases', only.c._jobInvRefs(7), '2026-10-17')).val || {};
     eq(ob.show, true, 'and the bar is shown');
-    // On living work nothing else draws the bar (no bequests card): a line waiting for a taker is reason enough.
-    const liv = rig2({ job: LIVING(), rows: [ROW('e', { itemNo: 5, objectName: 'Sofa', disposition: 'Donate' })] });
+    // On living work nothing else draws the bar (no bequests card): a firearm waiting for a taker is reason enough. An everyday
+    // line is not (2026-10-26): the client's word approves it, so nothing waits on a taker for a request.
+    const liv = rig2({ job: LIVING(), rows: [ROW('e', { itemNo: 5, objectName: 'Browning rifle', category: 'Firearms', disposition: 'Distribute' })] });
     const lb = attempt(() => liv.c.deskFoldState(7, liv.job(), 'releases', liv.c._jobInvRefs(7), '2026-10-17')).val || { bits: [] };
-    eq([lb.show, (lb.bits || []).map((b) => b.text).join(' | ')], [true, '1 item waits for somebody to be named to take it'], '⚠ living work: the bar is drawn for it, and says so');
+    eq([lb.show, (lb.bits || []).map((b) => b.text).join(' | ')], [true, '1 item waits for somebody to be named to take it'], '⚠ living work: the bar is drawn for a firearm, and says so');
+    const sofa = rig2({ job: LIVING(), rows: [ROW('e', { itemNo: 5, objectName: 'Sofa', disposition: 'Donate' })] });
+    const sb = attempt(() => sofa.c.deskFoldState(7, sofa.job(), 'releases', sofa.c._jobInvRefs(7), '2026-10-17')).val || { bits: [] };
+    eq(sb.show, false, '⚠⚠ and not for a sofa to be donated: nothing waits on a request');
     // Named, it moves to fresh.
     only.c._photoRefs[7][0].channel = 'Habitat ReStore';
     has(only.card(), 'sendApprovalRequest(7)', 'a taker typed: the send is offered');

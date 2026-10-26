@@ -227,7 +227,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(text(U.__doc.getElementById('ia-note').innerHTML).trim(), 'Daniel Adler has not signed #6 Line 6 yet: that line stays on the next request until they do.',
        'only the line still open is named');
     // The living client: who signed, typed, as before.
-    const V = [LINE('l', 1, { disposition: 'Distribute', channel: 'Sarah Ellsworth (daughter)' })];
+    // A rifle since 2026-10-26: on a client's own home only a firearm, or an item going to someone who works with Havellin,
+    // is recorded as approved in writing (Anthony: "Drop it, firearms aside"); an everyday line is refused by name.
+    const V = [LINE('l', 1, { objectName: 'Browning rifle', category: 'Firearms', disposition: 'Distribute', channel: 'Sarah Ellsworth (daughter)' })];
     const W = desk(['invRecordApproval', 'invSaveApproval'], LIVING(), V, { _invPick: { l: 1 }, _todayStr: () => '2026-10-03' });
     W.invRecordApproval(2);
     has(W.__doc.getElementById('ia-body').innerHTML, 'id="ia-signer" value="Margaret Ellsworth"', 'a living client: who signed, prefilled with the client');
@@ -475,8 +477,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     S._invBulkApply(2, 'channel', 'carla  ortiz (crew)');
     eq([lines[1].channel, lines[3].channel], ['carla  ortiz (crew)', 'carla  ortiz (crew)'], 'the bulk recipient is written on a living client\'s lines');
     eq(S.__log.alerts, [], 'nothing refused');
-    has(S.__log.badges.map((b) => b.m).join(' | '), '2 items updated. ⚠ 1 of them is flagged conflict of interest — #2 Lamp (Carla Ortiz works with Havellin; proposed: Distribute). Check before the release request goes to the representative.',
-        '⚠⚠ the bulk bar\'s confirmation names the line and the person (and not the line kept)');
+    has(S.__log.badges.map((b) => b.m).join(' | '), '2 items updated. ⚠ 1 of them is flagged conflict of interest — #2 Lamp (Carla Ortiz works with Havellin; proposed: Distribute). Check before the release request goes to the client.',
+        '⚠⚠ the bulk bar\'s confirmation names the line and the person (and not the line kept); a living client\'s request goes to the client (2026-10-26)');
     lacks(S.__log.badges.map((b) => b.m).join(' | '), 'flagged disputed', '⚠ a recipient sweep asks only the lines leaving: the disputed line kept is not named');
     // A disposition swept onto a line already naming one of ours names it too.
     S._invPick = { v3: 1 };
@@ -529,7 +531,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        '⚠⚠ left before every fiduciary approved: the request, the desk row, the desk\'s approvals list, the Releases bar\'s line (2026-10-22), the Job Plan, and what the request may carry (2026-10-26: a line held for want of a taker is never one already gone)');
     // P25 (Q44): and the one writer that names a line's recipient from the confirmed vendor of its kind asks it before writing.
     eq(callers('invStaffRefused'), ['_invBulkApply', '_invEdit', 'invFillPlanChannel'], 'the estate\'s refusal: every handler that writes a channel or a disposition');
-    eq(callers('invHavellinRecipient'), ['_renderInvRow', 'invStaffRefused'], 'the one definition: the estate\'s refusal and the row\'s name (the caution reads it too)');
+    // invWrittenReleaseNeeded since 2026-10-26: on a client's own home such a line still needs the client's written approval.
+    eq(callers('invHavellinRecipient'), ['_renderInvRow', 'invStaffRefused', 'invWrittenReleaseNeeded'], 'the one definition: the estate\'s refusal, the row\'s name and the living written-release rule (the caution reads it too)');
     has(noComments(decl('INV_RELEASE_CAUTIONS')), 'invHavellinRecipient(r, _invJob(jobId))', 'the living caution reads the same definition');
     ['_invEdit', '_invBulkApply'].forEach((n) => lacks(noComments(fn(n)), 'invHavellinRecipient(', n + ' never asks the definition bare (the estate refusal is invStaffRefused)'));
     // Every surface that prints who signed reads the one readable form.

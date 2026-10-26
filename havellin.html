@@ -1476,7 +1476,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.26 · 2:44pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.26 · 6:50pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -29821,9 +29821,17 @@ function _invEdit(jobId, stableId, key, el) {
   // ⚠ AND THE WORK BAR, ON A FIGURE (the Q93 review): its *Value N lines* counts the named lines with no figure, so a figure typed
   // (the appraisal's as it lands, or the desk's) left the button offering the line until the next full render. Repainted by id, as
   // _invSplitRepaint repaints it: it holds no field anybody types into, and More ▾ keeps its state (_renderInvWorkbar reads it).
-  if ((key === 'fmv' || _figMoved) && typeof _renderInvWorkbar === 'function') {
+  // On a client's own home a recipient or a category can make a line need written approval or stop needing it (2026-10-26:
+  // a Havellin person typed, Firearms set), and the work bar's Approval Request and a picked line's bulk bar follow, by id.
+  var _livingRelease = (key === 'channel' || key === 'category') && !invFiduciaryMode(_invJob(jobId));
+  if ((key === 'fmv' || _figMoved || _livingRelease) && typeof _renderInvWorkbar === 'function') {
     var _wbEl = document.getElementById('inv-workbar'), _wbJob = _invJob(jobId);
     if (_wbEl && _wbJob) _wbEl.outerHTML = _renderInvWorkbar(_wbJob, _jobInvRefs(jobId));
+  }
+  // (The bulk bar's half is untested on its own: browser step 112 drives the work bar's, on the same condition.)
+  if (_livingRelease && _invPick[stableId]) {
+    var _bbEl = document.getElementById('inv-bulk-' + jobId), _bbJob = _invJob(jobId);
+    if (_bbEl && _bbJob) _bbEl.outerHTML = _renderInvBulk(_bbJob);
   }
   // Every one of the counts is derived from a field editable on this row, so the strip is
   // repainted whatever changed rather than on a list of keys that would fall out of step with
@@ -31213,8 +31221,28 @@ var INV_RELEASE_DISPOSITIONS = ['Auction','Consign','Distribute','Sell','Donate'
 function _invAwaitingApproval(jobId) {
   var job = _invJob(jobId);
   return _jobInvRefs(jobId).filter(function(r){
-    return INV_RELEASE_DISPOSITIONS.indexOf(r.disposition) >= 0 && !invApprovalComplete(r, job);
+    return invWrittenReleaseNeeded(r, job) && !invApprovalComplete(r, job);
   });
+}
+// ⚠⚠ WHICH LEAVING LINES NEED WRITTEN RELEASE APPROVAL (2026-10-26; Anthony, on a living client: "they are going to approve
+// things verbally to send … the estate requirement for signed/initialed release is the important one"; he took "Drop it,
+// firearms aside", and for the two living cautions "Split them"). On an estate, every line leaving the property. On a client's
+// own home, a firearm (the protocol's written authority) and a line going to someone who works with Havellin (our conflict,
+// put in writing before it leaves); everything else there is approved by the client's word, and the Contents Record signed
+// at the close is its record (a ⚑ line sold with no value is named there, `flaggedUnvalued`). The one rule: the awaiting
+// list and so the request, the card and the Releases bar, a selection's request, the sign-out's wait, ratification, a
+// collection's written-release line, and where the work bar and the bulk bar offer the request at all.
+var INV_LIVING_RELEASE_TXT = 'On a client\u2019s own home only a firearm, or an item going to someone who works with Havellin, needs written '
+  + 'approval: the client\u2019s word approves the rest, and the Contents Record they sign at the close is the record.';
+// The lines of a selection a request can carry: on a living job, only what needs written approval (an estate's selection is
+// taken as picked, as it always was).
+function invWrittenReleasePicked(jobId, job) {
+  var picked = _invPicked(jobId);
+  return invFiduciaryMode(job) ? picked : picked.filter(function (r) { return invWrittenReleaseNeeded(r, job); });
+}
+function invWrittenReleaseNeeded(ref, job) {
+  if (!ref || ref.deletedAt || INV_RELEASE_DISPOSITIONS.indexOf(ref.disposition) < 0) return false;
+  return !!(invFiduciaryMode(job) || invIsFirearm(ref) || invHavellinRecipient(ref, job));
 }
 
 // ═══ P19 · WHO APPROVES A RELEASE, WHO A LINE IS FOR, WHO RECEIVED IT, AND WHO MAY NEVER TAKE IT (2026-10-03) ═══
@@ -31618,7 +31646,7 @@ function signoutCovered(ref, job, kind) {
 // in writing), done (already on a filed paper of that kind for that taker). The appraiser's groups ride the line's link
 // (apprId): out until checked back in, then a return group.
 function signoutGroups(job, items) {
-  var fid = !!(job && invFiduciaryMode(job)), map = {}, order = [];
+  var map = {}, order = [];
   var put = function(kind, taker, r, state){
     var k = signoutKey(kind, taker);
     if (!map[k]) { map[k] = { key: k, kind: kind, taker: taker, lines: [], ready: [], waiting: [], done: [] }; order.push(k); }
@@ -31629,7 +31657,7 @@ function signoutGroups(job, items) {
     var kind = signoutLineKind(r, job);
     if (kind) {
       var taker = signoutTaker(r, kind);
-      if (taker) put(kind, taker, r, signoutCovered(r, job, kind) ? 'done' : (fid && !invApprovalComplete(r, job)) ? 'waiting' : 'ready');
+      if (taker) put(kind, taker, r, signoutCovered(r, job, kind) ? 'done' : (invWrittenReleaseNeeded(r, job) && !invApprovalComplete(r, job)) ? 'waiting' : 'ready');
     }
     if (!invIsFirearm(r) && r.apprId && !invAppraised(r) && !r.apprWaived) {
       var a = ((job && job.appraisers) || []).filter(function(x){ return String(x.id) === String(r.apprId); })[0];
@@ -31912,11 +31940,11 @@ function invRecordedGone(ref, job) {
 // all. The next Approval Request lists it APART, as already released, for the missing fiduciaries' signature, which
 // ratifies the release; Record approval (partial or complete) records that signature like any other, and once every
 // fiduciary has signed the line drops off. Read by the request, the desk row's badge (ratification owed, not approval
-// incomplete), the desk's approvals list and the Job Plan's release-authority line, which counts these apart. An estate
-// only: written authority from every fiduciary is the estate's rule, and a living owner has none to ratify.
+// incomplete), the desk's approvals list and the Job Plan's release-authority line, which counts these apart. Whatever
+// needs written approval on the job (invWrittenReleaseNeeded): every leaving line on an estate; on a client's own home,
+// since 2026-10-26, a firearm or a line going to someone who works with Havellin, ratified by the client's signature.
 function invRatificationOwed(ref, job) {
-  if (!ref || ref.deletedAt || !job || !invFiduciaryMode(job)) return false;
-  if (INV_RELEASE_DISPOSITIONS.indexOf(ref.disposition) < 0) return false;
+  if (!ref || !job || !invWrittenReleaseNeeded(ref, job)) return false;
   return invRecordedGone(ref, job) && !invApprovalComplete(ref, job);
 }
 // How a line left, in a sentence's words, for the request's ratification section (P20): the day of disposition, else the
@@ -32159,7 +32187,10 @@ var INV_RELEASE_CAUTIONS = [
     test: function(r){ return !!r.needsAppr && INV_SALE_DISPOSITIONS.indexOf(r.disposition) >= 0 && !_invHasValue(r) && !r.apprWaived; },
     note: function(r){ return 'flagged for appraisal in the house; proposed: ' + (r.disposition || '') + ', with no value recorded'; },
     panelHead: 'Flagged for appraisal, no value recorded.',
-    desk: 'The client may sell their own things unappraised, so it is not refused: the release approval request names it above the line the client initials.',
+    // ⚠ ON THE CONTENTS RECORD (2026-10-26; Anthony: "Split them"): a living sale needs no written approval, so this line
+    // reaches no request unless it also needs one; the record the client signs at the close carries its badge.
+    desk: 'The client may sell their own things unappraised, so it is not refused: the Contents Record the client signs at the close names it on the line '
+        + '(and the release approval request, where the line needs the client\u2019s written approval too).',
     head: 'Property flagged for appraisal and proposed for sale with no value recorded',
     body: 'These lines were flagged in the house as worth a specialist\u2019s look, and each is proposed for sale with no value '
         + 'recorded yet. Selling before an appraisal is your decision, and a dealer\u2019s offer is often the market test, but '
@@ -32280,10 +32311,13 @@ function printApprovalRequest(jobId, selectedOnly, opt) {
   var _asHtml = !!(opt && opt.asHtml);
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return _asHtml ? { why: 'This job could not be found.' } : undefined;
-  var items = selectedOnly ? _invPicked(jobId) : _invAwaitingApproval(jobId);
+  var items = selectedOnly ? invWrittenReleasePicked(jobId, job) : _invAwaitingApproval(jobId);
   if (!items.length) {
+    // A living job (2026-10-26) says why nothing needs signing there, a selection of everyday items included.
     var _none = selectedOnly
-      ? 'Select the items you want approval for first.'
+      ? (_invPicked(jobId).length && !invFiduciaryMode(job) ? 'None of the items selected needs written approval. ' + INV_LIVING_RELEASE_TXT
+          : 'Select the items you want approval for first.')
+      : !invFiduciaryMode(job) ? 'Nothing is waiting on written approval. ' + INV_LIVING_RELEASE_TXT
       : 'Nothing is waiting on approval. An item needs a disposition of '
         + INV_RELEASE_DISPOSITIONS.join(', ') + ' and no complete written approval yet.';
     if (_asHtml) return { why: _none };
@@ -32353,7 +32387,7 @@ function printApprovalRequest(jobId, selectedOnly, opt) {
         + (gap ? '<div style="color:#8a5a1e;font-size:10px;">Signed so far by ' + esc(invApprovalSignedText(r, job))
             + '; still to sign: ' + esc(_andJoin(invApprovalMissing(r, job))) + '</div>'
           : gone ? '<div style="color:#8a5a1e;font-size:10px;">No written approval recorded; to sign: '
-            + esc(_andJoin(invApprovalMissing(r, job)) || 'the ' + invRepresentativeTitle(job)) + '</div>' : '')
+            + esc(_andJoin(invApprovalMissing(r, job)) || (_fid ? 'the ' + invRepresentativeTitle(job) : 'you')) + '</div>' : '')
         + '</td>'
       // A firearm asked for is initialled once, with every firearm on the list, under the firearms paragraph (P25, Q35); a
       // line under $500 with no caution and no bequest, once with its destination group (P25, Q46).
@@ -32403,10 +32437,11 @@ function printApprovalRequest(jobId, selectedOnly, opt) {
   var ratBlock = !ratify.length ? '' : '<div class="inv-ratify" style="margin-top:18px;">'
     + '<div style="font-size:12px;font-weight:700;color:#8a5a1e;border-bottom:1px solid #ddd;padding-bottom:3px;margin-bottom:4px;">Already released: for ratification</div>'
     + '<div style="font-size:11px;line-height:1.55;margin-bottom:8px;">' + (_r1 ? 'This item' : 'These items') + ' left the property before '
-      + esc(invEveryFiduciaryPhrase(job)) + ' had approved ' + (_r1 ? 'its' : 'their') + ' release in writing. '
+      + (_fid ? esc(invEveryFiduciaryPhrase(job)) + ' had approved ' + (_r1 ? 'its' : 'their') + ' release in writing. '
+          : 'your written approval of ' + (_r1 ? 'its' : 'their') + ' release was recorded. ')
       + (asked.length ? (_r1 ? 'It is' : 'They are') + ' listed apart from the ' + (asked.length === 1 ? 'item' : 'items') + ' above, for '
           : (_r1 ? 'It is' : 'They are') + ' listed here for ')
-      + 'the signature of ' + esc(ratMiss.length ? _andJoin(ratMiss) : 'the ' + invRepresentativeTitle(job))
+      + (_fid ? 'the signature of ' + esc(ratMiss.length ? _andJoin(ratMiss) : 'the ' + invRepresentativeTitle(job)) : 'your signature')
       + ', which ratifies ' + (_r1 ? 'the' : 'each') + ' release; nothing is undone.</div>'
     + theadOf(true) + ratify.map(rowOf).join('') + '</tbody></table>'
     + footOf(ratify, ' already released')
@@ -32439,7 +32474,7 @@ function printApprovalRequest(jobId, selectedOnly, opt) {
     // ⚠ The third argument is how this avoids _invDocHead's default tail, which states the
     // valuation basis and the date of death — neither of which a living job has. ⚠ It replaces only the basis: the head
     // adds "Prepared by Havellin Palm Beach, LLC · <date>" itself, which this printed a second time until P22.
-    + _invDocHead(job, 'Release Approval Request', _fid ? null : 'Everything leaving the property, for your sign-off')
+    + _invDocHead(job, 'Release Approval Request', _fid ? null : !asked.length ? 'For your signature' : 'For your written approval before ' + (asked.length === 1 ? 'it leaves' : 'they leave'))
     // ⚠ A LETTER (2026-10-26; Anthony: "it's a bit odd to say like verbal approval is never accepted … make it just sound like a
     // little bit more normal. Like we're writing a letter asking them for their release and initialing"; he approved this wording).
     // The rule stands where it is enforced: nothing leaves on a phone call (invApprovalComplete reads the signed paper alone).
@@ -32487,7 +32522,7 @@ function printApprovalRequest(jobId, selectedOnly, opt) {
         return '<div class="inv-firearms-auth" style="font-size:10.5px;color:#3c3228;margin-top:10px;border:1px solid #A32D2D;border-radius:3px;padding:8px 10px;">'
           + '<div style="color:#A32D2D;font-weight:700;margin-bottom:3px;">Firearms: written authority</div>'
           + firearms + ' firearm' + (firearms > 1 ? 's are' : ' is') + ' on this list. Every one goes to a '
-          + '<strong>licensed dealer</strong>, named by you on counsel&rsquo;s advice. '
+          + '<strong>licensed dealer</strong>, named by you' + (_fid ? ' on counsel&rsquo;s advice' : '') + '. '
           + (carry ? 'Your initial below, with ' + (_many ? 'every signature' : 'your signature') + ' at the foot, is your written authority for '
               + 'Havellin&rsquo;s named principal to transport each non-NFA firearm listed here, by the serial and to the licensed dealer '
               + 'printed against it, directly to that dealer. ' : '')
@@ -32580,7 +32615,7 @@ function approvalRequestBlocker(job) {
 // A line still waiting on written approval: live, leaving the property, not yet approved by every fiduciary
 // (invApprovalComplete, the one answer). The request's own list (_invAwaitingApproval) asks the same two questions.
 function _approvalLineOpen(r, job) {
-  return !!(r && !r.deletedAt && INV_RELEASE_DISPOSITIONS.indexOf(r.disposition) >= 0 && !invApprovalComplete(r, job));
+  return !!(r && invWrittenReleaseNeeded(r, job) && !invApprovalComplete(r, job));
 }
 // ⚠⚠ A RELEASE GOES TO SOMEBODY (2026-10-26; Anthony, off a request that went out with its Distribute and Donate groups reading
 // "no recipient named yet": "there are no recipients. There's no donation partner chosen"; he took "Hold them off"). A line
@@ -32763,10 +32798,13 @@ function sendApprovalRequest(jobId, selectedOnly) {
   var openBar = function () { if (typeof deskFoldOpen === 'function') deskFoldOpen(jobId, 'releases'); };
   var why = approvalRequestBlocker(job);
   if (why) { openBar(); _docNotice('warn', why, jobId); return false; }
-  var picked = selectedOnly ? _invPicked(jobId) : _invAwaitingApproval(jobId);
+  var picked = selectedOnly ? invWrittenReleasePicked(jobId, job) : _invAwaitingApproval(jobId);
   if (!picked.length) {
     openBar();
-    _docNotice('warn', selectedOnly ? 'Select the lines you want approval for first.'
+    _docNotice('warn', selectedOnly
+      ? (_invPicked(jobId).length && !invFiduciaryMode(job) ? 'None of the lines selected needs written approval. ' + INV_LIVING_RELEASE_TXT
+          : 'Select the lines you want approval for first.')
+      : !invFiduciaryMode(job) ? 'Nothing is waiting on written approval. ' + INV_LIVING_RELEASE_TXT
       : 'Nothing is waiting on approval: every line leaving the property has its written approval, or has no disposition yet.', jobId);
     return false;
   }
@@ -33060,9 +33098,12 @@ function invRecordApproval(jobId, opt) {
   var picked = fromReq
     ? _jobInvRefs(jobId).filter(function(r){ return r && !r.deletedAt && want.indexOf(String(r.stableId)) >= 0; })
         .sort(function(a, b){ return want.indexOf(String(a.stableId)) - want.indexOf(String(b.stableId)); })
-    : _invPicked(jobId);
+    // The selection: on a client's own home only what needs the client's written approval (2026-10-26, found on review: a
+    // signature recorded on nine everyday lines the paper never carried, beside the firearm it did).
+    : invWrittenReleasePicked(jobId, _invJob(jobId));
   if (!picked.length) {
     alert(fromReq ? 'Every line on the request has been approved or removed since it was sent: there is nothing to record.'
+      : _invPicked(jobId).length ? 'None of the items selected needs written approval. ' + INV_LIVING_RELEASE_TXT
       : 'Select the items the signed approval covers.');
     return false;
   }
@@ -34426,7 +34467,9 @@ function printDispositionLedger(jobId, opt) {
       + '<td style="' + td + '">' + esc(invDispDocWord(r.disposition)) + '</td>'
       + '<td style="' + td + '">' + esc(_invRecipient(job, r) || '—') + '</td>'
       // Who authorized it, each signer with their own day (P20): the one readable form, never the raw field.
-      + '<td style="' + td + '">' + esc(invApprovalSignedText(r, job) || '—') + '</td>'
+      // On a client's own home an everyday line is approved by their word (2026-10-26), so it reads "the client", never "—".
+      + '<td style="' + td + '">' + esc(invApprovalSignedText(r, job) || (!invFiduciaryMode(job) && INV_RELEASE_DISPOSITIONS.indexOf(r.disposition) >= 0
+          && !invWrittenReleaseNeeded(r, job) ? 'the client' : '—')) + '</td>'
       + '<td style="' + td + 'white-space:nowrap;">' + (r.dispDate ? esc(fmtDate2(r.dispDate)) : '—') + '</td>'
       + '<td style="' + td + 'text-align:right;">' + _invMoney(r.gross) + '</td>'
       + '<td style="' + td + 'text-align:right;">' + _invMoney(r.fees) + '</td>'
@@ -35419,7 +35462,7 @@ function printAppraisalWorklist(jobId, opt) {
       // ⚠ WHO AUTHORISES IT, BY MATTER, AND EVERY ONE OF THEM (P19): "the personal representative" was false on a trust,
       // and a firearm one co-trustee authorised stays on this list until the others have (invApprovalComplete).
       + '<div style="font-size:11px;color:#3c3228;line-height:1.5;">Nothing is released until '
-      + (jobFiduciaries(job).length > 1 ? 'every ' + invCoFiduciaryNoun(job) + ' has' : 'the ' + invRepresentativeTitle(job) + ' has')
+      + (jobFiduciaries(job).length > 1 ? 'every ' + invCoFiduciaryNoun(job) + ' has' : !invFiduciaryMode(job) ? 'the client has' : 'the ' + invRepresentativeTitle(job) + ' has')
       + ' authorised the transfer to a <strong>named licensed dealer</strong> in writing. Record the signed authority with <strong>Record approval</strong> on Job Admin &amp; Inv (select the firearm, then Record approval), with the dealer in Channel / Recipient (on a firearm going to a named person, on its dealer route), and the item joins this worklist. Once the authority, the serial and the dealer are all on the record, a non-NFA firearm may be transported by the named principal; anything NFA is collected by the dealer.</div>'
       + '<div style="font-size:11px;color:#666;margin-top:6px;">'
       + withheld.map(function(r){ return '#' + esc(_invItemNo(r)) + ' ' + esc(r.objectName || '(unnamed)'); }).join(' &middot; ')
@@ -37365,7 +37408,14 @@ function _invBulkApply(jobId, key, value) {
       return ' \u26a0 ' + hit.length + ' of them ' + (hit.length > 1 ? 'are' : 'is') + ' flagged '
         + c.badge.toLowerCase() + ' \u2014 ' + hit.map(function(r){ return _invNamed(r) + (c.note ? ' (' + c.note(r, jobId) + ')' : ''); }).join(', ') + '.';
     }).join('');
-    if (_swept) what += _swept + ' Check before the release request goes to the representative.';
+    // Where the client meets it on a living job (2026-10-26): the request for a line that needs written approval there (a
+    // firearm, someone who works with Havellin), else the Contents Record they sign at the close.
+    var _cau = _leaving.filter(function (r) { return invReleaseCautions(r, jobId).length; });
+    var _onReq = _cau.some(function (r) { return invWrittenReleaseNeeded(r, job); });
+    var _offReq = _cau.some(function (r) { return !invWrittenReleaseNeeded(r, job); });
+    if (_swept) what += _swept + (invFiduciaryMode(job) ? ' Check before the release request goes to the representative.'
+      : _onReq && _offReq ? ' Check before the release request goes to the client; the Contents Record the client signs at the close names the rest.'
+      : _onReq ? ' Check before the release request goes to the client.' : ' The Contents Record the client signs at the close names it.');
   }
   // THE CATEGORY IS THE ONE FIELD ON THIS BAR THAT ROUTES WORK, so the confirmation says where
   // the work went. Filing three things as Art and Decor puts them in front of an appraiser by
@@ -39362,9 +39412,11 @@ function _renderInvWorkbar(job, all) {
       + btn('exportInventoryCSV(' + jid + ')', 'CSV', 'Every column, as a spreadsheet file to attach to an email')
       // ⚠ ONCE (P16): at the None tier the Approval Request IS the primary, and drawing it again here put
       // two buttons for one document side by side. No control renders twice.
-      + (_primary === 'approval' ? '' : btn('printApprovalRequest(' + jid + ')', 'Approval Request', fid
+      // On a client's own home (2026-10-26) only while a line there needs the client's written approval (a firearm, or an item
+      // going to someone who works with Havellin: invWrittenReleaseNeeded); their word approves the rest.
+      + (_primary === 'approval' || (!fid && !_invAwaitingApproval(jid).length) ? '' : btn('printApprovalRequest(' + jid + ')', 'Approval Request', fid
           ? 'Written, itemised release approval for the representative to sign. Nothing of value leaves the property without it.'
-          : 'Written, itemised list of everything leaving the property, for the client to sign off.'))
+          : 'Written approval of a firearm, or an item going to someone who works with Havellin, for the client to sign before it leaves.'))
       // ⚠ NO SEND REQUEST ON THIS BAR (2026-10-22). It stood here from 2026-10-17 as well as on the Releases card's Approval
       // request section, one control drawn twice under two rules: this one offered while blocked and refused in the band,
       // the card's withheld and the blocker said in red. The card carries the send for every line awaiting approval (its
@@ -39624,7 +39676,7 @@ function _renderInvRow(job, ref) {
   var _gap = invApprovalGap(ref, job);
   if (invRatificationOwed(ref, job)) {
     var _rm = invApprovalMissing(ref, job);
-    warn.push('<span title="' + esc('Left the property before ' + invEveryFiduciaryPhrase(job) + ' had approved it in writing'
+    warn.push('<span title="' + esc('Left the property before ' + (invFiduciaryMode(job) ? invEveryFiduciaryPhrase(job) : 'the client') + ' had approved it in writing'
       + (_rm.length ? ': ' + _andJoin(_rm) + (_rm.length > 1 ? ' have' : ' has') + ' not signed' : '')
       + '. The next release approval request lists it apart, for that signature, which ratifies the release; nothing is undone.')
       + '" style="color:var(--bronze);font-weight:700;">ratification owed</span>');
@@ -40110,9 +40162,12 @@ function _renderInvBulk(job) {
     + '<button onclick="_invBulkApply(' + jid + ',\'reviewed\',1)" style="' + btnStyle + '" title="Mark each selected line reviewed: its name, count and value together">Mark reviewed</button>'
     // Re-value (2026-10-26b): Agent Two again on the selection, its own figures only (invBulkRevalue).
     + '<button onclick="invBulkRevalue(' + jid + ')" style="' + btnStyle + '" title="Value the selected lines again with Agent Two. A figure a person or an appraiser recorded is never touched.">Re-value</button>'
-    + '<button onclick="printApprovalRequest(' + jid + ',true)" style="' + btnStyle + '">Approval request</button>'
-    + '<button onclick="sendApprovalRequest(' + jid + ',true)" style="' + btnStyle + '" title="Email the Release Approval Request for the selected lines as a PDF, through a Gmail draft">Send request</button>'
-    + '<button onclick="invRecordApproval(' + jid + ')" style="' + btnStyle + '" title="Record a signed approval against every selected item">Record approval</button>'
+    // The written release across a selection: on a client's own home (2026-10-26) only where a picked line needs it.
+    + (invFiduciaryMode(job) || invWrittenReleasePicked(jid, job).length
+      ? '<button onclick="printApprovalRequest(' + jid + ',true)" style="' + btnStyle + '">Approval request</button>'
+        + '<button onclick="sendApprovalRequest(' + jid + ',true)" style="' + btnStyle + '" title="Email the Release Approval Request for the selected lines as a PDF, through a Gmail draft">Send request</button>'
+        + '<button onclick="invRecordApproval(' + jid + ')" style="' + btnStyle + '" title="Record a signed approval against every selected item">Record approval</button>'
+      : '')
     // Remove lines (2026-10-19): the selection off the inventory at once, photographs kept, Removed items giving them back.
     + '<button onclick="invBulkRemove(' + jid + ')" style="' + btnStyle + 'color:var(--err-tx);" title="Take every selected line off the inventory. No photograph is deleted, and Removed items, under Removed items &amp; snapshots on Job Admin &amp; Inv, gives them back.">Remove lines</button>'
     + '</span>'
@@ -48138,8 +48193,7 @@ function deskFoldState(jobId, job, fold, all, today) {
     return st;
   };
   // A line is counted once in each paper's run, under the first bit that names it: the approval it waits on (ratification,
-  // a request owed, a request out), then the paper its leaving owes (a receipt, a sign-out). A line can owe one of each:
-  // on living work a line may be signed out before the client's approval comes back.
+  // a request owed, a request out), then the paper its leaving owes (a receipt, a sign-out). A line can owe one of each.
   var runs = {};
   var once = function (run, list) {
     var seen = runs[run] || (runs[run] = {});
@@ -48157,7 +48211,7 @@ function deskFoldState(jobId, job, fold, all, today) {
     st.show = fid || !!S.st || !!(S.open.length + S.fresh.length + S.unnamed.length) || !!batches.length || !!outs.length;
     if (unread && !cached) return loading();
     st.openByDefault = S.fresh.length > 0 || draft || unfiled > 0;
-    var rat = once('approval', fid ? all.filter(function (r) { return invRatificationOwed(r, job); }) : []);
+    var rat = once('approval', all.filter(function (r) { return invRatificationOwed(r, job); }));   // on living work too (2026-10-26)
     var fresh = once('approval', S.fresh);
     var unnamedN = once('approval', S.unnamed);   // never asked for until somebody is named (2026-10-26)
     var unsigned = (S.st && S.st.sentAt && !draft) ? once('approval', S.open) : 0;
@@ -49087,17 +49141,20 @@ function collectionPartnerLines(jobId, job, c) {
   var live = _collLinesOf(jobId, c.id).filter(function (r) { return !r.deletedAt; });
   var shot = live.length > 0 && live.some(_invHasPhoto);
   var leaving = live.filter(function (r) { return INV_RELEASE_DISPOSITIONS.indexOf(r.disposition) >= 0; });
-  var approved = leaving.filter(function (r) { return invApprovalComplete(r, job); }).length;
+  // What needs it in writing (2026-10-26): every leaving line on an estate; on a client's own home, a firearm or a line to
+  // someone who works with Havellin. A living collection with none of those draws no written-release line at all.
+  var written = leaving.filter(function (r) { return invWrittenReleaseNeeded(r, job); });
+  var approved = written.filter(function (r) { return invApprovalComplete(r, job); }).length;
   var gone = leaving.filter(function (r) { return invRecordedGone(r, job); }).length;
   var n = function (k, t) { return k + ' of ' + t; };
   return [
     { key: 'coll_photo', ok: shot, label: 'Photographed on the inventory',
       detail: shot ? '' : 'not yet — tap it on the room’s brief, then photograph it with Items' },
-    { key: 'coll_approved', ok: leaving.length > 0 && approved === leaving.length, label: 'Release approved in writing',
-      detail: !leaving.length ? 'no line of it is set to leave yet' : n(approved, leaving.length) + ' — the release approval request, on Job Admin &amp; Inv' },
+    (invFiduciaryMode(job) || written.length) ? { key: 'coll_approved', ok: written.length > 0 && approved === written.length, label: 'Release approved in writing',
+      detail: !written.length ? 'no line of it is set to leave yet' : n(approved, written.length) + ' — the release approval request, on Job Admin &amp; Inv' } : null,
     { key: 'coll_released', ok: leaving.length > 0 && gone === leaving.length, label: 'Released, with its receipt on record',
       detail: !leaving.length ? 'nothing has left' : n(gone, leaving.length) + ' — a filed pickup list or receipt records it' }
-  ];
+  ].filter(Boolean);
 }
 function refreshVendorSourcing(jobId) {
   var job = jobs.find(function(j){ return j.id===jobId; });

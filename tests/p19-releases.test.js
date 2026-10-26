@@ -250,7 +250,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(typeof spec.after, 'function', '⚠ and the dialog\'s follow-up (close, repaint) survives the desk\'s repaint of the same paper');
     ok(S.__log.renders >= 1, 'fixture: the desk did repaint');
     // The living client: who signed, typed; blank refused.
-    const L2 = [LINE('l', 1, { disposition: 'Distribute', channel: 'Sarah Ellsworth (daughter)' })];
+    // A rifle since 2026-10-26: on a client's own home only a firearm, or an item going to someone who works with Havellin,
+    // is recorded as approved in writing (Anthony: "Drop it, firearms aside"); an everyday line is refused by name.
+    const L2 = [LINE('l', 1, { objectName: 'Browning rifle', category: 'Firearms', disposition: 'Distribute', channel: 'Sarah Ellsworth (daughter)' })];
     const V = desk(['invRecordApproval', 'invSaveApproval'], LIVING(), L2, { _invPick: { l: 1 }, _todayStr: () => '2026-10-03' });
     V.invRecordApproval(2);
     const vb = V.__doc.getElementById('ia-body').innerHTML;
@@ -318,8 +320,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(pt, 'never purchase or receive estate property', 'and estate property');
     has(pt, 'filed with the estate record and retained for seven years', 'filed with the estate record, as before');
     eq(count((P.__log.printed[0] || {}).html, 'Approved by: ____'), 1, 'one representative: one line, as before');
-    // The living client's request is unchanged: one line, no fiduciary, no staff sentence.
-    const V = desk(['printApprovalRequest'], LIVING(), [LINE('v', 1, { disposition: 'Donate', channel: 'Habitat for Humanity' })]);
+    // The living client's request is unchanged: one line, no fiduciary, no staff sentence. (A firearm since 2026-10-26: on a
+    // client's own home a donation needs no written approval, Anthony's "Drop it, firearms aside".)
+    const V = desk(['printApprovalRequest'], LIVING(), [LINE('v', 1, { objectName: 'Browning rifle', category: 'Firearms', disposition: 'Distribute', channel: 'Tom Ellis' })]);
     V.printApprovalRequest(2);
     const vh = (V.__log.printed[0] || {}).html || '';
     has(vh, 'Dear <strong>Margaret Ellsworth</strong>,', 'a living client is addressed by name');

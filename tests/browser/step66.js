@@ -131,7 +131,10 @@ const EST = 6601, LIVING = 6603;
         { stableId: 'd2', roomIdx: 1, label: 'detail', groupId: 'p1', seq: 2, status: 'uploaded', driveFileId: 'fd2', ts: T0, updatedAt: T0 + 3600000, deletedAt: T0 + 3600000, deletedWith: 'p1' },
         { stableId: 'd3', roomIdx: 1, label: 'detail', groupId: 'p1', seq: 3, status: 'uploaded', driveFileId: 'fd3', ts: T0, updatedAt: T0 + 60, deletedAt: T0 + 60 },
       ].concat(removed);
-      _photoRefs[LIVING] = [L('v1', { itemNo: 1, objectName: 'Armchair', disposition: 'Donate', channel: 'Goodwill' })];
+      // The rifle since 2026-10-26: on a client's own home only a firearm, or an item going to someone who works with Havellin,
+      // reaches the request (Anthony: "Drop it, firearms aside"); the armchair to Goodwill goes on the client's word.
+      _photoRefs[LIVING] = [L('v1', { itemNo: 1, objectName: 'Armchair', disposition: 'Donate', channel: 'Goodwill' }),
+        L('v2', { itemNo: 2, objectName: 'Browning rifle', category: 'Firearms', disposition: 'Distribute', channel: 'Tom Ellsworth' })];
       [EST, LIVING].forEach((id) => savePhotoRefs(id));
       jobLogs[LIVING] = [{ id: 1, date: '2026-10-01', activity: '<img src=x onerror="window.__xss=1">Sorting <b>study</b>',
         members: [{ name: '<b>Eve</b> Ortiz', role: 'PS', hours: 2 }, { name: 'Ashley Jerome', role: 'TC', hours: 1.5 }] }];
