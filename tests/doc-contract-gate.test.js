@@ -36,7 +36,7 @@ const FNS = ['scheduleSignLines', '_invDocPartyHead', 'invLineReviewed', 'invCon
   'signedRecordsOf', '_reconFlagText', '_ledgerNames', 'donationGroups', 'estateProceedsHolder', '_invRecipient',
   '_ymdLocal', 'invDonationReceipted', '_jobDestLabel', 'photoSharesLine', 'photoSharesOf',
   // 2026-10-22: the signed schedules, beside the ledger in the close-out papers.
-  '_renderSignedSchedulesCard', 'signedScheduleRows'
+  '_renderSignedSchedulesCard', 'signedScheduleRows', 'invLineUnderFloor', '_invFloorStampWords', '_arDupEligible'
 ];
 const VARS = [
   '_agRun', '_avRun', '_arRun', 'AGENT_NOTICE_KINDS', 
@@ -48,7 +48,7 @@ const VARS = [
   'INV_RELEASE_DISPOSITIONS', 'INV_RELEASE_CAUTIONS', 'MATTER_TYPES', '_invFilter', '_invShowRoll',
   '_invOpen', '_invPick', 'INVENTORY_COLUMNS', 'INV_PANEL_SECTIONS', 'DOC_SCOPES',
   'INV_VAL_SOURCES', 'EXEMPT_CAP_732_402', 'AS_FOUND_SUBFOLDER', 'PHOTO_SUBFOLDER',
-  'LEDGER_DOC_KEY', 'LEDGER_SIGNED_REF', 'SIGNED_RECORD_KINDS', 'INV_SALE_DISPOSITIONS', '_signedCopyKeys', '_signedCopySpecs',
+  'LEDGER_DOC_KEY', 'LEDGER_SIGNED_REF', 'SIGNED_RECORD_KINDS', 'INV_SALE_DISPOSITIONS', '_signedCopyKeys', '_signedCopySpecs', 'INV_REVIEW_FLOOR'
 ];
 
 const ESTATE = (over) => Object.assign({

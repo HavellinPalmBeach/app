@@ -22,8 +22,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('grouping — disposition first, undecided at the top, rooms in walkthrough order');
   {
     const ctx = sandbox({
-      fns: ['invLineReviewed', '_invDispLabel', '_invGroupItems', 'agentValueUnreviewed', '_avHasFigure'],
-      vars: ['INV_GROUP_ORDER', 'INV_UNDECIDED'],
+      fns: ['invLineReviewed', '_invDispLabel', '_invGroupItems', 'agentValueUnreviewed', '_avHasFigure', 'invLineUnderFloor', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible'],
+      vars: ['INV_GROUP_ORDER', 'INV_UNDECIDED', 'INV_REVIEW_FLOOR', 'MAIV_OTHER', 'MAIV_BY_CATEGORY'],
       stubs: { _invRoomName: (jobId, idx) => (idx == null ? 'Unassigned / estate-wide' : 'Room ' + idx) },
     });
     const job = { id: 1 };
@@ -56,9 +56,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('review state gates nothing and locks nothing');
   {
-    const ctx = sandbox({ fns: ['invLineReviewed', '_invReviewStats', '_invProgressStamp', 'agentValueUnreviewed', '_avHasFigure'] });
+    const ctx = sandbox({ vars: ['INV_REVIEW_FLOOR', 'MAIV_OTHER', 'MAIV_BY_CATEGORY'], fns: ['invLineReviewed', '_invReviewStats', '_invProgressStamp', 'agentValueUnreviewed', '_avHasFigure', 'invLineUnderFloor', '_invFloorStampWords', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible'] });
 
-    eq(ctx._invReviewStats([{ reviewed: true }, {}, {}]), { done: 1, total: 3, complete: false },
+    eq(ctx._invReviewStats([{ reviewed: true }, {}, {}]), { done: 1, total: 3, complete: false, floor: 0 },
        'progress is counted');
     eq(ctx._invReviewStats([]).complete, false, 'an empty inventory is not "complete"');
     eq(ctx._invReviewStats([{ reviewed: true }]).complete, true, 'a fully ticked one is');

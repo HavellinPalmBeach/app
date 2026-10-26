@@ -377,10 +377,27 @@ and browser step 69.
   - **One look per line:** §5's separate value review is gone. The line's Reviewed tick (`_invStampLineReviewed`, the
     row and the bulk bar's Mark reviewed) stamps `valReviewed` with the line's review, and `invLineReviewed` reads an
     unaccepted agent figure as not reviewed. *Accept value*, *Accept values* and the *Unreviewed values* chip are gone;
-    the chip is *Not reviewed*. The schedules' *N values not yet reviewed* is unchanged.
+    the chip is *Not reviewed*. The schedules' *N values not yet reviewed* is unchanged (until the $100 floor, below, took the values it accepts out of it).
   - **One hint:** the row's *agent value* badge (and Agent One's *agent*) are gone; `invLineUnsure` marks *unsure* where
     Agent Two's figure is low confidence, or Agent One was unsure and Agent Two has not yet valued the line under that name.
   - **Each × Qty = Total:** the row's value is two boxes, Each and Total (`invUnitValue`, `unitVal` on the manifest's save
     list). The figure Agent Two writes stays the line's whole value at its Quantity (`fmv`), Each is read off it, and a
     count corrected at the desk carries Each across (`_invQtyCarriesValue`, the agent's range scaled with it; an appraised
     line never moved). The prompt says the desk reads one article's value as the line's over its Quantity.
+- **Under $100, no tick (2026-10-25, Q99 and Q100):** Anthony: *"I'd prefer not to have to review absolutely every item if
+  we don't need to … I don't want to have to manually tick a drawer of like stainless steel silverware or a junk drawer
+  filled with tape"*; he took $100, and for the papers *"Say so on the stamp"*. One predicate, `invLineUnderFloor`, asked
+  first by `invLineReviewed`: a live line Agent Two valued (`valuedBy` agent, `_avHasFigure`) whose top, the greater of
+  `valHigh` and `fmv` (so the whole line at its Quantity; the range alone where counsel values), is under
+  `INV_REVIEW_FLOOR` (100) counts as reviewed with no tick, unless it is `agentValueStale`, a firearm, an intrinsic
+  category (`invIsIntrinsic`), ticked for appraisal or linked to an appraiser (`needsAppr`, `apprId`), a bequest,
+  disputed, MAIV or NFA, or carries any `agentNotices` or `valNotices`. The *Not reviewed* chip, `invLineUnsure`, the
+  group counts and `agentNoticeQuiet` read it through `invLineReviewed`; the row's box is ticked and disabled, titled
+  *Under $100 and nothing flagged: Agent Two's value counts as the review*. A count corrected at the desk scales the
+  range with the Total (`_invQtyCarriesValue`), so a top that reaches $100 sends the line back to the tick. Nothing is
+  written to the line (`valReviewed` stays unset, so a line a person marks reviewed, with the bulk bar's Mark reviewed, reads as checked): `_invReviewStats`
+  counts the floor's lines apart (`floor`), `_invProgressStamp` prints *REVIEWED — 42 items checked; 158 under $100
+  accepted as valued* (*N everyday items accepted as named* on the Contents List, which states no value), and
+  `_avUnreviewedStamp` (§12.2's count) leaves them out of *N values not yet reviewed* and prints a grey *N under $100
+  accepted as valued* beside it. The floor is the desk's rule, not the agent's: Agent Two is still never told a
+  threshold, and no backend changed.

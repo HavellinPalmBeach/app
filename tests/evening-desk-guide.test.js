@@ -434,18 +434,42 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(t, 'The values follow by themselves, Agent Two correcting Agent One’s guesses; Value N lines does the rest.', 'as the page says');
     lacks(t, 'Accept value', 'and the page names no Accept value');
     // Reviewed, read off the line: one tick for the name, the count and the value.
-    const R = sandbox({ fns: ['invLineReviewed', 'agentValueUnreviewed', '_avHasFigure', '_invHasValue'] });
+    const R = sandbox({ fns: ['invLineReviewed', 'agentValueUnreviewed', '_avHasFigure', '_invHasValue', 'invLineUnderFloor', 'agentValueStale', '_agNameKey', 'invIsFirearm', 'invIsIntrinsic', 'invCatMeta', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible'],
+      vars: ['INV_REVIEW_FLOOR', 'INV_TAXONOMY', 'MAIV_OTHER', 'MAIV_BY_CATEGORY'] });
+    // An Agent Two figure of $100 or more here: under $100 the value counts as the look by itself (Q99, below).
     eq(R.invLineReviewed({ namedBy: 'desk', objectName: 'Lamp', disposition: 'Donate' }), true, 'a name typed with a destination chosen counts as reviewed by itself');
-    eq(R.invLineReviewed({ namedBy: 'desk', objectName: 'Lamp', disposition: 'Donate', fmv: 40, valuedBy: 'agent' }), false, '…until Agent Two values it');
+    eq(R.invLineReviewed({ namedBy: 'desk', objectName: 'Lamp', disposition: 'Donate', fmv: 400, valuedBy: 'agent' }), false, '…until Agent Two values it');
     eq(R.invLineReviewed({ namedBy: 'agent', objectName: 'Lamp', disposition: 'Donate' }), false, 'a name Agent One gave needs the tick');
     eq(R.invLineReviewed({ namedBy: 'agent', objectName: 'Lamp', reviewed: 1 }), true, '…which confirms it');
-    eq(R.invLineReviewed({ namedBy: 'agent', objectName: 'Lamp', reviewed: 1, fmv: 40, valuedBy: 'agent' }), false, '…with its value: a tick that has not looked at the value is not the look');
+    eq(R.invLineReviewed({ namedBy: 'agent', objectName: 'Lamp', reviewed: 1, fmv: 400, valuedBy: 'agent' }), false, '…with its value: a tick that has not looked at the value is not the look');
     has(code(fn('_invStampLineReviewed')), '_avStampReviewed(ref, job)', 'the tick accepts Agent Two’s figure with the line');
-    has(code(fn('_renderInvRow')), '>Reviewed</label>', 'the row’s Reviewed box');
+    has(code(fn('_renderInvRow')), '_invRevBoxHtml(jid, ref)', 'the row draws its Reviewed box…');
+    has(code(fn('_invRevBoxHtml')), '>Reviewed</label>', '…the row’s Reviewed box');
     has(code(fn('_renderInvRow')), 'if (invLineUnsure(ref))', 'unsure on the row where the agents were guessing');
     has(code(fn('_renderInvRow')), '>unsure</span>', '…in those words');
     has(code(fn('_invEdit')), "if (key === 'objectName') agentValueAfterRename(jobId, stableId);", 'a name changed is valued again by itself');
-    has(t, 'One Reviewed tick covers it all, unsure first. A name you typed with a destination chosen counts as reviewed until Agent Two values it. A maker added to the name reprices it.', 'as the page says');
+    has(t, 'One Reviewed tick covers it all, unsure first. Anything Agent Two values under $100 needs no tick, except firearms, art, antiques, jewelry, silver, rugs, collectibles, wine, instruments and anything with a note, a flag or an appraiser. A name you typed with a destination chosen counts as reviewed until Agent Two values it; then as above. A maker added to the name reprices it.', 'as the page says');
+    // 2026-10-25 (Q99; Anthony: "I don't want to have to manually tick a drawer of like stainless steel silverware or a junk
+    // drawer filled with tape"): under $100 with nothing flagged, Agent Two's value is the look. The page's sentence on the real
+    // rule (review-floor.test.js holds the rule itself): the figure, the floor asked first, each exception the page names.
+    eq(R.INV_REVIEW_FLOOR, 100, 'the floor is $100, as the page says');
+    has(code(fn('invLineReviewed')), 'if (invLineUnderFloor(r)) return true;\n  if (agentValueUnreviewed(r)) return false;', 'invLineReviewed asks the floor first, before the unseen figure');
+    const SMALL = (o) => Object.assign({ namedBy: 'agent', objectName: 'Kitchen utensils', valNameAt: 'Kitchen utensils', category: 'General/Household',
+      disposition: 'Donate', valuedBy: 'agent', fmv: 40, valLow: 20, valHigh: 60 }, o || {});
+    const rev = (o) => { const r = attempt(() => R.invLineReviewed(SMALL(o))); return r.ok ? r.val : 'threw: ' + r.err; };
+    eq(rev(), true, '⚠⚠ Agent Two values it under $100, nothing flagged: no tick needed');
+    eq(rev({ fmv: 90, valHigh: 140 }), false, '…read at the top of its range: $90 that may be $140 waits for the tick');
+    [['firearms', 'Firearms'], ['art', 'Art & Décor'], ['antiques', 'Antiques'], ['jewelry', 'Jewelry & Watches'], ['silver', 'Silver & Precious Metal'],
+     ['rugs', 'Rugs & Carpets'], ['collectibles', 'Collectibles'], ['wine', 'Wine & Spirits'], ['instruments', 'Musical Instruments']]
+      .forEach(([w, cat]) => eq(rev({ category: cat }), false, '⚠ except ' + w + ' (' + cat + ')'));
+    [['a note from Agent One', { agentNotices: [{ kind: 'other', text: 'a mark under the base' }] }], ['a note from Agent Two', { valNotices: [{ kind: 'specialist', text: 'a maker worth a look' }] }],
+     ['a flag: appraise', { needsAppr: true }], ['a flag: a specific bequest', { flagBequest: true }], ['a flag: disputed', { flagDisputed: true }],
+     ['a flag: NFA', { flagNFA: true }], ['a flag: marked artistic value', { flagMAIV: 'yes' }], ['an appraiser', { apprId: 'a1' }]]
+      .forEach(([w, o]) => eq(rev(o), false, '⚠ except anything with ' + w));
+    eq(rev({ namedBy: 'desk', objectName: 'Box of kitchen tools', valNameAt: 'Box of kitchen tools' }), true, 'a name you typed, then valued under $100: still reviewed ("then as above")');
+    eq(rev({ namedBy: 'desk', objectName: 'Box of kitchen tools', valNameAt: 'Box of kitchen tools', fmv: 400, valLow: 300, valHigh: 500 }), false, '…valued over it: tick it');
+    eq(rev({ namedBy: 'desk', objectName: 'Box of kitchen tools', valNameAt: 'Box of kitchen tools', category: 'Art & Décor' }), false, '…or art under it: tick it');
+    has(code(fn('_invRevBoxHtml')), 'counts as the review', 'the row’s box says why it is ticked');
     // The selection.
     has(code(fn('_renderInvGroupHead')), '>Select all</button>', 'Select all on the group');
     const bulk = code(fn('_renderInvBulk'));

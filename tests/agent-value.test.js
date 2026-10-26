@@ -117,11 +117,11 @@ const AV_FNS = ['_avValueButtonHtml', 'agentValueMode', 'agentValueInternal', '_
   'invFiduciaryMode', 'isDecedentJob', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep', 'estateValueDate',
   '_avdDate', '_ymdLocal', 'resolveValBasis', '_agNameKey', '_agDetailRefs', 'invLineCloseUps', '_invFileId', 'invAppraisalThreshold',
   'gateDispute', '_gateYes', 'invNeedsAppraisal', 'fmt', '_invMoney', '_invNamed', '_invItemNo', '_andJoin',
-  'moneyToNumber', '_readAppsScriptJson', '_invJob', '_avNameIsAgents', '_invStampLineReviewed', '_invRenderWhenIdle'];
-const AV_VARS = ['_avRun', '_avForceComps', '_avAfter', 'AGENT_VALUE_BATCH', 'AGENT_VALUE_GENERAL_CEILING', 'AGENT_VALUE_MAX_COMPS',
+  'moneyToNumber', '_readAppsScriptJson', '_invJob', '_avNameIsAgents', '_invStampLineReviewed', '_invRenderWhenIdle', 'invLineUnderFloor', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible'];
+const AV_VARS = ['_avRun', '_avForceComps', '_avAfter', 'INV_REVIEW_FLOOR', 'AGENT_VALUE_BATCH', 'AGENT_VALUE_GENERAL_CEILING', 'AGENT_VALUE_MAX_COMPS',
   'AGENT_VALUE_MARK_RE', 'AGENT_VALUE_NO_MARK_RE', 'AGENT_VALUE_CONFS', 'AGENT_VALUE_SOURCES', 'AGENT_VALUE_OWN', 'AGENT_VALUE_SALE_DATE_RE',
   'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'DECEDENT_SERVICES', 'DOC_TIERS',
-  'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'AGENT_MAX_DETAILS', 'INV_VAL_SOURCES'];
+  'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'AGENT_MAX_DETAILS', 'INV_VAL_SOURCES', 'MAIV_OTHER', 'MAIV_BY_CATEGORY'];
 
 // A synchronous, already-settled promise (the runner is synchronous), unwrapping a returned thenable like a real one.
 function sp(v) {
@@ -664,7 +664,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The real schedules carry it, beside the status, and the shared table names the basis.
     has(liveLines(fn('printCourtInventory')), '_avUnreviewedStamp(onSched)', 'the Court Inventory counts its own lines');
     has(liveLines(fn('printTrustSchedule')), '_avUnreviewedStamp(onSched)', 'the Trust Schedule too');
-    has(liveLines(fn('printEstateInventoryReport')), '_avUnreviewedStamp(all)', 'and the Estate Inventory Report');
+    has(liveLines(fn('printEstateInventoryReport')), '_avUnreviewedStamp(all, { noFloor: true })', 'and the Estate Inventory Report (its own stamp counts the floor, so the pill leaves it out)');
     const sec = sandbox({ fns: ['invConditionText', '_invScheduleSection', 'invValBasisWord', 'invAppraised', 'invLineAppraiser', '_invHasValue', '_invMoney', 'fmt', 'roundCents'],
       stubs: { esc: (x) => String(x == null ? '' : x) } })._invScheduleSection('Tangible Personal Property',
       [ROW({ fmv: 640, valSource: 'Auction comps' }), ROW({ stableId: 'b', fmv: 40, valSource: 'General estimate', category: 'General/Household', qty: 60 })]);
@@ -696,7 +696,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(panel, 'WorthPoint search: <code>Herend Rothschild</code>', 'the WorthPoint lookup');
     has(panel, 'Use this sale', 'the paste form');
     has(panel, 'href="https://drive.google.com', 'or the photograph link when the line carries one');
-    const flags = sandbox({ vars: ['INV_WORK_FLAGS'], fns: ['invLineReviewed', 'agentValueUnreviewed', '_avHasFigure', '_invHasValue'] }).INV_WORK_FLAGS;
+    const flags = sandbox({ vars: ['INV_WORK_FLAGS', 'INV_REVIEW_FLOOR', 'MAIV_OTHER', 'MAIV_BY_CATEGORY'], fns: ['agentValueStale', '_agNameKey', 'invLineReviewed', 'agentValueUnreviewed', '_avHasFigure', '_invHasValue', 'invLineUnderFloor', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible'] }).INV_WORK_FLAGS;
     eq(flags[1].key, 'unreviewed', 'the Not reviewed chip sits beside Unnamed shots (2026-10-25b: it replaced Unreviewed values)');
     eq(flags[1].test(Object.assign({}, unrev, { reviewed: true })), true, 'and counts a line whose agent figure is not yet looked at, its name ticked or not');
     const bar = liveLines(fn('_renderInvWorkbar'));
@@ -723,9 +723,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             'invBequestFor', 'jobListEntries', 'invApprovalGap', 'invReceiptOwed', '_invBenListAttr',
             'invRatificationOwed', 'invFiduciaryMode', 'isDecedentJob', 'invReleaseCautions', '_invJob', 'invHavellinRecipient',
             // P22 (merged): the row reads a pickup record and a name left on a line moved off To a person.
-            'invPickupRecord', 'signedRecordsOf', 'invChannelLeftover', 'invChannelLeftoverText', '_invPanelLeftoverHtml', 'invLineUnsure', '_invEachInput', 'invUnitValue', 'invLineQty', '_invInputStyle', '_invCtrlMinW'],
+            'invPickupRecord', 'signedRecordsOf', 'invChannelLeftover', 'invChannelLeftoverText', '_invPanelLeftoverHtml', 'invLineUnsure', '_invEachInput', 'invUnitValue', 'invLineQty', '_invInputStyle', '_invCtrlMinW', 'invLineUnderFloor', '_invRevBoxHtml', 'invIsMAIV', 'invMAIVDefaultCat'],
       vars: ['INV_PLAN_CHANNEL_KINDS', 'INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick', '_agDupSet', 'DECEDENT_SERVICES', 'INV_RELEASE_CAUTIONS',
-             'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED'],
+             'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'INV_REVIEW_FLOOR', 'MAIV_OTHER', 'MAIV_BY_CATEGORY'],
       stubs: {
         jobs: [job], _invInput: () => '<input>', _invThumbHTML: () => '<div></div>', _invRoomName: () => 'Dining Room',
         invIsFirearm: () => false, invReleaseBlocked: () => false, invAwaitingAppraisal: () => false,

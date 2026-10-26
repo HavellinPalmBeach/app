@@ -87,7 +87,7 @@ const PRINT_FNS = ['_invDocPartyHead', 'invLineReviewed', 'invInitialGroupWords'
   // The job-flow audit (2026-10-08): the Contents Record says every line was photographed, and shared, only where it was.
   '_invHasPhoto', 'photoShareLive',
   // 2026-10-22: the signed schedules, beside the ledger in the close-out papers.
-  '_renderSignedSchedulesCard', 'signedScheduleRows'];
+  '_renderSignedSchedulesCard', 'signedScheduleRows', 'invLineUnderFloor', '_invFloorStampWords', '_arDupEligible'];
 const PRINT_VARS = ['INV_LINE_INITIAL_MIN', 'INV_DISP_DOC_WORDS', 'CONTENTS_SIGNED_REF',  'INV_CONTRACT_DOCS',
   '_agRun', '_avRun', '_arRun', 'AGENT_NOTICE_KINDS', 
   'INV_DISPOSITIONS', 'INV_GROUP_ORDER', 'INV_RELEASE_DISPOSITIONS', 'INV_RELEASE_CAUTIONS',
@@ -100,7 +100,7 @@ const PRINT_VARS = ['INV_LINE_INITIAL_MIN', 'INV_DISP_DOC_WORDS', 'CONTENTS_SIGN
   'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DOC_SCOPES', 'AS_FOUND_SUBFOLDER', 'PHOTO_SUBFOLDER',
   'LEDGER_DOC_KEY', 'LEDGER_SIGNED_REF', 'SIGNED_RECORD_KINDS', 'INV_SALE_DISPOSITIONS', '_signedCopyKeys', '_signedCopySpecs', 'INV_NET_LABELS',
   // P20 vars: the names the living client's staff caution reads.
-  'PERSON_NAME_ALIASES'];
+  'PERSON_NAME_ALIASES', 'INV_REVIEW_FLOOR'];
 
 function rig(job, refs) {
   const printed = [];

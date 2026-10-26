@@ -66,11 +66,11 @@ const AV_FNS = ['agentValueMode', 'agentValueInternal', '_avHasFigure', 'agentVa
   'invFiduciaryMode', 'isDecedentJob', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep', 'estateValueDate',
   '_avdDate', '_ymdLocal', 'resolveValBasis', '_agNameKey', '_agDetailRefs', 'invLineCloseUps', '_invFileId', 'invAppraisalThreshold',
   'gateDispute', '_gateYes', 'invNeedsAppraisal', 'fmt', '_invMoney', '_invNamed', '_invItemNo', '_andJoin',
-  'moneyToNumber', '_readAppsScriptJson', '_invJob', '_invRenderWhenIdle', '_invHasPhoto'];
-const AV_VARS = ['_avRun', '_avForceComps', '_avAfter', 'AGENT_VALUE_BATCH', 'AGENT_VALUE_GENERAL_CEILING', 'AGENT_VALUE_MAX_COMPS',
+  'moneyToNumber', '_readAppsScriptJson', '_invJob', '_invRenderWhenIdle', '_invHasPhoto', 'invIsFirearm', 'invLineUnderFloor', 'invIsMAIV', 'invMAIVDefaultCat'];
+const AV_VARS = ['_avRun', '_avForceComps', '_avAfter', 'INV_REVIEW_FLOOR', 'AGENT_VALUE_BATCH', 'AGENT_VALUE_GENERAL_CEILING', 'AGENT_VALUE_MAX_COMPS',
   'AGENT_VALUE_MARK_RE', 'AGENT_VALUE_NO_MARK_RE', 'AGENT_VALUE_CONFS', 'AGENT_VALUE_SOURCES', 'AGENT_VALUE_OWN', 'AGENT_VALUE_SALE_DATE_RE',
   'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'DECEDENT_SERVICES', 'DOC_TIERS',
-  'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'AGENT_MAX_DETAILS', 'INV_VAL_SOURCES', '_agDupSet', 'AGENT_ROOM_CONF_RANK', 'AGENT_PASS_GAP_MS'];
+  'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'AGENT_MAX_DETAILS', 'INV_VAL_SOURCES', '_agDupSet', 'AGENT_ROOM_CONF_RANK', 'AGENT_PASS_GAP_MS', 'MAIV_OTHER', 'MAIV_BY_CATEGORY'];
 
 function sp(v) {
   if (v && v.__sync) return v;
@@ -266,14 +266,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     R.ctx._invSetReviewed(7, 's1', false);
     r = R.ctx._getPhotoRef(7, 's1');
     eq([r.reviewed, r.valReviewed], [false, undefined], 'unticked: both gone');
-    eq(R.ctx.invLineReviewed({ namedBy: 'desk', objectName: 'Lamp', disposition: 'Donate', valuedBy: 'agent', fmv: 50, valHigh: 60 }), false,
+    eq(R.ctx.invLineReviewed({ namedBy: 'desk', objectName: 'Lamp', disposition: 'Donate', valuedBy: 'agent', fmv: 150, valHigh: 180 }), false,
       'a line named and decided on the desk is reviewed only while no unseen agent figure is on it');
     eq(R.ctx.invLineReviewed({ namedBy: 'desk', objectName: 'Lamp', disposition: 'Donate' }), true, '…and is, without one');
     has(liveLines(fn('_invBulkApply')), '_invStampLineReviewed(ref, job);', 'Mark reviewed stamps the same one look');
     lacks(liveLines(fn('_invBulkApply')), "'valReviewed'", 'and Accept values\' key is gone from the bulk handler');
     has(liveLines(fn('agentValueUseSale')), '_invStampLineReviewed(ref, job);', 'a sale pasted is the person\'s look at the line');
     ['agentValueAccept', '>Accept value<', 'Accept values</button>', '_avAcceptButtonHtml', "'unrevval'"].forEach((w) => lacks(live, w, '⚠ no second tier: ' + w));
-    const F = sandbox({ vars: ['INV_WORK_FLAGS'], fns: ['invLineReviewed', 'agentValueUnreviewed', '_avHasFigure', '_invHasValue'] }).INV_WORK_FLAGS;
+    const F = sandbox({ vars: ['INV_WORK_FLAGS', 'INV_REVIEW_FLOOR', 'MAIV_OTHER', 'MAIV_BY_CATEGORY'], fns: ['invLineReviewed', 'agentValueUnreviewed', '_avHasFigure', '_invHasValue', 'invLineUnderFloor', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible'] }).INV_WORK_FLAGS;
     eq([F[1].key, F[1].label], ['unreviewed', 'Not reviewed'], 'Not reviewed sits beside Unnamed shots');
     eq([F[1].test(SURE()), F[1].test(SURE({ reviewed: true, valReviewed: true }))], [true, false], 'and counts the one rule');
   }

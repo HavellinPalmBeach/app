@@ -43,10 +43,10 @@ const FNS = ['invLineReviewed', '_invDocPartyHead', 'invOwnInitial', 'invInitial
              '_invProgressStamp', '_invReviewStats', 'jobTakesProceedsStatements', 'proceedsReconciliation',
              '_jobDestLabel', '_agrApprover', 'signedRecordsOf',
              // P20: the request lists what left before every fiduciary approved apart, and prints who signed readably.
-             'invRatificationOwed', 'invRecordedGone', 'invPickupRecord', 'custodyEvents', 'invReceiptRecord', 'invViaDealer', 'invRecipientName', 'invApprovalSignedText', 'invApprovalSigners', 'invStaffRefused', 'agentValueUnreviewed', '_avHasFigure', '_invStampLineReviewed', '_avStampReviewed'];
+             'invRatificationOwed', 'invRecordedGone', 'invPickupRecord', 'custodyEvents', 'invReceiptRecord', 'invViaDealer', 'invRecipientName', 'invApprovalSignedText', 'invApprovalSigners', 'invStaffRefused', 'agentValueUnreviewed', '_avHasFigure', '_invStampLineReviewed', '_avStampReviewed', 'invLineUnderFloor', '_invFloorStampWords', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible'];
 const VARS = ['INV_LINE_INITIAL_MIN', 'INV_DISP_DOC_WORDS', 'INV_PLAN_CHANNEL_KINDS', 'INV_UNDECIDED', 'INV_RELEASE_CAUTIONS', 'INV_RELEASE_DISPOSITIONS', 'INV_CAT_GLYPH',
               'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
-              'DECEDENT_SERVICES', 'INVENTORY_COLUMNS', 'MATTER_TYPES', 'INV_SALE_DISPOSITIONS'];
+              'DECEDENT_SERVICES', 'INVENTORY_COLUMNS', 'MATTER_TYPES', 'INV_SALE_DISPOSITIONS', 'INV_REVIEW_FLOOR', 'MAIV_OTHER', 'MAIV_BY_CATEGORY'];
 
 const JOB = { id: 1, hvlId: 'HVL-0007', name: 'Butler Estate', client: 'Butler Estate',
               svc: 'probate', executor: 'Tripp Butler', tc: 'Anthony Graziano' };

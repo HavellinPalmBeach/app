@@ -20,7 +20,7 @@ const FNS = ['invLineReviewed', '_invDocPartyHead', 'invConditionText', 'matterD
   // the last group in this file. Nothing in the suite had ever called it.
   'printEstateInventoryReport', 'invAppraised', '_invHasValue', 'invAppraisalSourceText', 'invLineAppraiser', '_invLinkedAppraiser', 'invAppraisalInProgress', '_apprLabel', 'jobOnProbateTrack', '_avUnreviewedStamp', 'agentValueUnreviewed', '_invGroupItems', '_invDispLabel', '_invIsExempt',
   '_invIsProbateAsset', '_invTrack', '_invHasAppraisal', '_jobAppraisers', 'invAppraiserFor',
-  'resolveValBasis', '_avHasFigure'
+  'resolveValBasis', '_avHasFigure', 'invLineUnderFloor', '_invFloorStampWords', '_arDupEligible'
 ];
 const VARS = ['MATTER_TYPES',  'INV_CONTRACT_DOCS',
   '_agRun', '_avRun', '_arRun', 'AGENT_NOTICE_KINDS', 
@@ -28,7 +28,7 @@ const VARS = ['MATTER_TYPES',  'INV_CONTRACT_DOCS',
   'INV_CAT_GLYPH', 'estimateStore', 'INV_APPRAISAL_THRESHOLD',
   'INV_APPRAISAL_THRESHOLD_DISPUTED', 'INV_CATEGORIES', 'INV_TAXONOMY',
   'MAIV_BY_CATEGORY', 'MAIV_OTHER', 'MAIV_AGGREGATE_THRESHOLD', 'INV_CONDITIONS',
-  'INV_GROUP_ORDER', 'INV_DISPOSITIONS', 'INV_ASSET_TRACKS', 'INV_VAL_BASES', 'INV_UNDECIDED',
+  'INV_GROUP_ORDER', 'INV_DISPOSITIONS', 'INV_ASSET_TRACKS', 'INV_VAL_BASES', 'INV_UNDECIDED', 'INV_REVIEW_FLOOR'
 ];
 
 const ESTATE = {
@@ -245,7 +245,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ───────────────────────────────────────────────────────────────────────────
   group('⚠ THE PROGRESS STAMP NAMES WHAT THIS DOCUMENT CARRIES');
   {
-    const p = sandbox({ fns: ['_invProgressStamp', '_invReviewStats', 'invLineReviewed', 'agentValueUnreviewed', '_avHasFigure'] });
+    const p = sandbox({ vars: ['INV_REVIEW_FLOOR', 'MAIV_OTHER', 'MAIV_BY_CATEGORY'], fns: ['_invProgressStamp', '_invReviewStats', 'invLineReviewed', 'agentValueUnreviewed', '_avHasFigure', 'invLineUnderFloor', '_invFloorStampWords', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible'] });
     const plain = p._invProgressStamp([{ reviewed: true }, {}]);
     const noVal = p._invProgressStamp([{ reviewed: true }, {}], { noValues: true });
     has(plain, 'Values and dispositions on unreviewed lines may still change',

@@ -57,9 +57,9 @@ const ROW_FNS = ['invLineReviewed', '_renderInvRow', '_invRowPhotoHtml', '_invRo
   'invDealerRouteText', 'invBequestFor', 'jobListEntries', 'invApprovalGap', 'invReceiptOwed', '_invBenListAttr', 'invRatificationOwed',
   'invFiduciaryMode', 'isDecedentJob', 'invReleaseCautions', '_invJob', 'invHavellinRecipient', 'invChannelLeftover', 'invChannelLeftoverText',
   '_invPanelCautionHtml', '_invPanelLeftoverHtml', '_jobDestLabel', 'invAppraisalSourceText', 'invLineAppraiser', '_invLinkedAppraiser',
-  'invAppraised', 'invAppraisalInProgress', '_invHasAppraisal', '_invHasValue', '_avHasFigure', 'invLineUnsure', '_invEachInput', 'invUnitValue', 'invLineQty', '_agNameKey', '_invInputStyle', '_invCtrlMinW'];
+  'invAppraised', 'invAppraisalInProgress', '_invHasAppraisal', '_invHasValue', '_avHasFigure', 'invLineUnsure', '_invEachInput', 'invUnitValue', 'invLineQty', '_agNameKey', '_invInputStyle', '_invCtrlMinW', 'invLineUnderFloor', '_invRevBoxHtml', 'invIsMAIV', 'invMAIVDefaultCat'];
 const ROW_VARS = ['INV_PLAN_CHANNEL_KINDS', 'INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick', '_agDupSet',
-  'DECEDENT_SERVICES', 'INV_RELEASE_CAUTIONS'];
+  'DECEDENT_SERVICES', 'INV_RELEASE_CAUTIONS', 'INV_REVIEW_FLOOR', 'MAIV_OTHER', 'MAIV_BY_CATEGORY'];
 const LINE = (o) => Object.assign({ stableId: 'k80', label: 'inventory', roomIdx: 1, ts: 1, itemNo: 80, category: 'General/Household',
   objectName: 'White ceramic salad/dessert plates, coupe form, unmarked in frame', disposition: 'Donate', qty: 8,
   driveFileId: 'FK80', driveFileUrl: 'https://drive.google.com/file/d/FK80/view' }, o || {});
