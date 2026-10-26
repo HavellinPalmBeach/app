@@ -1380,6 +1380,21 @@ The filed PDF ends with an **Execution Record** stating only what the app witnes
 
 Questions for counsel: (1) under Florida's UETA (ch. 668, Fla. Stat.) and E-SIGN, is a finger-drawn signature captured on the firm's own device in the concierge's presence, with this execution record, sufficient to execute the agreement, on an estate as on a living client's job? (2) Should the record also state the client's capacity (as the signature page already prints it), the device's identity, or an IP or clock source, given that the app records the day and the person holding the device and nothing else? (3) Where Anthony is not present, the client's signature and the deposit are what the app waits on and the countersignature follows later in DocuSign or on paper: is a countersignature owed on the same copy, or is the executed copy with the client's signature alone enough, as the standard form's §17.6 counterparts clause suggests? (4) For a client of advanced age signing on the concierge's device, is there a sentence counsel wants read or shown before the pad (an acknowledgement of having had the opportunity to take the packet away or consult counsel), beyond the acknowledgement already on both signature pages?
 
+### D19. The release approval request as a letter ⚠ NEW 2026-10-26
+
+Anthony asked that the request read as a letter rather than a notice (*"it's a bit odd to say like verbal approval is never accepted … make it just sound like a little bit more normal"*), and approved these words. They replace the opening *"To [names]: the items listed below are ready to be released from the property. … Verbal approval is not accepted."* (D7, D15):
+
+> *"Dear Thomas Ellison and Catherine Ellison-Reyes,*
+> *The items listed below are ready to leave the property. Before anything is moved, we ask for the written approval of each of you. Please initial where shown, then each of you sign and date at the foot and return it to us.*
+> *Nothing on this list will be moved, sold, donated or disposed of until it is back with us, signed by both of you.*
+> *Thank you."*
+
+With one fiduciary, or a living client: *"your written approval"*, *"sign and date"*, *"signed by you"*; with three or more, *"all 3 of you"*. A request of items already gone (D7's ratification) reads: *"The items listed below have already left the property and are listed for your signature. Please each of you sign and date at the foot and return it to us."* The email that carries it asks: *"Please initial where marked, sign where shown, and return the signed copy to us; a scan or a photograph by reply is fine."*
+
+Two changes ride with it. (1) Only an item at $500 or more, a specific bequest or an item carrying a caution has an initial box of its own; every other item is covered by its destination group's one initial, and no longer says *"initialled with its group"* on its own row (D15). (2) An item leaving with nobody named to take it (a donation with no charity, a release to a person not yet named) is not on the request until somebody is named; one already gone is still listed for ratification.
+
+Questions for counsel: (1) does the letter, without the sentence on verbal approval, still read as the written authority D7 relies on, given that the app records an approval only from the signed paper? (2) Is *"a scan or a photograph by reply is fine"* acceptable as the returned approval, or should the signed original be asked for on an estate? (3) Is one initial per destination group, with a box of its own only for the items above, enough for §5.3's written approval of donations and of sales or disposals over $500?
+
 ## E. What is deliberately NOT being asked
 
 So counsel does not spend time on settled ground:

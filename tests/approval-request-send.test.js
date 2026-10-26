@@ -290,7 +290,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(parts.pdfs.map((p) => p.name), ['Havellin Release Approval Request - 14 Seaspray Ave - Oct 17 2026.pdf'], 'the PDF attached, named as the print names it');
     has(parts.text, 'Dear Rex and Dana,', 'greets the fiduciaries emailed, by first name, never the one with no email');
     has(parts.text, 'Attached is Havellin’s Release Approval Request for the Estate of Harold Brennan, 14 Seaspray Ave, Palm Beach, as of October 17, 2026: 2 lines proposed to leave the property.', 'says what it is, for what, as of when, and how many lines');
-    has(parts.text, 'Please initial each line or group where marked, sign where shown, and return the signed copy to us; a scan or a photograph by reply is fine.', 'asks for the initials, the signature and the copy back');
+    has(parts.text, 'Please initial where marked, sign where shown, and return the signed copy to us; a scan or a photograph by reply is fine.', 'asks for the initials, the signature and the copy back');
     has(parts.text, 'Nothing on it will be moved, sold, donated or disposed of until it comes back signed.', 'the rule, as the page states it');
     has(parts.text, 'Every co-representative named on it signs.', 'three fiduciaries: every one signs');
     has(parts.text, 'Lee Hale has no email on file with us and will receive a printed copy to sign.', '⚠ the one with no email is named, so the others know a third signature is being gathered');
@@ -359,7 +359,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(card, 'now await approval and were not on it', 'nothing new waits');
     has(r.card(), 'sendApprovalRequest(7)', 'a fresh send is offered (the two lines still wait)');
     // One line approved by all three, a new line put up for sale: the card counts both.
-    r.c._photoRefs[7].forEach((row) => { if (row.stableId === 'a') { row.authBy = ALL_SIGNED; row.approvalDate = '2026-10-17'; } if (row.stableId === 'c') row.disposition = 'Sell'; });
+    r.c._photoRefs[7].forEach((row) => { if (row.stableId === 'a') { row.authBy = ALL_SIGNED; row.approvalDate = '2026-10-17'; } if (row.stableId === 'c') { row.disposition = 'Sell'; row.channel = 'Kodner Galleries'; } });
     const card2 = text(r.card());
     has(card2, '2 lines · 1 line still unsigned', 'one of the two still unsigned');
     has(card2, '⚠ 1 line now await approval and were not on it: send a fresh request.', 'and the fresh line is named');

@@ -321,7 +321,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       '…to carry each non-NFA firearm by the serial and to the dealer printed against it');
     has(t, 'Havellin takes no ownership of any firearm', 'with the no-ownership sentence');
     has(t, 'Initial once for all 3 firearms above', '⚠⚠ one initial for the batch');
-    eq(count(html, 'initialled once, with the firearms below'), 3, '…and no per-line initial box on a firearm line');
+    // ⚠ restated 2026-10-26 (Anthony: no initial column where no item needs its own; "Keep theirs"): the firearm lines carry no cell at all.
+    eq(count(html, 'class="inv-own-init"'), 0, '…and no per-line initial box on a firearm line');
+    lacks(html, '>Initial</th>', 'nor an Initial column, with no item needing its own');
     has(t, 'Serial RS1 · to Palm Beach Arms (FFL), a licensed dealer', 'each firearm line prints its serial and dealer');
     has(t, 'Serial C99 · through Gulfstream Guns (FFL), a licensed dealer', 'a dealer-routed one names the dealer it goes through');
     has(t, '1 of them has no serial or no dealer recorded yet, and is not covered for transport', '⚠ one with no serial is not covered for transport');

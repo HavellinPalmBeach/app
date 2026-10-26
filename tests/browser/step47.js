@@ -149,11 +149,12 @@ const T0 = Date.parse('2026-09-24T15:00:00Z');   // a past day, so each desk ope
         L('s1', { itemNo: 3, objectName: 'Oak sideboard', disposition: 'Keep' }),
         L('bc', { itemNo: 4, objectName: 'Bar console', disposition: 'Keep', driveFileId: 'f-bar' }),
         L('bk', { itemNo: 5, objectName: 'Banksy print', disposition: 'Keep', derivedFrom: 'bc', driveFileId: 'f-bar' }),
-        L('lp', { itemNo: 6, objectName: 'Brass lamp', disposition: 'Donate' }),
+        // Named takers: an item with nobody named to take it is held off the approval request (2026-10-26, "Hold them off").
+        L('lp', { itemNo: 6, objectName: 'Brass lamp', disposition: 'Donate', channel: 'Goodwill Palm Beach' }),
       ];
       _photoRefs[4703] = [
-        L('pt', { itemNo: 1, objectName: 'Oil painting', category: 'Art & Décor', disposition: 'Auction', needsAppr: true }),
-        L('lm', { itemNo: 2, objectName: 'Floor lamp', disposition: 'Donate' }),
+        L('pt', { itemNo: 1, objectName: 'Oil painting', category: 'Art & Décor', disposition: 'Auction', channel: 'Christie’s', needsAppr: true }),
+        L('lm', { itemNo: 2, objectName: 'Floor lamp', disposition: 'Donate', channel: 'Goodwill Palm Beach' }),
       ];
       _photoRefs[4704] = [L('x1', { itemNo: 1, objectName: 'Dining table', disposition: 'Sell' })];
       _photoRefs[4702] = [];

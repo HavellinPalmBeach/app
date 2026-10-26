@@ -189,7 +189,7 @@ const textOf = (h) => String(h == null ? '' : h).replace(/<[^>]+>/g, ' ').replac
 // ⚠ SINCE THE BARS' LINES (2026-10-22): a line on the estate waits on written approval, so Releases opens by its own rule
 // (Anthony's Q89), and the job has a snapshot, so the history bar is drawn (shut: it never opens by itself).
 const ESTATE = () => ({ id: 7, name: 'Ashworth', svc: 'probate', won: true, invSnapshots: [{ ts: 1, label: 'Filed', count: 2 }] });
-const REFS = () => [{ stableId: 'a', label: 'inventory', objectName: 'Clock' }, { stableId: 'b', label: 'inventory', objectName: 'Desk', disposition: 'Donate' }];
+const REFS = () => [{ stableId: 'a', label: 'inventory', objectName: 'Clock' }, { stableId: 'b', label: 'inventory', objectName: 'Desk', disposition: 'Donate', channel: 'Goodwill' }];   // named: a line with nobody to take it is never asked for (2026-10-26)
 function desk(jobO, cards, opt) {
   opt = opt || {};
   const dom = liveDom(7);
@@ -616,7 +616,7 @@ function groupC({ group, ok, eq, has, lacks }) {
     eq(B.line('releases'), '2 items need written approval: send a request · no beneficiaries recorded', 'and says so, the Keep line not counted');
     eq(B.tones('releases')[0], 'amber', 'in amber');
     lacks(B.line('releases'), 'sign out', 'nothing is ready to sign out until the approval is on record');
-    const one = bars(PROBATE(), [LINE('a', { disposition: 'Junk' })]);
+    const one = bars(PROBATE(), [LINE('a', { disposition: 'Junk', channel: 'Haul-It' })]);
     eq(one.line('releases').split(' · ')[0], '1 item needs written approval: send a request', 'one line, in the singular');
   }
 
@@ -633,7 +633,7 @@ function groupC({ group, ok, eq, has, lacks }) {
     eq([B.releases.openByDefault, B.line('releases'), B.tones('releases')[0]], [false, '2 on the request still unsigned · no beneficiaries recorded', 'grey'],
       'sent: shut, grey, what is out for signature counted');
     // A line decided after the request went: owed a fresh one, so the bar opens again.
-    B = bars(sent, rows().concat([LINE('c', { disposition: 'Junk' })]));
+    B = bars(sent, rows().concat([LINE('c', { disposition: 'Junk', channel: 'Haul-It' })]));
     eq([B.releases.openByDefault, B.line('releases')], [true, '1 item needs written approval: send a request · 2 on the request still unsigned · no beneficiaries recorded'],
       '⚠ a line the request never carried opens it again');
   }
@@ -966,7 +966,8 @@ function groupE({ group, ok, eq, has, lacks }) {
     const D = desk(LIVING(), {}, { refs: rows, roots: ['_invEdit'], stubs: { savePhotoRefs() {}, _scheduleInventorySync() {}, showSyncBadge() {}, alert() {},
       _invRefreshSummary() {} } });
     D.render();
-    eq(line(heads(D.dom.html), 'releases'), '1 item needs written approval: send a request', 'fixture: the donation is owed a request');
+    // ⚠ restated 2026-10-26 (Anthony: "Hold them off"): with nobody named the line is not asked for, and the bar says what it waits on.
+    eq(line(heads(D.dom.html), 'releases'), '1 item waits for somebody to be named to take it', 'fixture: the donation waits for a taker');
     const s = settle(D, () => D.C._invEdit(7, 'a', 'channel', { value: 'Goodwill', type: 'text' }));
     ok(s.r.ok, 'the edit runs (' + (s.r.err || 'ok') + ')');
     eq(line(s.partial, 'releases'), '1 item needs written approval: send a request · 1 ready to sign out', '⚠ the charity named: ready to sign out, said at once');
@@ -1521,7 +1522,7 @@ function groupH({ group, ok, eq, has, lacks }) {
     // through the real tap: the draft sent, I've sent it, then the fresh request the next state's card offers.
     const rows = (more) => [LINE('a', { itemNo: 1, objectName: 'Harbor painting', disposition: 'Auction', channel: 'Kodner Galleries' }),
       LINE('b', { itemNo: 2, objectName: 'Table lamp', disposition: 'Donate', channel: 'Goodwill' }),
-      LINE('c', { itemNo: 3, objectName: 'Clock', disposition: 'Keep' })].concat(more ? [LINE('d', { itemNo: 4, objectName: 'Rug', disposition: 'Junk' })] : []);
+      LINE('c', { itemNo: 3, objectName: 'Clock', disposition: 'Keep' })].concat(more ? [LINE('d', { itemNo: 4, objectName: 'Rug', disposition: 'Junk', channel: 'Haul-It' })] : []);
     const real = ['_renderInvWorkbar', '_renderInvReleasesCard', '_renderInvBulk'];
     const drafted = () => ({ approvalRequest: { draftedAt: '2026-10-19T15:00:00.000Z', provider: 'gmail', draftUrl: 'https://mail.google.com/mail/u/0/#drafts/x',
       req: { to: ['ruth@adler.example'], cc: [], noEmail: [], viaCounsel: false, stableIds: ['a'], asked: 1, ratify: 0 } } });

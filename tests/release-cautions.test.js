@@ -18,7 +18,7 @@
 
 const { sandbox, source, fn } = require('./harness');
 
-const FNS = ['invLineReviewed', '_invDocPartyHead', 'invOwnInitial', 'invInitialGroupKey', 'estateDirectionWords', '_invDocName', 'printApprovalRequest', 'invDispDocWord', 'printDispositionLedger', 'referralFeeVendorsNote', 'vendorPaysReferral', '_vendorByName', '_vendorNameKey', '_andJoin', '_invBulkApply', '_invStampBy', 'deviceUser', 'invFillPlanChannel', 'invPlanChannel', 'invNoteDispositionMove',
+const FNS = ['invLineReviewed', '_invDocPartyHead', 'invOwnInitial', 'invInitialGroupKey', 'estateDirectionWords', '_invDocName', 'printApprovalRequest', 'invReleaseRecipientNamed', 'invDispDocWord', 'printDispositionLedger', 'referralFeeVendorsNote', 'vendorPaysReferral', '_vendorByName', '_vendorNameKey', '_andJoin', '_invBulkApply', '_invStampBy', 'deviceUser', 'invFillPlanChannel', 'invPlanChannel', 'invNoteDispositionMove',
              'invReleaseCautions', '_invCautionBadges', '_invCautionNotices', '_invNamed',
              '_invItemNo', '_invAwaitingApproval', '_jobInvRefs', '_invAssignItemNos',
              '_invTouch', '_invPrintThumb', '_invFileId', '_invRoomName', '_invMoney',
@@ -67,6 +67,10 @@ const ROWS = () => [
   mk({ stableId: 'd', ts: 4, itemNo: 4, objectName: "Mother's locket", category: 'Jewelry & Watches',
        fmv: '1200', disposition: 'Donate', flagBequest: true, flagDisputed: true }),
 ];
+
+// The same estate with somebody named to take each line, for the request: a line leaving with nobody named is held off it
+// (2026-10-26, "Hold them off").
+const NAMED = (rows) => rows.map((r) => Object.assign({ channel: r.disposition === 'Donate' ? 'Habitat ReStore' : 'Kodner Galleries' }, r));
 
 function ctx(rows, extra) {
   const state = { printed: '', alerted: '', badge: '' };
@@ -147,7 +151,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ───────────────────────────────────────────────────────────────────────────
   group('⚠⚠ THE RELEASE APPROVAL REQUEST — the document that authorises property to leave');
   {
-    const s = ctx();
+    const s = ctx(NAMED(ROWS()));
     s.printApprovalRequest(1);
     const doc = s.__state.printed;
     const txt = readable(doc);
@@ -198,12 +202,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ───────────────────────────────────────────────────────────────────────────
   group('⚠ A CLEAN ESTATE PRINTS NO NOTICE AT ALL — a caution on every job is noise');
   {
-    const s = ctx([
+    const s = ctx(NAMED([
       mk({ stableId: 'a', ts: 1, objectName: 'Dining chairs', category: 'Furniture',
            fmv: '900', disposition: 'Auction' }),   // under the threshold, which since 2026-10-14 reads every category
       mk({ stableId: 'b', ts: 2, objectName: 'Side table', category: 'Furniture',
            fmv: '600', disposition: 'Donate' }),
-    ]);
+    ]));
     s.printApprovalRequest(1);
     const doc = s.__state.printed;
     ok(doc.length > 0, 'the request still renders');

@@ -333,7 +333,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const S = desk(['printApprovalRequest'], PROBATE(), [LINE('a', 1, { disposition: 'Sell', channel: 'Kodner' })]);
     S.printApprovalRequest(8);
     const t = flat((S.__log.printed[0] || {}).html);
-    has(t, 'the item listed below is ready to be released from the property.', '⚠ one line: singular');
+    // ⚠ restated 2026-10-26: the request is a letter (Anthony approved its words).
+    has(t, 'The item listed below is ready to leave the property.', '⚠ one line: singular');
     const R = desk(['printApprovalRequest'], PROBATE(), [LINE('a', 1, { disposition: 'Sell', channel: 'Kodner' }),
       LINE('b', 2, { disposition: 'Sell', dispDate: '2026-10-02' })]);
     R.printApprovalRequest(8);

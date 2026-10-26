@@ -1476,7 +1476,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.26 · 10:23am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.26 · 2:13pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -19830,7 +19830,8 @@ function staleDraftNote(job, key, fresh, named) {
     : (list[0].why === 'edit' ? 'was made before the estimate was edited'
       : list[0].why === 'reopen' ? 'was made before the job was re-opened'
       : list[0].why === 'inventory' ? 'was made before the inventory changed'
-      : list[0].why === 'approved' ? 'was made before every line on it was approved' : 'has the old price');
+      : list[0].why === 'approved' ? 'was made before every line on it was approved'
+      : list[0].why === 'discarded' ? 'was discarded on the desk' : 'has the old price');
   if (fresh) return (gmail ? 'Delete' : 'Discard') + ' the older ' + what + ' — ' + (one ? 'it ' : 'they ') + why;
   var act = gmail ? (one ? 'delete it, don’t send it' : 'delete them, don’t send them')
                   : (one ? 'if it was never sent, discard it' : 'if they were never sent, discard them');
@@ -21596,6 +21597,8 @@ function docRecordSent(spec, res) {
   // The probate package says what it carried and to whom (2026-10-01, P17), which is also what marks its draft as one
   // the inventory overtakes rather than a price (draftIsStale); the approval request likewise (`req`, 2026-10-17).
   if (res.pkg) st.pkg = res.pkg;
+  // The request that went is kept while a newer one is drafted, so discarding the draft puts it back (2026-10-26).
+  if (res.req && st.req && st.sentAt && !docDraftPending(st)) st.sentReq = st.req;
   if (res.req) st.req = res.req;
   st.draftedAt = new Date().toISOString();
   st.draftedBy = _actor(spec.job) || spec.job.tc || '';
@@ -21674,6 +21677,7 @@ function markDocSent(jobId, docKey) {
   var st = docState(job, docKey);
   st.sentAt = new Date().toISOString();
   st.sentBy = _actor(job) || job.tc || '';
+  delete st.sentReq;   // what a discarded draft would have put back is history once a send is confirmed (2026-10-26)
   saveJobs(); syncJobToSheets(job);
   dashNotice('ok', 'Recorded as sent.');
   _dashRedraw(jobId);
@@ -32272,6 +32276,19 @@ function printApprovalRequest(jobId, selectedOnly, opt) {
   var wanted = {};
   items.forEach(function(r){ wanted[r.stableId] = 1; });
   items = _invAssignItemNos(jobId).filter(function(r){ return wanted[r.stableId]; });
+  // ⚠ NOBODY NAMED, NOT ASKED (2026-10-26, invReleaseRecipientNamed): a line leaving with no recipient stays off the paper.
+  var held = items.filter(function(r){
+    return INV_RELEASE_DISPOSITIONS.indexOf(r.disposition) >= 0 && !invReleaseRecipientNamed(r) && !invRatificationOwed(r, job);
+  });
+  items = items.filter(function(r){ return held.indexOf(r) < 0; });
+  if (!items.length) {
+    var _noOne = 'Nobody is named to take ' + (held.length === 1 ? 'the item' : 'any of the ' + held.length + ' items')
+      + (selectedOnly ? ' selected' : ' waiting for approval') + ' yet. Type who takes each on its row (a charity or a hauler confirmed '
+      + 'on the Job Plan fills itself in), then send the request.';
+    if (_asHtml) return { why: _noOne, held: held };
+    alert(_noOne);
+    return;
+  }
   var _fid = invFiduciaryMode(job);
   // ⚠⚠ EVERY FIDUCIARY SIGNS (P19, call 4): the request addresses every one of them, prints a signature line for each,
   // and says that all of them must sign where there is more than one.
@@ -32287,6 +32304,7 @@ function printApprovalRequest(jobId, selectedOnly, opt) {
   // LOAD. A living job enters no values by design, so the column is dropped there — unless
   // something actually carries one, in which case withholding it would hide real money.
   var showVal = _fid || valueOf(items) > 0;
+  var showInit = asked.some(function(r){ return !invIsFirearm(r) && invOwnInitial(r, job); });
   var rowOf = function(r) {
     var q = parseInt(r.qty, 10);
     var gone = ratify.indexOf(r) >= 0;
@@ -32321,9 +32339,12 @@ function printApprovalRequest(jobId, selectedOnly, opt) {
         + '</td>'
       // A firearm asked for is initialled once, with every firearm on the list, under the firearms paragraph (P25, Q35); a
       // line under $500 with no caution and no bequest, once with its destination group (P25, Q46).
-      + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;width:70px;">'
-        + (invIsFirearm(r) && !gone ? '<span class="inv-fa-init" style="font-size:9px;color:#888;">initialled once, with the firearms below</span>'
-          : (!gone && !invOwnInitial(r, job)) ? '<span class="inv-grp-init" style="font-size:9px;color:#888;">initialled with its group</span>' : '&nbsp;') + '</td>'
+      // ⚠ ONLY WHERE AN ITEM NEEDS ITS OWN (2026-10-26; Anthony: "I don't think we need … the initial column and for every item
+      // say initialled with its group"; he took "Keep theirs"): the column is drawn only when a line asked for initials on its own
+      // ($500 or more, a specific bequest, a caution: invOwnInitial), and only that line has a box; a group's line is the group row.
+      + (showInit ? '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;width:70px;">'
+        + (!gone && !invIsFirearm(r) && invOwnInitial(r, job) ? '<span class="inv-own-init" style="display:inline-block;width:56px;border-bottom:1px solid #999;">&nbsp;</span>' : '&nbsp;')
+        + '</td>' : '')
       + '</tr>';
   };
   // ⚠ GROUPED BY DESTINATION (P25, Q46): the lines asked for run destination by destination, and under each group whose
@@ -32335,7 +32356,7 @@ function printApprovalRequest(jobId, selectedOnly, opt) {
     var list = _grp[k];
     var together = list.filter(function (r) { return !invIsFirearm(r) && !invOwnInitial(r, job); });
     return list.map(rowOf).join('') + (together.length
-      ? '<tr class="inv-grp-row"><td colspan="' + (showVal ? 7 : 6) + '" style="padding:5px 6px 9px;border-bottom:1px solid #ccc;font-size:11px;text-align:right;">'
+      ? '<tr class="inv-grp-row"><td colspan="' + (5 + (showVal ? 1 : 0) + (showInit ? 1 : 0)) + '" style="padding:5px 6px 9px;border-bottom:1px solid #ccc;font-size:11px;text-align:right;">'
         + 'Initial once for the ' + (together.length > 1 ? together.length + ' items' : 'item') + ' above ' + esc(invInitialGroupWords(list[0]))
         + ', each ' + (together.some(function (r) { return isNaN(parseFloat(r.fmv)); }) ? 'under ' + _invMoney(INV_LINE_INITIAL_MIN) + ' or with no value recorded' : 'under ' + _invMoney(INV_LINE_INITIAL_MIN)) + ': ______________</td></tr>' : '');
   }).join('');
@@ -32345,7 +32366,8 @@ function printApprovalRequest(jobId, selectedOnly, opt) {
       + '<th style="padding:2px 6px;">Photo</th><th style="padding:2px 6px;">Ref</th><th style="padding:2px 6px;">Item</th>'
       + '<th style="padding:2px 6px;text-align:right;">Qty</th>'
       + (showVal ? '<th style="padding:2px 6px;text-align:right;">Est. value</th>' : '')
-      + '<th style="padding:2px 6px;">' + (_fid ? (gone ? 'Disposition' : 'Proposed disposition') : 'Where it is going') + '</th><th style="padding:2px 6px;">Initial</th>'
+      + '<th style="padding:2px 6px;">' + (_fid ? (gone ? 'Disposition' : 'Proposed disposition') : 'Where it is going') + '</th>'
+      + (showInit ? '<th style="padding:2px 6px;">Initial</th>' : '')
       + '</tr></thead><tbody>';
   };
   var footOf = function(list, what) {
@@ -32400,22 +32422,22 @@ function printApprovalRequest(jobId, selectedOnly, opt) {
     // valuation basis and the date of death — neither of which a living job has. ⚠ It replaces only the basis: the head
     // adds "Prepared by Havellin Palm Beach, LLC · <date>" itself, which this printed a second time until P22.
     + _invDocHead(job, 'Release Approval Request', _fid ? null : 'Everything leaving the property, for your sign-off')
-    + '<div style="font-size:11.5px;line-height:1.6;margin-bottom:12px;">'
-      + 'To <strong>' + esc(who) + '</strong>: '
-      // A request carrying only lines already gone says so (P20): none of them is "ready to be released".
-      + (asked.length ? (asked.length === 1 ? 'the item listed below is ready to be released from the property. '
-              : 'the items listed below are ready to be released from the property. ')
-          : (items.length === 1 ? 'the item listed below has already left the property and is listed for your signature. '
-              : 'the items listed below have already left the property and are listed for your signature. '))
-      + (_many
-          ? 'Please initial each line you approve, then each of you sign and date at the foot. <strong>Every '
-            + invCoFiduciaryNoun(job) + ' named below must sign: nothing on this list is approved until '
-            + (fids.length === 2 ? 'both of you have.' : 'all ' + fids.length + ' of you have.') + '</strong> '
-          : 'Please initial each line you approve, then sign and date at the foot. ')
-      // ⚠ "Verbal approval is not accepted" STAYS ON BOTH ARMS. It is on the published
-      // deliverables page, it is not decedent-specific, and it is the whole control.
-      + '<strong>' + (asked.length ? 'Nothing on this list will be moved, sold, donated or disposed of until this request is returned signed. ' : '')
-      + 'Verbal approval is not accepted.</strong></div>'
+    // ⚠ A LETTER (2026-10-26; Anthony: "it's a bit odd to say like verbal approval is never accepted … make it just sound like a
+    // little bit more normal. Like we're writing a letter asking them for their release and initialing"; he approved this wording).
+    // The rule stands where it is enforced: nothing leaves on a phone call (invApprovalComplete reads the signed paper alone).
+    // Drafted, not reviewed: counsel bundle.
+    + '<div class="inv-req-letter" style="font-size:11.5px;line-height:1.6;margin-bottom:12px;">'
+      + '<p style="margin:0 0 8px;">Dear <strong>' + esc(who) + '</strong>,</p>'
+      + '<p style="margin:0 0 8px;">' + (asked.length
+          ? 'The ' + (asked.length === 1 ? 'item listed below is' : 'items listed below are') + ' ready to leave the property. Before anything is '
+            + 'moved, we ask for ' + (_many ? 'the written approval of each of you' : 'your written approval') + '. Please initial where shown, then '
+            + (_many ? 'each of you sign' : 'sign') + ' and date at the foot and return it to us.'
+          : 'The ' + (items.length === 1 ? 'item listed below has' : 'items listed below have') + ' already left the property and '
+            + (items.length === 1 ? 'is' : 'are') + ' listed for your signature. Please ' + (_many ? 'each of you sign' : 'sign')
+            + ' and date at the foot and return it to us.') + '</p>'
+      + (asked.length ? '<p style="margin:0 0 8px;">Nothing on this list will be moved, sold, donated or disposed of until it is back with us, '
+          + 'signed by ' + (_many ? (fids.length === 2 ? 'both of you' : 'all ' + fids.length + ' of you') : 'you') + '.</p>' : '')
+      + '<p style="margin:0;">Thank you.</p></div>'
     // ⚠ ABOVE THE TABLE, NOT BELOW IT. The reader works down this list initialling lines, so a
     // caveat printed under the table has arrived after the signature it exists to come before.
     // The firearms note stays below because it is informational — it tells the representative
@@ -32479,7 +32501,7 @@ function printApprovalRequest(jobId, selectedOnly, opt) {
           + ' and retained for seven years.' : 'your job record.') + '</div>'
     + '</div>';
   var _title = _invDocName(job, 'Release Approval Request');   // APPROVAL_REQ_TITLE, as a literal: sandboxes lift this printer alone
-  if (_asHtml) return { html: html, title: _title, items: items, asked: asked, ratify: ratify };
+  if (_asHtml) return { html: html, title: _title, items: items, asked: asked, ratify: ratify, held: held };
   _printDocument(html, _title);
 }
 
@@ -32542,6 +32564,51 @@ function approvalRequestBlocker(job) {
 function _approvalLineOpen(r, job) {
   return !!(r && !r.deletedAt && INV_RELEASE_DISPOSITIONS.indexOf(r.disposition) >= 0 && !invApprovalComplete(r, job));
 }
+// ⚠⚠ A RELEASE GOES TO SOMEBODY (2026-10-26; Anthony, off a request that went out with its Distribute and Donate groups reading
+// "no recipient named yet": "there are no recipients. There's no donation partner chosen"; he took "Hold them off"). A line
+// leaving with nobody in Channel / Recipient is not asked for: approval to release to nobody approves nothing. A line already
+// gone is asked to be ratified wherever it went. The card and the Releases bar name what waits for a recipient; a charity or a
+// hauler confirmed on the Job Plan fills itself in (invPlanChannel), and a person is typed on the row.
+function invReleaseRecipientNamed(r) { return !!String((r && r.channel) || '').trim(); }
+function _approvalLineRequestable(r, job) {
+  return _approvalLineOpen(r, job) && (invReleaseRecipientNamed(r) || invRatificationOwed(r, job));
+}
+// What a request carried, as one short fingerprint (2026-10-26, Anthony: "I can't, I guess, edit it and go back and change
+// everything"): each line's disposition, recipient (trimmed) and value, in the paper's order, a line gone reading as gone.
+// ⚠ ONE SHORT STRING, NEVER A COPY PER LINE: the record rides the job's one cell on the sheet, and a copy of every line on a
+// large estate's request outgrew it (found on review). `list` holds the rows, or null where a row is missing.
+function approvalRequestSig(list, ids) {
+  var txt = (list || []).map(function (r, i) {
+    var id = r ? r.stableId : (ids || [])[i];
+    return (!r || r.deletedAt) ? id + '|x' : [id, r.disposition || '', String(r.channel || '').trim(), r.fmv != null ? r.fmv : ''].join('|');
+  }).join('\n');
+  var h = 2166136261;
+  for (var i = 0; i < txt.length; i++) { h ^= txt.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+  return h.toString(36);
+}
+// The lines on a WAITING draft that changed after it was made, by stableId: read only where the fingerprint no longer matches,
+// and only lines touched after the draft (updatedAt or deletedAt later than draftedAt), so a device holding an older copy of
+// the inventory claims nothing (found on review: it read every difference from its own copy as a change). Nothing on a device
+// without the manifest, as approvalRequestOvertaken. ⚠ A FLAG ON THE CARD, NEVER A REFUSAL: the draft may already have gone
+// from Gmail with the tap not yet pressed, and an Agent Two figure or a count can move a line's value at any time.
+function approvalRequestChanged(job, st) {
+  var req = st && st.req;
+  if (!job || !req || !req.sig || !Array.isArray(req.stableIds) || !docDraftPending(st)) return [];
+  var rows = (typeof _photoRefs !== 'undefined' && _photoRefs[job.id]) || null;
+  if (!rows) return [];
+  var by = {};
+  rows.forEach(function (r) { if (r) by[String(r.stableId)] = r; });
+  var ids = req.stableIds.map(String);
+  var now = ids.map(function (id) { return by[id] || null; });
+  if (approvalRequestSig(now, ids) === req.sig) return [];
+  var at = Date.parse(st.draftedAt);
+  return ids.filter(function (id, i) {
+    var r = now[i];
+    if (!r) return true;
+    var t = Number(r.deletedAt || r.updatedAt) || 0;
+    return isNaN(at) || t > at;
+  });
+}
 // ⚠ WHEN A REQUEST DRAFT IS OVERTAKEN: every line it carried has since been approved (or removed), so there is nothing
 // left for its signature. Read off the manifest, never written into the record (the two-device reason notePriceChange
 // gives); a device that has not loaded this job's manifest sees no line and claims nothing, as probatePackageMovedSince.
@@ -32556,13 +32623,19 @@ function approvalRequestOvertaken(job, st) {
 // lines waiting that it never carried (a fresh request is owed for them); `carried`, how many it asked for.
 function approvalRequestState(job, refs) {
   var st = (job && job.docState && job.docState[APPROVAL_REQ_KEY]) || null;
-  var ids = (st && st.req && Array.isArray(st.req.stableIds)) ? st.req.stableIds.map(String) : null;
-  var open = [], fresh = [];
+  // A draft overtaken while it waited never went: the request in force is the one sent before it (`sentReq`), else none (2026-10-26,
+  // found on review: the card printed the draft's count under the earlier request's date).
+  var req = (st && st.req && docDraftPending(st) && draftIsStale(job, st)) ? (st.sentReq || null) : ((st && st.req) || null);
+  var ids = (req && Array.isArray(req.stableIds)) ? req.stableIds.map(String) : null;
+  // `unnamed`: waiting, never carried, and nobody named to take it, so not asked for until somebody is (2026-10-26).
+  var open = [], fresh = [], unnamed = [];
   (refs || []).forEach(function (r) {
     if (!_approvalLineOpen(r, job)) return;
-    if (ids && ids.indexOf(String(r.stableId)) >= 0) open.push(r); else fresh.push(r);
+    if (ids && ids.indexOf(String(r.stableId)) >= 0) open.push(r);
+    else if (_approvalLineRequestable(r, job)) fresh.push(r);
+    else unnamed.push(r);
   });
-  return { st: st, req: (st && st.req) || null, carried: ids ? ids.length : 0, open: open, fresh: fresh };
+  return { st: st, req: req, carried: ids ? ids.length : 0, open: open, fresh: fresh, unnamed: unnamed };
 }
 function approvalRequestSubject(job) {
   var street = String((job && job.addr) || '').split(',')[0].trim();
@@ -32600,7 +32673,9 @@ function _approvalEmailParas(ctx) {
   P.push((ctx.attached ? 'Attached is' : 'Below is a link to') + ' Havellin’s ' + APPROVAL_REQ_TITLE + ' for ' + _approvalWhat(job)
     + ', as of ' + ctx.asOf + ': ' + what + '.');
   var fids = fid ? jobFiduciaries(job) : [];
-  P.push('Please initial each line or group where marked, sign where shown, and return the signed copy to us; a scan or a photograph by reply is fine.'
+  // A request of lines already gone marks nothing for initials (found on review): it asks only for the signature.
+  P.push((ctx.asked ? 'Please initial where marked, sign where shown,' : 'Please sign where shown')
+    + ' and return the signed copy to us; a scan or a photograph by reply is fine.'
     + (ctx.asked ? ' Nothing on it will be moved, sold, donated or disposed of until it comes back signed.' : '')
     + (fids.length > 1 ? ' Every ' + invCoFiduciaryNoun(job) + ' named on it signs.' : ''));
   if (ctx.viaCounsel && ctx.noEmail.length) {
@@ -32730,7 +32805,8 @@ function sendApprovalRequest(jobId, selectedOnly) {
             var gmail = provider === 'gmail';
             docRecordSent({ job: job, key: APPROVAL_REQ_KEY }, { provider: provider, draftUrl: draftUrl || '', pdfOk: gmail && !!b64,
               req: { to: rcpt.to, cc: rcpt.cc, noEmail: rcpt.noEmail, viaCounsel: !!rcpt.viaCounsel,
-                     stableIds: paperIds, asked: asked, ratify: ratify, filedUrl: filedUrl } });
+                     stableIds: paperIds, asked: asked, ratify: ratify, filedUrl: filedUrl,
+                     sig: approvalRequestSig(r.asked.concat(r.ratify)) } });
             var bits = [lead + (gmail ? 'Draft created in ' + (_gmailUserEmail || 'your Havellin mailbox') : 'Email opened') + ' for ' + _andJoin(rcpt.to)
               + (rcpt.cc.length ? ', copied to ' + _andJoin(rcpt.cc) : '')
               + (gmail && b64 ? ', with the ' + APPROVAL_REQ_TITLE + ' attached (' + items.length + ' line' + (items.length === 1 ? '' : 's') + ')'
@@ -32740,6 +32816,8 @@ function sendApprovalRequest(jobId, selectedOnly) {
             else if (rcpt.noEmail.length) bits.push(_andJoin(rcpt.noEmail) + ' ' + (rcpt.noEmail.length > 1 ? 'have' : 'has') + ' no email on file: print the request for them to sign (Approval Request).');
             if (gmail && !b64) bits.push('The PDF could not be built (' + (perr || 'no answer from the server') + '), so the draft links the filed copy instead of attaching it.');
             if (!filedUrl) bits.push('Not filed to Drive: the request.');
+            if (r.held && r.held.length) bits.push((r.held.length === 1 ? '1 item waits' : r.held.length + ' items wait') + ' for somebody to be named to take '
+              + (r.held.length === 1 ? 'it' : 'them') + ' and ' + (r.held.length === 1 ? 'is' : 'are') + ' not on it.');
             _docNotice(gmail && b64 && filedUrl && !rcpt.noEmail.length ? 'ok' : 'warn', bits.join(' '), jobId);
             if (draftUrl) { try { window.open(draftUrl, '_blank'); } catch (e) {} }
             showSyncBadge(gmail ? 'Gmail draft created ✓' : 'Email opened ✓');
@@ -32776,18 +32854,41 @@ function invMarkRequestSent(jobId) {
   _invRefreshReleases(jobId);
   return true;
 }
+// Lets a waiting draft go: it joins the record's out-of-date drafts (named on the card until a send, so the Gmail draft is
+// deleted), and the request that went before it, if one did, is the record again (`sentReq`, docRecordSent). Asks first.
+function discardApprovalRequestDraft(jobId) {
+  var job = _invJob(jobId), st = job && job.docState && job.docState[APPROVAL_REQ_KEY];
+  if (!st || !docDraftPending(st)) return false;
+  var where = st.provider === 'gmail' ? 'in ' + (st.mailbox || 'your Gmail drafts') : 'in your mail app';
+  if (!confirm('Discard this draft of the ' + APPROVAL_REQ_TITLE + '?\n\nThe card forgets it and offers Send request again. The email itself stays '
+      + where + ': delete it there.')) return false;
+  st = docState(job, APPROVAL_REQ_KEY);   // the writer's accessor: it stamps the key, as every writer of the record does
+  st.staleDrafts = (Array.isArray(st.staleDrafts) ? st.staleDrafts : []).concat([{ draftedAt: st.draftedAt, provider: st.provider || '',
+    mailbox: st.mailbox || '', why: 'discarded' }]);
+  if (st.sentReq) st.req = st.sentReq; else delete st.req;
+  delete st.sentReq;
+  ['draftedAt', 'draftedBy', 'draftUrl', 'provider', 'pdfOk', 'mailbox'].forEach(function (k) { delete st[k]; });
+  _saveJobEdit(job);   // a person's edit: the job's clock moves (docState() above stamped docState:approvalRequest)
+  _invRefreshReleases(jobId);
+  showSyncBadge('Draft discarded: delete it ' + where, false);
+  return true;
+}
 // The Releases card's first section: what the last request asked and of whom, the draft waiting on its tap, what is
 // still unsigned, the lines a fresh request is owed for, and the send. DOM-free markup; every person-entered value
 // escaped. Nothing where no line waits and nothing was ever sent.
 function approvalRequestCardHtml(job, all) {
   var jid = job.id, K = APPROVAL_REQ_KEY, S = approvalRequestState(job, all), st = S.st;
   var waiting = S.open.length + S.fresh.length;
-  if (!st && !waiting) return '';
+  if (!st && !waiting && !S.unnamed.length) return '';
   var live = draftOutstanding(job, K);
   var btn = function (call, label, primary) { return '<button class="' + (primary ? 'btn-bronze' : 'btn-s') + '" onclick="' + call + '">' + label + '</button>'; };
   var n = function (k) { return k + ' line' + (k === 1 ? '' : 's'); };
   var who = (S.req && S.req.to && S.req.to.length) ? ' to ' + _andJoin(S.req.to) : '';
   var lines = [], btns = '';
+  // What waits for somebody to be named (2026-10-26, "Hold them off"): never asked for, so said here, in either state.
+  var unnamedLine = S.unnamed.length ? '<span style="color:#8a5a1e;font-weight:600;">&#9888; ' + esc((S.unnamed.length === 1 ? '1 line waits' : S.unnamed.length + ' lines wait')
+    + ' for somebody to be named to take ' + (S.unnamed.length === 1 ? 'it' : 'them') + ', so ' + (S.unnamed.length === 1 ? 'it is' : 'they are')
+    + ' not asked for: type who takes each on its row (a charity or a hauler confirmed on the Job Plan fills itself in).') + '</span>' : '';
   var paper = (S.req && S.req.noEmail && S.req.noEmail.length)
     ? esc(_andJoin(S.req.noEmail) + ' had no email: ' + (S.req.viaCounsel ? 'it went through the estate attorney.' : 'they sign the printed copy.')) : '';
   if (live) {
@@ -32807,8 +32908,16 @@ function approvalRequestCardHtml(job, all) {
     // (approvalRequestRecordRefusal); the way round is named, so a signed copy in hand is not left with nowhere to go.
     var earlier = approvalRequestEarlierCopyText(st);
     if (earlier) lines.push(esc(earlier));
+    if (unnamedLine) lines.push(unnamedLine);
+    // ⚠ A DRAFT CAN BE LET GO (2026-10-26; Anthony: "the only thing I can do is mark I've sent it or open the draft"): Discard draft
+    // puts back what the card said before it (discardApprovalRequestDraft). A line on it changed since is flagged here, never a
+    // refusal (approvalRequestChanged): the draft may already have gone from Gmail, so both ways on are named.
+    var changed = approvalRequestChanged(job, st);
+    if (changed.length) lines.push('<span style="color:#8a5a1e;font-weight:600;">&#9888; ' + esc((changed.length === 1 ? '1 line on this draft' : changed.length + ' lines on this draft')
+      + ' changed after it was made (where it goes, who takes it or its value). Not sent yet? Discard draft, then send a fresh request. Already sent? Tap I’ve sent it.') + '</span>');
     btns = btn('invMarkRequestSent(' + jid + ')', '&#10003; I&rsquo;ve sent it', true)
-      + (st.draftUrl ? btn('openDocDraft(' + jid + ",'" + K + "')", '&#8599; Open the draft') : '');
+      + (st.draftUrl ? btn('openDocDraft(' + jid + ",'" + K + "')", '&#8599; Open the draft') : '')
+      + btn('discardApprovalRequestDraft(' + jid + ')', 'Discard draft');
   } else {
     if (st && st.sentAt) {
       lines.push(esc('Sent ' + _draftDay(st.sentAt) + (st.sentBy ? ' by ' + st.sentBy : '') + who + ', ' + n(S.carried)
@@ -32817,6 +32926,7 @@ function approvalRequestCardHtml(job, all) {
     }
     var stale = st ? staleDraftNote(job, K, false) : '';
     if (stale) lines.push(esc(stale));
+    if (unnamedLine) lines.push(unnamedLine);
     if (S.fresh.length) lines.push('<span style="color:#8a5a1e;font-weight:600;">&#9888; ' + esc(n(S.fresh.length)
       + (st && st.sentAt ? ' now await approval and were not on it: send a fresh request.' : ' await written approval; nothing has been sent from the app.')) + '</span>');
     // ⚠ RECORD THE SIGNED REQUEST (2026-10-22; Anthony, Q88: "Build all of it now"). The card knows which lines the request
@@ -32853,7 +32963,7 @@ function approvalRequestDashHtml(job) {
   var refs = (typeof _photoRefs !== 'undefined' && _photoRefs[job.id]) ? _jobInvRefs(job.id) : null;
   var S = approvalRequestState(job, refs);
   var n = function (k) { return k + ' line' + (k === 1 ? '' : 's'); };
-  var who = (st.req.to && st.req.to.length) ? ' to ' + _andJoin(st.req.to) : '';
+  var who = (S.req && S.req.to && S.req.to.length) ? ' to ' + _andJoin(S.req.to) : '';
   var lines = [], btns = '';
   if (live) {
     lines.push(esc('Drafted ' + _draftDay(st.draftedAt) + (st.draftedBy ? ' by ' + st.draftedBy : '') + who + ', ' + n(S.carried) + ' · ' + jtDraftLine(job, K, true)));
@@ -48026,11 +48136,12 @@ function deskFoldState(jobId, job, fold, all, today) {
     var outs = signoutGroups(job, all);
     // Drawn where either card draws: on an estate always (the bequests card); on living work where the request, a signing
     // act or a sign-out row has something to say (_renderInvReleasesCard's sections; group D holds the two answers equal).
-    st.show = fid || !!S.st || !!(S.open.length + S.fresh.length) || !!batches.length || !!outs.length;
+    st.show = fid || !!S.st || !!(S.open.length + S.fresh.length + S.unnamed.length) || !!batches.length || !!outs.length;
     if (unread && !cached) return loading();
     st.openByDefault = S.fresh.length > 0 || draft || unfiled > 0;
     var rat = once('approval', fid ? all.filter(function (r) { return invRatificationOwed(r, job); }) : []);
     var fresh = once('approval', S.fresh);
+    var unnamedN = once('approval', S.unnamed);   // never asked for until somebody is named (2026-10-26)
     var unsigned = (S.st && S.st.sentAt && !draft) ? once('approval', S.open) : 0;
     var owed = once('leaving', fid ? all.filter(function (r) { return invReceiptOwed(r, job); }) : []);
     var day = '', readyN = 0, notToday = false;
@@ -48045,8 +48156,11 @@ function deskFoldState(jobId, job, fold, all, today) {
     // While a draft waits, the card offers no send (approvalRequestCardHtml): the draft first, and a line it never carried
     // is owed the fresh request that follows it, so the line says so in the card's order, never "send a request".
     if (draft) bit('Request drafted: tap I’ve sent it', 'amber');
+    var changedN = draft ? approvalRequestChanged(job, S.st).length : 0;   // flagged on the card, never a refusal (2026-10-26)
+    if (changedN) bit(s(changedN, 'item', 'items') + ' on the draft changed since it was made', 'amber');
     if (fresh) bit(draft ? s(fresh, 'more item needs', 'more items need') + ' written approval: send a fresh request once the draft has gone'
       : s(fresh, 'item needs', 'items need') + ' written approval: send a request', 'amber');
+    if (unnamedN) bit(s(unnamedN, 'item waits', 'items wait') + ' for somebody to be named to take ' + (unnamedN === 1 ? 'it' : 'them'), 'amber');
     if (unfiled) bit(s(unfiled, 'signed approval', 'signed approvals') + ' not filed to Drive', 'amber');
     if (rat) bit(rat + ' for ratification', 'amber');
     if (owed) bit(s(owed, 'signed receipt', 'signed receipts') + ' owed', 'amber');

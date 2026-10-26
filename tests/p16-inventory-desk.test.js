@@ -306,7 +306,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       ['_printDocument', '_invPrintThumb', 'showSyncBadge', 'renderInventoryTab', '_scheduleInventorySync'], {
         jobs: [Object.assign({}, job)],
         _photoRefs: { [job.id]: [
-          LINE('a', { itemNo: 1, objectName: 'Oil painting', category: 'Art & Décor', disposition: 'Auction', needsAppr: true }),
+          // A buyer named: an item with nobody named to take it is held off the request (2026-10-26, "Hold them off").
+          LINE('a', { itemNo: 1, objectName: 'Oil painting', category: 'Art & Décor', disposition: 'Auction', channel: 'Christie’s', needsAppr: true }),
           LINE('b', { itemNo: 2, objectName: 'Locket', category: 'Jewelry & Watches', disposition: 'Distribute', channel: 'Karen', flagBequest: true, fmv: '200' }),
         ] },
         _printDocument: (html) => { printed.push(html); return true; }, _invPrintThumb: () => '',

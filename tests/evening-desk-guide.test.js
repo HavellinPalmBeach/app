@@ -101,10 +101,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(html, 'Pocket card &middot; keep it by the laptop', 'ends with a pocket card');
     eq(count(html, '<section class="card">'), 1, 'one card');
     ok(count(html, '<h2>') >= 10, 'at least ten sections (' + count(html, '<h2>') + ')');
-    // Under 2,650 words of text, masthead and footer included (Anthony's rule for these pages: short). 2,500 until 2026-10-26b,
-    // when he asked for the day's changes (condition graded, whole dollars, Re-value, Another item) to be on the page.
+    // Under 2,750 words of text, masthead and footer included (Anthony's rule for these pages: short). 2,500 until 2026-10-26b,
+    // when he asked for the day's changes (condition graded, whole dollars, Re-value, Another item) to be on the page; 2,650
+    // until the release request's letter, its hold for a taker and Discard draft, the same day (he asked for the session's
+    // changes to the process to be on it).
     const words = t.split(/\s+/).length;
-    ok(words < 2650, 'short: ' + words + ' words');
+    ok(words < 2750, 'short: ' + words + ' words');
     ['photography-guide.html', 'incident-guide.html', 'sorting-guide.html', 'packing-guide.html', 'move-day-guide.html', 'first-night-guide.html',
      'firearms-protocol.html', 'concierge-guide.html'].forEach((f) => has(html, '<a href="' + f + '">', 'names ' + f));
     has(t, 'Linked from the top of the Job Admin & Inv tab.', 'and says where the app links it');
@@ -568,6 +570,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // A partial approval is recorded and the rest stay on the next request.
     has(dlg, 'the lines stay on the next request until all', 'one representative’s signature is kept, the items stay on the next request');
     has(t, 'Only one of two representatives signed? Record it anyway. Those items stay on the next request until everyone has signed.', 'as the page says');
+    // The letter, the hold for a taker and Discard draft (2026-10-26): each sentence on the code that makes it true.
+    eq(sandbox({ vars: ['INV_LINE_INITIAL_MIN'] }).INV_LINE_INITIAL_MIN, 500, 'one initial per group under $500');
+    has(code(fn('printApprovalRequest')), '!invReleaseRecipientNamed(r) && !invRatificationOwed(r, job)', 'an item with nobody to take it is held off the request');
+    has(card, "' for somebody to be named to take '", 'and the card counts them');
+    has(card, "'Discard draft'", 'Discard draft');
+    has(card, 'changed after it was made (where it goes, who takes it or its value). Not sent yet? Discard draft, then send a fresh request.', 'a draft whose item changed: the card says so');
+    has(t, 'It reads as a letter, one initial per group under $500. Items with nobody in Who takes it wait off it, and the card counts them. Changed an item before sending? The card says so: press Discard draft, delete it in Gmail and send again.', 'as the page says');
     // The sign-out rows.
     const row = code(fn('_leavingRowHtml'));
     has(row, "'Sign out ' + g.ready.length + ' to ' + g.taker", 'Sign out N to …');

@@ -120,7 +120,9 @@ const EST = 7401;
       has(t, 'Initial once for the item above going to Kodner Galleries (Auction), each under $500', 'the clock, with its destination');
       has(t, 'Initial once for the item above going to Haul-It (Disposed of), each under $500', 'the mattress, with its own');
       const h = await p.evaluate(() => (window.__prints || []).slice(-1)[0] || '');
-      eq((h.match(/initialled with its group/g) || []).length, 4, '⚠ four lines initialled with their group; the painting and the disputed desk initialled on their own');
+      // ⚠ restated 2026-10-26 (Anthony: "Keep theirs"): a group's lines carry no words of their own; a box only where an item needs its own.
+      eq((h.match(/initialled with its group/g) || []).length, 0, '⚠ no line says it is initialled with its group');
+      eq((h.match(/class="inv-own-init"/g) || []).length, 2, '⚠ an initial box on the painting and the disputed desk alone');
     });
 
     // ── B ───────────────────────────────────────────────────────────────────

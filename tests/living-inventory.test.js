@@ -52,7 +52,7 @@ const ITEM = (id, over) => Object.assign({
   driveFileId: 'f' + id, driveFileUrl: 'https://drive.google.com/file/d/f' + id + '/view',
 }, over || {});
 
-const PRINT_FNS = ['_invDocPartyHead', 'invLineReviewed', 'invInitialGroupWords', 'invOwnInitial', 'invInitialGroupKey', 'invDocContractBlock',
+const PRINT_FNS = ['_invDocPartyHead', 'invReleaseRecipientNamed', 'invLineReviewed', 'invInitialGroupWords', 'invOwnInitial', 'invInitialGroupKey', 'invDocContractBlock',
   'printContentsRecord', 'contentsRecordSignoff', 'dispositionRecord', 'printApprovalRequest', 'invDispDocWord', 'printCourtInventory', 'jobOnProbateTrack', '_avUnreviewedStamp',
   'agentShotGroups', 'agentNameableRefs', '_agState', '_agStateHtml', '_agNoticesHtml', 'agentNotices',
   'printDispositionLedger', 'referralFeeVendorsNote', 'vendorPaysReferral', '_vendorByName', '_vendorNameKey', '_andJoin', '_renderInvWorkbar', '_arCheckButtonHtml', '_arState', 'agentRoomsToCheck', '_arCheckable', '_arStateHtml', '_avValueButtonHtml', 'agentValueableRefs', '_avHasFigure', '_invHasValue', '_avStateHtml', '_avState', '_avNoticesHtml', 'agentValueNotices', '_avNoticeKinds', '_avNoticeLabel', 'agentValueInternal', 'agentValueUnreviewed', 'agentValueStale', 'agentValueSpecialistWorth', 'invPrimaryDoc', '_invReviewStats', '_invProgressStamp',
@@ -506,12 +506,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // "with the estate record and retained for seven years". The button was never gated.
     const { ctx, last } = rig(LIVING, [
       ITEM('a', { objectName: 'Tea service', disposition: 'Distribute', channel: 'Sarah Ellsworth (daughter)' }),
-      ITEM('c', { objectName: 'Rowing machine', disposition: 'Donate' }),
+      ITEM('c', { objectName: 'Rowing machine', disposition: 'Donate', channel: 'Goodwill' }),
     ]);
     ctx.printApprovalRequest(2);
     const h = last().html;
 
-    has(h, 'To <strong>Margaret Ellsworth</strong>', 'it addresses the owner, who is standing there');
+    has(h, 'Dear <strong>Margaret Ellsworth</strong>,', 'it addresses the owner, who is standing there');
     lacks(h, 'Personal Representative', '⚠ not a representative they do not have');
     lacks(h, 'authorized fiduciary', '⚠ and they are not signing as a fiduciary');
     lacks(h, 'date of death', '⚠ no date-of-death basis line');
@@ -522,29 +522,32 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // ⚠⚠ THE CONTROL ITSELF SURVIVES ON BOTH ARMS. This sentence is on the published
     // deliverables page and is not decedent-specific — it is the whole point of the document,
     // and it is exactly the "keep us on track and honest" Anthony asked the record to provide.
-    has(h, 'Verbal approval is not accepted', '⚠⚠ and verbal approval is still not accepted');
+    // ⚠ restated 2026-10-26 (Anthony: a letter asking for the release, not a rule about verbal approval; he approved the words):
+    // the control survives as the letter's promise, on both arms.
+    has(h, 'Nothing on this list will be moved, sold, donated or disposed of until it is back with us, signed by you.', '⚠⚠ and nothing moves until it comes back signed');
+    lacks(h, 'Verbal approval', 'and no lecture about verbal approval');
     has(h, 'Sarah Ellsworth (daughter)', 'the recipient prints on the line');
 
     // The converse, byte for byte: the estate document is untouched.
-    const e = rig(ESTATE, [ITEM('p', { objectName: 'Sargent portrait', disposition: 'Auction', fmv: '48000' })]);
+    const e = rig(ESTATE, [ITEM('p', { objectName: 'Sargent portrait', disposition: 'Auction', fmv: '48000', channel: 'Christie’s' })]);
     e.ctx.printApprovalRequest(7);
     const eh = e.last().html;
     ['authorized fiduciary', 'date of death', 'Est. value',
-     'estimated value', 'estate record', 'Verbal approval is not accepted', 'Proposed disposition']
+     'estimated value', 'estate record', 'Nothing on this list will be moved', 'Proposed disposition']
       .forEach((t) => has(eh, t, 'the estate request still says "' + t + '"'));
     // ⚠ MY OWN ASSERTION WAS WRONG AND THE CODE WAS RIGHT: this fixture HAS an executor, so the
     // document addresses him by name. 'Personal Representative' is only the fallback, and the
     // fallback is what has to survive — an estate with nobody recorded must not fall through to
     // the client's own name, because on a decedent job that name belongs to someone who is dead.
-    has(eh, 'To <strong>Tripp Butler</strong>', 'and addresses the representative by name');
-    const noExec = rig(Object.assign({}, ESTATE, { executor: '' }), [ITEM('q', { disposition: 'Donate' })]);
+    has(eh, 'Dear <strong>Tripp Butler</strong>,', 'and addresses the representative by name');
+    const noExec = rig(Object.assign({}, ESTATE, { executor: '' }), [ITEM('q', { disposition: 'Donate', channel: 'Goodwill' })]);
     noExec.ctx.printApprovalRequest(7);
-    has(noExec.last().html, 'To <strong>Personal Representative</strong>',
+    has(noExec.last().html, 'Dear <strong>Personal Representative</strong>,',
         '⚠⚠ an estate with no representative recorded falls back to the ROLE, never to job.name');
 
     // ⚠ AND A LIVING JOB THAT DOES CARRY A FIGURE KEEPS THE COLUMN — withholding it there would
     // hide real money, which is the opposite failure.
-    const v = rig(LIVING, [ITEM('m', { objectName: 'Chandelier', disposition: 'Auction', fmv: '4200' })]);
+    const v = rig(LIVING, [ITEM('m', { objectName: 'Chandelier', disposition: 'Auction', fmv: '4200', channel: 'Christie’s' })]);
     v.ctx.printApprovalRequest(2);
     has(v.last().html, 'Est. value', 'a living job with a value recorded still shows the column');
   }

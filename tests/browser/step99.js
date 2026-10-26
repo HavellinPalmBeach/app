@@ -436,8 +436,12 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
       'nothing leaving yet: the Releases bar is not drawn');
     await press('#panel-inventory button[onclick="setInvWhen(\'all\')"]', 'All');
     await p.selectOption('#inv-row-n1 select[onchange*="\'disposition\'"]', 'Donate'); await p.waitForTimeout(700);
-    ok(await isOpen('releases', NEW), '⚠⚠ the armchair set to Donate: the Releases bar is drawn, open by itself (Q89)');
-    eq(await stat('releases', NEW), '1 item needs written approval: send a request', 'saying the request is owed');
+    // ⚠ restated 2026-10-26 (Anthony: "Hold them off"): with no charity named the armchair is not asked for; the bar is drawn and
+    // says what it waits on, and opens once a taker is typed on the row and the request is owed.
+    eq(await stat('releases', NEW), '1 item waits for somebody to be named to take it', 'the armchair set to Donate: the bar says it waits for a taker');
+    await p.fill('#inv-row-n1 .inv-recip', 'Habitat ReStore'); await p.press('#inv-row-n1 .inv-recip', 'Tab'); await p.waitForTimeout(700);
+    ok(await isOpen('releases', NEW), '⚠⚠ the charity typed: the Releases bar is drawn, open by itself (Q89)');
+    eq(await stat('releases', NEW), '1 item needs written approval: send a request · 1 ready to sign out', 'saying the request is owed');
 
     console.log('\n## Part 2 · Closing opens at the close, and when Close job is refused');
     await p.selectOption('#inv-job', String(DONE)); await p.waitForTimeout(1200);

@@ -151,7 +151,8 @@ const PDF = { name: 'signed.pdf', mimeType: 'application/pdf', buffer: Buffer.fr
         L('s4', { itemNo: 4, objectName: 'Tabriz rug', category: 'Rugs & Carpets', fmv: '9000', disposition: 'Sell', flagBequest: true }),
         L('s5', { itemNo: 5, objectName: 'Sofa', fmv: '200', disposition: 'Donate' }),
       ];
-      _photoRefs[5602] = [L('p1', { itemNo: 1, objectName: 'Dining table', fmv: '900', disposition: 'Sell' })];
+      // A buyer named: an item with nobody named to take it is held off the request (2026-10-26, "Hold them off").
+      _photoRefs[5602] = [L('p1', { itemNo: 1, objectName: 'Dining table', fmv: '900', disposition: 'Sell', channel: 'Kodner Galleries' })];
       _photoRefs[5603] = [L('v1', { itemNo: 1, objectName: 'Floor lamp', disposition: 'Donate', authBy: 'Margaret Ellsworth', approvalDate: '2026-10-01' })];
       [5601, 5602, 5603].forEach((id) => savePhotoRefs(id));
       saveJobs();
@@ -219,8 +220,10 @@ const PDF = { name: 'signed.pdf', mimeType: 'application/pdf', buffer: Buffer.fr
       await toDesk(5601);
       await press('#inv-workbar button[onclick="printApprovalRequest(5601)"]', 'Approval Request');
       const h = (await lastPrint()).html, t = await T(h);
-      has(h, 'To <strong>Ruth Adler and Daniel Adler</strong>', '⚠⚠ addressed to both co-trustees');
-      has(t, 'Every co-trustee named below must sign: nothing on this list is approved until both of you have.', 'saying both must sign');
+      has(h, 'Dear <strong>Ruth Adler and Daniel Adler</strong>,', '⚠⚠ addressed to both co-trustees');
+      // ⚠ restated 2026-10-26: the request is a letter (Anthony approved its words); it asks each of them, and both must sign.
+      has(t, 'we ask for the written approval of each of you.', 'asking each of them');
+      has(t, 'until it is back with us, signed by both of you.', 'saying both must sign');
       eq((h.match(/Approved by: _{10}/g) || []).length, 2, '⚠⚠ a signature line for each');
       has(t, 'Daniel Adler, Co-trustee / authorized fiduciary', 'the co-trustee\'s line');
       has(t, 'Designated items proposed to go elsewhere', 'the bequest notice');
@@ -348,7 +351,7 @@ const PDF = { name: 'signed.pdf', mimeType: 'application/pdf', buffer: Buffer.fr
       await press('#inv-workbar button[onclick="printApprovalRequest(5601)"]', 'Approval Request again');
       const t = await T((await lastPrint()).html);
       has(t, 'Signed so far by Ruth Adler; Daniel Adler (Oct 2, 2026); still to sign: Sam Adler', 'the lines are back on the request, naming who is still to sign');
-      has(t, 'all 3 of you have', 'for all three');
+      has(t, 'signed by all 3 of you.', 'for all three');
       ok(await printClosed(), 'the print closes before anything is filed');   // the print path takes the panels away for a moment
       // The Trust Schedule, filed as received; no Court Inventory on a trust.
       // RESTATED 2026-10-22 (the signed schedules beside the ledger): the schedules left the Releases card for the close-out
@@ -376,7 +379,7 @@ const PDF = { name: 'signed.pdf', mimeType: 'application/pdf', buffer: Buffer.fr
       lacks(await txt('#inv-releases'), 'Court Inventory', 'nor on the Releases card');
       await press('#inv-workbar button[onclick="printApprovalRequest(5602)"]', 'the probate Approval Request');
       const pt = await T((await lastPrint()).html);
-      has(pt, 'To Ann Finch:', 'addressed to the representative');
+      has(pt, 'Dear Ann Finch,', 'addressed to the representative');
       has(pt, 'never purchase or receive estate property', 'estate property');
       // A living client: no bequest card; the approval list, and no receipts.
       await toDesk(5603);
