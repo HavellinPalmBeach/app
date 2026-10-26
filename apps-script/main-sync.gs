@@ -93,7 +93,15 @@
 // changed on the desk is priced as that thing; a brand in a name is priced as that brand; the line is valued at its Quantity,
 // which the desk divides by for Each; and Agent One puts a brand the crew names into the name. No action or type changes; it
 // carries 2026-10-25's. Until it is live Agent Two may "correct" a name a person typed back to the generic thing and value that.
-var BACKEND_VERSION = '2026-10-25b';
+// ⚠ 2026-10-26 (Anthony: *"do a once over on the two agents … as accurate as possible on the first pass … TC oversight minimized"*;
+// *"make sure the agents update the model when there are new models so they are always the most accurate"*): every agent call runs on
+// the newest top-tier model read off Anthropic's model list, with the newest Opus as its fallback when a request runs long, is busy
+// or is rejected (_agModels, _agSendAll); one slow photograph no longer throws a naming call away; Agent One's naming, notes,
+// cabinet, category and basis rules; Agent Two sees the photograph of a guessed name, the room and what else a photograph shows,
+// corrects the category on a research line, prints a figure with no sale behind it as a general estimate, and hands back passing
+// failures as `retry`. No action or type changes; it carries 2026-10-25b's. Until it is live the agents stay on their old models,
+// Agent Two never looks at a guessed name's photograph, and one slow request can mark a batch "not valued".
+var BACKEND_VERSION = '2026-10-26';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive',
@@ -3032,7 +3040,168 @@ function testStripeAuth() {
 
 var AGENT_API          = 'https://api.anthropic.com/v1/messages';
 var AGENT_API_VERSION  = '2023-06-01';
-var AGENT_MODEL        = 'claude-opus-5';
+// ─── WHICH MODEL: THE NEWEST, BY ITSELF ────────────────────────────────────────────
+// ⚠⚠ 2026-10-26 (Anthony, asked whether Agent One should move from Opus 5 to Opus 5.5: *"Move to Opus 5.5"*; then *"Make sure the
+// agents update the model when there are new models so they are always the most accurate"*, and, told the top tier costs about
+// two and a half times Opus a house: *"our jobs are $10,000 to $40,000 plus. So is this a real expense? … at most 1 to 5 a month"*).
+// Every agent call (Agent One, the room check, Agent Two) asks _agModels(task) for two models: the newest of the top line (Fable)
+// first, the newest Opus as its fallback. The newest is read off Anthropic's own model list (GET /v1/models, _agModelList) at most
+// every AGENT_MODEL_LIST_SECS and cached; the floors below are the answer whenever the list cannot be read, and nothing is ever
+// chosen below them. A model nobody has tested runs the day it is released: that is the instruction, and the fallback is the net.
+// ⚠ URLFETCHAPP CUTS A REQUEST OFF AT ABOUT 60 SECONDS (undocumented, not configurable) and the top line thinks longer than Opus, so
+// a request that runs long, is cut off at its token ceiling, is busy (429, 529, 5xx), or is rejected outright (a 400 or 404 that is
+// not about the refusal fallback: a parameter or a tool version a new model does not take) is sent again at once on the fallback
+// (_agSendAll; Agent Two's own loop). A task whose first choice runs long AGENT_MODEL_SLOW_LIMIT times in a day, or whose fallback
+// answered what the first choice rejected, runs on the fallback for six hours (_agDemote), so a model that does not fit
+// stops costing a minute a request. AGENT_MODEL_PIN in Script Properties pins one model for every call (the escape hatch).
+var AGENT_MODELS_API        = 'https://api.anthropic.com/v1/models';
+var AGENT_MODEL_FLOORS      = { top: 'claude-fable-5-1', opus: 'claude-opus-5-5' };
+var AGENT_MODEL_LINES       = { top: 'claude-fable', opus: 'claude-opus' };
+var AGENT_MODEL_LIST_SECS   = 21600;  // six hours between readings of the model list
+var AGENT_MODEL_DEMOTE_SECS = 21600;  // six hours on the fallback once the first choice has not fitted: CacheService's own ceiling
+                                      // (expirationInSeconds is 1 to 21,600; a day was asked for on review, 2026-10-26, and refused)
+var AGENT_MODEL_SLOW_LIMIT  = 2;      // requests that ran long in a day before a task stops trying its first choice
+// ⚠ THE SERVER-SIDE REFUSAL FALLBACK on every agent call: a photograph or a line the model's classifier declines (a firearm in a
+// safe, say) is re-run on the model Anthropic recommends for that category inside the same call, instead of coming back unnamed
+// and being sent again on every run. An account that refuses the field answers 400 naming it, and that request is sent once more
+// without it. One constant for the three calls (Agent Two's own copy went with it).
+var AGENT_FALLBACK_BETA = 'server-side-fallback-2026-07-01';
+
+// The version a model id carries in its line (claude-fable-5-1 -> [5, 1]; claude-opus-6 -> [6, 0]), or null for another line, a
+// dated snapshot or anything else: only the bare aliases Anthropic recommends are chosen.
+function _agModelVersion(id, line) {
+  var pre = AGENT_MODEL_LINES[line] + '-', s = String(id || '');
+  if (s.indexOf(pre) !== 0) return null;
+  var parts = s.slice(pre.length).split('-');
+  if (parts.length > 2 || !parts.every(function (x) { return /^\d{1,2}$/.test(x); })) return null;
+  return [parseInt(parts[0], 10), parts.length > 1 ? parseInt(parts[1], 10) : 0];
+}
+function _agVerCmp(a, b) { return (a[0] - b[0]) || (a[1] - b[1]); }
+
+// The newest model of a line on the list that reads images, never below the line's floor.
+function _agNewestOf(list, line) {
+  var best = AGENT_MODEL_FLOORS[line], bestV = _agModelVersion(best, line);
+  (list || []).forEach(function (m) {
+    var v = m && _agModelVersion(m.id, line);
+    if (!v || _agVerCmp(v, bestV) <= 0) return;
+    var img = m.capabilities && m.capabilities.image_input;
+    if (img && img.supported === false) return;
+    best = m.id; bestV = v;
+  });
+  return best;
+}
+
+function _agCache() { try { return CacheService.getScriptCache(); } catch (e) { return null; } }
+
+// {top, opus}: the newest of each line, cached. A list that cannot be read answers the floors, remembered ten minutes so one run
+// does not ask again for every slice.
+function _agModelList(key) {
+  var cache = _agCache(), hit = null;
+  if (cache) { try { hit = cache.get('agent_models'); } catch (e) {} }
+  if (hit) { try { return JSON.parse(hit); } catch (e) {} }
+  var out = { top: AGENT_MODEL_FLOORS.top, opus: AGENT_MODEL_FLOORS.opus }, secs = 600;
+  try {
+    var res = UrlFetchApp.fetch(AGENT_MODELS_API + '?limit=1000', {
+      method: 'get', headers: { 'x-api-key': key, 'anthropic-version': AGENT_API_VERSION }, muteHttpExceptions: true
+    });
+    if (res.getResponseCode() < 300) {
+      var data = (JSON.parse(res.getContentText()) || {}).data || [];
+      out = { top: _agNewestOf(data, 'top'), opus: _agNewestOf(data, 'opus') };
+      secs = AGENT_MODEL_LIST_SECS;
+    }
+  } catch (e) { Logger.log('model list not read: ' + e); }
+  if (cache) { try { cache.put('agent_models', JSON.stringify(out), secs); } catch (e) {} }
+  return out;
+}
+
+function _agDemoted(task) {
+  var c = _agCache();
+  try { return !!c && c.get('agent_demote_' + task) === '1'; } catch (e) { return false; }
+}
+function _agDemote(task, why) {
+  var c = _agCache();
+  Logger.log('agent ' + task + ': the first-choice model is set aside for six hours (' + why + ')');
+  try { if (c) c.put('agent_demote_' + task, '1', AGENT_MODEL_DEMOTE_SECS); } catch (e) {}
+}
+function _agSlow(task) {
+  var c = _agCache();
+  try {
+    if (!c) return;
+    var n = (parseInt(c.get('agent_slow_' + task), 10) || 0) + 1;
+    c.put('agent_slow_' + task, String(n), AGENT_MODEL_DEMOTE_SECS);
+    if (n >= AGENT_MODEL_SLOW_LIMIT) _agDemote(task, n + ' requests ran past the time limit today');
+  } catch (e) {}
+}
+
+// The two models one call uses: {first, fallback}. `task` is 'name', 'rooms' or 'value'.
+function _agModels(task, key) {
+  var list = _agModelList(key), pin = _agProp('AGENT_MODEL_PIN');
+  // A pin is one model for every call, the fallback included (2026-10-26, on review): pinned away from a new Opus that misbehaves,
+  // a busy or slow request must not go to it.
+  var first = pin || list.top, fallback = pin || list.opus;
+  if (!pin && _agDemoted(task)) first = fallback;
+  return { first: first, fallback: fallback };
+}
+
+// ⚠ SEND, AND SEND AGAIN WHERE ANOTHER TRY CAN HELP (Agent One and the room check; Agent Two runs its own loop because a research
+// request can pause and be continued). `build(item, model, noFallbacks)` makes the request (and may throw, a photograph not yet in
+// Drive: that item fails by name); `read(res, item)` answers {ok, …} or {ok:false, error, fallbackRefused, retryable}. An item goes
+// at most three times: once, once more without the refusal-fallback field where the account refused it, and once on the fallback
+// model. A fetchAll that throws (one request past UrlFetchApp's limit throws the lot) sends the whole slice to the fallback while
+// `deadline` allows, else fails it as taking too long. Answers in item order: [{ok, …, model} | {ok:false, error}], plus timedOut.
+function _agSendAll(items, build, read, models, task, deadline, state) {
+  var out = new Array(items.length), timedOut = false;
+  state = state || {};
+  var queue = items.map(function (it, k) { return { k: k, model: models.first, noFb: false }; });
+  while (queue.length) {
+    var reqs = [], sent = [];
+    queue.forEach(function (q) {
+      try { reqs.push(build(items[q.k], q.model, q.noFb || !!state.noFallbacks)); sent.push(q); }
+      catch (e) { out[q.k] = { ok: false, error: String(e.message || e) }; }
+    });
+    queue = [];
+    if (!reqs.length) break;
+    var responses;
+    try {
+      responses = UrlFetchApp.fetchAll(reqs);
+    } catch (fetchErr) {
+      timedOut = true;
+      var why = 'took too long to come back (' + String(fetchErr.message || fetchErr).slice(0, 80) + ')';
+      if (sent.some(function (q) { return q.model !== models.fallback; })) _agSlow(task);
+      sent.forEach(function (q) {
+        if (q.model !== models.fallback && new Date().getTime() < deadline) queue.push({ k: q.k, model: models.fallback, noFb: q.noFb });
+        else out[q.k] = { ok: false, error: why };
+      });
+      continue;
+    }
+    responses.forEach(function (res, j) {
+      var q = sent[j], r = read(res, items[q.k]) || { ok: false, error: 'no answer' };
+      if (r.ok) {
+        r.model = q.model;
+        out[q.k] = r;
+        if (q.rejectedFirst) _agDemote(task, 'the first choice rejected a request the fallback answered');
+        return;
+      }
+      // ⚠ EVERY REQUEST THE FIELD WAS REFUSED ON GOES AGAIN WITHOUT IT (2026-10-26, on review): the whole first slice carried it,
+      // so all of it answers 400 together; only the first went again and the rest were failures.
+      var inTime = new Date().getTime() < deadline;
+      if (r.fallbackRefused && !q.noFb && inTime) {
+        state.noFallbacks = true;
+        queue.push({ k: q.k, model: q.model, noFb: true, rejectedFirst: q.rejectedFirst });
+        return;
+      }
+      // Past the deadline it is answered as it stands (the app asks again on the next run): a second fetchAll of up to a minute
+      // after a slice started late would run into Apps Script's six minutes.
+      if (r.retryable && q.model !== models.fallback && inTime) {
+        queue.push({ k: q.k, model: models.fallback, noFb: q.noFb, rejectedFirst: r.retryable === 'rejected' });
+        return;
+      }
+      out[q.k] = r;
+    });
+  }
+  return { answers: out, timedOut: timedOut };
+}
+
 // ⚠ IDENTIFICATION IS PERCEPTION, NOT REASONING, so this is deliberately not `high`. It is also
 // what keeps a call inside UrlFetchApp's timeout. Sweep low/medium/high on one real room and
 // measure naming quality against cost before changing it — do not tune it by argument.
@@ -3098,11 +3267,14 @@ function _agTool(categories) {
             additionalProperties: false,
             required: ['name', 'category', 'qty', 'confidence', 'basis', 'crop'],
             properties: {
-              name:       { type: 'string',  description: 'Describe it as fully as the photograph supports, never with a count: how many goes in qty.' },
+              name:       { type: 'string',  description: 'Describe it as fully as the photograph and the crew\'s note support, never with a count: how many goes in qty.' },
               category:   { type: 'string',  enum: categories },
               qty:        { type: 'integer', description: 'Articles on this line. 1 for a single object; the count for a lot, from the crew\'s note where it gives one.' },
               confidence: { type: 'string',  enum: ['high', 'medium', 'low'] },
-              basis:      { type: 'string',  description: 'Why you named it what you did, in a few words. Read by the desk, never printed for a client.' },
+              // ⚠ THE BASIS ROUTES THE VALUATION (2026-10-26): the app sends a line to sold-comparable research when its basis says a
+              // mark was read (agentValueMode). Free text failed both ways ("mark too faint to read" went to research; "nameplate reads
+              // Steinway" did not), so a mark actually read begins "Read:" and an unread one is not called a mark at all.
+              basis:      { type: 'string',  description: 'Why you named it what you did, in a few words. Where the name rests on a maker\'s mark, signature, hallmark, backstamp, label, badge, nameplate or logo you read in the photograph or a close-up, begin with "Read:" and quote what it says ("Read: GORHAM STERLING hallmark in close-up"). Where nothing on it is legible, say what you went on (shape, glaze, construction) and do not mention a mark, label, signature or maker. Never begin with "Read:" for a mark you could not read, a label written by hand on a box, or a brand taken from the crew\'s note. Read by the desk and the valuer, never printed for a client.' },
               crop:       { type: 'array',   description: 'x0,y0,x1,y1 normalised 0-1. Use 0,0,1,1 when the object fills the frame or you cannot place it.',
                             items: { type: 'number' } }
             }
@@ -3144,10 +3316,16 @@ function _agSystem(ctx) {
     + 'Group ordinary household goods into one line with a quantity: books, flatware, glassware, '
     + 'linens, kitchenware, tools, garage consumables. "Sterling flatware service" is one entry '
     + 'with qty 30, not thirty entries.\n'
-    + 'Give a line of its own to anything in these categories: Art & Decor, Antiques, Jewelry & '
+    + 'Give a line of its own to anything in these categories: Art & Décor, Antiques, Jewelry & '
     + 'Watches, Silver & Precious Metal, Rugs & Carpets, Collectibles, Firearms, Wine & Spirits, '
     + 'Musical Instruments. Also to anything carrying a readable maker\'s mark, signature or '
     + 'hallmark, and to anything visibly individual or valuable.\n'
+    // 2026-10-26: read literally, "a line of its own" for Silver contradicted the sterling service lotted with qty 30 above it,
+    // and the crock example gave no count: a group of one kind carries its count, a mixed group is one line of qty 1 (the desk
+    // multiplies the value by qty, so a mixed drawer given a count is valued many times over).
+    + 'A line of its own means never folded into a group of other things: a matched set of one kind (a sterling flatware '
+    + 'service, matching candlesticks) is still one line, with the count in qty. A group of one kind carries its count in '
+    + 'qty; a group of mixed things (a crock of utensils, a drawer of odds and ends) is one line with qty 1.\n'
     + 'Aim for the count a person would actually work through. A large house should come out in '
     + 'the hundreds of lines, not the thousands.\n'
     // 2026-10-19 (Anthony, the first practice job: a photograph of socks in an open drawer came back as the socks AND
@@ -3155,7 +3333,11 @@ function _agSystem(ctx) {
     // *Photographing a House*, promises: the surface is background, a mixed drawer is one line, rubbish is not inventory.
     + 'The photograph is OF one thing or one group. What it sits on or in is background, not an object: '
     + 'never record the table, bed, dresser, shelf, cloth or floor under the subject, or the drawer, '
-    + 'cabinet or closet it is shown in, unless that piece of furniture is itself the only thing in the frame.\n'
+    + 'cabinet or closet it is shown in, unless that piece of furniture is itself the only thing in the frame.'
+    // 2026-10-26: the field guide has the crew photograph a full bookcase or china cabinet it cannot empty once, as it stands, so
+    // there is no other photograph of the piece, and the background rule left the breakfront off the inventory.
+    + ' One exception: a freestanding bookcase, china cabinet or display cabinet photographed full, the whole piece in the '
+    + 'frame, is both: one line for the piece of furniture, and its contents under the rules here.\n'
     + 'A drawer, shelf, box, bin or bag of mixed small everyday things is ONE line for the whole of it, '
     + 'named for the container and what it holds ("Kitchen drawer contents: tape, batteries, golf balls, '
     + 'stationery"), qty 1, never a line per kind. Take something out of it onto a line of its own only '
@@ -3169,6 +3351,16 @@ function _agSystem(ctx) {
     + 'Be as specific as the photograph supports. Name the maker, model, period, material and '
     + 'pattern whenever you can see them. A generic name is a wasted line, because the desk '
     + 'cannot add detail it was never shown.\n'
+    // 2026-10-26: most lines are valued later from these words alone (an ordinary lot travels as text), and "Wood dresser",
+    // "Framed floral print" or "Area rug" is priced as the generic thing.
+    + 'Most lines are read later only as your words, without the photograph, so put in the name what tells this one apart '
+    + 'from others of its kind, as far as the photograph or a close-up shows it: for furniture the wood or material and '
+    + 'the form ("walnut six-drawer dresser, mid-century style"); for a painting or print the medium and whether it '
+    + 'appears original or printed (oil on canvas, watercolour, lithograph, poster), the subject and the frame; for a rug '
+    + 'its style, and hand-knotted or machine-made where the back or a close-up shows it ("Heriz-style rug, appears '
+    + 'hand-knotted"); for electronics and appliances the maker, and the model where a label is legible; for lighting the '
+    + 'material and form ("brass and crystal chandelier"); for books what kind they are ("hardcover history and '
+    + 'biography"); for tools the brand where it shows. Hedge what you infer, as below.\n'
     + 'State flatly only what is READABLE in the frame. When you are inferring from form, style '
     + 'or proportion, hedge in the words themselves: "appears to be", "likely", "in the style '
     + 'of". Both are useful; only one of them is a claim.\n'
@@ -3179,9 +3371,12 @@ function _agSystem(ctx) {
     + '  Good: "appears to be Bang & Olufsen, floor-standing column speakers" (qty 2) when it is the shape.\n'
     + '  Good: "Banksy print, likely a reproduction" when the image is recognisable but the edition is not.\n'
     + '  Good: "Kitchen utensils: wooden spoons, spatulas, whisks, tongs" for a crock of them.\n'
-    + '  Bad:  "Speakers." Bad: "Banksy original." Bad: "Tiffany lamp" on an unmarked leaded shade.\n'
+    + '  Bad:  "Speakers." Bad: "Banksy original." Bad: "Tiffany lamp" on an unmarked leaded shade nobody named.\n'
     + 'Some photographs are close-ups of a maker\'s mark, signature or hallmark belonging to an '
     + 'object in the main frame. Read them and use them. They are why they were taken.\n'
+    + 'In basis, begin with "Read:" and quote what you read when the name rests on a mark, signature, hallmark, label, '
+    + 'badge, nameplate or logo you could read. When nothing on it is legible, say what you went on and do not mention a '
+    + 'mark, label, signature or maker in the basis.\n'
     // 2026-10-24 (Anthony, off a stack of plates named "approx. 7 in stack" that was eight: *"I don't think we should put
     // the number of items in a name … I took the picture of the top of a stack of plates, and it only registered as 1, but
     // there were 7 more underneath it"*). The count is qty's alone, where a person corrects it in one box.
@@ -3193,6 +3388,18 @@ function _agSystem(ctx) {
     // stood in front of it; a maker or brand they say belongs in the name.
     + 'When the crew\'s note names the maker or brand ("Crate & Barrel coffee table"), put it in the name as '
     + 'they said it, unless the photograph plainly shows something else.\n\n'
+    // 2026-10-26: the field guide has the crew say "who it is going to, family history, the maker … the size of a painting or
+    // rug" over a photograph ("Mom's, from Venice, going to Karen"), and nothing kept a relative's or a recipient's name out of an
+    // item's name, which prints on the family's and the court's papers.
+    + 'THE NOTES WITH A PHOTOGRAPH\n'
+    + 'The crew\'s note was said standing in front of the thing. Use what it says about the thing itself: the count and '
+    + 'the maker as above, and the size, which goes into the name as they said it ("oil on canvas, 24 x 36 in", "rug, 9 x '
+    + '12 ft"). Where the note passes on what the family says about where it is from or how old it is, hedge it in the '
+    + 'name like any inference ("likely Venetian glass vase"). The rest of a note is for the people at the desk and never '
+    + 'goes in the name: who it is going to, who it belonged to, family history and instructions. Never put the name of '
+    + 'the owner, a relative or a recipient in a name.\n'
+    + 'The walkthrough note was written at the estimate about the whole room. Use it to recognise what this photograph '
+    + 'shows; never record something because the note mentions it.\n\n'
 
     + 'CATEGORY — pick exactly one from this list for every object:\n  - ' + cats + '\n'
     + 'Use General/Household when nothing else fits. Do not invent a category.\n'
@@ -3201,7 +3408,16 @@ function _agSystem(ctx) {
     + 'Everyday dishes, glassware, cookware, kitchen tools and table linens are General/Household, however '
     + 'decorative or hand-painted, unless a maker\'s mark, signature or hallmark is readable on them. '
     + 'Collectibles is for things people collect as such: figurines, coins, stamps, memorabilia, toys, '
-    + 'limited editions.\n\n'
+    + 'limited editions.\n'
+    // 2026-10-26 (Anthony, asked whether antiques and decor should get a rule like the dishes: *"Yes, both"*). Each line filed
+    // in an intrinsic category is researched one at a time and, on an estate with no value yet, counts as needing an appraisal.
+    // A painting the agent cannot tell from a decorator print stays Art & Décor, the safe side on an estate.
+    + 'Antiques is for pieces that look about a hundred years old or more by their construction and wear; a recent piece '
+    + 'made in a period style is Furniture, named "Queen Anne style" or "in the style of". Art & Décor is for original art '
+    + '(paintings, drawings, sculpture), fine prints, and decorative pieces by a maker or of evident quality. Mass-produced '
+    + 'decor (decorator canvases and prints, artificial plants and flowers, candles, empty picture frames, decorative '
+    + 'pillows, store-bought vases, bowls and baskets) is General/Household unless a signature, an edition number or a '
+    + 'maker\'s mark is readable on it. Where you cannot tell an original from a decorator print, it is Art & Décor.\n\n'
 
     + 'WHAT YOU MUST NEVER DO\n'
     + '- Never state or estimate a value, a price, a range or a worth. Not in the name, not in '
@@ -3209,9 +3425,11 @@ function _agSystem(ctx) {
     + 'contractually barred from it.\n'
     + '- Never say what should happen to an object: keep, sell, donate, junk, auction. That is '
     + 'the family\'s decision and it is recorded elsewhere.\n'
-    + '- Never describe a person, and never read or transcribe private papers, correspondence, '
+    + '- Never describe a person who appears in the photograph (in the room, in a mirror, in a photograph on display), and '
+    + 'never read or transcribe private papers, correspondence, '
     + 'financial statements or medical records. If a frame is mostly documents, record it as a '
-    + 'quantity of papers and say nothing about the contents.\n'
+    + 'quantity of papers and say nothing about the contents. The subject of a painting, print or sculpture is part of '
+    + 'the object and is described like any other.\n'
     + '- Never guess at an object you cannot see. An empty room is an empty list.\n\n'
 
     + 'CONFIDENCE\n'
@@ -3232,7 +3450,9 @@ function _agSystem(ctx) {
        + 'moment a frame shows one, or shows where one would be kept — a safe, a strongbox, a '
        + 'locked drawer, a filing cabinet:\n  - ' + must.join('\n  - ') + '\n';
   }
-  s += 'kind "other": anything else a person needs to look at. Use sparingly.\n\n'
+  s += 'kind "other": anything else a person must see or do that the name cannot carry, such as a mark or label that is '
+     + 'there but too small or blurred to read, or a frame too dark or blurred to name. Never to repeat a name, a hedge or '
+     + 'your confidence. Use sparingly.\n\n'
     +  'Call record_contents exactly once with everything you found.';
 
   if (ctx.fiduciary) {
@@ -3255,7 +3475,7 @@ function _agUserContent(shot) {
   if (details.length) {
     txt += ' The ' + (details.length === 1 ? 'photograph' : details.length + ' photographs')
         +  ' after the first ' + (details.length === 1 ? 'is a close-up' : 'are close-ups')
-        +  ' of something in it — a maker\'s mark, a signature, a hallmark. Read '
+        +  ' of the thing photographed: a mark, signature, hallmark or label, its back, a corner, a title page or damage. Read any words or marks on '
         +  (details.length === 1 ? 'it' : 'them') + ' and use '
         +  (details.length === 1 ? 'it' : 'them') + ' to name the object, and do NOT record '
         +  (details.length === 1 ? 'it' : 'them') + ' as objects of their own.';
@@ -3288,9 +3508,9 @@ function _agListedText(listed) {
     + 'listed, record an empty list.';
 }
 
-function _agRequestFor(shot, ctx, key) {
+function _agRequestFor(shot, ctx, key, model, noFallbacks) {
   var body = {
-    model: AGENT_MODEL,
+    model: model,
     max_tokens: AGENT_MAX_TOKENS,
     thinking: { type: 'adaptive' },
     output_config: { effort: AGENT_EFFORT },
@@ -3299,14 +3519,27 @@ function _agRequestFor(shot, ctx, key) {
     tool_choice: { type: 'auto' },
     messages: [{ role: 'user', content: _agUserContent(shot) }]
   };
+  var headers = { 'x-api-key': key, 'anthropic-version': AGENT_API_VERSION };
+  if (!noFallbacks) { body.fallbacks = 'default'; headers['anthropic-beta'] = AGENT_FALLBACK_BETA; }
   return {
     url: AGENT_API,
     method: 'post',
     contentType: 'application/json',
-    headers: { 'x-api-key': key, 'anthropic-version': AGENT_API_VERSION },
+    headers: headers,
     payload: JSON.stringify(body),
     muteHttpExceptions: true
   };
+}
+
+// One HTTP failure, classified for _agSendAll and Agent Two's loop (2026-10-26): the refusal-fallback field refused (sent again
+// without it); busy (429, 529, 5xx: the fallback model has capacity of its own); or rejected (any other 400 or 404: a parameter, a
+// tool version or the model itself that this model does not take). Busy and rejected are each worth one try on the fallback model.
+function _agHttpFailure(code, body) {
+  var err = (body && body.error) || {};
+  var msg = String(err.message || err.type || ('HTTP ' + code));
+  var fbRefused = code === 400 && /fallback/i.test(msg);
+  var retryable = fbRefused ? '' : (code === 429 || code === 529 || code >= 500) ? 'busy' : (code === 400 || code === 404) ? 'rejected' : '';
+  return { ok: false, error: msg, fallbackRefused: fbRefused, retryable: retryable };
 }
 
 // Pull the tool call out of a response. Returns {ok, objects, notices, error}.
@@ -3314,19 +3547,17 @@ function _agReadResult(res) {
   var code = res.getResponseCode();
   var body = {};
   try { body = JSON.parse(res.getContentText()); }
-  catch (e) { return { ok: false, error: 'unreadable answer (HTTP ' + code + ')' }; }
+  catch (e) { return { ok: false, error: 'unreadable answer (HTTP ' + code + ')', retryable: code >= 500 ? 'busy' : '' }; }
 
-  if (code >= 300) {
-    var err = (body && body.error) || {};
-    return { ok: false, error: (err.message || err.type || 'HTTP ' + code) };
-  }
-  // ⚠ A REFUSAL IS AN HTTP 200 AND MUST BE CHECKED BEFORE READING content.
+  if (code >= 300) return _agHttpFailure(code, body);
+  // ⚠ A REFUSAL IS AN HTTP 200 AND MUST BE CHECKED BEFORE READING content. With the fallback on, this is the whole chain
+  // declining (the fallback model too), never the first model alone.
   if (body.stop_reason === 'refusal') {
     var d = body.stop_details || {};
     return { ok: false, error: 'the model declined this image' + (d.category ? ' (' + d.category + ')' : '') };
   }
   if (body.stop_reason === 'max_tokens') {
-    return { ok: false, error: 'the answer was cut off before it finished' };
+    return { ok: false, error: 'the answer was cut off before it finished', retryable: 'cutoff' };
   }
   var blocks = body.content || [];
   for (var i = 0; i < blocks.length; i++) {
@@ -3366,45 +3597,42 @@ function agentIdentifyShots(data) {
     var key     = _agProp('ANTHROPIC_API_KEY');
     var started = new Date().getTime();
     var todo    = shots.slice(0, AGENT_MAX_SHOTS);
-    var results = {}, done = [], failed = {}, i = 0;
+    var results = {}, done = [], failed = {}, i = 0, timedOut = false, sendState = {};
+    var models = _agModels('name', key);
+    var build = function (shot, model, noFallbacks) { return _agRequestFor(shot, ctx, key, model, noFallbacks); };
 
     while (i < todo.length) {
       if (new Date().getTime() - started > AGENT_TIME_BUDGET) break;
       var slice = todo.slice(i, i + AGENT_PARALLEL);
-      var reqs = [], keep = [];
-      for (var j = 0; j < slice.length; j++) {
-        try {
-          reqs.push(_agRequestFor(slice[j], ctx, key));
-          keep.push(slice[j]);
-        } catch (imgErr) {
-          // A file that has not landed in Drive yet is ordinary, not fatal.
-          failed[slice[j].stableId] = String(imgErr.message || imgErr);
+      // ⚠ A SLOW PHOTOGRAPH NO LONGER THROWS THE CALL AWAY (2026-10-26): one request past UrlFetchApp's own limit throws the
+      // whole fetchAll, and it threw out of this action, so the photographs already named in earlier slices were paid for and
+      // never written, and the app, seeing an error, started neither the room check nor Agent Two. _agSendAll sends that slice to
+      // the fallback model, or fails it by name (unnamed, asked again on the next run), and the call goes on and answers.
+      var sentAll = _agSendAll(slice, build, function (res) { return _agReadResult(res); }, models, 'name',
+                               started + AGENT_TIME_BUDGET, sendState);
+      if (sentAll.timedOut) timedOut = true;
+      sentAll.answers.forEach(function (read, k) {
+        var id = slice[k].stableId;
+        if (read && read.ok) {
+          results[id] = { objects: read.objects, notices: read.notices, model: read.model };
+          done.push(id);
+        } else {
+          failed[id] = (read && read.error) || 'no answer';
         }
-      }
-      if (reqs.length) {
-        var responses = UrlFetchApp.fetchAll(reqs);
-        for (var k = 0; k < responses.length; k++) {
-          var read = _agReadResult(responses[k]);
-          var id   = keep[k].stableId;
-          if (read.ok) {
-            results[id] = { objects: read.objects, notices: read.notices };
-            done.push(id);
-          } else {
-            failed[id] = read.error;
-          }
-        }
-      }
+      });
       i += slice.length;
     }
 
-    return {
+    var out = {
       ok: true, success: true,
       results: results,
       done: done,
       failed: failed,
       remaining: Math.max(0, shots.length - i),
-      model: AGENT_MODEL
+      model: models.first
     };
+    if (timedOut) out.timedOut = true;
+    return out;
   } catch (error) {
     Logger.log('agentIdentifyShots error: ' + error);
     return { ok: false, error: String(error) };
@@ -3419,33 +3647,37 @@ function testAgentIdentify() {
   var miss = _agMissingProps();
   if (miss.length) { Logger.log('MISSING Script Property: ' + miss.join(', ')); return; }
 
+  // ⚠ AN ITEMS PHOTOGRAPH, AS PRODUCTION SENDS (2026-10-26): the first JPEG anywhere could be an as-found shot (never sent to Agent
+  // One), a cheque photograph or an incident photograph. A name with `_INV_` is an Items shot (testAgentRoomCheck's rule).
   var root = DriveApp.getFolderById(ROOT_FOLDER_ID);
   var found = null, stack = [root], guard = 0;
   while (stack.length && !found && guard++ < 400) {
     var f = stack.pop();
     var files = f.getFilesByType('image/jpeg');
-    if (files.hasNext()) { found = files.next(); break; }
+    while (files.hasNext()) { var x = files.next(); if (x.getName().indexOf('_INV_') >= 0) { found = x; break; } }
+    if (found) break;
     var subs = f.getFolders();
     while (subs.hasNext()) stack.push(subs.next());
   }
-  if (!found) { Logger.log('No JPEG under the root folder yet — take a photo on the Job Plan first.'); return; }
+  if (!found) { Logger.log('No Items photograph under the root folder yet — take one on the Job Plan first.'); return; }
 
   Logger.log('Photo: ' + found.getName());
-  var out = agentIdentifyShots({
-    context: {
-      categories: ['Art & Décor', 'Antiques', 'Collectibles', 'Electronics & Appliances',
-                   'Firearms', 'Furniture', 'General/Household', 'Jewelry & Watches',
-                   'Musical Instruments', 'Rugs & Carpets', 'Silver & Precious Metal',
-                   'Vehicles & Watercraft', 'Wine & Spirits'],
-      mustFind: ['a coin collection'], fiduciary: true
-    },
-    shots: [{ stableId: 'probe', fileId: found.getId(), room: 'probe' }]
-  });
+  var ctx = {
+    categories: ['Art & Décor', 'Antiques', 'Collectibles', 'Electronics & Appliances',
+                 'Firearms', 'Furniture', 'General/Household', 'Jewelry & Watches',
+                 'Musical Instruments', 'Rugs & Carpets', 'Silver & Precious Metal',
+                 'Vehicles & Watercraft', 'Wine & Spirits'],
+    mustFind: ['a coin collection'], fiduciary: true
+  };
+  var t0 = new Date().getTime();
+  var out = agentIdentifyShots({ context: ctx, shots: [{ stableId: 'probe', fileId: found.getId(), room: 'probe' }] });
+  var secs = Math.round((new Date().getTime() - t0) / 1000);
 
-  if (!out.ok) { Logger.log('FAILED: ' + out.error); return; }
+  if (!out.ok) { Logger.log('FAILED after ' + secs + 's: ' + out.error); return; }
   var r = out.results.probe;
-  if (!r) { Logger.log('FAILED: ' + (out.failed.probe || 'no result and no reason')); return; }
-  Logger.log('ALL GOOD — ' + out.model + ' answered.');
+  if (!r) { Logger.log('FAILED after ' + secs + 's: ' + (out.failed.probe || 'no result and no reason')); return; }
+  Logger.log('ALL GOOD — ' + (r.model || out.model) + ' answered in ' + secs + 's (first choice ' + out.model + ').');
+  if (secs > 45) Logger.log('⚠ CLOSE TO THE LIMIT: UrlFetchApp cuts a request off at about 60 s.');
   Logger.log('  objects: ' + r.objects.length);
   for (var i = 0; i < r.objects.length; i++) {
     var o = r.objects[i];
@@ -3456,6 +3688,20 @@ function testAgentIdentify() {
   for (var n = 0; n < (r.notices || []).length; n++) {
     Logger.log('  NOTICE [' + r.notices[n].kind + '] ' + r.notices[n].text);
   }
+  // ⚠ THE LISTED PATH (2026-10-24's rule, first met live until now): the same photograph again, told what the first reading
+  // listed. What it adds is printed; a warning only where an added name is one already listed, once case, spacing and
+  // punctuation are set aside (a second reading may rightly find something the first missed).
+  if (!r.objects.length) return;
+  var key = function (t) { return String(t || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); };
+  var listed = r.objects.map(function (o) { return { name: o.name, qty: o.qty }; });
+  var again = agentIdentifyShots({ context: ctx, shots: [{ stableId: 'probe', fileId: found.getId(), room: 'probe', listed: listed }] });
+  var r2 = again.ok && again.results.probe;
+  if (!r2) { Logger.log('  listed pass: no answer (' + ((again.failed || {}).probe || again.error || 'none') + ')'); return; }
+  Logger.log('  listed pass: ' + r2.objects.length + ' more' + (r2.objects.length ? ': ' + r2.objects.map(function (o) { return o.name; }).join('; ') : ''));
+  var names = listed.map(function (l) { return key(l.name); });
+  r2.objects.forEach(function (o) {
+    if (names.indexOf(key(o.name)) >= 0) Logger.log('     WARNING: a photograph already on the list was read again: ' + o.name);
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════════
@@ -3472,7 +3718,9 @@ function testAgentIdentify() {
 // can see both photographs can say which (CLAUDE.md, Decided: no auto-merging of possible duplicates).
 // ⚠ THE LINE LABELS ARE PLAIN STRINGS CHECKED HERE, never an enum (Agent Two's rule): a label this request did not carry
 // is dropped, and so is a "double" whose lines all came off one photograph, which is two things the namer saw at once.
-var AGENT_ROOM_MODEL       = 'claude-opus-5-5';  // its own constant: it compares many pictures at once (measure before changing)
+// The model: _agModels('rooms'), the newest top-tier model first and the newest Opus behind it (2026-10-26, Agent One's section).
+// ⚠ AGENT_ROOM_WINDOW was timed on Opus 5.5 (six photographs in 15 s, eight in 32 s): a run on the top line that passes UrlFetchApp's
+// limit goes to the fallback by itself, and twice in a day sets the top line aside for the room check that day (_agSlow).
 var AGENT_ROOM_EFFORT      = 'low';     // a run of pictures has to answer inside UrlFetchApp's per-request limit
 var AGENT_ROOM_MAX_TOKENS  = 16000;     // the non-streaming ceiling Agent One settled on; it caps, it does not spend
 // ⚠⚠ MEASURED, NOT GUESSED (Anthony's first live run of testAgentRoomCheck, 2026-10-06): eight photographs in one request
@@ -3608,9 +3856,9 @@ function _arWindowContent(room, shots, from, total, cache) {
   return { content: content, labels: labels };
 }
 
-function _arRequestFor(content, ctx, key) {
+function _arRequestFor(content, ctx, key, model, noFallbacks) {
   var body = {
-    model: AGENT_ROOM_MODEL,
+    model: model,
     max_tokens: AGENT_ROOM_MAX_TOKENS,
     thinking: { type: 'adaptive' },
     output_config: { effort: AGENT_ROOM_EFFORT },
@@ -3619,11 +3867,13 @@ function _arRequestFor(content, ctx, key) {
     tool_choice: { type: 'auto' },
     messages: [{ role: 'user', content: content }]
   };
+  var headers = { 'x-api-key': key, 'anthropic-version': AGENT_API_VERSION };
+  if (!noFallbacks) { body.fallbacks = 'default'; headers['anthropic-beta'] = AGENT_FALLBACK_BETA; }
   return {
     url: AGENT_API,
     method: 'post',
     contentType: 'application/json',
-    headers: { 'x-api-key': key, 'anthropic-version': AGENT_API_VERSION },
+    headers: headers,
     payload: JSON.stringify(body),
     muteHttpExceptions: true
   };
@@ -3635,13 +3885,10 @@ function _arReadResult(res, labels) {
   var code = res.getResponseCode();
   var body = {};
   try { body = JSON.parse(res.getContentText()); }
-  catch (e) { return { ok: false, error: 'unreadable answer (HTTP ' + code + ')' }; }
-  if (code >= 300) {
-    var err = (body && body.error) || {};
-    return { ok: false, error: (err.message || err.type || 'HTTP ' + code) };
-  }
+  catch (e) { return { ok: false, error: 'unreadable answer (HTTP ' + code + ')', retryable: code >= 500 ? 'busy' : '' }; }
+  if (code >= 300) return _agHttpFailure(code, body);
   if (body.stop_reason === 'refusal') return { ok: false, error: 'the model declined these photographs' };
-  if (body.stop_reason === 'max_tokens') return { ok: false, error: 'the answer was cut off before it finished' };
+  if (body.stop_reason === 'max_tokens') return { ok: false, error: 'the answer was cut off before it finished', retryable: 'cutoff' };
   var blocks = body.content || [];
   for (var i = 0; i < blocks.length; i++) {
     if (blocks[i].type === 'tool_use' && blocks[i].name === 'record_doubles') {
@@ -3707,9 +3954,9 @@ function agentCheckRooms(data) {
     var all = (data && data.rooms) || [];
     var rooms = all.slice(0, AGENT_ROOM_MAX_ROOMS);
     var remaining = all.slice(AGENT_ROOM_MAX_ROOMS).map(function (r) { return String(r && r.key); });
-    if (!rooms.length) return { ok: true, success: true, results: {}, failed: {}, remaining: remaining, model: AGENT_ROOM_MODEL };
-
     var key = _agProp('ANTHROPIC_API_KEY');
+    if (!rooms.length) return { ok: true, success: true, results: {}, failed: {}, remaining: remaining };
+    var models = _agModels('rooms', key), sendState = {};
     var started = new Date().getTime();
     var cache = {}, runs = [];
     var state = rooms.map(function (room) {
@@ -3725,31 +3972,30 @@ function agentCheckRooms(data) {
     while (i < runs.length) {
       if (new Date().getTime() - started > AGENT_ROOM_TIME_BUDGET) break;
       var slice = runs.slice(i, i + AGENT_ROOM_PARALLEL);
-      var reqs = [], keep = [];
+      var keep = [];
       slice.forEach(function (run) {
         if (run.st.error) return;
         try {
           var built = _arWindowContent(run.st.room, run.st.shots.slice(run.from, run.to), run.from, run.st.shots.length, cache);
           run.labels = built.labels;
-          reqs.push(_arRequestFor(built.content, ctx, key));
+          run.content = built.content;
           keep.push(run);
         } catch (imgErr) {
           // A photograph not in Drive yet, or not an image: the room fails by name rather than being read without it.
           run.st.error = String(imgErr.message || imgErr);
         }
       });
-      if (reqs.length) {
-        var responses = null;
-        try { responses = UrlFetchApp.fetchAll(reqs); }
-        catch (fetchErr) {
-          // UrlFetchApp's own per-request limit throws the whole slice (Agent Two's lesson): those rooms took too long.
-          keep.forEach(function (run) { run.st.error = 'took too long (' + String(fetchErr.message || fetchErr).slice(0, 120) + ')'; });
-        }
-        for (var k = 0; responses && k < responses.length; k++) {
-          var read = _arReadResult(responses[k], keep[k].labels);
-          if (read.ok) { keep[k].st.done++; keep[k].st.doubles = keep[k].st.doubles.concat(read.doubles); }
-          else keep[k].st.error = read.error;
-        }
+      if (keep.length) {
+        // UrlFetchApp's own per-request limit throws the whole slice (Agent Two's lesson): _agSendAll sends it to the fallback
+        // model while the budget allows, else those rooms took too long.
+        var sentAll = _agSendAll(keep, function (run, model, noFb) { return _arRequestFor(run.content, ctx, key, model, noFb); },
+                                 function (res, run) { return _arReadResult(res, run.labels); }, models, 'rooms',
+                                 started + AGENT_ROOM_TIME_BUDGET, sendState);
+        sentAll.answers.forEach(function (read, k) {
+          var run = keep[k];
+          if (read && read.ok) { run.st.done++; run.st.doubles = run.st.doubles.concat(read.doubles); run.st.model = read.model; }
+          else run.st.error = (read && read.error) || 'no answer';
+        });
       }
       i += slice.length;
     }
@@ -3757,10 +4003,13 @@ function agentCheckRooms(data) {
     var results = {}, failed = {};
     state.forEach(function (st) {
       if (st.error) failed[st.key] = st.error;
-      else if (st.done === st.wins) results[st.key] = { doubles: _arMergeDoubles(st.doubles), photos: st.shots.length };
+      else if (st.done === st.wins) {
+        results[st.key] = { doubles: _arMergeDoubles(st.doubles), photos: st.shots.length };
+        if (st.model) results[st.key].model = st.model;
+      }
       else remaining.push(st.key);
     });
-    return { ok: true, success: true, results: results, failed: failed, remaining: remaining, model: AGENT_ROOM_MODEL };
+    return { ok: true, success: true, results: results, failed: failed, remaining: remaining, model: models.first };
   } catch (error) {
     Logger.log('agentCheckRooms error: ' + error);
     return { ok: false, error: String(error) };
@@ -3810,7 +4059,7 @@ function testAgentRoomCheck() {
   if (out.failed.probe) { Logger.log('FAILED after ' + secs + 's: ' + out.failed.probe); return; }
   var r = out.results.probe;
   if (!r) { Logger.log('NOT FINISHED after ' + secs + 's: the time budget ran out before the room was read.'); return; }
-  Logger.log('ALL GOOD — ' + out.model + ' read ' + picked.length + ' photographs in one run in ' + secs
+  Logger.log('ALL GOOD — ' + (r.model || out.model) + ' read ' + picked.length + ' photographs in one run in ' + secs
     + 's. UrlFetchApp cuts a request off at about 60s.');
   if (secs > 45) Logger.log('⚠ CLOSE TO THE LIMIT: lower AGENT_ROOM_WINDOW before a full house.');
   Logger.log('  counted twice: ' + r.doubles.length);
@@ -3840,8 +4089,8 @@ function testAgentRoomCheck() {
 // ⚠ AND IT IS NEVER TOLD A THRESHOLD (§6). It values; the app's rules decide. A figure taught to the
 // model is a second copy of `invAppraisalThreshold`, the drift this codebase keeps paying for.
 
-var AGENT_VALUE_MODEL       = 'claude-opus-5-5';   // its own constant: measure before changing (spec §7)
-// ⚠ `medium` TO START, which is also this model's default — set explicitly so a default moving on
+// The model: _agModels('value'), the newest top-tier model first and the newest Opus behind it (2026-10-26, Agent One's section).
+// ⚠ `medium` TO START, which is also Opus 5.5's default — set explicitly so a default moving on
 // the API side cannot change what an estate costs. Sweep low/medium/high on one real estate and
 // measure against the comps a person would have found before tuning it.
 var AGENT_VALUE_EFFORT      = 'medium';
@@ -3860,12 +4109,11 @@ var AGENT_VALUE_MAX_COMPS   = 6;      // comparables kept per line (the manifest
 // valuing request researches for tens of seconds and may be continued twice, so the slice started
 // at the budget's edge still has to finish inside Apps Script's six minutes.
 var AGENT_VALUE_TIME_BUDGET = 120000;
-// ⚠ SERVER-SIDE REFUSAL FALLBACK, opted into by default as Anthropic's guidance asks of this model:
+// ⚠ SERVER-SIDE REFUSAL FALLBACK, opted into by default as Anthropic's guidance asks (AGENT_FALLBACK_BETA, Agent One's section):
 // a classifier decline is re-run on the model Anthropic recommends for its category, inside the same
 // call. The header and the scalar `fallbacks:'default'` go together; pairing either with the other
 // form is a 400. A deployment whose account refuses the field answers 400 naming it, and that one
 // request is sent again without it (`_avReadResult`, `noFallbacks`) rather than the button dying.
-var AGENT_VALUE_FALLBACK_BETA = 'server-side-fallback-2026-07-01';
 var AGENT_VALUE_SOURCES = { comps: ['Auction comps', 'Online comps'], general: ['General estimate'] };
 // "worthpoint" and "name" went on 2026-10-25: the desk shows the confidence and the WorthPoint terms beside every
 // figure, and a name Agent Two would change it now changes (`name` in the answer; Anthony: "No need to flag").
@@ -3890,7 +4138,61 @@ function _avCents(x) {
 // ⚠ `line` IS A PLAIN STRING, NOT AN ENUM OF THIS REQUEST'S LABELS. An enum would make the tool, and
 // with it the cached prefix, different on every request; the labels are checked here instead and an
 // answer for a line nobody asked about is dropped.
-function _avTool(mode) {
+function _avTool(mode, categories) {
+  var cats = (categories || []).filter(function (c) { return !!String(c || '').trim(); });
+  var props = {
+    line:       { type: 'string', description: 'The label the line was given, for example L1.' },
+    name:       { type: 'string', description: 'The line\'s name as you value it: the name given where it is right (always the name given on a line whose name a person checked), else your corrected name. One short line, about fifteen words, never with a count.' },
+    value:      { type: 'number', description: 'Your point value for the WHOLE line, in US dollars: every article on it together, never a per-piece price.' },
+    low:        { type: 'number', description: 'The low end of the range it would realistically sell for, whole line, US dollars.' },
+    high:       { type: 'number', description: 'The high end of that range, whole line, US dollars.' },
+    confidence: { type: 'string', enum: ['high', 'medium', 'low'] },
+    source:     { type: 'string', enum: AGENT_VALUE_SOURCES[mode] || AGENT_VALUE_SOURCES.general },
+    // ⚠ PRINTED, NOT DESK SHORTHAND (2026-10-26): it is the line's valNote, printed under the line on the Estate Inventory Report
+    // the attorney reads and in the workbook, and since the desk rescales a figure when a person corrects the count, it must
+    // never carry the count (a "seven plates at $8" sentence printed beside Qty 8).
+    basis:      { type: 'string', description: 'One plain sentence, about twenty words at most, saying what the figure rests on ("Four sold comparables, 2025 to 2026; the median, less for one chipped rim"; "The going used rate for everyday stainless flatware"), with the valuation-date caveat where the instructions ask for one, and never with this line\'s count or its name. It is printed beside the figure on the inventory the family, their attorney or a trustee reads.' },
+    comps: {
+      type: 'array',
+      description: 'The sales you relied on. Each must be a page your search or fetch returned, with its URL copied exactly.',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['title', 'venue', 'saleDate', 'price', 'url', 'kind'],
+        properties: {
+          title:    { type: 'string' },
+          venue:    { type: 'string', description: 'Who sold it: the auction house, the platform or the dealer.' },
+          saleDate: { type: 'string', description: 'YYYY-MM-DD, or YYYY-MM, or empty when the page gives no date.' },
+          price:    { type: 'number', description: 'The price realised (sold) or asked (asking), US dollars, for what that listing covered.' },
+          url:      { type: 'string' },
+          kind:     { type: 'string', enum: ['sold', 'asking'] }
+        }
+      }
+    },
+    lookup: { type: 'string', description: 'The terms a person would type into WorthPoint to check this line: maker, pattern, mark, form, period. Empty for a general estimate.' },
+    notices: {
+      type: 'array',
+      description: 'Things a person should look at. Never a substitute for a value.',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['kind', 'text'],
+        properties: {
+          kind: { type: 'string', enum: AGENT_VALUE_NOTICE_KINDS },
+          text: { type: 'string' }
+        }
+      }
+    }
+  };
+  var required = ['line', 'name', 'value', 'low', 'high', 'confidence', 'source', 'basis', 'comps', 'lookup', 'notices'];
+  // ⚠⚠ THE CATEGORY, UNDER THE NAME'S RULE (2026-10-26; Anthony: *"Yes, same rule as the name"*): a research line's category comes
+  // back with its name, and the app writes it only where the name is still Agent One's and unreviewed (_avNameIsAgents). The list
+  // rides the payload (Agent One's rule: this file holds no copy), constant within a job so the cached prefix holds; an app that
+  // sends none gets the tool without the field, as before.
+  if (cats.length) {
+    props.category = { type: 'string', enum: cats, description: 'The line\'s category as you value it: the one given, unless on a RESEARCH line the photograph and your research plainly put it elsewhere. Always the one given on an ORDINARY lot, on a line whose name or category a person checked, and on a line filed Firearms.' };
+    required.push('category');
+  }
   return {
     name: 'record_values',
     description: 'Record a value for every line you were given, or say why a line could not be valued. '
@@ -3904,56 +4206,14 @@ function _avTool(mode) {
         values: {
           type: 'array',
           description: 'One entry per line you could value.',
-          items: {
-            type: 'object',
-            additionalProperties: false,
-            required: ['line', 'name', 'value', 'low', 'high', 'confidence', 'source', 'basis', 'comps', 'lookup', 'notices'],
-            properties: {
-              line:       { type: 'string', description: 'The label the line was given, for example L1.' },
-              name:       { type: 'string', description: 'The line\'s name as you value it: the name given where it is right (always the name given on a line whose name a person checked), else your corrected name. One short line, never with a count.' },
-              value:      { type: 'number', description: 'Your point value for the WHOLE line, in US dollars: every article on it together, never a per-piece price.' },
-              low:        { type: 'number', description: 'The low end of the range it would realistically sell for, whole line, US dollars.' },
-              high:       { type: 'number', description: 'The high end of that range, whole line, US dollars.' },
-              confidence: { type: 'string', enum: ['high', 'medium', 'low'] },
-              source:     { type: 'string', enum: AGENT_VALUE_SOURCES[mode] || AGENT_VALUE_SOURCES.general },
-              basis:      { type: 'string', description: 'One sentence saying how the comparables became this figure. Read by the desk.' },
-              comps: {
-                type: 'array',
-                description: 'The sales you relied on. Each must be a page your search or fetch returned, with its URL copied exactly.',
-                items: {
-                  type: 'object',
-                  additionalProperties: false,
-                  required: ['title', 'venue', 'saleDate', 'price', 'url', 'kind'],
-                  properties: {
-                    title:    { type: 'string' },
-                    venue:    { type: 'string', description: 'Who sold it: the auction house, the platform or the dealer.' },
-                    saleDate: { type: 'string', description: 'YYYY-MM-DD, or YYYY-MM, or empty when the page gives no date.' },
-                    price:    { type: 'number', description: 'The price realised (sold) or asked (asking), US dollars, for what that listing covered.' },
-                    url:      { type: 'string' },
-                    kind:     { type: 'string', enum: ['sold', 'asking'] }
-                  }
-                }
-              },
-              lookup: { type: 'string', description: 'The terms a person would type into WorthPoint to check this line: maker, pattern, mark, form, period. Empty for a general estimate.' },
-              notices: {
-                type: 'array',
-                description: 'Things a person should look at. Never a substitute for a value.',
-                items: {
-                  type: 'object',
-                  additionalProperties: false,
-                  required: ['kind', 'text'],
-                  properties: {
-                    kind: { type: 'string', enum: AGENT_VALUE_NOTICE_KINDS },
-                    text: { type: 'string' }
-                  }
-                }
-              }
-            }
-          }
+          items: { type: 'object', additionalProperties: false, required: required, properties: props }
         },
         unvalued: {
           type: 'array',
-          description: 'Every line you could not value, each with the reason. Never guess instead.',
+          // 2026-10-26 (Anthony: *"Best estimate, marked unsure"*): a best estimate on thin evidence is a figure at low confidence,
+          // which the desk marks unsure and every paper prints as a general estimate (_avLineResult); unvalued left the person to
+          // type a figure from nothing.
+          description: 'Only a line you cannot value at all, with the reason: you cannot tell what it is, or it is papers or records, which are never valued for their contents. A best estimate on thin evidence goes under values with confidence low, never here.',
           items: {
             type: 'object',
             additionalProperties: false,
@@ -3969,10 +4229,11 @@ function _avTool(mode) {
 // The tools for one request: search (and, for the research depth, reading a page it found) and the
 // tool the answer comes back through. ⚠ `_20260209` CARRIES DYNAMIC FILTERING ITSELF, so no
 // `code_execution` tool is declared beside it (a second execution environment confuses the model).
-function _avTools(mode) {
+// It runs on every model the agents choose (dynamic filtering is on Claude 4.6 and later, Anthropic's docs, 2026-10-26).
+function _avTools(mode, categories) {
   var tools = [{ type: 'web_search_20260209', name: 'web_search', max_uses: AGENT_VALUE_SEARCHES[mode] || 1 }];
   if (mode === 'comps') tools.push({ type: 'web_fetch_20260209', name: 'web_fetch', max_uses: AGENT_VALUE_FETCHES });
-  tools.push(_avTool(mode));
+  tools.push(_avTool(mode, categories));
   return tools;
 }
 
@@ -3983,6 +4244,7 @@ function _avSystem(ctx) {
   var estate = !!ctx.estate;
   var basis = String(ctx.basis || 'Fair Market Value');
   var vdate = String(ctx.valuationDate || '');
+  var cats = (ctx.categories || []).length > 0;
   var s = ''
     + 'You are putting a value on the contents of a home so that a concierge can complete '
     + (estate ? 'an estate inventory' : 'an inventory for a client who is moving or clearing their home')
@@ -4009,7 +4271,14 @@ function _avSystem(ctx) {
             : 'Value at the current market.\n'))
     + 'The property is in Palm Beach County, Florida. Bulky furniture usually sells locally, so its market '
     + 'is regional; small valuable things sell nationally.\n'
-    + 'A line is a whole lot. "Sterling flatware, service for 12, 72 pieces" is ONE figure for all 72 '
+    // 2026-10-26 (the Restoration Hardware mirror, *"maybe it's worth $1500 new, and then not $25 used"*): a search for a branded
+    // piece finds the brand's own retail page first, and nothing said how a retail brand's used price relates to it.
+    + 'Furniture and decor from a retail or designer brand (Restoration Hardware, Pottery Barn, Crate & Barrel, Arhaus, '
+    + 'Ethan Allen and the like) sells used for a fraction of its retail price: value it at what that brand fetches '
+    + 'second-hand, never at the price its own site or a retailer asks. Mass-market and dated furniture often fetches '
+    + 'little. Modern electronics and appliances lose most of their value within a few years, while vintage audio and '
+    + 'other collected electronics can hold theirs: the model and its age matter as much as the brand.\n'
+    + 'A line is a whole lot. "Sterling flatware service" with Quantity 72 is ONE figure for all 72 '
     + 'pieces, never a per-piece price. Value the quantity on the line as given: a stack or a box hides '
     + 'what is under the top one, so never question the count from the photograph. The desk reads one '
     + 'article\'s value as the line\'s value divided by its Quantity and multiplies it again when a person '
@@ -4017,22 +4286,36 @@ function _avSystem(ctx) {
     // 2026-10-25 (the Ellison kitchen: "Condition not recorded" on nearly every line it valued). The crew photographs rather
     // than writes, and every document prints a line with no condition as photographed.
     + 'Condition is usually not written on the line, because the crew photographs rather than writes. Read '
-    + 'it from the photograph on a research line, assume ordinary used condition on an ordinary lot, and '
-    + 'adjust for any condition that is recorded.\n\n'
+    + 'it from the photograph wherever one is sent, assume ordinary used condition on a lot sent as text alone, and '
+    + 'adjust for any condition that is recorded.\n'
+    // 2026-10-26: a line split off a photograph is sent the whole photograph and its close-ups, and nothing said the photograph
+    // showed other lines; the line now says what else is listed off it (_avLineText).
+    + 'A photograph may show other things that are lines of their own, and the line says so: value only the thing this '
+    + 'line names. A close-up may be of one of those other things.\n\n'
 
     + 'THE TWO DEPTHS\n'
-    + 'A request marked RESEARCH is one line that may be worth real money: art, antiques, jewellery, '
-    + 'silver, rugs, collectibles, firearms, wine, instruments, or anything carrying a maker, a model or '
-    + 'a mark. Search for SOLD results: auction prices realised (LiveAuctioneers and Invaluable results '
-    + 'pages, auction house archives) and dealer sales. Find three or more sold comparables where they '
+    // 2026-10-26: since 2026-10-25b research also takes Agent One's unsure guesses and the names a person just typed, so it is
+    // no longer only "a line that may be worth real money", and branded furniture and electronics sell through resale, not auctions.
+    + 'A request marked RESEARCH is one line to look at closely: it may be worth real money (art, antiques, jewellery, '
+    + 'silver, rugs, collectibles, firearms, wine, instruments, or anything carrying a maker, a model or a mark), its name '
+    + 'may be a guess for you to confirm from the photograph, or a person may have just named it. Search for SOLD results '
+    + 'where that kind of thing actually sells: auction prices realised (LiveAuctioneers and Invaluable results pages, '
+    + 'auction house archives) and dealer sales for art, antiques, silver, jewellery and rugs; resale and consignment '
+    + 'sales for branded furniture, decor and electronics. Find three or more sold comparables where they '
     + 'exist and read the photographs, because the maker\'s mark is what makes a comparable a match. '
     + 'Your value is your reading of those sales, adjusted for condition and for any difference between '
     + 'them and this line.\n'
     + 'A request marked ORDINARY is a batch of everyday lots: kitchenware, linens, books, everyday '
-    + 'furniture and decor. One quick search for the going resale rate of that kind of lot is enough, '
-    + 'and you need not cite a comparable. This is a figure for a schedule, not research: "Stainless '
-    + 'flatware, service for 12, everyday brand, $40 to $60" is the whole job. A maker or brand in the name is '
-    + 'part of what the lot is: price that brand ("Henckels kitchen shears"), never the generic kind.\n\n'
+    + 'furniture and decor. Search for the going used rate of each kind of lot in the batch, not of each line: lots of '
+    + 'one kind (kitchenware, linens, books) share one search. You need not cite a comparable. This is a figure for a '
+    + 'schedule, not research: "Stainless flatware, everyday brand", Quantity 60, $40 to $60 for the lot, is the whole '
+    + 'job. A maker or brand in the name is '
+    + 'part of what the lot is: price that brand ("Henckels kitchen shears"), never the generic kind.\n'
+    // ⚠ AGENT ONE GUESSES, AGENT TWO LOOKS (2026-10-26; Anthony, 2026-10-25: "agent 1 guess and agent 2 confirm or update upon
+    // pricing"): an ordinary lot whose name is Agent One's hedged guess comes with its photograph (the app's agentValueLooks).
+    + 'Some ordinary lots come with their photograph, labelled with the line\'s label, because the name is a guess: look at '
+    + 'it, confirm or correct the name from what you see, price a brand the name only guesses at as far as the photograph '
+    + 'supports it, and read the condition off it. It is still an ordinary lot.\n\n'
 
     + 'EVIDENCE\n'
     + '- A comparable must be a page your search or fetch actually returned. Copy its URL exactly. A sale '
@@ -4040,13 +4323,22 @@ function _avSystem(ctx) {
     + 'link. Comparables without a returned URL are thrown away.\n'
     + '- Say whether each comparable SOLD or was only ASKING. An asking price is not a sale. You may cite '
     + 'one as "asking", but never set the value on asking prices alone.\n'
-    + '- If a research line has no sold comparable, give your best reading with confidence low, or put the '
-    + 'line under unvalued with the reason. Do not dress a guess up as research.\n\n'
+    + '- If a research line has no sold comparable, give your best reading with confidence low and say in the basis '
+    + 'what it rests on. Put a line under unvalued only when you cannot tell what it is, or it is papers or records. Do '
+    + 'not dress a guess up as research.\n\n'
 
     + 'THE RANGE AND CONFIDENCE\n'
     + 'low and high bracket where the line would realistically sell; your value sits inside them. high '
     + 'confidence = several close sold comparables agree. medium = the comparables are near but not exact, '
-    + 'or few. low = a best estimate on thin or indirect evidence.\n\n'
+    + 'or few. low = a best estimate on thin or indirect evidence.'
+    // 2026-10-26: the only scale was about comparables, which an ordinary lot is told it need not cite, so a literal reading put
+    // every everyday lot at low, and the desk marked each one unsure.
+    + ' On an ORDINARY lot, confidence says how well the going rate for that kind of lot is known, not how many sales '
+    + 'you cited: high where lots like it resell at a familiar rate, medium where the rate turns on a brand, model or '
+    + 'size the line does not give, and low only where you cannot tell what the lot is or what lots like it fetch.\n'
+    + 'The basis sentence is printed beside the figure on the inventory the family, their attorney or a trustee reads: '
+    + 'write it as the evidence, in plain words, never with this line\'s count or its name, so it stays true if a '
+    + 'person corrects the count.\n\n'
 
     + 'THE WORTHPOINT LOOKUP\n'
     + 'For a research line, write in lookup the words a person would type into WorthPoint\'s price guide to '
@@ -4058,14 +4350,28 @@ function _avSystem(ctx) {
     + 'THE NAME\n'
     + 'Give every line\'s name back in name, as you value it: the same words where they are right, or the '
     + 'name your research and the photograph support ("Hand-painted tin-glazed plates, yellow bird pattern, '
-    + 'likely Spanish, Puente del Arzobispo type"). Keep what was right, keep it one short line, never put a '
+    + 'likely Spanish, Puente del Arzobispo type"). Keep what was right, keep it one short line (about fifteen words: '
+    + 'what it is first, then what tells it apart), never put a '
     + 'count in it (how many is the Quantity), and hedge an attribution you are inferring rather than reading '
-    + '("likely", "appears to be"). Value the line as you name it. On an ordinary lot, which you see only as '
-    + 'text, give the name back as it was unless it is plainly wrong. Never write that a name was wrong: '
-    + 'correct it, and a person checks it at the desk.\n'
+    + '("likely", "appears to be"). Keep a maker or brand the crew named in their note unless the photograph plainly '
+    + 'shows otherwise, and never put the name of the owner, a relative or a recipient in a name, whatever the crew '
+    + 'noted. Value the line as you name it. On an ordinary lot sent as text alone, give the name back as it was unless '
+    + 'it is plainly wrong; on one sent with its photograph, confirm or correct it from the photograph. Never write that '
+    + 'a name was wrong: correct it, and a person checks it at the desk.\n'
     // 2026-10-25b: a name a person typed or reviewed (the wooden mirror that is Restoration Hardware) is the truth to price.
     + 'A line marked "Name checked by a person" was named or checked by someone who saw the thing itself: give '
     + 'that name back exactly as given and value the line as that, even where the photograph looks plainer.\n\n'
+    + (cats
+        ? 'THE CATEGORY\n'
+        + 'Give every line\'s category back in category: the one given, unless on a RESEARCH line the photograph and your '
+        + 'research plainly put it elsewhere (a piece filed as Antiques that is a recent reproduction is Furniture). Always '
+        + 'the one given on an ORDINARY lot, on a line whose name or category a person checked, and on a line filed Firearms '
+        + '(an antique gun stays Firearms). The categories mean: everyday dishes, '
+        + 'glassware, cookware, kitchen tools and table linens are General/Household unless a maker\'s mark, signature or '
+        + 'hallmark is readable; Antiques is for pieces about a hundred years old or more, a recent piece in a period style '
+        + 'being Furniture; Art & Décor is for original art, fine prints, sculpture and decorative pieces by a maker or of '
+        + 'evident quality, mass-produced decor being General/Household; Collectibles is for things people collect as such.\n\n'
+        : '')
 
     + 'NOTICES\n'
     // 2026-10-25 (Anthony, the Ellison kitchen: "Agent Two raised 23 things to look at", nine lines' worth, most of them
@@ -4082,7 +4388,9 @@ function _avSystem(ctx) {
     + 'the figure.\n\n'
 
     + 'WHAT YOU MUST NEVER DO\n'
-    + '- Never change a line\'s category or its quantity.\n'
+    + (cats
+        ? '- Never change a line\'s quantity, and change its category only as THE CATEGORY says.\n'
+        : '- Never change a line\'s category or its quantity.\n')
     + '- Never rename a line whose name a person checked: give its name back as it was.\n'
     + '- Never say what should happen to a line (keep, sell, donate, junk) beyond the notices above. That '
     + 'is the family\'s decision.\n'
@@ -4093,57 +4401,84 @@ function _avSystem(ctx) {
     + 'either under values or under unvalued, using the label it was given.';
 
   if (estate) {
+    // 2026-10-26: understated as well as overstated. On a Form 706 estate an undervalued figure costs the beneficiaries and the
+    // estate (a sale at too low a price, a valuation penalty) as surely as an overstated one.
     s += '\n\nThis is a decedent\'s estate. The schedule may be read by an attorney, a personal representative '
-       + 'or trustee, a beneficiary, a court or the IRS, so an overstated figure or an invented comparable is a '
-       + 'real problem for real people. That is the reason for the evidence rules above.';
+       + 'or trustee, a beneficiary, a court or the IRS, so an overstated or understated figure or an invented comparable '
+       + 'is a real problem for real people. That is the reason for the evidence rules above.';
   }
   return s;
 }
 
 // One line, as the model reads it. Everything a person recorded that bears on value, and nothing the
-// model must not act on (no disposition, no recipient, no flags).
+// model must not act on (no disposition, no recipient field, no flags; a crew's note can name a recipient, and THE NAME bars it).
 function _avLineText(label, it) {
   var t = label + '. ' + String(it.name || '').slice(0, 300)
         + ' | Category: ' + String(it.category || 'not recorded')
         + ' | Quantity: ' + (parseInt(it.qty, 10) > 1 ? parseInt(it.qty, 10) : 1)
         + ' | Condition: ' + String(it.condition || 'not written down');
+  // 2026-10-26: the room (Agent One had it, Agent Two did not), and on a photograph several lines share, the crew's note said over
+  // it, marked as possibly about another thing, and what else is listed off it.
+  if (it.room)       t += ' | Room: ' + String(it.room).slice(0, 60);
   if (it.fieldNote)  t += ' | The crew noted: "' + String(it.fieldNote).slice(0, 300) + '"';
+  if (it.photoNote)  t += ' | The crew said over the photograph this line shares (it may be about another thing in it): "' + String(it.photoNote).slice(0, 300) + '"';
+  var also = (it.alsoListed || []).filter(function (n) { return !!String(n || '').trim(); }).slice(0, 12);
+  if (also.length)   t += ' | Its photograph also shows, listed as lines of their own: ' + also.map(function (n) { return String(n).slice(0, 120); }).join('; ');
   if (it.agentBasis) t += ' | Named from: ' + String(it.agentBasis).slice(0, 200);
   // ⚠ WHO HAS THE NAME (2026-10-25b): a name a person typed or reviewed is given back and valued as named (THE NAME).
   if (it.nameChecked) t += ' | Name checked by a person';
+  else if (it.categoryChecked) t += ' | Category checked by a person';
   return t;
 }
 
-// The user turn for one request. A research line carries its photograph and close-ups (Agent One's
-// image block, the same full file); an ordinary batch is text alone.
+// The user turn for one request. A research line carries its photograph and close-ups (Agent One's image block, the same full
+// file), each labelled so the main frame is never taken for a close-up; an ordinary batch is text, with the photograph of any lot
+// sent with one (a guessed name, agentValueLooks), labelled with its line. ⚠ An ordinary lot's photograph that cannot be read costs
+// that lot its picture, never the batch its answer.
 function _avUserContent(unit) {
   var content = [];
   if (unit.mode === 'comps') {
     var it = unit.items[0];
+    var details = it.fileId ? (it.details || []).slice(0, 4) : [];
     if (it.fileId) {
+      content.push({ type: 'text', text: 'The photograph:' });
       content.push(_agImageBlock(it.fileId));
-      var details = it.details || [];
-      for (var i = 0; i < details.length && i < 4; i++) content.push(_agImageBlock(details[i].fileId));
+      for (var i = 0; i < details.length; i++) {
+        content.push({ type: 'text', text: 'Close-up ' + (i + 1) + ':' });
+        content.push(_agImageBlock(details[i].fileId));
+      }
     }
     content.push({ type: 'text', text: 'RESEARCH. One line to value'
-      + (it.fileId ? ', with its photograph' + ((it.details || []).length ? ' and close-ups of its marks' : '') : '')
-      + ':\n' + _avLineText(unit.labels[0], it) });
+      + (it.fileId ? ', with its photograph' + (details.length ? ' and close-ups taken of it (a mark, a label, its back, a corner or damage)' : '') : '')
+      + ':\n' + _avLineText(unit.labels[0], it)
+      + (it.roomNote ? '\nWalkthrough note for this room: "' + String(it.roomNote).slice(0, 400) + '"' : '') });
   } else {
-    var lines = unit.items.map(function (x, k) { return _avLineText(unit.labels[k], x); });
+    var lines = unit.items.map(function (x, k) {
+      if (x.fileId) {
+        try {
+          var img = _agImageBlock(x.fileId);
+          content.push({ type: 'text', text: unit.labels[k] + '\'s photograph:' });
+          content.push(img);
+          return _avLineText(unit.labels[k], x) + ' | Its photograph is above, labelled ' + unit.labels[k]
+            + (x.roomNote ? ' | Walkthrough note for its room: "' + String(x.roomNote).slice(0, 300) + '"' : '');
+        } catch (e) { /* a photograph not in Drive yet: valued as text */ }
+      }
+      return _avLineText(unit.labels[k], x);
+    });
     content.push({ type: 'text', text: 'ORDINARY. ' + unit.items.length + ' everyday lot'
       + (unit.items.length === 1 ? '' : 's') + ' to value:\n' + lines.join('\n') });
   }
   return content;
 }
 
-function _avBody(unit, ctx, noFallbacks) {
+function _avBody(unit, ctx, noFallbacks, model) {
   var body = {
-    model: AGENT_VALUE_MODEL,
+    model: model,
     max_tokens: AGENT_VALUE_MAX_TOKENS,
     thinking: { type: 'adaptive' },
     output_config: { effort: AGENT_VALUE_EFFORT },
     system: [{ type: 'text', text: _avSystem(ctx), cache_control: { type: 'ephemeral' } }],
-    tools: _avTools(unit.mode),
+    tools: _avTools(unit.mode, ctx.categories),
     tool_choice: { type: 'auto' },
     messages: [{ role: 'user', content: _avUserContent(unit) }]
   };
@@ -4153,7 +4488,7 @@ function _avBody(unit, ctx, noFallbacks) {
 
 function _avHttp(body, key) {
   var headers = { 'x-api-key': key, 'anthropic-version': AGENT_API_VERSION };
-  if (body.fallbacks) headers['anthropic-beta'] = AGENT_VALUE_FALLBACK_BETA;
+  if (body.fallbacks) headers['anthropic-beta'] = AGENT_FALLBACK_BETA;
   return {
     url: AGENT_API,
     method: 'post',
@@ -4190,18 +4525,14 @@ function _avReadResult(res) {
   var code = res.getResponseCode();
   var body = {};
   try { body = JSON.parse(res.getContentText()); }
-  catch (e) { return { ok: false, error: 'unreadable answer (HTTP ' + code + ')' }; }
-  if (code >= 300) {
-    var err = (body && body.error) || {};
-    var msg = String(err.message || err.type || ('HTTP ' + code));
-    return { ok: false, error: msg, fallbackRefused: code === 400 && /fallback/i.test(msg) };
-  }
+  catch (e) { return { ok: false, error: 'unreadable answer (HTTP ' + code + ')', retryable: code >= 500 ? 'busy' : '' }; }
+  if (code >= 300) return _agHttpFailure(code, body);
   // ⚠ A REFUSAL IS AN HTTP 200 AND IS CHECKED BEFORE content IS READ.
   if (body.stop_reason === 'refusal') {
     var d = body.stop_details || {};
     return { ok: false, error: 'the model declined to value this' + (d.category ? ' (' + d.category + ')' : '') };
   }
-  if (body.stop_reason === 'max_tokens') return { ok: false, error: 'the answer was cut off before it finished' };
+  if (body.stop_reason === 'max_tokens') return { ok: false, error: 'the answer was cut off before it finished', retryable: 'cutoff' };
   // ⚠ THE SERVER'S OWN TOOL LOOP STOPPED AT ITS ITERATION LIMIT. Not an answer and not a failure: the
   // caller sends the turn back and the API resumes where it left off (never with a "continue" message).
   if (body.stop_reason === 'pause_turn') return { pause: true, content: body.content || [] };
@@ -4283,12 +4614,17 @@ function _avLineResult(v, mode, seen) {
   });
   kept = kept.slice(0, AGENT_VALUE_MAX_COMPS);
   var conf = ['high', 'medium', 'low'].indexOf(v.confidence) >= 0 ? v.confidence : 'low';
+  var soldKept = kept.some(function (c) { return c.kind === 'sold'; });
   // ⚠ A DROPPED COMPARABLE COSTS THE LINE A LEVEL OF CONFIDENCE: the model cited something no tool
   // returned, so the rest of its reading is worth less too. And at the research depth a line with no
   // sold comparable left is low whatever else it found (§4b).
   if (dropped) conf = AGENT_VALUE_CONF_DOWN[conf];
-  if (mode === 'comps' && !kept.some(function (c) { return c.kind === 'sold'; })) conf = 'low';
-  var sources = AGENT_VALUE_SOURCES[mode] || AGENT_VALUE_SOURCES.general;
+  if (mode === 'comps' && !soldKept) conf = 'low';
+  // ⚠⚠ NO SOLD COMPARABLE, NO "COMPS" (2026-10-26): a researched figure that rests on no sale it can show is a general estimate on
+  // every paper. The research tool could answer only Auction or Online comps, so a best reading with nothing sold behind it printed
+  // "auction comps" on the Court Inventory and the Estate Inventory Report (CLAUDE.md: never print a claim the app did not witness).
+  // The asking prices it found stay on the line's record; `mode` stays comps, so the ceiling never re-sends it.
+  var sources = (mode === 'comps' && !soldKept) ? AGENT_VALUE_SOURCES.general : (AGENT_VALUE_SOURCES[mode] || AGENT_VALUE_SOURCES.general);
   var notices = (v.notices || []).filter(function (n) {
     return n && AGENT_VALUE_NOTICE_KINDS.indexOf(n.kind) >= 0 && String(n.text || '').trim();
   }).slice(0, 4).map(function (n) { return { kind: n.kind, text: String(n.text).slice(0, 300) }; });
@@ -4299,6 +4635,8 @@ function _avLineResult(v, mode, seen) {
     comps: kept,
     lookup: mode === 'comps' ? String(v.lookup || '').slice(0, 160) : '',
     name: String(v.name || '').replace(/\s+/g, ' ').trim().slice(0, 300),
+    // The category it values under, on a research line only (THE CATEGORY); the app writes it under the name's rule.
+    category: mode === 'comps' ? String(v.category || '').trim().slice(0, 60) : '',
     notices: notices,
     dropped: dropped,
     mode: mode
@@ -4319,11 +4657,12 @@ function agentValueLines(data) {
     }
     var ctx = (data && data.context) || {};
     var items = (data && data.items) || [];
-    if (!items.length) return { ok: true, success: true, results: {}, failed: {}, remaining: 0, model: AGENT_VALUE_MODEL };
+    if (!items.length) return { ok: true, success: true, results: {}, failed: {}, retry: {}, remaining: 0 };
 
     var key = _agProp('ANTHROPIC_API_KEY');
     var started = new Date().getTime();
     var todo = items.slice(0, AGENT_VALUE_MAX_LINES);
+    var models = _agModels('value', key);
 
     // Research lines go one to a request with their photographs; ordinary lots in batches, labelled
     // L1, L2 … within each request so the answer can be matched back without trusting the model with ids.
@@ -4337,8 +4676,23 @@ function agentValueLines(data) {
       units.push({ mode: 'general', items: chunk, labels: chunk.map(function (x, k) { return 'L' + (k + 1); }) });
     }
 
-    var results = {}, failed = {}, timedOut = false, noFallbacks = false, u = 0;
+    // ⚠⚠ TWO KINDS OF "NOT VALUED" (2026-10-26). `failed` is a verdict: the model's own unvalued, a refusal, a cut-off on the
+    // fallback, prose, research that ran long; the app stamps it on the line and the automatic run leaves it alone. `retry` is a
+    // passing failure: a request past UrlFetchApp's limit, a busy service, a line the model skipped; the app sends it once more in
+    // the same run and stamps nothing (one slow request had stamped every line in flight "not valued", and the automatic run
+    // never asked again).
+    var results = {}, failed = {}, retry = {}, timedOut = false, noFallbacks = false, u = 0;
     var failUnit = function (unit, why) { unit.items.forEach(function (it) { failed[it.stableId] = why; }); };
+    var retryUnit = function (unit, why) { unit.items.forEach(function (it) { retry[it.stableId] = why; }); };
+    // A unit sent afresh on the fallback model: a paused turn is never replayed to another model.
+    // Its continuations start again too (`cont`, per request, 2026-10-26 on review: a shared round counter left a unit sent to the
+    // fallback in round 1 with one continuation, and its research was stamped as having run long).
+    var onFallback = function (p) {
+      p.model = models.fallback;
+      p.body = _avBody(p.unit, ctx, noFallbacks, p.model);
+      p.user = p.body.messages[0]; p.turns = []; p.said = []; p.cont = 0;
+      return p;
+    };
 
     while (u < units.length) {
       if (new Date().getTime() - started > AGENT_VALUE_TIME_BUDGET) break;
@@ -4346,26 +4700,33 @@ function agentValueLines(data) {
       var pending = [];
       slice.forEach(function (unit) {
         try {
-          var body = _avBody(unit, ctx, noFallbacks);
-          pending.push({ unit: unit, body: body, user: body.messages[0], turns: [], said: [] });
+          var body = _avBody(unit, ctx, noFallbacks, models.first);
+          pending.push({ unit: unit, body: body, user: body.messages[0], turns: [], said: [], model: models.first, cont: 0 });
         } catch (imgErr) {
           // A photograph that has not reached Drive yet is ordinary, not fatal (Agent One's rule).
           failUnit(unit, String(imgErr.message || imgErr));
         }
       });
-      var round = 0;
       while (pending.length) {
         var responses;
         try {
           responses = UrlFetchApp.fetchAll(pending.map(function (p) { return _avHttp(p.body, key); }));
         } catch (fetchErr) {
-          // ⚠ ONE REQUEST THAT RUNS PAST URLFETCH'S OWN LIMIT THROWS FOR THE WHOLE fetchAll, so every
-          // line in flight is answered as unfinished, named as such, and the run goes on with the next
-          // slice. Nothing is written for them and the app can ask again.
+          // ⚠ ONE REQUEST THAT RUNS PAST URLFETCH'S OWN LIMIT THROWS FOR THE WHOLE fetchAll. What was on the first-choice model
+          // goes again on the fallback while the budget allows; the rest come back as `retry` and the app asks again. Nothing is
+          // written for them.
           timedOut = true;
-          pending.forEach(function (p) { failUnit(p.unit, 'the valuation took too long to come back (' + String(fetchErr.message || fetchErr).slice(0, 80) + ')'); });
-          pending = [];
-          break;
+          var why = 'the valuation took too long to come back (' + String(fetchErr.message || fetchErr).slice(0, 80) + ')';
+          if (pending.some(function (p) { return p.model !== models.fallback; })) _agSlow('value');
+          var canFall = new Date().getTime() - started <= AGENT_VALUE_TIME_BUDGET;
+          var again = [];
+          pending.forEach(function (p) {
+            if (canFall && p.model !== models.fallback) {
+              try { again.push(onFallback(p)); } catch (imgErr2) { failUnit(p.unit, String(imgErr2.message || imgErr2)); }
+            } else retryUnit(p.unit, why);
+          });
+          pending = again;
+          continue;
         }
         var next = [];
         responses.forEach(function (res, k) {
@@ -4374,7 +4735,8 @@ function agentValueLines(data) {
           if (read.pause) {
             p.turns = p.turns.concat(read.content);
             p.said.push(read.content);
-            if (round < AGENT_VALUE_CONTINUES) {
+            if ((p.cont || 0) < AGENT_VALUE_CONTINUES) {
+              p.cont = (p.cont || 0) + 1;
               p.body.messages = [p.user, { role: 'assistant', content: _avEcho(p.turns) }];
               next.push(p);
             } else {
@@ -4389,9 +4751,20 @@ function agentValueLines(data) {
               next.push(p);
               return;
             }
-            failUnit(p.unit, read.error);
+            // Busy, cut off at its ceiling, or rejected outright by a model that does not take this request: once on the fallback,
+            // inside the time budget; past it, asked again by the app on its next call (2026-10-26, on review: Apps Script's six
+            // minutes).
+            if (read.retryable && p.model !== models.fallback) {
+              if (new Date().getTime() - started > AGENT_VALUE_TIME_BUDGET) { retryUnit(p.unit, read.error); return; }
+              try { p.rejected = read.retryable === 'rejected'; next.push(onFallback(p)); }
+              catch (imgErr3) { failUnit(p.unit, String(imgErr3.message || imgErr3)); }
+              return;
+            }
+            if (read.retryable === 'busy') retryUnit(p.unit, read.error);
+            else failUnit(p.unit, read.error);
             return;
           }
+          if (p.rejected) _agDemote('value', 'the first choice rejected a request the fallback answered');
           p.said.push(read.content);
           var seen = _avSeenUrls(p.said);
           var input = read.input || {};
@@ -4400,26 +4773,29 @@ function agentValueLines(data) {
           (input.unvalued || []).forEach(function (x) { if (x && byLine[x.line] == null) byLine[x.line] = { why: x.reason }; });
           p.unit.items.forEach(function (it, j) {
             var hit = byLine[p.unit.labels[j]];
-            if (!hit) { failed[it.stableId] = 'the model did not answer for this line'; return; }
+            if (!hit) { retry[it.stableId] = 'the model did not answer for this line'; return; }
             if (hit.why != null) { failed[it.stableId] = String(hit.why || 'could not be valued').slice(0, 200); return; }
             var r = _avLineResult(hit.v, p.unit.mode, seen);
+            // A line filed Firearms is never moved out of it (2026-10-26, on review): the category is what switches the firearm
+            // protocol on in the app, which refuses the move too.
+            if (!r.error && String(it.category || '') === 'Firearms') r.category = '';
             if (r.error) failed[it.stableId] = r.error;
-            else results[it.stableId] = r;
+            else { r.model = p.model; results[it.stableId] = r; }
           });
         });
         pending = next;
-        round++;
       }
       u += slice.length;
     }
 
-    var answered = Object.keys(results).length + Object.keys(failed).length;
+    var answered = Object.keys(results).length + Object.keys(failed).length + Object.keys(retry).length;
     var out = {
       ok: true, success: true,
       results: results,
       failed: failed,
+      retry: retry,
       remaining: Math.max(0, items.length - answered),
-      model: AGENT_VALUE_MODEL
+      model: models.first
     };
     if (timedOut) out.timedOut = true;
     return out;
@@ -4438,9 +4814,10 @@ function testAgentValue() {
   if (miss.length) { Logger.log('MISSING Script Property: ' + miss.join(', ')); return; }
   var t0 = new Date().getTime();
   var probes = [
-    { stableId: 'probe-comps', mode: 'comps', name: 'Herend Rothschild Bird dinner plates, set of 8',
+    // 2026-10-26: no count in a probe's name either (a faithful echo of 'set of 8' tripped the probe's own warning).
+    { stableId: 'probe-comps', mode: 'comps', name: 'Herend Rothschild Bird dinner plates',
       category: 'Antiques', qty: 8, condition: 'Good' },
-    { stableId: 'probe-flatware', mode: 'general', name: 'Stainless steel flatware, service for 12, everyday brand',
+    { stableId: 'probe-flatware', mode: 'general', name: 'Stainless steel flatware, everyday brand',
       category: 'General/Household', qty: 60, condition: 'Good' },
     { stableId: 'probe-books', mode: 'general', name: 'Hardcover books, general fiction',
       category: 'General/Household', qty: 40, condition: 'Fair' },
@@ -4449,15 +4826,16 @@ function testAgentValue() {
       category: 'Furniture', qty: 1, condition: 'Good', nameChecked: true }
   ];
   var out = agentValueLines({
-    context: { estate: true, basis: 'Fair Market Value', valuationDate: '2026-06-14' },
+    context: { estate: true, basis: 'Fair Market Value', valuationDate: '2026-06-14',
+               categories: ['Antiques', 'Art & Décor', 'Collectibles', 'Furniture', 'General/Household'] },
     items: probes
   });
   var secs = Math.round((new Date().getTime() - t0) / 1000);
   if (!out.ok) { Logger.log('FAILED after ' + secs + 's: ' + out.error); return; }
-  Logger.log((out.timedOut ? 'PARTLY TIMED OUT' : 'ANSWERED') + ' in ' + secs + 's — ' + out.model);
+  Logger.log((out.timedOut ? 'PARTLY TIMED OUT' : 'ANSWERED') + ' in ' + secs + 's — first choice ' + out.model);
   Object.keys(out.results).forEach(function (id) {
     var r = out.results[id];
-    Logger.log('  ' + id + ': $' + r.fmv + ' ($' + r.low + '–$' + r.high + ', ' + r.confidence + ', ' + r.source + ') — ' + r.basis);
+    Logger.log('  ' + id + ' [' + (r.model || out.model) + ']: $' + r.fmv + ' ($' + r.low + '–$' + r.high + ', ' + r.confidence + ', ' + r.source + ') — ' + r.basis);
     // The name it valued under (2026-10-25b): printed where it differs from the probe's, with a warning on a count in it.
     var sent = ''; for (var k = 0; k < probes.length; k++) if (probes[k].stableId === id) sent = probes[k].name;
     var norm = function (x) { return String(x || '').toLowerCase().replace(/\s+/g, ' ').trim(); };
@@ -4468,5 +4846,6 @@ function testAgentValue() {
     if (r.lookup) Logger.log('      WorthPoint: ' + r.lookup);
   });
   Object.keys(out.failed).forEach(function (id) { Logger.log('  ' + id + ' NOT VALUED: ' + out.failed[id]); });
+  Object.keys(out.retry || {}).forEach(function (id) { Logger.log('  ' + id + ' TO ASK AGAIN: ' + out.retry[id]); });
   if (out.remaining) Logger.log('  ' + out.remaining + ' line(s) left for another call (the time budget ran out)');
 }

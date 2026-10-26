@@ -57,7 +57,7 @@ const ROW_FNS = ['invLineReviewed', '_renderInvRow', '_invRowPhotoHtml', '_invRo
   'invDealerRouteText', 'invBequestFor', 'jobListEntries', 'invApprovalGap', 'invReceiptOwed', '_invBenListAttr', 'invRatificationOwed',
   'invFiduciaryMode', 'isDecedentJob', 'invReleaseCautions', '_invJob', 'invHavellinRecipient', 'invChannelLeftover', 'invChannelLeftoverText',
   '_invPanelCautionHtml', '_invPanelLeftoverHtml', '_jobDestLabel', 'invAppraisalSourceText', 'invLineAppraiser', '_invLinkedAppraiser',
-  'invAppraised', 'invAppraisalInProgress', '_invHasAppraisal', '_invHasValue', '_avHasFigure', 'invLineUnsure', '_invEachInput', 'invUnitValue', 'invLineQty', '_agNameKey', '_invInputStyle', '_invCtrlMinW'];
+  'invAppraised', 'invAppraisalInProgress', '_invHasAppraisal', '_invHasValue', '_avHasFigure', 'invLineUnsure', '_invEachInput', 'invUnitValue', 'invLineQty', '_agNameKey', '_invInputStyle', '_invCtrlMinW', 'agentValueInternal'];
 const ROW_VARS = ['INV_PLAN_CHANNEL_KINDS', 'INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick', '_agDupSet',
   'DECEDENT_SERVICES', 'INV_RELEASE_CAUTIONS'];
 const LINE = (o) => Object.assign({ stableId: 'k80', label: 'inventory', roomIdx: 1, ts: 1, itemNo: 80, category: 'General/Household',

@@ -147,7 +147,9 @@ const COMP = { title: 'Herend Rothschild Bird dinner plates, set of 8', venue: '
     eq(posts[0].items[0].fileId, 'fa', 'the researched line carries its photograph');
     eq(posts[0].items[0].details, [{ fileId: 'fa_det' }], "⚠ and its maker's-mark close-up");
     eq(posts[0].items[1].fileId, '', 'an ordinary lot travels as text');
-    eq(posts[0].context, { estate: true, basis: 'Fair Market Value', valuationDate: '2026-06-14' }, 'valued at the date of death');
+    // 2026-10-26: the context also carries the desk's category list, so a researched line's category can be corrected.
+    const cats = await p.evaluate(() => INV_CATEGORIES.slice());
+    eq(posts[0].context, { estate: true, basis: 'Fair Market Value', valuationDate: '2026-06-14', categories: cats }, 'valued at the date of death');
     eq(posts[1].items.map(i => [i.stableId, i.mode]), [['c', 'comps']], '⚠ the ordinary lot over $250 is researched, in the same run');
     const man = await p.evaluate((id) => _photoRefs[id].filter(r => r.label === 'inventory').map(r => ({ id: r.stableId, fmv: r.fmv, src: r.valSource,
       by: r.valuedBy, conf: r.valConf, rev: !!r.valReviewed, fail: r.valFailed || '', date: r.valDate, name: r.objectName })), J);

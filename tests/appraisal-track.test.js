@@ -227,7 +227,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             '_fieldNoteAppend', 'fieldDispToInv', '_cleanName', '_photoUid', '_slotRefs'],
       vars: ['_photoUidSeq', 'FIELD_DISPOSITIONS', 'FIELD_DISP_DEFAULT', 'PHOTO_CAPTURE_LABELS',
              'AS_FOUND_SUBFOLDER', 'PHOTO_SUBFOLDER',
-             '_fieldCam', '_localShotThumbs', 'INV_DEFAULT_CATEGORY'],
+             '_fieldCam', '_localShotThumbs', 'INV_DEFAULT_CATEGORY', 'DETAIL_PHOTO_MAX_W', 'DETAIL_PHOTO_QUALITY'],
       stubs: {
         jobs: [Object.assign({}, JOB)], _photoRefs: { 1: [] }, estimateStore: {},
         _photoCaptureJob: (jid) => ({ id: jid, status: 'won', won: true }),

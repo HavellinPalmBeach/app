@@ -36,8 +36,7 @@ const FNS = ['scheduleSignLines', '_invDocPartyHead', 'invLineReviewed', 'invCon
   'signedRecordsOf', '_reconFlagText', '_ledgerNames', 'donationGroups', 'estateProceedsHolder', '_invRecipient',
   '_ymdLocal', 'invDonationReceipted', '_jobDestLabel', 'photoSharesLine', 'photoSharesOf',
   // 2026-10-22: the signed schedules, beside the ledger in the close-out papers.
-  '_renderSignedSchedulesCard', 'signedScheduleRows'
-];
+  '_renderSignedSchedulesCard', 'signedScheduleRows', 'agentNoticesOn'];
 const VARS = [
   '_agRun', '_avRun', '_arRun', 'AGENT_NOTICE_KINDS', 
   'INV_CONTRACT_DOCS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DECEDENT_SERVICES',

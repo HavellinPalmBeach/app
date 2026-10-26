@@ -42,7 +42,7 @@ function captureRig(over) {
           '_setPhotoRef', '_fieldNoteAppend', '_invDetailRefs', '_jobInvRefs', '_invTouch', '_invAssignItemNos'],
     vars: ['_photoUidSeq', 'FIELD_DISPOSITIONS', 'FIELD_DISP_DEFAULT', 'INV_DISPOSITIONS', 'PHOTO_CAPTURE_LABELS',
       'AS_FOUND_SUBFOLDER', 'PHOTO_SUBFOLDER',
-           '_localShotThumbs', 'INV_DEFAULT_CATEGORY'],
+           '_localShotThumbs', 'INV_DEFAULT_CATEGORY', 'DETAIL_PHOTO_MAX_W', 'DETAIL_PHOTO_QUALITY'],
     stubs: Object.assign({
       jobs: [Object.assign({}, JOB)], _photoRefs: { 1: [] },
       estimateStore: { 1: { estimate: EST, approved: true } },
@@ -85,7 +85,7 @@ function cameraRig(grant) {
           'collectionLinesUnshot', 'collectionLineUnshot', '_invHasPhoto', '_jobInvRefs', 'collectionLineWithPhoto', 'fieldCamToggleColl'],
     vars: ['_fieldCam', 'FIELD_CAM_MODES', 'FIELD_DISPOSITIONS', 'FIELD_DISP_DEFAULT', 'PHOTO_CAPTURE_LABELS',
            'AS_FOUND_SUBFOLDER', 'PHOTO_SUBFOLDER',
-           '_localShotThumbs', '_photoUidSeq', 'INV_DEFAULT_CATEGORY'],
+           '_localShotThumbs', '_photoUidSeq', 'INV_DEFAULT_CATEGORY', 'DETAIL_PHOTO_MAX_W', 'DETAIL_PHOTO_QUALITY'],
     stubs: {
       document: dom, navigator: nav,
       jobs: [Object.assign({}, JOB)], _photoRefs: { 1: [] },
@@ -723,10 +723,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             // P19: the row names a bequest, an incomplete approval and a receipt owed; the recipient box offers the roster.
             'invBequestFor', 'jobListEntries', 'invApprovalGap', 'invReceiptOwed', '_invBenListAttr',
             // P20: the row says a ratification is owed apart from an incomplete approval, and flags a living client's line going to one of ours.
-            'invRatificationOwed', 'invFiduciaryMode', 'isDecedentJob', 'invReleaseCautions', '_invJob', 'invHavellinRecipient', 'invChannelLeftover', 'invChannelLeftoverText', '_invPanelCautionHtml', '_invPanelLeftoverHtml', '_avHasFigure', 'invLineUnsure', '_invEachInput', 'invUnitValue', 'invLineQty', '_agNameKey', '_invInputStyle', '_invCtrlMinW'],
+            'invRatificationOwed', 'invFiduciaryMode', 'isDecedentJob', 'invReleaseCautions', '_invJob', 'invHavellinRecipient', 'invChannelLeftover', 'invChannelLeftoverText', '_invPanelCautionHtml', '_invPanelLeftoverHtml', '_avHasFigure', 'invLineUnsure', '_invEachInput', 'invUnitValue', 'invLineQty', '_agNameKey', '_invInputStyle', '_invCtrlMinW', 'agentValueAgain', '_avState', 'agentValueInternal', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep', 'agentNoticesOn'],
       vars: ['INV_PLAN_CHANNEL_KINDS', 'INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick', '_agDupSet',
              // P20 vars: the catalogues the row's new questions read.
-             'DECEDENT_SERVICES', 'INV_RELEASE_CAUTIONS'],
+             'DECEDENT_SERVICES', 'INV_RELEASE_CAUTIONS', '_avRun', '_avAfter', '_avForceComps', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
       stubs: { _invInput: () => '', _invThumbHTML: (j, r, px) => '<div data-thumb-id="' + (r.driveFileId || '') + '" style="w:' + px + '"></div>',
                _invItemNo: () => '3', _invRoomName: () => 'Kitchen', invIsFirearm: () => false, invReleaseBlocked: () => false,
                invAwaitingAppraisal: () => false, custodyEvents: () => [], _invPanelCols: () => [], INV_PANEL_SECTIONS: [],

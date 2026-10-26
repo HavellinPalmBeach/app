@@ -1779,7 +1779,7 @@ function groupI({ group, ok, eq, has, lacks }) {
       LINE('f1', { itemNo: 5, namedBy: 'agent', reviewed: true, agentNotices: [N('firearm', 'a long gun in the closet'), N('nfa', 'a tube that may be a suppressor')] })];
     const notesOf = (C, job) => readOf(C._agNoticesHtml(7, C._photoRefs[7]));
     // `_mustFindKey` lifted by name: the fixtures key their found records with it, whatever the code under test reaches.
-    const C = lift(['_agNoticesHtml', '_agRecordNoticesHtml', 'agentNotices', '_mustFindKey'], { jobs: [], _photoRefs: { 7: rows() }, estimateStore: { 7: { estimate: { rooms: [] } } } });
+    const C = lift(['_agNoticesHtml', '_agRecordNoticesHtml', 'agentNotices', '_mustFindKey', 'agentNoticesOn'], { jobs: [], _photoRefs: { 7: rows() }, estimateStore: { 7: { estimate: { rooms: [] } } } });
     const missing = PROBATE({ mustFind: 'Grandmother’s ring' });
     C.jobs.push(missing);
     const t0 = notesOf(C, missing);
@@ -1809,7 +1809,7 @@ function groupI({ group, ok, eq, has, lacks }) {
     C._photoRefs[7] = rows();
     C.jobs[0] = PROBATE({ mustFind: 'Grandmother’s ring', mustFound: { [C._mustFindKey('Grandmother’s ring')]: { at: '2026-10-21', by: 'Ashley Jerome' } } });
     const rec = (id) => readOf(C._agRecordNoticesHtml(C.jobs[0], C._photoRefs[7].filter((r) => r.stableId === id)[0]));
-    eq(rec('o2'), 'Agent One noted Look at this — the drawer pulls do not match · off the list above the rows: the line is reviewed', '⚠⚠ the reviewed line\'s record keeps its note, and says why it is off the list');
+    eq(rec('o2'), 'Agent One noted Look at this — the drawer pulls do not match · off the list above the rows: every line off its photograph is reviewed', '⚠⚠ the reviewed line\'s record keeps its note, and says why it is off the list');
     eq(rec('m1'), 'Agent One noted Must find — a ring box on the dresser · off the list above the rows: every must-find is recorded found', 'the Must find\'s too');
     eq(rec('o1'), 'Agent One noted Look at this — a crack along the top rail', 'a note still listed above reads plainly in the record');
     eq(rec('f1'), 'Agent One noted Possible NFA item — a tube that may be a suppressor Firearm — a long gun in the closet', 'every notice on the line, in the order that matters');
@@ -1836,7 +1836,7 @@ function groupI({ group, ok, eq, has, lacks }) {
     eq(D.log.renders, n0, 'repainted by id: no full render under the person typing');
     const full = D.render();
     eq(partial, inner(full, 'inv-agent-notices'), '⚠ equal to what a full render writes');
-    has(readOf(inner(full, 'inv-row-o1')), 'the drawer pulls do not match · off the list above the rows: the line is reviewed', '⚠⚠ and present in its record, saying why');
+    has(readOf(inner(full, 'inv-row-o1')), 'the drawer pulls do not match · off the list above the rows: every line off its photograph is reviewed', '⚠⚠ and present in its record, saying why');
     // The last Found it quiets the Must find on the desk, by id; Undo brings it back.
     D.dom.html = D.dom.html + '<div id="sf-host-desk" data-job="7"></div>';
     has(readOf(inner(D.dom.html, 'inv-agent-notices')), 'a ring box on the dresser', 'fixture: the Must find is above the rows while the ring is missing');

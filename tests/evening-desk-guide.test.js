@@ -417,7 +417,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq([Q.agentNoticeQuiet('other', { rev: false }, {}), Q.agentNoticeQuiet('other', { rev: true }, {})], [false, true], 'Look at this: gone once the item is reviewed');
     eq([Q.agentNoticeQuiet('mustfind', { rev: true }, { allFound: false }), Q.agentNoticeQuiet('mustfind', {}, { allFound: true })], [false, true], 'a Must find: stays until every must-find is found');
     eq([Q.agentNoticeQuiet('firearm', { rev: true }, { allFound: true }), Q.agentNoticeQuiet('nfa', { rev: true }, { allFound: true })], [false, false], 'Firearm and Possible NFA item: always stay');
-    has(t, 'Must find, Firearm and Possible NFA item in red, and they stay (a Must find goes quiet once every must-find is found); Look at this in amber, gone once you review the item. Quiet notes stay in the item’s record.', 'as the page says');
+    // 2026-10-26: Agent One keeps a photograph's notes on the photograph's own line, whichever thing they are about, so a Look at
+    // this goes quiet once every line off that photograph is reviewed (the real sibling walk, on a photograph split three ways).
+    const sibRefs = [{ stableId: 'p', rev: true }, { stableId: 'p2', derivedFrom: 'p', rev: true, ts: 2 }, { stableId: 'p3', derivedFrom: 'p', rev: false, ts: 3 }];
+    const QS = sandbox({ fns: ['agentNoticeQuiet', '_invPhotoSiblings', '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef'],
+      stubs: { _photoRefs: { 7: sibRefs }, invLineReviewed: (r) => !!(r && r.rev), mustFindAllFound: () => false } });
+    const quietOn = (refs) => { QS._photoRefs[7] = refs; return QS.agentNoticeQuiet('other', refs[0], { id: 7 }); };
+    eq(quietOn(sibRefs), false, '⚠ a Look at this on a reviewed photograph line stays while another item off its photo is unreviewed');
+    eq(quietOn(sibRefs.map((r) => Object.assign({}, r, { rev: true }))), true, '…and goes once every item off its photo is reviewed');
+    has(t, 'Must find, Firearm and Possible NFA item in red, and they stay (a Must find goes quiet once every must-find is found); Look at this in amber, gone once every item in its photo is reviewed. Quiet notes stay in the item’s record.', 'as the page says');
     has(code(fn('_agRecordNoticesHtml')), 'off the list above the rows', 'a quiet note is still read in the item’s record');
     has(SRC, '>Show the item</button>', 'Show the item');
     has(t, 'Show the item jumps to it and opens it.', 'as the page says');
@@ -442,10 +450,23 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(R.invLineReviewed({ namedBy: 'agent', objectName: 'Lamp', reviewed: 1, fmv: 40, valuedBy: 'agent' }), false, '…with its value: a tick that has not looked at the value is not the look');
     has(code(fn('_invStampLineReviewed')), '_avStampReviewed(ref, job)', 'the tick accepts Agent Two’s figure with the line');
     has(code(fn('_renderInvRow')), '>Reviewed</label>', 'the row’s Reviewed box');
-    has(code(fn('_renderInvRow')), 'if (invLineUnsure(ref))', 'unsure on the row where the agents were guessing');
+    has(code(fn('_renderInvRow')), 'if (invLineUnsure(ref, job))', 'unsure on the row where the agents were guessing');
     has(code(fn('_renderInvRow')), '>unsure</span>', '…in those words');
     has(code(fn('_invEdit')), "if (key === 'objectName') agentValueAfterRename(jobId, stableId);", 'a name changed is valued again by itself');
-    has(t, 'One Reviewed tick covers it all, unsure first. A name you typed with a destination chosen counts as reviewed until Agent Two values it. A maker added to the name reprices it.', 'as the page says');
+    // "press Unsure first" (2026-10-26): the Needs you strip carries an Unsure count, third, whose test is the row's own hint
+    // (invLineUnsure, the real rule, handed the job).
+    const U = lift(['invLineUnsure'], {});
+    const WF = sandbox({ vars: ['INV_WORK_FLAGS'], stubs: { invLineUnsure: (r, j) => U.invLineUnsure(r, j) } }).INV_WORK_FLAGS || [];
+    const unsureFlag = WF.filter((f) => f.key === 'unsure')[0];
+    eq(WF.slice(0, 3).map((f) => f.key), ['unnamed', 'unreviewed', 'unsure'], 'Needs you: Unnamed shots, Not reviewed, then Unsure');
+    eq(unsureFlag && unsureFlag.label, 'Unsure', 'the count reads Unsure');
+    const guess = { stableId: 'g', namedBy: 'agent', objectName: 'Vase, likely Murano', agentConf: 'low', disposition: '' };
+    const lowFig = { stableId: 'f', namedBy: 'desk', objectName: 'Mirror', disposition: '', valuedBy: 'agent', valLow: 20, valHigh: 60, valConf: 'low' };
+    ok(!!unsureFlag && unsureFlag.test(guess, LIVING()) === true, 'it counts Agent One’s guess at a name');
+    ok(!!unsureFlag && unsureFlag.test(Object.assign({}, guess, { reviewed: 1 }), LIVING()) === false, '…until the line is reviewed');
+    ok(!!unsureFlag && unsureFlag.test(Object.assign({ fmv: 40 }, lowFig), LIVING()) === true, 'it counts Agent Two’s low-confidence figure');
+    ok(!!unsureFlag && unsureFlag.test(lowFig, ESTATE({ docTier: 'contents' })) === false, '…never where counsel values: the job reaches the rule');
+    has(t, 'One Reviewed tick covers it all; press Unsure first. A name you typed with a destination chosen counts as reviewed until Agent Two values it. A maker added to the name reprices it.', 'as the page says');
     // The selection.
     has(code(fn('_renderInvGroupHead')), '>Select all</button>', 'Select all on the group');
     const bulk = code(fn('_renderInvBulk'));

@@ -724,13 +724,13 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
     console.log('\n## Part 5 · a reviewed line\'s note is read in its record; a line ticked Reviewed takes its note off the list');
     await press('#inv-row-e18 button[onclick="_invToggleOpen(\'e18\')"]', 'the stand mixer\'s ▾');
     const rec18 = await p.evaluate(() => { const el = document.querySelector('#inv-row-e18 .inv-agent-rec'); return el && el.checkVisibility() ? [...el.children].map((c) => c.textContent.replace(/\s+/g, ' ').trim()).join(' | ') : null; });
-    eq(rec18, 'Agent One noted | Look at this — the power cord is frayed near the plug · off the list above the rows: the line is reviewed',
+    eq(rec18, 'Agent One noted | Look at this — the power cord is frayed near the plug · off the list above the rows: every line off its photograph is reviewed',
       '⚠⚠ the reviewed line\'s note is in its record, on screen, saying why it is off the list');
     await press('#inv-row-e20 input[onchange*="_invSetReviewed"]', 'Reviewed, on the nightstand');
     const R5 = await desk5();
     ok(R5.notes.indexOf('a water ring on the top') < 0, '⚠⚠ ticked Reviewed: the nightstand\'s Look at this leaves the list above the rows');
     const rec20 = await p.evaluate(() => { const el = document.querySelector('#inv-row-e20 .inv-agent-rec'); return el && el.checkVisibility() ? [...el.children].map((c) => c.textContent.replace(/\s+/g, ' ').trim()).join(' | ') : null; });
-    has(rec20, 'a water ring on the top, worth a look before it is priced · off the list above the rows: the line is reviewed', '⚠⚠ and is read in its record');
+    has(rec20, 'a water ring on the top, worth a look before it is priced · off the list above the rows: every line off its photograph is reviewed', '⚠⚠ and is read in its record');
     has(R5.notes, 'a gold pocket watch in the top drawer', 'the Must find stands: a must-find is still missing, reviewed line or not');
 
     console.log('\n## Part 5 · both must-finds found: the brief shrinks to one green line, and the Must find goes quiet by id');

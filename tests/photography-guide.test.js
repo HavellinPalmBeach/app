@@ -319,6 +319,19 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(sys, 'qty 30, not thirty entries', 'the prompt groups ordinary goods of one kind (the group photo)');
     has(sys, 'What it sits on or in is background, not an object', 'the surface is background');
     has(sys, 'unless that piece of furniture is itself the only thing in the frame', 'and furniture photographed alone is still a line');
+    // 2026-10-26: a full bookcase or china cabinet the crew cannot empty is photographed once, whole, as it stands, so there is no
+    // other photograph of the piece; the prompt's one exception to the surface rule lists it and its contents. The guide says so
+    // beside the instruction and names it among the surface section's exceptions.
+    has(guide, 'photograph it once, whole, as it stands. The app lists the piece and its contents as two items.', 'a full bookcase or china cabinet: the piece and its contents, two items');
+    has(guide, 'The exceptions are furniture alone in a photo, which is how furniture is photographed (cleared, drawers closed, last), and a full bookcase or china cabinet.', '…and the surface section names it among the exceptions');
+    lacks(guide, 'The one exception is', '⚠ and no longer says there is only one');
+    has(sys, 'a freestanding bookcase, china cabinet or display cabinet photographed full', 'the prompt lists the piece photographed full');
+    has(sys, 'is both: one line for the piece of furniture, and its contents under the rules here', '…and its contents');
+    // And what a person says at the camera: the maker and the size go into the name (the prompt's notes rule, 2026-10-25b and -26).
+    has(guide, 'The maker and size go into the name.', 'the guide says a maker and a size said at the camera go into the name');
+    has(sys, 'note names the maker or brand ("Crate & Barrel coffee table"), put it in the name', 'the prompt puts the maker in the name');
+    has(sys, 'and the size, which goes into the name as they said it', '…and the size');
+    ok(((/var BACKEND_VERSION = '([^']+)'/.exec(GS) || [])[1] || '') >= '2026-10-26', 'the cabinet and the size are a redeploy, and the backend says so');
     has(sys, 'mixed small everyday things is ONE line for the whole of it', 'a mixed drawer is one line named for the drawer');
     has(sys, 'Opened or used-up consumables (food, toiletries and cosmetics, cleaning supplies, medicines), worn', 'the used-up is not inventory');
     has(sys, 'inventoriable: leave them out. A frame holding nothing else is an empty list.', 'and a frame of nothing else is an empty list');

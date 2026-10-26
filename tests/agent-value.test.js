@@ -42,14 +42,14 @@ function gsVar(name) {
   if (!m) throw new Error('var not in .gs: ' + name);
   return m[2];
 }
-const GS_VARS = ['AGENT_API', 'AGENT_API_VERSION', 'AGENT_MAX_IMG', 'AGENT_VALUE_MODEL', 'AGENT_VALUE_EFFORT',
+const GS_VARS = ['AGENT_API', 'AGENT_API_VERSION', 'AGENT_MAX_IMG', 'AGENT_MODELS_API', 'AGENT_MODEL_FLOORS', 'AGENT_MODEL_LINES', 'AGENT_MODEL_LIST_SECS', 'AGENT_MODEL_DEMOTE_SECS', 'AGENT_MODEL_SLOW_LIMIT', 'AGENT_FALLBACK_BETA', 'AGENT_VALUE_EFFORT',
   'AGENT_VALUE_MAX_TOKENS', 'AGENT_VALUE_PARALLEL', 'AGENT_VALUE_MAX_LINES', 'AGENT_VALUE_GENERAL_BATCH',
   'AGENT_VALUE_SEARCHES', 'AGENT_VALUE_FETCHES', 'AGENT_VALUE_CONTINUES', 'AGENT_VALUE_MAX_COMPS',
-  'AGENT_VALUE_TIME_BUDGET', 'AGENT_VALUE_FALLBACK_BETA', 'AGENT_VALUE_SOURCES', 'AGENT_VALUE_NOTICE_KINDS',
+  'AGENT_VALUE_TIME_BUDGET', 'AGENT_VALUE_SOURCES', 'AGENT_VALUE_NOTICE_KINDS',
   'AGENT_VALUE_CONF_DOWN'];
 const GS_FNS = ['_agProp', '_agMissingProps', '_agImageBlock', '_avCents', '_avTool', '_avTools', '_avSystem',
   '_avLineText', '_avUserContent', '_avBody', '_avHttp', '_avEcho', '_avReadResult', '_avSeenUrls', '_avUrlKey',
-  '_avLineResult', 'agentValueLines'];
+  '_avLineResult', 'agentValueLines', '_agModelVersion', '_agVerCmp', '_agNewestOf', '_agCache', '_agModelList', '_agDemoted', '_agDemote', '_agSlow', '_agModels', '_agSendAll', '_agHttpFailure'];
 
 // `reply(body, i, call)` answers each request of each fetchAll; `throwOn(call)` makes a fetchAll throw, as
 // UrlFetchApp does when one request outruns its own limit. `tick` is the clock's step per reading.
@@ -117,11 +117,11 @@ const AV_FNS = ['_avValueButtonHtml', 'agentValueMode', 'agentValueInternal', '_
   'invFiduciaryMode', 'isDecedentJob', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep', 'estateValueDate',
   '_avdDate', '_ymdLocal', 'resolveValBasis', '_agNameKey', '_agDetailRefs', 'invLineCloseUps', '_invFileId', 'invAppraisalThreshold',
   'gateDispute', '_gateYes', 'invNeedsAppraisal', 'fmt', '_invMoney', '_invNamed', '_invItemNo', '_andJoin',
-  'moneyToNumber', '_readAppsScriptJson', '_invJob', '_avNameIsAgents', '_invStampLineReviewed', '_invRenderWhenIdle'];
+  'moneyToNumber', '_readAppsScriptJson', '_invJob', '_avNameIsAgents', '_invStampLineReviewed', '_invRenderWhenIdle', 'agentValueLooks', '_avPhotoContext', '_invPhotoSource', '_invRoomName', 'agentListedOff', 'agentValueAgain', 'invLineQty', 'invLineReviewed'];
 const AV_VARS = ['_avRun', '_avForceComps', '_avAfter', 'AGENT_VALUE_BATCH', 'AGENT_VALUE_GENERAL_CEILING', 'AGENT_VALUE_MAX_COMPS',
   'AGENT_VALUE_MARK_RE', 'AGENT_VALUE_NO_MARK_RE', 'AGENT_VALUE_CONFS', 'AGENT_VALUE_SOURCES', 'AGENT_VALUE_OWN', 'AGENT_VALUE_SALE_DATE_RE',
   'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'DECEDENT_SERVICES', 'DOC_TIERS',
-  'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'AGENT_MAX_DETAILS', 'INV_VAL_SOURCES'];
+  'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'AGENT_MAX_DETAILS', 'INV_VAL_SOURCES', 'AGENT_VALUE_READ_RE', 'AGENT_VALUE_HEDGE_RE', 'AGENT_LISTED_MAX', '_avAutoAgain', 'INV_CATEGORIES'];
 
 // A synchronous, already-settled promise (the runner is synchronous), unwrapping a returned thenable like a real one.
 function sp(v) {
@@ -183,7 +183,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(out.ok, 'it answers');
     const req = g.sent[0][0];
     const body = JSON.parse(req.payload);
-    eq(body.model, 'claude-opus-5-5', 'the model the spec names, its own constant');
+    // 2026-10-26 (Anthony: always the most accurate model): the newest top-tier model, its floor where the model list cannot be read.
+    eq(body.model, 'claude-fable-5-1', 'the newest top-tier model (the floor, with no model list in the sandbox)');
     eq(body.output_config, { effort: 'medium' }, 'effort set explicitly, medium to start');
     eq(body.thinking, { type: 'adaptive' }, 'adaptive thinking');
     eq(body.max_tokens, 16000, 'the non-streaming ceiling');
@@ -313,7 +314,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const out = run(ANSWER([VAL({ line: 'L1', comps: [] })], [{ line: 'L2', reason: 'no resale market for this' }]), two);
     ok(!!out.results.a, 'the line valued is valued');
     eq(out.failed.b, 'no resale market for this', 'a line the model could not value carries its reason');
-    eq(out.failed.c, 'the model did not answer for this line', 'a line it skipped is named as skipped');
+    // 2026-10-26: a line the model skipped is a passing failure, handed back to ask again (`retry`), never a verdict on the line.
+    eq(out.retry.c, 'the model did not answer for this line', 'a line it skipped is named as skipped, to be asked again');
+    eq(out.failed.c, undefined, '…and is not stamped as not valued');
     const stray = run(ANSWER([VAL({ line: 'L9', comps: [] })]), [LINE({ mode: 'general', fileId: '' })]);
     eq(Object.keys(stray.results), [], 'an answer for a line nobody asked about is dropped');
     eq(run({ code: 500 }, [LINE({ fileId: 'GONE', details: [] })]).failed.s1, 'File not found: GONE', 'a photograph not yet in Drive fails that line alone');
@@ -328,21 +331,31 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(Object.keys(out.results).sort(), ['s1', 's2'], 'both lines valued');
     eq(g.sent.length, 2, 'one refused call, one resend');
     ok(g.sent[1].every((r) => !('fallbacks' in JSON.parse(r.payload)) && !r.headers['anthropic-beta']), 'the resend carries neither the field nor its header');
+    // 2026-10-26: any other 400 may be a model that does not take the request: it is tried once on the fallback model, then failed by name.
     const other = gsCtx({ reply: () => ({ code: 400, body: { error: { message: 'messages: something else is wrong' } } }) });
-    eq(other.agentValueLines({ context: CTXP, items: [LINE()] }).failed.s1, 'messages: something else is wrong', 'any other 400 is a failure, named, and never retried');
-    eq(other.sent.length, 1, 'once');
+    eq(other.agentValueLines({ context: CTXP, items: [LINE()] }).failed.s1, 'messages: something else is wrong', 'any other 400 is a failure, named');
+    eq(other.sent.length, 2, 'after one try on the fallback model');
+    eq(JSON.parse(other.sent[1][0].payload).model, 'claude-opus-5-5', '…the newest Opus');
   }
 
   group('S8 · a fetch that outruns its limit fails its slice, named, and the run goes on; the budget hands back the rest');
   {
     const items = [];
     for (let i = 1; i <= 9; i++) items.push(LINE({ stableId: 'c' + i }));
+    // 2026-10-26: the slice that threw goes again at once on the fallback model; where that throws too, its lines come back to be
+    // asked again (`retry`), never stamped as not valued.
     const g = gsCtx({ throwOn: (call) => call === 0, reply: () => ({ code: 200, body: ANSWER([VAL({ comps: [COMP()] })], [], [SEARCH([SOLD_URL])]) }) });
     const out = g.agentValueLines({ context: CTXP, items });
     eq(out.timedOut, true, 'it says some took too long');
-    eq(Object.keys(out.failed).length, 8, 'the eight in the slice that threw are failed');
-    has(out.failed.c1, 'took too long', 'named as such');
-    ok(!!out.results.c9, 'and the next slice was still valued');
+    eq(Object.keys(out.failed).length, 0, 'the eight in the slice that threw are not failed');
+    eq(Object.keys(out.results).length, 9, '…they were valued on the fallback model, and the next slice too');
+    eq(out.results.c1.model, 'claude-opus-5-5', 'the fallback answered them');
+    const g2 = gsCtx({ throwOn: (call) => call <= 1, reply: () => ({ code: 200, body: ANSWER([VAL({ comps: [COMP()] })], [], [SEARCH([SOLD_URL])]) }) });
+    const out2 = g2.agentValueLines({ context: CTXP, items });
+    eq(Object.keys(out2.retry).length, 8, 'the fallback threw too: the eight come back to be asked again');
+    has(out2.retry.c1, 'took too long', 'named as such');
+    eq(Object.keys(out2.failed).length, 0, 'and none is stamped not valued');
+    ok(!!out2.results.c9, 'and the next slice was still valued');
     // The budget: the clock passes it after the first slice, so the second is handed back.
     const slow = gsCtx({ tick: 70000, reply: () => ({ code: 200, body: ANSWER([VAL({ comps: [COMP()] })], [], [SEARCH([SOLD_URL])]) }) });
     const o2 = slow.agentValueLines({ context: CTXP, items });
@@ -420,8 +433,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(r.valReviewed, undefined, '⚠ unreviewed: the desk accepts it');
     eq([r.objectName, r.category, r.qty], ['Herend Rothschild Bird dinner plates, set of 8', 'Antiques', 8], 'the name, category and quantity are untouched');
     const body = liveLines(fn('_avWrite'));
-    ['objectName =', 'category =', 'qty =', 'disposition', 'channel', 'flagNFA', 'flagBequest', 'flagDisputed', 'flagExempt',
+    ['objectName =', 'qty =', 'disposition', 'channel', 'flagNFA', 'flagBequest', 'flagDisputed', 'flagExempt',
      'assetTrack', 'needsAppr', 'authBy', 'approvalDate', 'receiptDoc', 'gross', 'fees', 'itemNo', 'apprId'].forEach((k) => lacks(body, k, 'the writer never touches ' + k));
+    // ⚠ 2026-10-26 (Anthony: "Yes, same rule as the name"): the category, once, under the name's rule and from the app's own list.
+    eq((body.match(/ref\.category = /g) || []).length, 1, 'the category is written in one place');
+    has(body, "if (_avNameIsAgents(ref) && ref.catBy !== 'desk' && ref.category !== 'Firearms'",
+        '…only over Agent One\'s unreviewed name, never a category a person set, never out of Firearms');
+    has(body, "&& res.category && res.category !== ref.category && INV_CATEGORIES.indexOf(res.category) >= 0) ref.category = res.category;",
+        '…and only a category on the list');
     ok(!/\bref\.reviewed\b/.test(body), 'nor the line\'s own review tick');
 
     // A sale date is kept only in the shape the tool asks for, whatever reached the app.
@@ -464,13 +483,19 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('A5 · the ceiling: an ordinary lot that comes back above it is researched instead, in the same run');
   {
-    const { ctx } = rig(ESTATE(), [ROW({ category: 'Furniture' })]);
+    // One article (2026-10-26: the ceiling reads one article's figure, the line's over its Quantity).
+    const { ctx } = rig(ESTATE(), [ROW({ category: 'Furniture', qty: '1' })]);
     eq(ctx.agentValueApply(7, 's1', RES({ mode: 'general', fmv: 400, source: 'General estimate', comps: [] }), ESTATE(), {}), 'research', 'over $250: sent to research');
     eq(ctx._getPhotoRef(7, 's1').fmv, undefined, 'its first figure is never written');
     eq(ctx.agentValueMode(ctx._getPhotoRef(7, 's1')), 'comps', 'the line is now researched');
     eq(ctx.agentValueApply(7, 's1', RES({ mode: 'comps', fmv: 400 }), ESTATE(), {}), 'valued', 'and the researched figure is written');
-    const { ctx: c2 } = rig(ESTATE(), [ROW({ category: 'Furniture' })]);
+    const { ctx: c2 } = rig(ESTATE(), [ROW({ category: 'Furniture', qty: '1' })]);
     eq(c2.agentValueApply(7, 's1', RES({ mode: 'general', fmv: 250, source: 'General estimate', comps: [] }), ESTATE(), {}), 'valued', 'at the ceiling it is an ordinary lot');
+    // ⚠⚠ A GROUP IS TESTED BY ONE ARTICLE (Anthony, 2026-10-26: "One item's price"): 24 plates at $600 is $25 a plate, an ordinary lot.
+    const { ctx: c3 } = rig(ESTATE(), [ROW({ category: 'General/Household', qty: '24' })]);
+    eq(c3.agentValueApply(7, 's1', RES({ mode: 'general', fmv: 600, source: 'General estimate', comps: [] }), ESTATE(), {}), 'valued', '⚠ 24 at $600 together: $25 each, valued as the ordinary lot it is');
+    const { ctx: c4 } = rig(ESTATE(), [ROW({ category: 'General/Household', qty: '2' })]);
+    eq(c4.agentValueApply(7, 's1', RES({ mode: 'general', fmv: 600, source: 'General estimate', comps: [] }), ESTATE(), {}), 'research', '…while 2 at $600 together, $300 each, is researched');
   }
 
   group('⚠⚠ A6 · WHO OWNS A FIGURE: the desk by typing, the appraisal outright (spec §2.3)');
@@ -545,13 +570,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(JSON.stringify(Object.keys(p)), 'disposition', 'and nothing the model must not act on');
     const p2 = ctx._avItemPayload(7, ROW({ stableId: 'x', category: 'Furniture' }));
     eq([p2.mode, p2.fileId, p2.details], ['general', '', []], 'an ordinary lot travels as text');
-    eq(ctx._avContext(ESTATE()), { estate: true, basis: 'Fair Market Value', valuationDate: '2026-06-14' }, 'the job\'s context');
+    const _c = ctx._avContext(ESTATE());
+    eq([_c.estate, _c.basis, _c.valuationDate], [true, 'Fair Market Value', '2026-06-14'], 'the job\'s context');
+    eq(_c.categories, ctx.INV_CATEGORIES, 'with the category list (2026-10-26: a research line\'s category comes back under the name\'s rule)');
     eq(ctx._avContext(LIVING()).valuationDate, '2026-10-06', 'a living job values today');
   }
 
   group('A10 · the run: by id, re-asked for what was not answered, the ceiling re-sent, named when nothing comes back');
   {
-    const refs = [ROW({ stableId: 'a' }), ROW({ stableId: 'b', category: 'Furniture' }), ROW({ stableId: 'c', category: 'Furniture' })];
+    // 'b' is one article (2026-10-26: the ceiling reads one article's figure, so a group of cheap things is never sent on for its total).
+    const refs = [ROW({ stableId: 'a' }), ROW({ stableId: 'b', category: 'Furniture', qty: '1' }), ROW({ stableId: 'c', category: 'Furniture' })];
     const R = rig(ESTATE(), refs, { answer: (body, n) => {
       if (n === 0) return { ok: true, results: { a: RES(), b: RES({ mode: 'general', fmv: 600, source: 'General estimate', comps: [] }) }, failed: {}, remaining: 1 };
       if (n === 1) return { ok: true, results: { c: RES({ mode: 'general', fmv: 40, low: 30, high: 60, source: 'General estimate', comps: [] }), b: RES({ fmv: 650 }) }, failed: {} };
@@ -715,7 +743,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     // The row and its record, rendered by the real functions (Agent One's row rig, with Agent Two's figure on the line).
     const rowRig = (row, job) => sandbox({
-      fns: ['invLineReviewed', '_renderInvRow', '_invRowPhotoHtml', '_invRowHasWho', 'invOutForAppraisal', 'invPlanChannel', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', 'invAppraisalSourceText', 'invLineAppraiser', '_invLinkedAppraiser', 'invAppraised', 'invAppraisalInProgress', '_invHasAppraisal',
+      fns: ['invLineReviewed', '_renderInvRow', '_invRowPhotoHtml', '_invRowHasWho', 'invOutForAppraisal', 'invPlanChannel', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', 'agentValueAgain', '_avState', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', 'invAppraisalSourceText', 'invLineAppraiser', '_invLinkedAppraiser', 'invAppraised', 'invAppraisalInProgress', '_invHasAppraisal',
             '_avHasFigure', '_invHasValue', '_avSummary', 'fmt', 'roundCents', 'agentValueInternal', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep',
             'invAppraisalThreshold', 'gateDispute', '_gateYes', '_agNameKey', '_invRowDomId', '_invRecipientInput', '_renderInvPanel', 'invCloseUpRefusal', '_invCloseUpsHtml', '_invCloseUpTileHtml', '_agRecordNoticesHtml', '_avPanelHtml', '_invMoney', '_invDetailRefs', '_invPanelAppraisalHtml',
             '_invPhotoSiblings', '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef', '_invNamed', '_invItemNo',
@@ -723,8 +751,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             'invBequestFor', 'jobListEntries', 'invApprovalGap', 'invReceiptOwed', '_invBenListAttr',
             'invRatificationOwed', 'invFiduciaryMode', 'isDecedentJob', 'invReleaseCautions', '_invJob', 'invHavellinRecipient',
             // P22 (merged): the row reads a pickup record and a name left on a line moved off To a person.
-            'invPickupRecord', 'signedRecordsOf', 'invChannelLeftover', 'invChannelLeftoverText', '_invPanelLeftoverHtml', 'invLineUnsure', '_invEachInput', 'invUnitValue', 'invLineQty', '_invInputStyle', '_invCtrlMinW'],
-      vars: ['INV_PLAN_CHANNEL_KINDS', 'INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick', '_agDupSet', 'DECEDENT_SERVICES', 'INV_RELEASE_CAUTIONS',
+            'invPickupRecord', 'signedRecordsOf', 'invChannelLeftover', 'invChannelLeftoverText', '_invPanelLeftoverHtml', 'invLineUnsure', '_invEachInput', 'invUnitValue', 'invLineQty', '_invInputStyle', '_invCtrlMinW', 'agentNoticesOn'],
+      vars: ['INV_PLAN_CHANNEL_KINDS', 'INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick', '_agDupSet', '_avRun', '_avAfter', '_avForceComps', 'DECEDENT_SERVICES', 'INV_RELEASE_CAUTIONS',
              'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED'],
       stubs: {
         jobs: [job], _invInput: () => '<input>', _invThumbHTML: () => '<div></div>', _invRoomName: () => 'Dining Room',
@@ -749,6 +777,22 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     html = R._renderInvRow(ESTATE(), R._photoRefs[7][0]);
     lacks(html, 'agent value', 'a desk figure carries no agent badge');
     lacks(html, 'agentValueAccept', 'and no Accept');
+    // 2026-10-26 (on review, the sweep): the unsure hint's tooltip speaks of the name the line carries; a line Agent Two renamed
+    // says so rather than giving Agent One's basis for a name it no longer has.
+    R = rowRig(ROW({ stableId: 's1', objectName: 'Hand-painted tin-glazed plates, likely Spanish', namedBy: 'agent', agentConf: 'low', agentBasis: 'glaze and pattern',
+      valuedBy: 'agent', fmv: 200, valLow: 160, valHigh: 240, valConf: 'low', valNameAt: 'Hand-painted tin-glazed plates, likely Spanish', valNameFrom: 'Hand-painted plates, likely Italian' }), ESTATE());
+    html = R._renderInvRow(ESTATE(), R._photoRefs[7][0]);
+    has(html, 'Agent One named it \u201cHand-painted plates, likely Italian\u201d; Agent Two renamed it as it valued it.', '⚠ a renamed line\'s unsure tooltip says who named it what');
+    lacks(html, 'Named by Agent One: glaze and pattern', '…never Agent One\'s basis for the old name');
+    // …and while Agent Two is already valuing a stale line again, its record says so and withholds Re-value (the press was refused).
+    R = rowRig(ROW({ stableId: 's1', objectName: 'Restoration Hardware mirror', namedBy: 'desk', valuedBy: 'agent', fmv: 25, valLow: 20, valHigh: 30, valConf: 'high', valNameAt: 'Wooden wall mirror' }), ESTATE());
+    R._invOpen.s1 = 1; R._avAfter[7] = { s1: 'rename' };
+    html = R._renderInvRow(ESTATE(), R._photoRefs[7][0]);
+    has(html, 'Being valued again for the new name.', '⚠ the record: being valued again');
+    lacks(html, 'agentRevalue(', '…and no Re-value while it is');
+    R._avAfter[7] = {};
+    html = R._renderInvRow(ESTATE(), R._photoRefs[7][0]);
+    has(html, 'agentRevalue(', 'nothing out: Re-value is offered');
     R = rowRig(ROW({ stableId: 's1', valuedBy: 'agent', valLow: 480, valHigh: 800 }), ESTATE({ docTier: 'contents' }));
     has(R._renderInvRow(ESTATE({ docTier: 'contents' }), R._photoRefs[7][0]), 'agent $480&ndash;$800 &middot; internal', 'an internal range on the row');
 
@@ -756,15 +800,23 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const picks = [ROW({ stableId: 'a', fmv: 640, valuedBy: 'agent', valHigh: 800 }), ROW({ stableId: 'd', fmv: 900, valuedBy: 'desk', updatedAt: 9 })];
     const B = sandbox({
       fns: ['_invBulkApply', 'agentValueUnreviewed', '_avHasFigure', '_invHasValue', '_avStampReviewed', '_invStampBy', 'deviceUser', '_avTakeValue', '_invKeyOnJob', '_invColOnJob',
-            '_getPhotoRef', '_setPhotoRef', '_invJob', 'invFiduciaryMode', 'isDecedentJob', '_invStampLineReviewed'],
-      vars: ['INVENTORY_COLUMNS', 'DECEDENT_SERVICES', 'AGENT_VALUE_OWN'],
+            '_getPhotoRef', '_setPhotoRef', '_invJob', 'invFiduciaryMode', 'isDecedentJob', '_invStampLineReviewed',
+            // 2026-10-26: Mark reviewed names what it swept past (the unsure lines, an agent's note, a duplicate pair)
+            'invLineUnsure', 'invLineReviewed', '_agNameKey', 'agentValueInternal', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep',
+            'agentNotices', 'agentNoticeQuiet', 'agentValueNotices', '_avNoticeKinds', '_avNoticeLabel', 'agentValueStale', 'agentValueSpecialistWorth',
+            'agentValueAgain', '_avState', '_invNamed', '_invItemNo', 'invAppraisalThreshold', 'gateDispute', '_gateYes', 'fmt', 'roundCents', 'agentNoticesOn'],
+      vars: ['INVENTORY_COLUMNS', 'DECEDENT_SERVICES', 'AGENT_VALUE_OWN', 'AGENT_NOTICE_KINDS', '_avRun', '_avAfter', '_avForceComps', 'DOC_TIERS',
+             'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED'],
       stubs: { jobs: [ESTATE()], _photoRefs: { 7: picks }, _invPicked: (j) => picks, _invTouch(r) { r.updatedAt = (r.updatedAt || 0) + 1; return r; },
-               savePhotoRefs() {}, _scheduleInventorySync() {}, showSyncBadge() {}, renderInventoryTab() {}, _invMatchesFilter: () => true, _invBulkLast: null },
+               savePhotoRefs() {}, _scheduleInventorySync() {}, showSyncBadge() {}, renderInventoryTab() {}, _invMatchesFilter: () => true, _invBulkLast: null,
+               _jobInvRefs: () => picks, _agDupIndex: () => ({}), _invPhotoSiblings: () => [], mustFindAllFound: () => false },
     });
     B._invBulkApply(7, 'reviewed', true);
     eq([picks[0].reviewed, picks[0].valReviewed], [true, true], 'the agent-valued line reviewed, its figure accepted with it');
     eq([picks[1].reviewed, picks[1].valReviewed], [true, undefined], 'the desk-valued line reviewed, nothing of the agent\'s stamped');
-    eq(B._invBulkLast.msg, '2 items marked reviewed.', 'the bar says what it did');
+    // 2026-10-26: the agent's figure carried no confidence, so it read unsure, and the bar says the sweep passed it.
+    has(B._invBulkLast.msg, '2 items marked reviewed.', 'the bar says what it did');
+    has(B._invBulkLast.msg, '1 of them was marked unsure: ', '…and names the unsure line it swept past');
     B._invBulkApply(7, 'valSource', 'Appraisal');
     eq([picks[0].valuedBy, picks[0].valHigh], ['appraiser', undefined], 'Appraisal set across a selection takes the agent\'s line outright');
   }

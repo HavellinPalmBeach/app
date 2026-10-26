@@ -170,7 +170,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const liveMap = mapSrc.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
     lacks(liveMap, 'coi_on_file', '⚠ the old Yes / Pending / No tick is written by nothing');
     const liveAll = SRC.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
-    ok(liveAll.length > SRC.length * 0.6, 'fixture: the comment strip kept most of the file');
+    // 0.55 (2026-10-26): the file is about 40% line comments by size, so 0.6 sat on the line (doc-send.test.js says the same).
+    ok(liveAll.length > SRC.length * 0.55, 'fixture: the comment strip kept most of the file');
     eq(count(liveAll, 'coi_on_file'), 0, 'and read by nothing');
     has(live('editVendor'), "['v-coi-received', 'v-coi-expires'].forEach(function(fid){ _setV(fid, _vendorYmd(v[VENDOR_FORM_MAP[fid]])); });", 'Edit fills the two dates as yyyy-mm-dd (a date input rejects the sheet\'s ISO datetime)');
     has(live('vendorCardHtml'), "['COI', vendorCoiState(v, _todayStr()).card]", 'the card prints the state, through the one reader');

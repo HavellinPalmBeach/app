@@ -633,7 +633,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // toggleIntakeFields, and "(561) 000-0000" through Edit Client's tel() default). Three shapes: a script setting
     // `.placeholder`, setAttribute, and a placeholder spliced into a string a builder returns.
     const code = src.split('\n').filter((l) => !/^\s*\/\//.test(l)).join('\n');
-    ok(code.length > src.length * 0.6, 'the source with comments stripped is still most of the file');
+    // 0.55 (2026-10-26): the file is about 40% line comments by size, so 0.6 sat on the line (0.6004 at 2026-10-25b, 0.5996 after
+    // the agents' once-over). The guard is that a strip which ate the file (a block-comment regex took 170 KB once) cannot pass.
+    ok(code.length > src.length * 0.55, 'the source with comments stripped is still most of the file');
     eq((code.match(/\.placeholder\s*=[^=]/g) || []).length, 0, '⚠ no script sets a placeholder');
     lacks(code, "setAttribute('placeholder'", 'nor through setAttribute');
     eq((code.match(/placeholder="'/g) || []).length, 0, '⚠ and no builder splices one into its markup');

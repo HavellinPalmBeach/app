@@ -19,6 +19,10 @@ the doubles under *Possible duplicates*; it never merges. A walkthrough collecti
 the camera when it is shot from the room's brief, so Agent One names it from the picture, with the
 walkthrough's words in its field note. Step 3, Agent Two, was built as P23 (`AGENT_TWO_SPEC.md`).
 
+**Since the once-over (2026-10-26, Apps Script `2026-10-26`, a redeploy owed):** the model chooses itself, the newest
+top-tier model first and the newest Opus behind it (§3, *The model*; §10); one slow photograph no longer throws a naming
+call away (§5); and the naming rules in §2b's last bullet. Manual §2 and §10a (*The agents, once over*) say what a person sees.
+
 Anthony, on what the field is for: *"the whole point is that we don't take the time to name objects
 in the field. we just capture per room and the agent names."*
 
@@ -128,6 +132,32 @@ job."*
   Barrel coffee table"*), the name carries it as they said it, unless the photograph plainly shows something else, so
   Agent Two prices that brand (Anthony, of the brand: *"Type it in the name"*). Agent Two now follows the naming and the
   room check by itself and researches a line named with low confidence (AGENT_TWO_SPEC §13).
+- **The once-over (2026-10-26):** Anthony: *"do a once over on the two agents … as accurate as possible on the first
+  pass … TC oversight minimized."* Most lines are valued later from their words alone, so a name carries what tells the
+  thing apart, as far as the photograph or a close-up shows it: furniture's wood or material and form, a painting's medium
+  and whether it appears original or printed (with its subject and frame), a rug's style and hand-knotted or machine-made
+  where the back shows it, an appliance's maker and model off a legible label, lighting's material and form, what kind of
+  books, a tool's brand. The crew's note: a size said at the camera goes into the name as said (*oil on canvas, 24 x 36
+  in*); what the family says about origin or age is hedged; who it is going to, who it belonged to, family history and
+  instructions never go in a name, and **no owner's, relative's or recipient's name ever does**. The walkthrough note helps
+  recognise what a photograph shows and never adds a line. A freestanding bookcase, china cabinet or display cabinet
+  photographed full, the whole piece in the frame, is two lines, the piece and its contents (the one exception to the
+  surface rule: *Photographing a House* has the crew photograph such a piece once, as it stands). Categories (Anthony:
+  *"Yes, both"*): Antiques is about a hundred years old or more by construction and wear, a recent piece in a period style
+  being Furniture; mass-produced decor (decorator canvases and prints, artificial plants, candles, empty frames, decorative
+  pillows, store-bought vases, bowls and baskets) is General/Household unless a signature, an edition number or a maker's
+  mark is readable; a painting it cannot tell from a decorator print stays Art & Décor. A matched set of one kind is one line
+  with its count; a mixed group is one line of qty 1 (the desk multiplies the value by qty). The basis begins *"Read:"* and
+  quotes what it read when the name rests on a legible mark, label, nameplate or logo, and mentions no mark otherwise
+  (`AGENT_VALUE_READ_RE` sends a *Read:* basis to research). Kind `other` is for what the name cannot carry (a mark too
+  blurred to read, a frame too dark to name), never a hedge repeated. A person in the photograph is never described; the
+  subject of a painting is. Close-ups are compressed at 1,200 px wide and 0.85 (`DETAIL_PHOTO_MAX_W`,
+  `DETAIL_PHOTO_QUALITY`; a portrait one reaches 1,600 px), every other shot still 900 px at 0.72; Agent One reads the first
+  four taken (`_agDetailRefs` sorts by `ts`). The desk: an empty answer's row reads *nothing to list* and is never sent
+  again (`agentNameableRefs` skips `agentConf: 'none'`); a second naming adds its notices to the first's; a *Look at this*
+  goes quiet once every line off its photograph is reviewed; a row named on the desk while a run is out is left alone, and
+  then nothing from that answer is written by position onto the photograph's other rows (on review, 2026-10-26): they stay
+  blank, one blank row is added where none is left and the answer saw more, and Name N shots asks again with what is listed.
 - The confirming is Havellin's job and the app already carries the state for it: `namedBy:'agent'`
   plus `reviewed:false` plus the *IN PROGRESS — N of M items reviewed* stamp on every client
   document. An attribution nobody has confirmed is visibly unconfirmed.
@@ -171,7 +201,7 @@ Properties, identical in shape to `esignSend` / `stripeLink` / `htmlToPdf`.
 
 | | |
 |---|---|
-| Model | `claude-opus-5` |
+| Model | Chosen by itself since 2026-10-26 (`_agModels`; Anthony: *"Make sure the agents update the model when there are new models so they are always the most accurate"*): the newest top-tier model on Anthropic's model list (`GET /v1/models`, read at most every six hours and cached) first, today `claude-fable-5-1`, and the newest Opus as the fallback, today `claude-opus-5-5`, never below those floors (`AGENT_MODEL_FLOORS`). A request that runs long, finds the service busy, is cut off or is rejected goes again on the fallback (`_agSendAll`); a task whose first choice runs long twice in a day, or is rejected where the fallback answered, runs on the fallback for six hours (CacheService's ceiling) (`_agSlow`, `_agDemote`). `AGENT_MODEL_PIN` in Script Properties pins one model for every call. The room check and Agent Two choose the same way. It was `claude-opus-5` (`AGENT_MODEL`) until then |
 | Thinking | `{type: 'adaptive'}` |
 | Effort | `output_config: {effort: 'medium'}` — identification is **perception, not reasoning**, and high effort buys little here. Sweep low/medium/high on one real room and measure before fixing it |
 | Output | Structured, via a `strict: true` tool or `output_config.format`. Never free text parsed with a regex |
@@ -259,6 +289,11 @@ Apps Script's ceiling is a **6-minute execution limit**, and a vision call runs 
 - App side copies `_invEnsureThumbs`: batch, **mark tried BEFORE the request** so a failure cannot
   be re-fired by the next render, then re-fire while `remaining` is non-zero. A named failure on
   screen, never a silent one.
+- **A slice that throws is not the call's end (2026-10-26):** one request past UrlFetchApp's limit throws the whole
+  `fetchAll`, and it used to throw out of `agentIdentifyShots`, so the photographs earlier slices named were paid for and
+  never written. `_agSendAll` sends that slice to the fallback model while the budget allows, else fails it by name, and the
+  call answers; the app groups the reasons on the work bar (`_agFailureKind`) and a run that named something before it
+  failed still hands on to the room check and Agent Two.
 - ⚠ **NOT the Batch API.** It halves the cost and adds up to 24 hours. The desk wants tonight's
   shots named tonight, and the saving is ~$3.
 
@@ -352,6 +387,10 @@ Shots are compressed to 900px at 0.72 before upload, so ~800–1,450 tokens a ph
 
 Against a $20k–$100k ticket. **Cost does not constrain this build and must not drive the model
 choice.** Thinking tokens are the variable, which is the real argument for effort `medium`.
+
+**Since 2026-10-26 the first choice is the top tier**, about two and a half times Opus a house, and close-ups are sent at
+1,200 px wide (more tokens each). Anthony, told so: *"our jobs are $10,000 to $40,000 plus. So is this a real expense? … at
+most 1 to 5 a month."* The table above stays Opus 5's, for the comparison.
 
 ---
 

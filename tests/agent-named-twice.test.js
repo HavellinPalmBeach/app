@@ -240,7 +240,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(vprops.required.indexOf('name') > -1 && vprops.properties.name && vprops.properties.name.type === 'string', '⚠ the strict tool asks for the name on every value');
     has(sys, 'Value the quantity on the line as given: a stack or a box hides what is under the top one, so never question the count from the photograph.', '⚠ the count is the line\'s');
     has(sys, 'Condition is usually not written on the line, because the crew photographs rather than writes.', 'condition is usually unwritten, and why');
-    has(sys, 'Read it from the photograph on a research line, assume ordinary used condition on an ordinary lot', 'read off the photograph, or ordinary');
+    // 2026-10-26: wherever a photograph is sent (a research line, or an ordinary lot whose name is a guess), else ordinary.
+    has(sys, 'Read it from the photograph wherever one is sent, assume ordinary used condition on a lot sent as text alone', 'read off the photograph, or ordinary');
     lacks(sys, 'Adjust for the condition recorded on the line.', 'the old sentence that read a blank as a gap is gone');
     has(sys, 'A notice is for something a person must DO about the line. Most lines need none; never give a line more than one.', '⚠⚠ one notice at most, most lines none');
     has(sys, 'Never raise a notice about the name (correct it instead), because the condition is not recorded, because a count is approximate, because your search ran out or found no sold comparable, or to suggest a WorthPoint check',
@@ -298,7 +299,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(kept && JSON.parse(kept)[0].valNameFrom, 'Agent One\'s name', '⚠ valNameFrom survives the save');
     // The record says what it replaced, quietly; the list above the rows says nothing of it.
     const V = sandbox({ fns: ['_avPanelHtml', '_avNoticeLabel', '_avNoticeKinds', 'agentValueUnreviewed', 'agentValueStale', '_avHasFigure', '_invHasValue', 'agentValueInternal', '_agNameKey',
-      'agentValueNotices', '_avNoticesHtml', 'agentValueSpecialistWorth', '_deskShowBtnHtml', '_invNamed', '_invItemNo'],
+      'agentValueNotices', '_avNoticesHtml', 'agentValueSpecialistWorth', '_deskShowBtnHtml', '_invNamed', '_invItemNo', 'agentValueAgain', '_avState'], vars: ['_avRun', '_avAfter', '_avForceComps'],
       stubs: { esc: (x) => String(x == null ? '' : x), fmt: (x) => '$' + x, _invMoney: (x) => '$' + x, invFiduciaryMode: () => true, docTierProduces: () => true, invNeedsAppraisal: () => false } });
     const renamed = R({ objectName: 'Hand-painted tin-glazed plates, yellow bird pattern, likely Spanish', valNameFrom: 'Hand-painted majolica dinner plates, likely Italian',
       valuedBy: 'agent', fmv: 75, valLow: 40, valHigh: 120, valConf: 'low', valNameAt: 'Hand-painted tin-glazed plates, yellow bird pattern, likely Spanish', valNotices: [] });
@@ -314,7 +315,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('F · ⚠ a mark nobody could read does not send a line to research');
   {
-    const V = sandbox({ fns: ['agentValueMode', 'invIsIntrinsic', 'invCatMeta', '_avNameIsAgents'], vars: ['AGENT_VALUE_MARK_RE', 'AGENT_VALUE_NO_MARK_RE', 'INV_TAXONOMY'],
+    const V = sandbox({ fns: ['agentValueMode', 'invIsIntrinsic', 'invCatMeta', '_avNameIsAgents'], vars: ['AGENT_VALUE_MARK_RE', 'AGENT_VALUE_NO_MARK_RE', 'AGENT_VALUE_READ_RE', 'INV_TAXONOMY'],
       stubs: { _avForceComps: {} } });
     const mode = (basis, cat) => V.agentValueMode({ stableId: 'x', category: cat || 'General/Household', agentBasis: basis });
     eq(mode('illegible painted script mark on underside'), 'general', '⚠⚠ the Ellison plates\' basis: an everyday lot');
@@ -332,7 +333,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const ROWV = (id, n, notices, over) => Object.assign({ stableId: id, itemNo: n, label: 'inventory', roomIdx: 2, objectName: 'Line ' + n, category: 'General/Household',
       fmv: 50, valLow: 25, valHigh: 90, valConf: 'low', valSource: 'Online comps', valuedBy: 'agent', valNameAt: 'Line ' + n, valNotices: notices }, over || {});
     const V = sandbox({ fns: ['agentValueNotices', '_avNoticeKinds', '_avNoticeLabel', '_avNoticesHtml', '_deskShowBtnHtml', '_invNamed', '_invItemNo',
-      'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', '_avHasFigure', '_invHasValue', '_avPanelHtml', 'agentValueInternal', '_agNameKey'],
+      'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', '_avHasFigure', '_invHasValue', '_avPanelHtml', 'agentValueInternal', '_agNameKey', 'agentValueAgain', '_avState'], vars: ['_avRun', '_avAfter', '_avForceComps'],
       stubs: { esc: (x) => String(x == null ? '' : x), fmt: (x) => '$' + x, _invMoney: (x) => '$' + x, invFiduciaryMode: () => true, docTierProduces: () => true,
         invNeedsAppraisal: () => false } });
     const job = { id: 7, svc: 'cleanout' };

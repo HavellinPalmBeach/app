@@ -169,8 +169,9 @@ const COIN_LINE = J + '_col' + COIN, STAMP_LINE = J + '_col' + STAMP;
       await press('#inv-row-' + COIN_LINE + ' button:has-text("Use that line")', 'Use that line');
       has(dialogs.join(' | '), 'as Coin collection from the walkthrough?', 'asked first, naming both');
       const d1 = await ref('d1'), cl = await ref(COIN_LINE);
-      eq([String(d1.sourceCollId), d1.needsAppr, d1.fmv, d1.objectName], [String(COIN), true, 5000, 'Silver coins in Whitman albums'],
-         'the photographed line carries the collection, its instruction and value, under its own name');
+      // 2026-10-26: the walkthrough's rough figure is not carried (Anthony: *"Yes, Agent Two values it"*); a person's figure would be.
+      eq([String(d1.sourceCollId), d1.needsAppr, d1.fmv == null || d1.fmv === '' ? null : d1.fmv, d1.objectName], [String(COIN), true, null, 'Silver coins in Whitman albums'],
+         'the photographed line carries the collection and its instruction under its own name, never the walkthrough\'s ballpark');
       eq(!!cl.deletedAt, true, 'the collection\'s own line comes off');
       eq(await p.evaluate((j) => _jobInvRefs(j).filter((r) => r.sourceCollId != null).map((r) => r.stableId).sort(), J), ['d1', STAMP_LINE].sort(),
          '⚠⚠ each collection counted once: the coins on their photograph, the stamps waiting for theirs');
