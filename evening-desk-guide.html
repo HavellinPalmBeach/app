@@ -406,18 +406,20 @@ footer p{max-width:66ch;}
         <span class="btn">Check N rooms</span> runs it again.</li>
       <li><strong>Agent One&rsquo;s notes</strong>, under <em>Agent One raised 3 things to look at</em>. <em>Must find</em>,
         <em>Firearm</em> and <em>Possible NFA item</em> in red, and they stay (a Must find goes quiet once every must-find is
-        found); <em>Look at this</em> in amber, gone once you review the item. Quiet notes stay in the item&rsquo;s record.
+        found; a Firearm note outlives the item it was raised on); <em>Look at this</em> in amber, gone once you review the item. Quiet notes stay in the item&rsquo;s record.
         <span class="btn">Show the item</span> jumps to it and opens it.</li>
       <li><strong>Possible duplicates.</strong> Compare the photos, then <span class="btn">Remove</span> the extra, or
-        <span class="btn">Not duplicates</span> if they really are two things. Ticking Reviewed does not settle it.</li>
+        <span class="btn">Not duplicates</span> if they really are two things. Ticking Reviewed, or renaming one, does not settle it.</li>
       <li><strong>The values follow by themselves</strong>, Agent Two correcting Agent One&rsquo;s guesses;
         <span class="btn">Value N lines</span> does the rest.</li>
       <li><strong><em>Not yet decided</em>, room by room.</strong> Correct the name and count, choose where it goes, type who
         takes it if it leaves, check the value against what you saw. Nothing flagged? No tick, whatever its value: the box is
-        ticked in grey. Flagged? One <strong>Reviewed</strong> tick covers it all: a note, a possible
-        duplicate, a firearm or ammunition, an appraisal, a bequest, a dispute, both agents unsure. Hover the box for why.
-        On a disputed estate every item either agent named or valued takes it. Bronze <em>unsure</em> marks any guess, even on
-        a grey tick: read those hardest. A maker added to the name reprices it.</li>
+        ticked in grey. Flagged? One <strong>Reviewed</strong> tick covers it: a note, a firearm or
+        ammunition, an appraisal not yet in or waived, a bequest, a dispute, both agents unsure. Hover the box for every
+        reason. A tick never settles an item with no name or a possible duplicate (the box turns bronze): name it, or Remove
+        or Not duplicates. On a disputed estate every item either agent named or valued takes it. Bronze
+        <em>unsure</em> marks any guess, even on a grey tick, until your tick or a value you type: read those hardest. A maker
+        added to the name reprices it.</li>
       <li><strong>A drawer photographed piece by piece.</strong> Tick the rows (or <span class="btn">Select all</span> on the
         group) and a selection bar appears at the foot. <span class="btn">Remove lines</span> takes them off the list and keeps
         the photos; <span class="btn">Set disposition&hellip;</span> gives them all one destination, such as Donate.</li>
@@ -425,8 +427,10 @@ footer p{max-width:66ch;}
         undecided (<em>1 from earlier days still undecided: press All</em>): press <span class="btn">All</span> and finish
         them.</li>
       <li><strong>Last, read the whole list</strong> against what you saw and press
-        <span class="btn">&#10003; I&rsquo;ve read the list</span> on the Inventory Review bar: it records who and when.
-        Change anything after, even a tick, and it says <em>changed since</em>: press it again.</li>
+        <span class="btn">&#10003; I&rsquo;ve read the list</span> on the Inventory Review bar: it records who and when,
+        for the list as it stood. Change a name, count, value, destination, recipient, condition or room after, or remove an
+        item, on any device, and it says <em>changed since</em>: press it again. A tick changes nothing. While the list is
+        loading or the sheet is unreachable, the press waits.</li>
     </ol>
 
     <h3>The row</h3>
@@ -439,17 +443,17 @@ footer p{max-width:66ch;}
           <strong>Move</strong>, <em>To a person</em> is <strong>Distribute</strong>, <em>Remove</em> is
           <strong>Junk</strong>), plus <strong>Auction</strong> and <strong>Consign</strong>, other ways to sell, and
           <strong>Hold</strong>, kept back for now. Items split off one photo start with its destination.</td></tr>
-        <tr><td>Who takes it</td><td>On an estate the beneficiaries are offered as
-          you type. With one vendor of that kind confirmed on the Job Plan, it fills itself in.</td></tr>
+        <tr><td>Who takes it</td><td>With one vendor of that kind confirmed on the Job Plan, it fills itself in.</td></tr>
         <tr><td>&#9662;</td><td>The rest: category, condition, serial number, appraiser, chain of custody,
           <span class="btn">&#10133; Another item in this photo</span>, <span class="btn">&#10133; Close-up</span>,
           <span class="btn">Remove line</span>.</td></tr>
       </tbody>
     </table></div>
-    <p style="margin-top:14px;">Papers print marked <strong>IN PROGRESS</strong> until every item is decided, valued and, where
-      flagged, ticked; they are never held back. Where an Agent Two value stands unticked, they also wait
-      for the list to be read, then print <em>REVIEWED &mdash; read by Anthony Graziano, October 26, 2026; 42 items
-      checked; 158 accepted as valued</em>. <span class="btn">+ Add line item</span> adds anything with no photo. A car or boat from the walkthrough
+    <p style="margin-top:14px;">Papers print marked <strong>IN PROGRESS</strong> until every flagged item is checked; they are
+      never held back. Where an Agent Two value stands unticked, they also wait for the list to be read, then print
+      <em>REVIEWED &mdash; read by Anthony Graziano, October 26, 2026; 42 items checked; 158 accepted as valued</em>. The
+      Court Inventory and the Trust Schedule stay FINAL; their count of Agent Two&rsquo;s values is bronze until the list is
+      read. <span class="btn">+ Add line item</span> adds anything with no photo. A car or boat from the walkthrough
       waits under the Inventory Review bar (<em>From the Estimate Walkthrough</em>) until you press
       <span class="btn">Add &rarr;</span>.</p>
   </section>
@@ -490,16 +494,14 @@ footer p{max-width:66ch;}
     <p class="opens"><b>Opens by itself</b> when an item needs an appraisal and has no appraiser linked. Red on a Formal job,
       whose record is not complete without it; amber otherwise.</p>
     <ul class="plain">
-      <li><span class="btn">+ Add an appraiser</span>, from the Vendor Directory or typed in. A firm that also buys is not
-        independent.</li>
+      <li><span class="btn">+ Add an appraiser</span>, from the Vendor Directory or typed in.</li>
       <li>Link each item you send to an appraiser, or <span class="btn">Waive</span> (it asks who decided, and why). On every
         job the appraiser is then its source: <em>Appraisal &middot; their name &middot; pending</em>. Handing it over is a
         sign-out, under Releases.</li>
       <li>When the report comes back, type its figure in Total: that is the appraisal, and the item leaves this list. Then
         <span class="btn">File the report</span> on the appraiser&rsquo;s row (a PDF or a photo, to the client&rsquo;s Drive).
         Until then the row says <em>report not filed</em>.</li>
-      <li>On an estate whose papers state values: the valuation basis and the date values are as of. Set them once, as
-        counsel says.</li>
+      <li>On an estate whose papers state values: the valuation basis and the date values are as of.</li>
     </ul>
 
     <h3>Closing the job</h3>
@@ -510,8 +512,7 @@ footer p{max-width:66ch;}
     <ul class="plain">
       <li>The satisfaction call (a call, not a text), <span class="btn">&#9993; Draft review request</span>, the referral ask,
         and stars for every vendor used.</li>
-      <li>The Disposition Ledger on an estate, the Contents Record on living work: print it (the Contents Record prints from
-        the Inventory Review bar), have it signed, then <span class="btn">File signed copy</span>. On an estate whose papers
+      <li>The Disposition Ledger on an estate, the Contents Record on living work: print it, have it signed, then <span class="btn">File signed copy</span>. On an estate whose papers
         state values, the signed Court Inventory or Trust Schedule is filed here too.</li>
       <li>Proceeds statements: <span class="btn">+ Record a statement</span>, then <span class="btn">File the statement</span>.
         Donations: <span class="btn">File charity receipt</span> for each charity.</li>
@@ -522,8 +523,7 @@ footer p{max-width:66ch;}
 
     <h3>Removed items &amp; snapshots</h3>
     <p>Opens by itself only when you take a snapshot. <span class="btn">Restore</span> gives back anything taken off the
-      list. A snapshot (More &#9662;, on an estate) is a dated copy; <span class="btn">Compare with now</span>
-      shows what changed. The totals (<span class="btn">Show summary &amp;
+      list. The totals (<span class="btn">Show summary &amp;
       rollups</span>, in More &#9662;) appear under this bar, at the very foot.</p>
   </section>
 
@@ -540,7 +540,6 @@ footer p{max-width:66ch;}
         <h4>Living work</h4>
         <ul class="plain">
           <li>The client approves what leaves, on the same request. No receipts from a person, no bequests.</li>
-          <li>The Contents Record is the one paper the client signs.</li>
         </ul>
       </div>
       <div class="side">
@@ -557,14 +556,6 @@ footer p{max-width:66ch;}
     <h2>The week of a job</h2>
     <div class="stages">
       <div class="stage" data-n="1">
-        <p class="stage-h">The first evening</p>
-        <p class="stage-when">After the first day of photos</p>
-        <ul>
-          <li>Bring in any car or boat from the walkthrough. On an estate, add the beneficiaries and bequests you have,
-            and any appraiser needed.</li>
-        </ul>
-      </div>
-      <div class="stage" data-n="2">
         <p class="stage-h">The night the signed request comes back</p>
         <p class="stage-when">Releases &amp; signed papers</p>
         <ul>
@@ -575,7 +566,7 @@ footer p{max-width:66ch;}
             has signed.</li>
         </ul>
       </div>
-      <div class="stage" data-n="3">
+      <div class="stage" data-n="2">
         <p class="stage-h">A pickup day</p>
         <p class="stage-when">In the house, on the iPad</p>
         <ul>
@@ -585,7 +576,7 @@ footer p{max-width:66ch;}
             a sheet.</li>
         </ul>
       </div>
-      <div class="stage" data-n="4">
+      <div class="stage" data-n="3">
         <p class="stage-h">The closing evening</p>
         <p class="stage-when">Closing the job opens by itself</p>
         <ul>
@@ -603,8 +594,8 @@ footer p{max-width:66ch;}
         approval never counts. Anything that left early goes on the next request <em>for ratification</em>, approved after the
         fact; it is never undone.</li>
       <li class="crit"><strong>Firearms:</strong> nothing moves without written authority, and none goes on a sign-out sheet.
-        Only Anthony drives one to a licensed dealer, never an NFA item. The <a href="firearms-protocol.html">Firearms
-        Protocol</a> is the procedure.</li>
+        Only Anthony drives one to a licensed dealer, never an NFA item (<a href="firearms-protocol.html">Firearms
+        Protocol</a>).</li>
       <li><strong>Havellin&rsquo;s people never buy or receive estate property.</strong> The app refuses it on an estate; in a
         client&rsquo;s own home it is flagged for the client to initial.</li>
       <li><strong>No item or paper is deleted.</strong> <span class="btn">Remove line</span> keeps the photo; a paper filed in
@@ -628,10 +619,9 @@ footer p{max-width:66ch;}
         <tr><td>I can&rsquo;t find Releases, the ledger or Removed items</td><td>They are in the bars under the last item.
           Tap a bar to open it.</td></tr>
         <tr><td>A bar says <em>loading&hellip;</em></td><td>This device has not yet read the client&rsquo;s items from the
-          sheet, and the bar claims nothing until it has. If it stays, reload.</td></tr>
+          sheet, and the bar claims nothing until it has.</td></tr>
         <tr><td>A bar says <em>sheet unreachable: this device&rsquo;s copy</em></td><td>The sheet did not answer: the bar shows
-          what this device holds and opens nothing by itself, and the tab asks again every 15 seconds. Check the
-          connection.</td></tr>
+          what this device holds and opens nothing by itself, and the tab asks again every 15 seconds.</td></tr>
         <tr><td>No thumbnails</td><td>Nothing is lost. Reload, or tap the box for Drive.</td></tr>
       </tbody>
     </table></div>
@@ -659,8 +649,8 @@ footer p{max-width:66ch;}
       where <a href="photography-guide.html">Photographing a House</a> ends, beside <a href="incident-guide.html">Reporting an
       Incident</a>, <a href="sorting-guide.html">Sorting a House</a>, <a href="packing-guide.html">Packing a House</a>,
       <a href="move-day-guide.html">Move Day</a>, <a href="first-night-guide.html">The First Night</a> and the
-      <a href="firearms-protocol.html">Firearms Protocol</a>. The <a href="concierge-guide.html">Concierge Guide</a> explains
-      each screen and button.</p>
+      <a href="firearms-protocol.html">Firearms Protocol</a>; the <a href="concierge-guide.html">Concierge Guide</a> explains
+      each button.</p>
   </footer>
 
 </div>
