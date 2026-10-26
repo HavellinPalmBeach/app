@@ -363,6 +363,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(abbr.length < 300 && /fits\.$/.test(abbr), '⚠ an abbreviation is never a sentence end; the last real one is: "' + abbr.slice(-24) + '"');
     const init = g._avClip(pad(42) + 'Signed J. Smith on the back, a regional painter whose oils sell at small auctions for modest sums.');
     ok(init.length <= 300 && !/J\.$/.test(init), 'an initial is not a sentence end either: "' + init.slice(-20) + '"');
+    const low = g._avClip(pad(45) + 'One sale fits. A lot of 40 pcs. in all sold together for a modest sum at a regional house.');
+    ok(low.length < 300 && /fits\.$/.test(low), '⚠ a point before a lowercase word is no full stop, abbreviation list or not: "' + low.slice(-20) + '"');
     eq(g._avClip('x'.repeat(300)).length, 300, 'text that fits is never cut');
     has(String(g._avSystem(CTXP)), 'in one or two short sentences, under forty words', 'the prompt asks for a short note');
     has(JSON.stringify(g._avTool('comps')), 'One or two short sentences, under forty words.', 'and the note\'s field says so');
