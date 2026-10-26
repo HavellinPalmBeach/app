@@ -119,7 +119,10 @@ const P = ID + '_r2_inventory_plates', S = ID + '_d_salad', DP = ID + '_r2_detai
     const host = (sid) => p.evaluate((sid) => {
       const h = document.getElementById('inv-cu-' + sid);
       if (!h) return null;
-      const tiles = Array.from(h.querySelectorAll('[data-cu-id]')).map((t) => ({ id: t.getAttribute('data-cu-id'), bg: !!(t.firstChild && t.firstChild.style.backgroundImage),
+      // Restated 2026-10-26b: a close-up's picture sits inside its Drive link (_invPhotoOpenHtml), so the tile's photograph is the
+      // thumbnail inside it, never its first child.
+      const pic = (t) => t.querySelector('[data-thumb-id]') || t.querySelector('.inv-photo-cell > div') || t.firstChild;
+      const tiles = Array.from(h.querySelectorAll('[data-cu-id]')).map((t) => ({ id: t.getAttribute('data-cu-id'), bg: !!(pic(t) && pic(t).style.backgroundImage),
         state: (t.querySelector('.inv-cu-state') || {}).textContent || '' }));
       return { text: h.firstElementChild ? h.firstElementChild.textContent.trim() : '', tiles };
     }, sid);

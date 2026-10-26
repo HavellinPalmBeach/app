@@ -62,8 +62,8 @@ const DETAIL = (over) => Object.assign({
 
 function rig(refs, stubs) {
   return sandbox({
-    fns: ['agentShotGroups', 'agentNameableRefs', '_agDetailRefs', '_agShotPayload', 'agentListedOff', '_agWrite',
-          'agentApplyResult', '_agState', 'invSplitItemN', '_getPhotoRef', '_setPhotoRef', '_jobInvRefs',
+    fns: ['agentShotGroups', 'agentNameableRefs', '_agDetailRefs', '_agShotPayload', 'agentListedOff', '_agWrite', '_invCondIsAgents', '_invAgentCondition',
+          'agentApplyResult', '_agState', 'invSplitItemN', '_invSplitSource', '_getPhotoRef', '_setPhotoRef', '_jobInvRefs',
           '_invFileId', '_photoUid', '_invPhotoSource', '_invRoomName', '_invDetailRefs',
           '_agNameKey', '_agDupEligible', 'agentDuplicateGroups', 'agentNamedTwice', '_arDupEligible', '_arWrite',
           '_importableFromEstimate', '_importedSourceSet', '_pushInvLine',
@@ -72,7 +72,7 @@ function rig(refs, stubs) {
           'collectionLinesEnsure', '_collLinesOf', 'collectionLineId', 'collectionLineUnshot', '_invHasPhoto',
           'collectionsAwaitingPhoto', 'collectionLineWithPhoto', 'collectionUseLine', '_invJob', 'fieldDispToInv',
           '_invTombstoneLine', '_invItemNo', '_invNamed', '_avHasFigure', '_invHasValue'],
-    vars: ['_agRun', 'AGENT_MAX_DETAILS', 'AGENT_LISTED_MAX', 'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY',
+    vars: ['_agRun', 'AGENT_CONDITIONS', 'AGENT_MAX_DETAILS', 'AGENT_LISTED_MAX', 'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY',
            'INV_SPLIT_MAX', '_photoUidSeq', 'AGENT_ROOM_CONF_RANK', 'AGENT_PASS_GAP_MS', 'COLL_LINE_WEAK_STAMP',
            'FIELD_DISPOSITIONS', 'FIELD_DISP_DEFAULT'],
     stubs: Object.assign({
@@ -380,5 +380,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(found.deletedAt, undefined, 'the as-found shot is untouched');
     eq(saves, 1, '⚠ the manifest is saved once, not once per line');
     eq(Object.keys(ctx._invPick).length, 0, 'and the selection is cleared');
+  }
+
+  // 2026-10-26b (Anthony: "Agents grade it"): an Items photo is how the thing's condition is graded.
+  group('the Items photo is graded for condition, as the guide says');
+  {
+    has(guide, 'Everything the app can see in it goes on the list, graded for condition.', 'the guide says so');
+    has(fn('_agContext'), 'conditions: AGENT_CONDITIONS', 'Agent One is sent the grades');
+    has(fn('_agWrite'), '_invAgentCondition(ref, obj.condition)', 'and its grade lands on the item it names');
   }
 };

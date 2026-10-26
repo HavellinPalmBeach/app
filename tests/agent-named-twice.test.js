@@ -48,8 +48,8 @@ const attempt = (f) => { try { return { val: f() }; } catch (e) { return { err: 
 function gs() {
   const ctx = { JSON, Math, Number, String, Object, Array, Error, parseInt, parseFloat, isFinite };
   vm.createContext(ctx);
-  vm.runInContext(['AGENT_VALUE_SOURCES', 'AGENT_VALUE_NOTICE_KINDS', 'AGENT_VALUE_MAX_COMPS', 'AGENT_VALUE_CONF_DOWN'].map(gsVar)
-    .concat(['_avCents', '_avUrlKey', '_avLineResult'].map(gsFn)).join('\n'), ctx);
+  vm.runInContext(['AGENT_VALUE_SOURCES', 'AGENT_VALUE_NOTICE_KINDS', 'AGENT_VALUE_MAX_COMPS', 'AGENT_VALUE_CONF_DOWN', 'AGENT_VALUE_RESULTS_SEGMENTS', 'AGENT_VALUE_RESULTS_PARAMS', 'AGENT_VALUE_NO_PRICE_RE', 'AGENT_VALUE_TEXT_MAX'].map(gsVar)
+    .concat(['_avCents', '_avUrlKey', '_avResultsPage', '_avClip', '_avLineResult'].map(gsFn)).join('\n'), ctx);
   return ctx;
 }
 function backend() {
@@ -80,12 +80,12 @@ function app(refs, over) {
   // The clock moves a millisecond on every read, as a real one moves between writes, so one stamp per answer is measured.
   class D extends Date { static now() { return clock++; } }
   const ctx = sandbox({
-    fns: ['agentListedOff', 'agentNameableRefs', 'agentShotGroups', '_agDetailRefs', '_agShotPayload', '_agContext', '_agWrite',
-      'agentApplyResult', '_agState', '_agSendNext', 'invSplitItemN', '_getPhotoRef', '_setPhotoRef', '_jobInvRefs', '_invFileId', '_photoUid',
+    fns: ['agentListedOff', 'agentNameableRefs', 'agentShotGroups', '_agDetailRefs', '_agShotPayload', '_agContext', '_agWrite', '_invCondIsAgents', '_invAgentCondition',
+      'agentApplyResult', '_agState', '_agSendNext', 'invSplitItemN', '_invSplitSource', '_getPhotoRef', '_setPhotoRef', '_jobInvRefs', '_invFileId', '_photoUid',
       '_invPhotoSource', '_invRoomName', 'agentNamedTwice', 'agentDuplicateGroups', '_agDupEligible', '_arDupEligible', '_agNameKey',
       '_agDupIndex', '_agDupHtml', '_agDupHandle', '_agDupUnhandle', 'agentDropDuplicate', 'agentNotDuplicate', '_invItemNo',
       'savePhotoRefs', 'collectionLineWithPhoto'],
-    vars: ['_agRun', 'AGENT_MAX_DETAILS', 'AGENT_LISTED_MAX', 'AGENT_BATCH', 'AGENT_PASS_GAP_MS', 'AGENT_ROOM_CONF_RANK', 'AGENT_ROOM_CONF_WORDS',
+    vars: ['_agRun', 'AGENT_CONDITIONS', 'AGENT_MAX_DETAILS', 'AGENT_LISTED_MAX', 'AGENT_BATCH', 'AGENT_PASS_GAP_MS', 'AGENT_ROOM_CONF_RANK', 'AGENT_ROOM_CONF_WORDS',
       'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY', 'INV_SPLIT_MAX', '_photoUidSeq'],
     stubs: Object.assign({
       Date: D,
@@ -243,7 +243,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // 2026-10-26: wherever a photograph is sent (a research line, or an ordinary lot whose name is a guess), else ordinary.
     has(sys, 'Read it from the photograph wherever one is sent, assume ordinary used condition on a lot sent as text alone', 'read off the photograph, or ordinary');
     lacks(sys, 'Adjust for the condition recorded on the line.', 'the old sentence that read a blank as a gap is gone');
-    has(sys, 'A notice is for something a person must DO about the line. Most lines need none; never give a line more than one.', '⚠⚠ one notice at most, most lines none');
+    has(sys, 'A notice is for something a person must DO about the line', 'a notice is for something to do (restated 2026-10-26b: it is asked short now)');
+    has(sys, 'Most lines need none; never give a line more than one.', '⚠⚠ one notice at most, most lines none');
     has(sys, 'Never raise a notice about the name (correct it instead), because the condition is not recorded, because a count is approximate, because your search ran out or found no sold comparable, or to suggest a WorthPoint check',
       '⚠⚠ the notes the Ellison kitchen was full of are named and barred');
     lacks(sys, 'kind "worthpoint"', 'no WorthPoint notice kind in the prompt');
@@ -260,9 +261,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       objectName: 'Hand-painted majolica dinner plates, likely Italian', namedBy: 'agent' }, over || {});
     const RESV = (over) => Object.assign({ fmv: 75, low: 40, high: 120, confidence: 'low', source: 'Online comps', basis: 'No sold comparable',
       comps: [], lookup: 'Spanish bird plate', notices: [], mode: 'comps', name: 'Hand-painted tin-glazed plates, yellow bird pattern, likely Spanish' }, over || {});
-    const W = (refs) => sandbox({ fns: ['_avWrite', '_avRename', '_agNameKey', '_avHasFigure', '_invHasValue', 'agentValueInternal', '_avValDate', '_avComp',
-      'agentValueStale', '_getPhotoRef', '_setPhotoRef', 'roundCents', 'estateValueDate', '_avdDate', '_ymdLocal', '_todayStr', '_avNameIsAgents'],
-      vars: ['AGENT_VALUE_MAX_COMPS', 'AGENT_VALUE_CONFS', 'AGENT_VALUE_SOURCES', 'AGENT_VALUE_SALE_DATE_RE'],
+    const W = (refs) => sandbox({ fns: ['_avWrite', 'agentValueWhole', 'invLineQty', '_avRename', '_agNameKey', '_avHasFigure', '_invHasValue', 'agentValueInternal', '_avValDate', '_avComp',
+      'agentValueStale', '_getPhotoRef', '_setPhotoRef', 'roundCents', 'estateValueDate', '_avdDate', '_ymdLocal', '_todayStr', '_avNameIsAgents', '_invCondIsAgents', '_invAgentCondition'],
+      vars: ['AGENT_CONDITIONS', 'AGENT_VALUE_MAX_COMPS', 'AGENT_VALUE_CONFS', 'AGENT_VALUE_SOURCES', 'AGENT_VALUE_SALE_DATE_RE'],
       stubs: { _photoRefs: { 7: refs }, _invTouch: (r) => r, invFiduciaryMode: () => true, docTierProduces: () => true } });
     const job = { id: 7, svc: 'cleanout', docTier: 'values', deathDate: '2026-08-14' };
     let A = W([R()]);

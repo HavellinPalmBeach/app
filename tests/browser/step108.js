@@ -111,7 +111,8 @@ const jpeg = Buffer.from('/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP////////////////////
         Object.assign({ stableId: 'emp', itemNo: 1, objectName: '', agentAt: T + 5000, agentConf: 'none', updatedAt: T + 5000 }, photo('1', 'FID_EMP', 1)),
         Object.assign({ stableId: 'pl', itemNo: 2, objectName: 'Hand-painted plates, yellow bird pattern, likely Italian', qty: 8, agentBasis: 'glaze and pattern; nothing legible' }, photo('2', 'FID_PL', 2), agent('medium', 2)),
         Object.assign({ stableId: 'lamp', itemNo: 3, objectName: 'Brass table lamp', qty: 1, agentBasis: 'form only' }, photo('3', 'FID_LA', 3), agent('low', 3, 'Antiques')),
-        Object.assign({ stableId: 'fw', itemNo: 4, objectName: 'Everyday stainless flatware', qty: 60 }, photo('4', 'FID_FW', 4), agent('high', 4)),
+        // Graded by Agent One (2026-10-26b), so it travels as text: a line nobody has graded goes with its photograph.
+        Object.assign({ stableId: 'fw', itemNo: 4, objectName: 'Everyday stainless flatware', qty: 60, condition: 'Good', condBy: 'agent' }, photo('4', 'FID_FW', 4), agent('high', 4)),
         // C2 (on review): one photograph, two lines; Agent One's Look at this sits on the photograph's own line. Valued by the desk, so
         // Agent Two leaves both alone.
         Object.assign({ stableId: 'co', itemNo: 5, objectName: 'Wool coats', qty: 6, fmv: 60, valuedBy: 'desk', valSource: 'Online comps',
@@ -211,7 +212,8 @@ const jpeg = Buffer.from('/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP////////////////////
       const it = ((net.value[net.value.length - 1] || {}).items || [])[0] || {};
       eq([it.stableId, it.mode], ['fw', 'comps'], 'for the flatware, researched');
       ok((it.details || []).some((d) => d.fileId === 'cu1'), '⚠ with the close-up just added');
-      eq((await line('fw')).fmv, 75, 'its new figure on the line');
+      // Restated 2026-10-26b, whole dollars each (agentValueWhole): $75 for sixty is $1.25 each, so $1 each, $60.
+      eq((await line('fw')).fmv, 60, 'its new figure on the line, in whole dollars each');
       eq(await overflow(), 0, 'no horizontal overflow at 1440');
       await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(600);
       eq(await overflow(), 0, 'no horizontal overflow at 390');

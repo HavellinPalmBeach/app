@@ -46,7 +46,7 @@ function rig(refs, over) {
   const saved = [];
   const synced = [];
   const ctx = sandbox({
-    fns: ['invSplitItem', 'invSplitItemN', 'invSplitItemClick', '_invDerivedRefs', '_invPhotoSource',
+    fns: ['invSplitItem', 'invSplitItemN', '_invSplitSource', 'invSplitItemClick', '_invDerivedRefs', '_invPhotoSource',
           '_invPhotoSiblings', '_getPhotoRef', '_setPhotoRef', '_slotRefs', '_jobInvRefs',
           '_invFileId', '_photoUid', '_invNamed', '_invItemNo', '_invAssignItemNos'],
     vars: ['_photoUidSeq', 'INV_DEFAULT_CATEGORY', 'INV_SPLIT_MAX'],
@@ -282,7 +282,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠ THE RENDERED ROW SAYS HOW MANY OBJECTS SHARE THE FRAME');
   {
     const rowCtx = sandbox({
-      fns: ['invLineReviewed', '_renderInvRow', '_invRowPhotoHtml', '_invRowHasWho', 'invOutForAppraisal', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', 'invPickupRecord', 'signedRecordsOf', '_invRowDomId', '_invRecipientInput', 'invPlanChannel', '_renderInvPanel', 'invCloseUpRefusal', '_invCloseUpsHtml', '_invCloseUpTileHtml', '_agRecordNoticesHtml', '_avPanelHtml', '_avNoticeLabel', '_avNoticeKinds', '_invDetailRefs', '_invPhotoSiblings', 'invAppraisalSourceText', 'invLineAppraiser', '_invLinkedAppraiser', 'invAppraised', 'invAppraisalInProgress', '_invHasAppraisal', '_invHasValue', '_invPanelAppraisalHtml',
+      fns: ['invLineReviewed', '_renderInvRow', '_invRowPhotoHtml', '_invPhotoOpenHtml', '_invRowHasWho', 'invOutForAppraisal', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', 'invPickupRecord', 'signedRecordsOf', '_invRowDomId', '_invRecipientInput', 'invPlanChannel', '_renderInvPanel', 'invCloseUpRefusal', '_invCloseUpsHtml', '_invCloseUpTileHtml', '_agRecordNoticesHtml', '_avPanelHtml', '_avNoticeLabel', '_avNoticeKinds', '_invDetailRefs', '_invPhotoSiblings', 'invAppraisalSourceText', 'invLineAppraiser', '_invLinkedAppraiser', 'invAppraised', 'invAppraisalInProgress', '_invHasAppraisal', '_invHasValue', '_invPanelAppraisalHtml',
             '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef', '_invNamed', '_invItemNo',
             // P16: the row names a firearm's dealer route and the panel carries the firearm block.
             'invDealerRouteOffered', 'invDealerRoute', 'invDealerRouteText', '_invFirearmPanelHtml',
@@ -316,7 +316,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // The converse, or the cue is noise on every ordinary row in the manifest.
     const loneCtx = sandbox({
-      fns: ['invLineReviewed', '_renderInvRow', '_invRowPhotoHtml', '_invRowHasWho', 'invOutForAppraisal', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', 'invPickupRecord', 'signedRecordsOf', '_invRowDomId', '_invRecipientInput', 'invPlanChannel', '_invDetailRefs', '_invPhotoSiblings', '_invPhotoSource', 'invAppraisalSourceText', 'invLineAppraiser', '_invLinkedAppraiser', 'invAppraised', 'invAppraisalInProgress', '_invHasAppraisal', '_invHasValue',
+      fns: ['invLineReviewed', '_renderInvRow', '_invRowPhotoHtml', '_invPhotoOpenHtml', '_invRowHasWho', 'invOutForAppraisal', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', 'invPickupRecord', 'signedRecordsOf', '_invRowDomId', '_invRecipientInput', 'invPlanChannel', '_invDetailRefs', '_invPhotoSiblings', '_invPhotoSource', 'invAppraisalSourceText', 'invLineAppraiser', '_invLinkedAppraiser', 'invAppraised', 'invAppraisalInProgress', '_invHasAppraisal', '_invHasValue',
             '_invDerivedRefs', '_getPhotoRef', '_invItemNo', 'invDealerRouteOffered', 'invDealerRoute', 'invDealerRouteText',
             'invBequestFor', 'jobListEntries', 'invApprovalGap', 'invReceiptOwed', '_invBenListAttr',
             // P20: the row says a ratification is owed apart from an incomplete approval, and flags a living client's line going to one of ours.

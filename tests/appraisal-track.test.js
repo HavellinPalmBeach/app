@@ -372,7 +372,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                    driveFileUrl: 'https://drive.google.com/file/d/FID/view', driveFileId: 'FID', status: 'uploaded',
                    objectName: 'Porcelain figures', category: 'General/Household', needsAppr: true, sourceCollId: 'c2' };
     const s = sandbox({
-      fns: ['invSplitItemN', 'collectionPieceOf', 'collectionOf', '_collDispToInv', '_collDispNeedsAppr',
+      fns: ['invSplitItemN', '_invSplitSource', 'collectionPieceOf', 'collectionOf', '_collDispToInv', '_collDispNeedsAppr',
             '_getPhotoRef', '_setPhotoRef', '_invPhotoSource', '_invFileId', '_photoUid'],
       vars: ['INV_SPLIT_MAX', 'INV_DEFAULT_CATEGORY', '_photoUidSeq'],
       stubs: {

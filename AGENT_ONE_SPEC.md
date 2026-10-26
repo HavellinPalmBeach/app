@@ -158,6 +158,14 @@ job."*
   goes quiet once every line off its photograph is reviewed; a row named on the desk while a run is out is left alone, and
   then nothing from that answer is written by position onto the photograph's other rows (on review, 2026-10-26): they stay
   blank, one blank row is added where none is left and the answer saw more, and Name N shots asks again with what is listed.
+- **Condition (2026-10-26b, Apps Script `2026-10-26b`):** Anthony: *"why doesn't it just grade that excellent condition or
+  why can't it see that my couch doesn't have any tears or rips in it"*; he took *"Agents grade it"*. §2's "writes the name,
+  the category and the count and nothing else" gains the condition: where the app sends its grades (`AGENT_CONDITIONS`:
+  Excellent, Good, Fair, Poor; Salvage is a person's call), `record_contents` carries a required `condition`, one of them or
+  empty, and the prompt's CONDITION section says what each means (`AGENT_CONDITION_TEXT`, shared with Agent Two) and to
+  leave it empty where the photograph cannot show it. `_agWrite` writes it through `_invAgentCondition`, only over a blank or
+  its own unreviewed grade (`_invCondIsAgents`; a person's grade is `condBy` desk). A scratch or stain seen goes in the grade,
+  never the name. `testAgentIdentify()` prints each grade.
 - The confirming is Havellin's job and the app already carries the state for it: `namedBy:'agent'`
   plus `reviewed:false` plus the *IN PROGRESS — N of M items reviewed* stamp on every client
   document. An attribution nobody has confirmed is visibly unconfirmed.

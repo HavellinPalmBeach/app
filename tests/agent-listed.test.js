@@ -72,10 +72,10 @@ const S = () => Object.assign({ stableId: 's', itemNo: 81, derivedFrom: 'p', obj
 const BLANK = (id, n) => Object.assign({ stableId: id, itemNo: n, derivedFrom: 'p', objectName: '', category: 'General/Household', updatedAt: 700 }, PHOTO);
 function app(refs) {
   return sandbox({
-    fns: ['agentListedOff', 'agentNameableRefs', 'agentShotGroups', '_agDetailRefs', '_agShotPayload', '_agContext', '_agWrite',
-      'agentApplyResult', '_agState', 'invSplitItemN', '_getPhotoRef', '_setPhotoRef', '_jobInvRefs', '_invFileId', '_photoUid',
+    fns: ['agentListedOff', 'agentNameableRefs', 'agentShotGroups', '_agDetailRefs', '_agShotPayload', '_agContext', '_agWrite', '_invCondIsAgents', '_invAgentCondition',
+      'agentApplyResult', '_agState', 'invSplitItemN', '_invSplitSource', '_getPhotoRef', '_setPhotoRef', '_jobInvRefs', '_invFileId', '_photoUid',
       '_invPhotoSource', '_invRoomName'],
-    vars: ['_agRun', 'AGENT_MAX_DETAILS', 'AGENT_LISTED_MAX', 'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY', 'INV_SPLIT_MAX', '_photoUidSeq'],
+    vars: ['_agRun', 'AGENT_CONDITIONS', 'AGENT_MAX_DETAILS', 'AGENT_LISTED_MAX', 'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY', 'INV_SPLIT_MAX', '_photoUidSeq'],
     stubs: {
       jobs: [{ id: 7, hvlId: 'HVL-0009', svc: 'cleanout' }], _photoRefs: { 7: refs },
       estimateStore: { 7: { estimate: { rooms: [{ idx: 2, name: 'Kitchen', note: '' }] } } },

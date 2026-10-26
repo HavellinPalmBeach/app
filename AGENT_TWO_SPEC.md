@@ -326,6 +326,10 @@ and browser step 69.
 - **The URL guard (§4b)** reads links out of every tool *result* block (search results, fetched pages, and what the dynamic
   filter's code printed), never the model's own blocks (a fetch request carries a URL the model chose). A drop costs a level
   of confidence; research with no sold comparable left is `low`. An ordinary lot is not held to the sold rule.
+  Since `2026-10-26b` a comparable is also one item's own page with the price that page shows (the first live
+  `testAgentValue()` cited an eBay search page and a LiveAuctioneers price-results page whose price it had not seen):
+  `_avResultsPage` and `AGENT_VALUE_NO_PRICE_RE` leave the rest out (`unfit`, no confidence lost, since a tool returned
+  the page), so it never earns comps; the prompt's EVIDENCE rule and the `comps` field are the first net.
 - **Refusal fallback.** `fallbacks: 'default'` with its beta header, per Anthropic's guidance for this model; a 400 that names
   the field is sent once more without it. `pause_turn` is continued twice at most; a request still paused is failed as
   unfinished.
@@ -459,3 +463,14 @@ and browser step 69.
     (unless a person or an appraisal owns it), and `collectionUseLine` carries it only when owned, so Agent Two values the
     collection and an appraiser's figure replaces Agent Two's when it lands (Anthony: *"a flagged collection will almost
     certainly go to an appraiser or specialty buyer … Good to know the value going in"*).
+- **Anthony at the desk (2026-10-26b, Apps Script `2026-10-26b`):** off a client the earlier agents had valued.
+  **Whole dollars each** (*"Do we say $10 or do we say $12?"*; he took *"Whole dollars each"*): `_avWrite` writes the figure
+  and both ends of its range through `agentValueWhole(x, qty)`, one article's share to the nearest dollar times the count
+  ($75 for seven plates is $11 each, $77), under a dollar each in cents; a typed figure stays as typed. (Between $1 and $10
+  each the rounding can move a group a long way, sixty forks at $1.25 becoming $60: put to him, not yet answered.)
+  **Condition** (*"Agents grade it"*): `record_values` carries `condition` where the app sends its grades; the server keeps it
+  only for a line whose photograph the request carried (`unit.saw`), and `_avItemPayload` sends a line nobody has graded with
+  its photograph (`agentValueGradesCondition`), still an ordinary lot. **Re-value across a selection** (`invBulkRevalue`, *"Re-value
+  on the bulk bar"*): the record's rule, each line at its own depth. **A comparable is one item's own page with its price**
+  (above, §4b). **A note ends on a whole sentence** (`_avClip`): one had stopped at *Check whether this is*; a note is asked
+  for in under forty words.

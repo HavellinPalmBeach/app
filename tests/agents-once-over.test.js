@@ -116,7 +116,7 @@ function sr(e) {
     catch(h) { try { return sp(h(e)); } catch (e2) { return sr(e2); } }, finally(f) { if (f) f(); return this; } };
 }
 const AV_FNS = ['agentValueMode', 'agentValueInternal', '_avHasFigure', 'agentValueableRefs', 'agentValueUnreviewed',
-  'agentValueStale', 'agentValueSpecialistWorth', '_avValDate', '_avContext', '_avItemPayload', '_avComp', '_avWrite', '_avRename', '_avNameIsAgents',
+  'agentValueStale', 'agentValueSpecialistWorth', '_avValDate', '_avContext', '_avItemPayload', 'agentValueGradesCondition', '_avComp', '_avWrite', 'agentValueWhole', '_avRename', '_avNameIsAgents',
   '_avNoteFailure', 'agentValueApply', '_avTakeValue', '_avStampReviewed', '_invStampBy', 'deviceUser', '_avStart',
   '_avSendNext', '_avFinish', '_avRepaint', '_avStateHtml', '_avState', 'agentValueAuto', 'agentValueAfterRename', 'agentValueAfterCloseUp', 'agentValueRun',
   'agentValueNotices', '_avNoticesHtml', '_avNoticeKinds', '_avNoticeLabel', '_deskShowBtnHtml', '_avSummary', '_avRowBadges', '_avPanelHtml', 'agentValueAgain',
@@ -127,8 +127,8 @@ const AV_FNS = ['agentValueMode', 'agentValueInternal', '_avHasFigure', 'agentVa
   '_avdDate', '_ymdLocal', 'resolveValBasis', '_agNameKey', '_agDetailRefs', 'invLineCloseUps', '_invFileId', 'invAppraisalThreshold',
   'gateDispute', '_gateYes', 'invNeedsAppraisal', 'fmt', '_invMoney', '_invNamed', '_invItemNo', '_andJoin',
   'moneyToNumber', '_readAppsScriptJson', '_invJob', '_invRenderWhenIdle', '_invHasPhoto', 'agentValueLooks', '_avPhotoContext', '_invPhotoSource',
-  '_invRoomName', 'agentListedOff', '_invDerivedRefs', '_invPhotoSiblings'];
-const AV_VARS = ['_avRun', '_avForceComps', '_avAfter', '_avAutoAgain', 'AGENT_VALUE_BATCH', 'AGENT_VALUE_GENERAL_CEILING', 'AGENT_VALUE_MAX_COMPS',
+  '_invRoomName', 'agentListedOff', '_invDerivedRefs', '_invPhotoSiblings', '_invCondIsAgents', '_invAgentCondition'];
+const AV_VARS = ['_avRun', 'AGENT_CONDITIONS', '_avForceComps', '_avAfter', '_avAutoAgain', 'AGENT_VALUE_BATCH', 'AGENT_VALUE_GENERAL_CEILING', 'AGENT_VALUE_MAX_COMPS',
   'AGENT_VALUE_MARK_RE', 'AGENT_VALUE_NO_MARK_RE', 'AGENT_VALUE_READ_RE', 'AGENT_VALUE_HEDGE_RE', 'AGENT_VALUE_CONFS', 'AGENT_VALUE_SOURCES', 'AGENT_VALUE_OWN',
   'AGENT_VALUE_SALE_DATE_RE', 'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
   'DECEDENT_SERVICES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'AGENT_MAX_DETAILS', 'INV_VAL_SOURCES', 'AGENT_LISTED_MAX'];
@@ -457,12 +457,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(g.logs.join('\n'), 'answered in', 'and it prints the seconds and the model');
   }
 
-  group('P5 · the deployment: 2026-10-26, the app relies on it, and the banner leads with its gap');
+  // Restated 2026-10-26b (agent-value.test.js S3c): the comparable rule leads the banner; this build's gap is named by its vintage.
+  group('P5 · the deployment: at least 2026-10-26, the app relies on it, and the banner names its gap');
   {
-    eq(gsAll().BACKEND_VERSION, '2026-10-26', 'main-sync.gs is 2026-10-26');
+    ok(gsAll().BACKEND_VERSION >= '2026-10-26', 'main-sync.gs is 2026-10-26 or later');
     const app = sandbox({ vars: ['BACKEND_MIN_VERSION', 'BACKEND_FEATURE_COST'] });
-    eq(app.BACKEND_MIN_VERSION, '2026-10-26', 'and the app relies on it');
-    ok(/^the agents never move to a newer model by themselves/.test(app.BACKEND_FEATURE_COST.version), 'the banner names the newest gap first, by consequence');
+    ok(app.BACKEND_MIN_VERSION >= '2026-10-26', 'and the app relies on it');
+    has(app.BACKEND_FEATURE_COST.version, 'on a deployment older than 2026-10-26, the agents never move to a newer model by themselves', 'the banner names this build\'s gap, by consequence and vintage');
     has(app.BACKEND_FEATURE_COST.version, 'on a deployment older than 2026-10-25b, a name you type or review on the desk', 'and 2026-10-25b\'s after it, by its vintage');
     lacks(GS, "var AGENT_MODEL ", 'no model constant of its own per agent any more');
     lacks(GS, 'AGENT_VALUE_FALLBACK_BETA', 'one refusal-fallback constant for the three calls');
@@ -485,8 +486,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const refs = [ROW({ stableId: 'p', objectName: '', namedBy: undefined, agentNotices: [{ kind: 'firearm', text: 'long gun case behind the coats' }] }),
                   ROW({ stableId: 'q', objectName: '', namedBy: undefined, derivedFrom: 'p' })];
     // invSplitItemN is stubbed, never lifted (a lifted function overrides the stub): a split here is the defect.
-    const S = sandbox({ fns: ['agentApplyResult', '_agWrite', '_agState', '_getPhotoRef', '_setPhotoRef', '_agNameKey'],
-      vars: ['_agRun', 'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY'],
+    const S = sandbox({ fns: ['agentApplyResult', '_agWrite', '_invCondIsAgents', '_invAgentCondition', '_agState', '_getPhotoRef', '_setPhotoRef', '_agNameKey'],
+      vars: ['_agRun', 'AGENT_CONDITIONS', 'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY'],
       stubs: { _photoRefs: { 7: refs }, _invTouch: (r) => r, invSplitItemN: () => { throw new Error('must not split'); } } });
     S._getPhotoRef(7, 'q').objectName = 'Grey strongbox';   // typed on the desk while the run was out
     S._getPhotoRef(7, 'q').namedBy = 'desk';
@@ -508,8 +509,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠ A2b · on review: the only row named by hand while the run was out, and the answer saw more: one blank row for Name shots to ask again');
   {
     const minted = [];
-    const S = sandbox({ fns: ['agentApplyResult', '_agWrite', '_agState', '_getPhotoRef', '_setPhotoRef', '_agNameKey', '_agStateHtml', '_agFailureKind'],
-      vars: ['_agRun', 'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY'],
+    const S = sandbox({ fns: ['agentApplyResult', '_agWrite', '_invCondIsAgents', '_invAgentCondition', '_agState', '_getPhotoRef', '_setPhotoRef', '_agNameKey', '_agStateHtml', '_agFailureKind'],
+      vars: ['_agRun', 'AGENT_CONDITIONS', 'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY'],
       stubs: { _photoRefs: { 7: [ROW({ stableId: 'p', objectName: 'Silver tea service', namedBy: 'desk' })] }, _invTouch: (r) => r, esc: (x) => String(x),
         invSplitItemN: (j, src, n) => { const r = ROW({ stableId: 'n' + minted.length, objectName: '', namedBy: undefined, derivedFrom: src }); minted.push([src, n]); return [r]; } } });
     S.agentApplyResult(7, { srcId: 'p', rows: ['p'] }, { objects: [{ name: 'Silver tea service', category: 'Silver & Precious Metal', qty: 1, confidence: 'high', basis: 'x' },
@@ -517,7 +518,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq([S._getPhotoRef(7, 'p').objectName, minted], ['Silver tea service', [['p', 1]]], '⚠ the typed name stands; one blank row is added off the photograph, nothing written by position');
     S._agState(7).total = 1;   // the run sent one photograph
     has(S._agStateHtml(7), '1 left alone: named on the desk meanwhile (press Name shots for what else that photograph shows)', '⚠ the work bar says a row was left alone, and what to press');
-    const T = sandbox({ fns: ['agentApplyResult', '_agWrite', '_agState', '_getPhotoRef', '_setPhotoRef', '_agNameKey'], vars: ['_agRun', 'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY'],
+    const T = sandbox({ fns: ['agentApplyResult', '_agWrite', '_invCondIsAgents', '_invAgentCondition', '_agState', '_getPhotoRef', '_setPhotoRef', '_agNameKey'], vars: ['_agRun', 'AGENT_CONDITIONS', 'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY'],
       stubs: { _photoRefs: { 7: [ROW({ stableId: 'p', objectName: 'Silver tea service', namedBy: 'desk' })] }, _invTouch: (r) => r, invSplitItemN: () => { throw new Error('must not split'); } } });
     let threw = '';
     try { T.agentApplyResult(7, { srcId: 'p', rows: ['p'] }, { objects: [{ name: 'Tea service', category: 'General/Household', qty: 1, confidence: 'high', basis: 'x' }], notices: [] }); }
@@ -559,8 +560,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const refs = [ROW({ stableId: 'p', objectName: 'Coffee table, appears to be walnut', fieldNote: 'the table is Crate & Barrel', agentBasis: 'form' }),
       ROW({ stableId: 'q', objectName: 'Wool rug, likely Persian', derivedFrom: 'p', agentBasis: 'pattern' }),
-      ROW({ stableId: 'r', objectName: 'Restoration Hardware wall mirror', namedBy: 'desk', agentBasis: 'wood frame, no visible maker\'s mark', reviewed: true }),
-      ROW({ stableId: 't', objectName: 'Everyday stainless flatware', agentConf: 'high' })];
+      // Graded, so they travel as text (2026-10-26b: a line nobody has graded goes with its photograph, checked below).
+      ROW({ stableId: 'r', objectName: 'Restoration Hardware wall mirror', namedBy: 'desk', agentBasis: 'wood frame, no visible maker\'s mark', reviewed: true, condition: 'Good', condBy: 'desk' }),
+      ROW({ stableId: 't', objectName: 'Everyday stainless flatware', agentConf: 'high', condition: 'Good', condBy: 'agent' }),
+      ROW({ stableId: 'u', objectName: 'Everyday stainless flatware', agentConf: 'high' })];
     const R = rig(ESTATE(), refs);
     const p = R.ctx._avItemPayload(7, R.ctx._getPhotoRef(7, 'q'));
     eq([p.mode, p.fileId], ['general', 'FID'], '⚠⚠ an ordinary lot whose name is a hedged guess rides with its photograph');
@@ -572,7 +575,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq([own.fieldNote, own.photoNote], ['', 'the table is Crate & Barrel'], 'on the photograph\'s own line the shared note travels once, as the photograph\'s');
     const typed = R.ctx._avItemPayload(7, R.ctx._getPhotoRef(7, 'r'));
     eq([typed.nameChecked, typed.agentBasis, typed.fileId], [true, '', ''], '⚠ a name a person typed: marked, without Agent One\'s reasons, never "a guess"');
-    eq(R.ctx._avItemPayload(7, R.ctx._getPhotoRef(7, 't')).fileId, '', 'a sure everyday name travels as text, as before');
+    eq(R.ctx._avItemPayload(7, R.ctx._getPhotoRef(7, 't')).fileId, '', 'a sure everyday name already graded travels as text, as before');
+    eq(R.ctx._avItemPayload(7, R.ctx._getPhotoRef(7, 'u')).fileId, 'FID', '⚠ one nobody has graded goes with its photograph, so Agent Two can grade it (2026-10-26b)');
     eq(R.ctx._avContext(ESTATE()).categories, R.ctx.INV_CATEGORIES, 'the category list rides the context');
   }
 
@@ -799,6 +803,143 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        '⚠ queued for Agent Two before the notes repaint, so they read "Agent Two is valuing it again", never "Re-value it"');
     has(E.ctx.document.getElementById('inv-value-notices').innerHTML, 'Agent Two is valuing it again for the new name',
         '⚠⚠ Agent Two\'s notes, repainted by the edit itself, say it is being valued again');
+  }
+
+  // ═══════════════════ 2026-10-26b · ANTHONY AT THE DESK, THE SAME DAY ═══════════════════
+  group('⚠⚠ B1 · condition off the photograph (Anthony: "Agents grade it"): one list, one ownership rule');
+  {
+    const S = sandbox({ fns: ['_invCondIsAgents', '_invAgentCondition'], vars: ['AGENT_CONDITIONS', 'INV_CONDITIONS'] });
+    eq(S.AGENT_CONDITIONS.filter((c) => S.INV_CONDITIONS.indexOf(c) < 0), [], 'every grade an agent may give is one the desk offers');
+    eq(S.AGENT_CONDITIONS.indexOf('Salvage'), -1, 'Salvage is a person\'s call');
+    const own = (r) => S._invCondIsAgents(r);
+    eq([own({}), own({ condition: 'Good', condBy: 'agent' }), own({ condition: 'Good', condBy: 'agent', reviewed: true }),
+        own({ condition: 'Fair', condBy: 'desk' }), own({ condition: '', condBy: 'desk' }), own({ condition: 'Good' })],
+       [true, true, false, false, false, false],
+       '⚠ a blank or an unreviewed agent grade is the agents\'; a person\'s (even cleared), a reviewed one or one nobody marked stands');
+    const r = {};
+    eq([S._invAgentCondition(r, 'Good'), r.condition, r.condBy], [true, 'Good', 'agent'], 'a grade is written and marked the agent\'s');
+    const d = { condition: 'Fair', condBy: 'desk' };
+    eq([S._invAgentCondition(d, 'Excellent'), d.condition], [false, 'Fair'], 'never over a person\'s');
+    const x = {};
+    eq([S._invAgentCondition(x, 'Salvage'), S._invAgentCondition(x, ''), S._invAgentCondition(x, 'Mint'), x.condition], [false, false, false, undefined],
+       'nothing off the list, and an empty grade writes nothing');
+    has(fn('_invEdit'), "if (key === 'condition') ref.condBy = 'desk';", 'a grade a person sets on the record is theirs');
+    has(fn('_invBulkApply'), "if (key === 'condition') ref.condBy = 'desk';", 'and one set across a selection');
+    has(fn('savePhotoRefs'), 'condBy:r.condBy,', 'and the manifest keeps who graded it (a key off the save list is dropped on every save)');
+  }
+
+  group('B2 · Agent One grades as it names; never over a grade a person set');
+  {
+    const S = sandbox({ fns: ['_agWrite', '_invCondIsAgents', '_invAgentCondition', '_getPhotoRef', '_setPhotoRef'],
+      vars: ['AGENT_CONDITIONS', 'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY'],
+      stubs: { _photoRefs: { 7: [{ stableId: 'a', label: 'inventory' }, { stableId: 'b', label: 'inventory', condition: 'Poor', condBy: 'desk' }] },
+        _invTouch: (r) => r } });
+    let err = '';
+    try {
+      S._agWrite(7, 'a', { name: 'Glossy frameless photographic print, beach scene', category: 'General/Household', qty: 1, confidence: 'medium', basis: 'b', condition: 'Excellent' });
+      S._agWrite(7, 'b', { name: 'Upholstered sofa', category: 'Furniture', qty: 1, confidence: 'high', basis: 'b', condition: 'Good' });
+    } catch (e) { err = String(e && e.message || e); }
+    eq(err, '', 'the answers are written');
+    const a = S._getPhotoRef(7, 'a') || {};
+    eq([a.condition, a.condBy], ['Excellent', 'agent'], '⚠ the foyer\'s beach print, graded off its photograph as it is named');
+    eq((S._getPhotoRef(7, 'b') || {}).condition, 'Poor', 'a grade a person set stands');
+    has(fn('_agContext'), 'conditions: AGENT_CONDITIONS', 'Agent One is sent the grades');
+  }
+
+  group('B3 · Agent Two grades under the same rule; a line nobody has graded travels with its photograph');
+  {
+    const job = ESTATE();
+    const R = rig(job, [ROW({ stableId: 'g' }), ROW({ stableId: 'h', condition: 'Good', condBy: 'desk' }),
+      ROW({ stableId: 'k', condition: 'Good', condBy: 'agent', reviewed: true })]);
+    ['g', 'h', 'k'].forEach((id) => R.ctx._avWrite(7, id, RES({ condition: id === 'g' ? 'Fair' : 'Poor' }), job));
+    eq(['g', 'h', 'k'].map((id) => R.ctx._getPhotoRef(7, id).condition), ['Fair', 'Good', 'Good'], '⚠ written over a blank; a person\'s and a reviewed grade stand');
+    eq(R.ctx._avContext(job).conditions, ['Excellent', 'Good', 'Fair', 'Poor'], 'Agent Two is sent the grades');
+    eq(R.ctx.agentValueGradesCondition(ROW({ condition: '' })), true, 'an ungraded photographed line is sent with its photograph');
+    eq([R.ctx.agentValueGradesCondition(ROW({ condition: 'Good', condBy: 'agent' })), R.ctx.agentValueGradesCondition(ROW({ driveFileId: '', filename: '', driveFileUrl: '' }))],
+       [false, false], 'one already graded, or with no photograph, is not');
+  }
+
+  group('⚠⚠ B4 · the backend: a grade is a field only when the app sends the grades, and Agent Two\'s is kept only off a photograph the request carried');
+  {
+    const g = gsAll();
+    const conds = ['Excellent', 'Good', 'Fair', 'Poor'];
+    const t1 = g._agTool(CATS, conds).input_schema.properties.objects.items;
+    eq([t1.properties.condition && t1.properties.condition.enum, t1.required.indexOf('condition') >= 0], [conds.concat(['']), true], 'Agent One: one of the grades, or empty');
+    eq(g._agTool(CATS).input_schema.properties.objects.items.properties.condition, undefined, 'no grades sent, no field (an older app)');
+    has(g._agSystem({ categories: CATS, conditions: conds, mustFind: [] }), 'CONDITION\nGrade each line', 'Agent One is told how to grade');
+    lacks(g._agSystem({ categories: CATS, mustFind: [] }), 'CONDITION\n', 'and not without the grades');
+    has(g.AGENT_CONDITION_TEXT, 'leave it empty where it cannot show it', 'empty where the photograph cannot show it');
+    const t2 = g._avTool('general', CATS, conds).input_schema.properties.values.items;
+    eq([t2.properties.condition && t2.properties.condition.enum, t2.required.indexOf('condition') >= 0], [conds.concat(['']), true], 'Agent Two: the same field');
+    has(g._avSystem(Object.assign({}, CTX2, { conditions: conds })), 'Leave it empty on a lot sent as text alone.', 'Agent Two is told where it may grade');
+    const h = gsAll({ reply: () => ({ code: 200, body: ANSWER2([VAL({ line: 'L1', condition: 'Fair' }), VAL({ line: 'L2', condition: 'Good' })]) }) });
+    const out = h.agentValueLines({ context: Object.assign({}, CTX2, { conditions: conds }), items: [LINE({ stableId: 'txt' }), LINE({ stableId: 'pic', fileId: 'FID' })] });
+    const res = (out && out.results) || {};
+    eq([res.txt && res.txt.condition, res.pic && res.pic.condition], ['', 'Good'], '⚠⚠ a lot valued as text never comes back graded; one sent with its photograph does');
+    const h2 = gsAll({ reply: () => ({ code: 200, body: ANSWER2([VAL({ line: 'L1', condition: 'Salvage' })]) }) });
+    const o2 = h2.agentValueLines({ context: Object.assign({}, CTX2, { conditions: conds }), items: [LINE({ stableId: 'pic', fileId: 'FID' })] });
+    eq(o2 && o2.results && o2.results.pic && o2.results.pic.condition, '', 'and only one of the grades it was sent');
+    has(gsFn('testAgentIdentify'), "conditions: ['Excellent', 'Good', 'Fair', 'Poor']", 'the naming probe asks for grades and prints them');
+  }
+
+  group('⚠⚠ B5 · an agent\'s figure reads in whole dollars each (Anthony: "Whole dollars each"): Total = Each × Qty; under a dollar each stays in cents');
+  {
+    const S = sandbox({ fns: ['agentValueWhole', 'roundCents'] });
+    eq([S.agentValueWhole(75, 7), S.agentValueWhole(45, 60), S.agentValueWhole(175.4, 1), S.agentValueWhole(0.5, 1), S.agentValueWhole(640, 8), S.agentValueWhole(0, 3)],
+       [77, 45, 175, 0.5, 640, 0], '⚠ the cabbage-ware plates read $11 × 7 = $77; sixty forks at 75¢ stay $45; a single item to the dollar');
+    ok(isNaN(S.agentValueWhole('', 2)) && isNaN(S.agentValueWhole(null, 2)) && isNaN(S.agentValueWhole(-5, 1)), 'no figure stays no figure, never $0');
+    const job = ESTATE();
+    const R = rig(job, [ROW({ stableId: 'cab', qty: 7 })]);
+    R.ctx._avWrite(7, 'cab', RES({ fmv: 75, low: 45, high: 120 }), job);
+    const c = R.ctx._getPhotoRef(7, 'cab');
+    eq([c.fmv, c.valLow, c.valHigh], [77, 42, 119], 'written whole each, its range with it');
+    lacks(fn('_invEdit'), 'agentValueWhole', 'a figure a person types stays as typed');
+    eq((src.match(/agentValueWhole\(/g) || []).length, 4, 'one definition, read by the one writer for the figure and both ends of its range');
+  }
+
+  group('⚠⚠ B6 · Re-value across a selection (Anthony: "Re-value on the bulk bar"): Agent Two\'s own figures and unvalued lines, each at its own depth');
+  {
+    const job = ESTATE();
+    const rows = [ROW({ stableId: 'ag', valuedBy: 'agent', fmv: 75, valConf: 'low', reviewed: true, valReviewed: true }), ROW({ stableId: 'dk', valuedBy: 'desk', fmv: 900 }),
+      ROW({ stableId: 'ap', valuedBy: 'appraiser', fmv: 4000, valSource: 'Appraisal' }), ROW({ stableId: 'un', objectName: '', namedBy: undefined }),
+      ROW({ stableId: 'nv', objectName: 'Everyday stainless flatware', agentConf: 'high' })];
+    let asked = '';
+    const R = rig(job, rows, { fns: ['invBulkRevalue', '_invPicked'],
+      stubs: { _invPick: { ag: 1, dk: 1, ap: 1, un: 1, nv: 1 }, confirm: (m) => { asked = String(m); return true; } } });
+    let n = null, err = '';
+    try { n = R.ctx.invBulkRevalue(7); } catch (e) { err = String(e && e.message || e); }
+    eq(err, '', 'the press runs');
+    eq(n, 2, 'two lines go');
+    eq(((R.posts[0] && R.posts[0].items) || []).map((i) => i.stableId).sort(), ['ag', 'nv'], '⚠ Agent Two\'s figure and the unvalued named line; never a desk or appraiser figure, never an unnamed line');
+    eq(R.ctx._avForceComps.ag, undefined, 'each at its own depth: nothing forced to research');
+    has(asked, '2 carry a value a person or an appraiser recorded and are left as they are.', 'the confirm names what it leaves');
+    has(asked, '1 has no name yet and is left for Agent One (Name shots).', 'and the unnamed line');
+    has(asked, '1 of them was marked reviewed and comes back unreviewed.', 'and the reviewed line that comes back unreviewed');
+    const busy = rig(job, rows, { fns: ['invBulkRevalue', '_invPicked'], stubs: { _invPick: { ag: 1 } } });
+    busy.ctx._avState(7).running = true;
+    eq(busy.ctx.invBulkRevalue(7), false, 'refused while a run is out');
+    has(busy.alerts[0] || '', 'already valuing', 'saying so');
+    const none = rig(job, rows, { fns: ['invBulkRevalue', '_invPicked'], stubs: { _invPick: { dk: 1 } } });
+    eq(none.ctx.invBulkRevalue(7), false, 'nothing of Agent Two\'s in the selection: nothing sent');
+    has(none.alerts[0] || '', 'Nothing to value again in this selection.', 'saying so');
+    has(fn('_renderInvBulk'), "invBulkRevalue(' + jid + ')", 'the selection bar carries it');
+  }
+
+  group('B7 · every photograph in a record opens its file in Drive; the buttons stay beside the photograph');
+  {
+    const S = sandbox({ fns: ['_invPhotoOpenHtml', '_invCloseUpTileHtml', '_invThumbHTML', '_invFileId'], vars: ['INV_CAT_GLYPH'],
+      stubs: { esc: (x) => String(x == null ? '' : x).replace(/&/g, '&amp;').replace(/"/g, '&quot;') } });
+    const linked = S._invPhotoOpenHtml(7, { stableId: 'a', driveFileUrl: 'https://drive.google.com/file/d/A/view', driveFileId: 'A' }, 240);
+    has(linked, 'href="https://drive.google.com/file/d/A/view" target="_blank" rel="noopener"', 'the photograph opens its file in a new tab');
+    has(linked, '>Open in Drive &#8599;</a>', 'with a small link under it');
+    lacks(S._invPhotoOpenHtml(7, { stableId: 'b' }, 240), '<a ', 'nothing to open on a shot not yet in Drive');
+    has(S._invCloseUpTileHtml(7, { stableId: 'd', driveFileUrl: 'https://drive.google.com/file/d/D/view', driveFileId: 'D', status: 'uploaded' }), 'Open in Drive', '⚠ a close-up opens in Drive too');
+    lacks(S._invCloseUpTileHtml(7, { stableId: 'e', status: 'failed', driveFileUrl: 'https://drive.google.com/file/d/E/view' }), 'Open in Drive', 'never one that failed: Retry is its control');
+    const panel = fn('_renderInvPanel');
+    lacks(panel, 'Open photo in Drive', 'the big button is gone');
+    has(panel, 'flex:1 1 260px;min-width:0', '⚠ the buttons take the room beside the photograph, so a long sentence never drops them under it');
+    has(panel, 'class="inv-rec-sibs" style="flex:1 1 100%', 'the lines a photograph carries wrap inside that column');
+    has(src, '.inv-rec-acts label.btn-s{margin:0;line-height:normal;}', '+ Close-up sits level with the other buttons: no form-label margin, a button\'s line height');
   }
 
   group('A13 · the naming run hands on what it named, and never values ahead of the room check');

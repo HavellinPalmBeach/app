@@ -101,9 +101,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(html, 'Pocket card &middot; keep it by the laptop', 'ends with a pocket card');
     eq(count(html, '<section class="card">'), 1, 'one card');
     ok(count(html, '<h2>') >= 10, 'at least ten sections (' + count(html, '<h2>') + ')');
-    // Under 2,500 words of text, masthead and footer included (Anthony's rule for these pages: short).
+    // Under 2,650 words of text, masthead and footer included (Anthony's rule for these pages: short). 2,500 until 2026-10-26b,
+    // when he asked for the day's changes (condition graded, whole dollars, Re-value, Another item) to be on the page.
     const words = t.split(/\s+/).length;
-    ok(words < 2500, 'short: ' + words + ' words');
+    ok(words < 2650, 'short: ' + words + ' words');
     ['photography-guide.html', 'incident-guide.html', 'sorting-guide.html', 'packing-guide.html', 'move-day-guide.html', 'first-night-guide.html',
      'firearms-protocol.html', 'concierge-guide.html'].forEach((f) => has(html, '<a href="' + f + '">', 'names ' + f));
     has(t, 'Linked from the top of the Job Admin & Inv tab.', 'and says where the app links it');
@@ -501,7 +502,23 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(Object.keys(sandbox({ vars: ['INV_PLAN_CHANNEL_KINDS'] }).INV_PLAN_CHANNEL_KINDS), ['Donate', 'Junk', 'Auction', 'Sell'], 'the kinds that fill themselves in from the one confirmed vendor');
     has(t, 'With one vendor of that kind confirmed on the Job Plan, it fills itself in.', 'as the page says');
     // 2026-10-24: + Close-up, a close-up missed in the house, is a label over the record's chooser (closeup-later.test.js).
-    ['&#10133; Another item in this photo</button>', '&#10133; Close-up</label>', 'Remove line</button>', '>Open photo in Drive</a>'].forEach((w) => has(code(fn('_renderInvPanel')), w, 'the record carries ' + decode(w.replace(/<[^>]+>/g, ''))));
+    ['&#10133; Another item in this photo</button>', '&#10133; Close-up</label>', 'Remove line</button>', '_invPhotoOpenHtml(jid, ref, 240)'].forEach((w) => has(code(fn('_renderInvPanel')), w, 'the record carries ' + decode(w.replace(/<[^>]+>/g, ''))));
+    // 2026-10-26b (Anthony: "maybe we just need a little link under each photo"): the record's photograph and each close-up open in Drive.
+    has(code(fn('_invPhotoOpenHtml')), '>Open in Drive &#8599;</a>', 'each photograph in a record carries a small Open in Drive link');
+    has(code(fn('_invCloseUpTileHtml')), '_invPhotoOpenHtml(jobId, d, 120)', 'a close-up\'s tile too');
+    has(t, 'Opens it in Drive. So do the record’s photos.', 'as the page says');
+    // 2026-10-26b, on the page at Anthony's ask ("update the evening desk with any relevant changes"): each held to its code.
+    has(t, 'Each photo is graded Excellent, Good, Fair or Poor. If it is wrong, change it in the ▾ record; yours is never written over. Blank means the photo could not show it.', 'condition, as the page says');
+    eq(sandbox({ vars: ['AGENT_CONDITIONS'] }).AGENT_CONDITIONS, ['Excellent', 'Good', 'Fair', 'Poor'], '…the grades the agents give');
+    has(code(fn('_invEdit')), "if (key === 'condition') ref.condBy = 'desk';", '…and a grade typed in the record is never written over');
+    has(t, 'Seven plates at $75 read $11 each, $77; under a dollar each keeps its cents. A value you type stays as typed.', 'whole dollars each, as the page says');
+    const W = sandbox({ fns: ['agentValueWhole', 'roundCents'] });
+    eq([W.agentValueWhole(75, 7), W.agentValueWhole(45, 60)], [77, 45], '…$11 × 7 = $77; sixty at 75¢ stay $45');
+    has(t, 'Tick its rows and press Re-value on the selection bar. Values you or an appraiser typed are left alone.', 'Re-value on the selection bar, as the page says');
+    has(code(fn('_renderInvBulk')), '>Re-value</button>', '…the selection bar carries it');
+    has(code(fn('invBulkRevalue')), "r.valuedBy !== 'agent'", '…and leaves a figure a person or an appraiser recorded');
+    has(t, 'Another item in this photo (a blank row for something else in the same photo; it never opens the camera)', 'Another item, as the page says');
+    has(code(fn('invSplitItemClick')), 'added for another thing in this photograph', '…the toast says what it added');
     has(SRC, 'IN PROGRESS</strong> stamp until every line is ticked &mdash; they are never withheld.', 'papers print marked IN PROGRESS, never withheld');
     has(t, 'Papers print marked IN PROGRESS until every item is reviewed; they are never held back.', 'as the page says');
     has(code(fn('_renderInvWorkbar')), "'+ Add line item'", '+ Add line item');
@@ -678,7 +695,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(head, '<span class="inv-c-each">Each</span><span class="inv-c-val">Total</span>', 'the row’s Each and Total, headed');
     has(t, 'Each, Total Fair market value of one, and of all; on an estate, as of the date of death.', 'as the page says');
     has(code(fn('_invEdit')), "if (key === 'fmv' || key === 'unitVal') _avTakeValue(ref, 'typed', _invJob(jobId));", 'a figure typed in either is the desk’s, or the appraisal’s on a linked item');
-    const S = sandbox({ fns: ['invSplitItemN', '_invPhotoSource', '_getPhotoRef', '_setPhotoRef', '_invFileId', '_photoUid'],
+    const S = sandbox({ fns: ['invSplitItemN', '_invSplitSource', '_invPhotoSource', '_getPhotoRef', '_setPhotoRef', '_invFileId', '_photoUid'],
       vars: ['_photoUidSeq', 'INV_DEFAULT_CATEGORY', 'INV_SPLIT_MAX'],
       stubs: { _photoRefs: { 7: [{ stableId: 'p', label: 'inventory', roomIdx: 1, ts: 1, driveFileId: 'F', driveFileUrl: 'u', disposition: 'Donate', channel: 'Habitat for Humanity' }] },
         savePhotoRefs() {}, _invTouch(r) { return r; }, _scheduleInventorySync() {} } });

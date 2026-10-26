@@ -47,14 +47,14 @@ function gsVar(name) {
 function gsCtx() {
   const ctx = { JSON, Math, Number, String, Object, Array, Error, parseInt, parseFloat, isFinite };
   vm.createContext(ctx);
-  vm.runInContext(['AGENT_VALUE_SOURCES', 'AGENT_VALUE_NOTICE_KINDS', 'AGENT_VALUE_CONF_DOWN', 'AGENT_VALUE_MAX_COMPS', 'BACKEND_VERSION'].map(gsVar)
-    .concat(['_avCents', '_avTool', '_avSystem', '_avLineText', '_avLineResult', '_avUrlKey'].map(gsFn)).join('\n'), ctx);
+  vm.runInContext(['AGENT_VALUE_SOURCES', 'AGENT_VALUE_NOTICE_KINDS', 'AGENT_VALUE_CONF_DOWN', 'AGENT_VALUE_MAX_COMPS', 'AGENT_VALUE_RESULTS_SEGMENTS', 'AGENT_VALUE_RESULTS_PARAMS', 'AGENT_VALUE_NO_PRICE_RE', 'AGENT_VALUE_TEXT_MAX', 'BACKEND_VERSION'].map(gsVar)
+    .concat(['_avCents', '_avTool', '_avSystem', '_avLineText', '_avLineResult', '_avUrlKey', '_avResultsPage', '_avClip'].map(gsFn)).join('\n'), ctx);
   return ctx;
 }
 
 // ─── THE REAL APP SIDE ───────────────────────────────────────────────────────
 const AV_FNS = ['agentValueMode', 'agentValueInternal', '_avHasFigure', 'agentValueableRefs', 'agentValueUnreviewed',
-  'agentValueStale', 'agentValueSpecialistWorth', '_avValDate', '_avContext', '_avItemPayload', '_avComp', '_avWrite', '_avRename', '_avNameIsAgents',
+  'agentValueStale', 'agentValueSpecialistWorth', '_avValDate', '_avContext', '_avItemPayload', 'agentValueGradesCondition', '_avComp', '_avWrite', '_invCondIsAgents', '_invAgentCondition', 'agentValueWhole', '_avRename', '_avNameIsAgents',
   '_avNoteFailure', 'agentValueApply', '_avTakeValue', '_avStampReviewed', '_invStampBy', 'deviceUser', '_avStart',
   '_avSendNext', '_avFinish', '_avRepaint', '_avStateHtml', '_avState', 'agentValueAuto', 'agentValueAfterRename', 'agentValueUseSale',
   'agentValueNotices', '_avNoticesHtml', '_avNoticeKinds', '_avNoticeLabel', '_deskShowBtnHtml', '_avSummary', '_avRowBadges', '_avPanelHtml',
@@ -67,7 +67,7 @@ const AV_FNS = ['agentValueMode', 'agentValueInternal', '_avHasFigure', 'agentVa
   '_avdDate', '_ymdLocal', 'resolveValBasis', '_agNameKey', '_agDetailRefs', 'invLineCloseUps', '_invFileId', 'invAppraisalThreshold',
   'gateDispute', '_gateYes', 'invNeedsAppraisal', 'fmt', '_invMoney', '_invNamed', '_invItemNo', '_andJoin',
   'moneyToNumber', '_readAppsScriptJson', '_invJob', '_invRenderWhenIdle', '_invHasPhoto', 'agentValueLooks', '_avPhotoContext', '_invPhotoSource', '_invRoomName', 'agentListedOff', 'agentValueAgain'];
-const AV_VARS = ['_avRun', '_avForceComps', '_avAfter', 'AGENT_VALUE_BATCH', 'AGENT_VALUE_GENERAL_CEILING', 'AGENT_VALUE_MAX_COMPS',
+const AV_VARS = ['_avRun', 'AGENT_CONDITIONS', '_avForceComps', '_avAfter', 'AGENT_VALUE_BATCH', 'AGENT_VALUE_GENERAL_CEILING', 'AGENT_VALUE_MAX_COMPS',
   'AGENT_VALUE_MARK_RE', 'AGENT_VALUE_NO_MARK_RE', 'AGENT_VALUE_CONFS', 'AGENT_VALUE_SOURCES', 'AGENT_VALUE_OWN', 'AGENT_VALUE_SALE_DATE_RE',
   'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'DECEDENT_SERVICES', 'DOC_TIERS',
   'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'AGENT_MAX_DETAILS', 'INV_VAL_SOURCES', '_agDupSet', 'AGENT_ROOM_CONF_RANK', 'AGENT_PASS_GAP_MS', 'AGENT_VALUE_READ_RE', 'AGENT_VALUE_HEDGE_RE', 'AGENT_LISTED_MAX', '_avAutoAgain', 'INV_CATEGORIES'];

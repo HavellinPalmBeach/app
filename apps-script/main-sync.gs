@@ -101,7 +101,13 @@
 // corrects the category on a research line, prints a figure with no sale behind it as a general estimate, and hands back passing
 // failures as `retry`. No action or type changes; it carries 2026-10-25b's. Until it is live the agents stay on their old models,
 // Agent Two never looks at a guessed name's photograph, and one slow request can mark a batch "not valued".
-var BACKEND_VERSION = '2026-10-26';
+// ⚠ 2026-10-26b (the first live testAgentValue, the same day; Anthony: "Fix it now"): a comparable is one item's own page with the
+// price that page shows (_avResultsPage, AGENT_VALUE_NO_PRICE_RE in _avLineResult, and the prompt's EVIDENCE rule); a note or a
+// basis that runs long ends at a whole sentence or a word (_avClip), and a note is asked for in under forty words; and both agents
+// grade an item's condition off its photograph (AGENT_CONDITION_TEXT; Anthony: "Agents grade it"), Agent Two's kept only off a
+// photograph the request carried. No action or type changes; it carries 2026-10-26's. Until it is live a search page or a sale with no price shown can stand as a sold comparable, a
+// researched line resting on one prints "auction comps", a long note stops mid-phrase, and no condition is graded.
+var BACKEND_VERSION = '2026-10-26b';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive',
@@ -3247,8 +3253,19 @@ function _agImageBlock(fileId) {
 // this shape works on every model and still guarantees the arguments validate. `strict` needs
 // `additionalProperties:false` and every property in `required`, hence `basis` and `crop` being
 // mandatory rather than optional — the prompt says what to send when there is nothing to say.
-function _agTool(categories) {
-  return {
+// ⚠⚠ CONDITION, GRADED OFF THE PHOTOGRAPH (2026-10-26b; Anthony: "why doesn't it just grade that excellent condition or why can't
+// it see that my couch doesn't have any tears or rips in it"; he took "Agents grade it"). The grades ride the payload (the app's
+// AGENT_CONDITIONS, as the categories do; this end holds no copy), and with no list there is no field. One sentence of what each
+// grade means, read by both agents' prompts. Empty where the photograph cannot show it; the app writes a grade only over a blank or
+// an agent's own unreviewed grade (_invCondIsAgents), and the line's one tick confirms it.
+var AGENT_CONDITION_TEXT = 'Excellent = like new, no visible wear. Good = ordinary light wear for its age, nothing damaged. '
+  + 'Fair = visible wear, marks, fading or small damage. Poor = broken, torn, stained or missing parts. Grade only what the '
+  + 'photograph shows of the thing itself; leave it empty where it cannot show it (a closed box, a thing mostly hidden or '
+  + 'too small to see, a group whose pieces differ).';
+
+function _agTool(categories, conditions) {
+  var conds = (conditions || []).filter(function (c) { return !!String(c || '').trim(); });
+  var tool = {
     name: 'record_contents',
     description: 'Record every distinct inventoriable object visible in the photograph, and any '
                + 'notice a person needs to see. Call this exactly once.',
@@ -3296,6 +3313,13 @@ function _agTool(categories) {
       }
     }
   };
+  if (conds.length) {
+    var obj = tool.input_schema.properties.objects.items;
+    obj.properties.condition = { type: 'string', enum: conds.concat(['']),
+      description: 'Its condition as the photograph shows it, empty where it cannot show it. ' + AGENT_CONDITION_TEXT };
+    obj.required = obj.required.concat(['condition']);
+  }
+  return tool;
 }
 
 // ─── THE SYSTEM PROMPT ────────────────────────────────────────────────────────────
@@ -3450,6 +3474,10 @@ function _agSystem(ctx) {
        + 'moment a frame shows one, or shows where one would be kept — a safe, a strongbox, a '
        + 'locked drawer, a filing cabinet:\n  - ' + must.join('\n  - ') + '\n';
   }
+  if ((ctx.conditions || []).length) {
+    s += '\nCONDITION\nGrade each line\'s condition from the photograph. ' + AGENT_CONDITION_TEXT + ' A scratch, chip, tear or '
+       + 'stain you can see goes in the grade, never in the name.\n\n';
+  }
   s += 'kind "other": anything else a person must see or do that the name cannot carry, such as a mark or label that is '
      + 'there but too small or blurred to read, or a frame too dark or blurred to name. Never to repeat a name, a hedge or '
      + 'your confidence. Use sparingly.\n\n'
@@ -3515,7 +3543,7 @@ function _agRequestFor(shot, ctx, key, model, noFallbacks) {
     thinking: { type: 'adaptive' },
     output_config: { effort: AGENT_EFFORT },
     system: [{ type: 'text', text: _agSystem(ctx), cache_control: { type: 'ephemeral' } }],
-    tools: [_agTool(ctx.categories || [])],
+    tools: [_agTool(ctx.categories || [], ctx.conditions || [])],
     tool_choice: { type: 'auto' },
     messages: [{ role: 'user', content: _agUserContent(shot) }]
   };
@@ -3667,7 +3695,8 @@ function testAgentIdentify() {
                  'Firearms', 'Furniture', 'General/Household', 'Jewelry & Watches',
                  'Musical Instruments', 'Rugs & Carpets', 'Silver & Precious Metal',
                  'Vehicles & Watercraft', 'Wine & Spirits'],
-    mustFind: ['a coin collection'], fiduciary: true
+    mustFind: ['a coin collection'], fiduciary: true,
+    conditions: ['Excellent', 'Good', 'Fair', 'Poor']   // the app's AGENT_CONDITIONS (2026-10-26b)
   };
   var t0 = new Date().getTime();
   var out = agentIdentifyShots({ context: ctx, shots: [{ stableId: 'probe', fileId: found.getId(), room: 'probe' }] });
@@ -3681,7 +3710,7 @@ function testAgentIdentify() {
   Logger.log('  objects: ' + r.objects.length);
   for (var i = 0; i < r.objects.length; i++) {
     var o = r.objects[i];
-    Logger.log('   - [' + o.confidence + '] ' + o.name + '  (' + o.category + ', qty ' + o.qty + ') — ' + o.basis);
+    Logger.log('   - [' + o.confidence + '] ' + o.name + '  (' + o.category + ', qty ' + o.qty + (o.condition ? ', ' + o.condition : ', condition not graded') + ') — ' + o.basis);
     // 2026-10-24: a name carries no count. Said here, so the first run after a redeploy shows whether the prompt holds.
     if (AGENT_COUNT_IN_NAME_RE.test(String(o.name || ''))) Logger.log('     WARNING: a count in the name; the count belongs in qty alone.');
   }
@@ -4105,6 +4134,46 @@ var AGENT_VALUE_SEARCHES    = { comps: 5, general: 8 };
 var AGENT_VALUE_FETCHES     = 2;      // comps only: reading a results page the search turned up
 var AGENT_VALUE_CONTINUES   = 2;      // `pause_turn` continuations per request before it is called unfinished
 var AGENT_VALUE_MAX_COMPS   = 6;      // comparables kept per line (the manifest lives in a ~5MB localStorage)
+// ⚠⚠ A COMPARABLE IS ONE ITEM'S OWN PAGE, WITH THE PRICE THAT PAGE SHOWS (2026-10-26b; the first live testAgentValue cited an
+// eBay search page as a $50 listing, and a LiveAuctioneers price-results page as a sold pair of mirrors at $380, the top of that
+// page's range for other mirrors, with "price not shown" in its own title). A search or results page lists many things and
+// changes from day to day, so nobody can check the sale against it later; such a link, a price of nothing, or a comparable whose
+// own words say its price was not shown is left out of the line (`unfit`, _avLineResult), so it can never be the sold comparable
+// that earns "comps" on the Court Inventory. No level of confidence is taken off for it, because a tool did return the page. A URL
+// shape and a word list: the prompt's EVIDENCE rule is the first net, these the second.
+var AGENT_VALUE_RESULTS_SEGMENTS = ['search', 'sch', 'search-results', 'searchresults', 'results', 'price-result', 'price-results'];
+var AGENT_VALUE_RESULTS_PARAMS = ['q', 'query', 'keyword', 'keywords', '_nkw', 'k', 'kw', 'searchterm', 'search_query', 'searchtext'];
+var AGENT_VALUE_NO_PRICE_RE = /\bprices?\s+(?:(?:is|was|were|are)\s+)?(?:not|(?:is|was|were|are)n['\u2019]t)\s+(?:shown|disclosed|available|listed|given|published|visible|stated|public)\b|\bundisclosed\b|\bno\s+(?:sold\s+|hammer\s+|realized\s+|realised\s+)?price\b|\bprice\s+(?:unknown|hidden|withheld|on\s+request)\b/i;
+
+// ⚠ A NOTE OR A BASIS THAT RUNS LONG ENDS AT A WHOLE SENTENCE, OR AT A WORD WITH "…", NEVER MID-PHRASE (2026-10-26b; Anthony, off a
+// cabbage-ware line's note that ended "Check whether this is": "it seems to be cut off at the end"). The basis prints on the Estate
+// Inventory Report the attorney reads. The last full stop past half the room is kept whole; failing one, the last space.
+var AGENT_VALUE_TEXT_MAX = 300;
+function _avClip(x, max) {
+  var t = String(x || '').replace(/\s+/g, ' ').trim(), n = max || AGENT_VALUE_TEXT_MAX;
+  if (t.length <= n) return t;
+  var cut = t.slice(0, n - 1), end = -1, m, re = /[.!?](?=\s)/g;
+  while ((m = re.exec(cut + ' '))) end = m.index;
+  if (end >= n / 2) return cut.slice(0, end + 1);
+  var sp = cut.lastIndexOf(' ');
+  if (sp > n / 2) cut = cut.slice(0, sp);
+  return cut.replace(/[\s,;:.\u2013\u2014(-]+$/, '') + '\u2026';
+}
+
+// A search or results page: a path segment that names one (`/search`, eBay's `/sch/`, LiveAuctioneers' `/price-result/`, Heritage's
+// `search-results.zx`; an extension is ignored), eBay's browse and shop pages, or a search term in the query (`?q=`, `?_nkw=`).
+function _avResultsPage(u) {
+  var m = String(u || '').trim().match(/^https?:\/\/([^\/?#]+)([^?#]*)(?:\?([^#]*))?/i);
+  if (!m) return false;
+  var host = m[1].toLowerCase().replace(/^www\./, '');
+  var segs = m[2].toLowerCase().split('/').filter(Boolean).map(function (x) { return x.replace(/\.[a-z0-9]+$/, ''); });
+  if (segs.some(function (x) { return AGENT_VALUE_RESULTS_SEGMENTS.indexOf(x) >= 0; })) return true;
+  if (/(^|\.)ebay\.[a-z.]+$/.test(host) && (segs[0] === 'b' || segs[0] === 'shop')) return true;
+  return String(m[3] || '').split('&').some(function (kv) {
+    var eq = kv.indexOf('=');
+    return eq > 0 && eq < kv.length - 1 && AGENT_VALUE_RESULTS_PARAMS.indexOf(kv.slice(0, eq).toLowerCase()) >= 0;
+  });
+}
 // ⚠ A SLICE IS STARTED ONLY INSIDE THIS, and it is half of Agent One's budget for a reason: a
 // valuing request researches for tens of seconds and may be continued twice, so the slice started
 // at the budget's edge still has to finish inside Apps Script's six minutes.
@@ -4138,8 +4207,9 @@ function _avCents(x) {
 // ⚠ `line` IS A PLAIN STRING, NOT AN ENUM OF THIS REQUEST'S LABELS. An enum would make the tool, and
 // with it the cached prefix, different on every request; the labels are checked here instead and an
 // answer for a line nobody asked about is dropped.
-function _avTool(mode, categories) {
+function _avTool(mode, categories, conditions) {
   var cats = (categories || []).filter(function (c) { return !!String(c || '').trim(); });
+  var conds = (conditions || []).filter(function (c) { return !!String(c || '').trim(); });
   var props = {
     line:       { type: 'string', description: 'The label the line was given, for example L1.' },
     name:       { type: 'string', description: 'The line\'s name as you value it: the name given where it is right (always the name given on a line whose name a person checked), else your corrected name. One short line, about fifteen words, never with a count.' },
@@ -4154,7 +4224,7 @@ function _avTool(mode, categories) {
     basis:      { type: 'string', description: 'One plain sentence, about twenty words at most, saying what the figure rests on ("Four sold comparables, 2025 to 2026; the median, less for one chipped rim"; "The going used rate for everyday stainless flatware"), with the valuation-date caveat where the instructions ask for one, and never with this line\'s count or its name. It is printed beside the figure on the inventory the family, their attorney or a trustee reads.' },
     comps: {
       type: 'array',
-      description: 'The sales you relied on. Each must be a page your search or fetch returned, with its URL copied exactly.',
+      description: 'The sales you relied on. Each must be one item\'s own page (the lot, the listing) that your search or fetch returned, with its URL copied exactly: never a search or results page, and never a sale whose page shows no price.',
       items: {
         type: 'object',
         additionalProperties: false,
@@ -4163,7 +4233,7 @@ function _avTool(mode, categories) {
           title:    { type: 'string' },
           venue:    { type: 'string', description: 'Who sold it: the auction house, the platform or the dealer.' },
           saleDate: { type: 'string', description: 'YYYY-MM-DD, or YYYY-MM, or empty when the page gives no date.' },
-          price:    { type: 'number', description: 'The price realised (sold) or asked (asking), US dollars, for what that listing covered.' },
+          price:    { type: 'number', description: 'The price that page shows: realised (sold) or asked (asking), US dollars, for what that listing covered. Never one filled in from a range, an estimate or another lot.' },
           url:      { type: 'string' },
           kind:     { type: 'string', enum: ['sold', 'asking'] }
         }
@@ -4179,7 +4249,7 @@ function _avTool(mode, categories) {
         required: ['kind', 'text'],
         properties: {
           kind: { type: 'string', enum: AGENT_VALUE_NOTICE_KINDS },
-          text: { type: 'string' }
+          text: { type: 'string', description: 'One or two short sentences, under forty words.' }
         }
       }
     }
@@ -4192,6 +4262,12 @@ function _avTool(mode, categories) {
   if (cats.length) {
     props.category = { type: 'string', enum: cats, description: 'The line\'s category as you value it: the one given, unless on a RESEARCH line the photograph and your research plainly put it elsewhere. Always the one given on an ORDINARY lot, on a line whose name or category a person checked, and on a line filed Firearms.' };
     required.push('category');
+  }
+  // Condition off the photograph (2026-10-26b, AGENT_CONDITION_TEXT): kept by the server only for a line whose photograph this
+  // request carried (`unit.saw`, _avUserContent), so a lot valued as text alone never comes back graded.
+  if (conds.length) {
+    props.condition = { type: 'string', enum: conds.concat(['']), description: 'Its condition from the photograph you were shown of this line, empty where you were shown none or it cannot show it. ' + AGENT_CONDITION_TEXT };
+    required.push('condition');
   }
   return {
     name: 'record_values',
@@ -4230,10 +4306,10 @@ function _avTool(mode, categories) {
 // tool the answer comes back through. ⚠ `_20260209` CARRIES DYNAMIC FILTERING ITSELF, so no
 // `code_execution` tool is declared beside it (a second execution environment confuses the model).
 // It runs on every model the agents choose (dynamic filtering is on Claude 4.6 and later, Anthropic's docs, 2026-10-26).
-function _avTools(mode, categories) {
+function _avTools(mode, categories, conditions) {
   var tools = [{ type: 'web_search_20260209', name: 'web_search', max_uses: AGENT_VALUE_SEARCHES[mode] || 1 }];
   if (mode === 'comps') tools.push({ type: 'web_fetch_20260209', name: 'web_fetch', max_uses: AGENT_VALUE_FETCHES });
-  tools.push(_avTool(mode, categories));
+  tools.push(_avTool(mode, categories, conditions));
   return tools;
 }
 
@@ -4288,6 +4364,12 @@ function _avSystem(ctx) {
     + 'Condition is usually not written on the line, because the crew photographs rather than writes. Read '
     + 'it from the photograph wherever one is sent, assume ordinary used condition on a lot sent as text alone, and '
     + 'adjust for any condition that is recorded.\n'
+    // 2026-10-26b (Anthony: "Agents grade it"): the grade it reads goes on the line too, where a photograph was sent.
+    + ((ctx.conditions || []).length
+        ? 'A condition on the line may be the first agent\'s grade from the same photograph. Give back the condition '
+          + 'you see wherever you were sent the line\'s photograph, from these grades: ' + AGENT_CONDITION_TEXT + ' Leave it '
+          + 'empty on a lot sent as text alone.\n'
+        : '')
     // 2026-10-26: a line split off a photograph is sent the whole photograph and its close-ups, and nothing said the photograph
     // showed other lines; the line now says what else is listed off it (_avLineText).
     + 'A photograph may show other things that are lines of their own, and the line says so: value only the thing this '
@@ -4320,7 +4402,12 @@ function _avSystem(ctx) {
     + 'EVIDENCE\n'
     + '- A comparable must be a page your search or fetch actually returned. Copy its URL exactly. A sale '
     + 'you remember, or a link you construct, is not evidence: never invent a sale, a price, a date or a '
-    + 'link. Comparables without a returned URL are thrown away.\n'
+    + 'link. Comparables without a returned URL are thrown away.\n'    // 2026-10-26b: the first live run cited an eBay search page and a price-results page whose price it had not seen.
+    + '- A comparable is one item\'s own page: the lot, the listing, the sale. Never cite a search or results page: '
+    + 'open the item from it, or let what you saw there inform your reading without citing it. Its price is the '
+    + 'price that page shows for that sale or listing; a sale whose page shows no price is not a comparable, and '
+    + 'you never fill one in from a range, an estimate or another lot. Comparables that fail this are thrown away.\n'
+
     + '- Say whether each comparable SOLD or was only ASKING. An asking price is not a sale. You may cite '
     + 'one as "asking", but never set the value on asking prices alone.\n'
     + '- If a research line has no sold comparable, give your best reading with confidence low and say in the basis '
@@ -4376,8 +4463,8 @@ function _avSystem(ctx) {
     + 'NOTICES\n'
     // 2026-10-25 (Anthony, the Ellison kitchen: "Agent Two raised 23 things to look at", nine lines' worth, most of them
     // the name, the condition, the count, a search that ran short or a WorthPoint check the desk already offers).
-    + 'A notice is for something a person must DO about the line. Most lines need none; never give a line '
-    + 'more than one.\n'
+    + 'A notice is for something a person must DO about the line, in one or two short sentences, under forty '
+    + 'words. Most lines need none; never give a line more than one.\n'
     + 'kind "appraiser": a qualified appraisal is advisable - the piece is signed, marked, rare, or the '
     + 'comparables disagree widely.\n'
     + 'kind "specialist": it should sell through a specialist auction house or dealer, not a general sale.\n'
@@ -4437,12 +4524,14 @@ function _avLineText(label, it) {
 // that lot its picture, never the batch its answer.
 function _avUserContent(unit) {
   var content = [];
+  unit.saw = {};   // the labels whose photograph this request carries: only they may come back with a condition (2026-10-26b)
   if (unit.mode === 'comps') {
     var it = unit.items[0];
     var details = it.fileId ? (it.details || []).slice(0, 4) : [];
     if (it.fileId) {
       content.push({ type: 'text', text: 'The photograph:' });
       content.push(_agImageBlock(it.fileId));
+      unit.saw[unit.labels[0]] = 1;
       for (var i = 0; i < details.length; i++) {
         content.push({ type: 'text', text: 'Close-up ' + (i + 1) + ':' });
         content.push(_agImageBlock(details[i].fileId));
@@ -4459,6 +4548,7 @@ function _avUserContent(unit) {
           var img = _agImageBlock(x.fileId);
           content.push({ type: 'text', text: unit.labels[k] + '\'s photograph:' });
           content.push(img);
+          unit.saw[unit.labels[k]] = 1;
           return _avLineText(unit.labels[k], x) + ' | Its photograph is above, labelled ' + unit.labels[k]
             + (x.roomNote ? ' | Walkthrough note for its room: "' + String(x.roomNote).slice(0, 300) + '"' : '');
         } catch (e) { /* a photograph not in Drive yet: valued as text */ }
@@ -4478,7 +4568,7 @@ function _avBody(unit, ctx, noFallbacks, model) {
     thinking: { type: 'adaptive' },
     output_config: { effort: AGENT_VALUE_EFFORT },
     system: [{ type: 'text', text: _avSystem(ctx), cache_control: { type: 'ephemeral' } }],
-    tools: _avTools(unit.mode, ctx.categories),
+    tools: _avTools(unit.mode, ctx.categories, ctx.conditions),
     tool_choice: { type: 'auto' },
     messages: [{ role: 'user', content: _avUserContent(unit) }]
   };
@@ -4599,15 +4689,18 @@ function _avLineResult(v, mode, seen) {
   // the agent's reading and the range is its spread, so the spread widens to include the reading.
   if (low > fmv) low = fmv;
   if (high < fmv) high = fmv;
-  var kept = [], dropped = 0;
+  var kept = [], dropped = 0, unfit = 0;
   (v.comps || []).forEach(function (c) {
     if (!c || !seen[_avUrlKey(c.url)]) { dropped++; return; }
     var price = _avCents(c.price);
+    // One item's own page with the price that page shows, or it is not a comparable (AGENT_VALUE_RESULTS_SEGMENTS, 2026-10-26b).
+    if (!(isFinite(price) && price > 0) || _avResultsPage(c.url)
+        || AGENT_VALUE_NO_PRICE_RE.test(String(c.title || '') + ' ' + String(c.venue || ''))) { unfit++; return; }
     kept.push({
       title: String(c.title || '').slice(0, 160),
       venue: String(c.venue || '').slice(0, 80),
       saleDate: (String(c.saleDate || '').trim().match(/^\d{4}(?:-\d{2}(?:-\d{2})?)?/) || [''])[0],
-      price: isFinite(price) ? price : '',
+      price: price,
       url: String(c.url || '').slice(0, 400),
       kind: c.kind === 'sold' ? 'sold' : 'asking'
     });
@@ -4627,11 +4720,11 @@ function _avLineResult(v, mode, seen) {
   var sources = (mode === 'comps' && !soldKept) ? AGENT_VALUE_SOURCES.general : (AGENT_VALUE_SOURCES[mode] || AGENT_VALUE_SOURCES.general);
   var notices = (v.notices || []).filter(function (n) {
     return n && AGENT_VALUE_NOTICE_KINDS.indexOf(n.kind) >= 0 && String(n.text || '').trim();
-  }).slice(0, 4).map(function (n) { return { kind: n.kind, text: String(n.text).slice(0, 300) }; });
+  }).slice(0, 4).map(function (n) { return { kind: n.kind, text: _avClip(n.text) }; });
   return {
     fmv: fmv, low: low, high: high, confidence: conf,
     source: sources.indexOf(v.source) >= 0 ? v.source : sources[0],
-    basis: String(v.basis || '').slice(0, 300),
+    basis: _avClip(v.basis),
     comps: kept,
     lookup: mode === 'comps' ? String(v.lookup || '').slice(0, 160) : '',
     name: String(v.name || '').replace(/\s+/g, ' ').trim().slice(0, 300),
@@ -4639,6 +4732,7 @@ function _avLineResult(v, mode, seen) {
     category: mode === 'comps' ? String(v.category || '').trim().slice(0, 60) : '',
     notices: notices,
     dropped: dropped,
+    unfit: unfit,
     mode: mode
   };
 }
@@ -4776,6 +4870,8 @@ function agentValueLines(data) {
             if (!hit) { retry[it.stableId] = 'the model did not answer for this line'; return; }
             if (hit.why != null) { failed[it.stableId] = String(hit.why || 'could not be valued').slice(0, 200); return; }
             var r = _avLineResult(hit.v, p.unit.mode, seen);
+            // A grade only off a photograph this request carried, and only one of the grades it was sent (2026-10-26b).
+            if (!r.error) r.condition = (p.unit.saw && p.unit.saw[p.unit.labels[j]] && (ctx.conditions || []).indexOf(hit.v.condition) >= 0) ? hit.v.condition : '';
             // A line filed Firearms is never moved out of it (2026-10-26, on review): the category is what switches the firearm
             // protocol on in the app, which refuses the move too.
             if (!r.error && String(it.category || '') === 'Firearms') r.category = '';
@@ -4843,6 +4939,7 @@ function testAgentValue() {
     if (AGENT_COUNT_IN_NAME_RE.test(String(r.name || ''))) Logger.log('      WARNING: a count in the name; the count belongs in qty alone.');
     (r.comps || []).forEach(function (c) { Logger.log('      [' + c.kind + '] ' + c.title + ' · ' + c.venue + ' · ' + c.saleDate + ' · $' + c.price + ' · ' + c.url); });
     if (r.dropped) Logger.log('      ' + r.dropped + ' comparable(s) dropped: no tool returned their link');
+    if (r.unfit) Logger.log('      ' + r.unfit + ' comparable(s) left out: a search or results page, or no price of its own');
     if (r.lookup) Logger.log('      WorthPoint: ' + r.lookup);
   });
   Object.keys(out.failed).forEach(function (id) { Logger.log('  ' + id + ' NOT VALUED: ' + out.failed[id]); });
