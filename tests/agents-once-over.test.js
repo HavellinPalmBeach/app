@@ -891,6 +891,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const h2 = gsAll({ reply: () => ({ code: 200, body: ANSWER2([VAL({ line: 'L1', condition: 'Salvage' })]) }) });
     const o2 = h2.agentValueLines({ context: Object.assign({}, CTX2, { conditions: conds }), items: [LINE({ stableId: 'pic', fileId: 'FID' })] });
     eq(o2 && o2.results && o2.results.pic && o2.results.pic.condition, '', 'and only one of the grades it was sent');
+    // A researched line sent with its photograph grades too (a revert of the research arm's mark stayed green until this).
+    const h3 = gsAll({ reply: () => ({ code: 200, body: ANSWER2([VAL({ line: 'L1', condition: 'Fair' })]) }) });
+    const o3 = h3.agentValueLines({ context: Object.assign({}, CTX2, { conditions: conds }), items: [LINE({ stableId: 'res', mode: 'comps', fileId: 'FID' })] });
+    eq(o3 && o3.results && o3.results.res && o3.results.res.condition, 'Fair', '⚠ a researched line keeps the grade read off its photograph');
+    const h4 = gsAll({ reply: () => ({ code: 200, body: ANSWER2([VAL({ line: 'L1', condition: 'Fair' })]) }) });
+    const o4 = h4.agentValueLines({ context: Object.assign({}, CTX2, { conditions: conds }), items: [LINE({ stableId: 'res', mode: 'comps' })] });
+    eq(o4 && o4.results && o4.results.res && o4.results.res.condition, '', 'and one researched with no photograph never comes back graded');
     has(gsFn('testAgentIdentify'), "conditions: ['Excellent', 'Good', 'Fair', 'Poor']", 'the naming probe asks for grades and prints them');
   }
 
