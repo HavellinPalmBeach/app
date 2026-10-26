@@ -135,7 +135,8 @@ Written by the agent:
 - **Review** is its own flag (`valReviewed`, with who and when), separate from the name's `reviewed`:
   a line can have a confirmed name and an unconfirmed value. The desk gets an *Unreviewed values*
   chip beside *Unnamed shots*, and **Accept** on the row. *(Built so in P23; since 2026-10-25b the line's
-  one Reviewed tick sets both, and Accept, Accept values and the chip are gone: §13.)*
+  one Reviewed tick sets both, and Accept, Accept values and the chip are gone; since 2026-10-26 a line with nothing
+  flagged needs no tick at all, and its value stands as Agent Two left it: §13.)*
 
 ### 5a · A value made against a name that changed
 
@@ -287,7 +288,7 @@ Measure on the first real estate before tuning. Cost does not drive the model ch
    without a figure.
 2. **An unreviewed agent value counts as valued** for FINAL; the schedule says *N values not yet
    reviewed*, as the *IN PROGRESS* stamp does, and nothing is withheld. (Since 2026-10-25b a value is
-   reviewed by its line's one tick: §13.)
+   reviewed by its line's one tick, and since 2026-10-26 a value on a line with nothing flagged stands without one: §13.)
 3. **The Court Inventory and the Trust Schedule name the basis on each line** (*auction comps*,
    *general estimate*, *WorthPoint comps*, *appraisal*).
 4. **An appraisal replaces the agent's figures** rather than sitting beside them (§2.3).
@@ -377,27 +378,36 @@ and browser step 69.
   - **One look per line:** §5's separate value review is gone. The line's Reviewed tick (`_invStampLineReviewed`, the
     row and the bulk bar's Mark reviewed) stamps `valReviewed` with the line's review, and `invLineReviewed` reads an
     unaccepted agent figure as not reviewed. *Accept value*, *Accept values* and the *Unreviewed values* chip are gone;
-    the chip is *Not reviewed*. The schedules' *N values not yet reviewed* is unchanged (until the $100 floor, below, took the values it accepts out of it).
+    the chip is *Not reviewed*. The schedules' *N values not yet reviewed* is unchanged (until the $100 line of 2026-10-25, and then the flagged-lines rule of 2026-10-26, below, took the values that stand out of it).
   - **One hint:** the row's *agent value* badge (and Agent One's *agent*) are gone; `invLineUnsure` marks *unsure* where
     Agent Two's figure is low confidence, or Agent One was unsure and Agent Two has not yet valued the line under that name.
   - **Each × Qty = Total:** the row's value is two boxes, Each and Total (`invUnitValue`, `unitVal` on the manifest's save
     list). The figure Agent Two writes stays the line's whole value at its Quantity (`fmv`), Each is read off it, and a
     count corrected at the desk carries Each across (`_invQtyCarriesValue`, the agent's range scaled with it; an appraised
     line never moved). The prompt says the desk reads one article's value as the line's over its Quantity.
-- **Under $100, no tick (2026-10-25, Q99 and Q100):** Anthony: *"I'd prefer not to have to review absolutely every item if
-  we don't need to … I don't want to have to manually tick a drawer of like stainless steel silverware or a junk drawer
-  filled with tape"*; he took $100, and for the papers *"Say so on the stamp"*. One predicate, `invLineUnderFloor`, asked
-  first by `invLineReviewed`: a live line Agent Two valued (`valuedBy` agent, `_avHasFigure`) whose top, the greater of
-  `valHigh` and `fmv` (so the whole line at its Quantity; the range alone where counsel values), is under
-  `INV_REVIEW_FLOOR` (100) counts as reviewed with no tick, unless it is `agentValueStale`, a firearm, an intrinsic
-  category (`invIsIntrinsic`), ticked for appraisal or linked to an appraiser (`needsAppr`, `apprId`), a bequest,
-  disputed, MAIV or NFA, or carries any `agentNotices` or `valNotices`. The *Not reviewed* chip, `invLineUnsure`, the
-  group counts and `agentNoticeQuiet` read it through `invLineReviewed`; the row's box is ticked and disabled, titled
-  *Under $100 and nothing flagged: Agent Two's value counts as the review*. A count corrected at the desk scales the
-  range with the Total (`_invQtyCarriesValue`), so a top that reaches $100 sends the line back to the tick. Nothing is
-  written to the line (`valReviewed` stays unset, so a line a person marks reviewed, with the bulk bar's Mark reviewed, reads as checked): `_invReviewStats`
-  counts the floor's lines apart (`floor`), `_invProgressStamp` prints *REVIEWED — 42 items checked; 158 under $100
-  accepted as valued* (*N everyday items accepted as named* on the Contents List, which states no value), and
-  `_avUnreviewedStamp` (§12.2's count) leaves them out of *N values not yet reviewed* and prints a grey *N under $100
-  accepted as valued* beside it. The floor is the desk's rule, not the agent's: Agent Two is still never told a
-  threshold, and no backend changed.
+- **Only flagged lines take a tick (2026-10-26, Q106; it replaced the $100 line of 2026-10-25, Q99, and carries Q100 to
+  Q105):** Anthony: *"we will be obviously going back to the office and looking over the entire inventory list ourselves to
+  make sure everything looks right … this is our job at night. The agent identifies everything and then values it. And then
+  we go back and we go over the list and we make sure it makes sense. And we verify it with what we saw on site"*; he took
+  *"Only flagged lines"*. There is no value limit: `INV_REVIEW_FLOOR`, `invLineUnderFloor` and `_invFloorStampWords` are
+  gone. One predicate, `invLineAccepted(ref, fc)`, asked first by `invLineReviewed`, with the job-wide facts in `fc`
+  (`invAcceptCtx(job, all)`: the job, and every line in an open `agentDuplicateGroups` group; the desk's paint reads its
+  cached index through `_invAcceptCtxOf`; with no context no line stands): a live line with a name, a destination (not
+  Undecided or Hold) and a figure, Agent Two's (`_avHasFigure`, the range alone where counsel values) or the desk's
+  (`valuedBy` desk with a value, Q105), stands with no tick unless it is flagged: any line on a disputed estate
+  (`gateDispute`, Q102); `agentValueStale`; Agent One's name and Agent Two's figure both low (Q101; either alone stands, so on a
+  decided, valued line `invLineUnsure`'s hint stays only where both were guessing); a firearm, `flagNFA` or ammunition in the name
+  (`INV_ACCEPT_AMMO_RE`); `needsAppr`, `apprId`, `invNeedsAppraisal(ref, job)` (the appraisal threshold in any category; an
+  intrinsic category with no value) or `agentValueSpecialistWorth` (living work); `flagBequest`, `flagDisputed`, a lot over
+  the Form 706 article cap (`invLotSplitState` `over`); its own `agentNotices` or `valNotices`, or an Agent One note still
+  open on its photograph's line (`_invPhotoNoteOpen`); `_arDupEligible` or an open duplicate group (`fc.dup`); any
+  `invReleaseCautions`. The intrinsic categories and MAIV are no longer flags of their own (the $100 line's were). Sterling
+  that looks like stainless is the photography guide's close-up of the mark (Q103), never a rule. Nothing is written to
+  the line: `invLineAcceptedOnly` (accepted, Agent Two's figure, no `valReviewed`; on a paper that prints no values also no
+  `reviewed` and not `namedBy` desk) is `_invReviewStats`' `accepted`, and every other reviewed line is "checked".
+  `_invProgressStamp` prints *REVIEWED — 42 items checked; 158 accepted as valued* (*accepted as named* on the Contents List,
+  the Disposition Ledger and the Contents Record; Q100), and `_avUnreviewedStamp` (§12.2's count) leaves those lines out of
+  *N values not yet reviewed* and prints a grey *N accepted as valued* beside it on the Court Inventory and the Trust
+  Schedule (Q104; the Estate Inventory Report's own stamp names them, `noAccepted`). The row's box is ticked in grey and
+  still pressable, and a press records the person's look (`_invStampLineReviewed`); the work bar reads *N of M reviewed ·
+  K accepted*. Agent Two is still never told a threshold, and no backend changed.

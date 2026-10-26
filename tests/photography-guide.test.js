@@ -8,8 +8,9 @@
 // the zoom is a close-up (the Close-up shutter, since P25): the app names each item photo on its own and lists everything in it. The
 // guide teaches the method, and to do that it says how the app treats a photo: the first four close-ups are read, a
 // close-up never adds an item, the destination and the Appraise flag stick to one thing per photo, a note said after a
-// close-up goes on its item, the $100 rule on a Form 706 estate, the duplicate check's batches of 12 sharing 6, and a
-// walkthrough collection already on the list.
+// close-up goes on its item, the $100 rule on a Form 706 estate, the duplicate check's batches of 12 sharing 6, a
+// walkthrough collection already on the list, and (2026-10-26, Q103) one piece of a flatware, china or glass group turned
+// over for a close-up of its mark, which rides with the group to the naming.
 //
 // ⚠ EACH OF THOSE IS A SENTENCE A PERSON ACTS ON, so each is held here to the code that makes it true, driven where it
 // can be. When the app changes one, this file goes red on purpose: update the guide's sentence, then this check, in the
@@ -266,6 +267,38 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const ctx = rig([ROW(), DETAIL()]);
     eq(ctx._jobInvRefs(7).map((r) => r.stableId), ['s1'], 'the close-up is not an item on the list');
     eq(ctx.agentShotGroups(7).length, 1, 'and is not sent to be named on its own');
+  }
+
+  // 2026-10-26 (Q103, as Anthony revised it: "we will look over everything, but don't need tic boxes"): sterling that looks like
+  // stainless is caught in the house, never by a tick on the desk. The guide tells the crew to turn one piece of a flatware,
+  // china or glass group over and take a close-up of the mark; the camera files that close-up with the group's one item and it
+  // rides with that item to the naming, which is told to read a mark (STERLING, 18/10, a backstamp). No rule for tableware.
+  group('Q103: turn one piece of a flatware, china or glass group over and take a close-up of the mark, and the naming reads it');
+  {
+    has(guide, 'Flatware, china and glass Turn one piece over, even in a group, and take a close-up of the mark underneath ("Sterling", "18/10", a maker’s stamp): sterling and stainless look alike from above.',
+      'the guide says so, in the close-ups table');
+    eq(count(guide, 'Turn one piece over'), 1, 'once');
+    lacks(guide, 'China and glass The mark on the bottom', 'the row it replaced is gone');
+    // The camera's Close-up is filed with the item just photographed: the group's one item.
+    const commit = live(fn('_fieldCamCommit'));
+    has(commit, "var label = st.mode === 'inventory' ? ((st.detail && st.last) ? 'detail' : 'inventory') : st.mode;", 'the Close-up shutter files a close-up…');
+    has(commit, "groupId: label === 'detail' ? st.last : null", '…against the last item photographed');
+    // …and rides with that item to the naming: the group photo and the mark under one piece, in one request.
+    const ctx = rig([ROW({ fieldNote: 'set of 12' }), DETAIL({ stableId: 'm1', driveFileId: 'MARK' })]);
+    const payload = ctx._agShotPayload(7, { srcId: 's1', rows: ['s1'] });
+    eq(payload && payload.details.map((d) => d.fileId), ['MARK'], 'the close-up of the mark is in the group’s request');
+    const box = { _agImageBlock: (id) => ({ type: 'image', id }), String, Math };
+    vm.createContext(box);
+    vm.runInContext(gsFn('_agUserContent') + '\n' + gsFn('_agListedText') + '\nvar AGENT_LISTED_MAX = 30;', box);
+    const content = box._agUserContent({ fileId: 'FID', room: 'Kitchen', details: payload ? payload.details : [] });
+    eq(content.filter((b) => b.type === 'image').map((b) => b.id), ['FID', 'MARK'], '⚠ and reaches the model beside the group photo');
+    const asked = content.filter((b) => b.type === 'text').map((b) => b.text).join(' ');
+    has(asked, 'is a close-up of something in it — a maker\'s mark, a signature, a hallmark. Read it and use it to name the object', '⚠ with the instruction to read the mark and name the group by it');
+    has(gsFn('_agSystem'), 's mark, signature or hallmark is readable on them. ', 'everyday dishes stay household goods unless a mark is readable: the mark is what changes the name');
+    // The desk asks no tick of tableware for it (Q103): the review's rule names no silver, stainless, china or glass.
+    const rule = live(fn('invLineAccepted'));
+    ok(rule.length > 400, 'fixture: the review rule read (' + rule.length + ' chars)');
+    ok(!/stainless|sterling|flatware|china|glass|silver/i.test(rule), '⚠ no tableware rule in the review');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

@@ -27513,7 +27513,7 @@ function savePhotoRefs(jobId) {
                // dropped silently on every save — this file records that exact failure three
                // separate times (fieldNote/groupId, serial, clearedAt).
                namedBy:r.namedBy, agentAt:r.agentAt, agentConf:r.agentConf, agentListed:r.agentListed,
-               agentBasis:r.agentBasis, agentNotices:r.agentNotices, agentPhotoNotes:r.agentPhotoNotes, crop:r.crop,
+               agentBasis:r.agentBasis, agentNotices:r.agentNotices, crop:r.crop,
                dupOK:r.dupOK,
                // ⚠ AGENT TWO'S FIELDS (P23): its figure's range, comparables, WorthPoint lookup, confidence, notices,
                // who valued the line and when, the name it valued, a failure's reason, and the desk's acceptance.
@@ -29504,7 +29504,7 @@ function _invQtyCarriesValue(ref, unitWas, qWas) {
   var qNow = invLineQty(ref);
   if (qNow === qWas) return false;
   // ⚠ WHERE COUNSEL VALUES THE LINE HAS NO FIGURE, ONLY AGENT TWO'S INTERNAL RANGE (agentValueInternal): the count carries
-  // the range, or a recount from 4 plates to 40 would leave them under the $100 floor (invLineUnderFloor; the review).
+  // the range, or a recount from 4 plates to 40 would leave its top under the appraisal threshold (invNeedsAppraisal reads it).
   if (isNaN(unitWas) && ref.valuedBy === 'agent' && !_invHasValue(ref) && !isNaN(parseFloat(ref.valHigh))) {
     ['valLow', 'valHigh'].forEach(function(k) { var x = parseFloat(ref[k]); if (!isNaN(x)) ref[k] = roundCents(x * qNow / qWas); });
     return true;
@@ -29649,7 +29649,7 @@ function _invApprovalReadHtml(ref, job) {
 function _invEdit(jobId, stableId, key, el) {
   var ref = _getPhotoRef(jobId, stableId);
   if (!ref) return;
-  var _revWas = invLineReviewed(ref);   // the $100 floor can move with a count, a category or a flag (_invReviewRepaint)
+  var _revWas = invLineReviewed(ref, _invAcceptCtxOf(_invJob(jobId)));   // a flag, a name or a figure can move it (_invReviewRepaint)
   var _wasAgentValue = ref.valuedBy === 'agent';
   var _wasAppraised = invAppraised(ref);   // the row's appraisal chip follows the figure landing (Q93), below
   // ⚠⚠ HAVELLIN'S PEOPLE NEVER BUY OR RECEIVE ESTATE PROPERTY (P19, call 6): asked of the line as it would be after
@@ -29757,9 +29757,14 @@ function _invEdit(jobId, stableId, key, el) {
   }
   // ⚠ A NAME CHANGED IS VALUED AGAIN, BY ITSELF (2026-10-25b): the wooden mirror that is Restoration Hardware.
   if (key === 'objectName') agentValueAfterRename(jobId, stableId);
-  // ⚠ ON OR OFF THE $100 FLOOR (2026-10-25, the review): twelve plates where there were four, Silver for Household, a
-  // bequest ticked. The row's box and its group's count follow, by id, so the box the person tabbed into keeps its focus.
-  if (invLineReviewed(ref) !== _revWas && typeof _invReviewRepaint === 'function') _invReviewRepaint(jobId, ref);
+  // ⚠ STANDING AS IT IS OR FLAGGED (the review, 2026-10-26): a bequest or appraisal ticked, a name that makes it a duplicate,
+  // a figure typed. The row's box, its group's count and the work bar follow, by id, so the box the person tabbed into keeps
+  // its focus; the paint's duplicate index first, since a name can join or leave a group.
+  if (_agDupSetJob === jobId) _agDupSet = _agDupIndex(jobId);
+  if (invLineReviewed(ref, _invAcceptCtxOf(_invJob(jobId))) !== _revWas && typeof _invReviewRepaint === 'function') _invReviewRepaint(jobId, ref);
+  // And the list's read (Q107): a change after it makes it the read of an earlier list, and its line on the work bar says so.
+  var _rdEl = document.getElementById('inv-read-' + jobId), _rdJob = _invJob(jobId);
+  if (_rdEl && _rdJob) _rdEl.outerHTML = _invListReadHtml(_rdJob, { total: _jobInvRefs(jobId).length });
   // And Agent One's (Q90): a name or a category typed on a decided line reviews it, and its Look at this goes quiet.
   if ((key === 'objectName' || key === 'category') && typeof _invRefreshAgentNotices === 'function') _invRefreshAgentNotices(jobId);
   // These feed the Summary rollups; refresh only the summary (table inputs keep focus).
@@ -30544,26 +30549,40 @@ function _invMoney(v) { var n = parseFloat(v); return isNaN(n) ? '—' : fmt(n);
 // review is finished is precisely what stops that. So an unfinished review is STAMPED,
 // never gated — the reader is told what they are holding and can act on it either way.
 function _invProgressStamp(items, opts) {
-  var st = _invReviewStats(items);
-  // `floorNamed`: a page that prints no figure for a line (the Disposition Ledger, the Contents Record) names the floor's
+  opts = opts || {};
+  // `fc` (invAcceptCtx): the job's facts the review rule reads; a printer that hands none in counts no line as standing by
+  // itself. `namesOnly`: a page that prints no figure for a line (the Disposition Ledger, the Contents Record) names those
   // lines as named, never as valued, without the Contents List's `noValues` caveat about descriptions (the review).
-  var fw = _invFloorStampWords(st, opts && (opts.noValues || opts.floorNamed)), checked = st.total - st.floor;
+  var bare = !!(opts.noValues || opts.namesOnly);
+  var st = _invReviewStats(items, opts.fc, bare);
+  var fw = _invAcceptedStampWords(st, bare), checked = st.total - st.accepted;
   var items_ = function(n) { return n + ' item' + (n === 1 ? '' : 's'); };
-  if (st.complete) {
+  // `read` (invListRead, Q107): a REVIEWED stamp over lines standing as the agents left them names who read the list and when.
+  var rd = opts.fc && opts.fc.job ? invListRead(opts.fc.job) : null;
+  if (st.complete && (!fw || (rd && rd.current))) {
     return '<div style="display:inline-block;font-size:11px;font-weight:700;color:#fff;background:#357a50;'
       + 'border-radius:3px;padding:1px 8px;margin-bottom:12px;">REVIEWED &mdash; '
-      + (!fw ? 'all ' + st.total + ' items' : checked ? items_(checked) + ' checked; ' + fw : 'all ' + fw) + '</div>';
+      + (!fw ? (st.total === 1 ? '1 item' : 'all ' + st.total + ' items')
+          : esc(invListReadWords(rd)) + '; ' + (checked ? items_(checked) + ' checked; ' : '') + fw) + '</div>';
+  }
+  if (st.complete) {
+    return '<div style="display:inline-block;font-size:11px;font-weight:700;color:#fff;background:#8a6d3b;'
+      + 'border-radius:3px;padding:1px 8px;margin-bottom:12px;">IN PROGRESS &mdash; '
+      + (checked ? items_(checked) + ' checked; ' : '') + fw + '; the list not yet read' + (rd ? ' since it last changed' : '') + '</div>'
+      + '<div style="font-size:10px;color:#8a6d3b;font-style:italic;margin:-8px 0 12px;">This is a working copy issued during the engagement. '
+      + 'Every item is named and decided; the list has not been read through' + (rd ? ' since it last changed' : '') + '.</div>';
   }
   return '<div style="display:inline-block;font-size:11px;font-weight:700;color:#fff;background:#8a6d3b;'
     + 'border-radius:3px;padding:1px 8px;margin-bottom:12px;">IN PROGRESS &mdash; '
-    + (fw ? (st.done - st.floor) + ' of ' + items_(checked) + ' checked; ' + fw : st.done + ' of ' + st.total + ' items reviewed') + '</div>'
+    + (fw ? (st.done - st.accepted) + ' of ' + items_(checked) + ' checked; ' + fw : st.done + ' of ' + st.total + ' items reviewed') + '</div>'
     // ⚠ THE CAVEAT HAS TO NAME WHAT THE DOCUMENT IT IS STAMPED ON ACTUALLY CARRIES.
     // The Contents List states no value and no disposition anywhere on the page, so the
     // default sentence would promise to revise two things it never stated — which is the
     // same defect `_invDocHead`'s `extra` argument exists to avoid one helper over.
     + '<div style="font-size:10px;color:#8a6d3b;font-style:italic;margin:-8px 0 12px;">This is a working copy issued during the engagement. '
-    + ((opts && opts.noValues)
+    + (opts.noValues
         ? 'Descriptions and conditions on unreviewed lines may still change.'
+        : opts.namesOnly ? 'Dispositions on unreviewed lines may still change.'
         : 'Values and dispositions on unreviewed lines may still change.') + '</div>';
 }
 
@@ -30925,7 +30944,7 @@ function printContentsList(jobId, opt) {
 
   var html = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
     + head
-    + _invProgressStamp(rec.items, { noValues: true })
+    + _invProgressStamp(rec.items, { noValues: true, fc: invAcceptCtx(job) })
     + gapBlock
     + exBlock
     + body
@@ -31073,13 +31092,14 @@ function printEstateInventoryReport(jobId, opt) {
   var noPhoto = all.filter(function(r){ return !r.manual && _invFileId(r) && !_invThumbFor(jobId, r); }).length;
   var noFile  = all.filter(function(r){ return !r.manual && !_invFileId(r); }).length;
   var totalFMV = all.reduce(function(t, r){ var n = parseFloat(r.fmv); return t + (isNaN(n) ? 0 : n); }, 0);
+  var _ac = invAcceptCtx(job);   // the review rule's facts, read by both stamps (invLineAccepted)
 
   var html = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
     + _invDocHead(job, 'Estate Inventory &mdash; Asset Schedule')
-    + _invProgressStamp(all)
+    + _invProgressStamp(all, { fc: _ac })
     // Agent Two's figures nobody has accepted, counted beside the review stamp, never withheld (P23). The stamp beside it
-    // already names the values the $100 floor accepted, so they are not named twice (noFloor).
-    + _avUnreviewedStamp(all, { noFloor: true })
+    // already names the values that stand with nothing flagged, so they are not named twice (noAccepted).
+    + _avUnreviewedStamp(all, { noAccepted: true, fc: _ac })
     + block(main, 'Asset Schedule')
     + block(carved, esc(_carvePots(carved)) + ' Property &mdash; carved out of the probate estate')
     + '<div style="display:flex;justify-content:flex-end;font-size:13px;font-weight:700;margin-top:12px;border-top:2px solid #333;padding-top:6px;">'
@@ -33947,7 +33967,7 @@ function printCourtInventory(jobId, opt) {
     + '<div style="font-size:11px;color:#666;margin-bottom:2px;">Basis: <strong>' + esc(basis) + '</strong> as of ' + esc(vlabel) + ' (' + esc(vdateStr) + ') &middot; Prepared by Havellin Palm Beach, LLC &middot; ' + new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) + '</div>'
     + '<div style="display:inline-block;font-size:11px;font-weight:700;color:#fff;background:' + (draft ? '#A32D2D' : '#357a50') + ';border-radius:3px;padding:1px 8px;margin-bottom:12px;">' + status + '</div>'
     // Agent Two's figures nobody has accepted, counted beside the status and never holding it back (P23).
-    + _avUnreviewedStamp(onSched)
+    + _avUnreviewedStamp(onSched, { fc: invAcceptCtx(job) })
     // ⚠ ABOVE THE TABLE, NOT UNDER IT. A reader works down this page and takes the schedule as
     // what it says it is; a caveat printed after the total has arrived once they have already
     // read it as a court filing. Same placement rule the release cautions and the as-found gap
@@ -34080,7 +34100,7 @@ function printTrustSchedule(jobId, opt) {
     + '<div style="font-size:11px;color:#666;margin-bottom:2px;">Basis: <strong>' + esc(basis) + '</strong> as of ' + esc(vlabel) + ' (' + esc(vdateStr) + ') &middot; Prepared by Havellin Palm Beach, LLC &middot; ' + new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) + '</div>'
     + '<div style="font-size:11px;color:#666;margin-bottom:8px;">Prepared for the successor trustee&rsquo;s use in administering the trust under chapter 736, Florida Statutes.</div>'
     + '<div style="display:inline-block;font-size:11px;font-weight:700;color:#fff;background:' + (draft ? '#A32D2D' : '#357a50') + ';border-radius:3px;padding:1px 8px;margin-bottom:12px;">' + status + '</div>'
-    + _avUnreviewedStamp(onSched)
+    + _avUnreviewedStamp(onSched, { fc: invAcceptCtx(job) })
     // ⚠ ABOVE THE TABLE. A reader works down this page and takes the schedule as what it says it
     // is; a caveat under the total has arrived after they read it. Same placement rule the
     // probate schedule, the release cautions and the as-found gap block all follow.
@@ -34335,7 +34355,7 @@ function printDispositionLedger(jobId, opt) {
       + '</div>';
   var html = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
     + _invDocHead(job, 'Disposition Ledger', 'Where each item went and what it brought &middot; proceeds net to ' + esc(holder))
-    + (L.items.length ? _invProgressStamp(L.items, { floorNamed: true }) : '')
+    + (L.items.length ? _invProgressStamp(L.items, { namesOnly: true, fc: invAcceptCtx(job) }) : '')
     + gapBlock
     + (L.rows.length
         ? '<table style="width:100%;border-collapse:collapse;font-size:10.5px;"><thead><tr style="color:#888;text-align:left;">'
@@ -35427,7 +35447,7 @@ function printContentsRecord(jobId, opt) {
 
   var html = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
     + head
-    + _invProgressStamp(rec.items, { floorNamed: true })
+    + _invProgressStamp(rec.items, { namesOnly: true, fc: invAcceptCtx(job) })
     + gapBlock
     + (rec.total
         ? body
@@ -36882,7 +36902,7 @@ var INV_WORK_FLAGS = [
   {key:'unnamed',   label:'Unnamed shots',   test:function(r){ return !r.objectName; }},
   // Second, beside it: the lines nobody has looked at yet (2026-10-25b, the one look: invLineReviewed, its value included), on
   // every job. It replaced P23's *Unreviewed values*, which counted the second tier, Agent Two's figures nobody had accepted.
-  {key:'unreviewed', label:'Not reviewed', test:function(r){ return !invLineReviewed(r); }},
+  {key:'unreviewed', label:'Not reviewed', test:function(r, job){ return !invLineReviewed(r, _invAcceptCtxOf(job)); }},
   {key:'undecided', label:'Not yet decided', test:function(r){ return !r.disposition; }},
   // fid: a living job enters no values, so this would count every row on the job forever.
   {key:'noval',     label:'No value yet',    fid:true, test:function(r){ return _invNeedsValue(r); }},
@@ -36955,7 +36975,7 @@ function _invEarlierHintHtml(job, all) {
 // Disposition → Room. Rooms run in WALKTHROUGH order (the estimate's own room index), the
 // same order the Job Plan cards were worked in, so the evening review retraces the day.
 function _invGroupItems(job, items) {
-  var byDisp = {};
+  var byDisp = {}, _ac = _invAcceptCtxOf(job);
   items.forEach(function(r){
     var k = r.disposition || '';
     (byDisp[k] = byDisp[k] || []).push(r);
@@ -36980,7 +37000,7 @@ function _invGroupItems(job, items) {
     var fmv = 0, done = 0;
     rows.forEach(function(r){
       var n = parseFloat(r.fmv); if (!isNaN(n)) fmv += n;
-      if (invLineReviewed(r)) done++;
+      if (invLineReviewed(r, _ac)) done++;
     });
     return {
       key: k, label: _invDispLabel(k), items: rows, fmv: fmv, reviewed: done,
@@ -37007,30 +37027,103 @@ function _invGroupItems(job, items) {
 // make sense and are correct"*): the line's Reviewed tick covers its name, its count and Agent Two's figure together
 // (_invStampLineReviewed), so a line is reviewed only while no figure Agent Two wrote since has gone unseen
 // (agentValueUnreviewed: _avWrite clears `valReviewed`). Accept value and Accept values, the second tier, are gone.
-// ⚠⚠ UNDER $100, AGENT TWO'S FIGURE IS THE LOOK (Anthony, 2026-10-25, Q99: *"I'd prefer not to have to review absolutely
-// every item if we don't need to … I don't want to have to manually tick a drawer of like stainless steel silverware or a
-// junk drawer filled with tape"*; he took $100, the Form 706 line for household goods). A line Agent Two valued, the top of
-// its range under the floor, counts as reviewed by itself (invLineReviewed, first). Never what a person must see: a firearm
-// or an NFA flag, a specialist category (invIsIntrinsic: art, antiques, jewellery, silver, rugs, collectibles, wine,
-// instruments), a line ticked for appraisal or linked to an appraiser, a bequest, a dispute or marked artistic value, a
-// note from either agent on the line or on its photograph (`agentPhotoNotes`, written by agentApplyResult on every line
-// off a photograph Agent One noted something in), a possible duplicate the room check linked (_arDupEligible), or a
-// figure made for an earlier name; and it waits for its destination, as a line named on the desk does, so a REVIEWED
-// stamp never stands over a line nobody has decided. The papers say how many passed this way (_invFloorStampWords;
-// Anthony, Q100: *"Say so on the stamp"*): nothing claims a person looked at the cutlery drawer.
-var INV_REVIEW_FLOOR = 100;
-function invLineUnderFloor(ref) {
-  if (!ref || ref.deletedAt || ref.valuedBy !== 'agent' || !_avHasFigure(ref)) return false;
-  var tops = [parseFloat(ref.valHigh), parseFloat(ref.fmv)].filter(function(x) { return !isNaN(x); });
-  if (!tops.length || Math.max.apply(null, tops) >= INV_REVIEW_FLOOR) return false;
-  if (!ref.disposition || ref.disposition === 'Undecided') return false;
-  if (agentValueStale(ref) || invIsFirearm(ref) || invIsIntrinsic(ref.category) || invIsMAIV(ref) || _arDupEligible(ref)) return false;
-  if (ref.needsAppr || ref.apprId || ref.flagBequest || ref.flagDisputed || ref.flagNFA || ref.agentPhotoNotes) return false;
-  return !(ref.agentNotices || []).length && !(ref.valNotices || []).length;
+// ⚠⚠ A TICK ONLY WHERE SOMETHING IS FLAGGED (Anthony, 2026-10-26, Q106, after Q99's $100 line: *"we will be obviously
+// going back to the office and looking over the entire inventory list ourselves to make sure everything looks right. So the
+// idea that … we need to be like ticking boxes is ridiculous to approve everything, because … this is our job at night. The
+// agent identifies everything and then values it. And then we go back and we go over the list and we make sure it makes
+// sense. And we verify it with what we saw on site"*; he took *"Only flagged lines"*). The night's read of the whole list is
+// the review, and a person fixes what they spot as they read. So a line the agents named and valued, with a destination and
+// nothing flagged, stands as it is (invLineAccepted, asked first by invLineReviewed), whatever its value, and a figure typed
+// on the desk is a person's look and stands the same way (Q105). A tick stays only where the app flags something for a
+// person: a note from either agent, on the line or still open on its photograph's line (a note sits on the photograph's
+// first line); a line both agents were guessing on (Q101: Agent One's name and Agent Two's figure both low); a possible
+// duplicate (agentDuplicateGroups, which only the whole list can answer); a firearm, an NFA flag or ammunition; an appraisal
+// (ticked, linked, at the appraisal threshold, or worth a specialist on living work); a bequest or a dispute on the line; a
+// release caution; a lot over the Form 706 article cap; a figure made for an earlier name; and every line of a disputed
+// estate (Q102, gateDispute: the siblings' counsel read every line). The sterling that looks like stainless is the
+// photography guide's close-up of the mark and the night's read (Q103), never a tick. The papers say how many stood as
+// they were (_invAcceptedStampWords; Q100: *"Say so on the stamp"*), so nothing claims a person ticked the cutlery drawer.
+// Ammunition goes where a firearm goes, whatever category Agent One filed it under: the protocol keeps it apart, and a
+// charity or a hauler refuses it (invIsFirearm reads the category alone).
+// The words pair a round, a cartridge or a shell with a calibre or a gauge (the reviews, 2026-10-26: a bare "12-gauge" held an
+// extension cord and a brad nailer while "Box of .22 LR cartridges" stood), and they read Agent One's first reading too
+// (`valNameFrom`), so Agent Two's correction never takes the word away.
+var INV_ACCEPT_AMMO_RE = /\b(?:ammunition|ammo|shotshells?|shotgun shells?|gunpowder|black powder|smokeless powder|buckshot|birdshot|rimfire|centerfire|primers|reloading (?:press|dies|supplies|equipment))\b|(?:^|[^\d.])\.(?:17|22|220|223|243|25|257|270|30|300|303|308|32|338|35|357|38|380|40|410|44|45|50)(?![\d.])|\b\d{1,3}[- ]?(?:gauge|ga|bore)\.?\s+(?:[a-z]+\s+){0,2}(?:shells?|loads?|slugs?|shot|ammo|rounds?|cartridges?)\b|\b\d{1,2}(?:\.\d{1,2})?\s?mm\s+(?:rounds?|cartridges?|ammo|ammunition|luger|bullets?)\b|\b(?:rounds?|cartridges?|bullets?|shells?)\s+(?:of|for)\s+(?:a\s+)?(?:\.?\d|rifle|pistol|shotgun|revolver|handgun)/i;
+// The job-wide facts the rule reads: the job (its dispute, the appraisal threshold, a line's cautions, the photograph's line)
+// and every line in a Possible duplicates group still open. ⚠ NO CONTEXT, NO LINE STANDS BY ITSELF: a reader that hands
+// none in asks for more ticks, never fewer.
+function invAcceptCtx(job, all) {
+  if (!job) return null;
+  var dup = {};
+  agentDuplicateGroups(job.id, all).forEach(function(g) { g.rows.forEach(function(r) { dup[r.stableId] = 1; }); });
+  return { job: job, dup: dup };
 }
-function invLineReviewed(r) {
+// The desk's: the paint's own duplicate index where it is this job's (_agDupSet, computed once per paint and refreshed by
+// _invEdit, named by _agDupSetJob), so a row never runs the grouper; else one worked out now.
+function _invAcceptCtxOf(job) {
+  if (!job) return null;
+  return _agDupSetJob === job.id ? { job: job, dup: _agDupSet } : invAcceptCtx(job);
+}
+// A note from Agent One still open on the line's photograph: it sits on the photograph's first line, so a hallmark on the
+// spoon in the drawer is the drawer's note. It goes quiet as that line's own note does (agentNoticeQuiet), and with that line
+// when the line is removed (the reviews: a removed dresser's note held its socks and belts for good, and showed nowhere).
+function _invPhotoNoteOpen(ref, job) {
+  var src = ref.derivedFrom ? _getPhotoRef(job.id, ref.derivedFrom) : null;
+  return !!src && !src.deletedAt && (src.agentNotices || []).some(function(n) { return !agentNoticeQuiet(n.kind, src, job); });
+}
+// ⚠ WHY A LINE KEEPS ITS TICK, OR '' WHERE IT STANDS AS IT IS (Q106): the one rule, read by invLineAccepted and by the row's
+// box, whose tooltip names the reason (the reviews: 46 unticked boxes and nothing on the row to say why). In order:
+// - no context, or a disputed estate (Q102): every line takes a tick;
+// - a name, a destination (not Undecided, not Hold) and a figure: Agent Two's (its range alone only where counsel values,
+//   since a paper that prints values prints a range-only line as '—'), one typed on the desk (Q105), or an appraisal's typed
+//   from the report: each a person's look;
+// - a figure made for an earlier name; both agents guessing (Q101);
+// - a firearm, an NFA flag or ammunition; an appraisal wanted, linked, at the threshold or worth a specialist, until the
+//   appraisal's figure is on the line; a bequest or a dispute on the line;
+// - a note not yet quiet, Agent One's on the line or on its photograph's line, Agent Two's while the figure is its own;
+// - a line of an open Possible duplicates group: a tick never answers it, only Remove or Not duplicates (dupOK);
+// - a release caution.
+// The Form 706 lot cap is not here: a tick does not split a lot; *Lots to split* asks for that.
+function invLineHold(ref, fc) {
+  if (!ref || ref.deletedAt) return 'gone';
+  if (!fc || !fc.job) return 'nocontext';
+  var job = fc.job;
+  if (gateDispute(job)) return 'dispute';
+  if (!String(ref.objectName || '').trim()) return 'noname';
+  if (!ref.disposition || ref.disposition === 'Undecided' || ref.disposition === 'Hold') return 'nodest';
+  var agent = ref.valuedBy === 'agent', appraised = ref.valuedBy === 'appraiser' && invAppraised(ref);
+  if (!(agent ? (agentValueInternal(job) ? _avHasFigure(ref) : _invHasValue(ref))
+      : (ref.valuedBy === 'desk' || appraised) && _invHasValue(ref))) return 'nofigure';
+  if (agent && agentValueStale(ref)) return 'stale';
+  if (agent && ref.namedBy === 'agent' && (ref.agentConf || 'low') === 'low' && (ref.valConf || 'low') === 'low') return 'guess';
+  if (invIsFirearm(ref) || ref.flagNFA || INV_ACCEPT_AMMO_RE.test(String(ref.objectName || '')) || INV_ACCEPT_AMMO_RE.test(String(ref.valNameFrom || ''))) return 'firearm';
+  if (!appraised && (ref.needsAppr || ref.apprId || invNeedsAppraisal(ref, job) || agentValueSpecialistWorth(ref, job))) return 'appraisal';
+  if (ref.flagBequest) return 'bequest';
+  if (ref.flagDisputed) return 'disputed';
+  if ((ref.agentNotices || []).some(function(n) { return !agentNoticeQuiet(n.kind, ref, job); })) return 'note';
+  if (agent && (ref.valNotices || []).length) return 'valnote';
+  if (_invPhotoNoteOpen(ref, job)) return 'photonote';
+  if (fc.dup[ref.stableId]) return 'duplicate';
+  return invReleaseCautions(ref, job.id).length ? 'caution' : '';
+}
+// The row's words for each reason, read by the box's tooltip.
+var INV_HOLD_WORDS = {
+  dispute: 'a disputed estate: every item takes a tick', noname: 'no name yet', nodest: 'no destination yet',
+  nofigure: 'no value yet', stale: 'its value was made for an earlier name', guess: 'both agents were guessing',
+  firearm: 'a firearm or ammunition', appraisal: 'waiting on an appraisal', bequest: 'a specific bequest',
+  disputed: 'marked disputed', note: 'an agent\u2019s note on it', valnote: 'Agent Two\u2019s note on it',
+  photonote: 'a note on the first item off its photograph', duplicate: 'a possible duplicate: answer it under Possible duplicates',
+  caution: 'a release caution'
+};
+function invLineAccepted(ref, fc) { return !invLineHold(ref, fc); }
+// A line standing by the rule alone, no person having looked at it: Agent Two's own figure, unticked since it landed. On a
+// paper that states no values a name a person typed or ticked is the look, so `namesOnly` leaves it out (the papers' review).
+function invLineAcceptedOnly(r, fc, namesOnly) {
+  return invLineAccepted(r, fc) && r.valuedBy === 'agent' && !r.valReviewed && !(namesOnly && (r.reviewed || r.namedBy === 'desk'));
+}
+function invLineReviewed(r, fc) {
   if (!r) return false;
-  if (invLineUnderFloor(r)) return true;
+  if (invLineAccepted(r, fc)) return true;
   if (agentValueUnreviewed(r)) return false;
   if (r.reviewed) return true;
   return r.namedBy === 'desk' && !!String(r.objectName || '').trim() && !!r.disposition && r.disposition !== 'Undecided';
@@ -37050,6 +37143,8 @@ function _invStampLineReviewed(ref, job) {
 // Agent One's on a line Agent Two had renamed, speaking of the first name). Nothing to clear: the line's one tick takes it
 // with it. A missing confidence reads low, as the badges always read it.
 function invLineUnsure(ref) {
+  // ⚠ A PERSON'S LOOK ONLY (Anthony, 2026-10-26, Q108: *"Show it, no tick"*): no context, so a line standing as the agents left
+  // it still shows its guess as a cue for the night's read; a tick still takes it (Q101 keeps the tick for both guessing).
   if (!ref || ref.deletedAt || invLineReviewed(ref)) return false;
   var agentFigure = ref.valuedBy === 'agent' && _avHasFigure(ref);
   if (agentFigure && (ref.valConf || 'low') === 'low') return true;
@@ -37057,19 +37152,57 @@ function invLineUnsure(ref) {
   var settled = agentFigure && _agNameKey(ref.valNameAt) === _agNameKey(ref.objectName);
   return !settled && (ref.agentConf || 'low') === 'low';
 }
-function _invReviewStats(items) {
-  var done = items.filter(invLineReviewed).length;
-  // `floor`: the lines reviewed by the $100 floor alone, which no person's tick has looked at (a tick stamps the value too).
-  var floor = items.filter(function(r) { return invLineUnderFloor(r) && !r.valReviewed; }).length;
-  return { done: done, total: items.length, complete: items.length > 0 && done === items.length, floor: floor };
+function _invReviewStats(items, fc, namesOnly) {
+  var done = items.filter(function(r) { return invLineReviewed(r, fc); }).length;
+  // `accepted`: the lines standing as the agents left them, which no person's tick has looked at (invLineAcceptedOnly).
+  var accepted = items.filter(function(r) { return invLineAcceptedOnly(r, fc, namesOnly); }).length;
+  return { done: done, total: items.length, complete: items.length > 0 && done === items.length, accepted: accepted };
 }
-// The stamp's words for the lines the $100 floor passed (Anthony, Q100: *"Say so on the stamp"*): "42 items checked; 158
-// under $100 accepted as valued". On a paper that states no values (the Contents List) the small lines are "accepted as
-// named". Empty where none passed that way, so a stamp reads as it always did.
-function _invFloorStampWords(st, noValues) {
-  if (!st || !st.floor) return '';
-  return st.floor + (noValues ? ' everyday item' + (st.floor === 1 ? '' : 's') + ' accepted as named'
-    : ' under ' + fmt(INV_REVIEW_FLOOR) + ' accepted as valued');
+// The stamp's words for the lines that stand as the agents left them (Anthony, Q100: *"Say so on the stamp"*): "42 items
+// checked; 158 accepted as valued". On a paper that states no values (the Contents List, the Disposition Ledger, the Contents
+// Record) they are "accepted as named". Empty where none stand that way, so a stamp reads as it always did.
+function _invAcceptedStampWords(st, noValues) {
+  if (!st || !st.accepted) return '';
+  return st.accepted + (noValues ? ' accepted as named' : ' accepted as valued');
+}
+// ⚠⚠ THE LIST READ (Anthony, 2026-10-26, Q107: *"One 'List read' press"*). The night's read of the whole list is the review
+// (Q106), and the app cannot witness a read it is not told of: with the agents finishing by themselves, a paper printed REVIEWED
+// before anyone had opened the desk. One press, *I've read the list*, records who and when on the job (`invRead`, a person's
+// edit); a line changed after it (a name, a figure, a destination, a tick, a removal: its `updatedAt`) makes it the read of an
+// earlier list, and the papers go back to IN PROGRESS until the next press. Only where a line stands as the agents left it:
+// a list every line of which a person checked needs no read to say so.
+function invListChangedAt(jobId) {
+  return (_photoRefs[jobId] || []).reduce(function(m, r) {
+    return (r.label === 'inventory' && !r.collId) ? Math.max(m, r.updatedAt || r.ts || 0) : m;
+  }, 0);
+}
+function invListRead(job) {
+  var rd = job && job.invRead;
+  if (!rd || !rd.at) return null;
+  return { at: rd.at, by: rd.by || '', current: rd.at >= invListChangedAt(job.id) };
+}
+// The words a paper prints for it: "read by Anthony Graziano, October 26, 2026".
+function invListReadWords(rd) {
+  return 'read by ' + (rd.by || 'the desk') + ', ' + fmtCEDate(_ymdLocal(new Date(rd.at)));
+}
+function invMarkListRead(jobId) {
+  var job = _invJob(jobId);
+  if (!job) return;
+  job.invRead = { at: Date.now(), by: _invStampBy(job) };
+  _saveJobEdit(job);
+  var wb = document.getElementById('inv-workbar');
+  if (wb) wb.outerHTML = _renderInvWorkbar(job, _jobInvRefs(jobId));
+}
+// The work bar's line: who read the list and when, or that it has changed since; and the press.
+function _invListReadHtml(job, st) {
+  if (!st.total) return '';
+  var rd = invListRead(job);
+  var said = rd && rd.current ? '&#10003; List ' + esc(invListReadWords(rd))
+    : rd ? 'List ' + esc(invListReadWords(rd)) + ' &middot; changed since'
+    : 'List not read yet';
+  return '<div id="inv-read-' + job.id + '" style="font-size:10.5px;color:' + (rd && rd.current ? 'var(--ok-tx)' : 'var(--gray)') + ';margin-top:7px;">' + said
+    + (rd && rd.current ? '' : ' &middot; <button class="btn-s" onclick="invMarkListRead(' + job.id + ')" style="font-size:10px;">&#10003; I\u2019ve read the list</button>')
+    + '</div>';
 }
 function _invSetReviewed(jobId, stableId, on) {
   var ref = _getPhotoRef(jobId, stableId);
@@ -37268,7 +37401,7 @@ function _invProgressBar(st, width) {
     + '<div style="width:' + (width || 120) + 'px;height:6px;border-radius:3px;background:var(--border);overflow:hidden;flex:0 0 auto;">'
     + '<div style="width:' + pct + '%;height:100%;background:' + (st.complete ? 'var(--ok-tx)' : 'var(--bronze)') + ';"></div></div>'
     + '<span style="font-size:11px;color:' + (st.complete ? 'var(--ok-tx)' : 'var(--gray)') + ';white-space:nowrap;">'
-    + st.done + ' of ' + st.total + ' reviewed</span></div>';
+    + st.done + ' of ' + st.total + ' reviewed' + (st.accepted ? ' &middot; ' + st.accepted + ' accepted' : '') + '</span></div>';
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -37449,16 +37582,6 @@ function agentApplyResult(jobId, group, result) {
   }
   // Fewer objects than blank rows is left alone rather than reconciled. Somebody split that
   // frame by hand for a reason the photograph may not show.
-  // ⚠ A NOTE IS ABOUT THE PHOTOGRAPH, AND IT SITS ON ITS FIRST LINE ONLY (`src.agentNotices`, above; Show the item goes
-  // there): every line off the photograph carries how many it raised (`agentPhotoNotes`), so the $100 floor
-  // (invLineUnderFloor) leaves them all for a person. A hallmark on the spoon is a note on the drawer's first line.
-  if (notices.length) {
-    _jobInvRefs(jobId).forEach(function(r) {
-      if ((r.stableId !== group.srcId && r.derivedFrom !== group.srcId) || r.agentPhotoNotes === notices.length) return;
-      r.agentPhotoNotes = notices.length;
-      _setPhotoRef(jobId, _invTouch(r));
-    });
-  }
 }
 
 // ─── THE RUN ───────────────────────────────────────────────────────────────────
@@ -37637,7 +37760,10 @@ function _agNameKey(s) {
 // and a desk edit (which sets `namedBy:'desk'`) each mean a person has looked at the row and
 // had the chance to say; flagging past that is nagging rather than catching.
 function _agDupEligible(r) {
-  return !!r && r.namedBy === 'agent' && !r.reviewed && !r.dupOK && !r.deletedAt
+  // ⚠ A TICK IS NOT AN ANSWER (the reviews, 2026-10-26): with a tick only on flagged lines (Q106), the tick on one half of a
+  // pair released the other half, which then stood as the agents left it under a REVIEWED stamp with the item counted
+  // twice. The group lasts until Remove or Not duplicates (`dupOK`), as the room check's always has.
+  return !!r && r.namedBy === 'agent' && !r.dupOK && !r.deletedAt
       && !!_agNameKey(r.objectName) && r.roomIdx != null;
 }
 
@@ -37773,6 +37899,7 @@ function _arDupEligible(r) {
 // repainting in 1,420 ms at 3,000 rows. Empty by default, so a row rendered outside the tab
 // simply carries no chip rather than throwing.
 var _agDupSet = {};
+var _agDupSetJob = null;   // whose (_invAcceptCtxOf): a row of another client never reads this one's
 function _agDupIndex(jobId, all) {
   var out = {};
   agentDuplicateGroups(jobId, all).forEach(function(g) {
@@ -38431,7 +38558,7 @@ function agentRevalue(jobId, stableId) {
   }
   if (!String(ref.objectName || '').trim()) { alert('Name the line first: Agent Two values a line as it is named.'); return; }
   if (!confirm('Value ' + _invNamed(ref) + ' again, researched against sold comparables?'
-      + (ref.valuedBy === 'agent' && _avHasFigure(ref) ? '\n\nThe figure Agent Two recorded is replaced when the new one comes back, and it comes back unreviewed.' : ''))) return;
+      + (ref.valuedBy === 'agent' && _avHasFigure(ref) ? '\n\nThe figure Agent Two recorded is replaced when the new one comes back, and a tick you gave the old one goes with it.' : ''))) return;
   _avForceComps[stableId] = 1;
   _avStart(jobId, job, [stableId], { revalue: true });
 }
@@ -38577,7 +38704,7 @@ function _avStateHtml(jobId) {
   if (st.failed) bits.push(st.failed + ' could not be valued (the reason is on the line)');
   if (st.skipped) bits.push(st.skipped + ' left alone: a value was recorded meanwhile');
   if (st.timedOut) bits.push('some took too long and can be sent again');
-  return '<span style="color:var(--gray);">Agent Two: ' + esc(bits.join(' · ')) + ' &middot; review them below</span>';
+  return '<span style="color:var(--gray);">Agent Two: ' + esc(bits.join(' · ')) + ' &middot; look them over below</span>';
 }
 
 // ─── THE DESK'S ACTS ON ONE LINE ────────────────────────────────────────────────
@@ -38823,13 +38950,20 @@ function invValBasisWord(ref, jobId) {
 
 // ⚠ AN UNREVIEWED AGENT VALUE COUNTS AS VALUED, AND THE PAGE SAYS HOW MANY (Anthony, 2026-10-06, spec
 // §12.2), the way the IN PROGRESS stamp says how many lines are unreviewed. Nothing is withheld for it.
+// The schedules' read words beside the grey count (Q107): who read the list, or that it is not read since it changed.
+function _avReadWords(fc) {
+  var rd = fc && fc.job ? invListRead(fc.job) : null;
+  return rd && rd.current ? ' &middot; list ' + esc(invListReadWords(rd)) : ' &middot; list not yet read' + (rd ? ' since it changed' : '');
+}
 function _avUnreviewedStamp(items, opts) {
-  var n = (items || []).filter(function(r) { return agentValueUnreviewed(r) && _invHasValue(r) && !invLineUnderFloor(r); }).length;
-  // The values the $100 floor accepted are not "not yet reviewed", and the page says how many there are (Q100).
-  var f = (items || []).filter(function(r) { return agentValueUnreviewed(r) && _invHasValue(r) && invLineUnderFloor(r); }).length;
+  var fc = opts && opts.fc;
+  var n = (items || []).filter(function(r) { return agentValueUnreviewed(r) && _invHasValue(r) && !invLineAccepted(r, fc); }).length;
+  // The values standing with nothing flagged are not "not yet reviewed", and the page says how many there are (Q100; the
+  // court and trust schedules in the stamp's own words, Q104).
+  var f = (items || []).filter(function(r) { return _invHasValue(r) && invLineAcceptedOnly(r, fc); }).length;
   var pill = function(text, bg) { return '<div style="display:inline-block;font-size:11px;font-weight:700;color:#fff;background:' + bg + ';border-radius:3px;padding:1px 8px;margin:0 0 12px 6px;">' + text + '</div>'; };
   return (n ? pill(n + ' value' + (n === 1 ? '' : 's') + ' not yet reviewed', '#8a6d3b') : '')
-    + (f && !(opts && opts.noFloor) ? pill(f + ' under ' + fmt(INV_REVIEW_FLOOR) + ' accepted as valued', '#6b6b6b') : '');
+    + (f && !(opts && opts.noAccepted) ? pill(f + ' accepted as valued' + _avReadWords(fc), '#6b6b6b') : '');
 }
 
 // ⚠ WHICH INVENTORY DOCUMENT THIS ENGAGEMENT PRODUCES — the work bar's primary (see its three arms) and, since
@@ -38844,7 +38978,7 @@ function invPrimaryDoc(job) {
 }
 
 function _renderInvWorkbar(job, all) {
-  var st = _invReviewStats(all);
+  var st = _invReviewStats(all, _invAcceptCtxOf(job));
   var _moreEl = document.getElementById('inv-more');
   var _moreOpen = !!(_moreEl && _moreEl.open);
   var jid = job.id;
@@ -38873,7 +39007,7 @@ function _renderInvWorkbar(job, all) {
       // anything useful. It withdraws itself once nothing is left unnamed.
       + (_agNameables > 0
           ? '<button class="btn-s" onclick="agentNameShots(' + jid + ')"'
-            + ' title="Read the photographs and fill in a name and a category on every unnamed line; the room check and Agent Two\u2019s values follow by themselves. No disposition is set, and every line waits for its one Reviewed tick."'
+            + ' title="Read the photographs and fill in a name and a category on every unnamed line; the room check and Agent Two\u2019s values follow by themselves. No disposition is set; a line with nothing flagged needs no tick once it has its destination."'
             + ' style="background:var(--bronze-dk);color:#fff;border-color:var(--bronze-dk);">Name ' + _agNameables
             + ' shot' + (_agNameables === 1 ? '' : 's') + '</button>'
           : '')
@@ -38959,8 +39093,9 @@ function _renderInvWorkbar(job, all) {
           + ' The Estate Inventory, the Court Inventory and the Trust Schedule are withheld for that reason, not because anything is missing here.</div>'
         : '')
     + (st.total && !st.complete
-        ? '<div style="font-size:10.5px;color:var(--gray);margin-top:7px;">Client documents print with an <strong>IN PROGRESS</strong> stamp until every line is ticked &mdash; they are never withheld.</div>'
+        ? '<div style="font-size:10.5px;color:var(--gray);margin-top:7px;">Client documents print with an <strong>IN PROGRESS</strong> stamp until every flagged item is ticked and the list is read since its last change &mdash; they are never withheld.</div>'
         : '')
+    + _invListReadHtml(job, st)
     + '<div id="inv-agent-state" style="font-size:10.5px;margin-top:7px;">' + _agStateHtml(jid) + '</div>'
     + '<div id="inv-room-state" style="font-size:10.5px;margin-top:4px;">' + _arStateHtml(jid) + '</div>'
     + '<div id="inv-value-state" style="font-size:10.5px;margin-top:4px;">' + _avStateHtml(jid) + '</div>'
@@ -39122,8 +39257,8 @@ function _invRecipientInput(jid, ref, job) {
     + (ref.channelFrom === 'plan' && !empty ? '<div class="inv-chan-plan" style="font-size:9.5px;color:var(--gray);">from the Job Plan</div>' : '');
 }
 
-// The row's Reviewed box, one builder: drawn by the row and repainted by id (_invReviewRepaint) when an edit moves the
-// line on or off the $100 floor, so the box the person tabbed into keeps its focus (2026-10-25, the review).
+// The row's Reviewed box, one builder: drawn by the row and repainted by id (_invReviewRepaint) when an edit flags a line
+// or settles it, so the box the person tabbed into keeps its focus (the review). The work bar's count follows, by id.
 function _invReviewRepaint(jobId, ref) {
   var job = _invJob(jobId), rb = document.getElementById('inv-rev-' + ref.stableId);
   if (!job || !rb) return false;
@@ -39134,20 +39269,32 @@ function _invReviewRepaint(jobId, ref) {
     var head = document.getElementById(_invGroupHeadDomId(g.key));
     if (head) head.outerHTML = _renderInvGroupHead(job, g);
   });
+  var wb = document.getElementById('inv-workbar');
+  if (wb) wb.outerHTML = _renderInvWorkbar(job, _jobInvRefs(jobId));
   return true;
 }
-function _invRevBoxHtml(jid, ref) {
-  return '<label id="inv-rev-' + esc(ref.stableId) + '" class="inv-c-rev" style="display:inline-flex;align-items:center;gap:4px;font-size:10px;color:' + (invLineReviewed(ref) ? 'var(--ok-tx)' : 'var(--gray)') + ';cursor:pointer;white-space:nowrap;" '
-        + 'title="' + (ref.reviewed && ref.reviewedBy && !(invLineUnderFloor(ref) && !ref.valReviewed) ? 'Reviewed by ' + esc(ref.reviewedBy)
-            : invLineUnderFloor(ref) && !ref.valReviewed ? esc('Under ' + fmt(INV_REVIEW_FLOOR) + ' and nothing flagged: Agent Two\u2019s value counts as the review')
-            : invLineReviewed(ref) ? 'Reviewed: named and decided on the desk' : 'Tick when this line has been checked') + '">'
-        // A line reviewed by being named and decided (invLineReviewed) reads ticked and cannot be unticked: it is not a tick.
-        + '<input type="checkbox"' + (invLineReviewed(ref) ? ' checked' : '') + (invLineReviewed(ref) && !ref.reviewed ? ' disabled' : '')
-        + ' onchange="_invSetReviewed(' + jid + ',\'' + ref.stableId + '\',this.checked)" '
-        + 'style="width:14px;height:14px;cursor:pointer;accent-color:var(--ok-tx);">Reviewed</label>';
+function _invRevBoxHtml(jid, ref, fc) {
+  fc = fc || _invAcceptCtxOf(_invJob(jid));
+  var rev = invLineReviewed(ref, fc), only = invLineAcceptedOnly(ref, fc), hold = rev ? '' : invLineHold(ref, fc);
+  // ⚠ STANDING AS IT IS, IT STILL TAKES A TICK (the review): ticked in grey, and a press records the person's own look
+  // (`true`, never `this.checked`, which would read the grey tick as one to take off), so the papers count it as checked.
+  var title = only
+      ? (ref.reviewed && ref.reviewedBy ? 'Reviewed by ' + esc(ref.reviewedBy) + '; Agent Two\u2019s value since stands, nothing flagged. Tick it to record your look at the value.'
+        : 'Nothing flagged: ' + (ref.namedBy === 'desk' ? 'the name and Agent Two\u2019s value stand' : 'the agents\u2019 name and value stand as they are') + '. Tick it to record your own look.')
+    : rev && ref.reviewed && ref.reviewedBy ? 'Reviewed by ' + esc(ref.reviewedBy)
+    : rev && invLineAccepted(ref, fc) ? 'Reviewed: a figure recorded on the desk, nothing flagged'
+    : rev ? 'Reviewed: named and decided on the desk'
+    : 'Needs a look: ' + (INV_HOLD_WORDS[hold] || 'tick when this item has been checked') + '. Tick it once checked.';
+  return '<label id="inv-rev-' + esc(ref.stableId) + '" class="inv-c-rev" style="display:inline-flex;align-items:center;gap:4px;font-size:10px;color:' + (rev && !only ? 'var(--ok-tx)' : 'var(--gray)') + ';cursor:pointer;white-space:nowrap;" '
+        + 'title="' + title + '">'
+        // A line reviewed by a person's own act (a name and a destination typed, a figure typed) reads ticked and cannot be
+        // unticked: it is not a tick.
+        + '<input type="checkbox"' + (rev ? ' checked' : '') + (rev && !ref.reviewed && !only ? ' disabled' : '')
+        + ' onchange="_invSetReviewed(' + jid + ',\'' + ref.stableId + '\',' + (only ? 'true' : 'this.checked') + ')" '
+        + 'style="width:14px;height:14px;cursor:pointer;accent-color:' + (only ? 'var(--gray)' : 'var(--ok-tx)') + ';">Reviewed</label>';
 }
 function _renderInvRow(job, ref) {
-  var jid = job.id;
+  var jid = job.id, _ac = _invAcceptCtxOf(job);
   var sid = ref.stableId;
   var open = !!_invOpen[sid];
   var picked = !!_invPick[sid];
@@ -39334,7 +39481,7 @@ function _renderInvRow(job, ref) {
       + (_invRowHasWho(ref.disposition)
           ? '<div class="inv-c inv-c-who" data-cap="Who takes it">' + _invRecipientInput(jid, ref, job) + '</div>'
           : '')
-      + _invRevBoxHtml(jid, ref)
+      + _invRevBoxHtml(jid, ref, _ac)
       + '<button class="icon-btn inv-c-open" onclick="_invToggleOpen(\'' + sid + '\')" title="Open the full record">' + (open ? '&#9652;' : '&#9662;') + '</button>'
     + '</div>'
     + (open ? _renderInvPanel(job, ref) : '')
@@ -39689,11 +39836,13 @@ function renderInventoryTab() {
   // called turned it straight back. Found on the real page with P14. A person's choice now stands until they
   // open another client's desk, which starts clean: Today if anything was shot there today, else All.
   _invApplyWhenDefault(jobId, all);
-  var items = all.filter(function(r){ return _invMatchesFilter(r, job); });
   // ONE PASS, READ PER ROW. See `_agDupIndex` — the grouper must not be called from inside
   // the row loop. It is computed over EVERY row rather than the filtered ones, or a filter
-  // hiding one half of a pair would make the other half stop reading as a duplicate.
+  // hiding one half of a pair would make the other half stop reading as a duplicate. Before the filter, which reads it
+  // through the Not reviewed chip (_invAcceptCtxOf).
   _agDupSet = _agDupIndex(jobId, all);
+  _agDupSetJob = jobId;
+  var items = all.filter(function(r){ return _invMatchesFilter(r, job); });
 
   var body;
   if (!all.length) {

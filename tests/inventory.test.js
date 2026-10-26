@@ -216,7 +216,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ── 3. Court inventory: exempt subtotal, cap, and the track/exempt overlap ──
   group('court inventory: exempt property');
   {
-    const COURT_FNS = INV_FNS.concat(['_invDocPartyHead', 'invConditionText', 
+    const COURT_FNS = INV_FNS.concat(['_invAcceptCtxOf', 'invLineAccepted', 'invLineHold', 'invLineAcceptedOnly', '_invDocPartyHead', 'invAcceptCtx', '_arDupEligible', 'agentDuplicateGroups', '_agDupEligible', 'agentNamedTwice', 'invConditionText', 
       '_invMoney', '_invDocName', 'printCourtInventory', 'jobOnProbateTrack', '_avUnreviewedStamp', 'agentValueUnreviewed', '_invScheduleSection', 'invValBasisWord', 'invLineAppraiser', '_invLinkedAppraiser', '_apprLabel', 'isFormalDoc', 'resolveDocLevel',
       'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'docLevelFloorReason', '_gate706', 'isDecedentJob',
       'resolveValBasis', 'estateValueDate', '_avdDate',
@@ -591,9 +591,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('a cleared value stays blank, and money shows as money');
   {
-    const m = sandbox({ fns: ['_invEdit', 'invLineReviewed', 'invLineUnderFloor', 'agentValueUnreviewed', '_avTakeValue', '_getPhotoRef', '_setPhotoRef', 'savePhotoRefs',
-                              '_warnPhotoStoreFull', '_invTouch', 'moneyToNumber', '_invHasVal', 'invAppraised', '_invHasValue', '_invJob', 'invUnitValue', 'invLineQty', '_invQtyCarriesValue', '_invPaintFigures', 'agentValueAfterRename', 'agentValueStale', '_avHasFigure'],
-                        vars: ['INV_STICKY_FIELDS'],
+    const m = sandbox({ fns: ['_invEdit', '_invAcceptCtxOf', 'invLineReviewed', 'invLineAccepted', 'invLineHold', 'invLineAcceptedOnly', 'agentValueUnreviewed', '_avTakeValue', '_getPhotoRef', '_setPhotoRef', 'savePhotoRefs',
+                              '_warnPhotoStoreFull', '_invTouch', 'moneyToNumber', '_invHasVal', 'invAppraised', '_invHasValue', '_invJob', 'invUnitValue', 'invLineQty', '_invQtyCarriesValue', '_invPaintFigures', 'agentValueAfterRename', 'agentValueStale', '_avHasFigure', 'invAcceptCtx', '_arDupEligible'],
+                        vars: ['_agDupSetJob', 'INV_STICKY_FIELDS'],
                         // _invRefreshReleases with its sibling repaints: _invEdit runs it on every edit since the desk build's review (2026-10-23).
                         stubs: { _invRefreshSummary() {}, _invRefreshGuardrail() {}, _invRefreshFlagStrip() {}, _invRefreshRecords() {}, _invRefreshReleases() {},
                                  _scheduleInventorySync() {}, _invNetDisplay: () => '' } });

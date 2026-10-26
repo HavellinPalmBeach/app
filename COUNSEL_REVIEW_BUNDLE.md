@@ -545,6 +545,34 @@ create a duty to verify coverage that Havellin breaches when a vendor's policy l
 *requires, as a condition of the booking*? (3) Is *any valuation, price or sale outcome* enough to keep an appraiser's error
 with the appraiser on a court-reviewed matter, read with §7.1's *not an appraisal or a statement of value*?
 
+### A21. The inventory's review stamp, and the schedules' "accepted as valued" ⚠ NEW 2026-10-26 · PRIORITY 2
+
+**What it says now.** Every inventory paper Havellin issues mid-job carries a stamp. Until now it counted lines a person had
+ticked: *"IN PROGRESS — 30 of 200 items reviewed"*. Since 2026-10-26 a line with nothing flagged stands as the agents named and
+valued it, untouched by a tick, and the stamp says how many: *"REVIEWED — 42 items checked; 158 accepted as valued"* (or *"IN
+PROGRESS — 30 of 42 items checked; 158 accepted as valued"*). On the papers that print no values (the Contents List, the
+Disposition Ledger and the Contents Record) the words are *"accepted as named"*. Where any line stands that way, REVIEWED waits
+on a recorded read of the whole list: one press on the desk, *I've read the list*, with who and when; the stamp then reads
+*"REVIEWED — read by Anthony Graziano, October 26, 2026; 42 items checked; 158 accepted as valued"*, and a change to any line
+after the read sends it back to *"IN PROGRESS — …; the list not yet read since it last changed"* (Anthony, Q107). The Court
+Inventory and the Trust Schedule, which a representative adopts or a trustee receives, carry the same words as a grey note beside
+their status: *"158 accepted as valued · list read by Anthony Graziano, October 26, 2026"* (or *"· list not yet read"*), and *"N
+values not yet reviewed"* for the values on lines that do not stand (flagged, or not yet decided). Each line's basis still prints (*general
+estimate*, *auction comps*, *appraisal · <name>*).
+
+**Why.** Anthony, 2026-10-26: *"we will be obviously going back to the office and looking over the entire inventory list
+ourselves to make sure everything looks right … this is our job at night. The agent identifies everything and then values it.
+And then we go back and we go over the list and we make sure it makes sense. And we verify it with what we saw on site."* A tick
+stays where the app flags something for a person (an agent's note, a guess, a possible duplicate, a firearm, an appraisal, a
+bequest, a dispute, a disputed estate). He chose the schedules' wording himself (*"Same words as the stamp"*), over the
+recommendation *"valued by estimate, not checked one by one"*.
+
+**The question.** (1) On a Court Inventory a personal representative adopts under §733.604, does *"accepted as valued"* read as
+a representation that Havellin examined each of those lines, and should it say who accepted them and on what basis? (2) Is
+*"REVIEWED — read by …"* a fair heading over a page most of whose lines no person ticked, the read being one recorded press for
+the whole list rather than a per-line act? (3) Does either stamp need a sentence of its own in the agreements' §7.1 Project
+Records description?
+
 ## B. Standard (living-client) services agreement
 
 ### B1. Two confidentiality standards in one contract
@@ -1269,7 +1297,8 @@ team member, and does the standard agreement need a clause to match A12?
 
 **What it does.** From P23 the desk can put an estimated value on every inventory line with **Agent Two**: software that
 searches recent sold results (auction prices realised, dealer sales) and, for ordinary household lots, the going resale rate.
-Every figure comes back marked *unreviewed* for a person to accept or correct, cites the sales it rests on (a sale is kept only
+Every figure comes back marked *unreviewed* for a person to look at or correct (since 2026-10-26, A21, a figure on a line
+nothing flags stands as Agent Two left it, and the papers count it apart), cites the sales it rests on (a sale is kept only
 if its link was actually returned by the search), and is replaced outright by a credentialed appraisal once one is recorded.
 Anthony's decisions (2026-10-05 and -06): it values living clients' lines too; an unreviewed figure counts as valued (the
 schedule is not held at DRAFT for it); and where the engagement gives valuation to counsel it writes no value at all.
@@ -1278,7 +1307,9 @@ schedule is not held at DRAFT for it); and where the engagement gives valuation 
 - **Court Inventory and Trust Schedule:** a *Basis* column on every line naming what the figure rests on, in these words:
   *appraisal*, *auction comps*, *online comps*, *general estimate*, *WorthPoint comps*, *dealer quote*, *PR estimate*.
 - **Court Inventory, Trust Schedule and Estate Inventory PDF:** a stamp beside the DRAFT / FINAL status reading
-  *"N values not yet reviewed"* when software figures nobody at Havellin has accepted are on the page. It does not make the
+  *"N values not yet reviewed"* when software figures nobody at Havellin has looked at are on lines that do not stand (flagged,
+  or not yet decided), and since 2026-10-26 a grey *"N accepted as valued · list read by …"* for the figures on lines nothing
+  flags (A21). It does not make the
   schedule a draft, and the signature block is still offered when the schedule is otherwise final.
 - **Contents list and None tiers** (the agreement gives valuation to counsel, and the Contents List says Havellin *"states no
   opinion of value"*): Agent Two's range is kept on Havellin's desk only, never written as a value and never printed, and is

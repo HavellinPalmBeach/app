@@ -206,10 +206,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                  '_invOnProbateSchedule', '_invTrack', 'resolveValBasis', 'estateValueDate',
                  '_invMoney', '_invExcludedTracks', '_invDocName', '_invHasValue', '_invIsExempt',
                  'matterDef', 'matterTypeOf', 'invDocContractBlock',
-                 'docTierProduces', 'docTierOf', 'svcHasDocStep', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'estimateAppraiserNames', 'docScopeDef', 'roundCents', 'fmt', 'scheduleSigners', 'jobFiduciaries', 'jobListEntries', '_avHasFigure', 'invLineUnderFloor', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible'];
+                 'docTierProduces', 'docTierOf', 'svcHasDocStep', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'estimateAppraiserNames', 'docScopeDef', 'roundCents', 'fmt', 'scheduleSigners', 'jobFiduciaries', 'jobListEntries', '_avHasFigure', 'invLineAccepted', 'invLineHold', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', 'invAcceptCtx', 'agentDuplicateGroups', '_agDupEligible', 'agentNamedTwice'];
     const VARS = ['DECEDENT_SERVICES', 'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD',
                   'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS',
-                  'EXEMPT_CAP_732_402', 'MATTER_TYPES', 'INV_CONTRACT_DOCS', 'DOC_SCOPES', 'INV_REVIEW_FLOOR', 'MAIV_OTHER', 'MAIV_BY_CATEGORY'];
+                  'EXEMPT_CAP_732_402', 'MATTER_TYPES', 'INV_CONTRACT_DOCS', 'DOC_SCOPES', 'MAIV_OTHER', 'MAIV_BY_CATEGORY'];
     const item = (id, name, fmv, track) => ({ stableId: id, label: 'inventory', jobId: 7,
       // Appraised (source Appraisal with the figure): since 2026-10-14 a $4,000 sofa awaits an appraisal in any category,
       // which would hold this schedule at DRAFT; the group is about the matter type, not the worklist.

@@ -86,7 +86,7 @@ const phases = (job, est) => inEastern(() => { const r = attempt(() => docCtx(jo
 const phaseText = (P) => JSON.stringify(P);
 
 // ── The two schedules: the Trust Schedule suite's lift list, the real date formatter, and the signers.
-const SCH_FNS = ['invConditionText', 
+const SCH_FNS = ['invConditionText', 'invAcceptCtx', 'agentDuplicateGroups', '_agDupEligible', 'agentNamedTwice', 
   '_invDocPartyHead', 'printTrustSchedule', 'printCourtInventory', '_avUnreviewedStamp', 'agentValueUnreviewed', '_invScheduleSection', 'invValBasisWord', 'invLineAppraiser', '_invLinkedAppraiser', '_apprLabel', '_invTrack', '_invTrackDefault', '_invOnTrustSchedule',
   '_invOnProbateSchedule', '_invIsExempt', '_invIsProbateAsset', '_invExcludedTracks', '_invHasValue', 'invDocContractBlock',
   'docTierProduces', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'matterDef', 'matterTypeOf',
@@ -96,9 +96,9 @@ const SCH_FNS = ['invConditionText',
   'invAppraisalThreshold', '_invHasAppraisal', '_jobAppraisers', 'resolveValBasis', 'estateValueDate', '_invMoney', '_invDocName',
   'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'estimateAppraiserNames',
   'docScopeDef', 'weArrangeAppraisals', 'roundCents', 'fmt', 'fmtDate2',
-  'trustInstrumentTitle', 'fmtCEDate', 'scheduleSigners', 'scheduleSignLines', 'jobFiduciaries', 'samePerson', 'canonPersonName', 'jobListEntries', '_avHasFigure', 'invLineUnderFloor', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible'];
+  'trustInstrumentTitle', 'fmtCEDate', 'scheduleSigners', 'scheduleSignLines', 'jobFiduciaries', 'samePerson', 'canonPersonName', 'jobListEntries', '_avHasFigure', 'invLineAccepted', 'invLineHold', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible'];
 const SCH_VARS = ['INV_CONTRACT_DOCS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DECEDENT_SERVICES', 'MATTER_TYPES', 'INV_ASSET_TRACKS',
-  'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'EXEMPT_CAP_732_402', 'INV_CATEGORIES', 'DOC_SCOPES', 'PERSON_NAME_ALIASES', 'INV_REVIEW_FLOOR', 'MAIV_OTHER', 'MAIV_BY_CATEGORY'];
+  'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'EXEMPT_CAP_732_402', 'INV_CATEGORIES', 'DOC_SCOPES', 'PERSON_NAME_ALIASES', 'MAIV_OTHER', 'MAIV_BY_CATEGORY'];
 const IT = (id, o) => Object.assign({ stableId: id, label: 'inventory', objectName: 'Item ' + id, category: 'Furniture', condition: 'Good',
   // Appraised (source Appraisal with the figure): since 2026-10-14 a $4,000 line awaits an appraisal in any category, which
   // would hold every schedule here at DRAFT; these groups are about the signers, not the worklist.

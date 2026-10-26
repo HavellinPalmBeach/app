@@ -146,8 +146,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const ctx = sandbox({
       fns: ['_renderInvPanel', 'invCloseUpRefusal', '_invHasPhoto', '_invCloseUpsHtml', '_invCloseUpTileHtml', '_invDetailRefs',
             '_invPhotoSiblings', '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef', '_agRecordNoticesHtml', 'agentNoticeQuiet', 'invLineReviewed',
-            '_invPanelAppraisalHtml', '_invHasAppraisal', 'invAppraisalInProgress', 'invAppraised', '_invLinkedAppraiser', 'invLineAppraiser', 'invAppraisalSourceText', 'agentValueUnreviewed', '_avHasFigure', 'invLineUnderFloor', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible'],
-      vars: ['AGENT_NOTICE_KINDS', 'INV_REVIEW_FLOOR', 'MAIV_OTHER', 'MAIV_BY_CATEGORY'],
+            '_invPanelAppraisalHtml', '_invHasAppraisal', 'invAppraisalInProgress', 'invAppraised', '_invLinkedAppraiser', 'invLineAppraiser', 'invAppraisalSourceText', 'agentValueUnreviewed', '_avHasFigure', 'invLineAccepted', 'invLineHold', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible'],
+      vars: ['AGENT_NOTICE_KINDS', 'MAIV_OTHER', 'MAIV_BY_CATEGORY'],
       stubs: {
         _photoRefs: { 1: PLATES().concat([
           { stableId: 'dx', label: 'detail', groupId: 'p', status: 'failed', ts: 1002 },

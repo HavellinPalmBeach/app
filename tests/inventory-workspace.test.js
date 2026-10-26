@@ -22,8 +22,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('grouping — disposition first, undecided at the top, rooms in walkthrough order');
   {
     const ctx = sandbox({
-      fns: ['invLineReviewed', '_invDispLabel', '_invGroupItems', 'agentValueUnreviewed', '_avHasFigure', 'invLineUnderFloor', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible'],
-      vars: ['INV_GROUP_ORDER', 'INV_UNDECIDED', 'INV_REVIEW_FLOOR', 'MAIV_OTHER', 'MAIV_BY_CATEGORY'],
+      fns: ['invLineReviewed', '_invDispLabel', '_invGroupItems', 'agentValueUnreviewed', '_avHasFigure', 'invLineAccepted', 'invLineHold', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_jobInvRefs', '_agDupEligible', 'agentNamedTwice', 'gateDispute', '_gateYes'],
+      vars: ['INV_GROUP_ORDER', 'INV_UNDECIDED', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', '_agDupSetJob'],
       stubs: { _invRoomName: (jobId, idx) => (idx == null ? 'Unassigned / estate-wide' : 'Room ' + idx) },
     });
     const job = { id: 1 };
@@ -56,9 +56,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('review state gates nothing and locks nothing');
   {
-    const ctx = sandbox({ vars: ['INV_REVIEW_FLOOR', 'MAIV_OTHER', 'MAIV_BY_CATEGORY'], fns: ['invLineReviewed', '_invReviewStats', '_invProgressStamp', 'agentValueUnreviewed', '_avHasFigure', 'invLineUnderFloor', '_invFloorStampWords', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible'] });
+    const ctx = sandbox({ vars: ['MAIV_OTHER', 'MAIV_BY_CATEGORY'], fns: ['invLineReviewed', '_invReviewStats', '_invProgressStamp', 'agentValueUnreviewed', '_avHasFigure', 'invLineAccepted', 'invLineHold', 'invLineAcceptedOnly', '_invAcceptedStampWords', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible'] });
 
-    eq(ctx._invReviewStats([{ reviewed: true }, {}, {}]), { done: 1, total: 3, complete: false, floor: 0 },
+    eq(ctx._invReviewStats([{ reviewed: true }, {}, {}]), { done: 1, total: 3, complete: false, accepted: 0 },
        'progress is counted');
     eq(ctx._invReviewStats([]).complete, false, 'an empty inventory is not "complete"');
     eq(ctx._invReviewStats([{ reviewed: true }]).complete, true, 'a fully ticked one is');

@@ -238,12 +238,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠ EMPTYING A STICKY FIELD IS STAMPED, so the merge can tell it from never having one');
   {
     const m = sandbox({
-      fns: ['_invEdit', 'invLineReviewed', 'invLineUnderFloor', 'agentValueUnreviewed', 'invAppraised', '_invHasValue', '_getPhotoRef', '_setPhotoRef', 'savePhotoRefs', '_warnPhotoStoreFull',
+      fns: ['_invEdit', 'invLineReviewed', 'invLineAccepted', 'invLineHold', 'invLineAcceptedOnly', 'agentValueUnreviewed', 'invAppraised', '_invHasValue', '_getPhotoRef', '_setPhotoRef', 'savePhotoRefs', '_warnPhotoStoreFull',
             '_invTouch', 'moneyToNumber', '_invHasVal', 'invStickyValue',
             // P22: the Authorized By box saves the stored form (invApprovalBoxToStored), asked of the job.
             'invApprovalBoxToStored', 'invApprovalBoxText', 'invApprovalSigners', 'invApprovalSignedText', 'invRecipientName',
-            '_invReadableDay', '_invJob', 'invUnitValue', 'invLineQty', '_invQtyCarriesValue', '_invPaintFigures', 'agentValueAfterRename', 'agentValueStale', '_avHasFigure'],
-      vars: ['INV_STICKY_FIELDS'],
+            '_invReadableDay', '_invJob', 'invUnitValue', 'invLineQty', '_invQtyCarriesValue', '_invPaintFigures', 'agentValueAfterRename', 'agentValueStale', '_avHasFigure', '_invAcceptCtxOf'],
+      vars: ['INV_STICKY_FIELDS', '_agDupSetJob'],
       // _invRefreshReleases: stubbed with its sibling repaints since _invEdit runs it on every edit (the desk build's review, 2026-10-23).
       stubs: { jobs: [], fmtDate2: (d) => String(d || ''), _invRefreshSummary() {}, _invRefreshGuardrail() {}, _invRefreshFlagStrip() {}, _invRefreshRecords() {}, _invRefreshReleases() {}, _scheduleInventorySync() {},
                _invNetDisplay: () => '', renderInventoryTab() {} },

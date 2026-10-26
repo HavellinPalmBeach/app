@@ -1879,7 +1879,7 @@ function groupI({ group, ok, eq, has, lacks }) {
     eq(callersOf('_invFilterHides'), ['_invEarlierUndecided', '_invMatchesFilter', 'deskShowLine'], 'what hides a line: the filter, Show the item and the earlier-days hint');
     eq(noComments(fn('_invMatchesFilter')).replace(/\s+/g, ' ').trim(), 'function _invMatchesFilter(r, job) { return _invFilterHides(r, job).length === 0; }',
       '⚠ a line shows when no part hides it: no second copy of any part');
-    eq(callersOf('agentNoticeQuiet'), ['_agRecordNoticesHtml', 'agentNotices'], 'whether a notice is quiet: the list above the rows and the record');
+    eq(callersOf('agentNoticeQuiet'), ['_agRecordNoticesHtml', '_invPhotoNoteOpen', 'agentNotices'], 'whether a notice is quiet: the list above the rows, the record, and a line held for its photograph\'s open note (Q106)');
     eq(callersOf('mustFindAllFound'), ['agentNoticeQuiet', 'standingFlagsBlock'], 'every must-find found: the desk\'s brief and the Must find notices');
     has(noComments(fn('_invEarlierUndecided')), "INV_WORK_FLAGS.filter(function(x){ return x.key === 'undecided'; })[0]", 'the hint reads the Not yet decided chip\'s own test');
     lacks(noComments(fn('_invEarlierUndecided')), '!r.disposition', 'never a copy of it');

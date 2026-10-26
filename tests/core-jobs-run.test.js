@@ -298,7 +298,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(C.invLineReviewed({ namedBy: 'agent', objectName: 'Sofa', disposition: 'Donate' }), false, 'Agent One\'s name, decided: the tick is still the review');
     eq(C.invLineReviewed({ namedBy: 'agent', objectName: 'Sofa', disposition: 'Donate', reviewed: true }), true, '…and ticked, reviewed');
     eq(C.invLineReviewed({ namedBy: 'desk', objectName: '', disposition: 'Donate' }), false, 'a decided line with no name: not yet');
-    eq(C._invReviewStats([desk, { namedBy: 'agent', objectName: 'Lamp', disposition: 'Keep' }]), { done: 1, total: 2, complete: false, floor: 0 }, 'the stamp counts the derived review');
+    eq(C._invReviewStats([desk, { namedBy: 'agent', objectName: 'Lamp', disposition: 'Keep' }]), { done: 1, total: 2, complete: false, accepted: 0 }, 'the stamp counts the derived review');
     eq(C._invReviewStats([desk, desk]).complete, true, '…and reads REVIEWED once every line is');
   }
 

@@ -433,43 +433,83 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(code(fn('_avRename')), '_avNameIsAgents(ref)', '…correcting a name only while it is Agent One’s and unreviewed');
     has(t, 'The values follow by themselves, Agent Two correcting Agent One’s guesses; Value N lines does the rest.', 'as the page says');
     lacks(t, 'Accept value', 'and the page names no Accept value');
-    // Reviewed, read off the line: one tick for the name, the count and the value.
-    const R = sandbox({ fns: ['invLineReviewed', 'agentValueUnreviewed', '_avHasFigure', '_invHasValue', 'invLineUnderFloor', 'agentValueStale', '_agNameKey', 'invIsFirearm', 'invIsIntrinsic', 'invCatMeta', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible'],
-      vars: ['INV_REVIEW_FLOOR', 'INV_TAXONOMY', 'MAIV_OTHER', 'MAIV_BY_CATEGORY'] });
-    // An Agent Two figure of $100 or more here: under $100 the value counts as the look by itself (Q99, below).
-    eq(R.invLineReviewed({ namedBy: 'desk', objectName: 'Lamp', disposition: 'Donate' }), true, 'a name typed with a destination chosen counts as reviewed by itself');
-    eq(R.invLineReviewed({ namedBy: 'desk', objectName: 'Lamp', disposition: 'Donate', fmv: 400, valuedBy: 'agent' }), false, '…until Agent Two values it');
-    eq(R.invLineReviewed({ namedBy: 'agent', objectName: 'Lamp', disposition: 'Donate' }), false, 'a name Agent One gave needs the tick');
-    eq(R.invLineReviewed({ namedBy: 'agent', objectName: 'Lamp', reviewed: 1 }), true, '…which confirms it');
-    eq(R.invLineReviewed({ namedBy: 'agent', objectName: 'Lamp', reviewed: 1, fmv: 400, valuedBy: 'agent' }), false, '…with its value: a tick that has not looked at the value is not the look');
+    // Reviewed, read off the line (2026-10-26, Q106; it replaced Q99's $100 line of the day before; Anthony: "this is our job at
+    // night … we go over the list and we make sure it makes sense. And we verify it with what we saw on site"): an item with its
+    // name, destination and value and nothing flagged stands with no tick, whatever its value; a flagged one takes the one tick
+    // for its name, count and value. The page's sentences on the real rule, with a real context (invAcceptCtx: the job and the
+    // open duplicate groups), each flag the page names, and the box it describes. review-flagged.test.js holds the rule whole.
+    const RV = lift(['invLineAccepted', 'invLineHold', 'invAcceptCtx', 'invLineReviewed', 'invLineUnsure', '_invRevBoxHtml', '_invProgressStamp'],
+      { jobs: [], _photoRefs: {}, estimateStore: {}, vendors: [], vendorDirectory: [], contractors: [] });
+    const EST = (o) => Object.assign({ id: 7, hvlId: 'HVL-0007', name: 'Butler Estate', svc: 'cleanout', matterType: 'probate', docTier: 'values',
+      deathDate: '2026-06-14', executor: 'Tripp Butler', tc: 'Ashley Jerome', won: true, status: 'won' }, o || {});
+    // Agent One's name and Agent Two's figure, both fairly sure, a destination chosen, nothing flagged: the cutlery drawer. Each
+    // flag below is this line with one thing changed, so every step before it passes.
+    const ITEM = (o) => { const n = (o && o.objectName) || 'Kitchen utensils, drawer'; return Object.assign({ stableId: 'k1', label: 'inventory',
+      roomIdx: 1, ts: 1, objectName: n, valNameAt: n, namedBy: 'agent', agentConf: 'medium', category: 'General/Household', qty: 1,
+      disposition: 'Donate', driveFileId: 'Fk1', valuedBy: 'agent', fmv: 40, valLow: 20, valHigh: 60, valConf: 'medium' }, o || {}); };
+    // The line as the desk reads it: on `job`, with `others` beside it on the job's list.
+    const look = (job, o, others) => {
+      const line = ITEM(o), all = [line].concat(others || []);
+      RV.jobs.length = 0; RV.jobs.push(job); RV._photoRefs[job.id] = all;
+      const r = attempt(() => { const fc = RV.invAcceptCtx(job, all);
+        return { stands: RV.invLineAccepted(line, fc), reviewed: RV.invLineReviewed(line, fc), unsure: RV.invLineUnsure(line, fc),
+          box: RV._invRevBoxHtml(job.id, line, fc) }; });
+      return r.ok ? r.val : { err: r.err };
+    };
+    const base = look(EST());
+    eq([base.stands, base.reviewed], [true, true], '⚠⚠ "Nothing flagged? No tick": the $40 drawer, named, valued and decided, stands with nobody ticking it' + (base.err ? ' (' + base.err + ')' : ''));
+    eq(look(EST(), { objectName: 'Mahogany dining table, six chairs', category: 'Furniture', disposition: 'Sell', fmv: 2400, valLow: 2000, valHigh: 2900 }).stands, true,
+      '⚠⚠ "whatever its value": a $2,400 table stands too (the $100 line of 2026-10-25 is gone)');
+    eq(look(EST(), { objectName: 'Oil on canvas, harbour scene', category: 'Art & Décor', fmv: 300, valLow: 200, valHigh: 450 }).stands, true,
+      '…and art is no flag of its own');
+    has(base.box || '', ' checked', '"the box is ticked…"');
+    has(base.box || '', 'accent-color:var(--gray)', '"…in grey"');
+    lacks(base.box || '', ' disabled', 'and it can still be pressed, to record a look');
+    has(base.box || '', 'Nothing flagged: the agents’ name and value stand as they are.', 'its tooltip says why');
+    // "Correct the name and count, choose where it goes … check the value": until it has them the line is not done.
+    [['no destination yet', { disposition: '' }], ['Not yet decided', { disposition: 'Undecided' }], ['no value yet', { fmv: '', valLow: undefined, valHigh: undefined }]]
+      .forEach(([w, o]) => eq(look(EST(), o).reviewed, false, 'until it is decided and valued it is not done: ' + w));
+    // "Flagged? One Reviewed tick covers it all, unsure first: a note, a possible duplicate, a firearm or ammunition, an
+    // appraisal, a bequest, a dispute, both agents unsure."
+    const TWIN = ITEM({ stableId: 'k2', driveFileId: 'Fk2', ts: 2 });
+    [['a note (Agent One’s)', { agentNotices: [{ kind: 'other', text: 'a mark under the base' }] }],
+     ['a note (Agent Two’s)', { valNotices: [{ kind: 'specialist', text: 'a maker worth a look' }] }],
+     ['a possible duplicate (the same name off another photo in the room)', {}, [TWIN]],
+     ['a firearm', { category: 'Firearms', objectName: 'Remington pump shotgun' }],
+     ['ammunition, whatever its category', { objectName: 'Box of 20 gauge target loads' }],
+     ['an appraisal: ticked for one', { needsAppr: true }],
+     ['an appraisal: linked to an appraiser', { apprId: 'a1' }],
+     ['an appraisal: worth $3,000 or more, in any category', { objectName: 'Leather sofa, Restoration Hardware', category: 'Furniture', fmv: 3200, valLow: 2800, valHigh: 3600 }],
+     ['a bequest', { flagBequest: true }],
+     ['a dispute', { flagDisputed: true }],
+     ['both agents unsure', { agentConf: 'low', valConf: 'low' }]]
+      .forEach(([w, o, others]) => { const l = look(EST(), o, others); eq([l.stands, l.reviewed], [false, false], '⚠ flagged, it waits for the tick: ' + w + (l.err ? ' (' + l.err + ')' : '')); });
+    eq(look(EST(), {}, [ITEM({ stableId: 'k2', driveFileId: 'Fk2', ts: 2, objectName: 'Brass table lamp' })]).stands, true, '…the duplicate\'s control: another thing in the room, the drawer stands');
+    eq([look(EST(), { valConf: 'low' }).stands, look(EST(), { agentConf: 'low' }).stands], [true, true], '"both": either agent alone unsure, the line stands');
+    eq(look(EST(), { agentConf: 'low', valConf: 'low' }).unsure, true, '"unsure first": both unsure, the row reads unsure');
+    // "On a disputed estate every item takes it."
+    eq([look(EST({ gateDispute: 'yes' })).stands, look(EST({ svc: 'contested_probate' })).stands], [false, false],
+      '⚠ on a disputed estate, or a contested probate, even the drawer waits for the tick');
+    // The tick itself: one look for the name, the count and the value.
     has(code(fn('_invStampLineReviewed')), '_avStampReviewed(ref, job)', 'the tick accepts Agent Two’s figure with the line');
-    has(code(fn('_renderInvRow')), '_invRevBoxHtml(jid, ref)', 'the row draws its Reviewed box…');
+    has(code(fn('_renderInvRow')), '_invRevBoxHtml(jid, ref, _ac)', 'the row draws its Reviewed box…');
     has(code(fn('_invRevBoxHtml')), '>Reviewed</label>', '…the row’s Reviewed box');
     has(code(fn('_renderInvRow')), 'if (invLineUnsure(ref))', 'unsure on the row where the agents were guessing');
     has(code(fn('_renderInvRow')), '>unsure</span>', '…in those words');
     has(code(fn('_invEdit')), "if (key === 'objectName') agentValueAfterRename(jobId, stableId);", 'a name changed is valued again by itself');
-    has(t, 'One Reviewed tick covers it all, unsure first. Anything Agent Two values under $100 needs no tick, except firearms, art, antiques, jewelry, silver, rugs, collectibles, wine, instruments and anything with a note, a flag or an appraiser. A name you typed with a destination chosen counts as reviewed until Agent Two values it; then as above. A maker added to the name reprices it.', 'as the page says');
-    // 2026-10-25 (Q99; Anthony: "I don't want to have to manually tick a drawer of like stainless steel silverware or a junk
-    // drawer filled with tape"): under $100 with nothing flagged, Agent Two's value is the look. The page's sentence on the real
-    // rule (review-floor.test.js holds the rule itself): the figure, the floor asked first, each exception the page names.
-    eq(R.INV_REVIEW_FLOOR, 100, 'the floor is $100, as the page says');
-    has(code(fn('invLineReviewed')), 'if (invLineUnderFloor(r)) return true;\n  if (agentValueUnreviewed(r)) return false;', 'invLineReviewed asks the floor first, before the unseen figure');
-    const SMALL = (o) => Object.assign({ namedBy: 'agent', objectName: 'Kitchen utensils', valNameAt: 'Kitchen utensils', category: 'General/Household',
-      disposition: 'Donate', valuedBy: 'agent', fmv: 40, valLow: 20, valHigh: 60 }, o || {});
-    const rev = (o) => { const r = attempt(() => R.invLineReviewed(SMALL(o))); return r.ok ? r.val : 'threw: ' + r.err; };
-    eq(rev(), true, '⚠⚠ Agent Two values it under $100, nothing flagged: no tick needed');
-    eq(rev({ fmv: 90, valHigh: 140 }), false, '…read at the top of its range: $90 that may be $140 waits for the tick');
-    [['firearms', 'Firearms'], ['art', 'Art & Décor'], ['antiques', 'Antiques'], ['jewelry', 'Jewelry & Watches'], ['silver', 'Silver & Precious Metal'],
-     ['rugs', 'Rugs & Carpets'], ['collectibles', 'Collectibles'], ['wine', 'Wine & Spirits'], ['instruments', 'Musical Instruments']]
-      .forEach(([w, cat]) => eq(rev({ category: cat }), false, '⚠ except ' + w + ' (' + cat + ')'));
-    [['a note from Agent One', { agentNotices: [{ kind: 'other', text: 'a mark under the base' }] }], ['a note from Agent Two', { valNotices: [{ kind: 'specialist', text: 'a maker worth a look' }] }],
-     ['a flag: appraise', { needsAppr: true }], ['a flag: a specific bequest', { flagBequest: true }], ['a flag: disputed', { flagDisputed: true }],
-     ['a flag: NFA', { flagNFA: true }], ['a flag: marked artistic value', { flagMAIV: 'yes' }], ['an appraiser', { apprId: 'a1' }]]
-      .forEach(([w, o]) => eq(rev(o), false, '⚠ except anything with ' + w));
-    eq(rev({ namedBy: 'desk', objectName: 'Box of kitchen tools', valNameAt: 'Box of kitchen tools' }), true, 'a name you typed, then valued under $100: still reviewed ("then as above")');
-    eq(rev({ namedBy: 'desk', objectName: 'Box of kitchen tools', valNameAt: 'Box of kitchen tools', fmv: 400, valLow: 300, valHigh: 500 }), false, '…valued over it: tick it');
-    eq(rev({ namedBy: 'desk', objectName: 'Box of kitchen tools', valNameAt: 'Box of kitchen tools', category: 'Art & Décor' }), false, '…or art under it: tick it');
-    has(code(fn('_invRevBoxHtml')), 'counts as the review', 'the row’s box says why it is ticked');
+    has(t, 'Correct the name and count, choose where it goes, type who takes it if it leaves, check the value against what you saw. Nothing flagged? No tick, whatever its value: the box is ticked in grey. Flagged? One Reviewed tick covers it all, unsure first: a note, a possible duplicate, a firearm or ammunition, an appraisal, a bequest, a dispute, both agents unsure. On a disputed estate every item takes it. A maker added to the name reprices it.', 'as the page says');
+    has(t, 'Not yet decided, room by room: name, where it goes, who takes it, value; tick what is flagged.', 'and the pocket card');
+    lacks(t, '$100 needs no tick', '⚠ the $100 line is gone from the page');
+    lacks(t, 'counts as reviewed until Agent Two values it', '…and so is the name typed that waited for a tick once valued');
+    // "Papers print marked IN PROGRESS until every item is decided, valued and, where flagged, ticked", on the real stamp.
+    const stamp = (items, job) => { RV.jobs.length = 0; RV.jobs.push(job); RV._photoRefs[job.id] = items;
+      const r = attempt(() => RV._invProgressStamp(items, { fc: RV.invAcceptCtx(job, items) })); return r.ok ? decode(r.val.replace(/<[^>]+>/g, ' ')) : 'threw: ' + r.err; };
+    const two = (o) => [ITEM(), ITEM(Object.assign({ stableId: 'k3', driveFileId: 'Fk3', ts: 3, objectName: 'Brass table lamp' }, o || {}))];
+    has(stamp(two(), EST()), 'REVIEWED', 'every item decided, valued and nothing flagged: REVIEWED with no tick');
+    has(stamp(two({ disposition: 'Undecided' }), EST()), 'IN PROGRESS', 'one item undecided: IN PROGRESS');
+    has(stamp(two({ fmv: '', valLow: undefined, valHigh: undefined }), EST()), 'IN PROGRESS', 'one item not valued: IN PROGRESS');
+    has(stamp(two({ flagDisputed: true }), EST()), 'IN PROGRESS', 'one flagged and unticked: IN PROGRESS');
+    has(stamp(two({ flagDisputed: true, reviewed: true, reviewedBy: 'Ashley Jerome', valReviewed: true }), EST()), 'REVIEWED', '…and ticked: REVIEWED');
     // The selection.
     has(code(fn('_renderInvGroupHead')), '>Select all</button>', 'Select all on the group');
     const bulk = code(fn('_renderInvBulk'));
@@ -505,8 +545,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(t, 'With one vendor of that kind confirmed on the Job Plan, it fills itself in.', 'as the page says');
     // 2026-10-24: + Close-up, a close-up missed in the house, is a label over the record's chooser (closeup-later.test.js).
     ['&#10133; Another item in this photo</button>', '&#10133; Close-up</label>', 'Remove line</button>', '>Open photo in Drive</a>'].forEach((w) => has(code(fn('_renderInvPanel')), w, 'the record carries ' + decode(w.replace(/<[^>]+>/g, ''))));
-    has(SRC, 'IN PROGRESS</strong> stamp until every line is ticked &mdash; they are never withheld.', 'papers print marked IN PROGRESS, never withheld');
-    has(t, 'Papers print marked IN PROGRESS until every item is reviewed; they are never held back.', 'as the page says');
+    has(SRC, 'IN PROGRESS</strong> stamp until every line is named, valued and decided and every flagged line ticked &mdash; they are never withheld.', 'papers print marked IN PROGRESS, never withheld (the work bar, 2026-10-26)');
+    has(t, 'Papers print marked IN PROGRESS until every item is decided, valued and, where flagged, ticked; they are never held back.', 'as the page says (the stamp itself is driven above)');
     has(code(fn('_renderInvWorkbar')), "'+ Add line item'", '+ Add line item');
     const imp = code(fn('_renderInventoryImportPanel'));
     has(imp, 'From the Estimate Walkthrough', 'the vehicles still to bring in…');
@@ -675,7 +715,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(t, 'Photo Opens it in Drive.', 'as the page says');
     has(t, 'No thumbnails Nothing is lost. Reload, or tap the box for Drive.', '…and its tricky spot');
     has(row, "+ '\\',\\'qty\\',this)\">", 'the count is a box on the row, written through the one writer');
-    has(t, 'Correct the name and count, choose where it goes, type who takes it if it leaves, check the value.', 'as the page says');
+    has(t, 'Correct the name and count, choose where it goes, type who takes it if it leaves, check the value against what you saw.', 'as the page says');
     // Each and Total (2026-10-25b): one article's value and the count's, under their own headings.
     const head = code(fn('_renderInvColHead'));
     has(head, '<span class="inv-c-each">Each</span><span class="inv-c-val">Total</span>', 'the row’s Each and Total, headed');
