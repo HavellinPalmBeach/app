@@ -98,20 +98,41 @@ const APP = process.env.APP || 'file:///home/user/app/havellin.html';
   s = await strip({ dropTier: true, docScope: '' });
   ok(!s.contentsList && s.estateReport, 'a legacy job with no tier behaves exactly as it did before today');
 
-  // ── The rendered document, off the REAL printer ──────────────────────────────
+  // ── The rendered document, off the REAL printer, through the viewer ─────────
+  // Restated 2026-10-27: the work bar's papers open on screen first. printContentsList opens the document viewer
+  // (#doc-viewer-modal), titled by the paper, and prints nothing; the viewer's Print / Save PDF (printDocViewer) prints
+  // the page it holds through _printDocument, the viewer comes back once the dialog closes, and Close drops it.
   await strip({ docTier: 'contents' });
   const doc = await p.evaluate((id) => {
-    let captured = null, title = null;
+    let captured = null, title = null, prints = 0;
     const realPrint = window.print, realTitle = document.title;
-    window.print = () => { captured = document.getElementById('print-target').innerHTML; title = document.title; };
+    window.print = () => { prints++; captured = document.getElementById('print-target').innerHTML; title = document.title; };
     printContentsList(id);
-    // _printDocument defers the dialog by a frame; wait for it synchronously is not possible,
-    // so read the target after the timeout the real path uses.
+    const ov = document.getElementById('doc-viewer-modal');
+    const viewer = { open: !!ov && ov.style.display === 'flex',
+      title: (document.getElementById('doc-viewer-title') || {}).textContent || '' };
+    // Wait past the 150 ms a print at once would have taken, then press Print / Save PDF; _printDocument defers the
+    // dialog, so read the target after the timeout the real path uses.
     return new Promise(res => setTimeout(() => {
-      window.print = realPrint;
-      res({ html: captured || document.getElementById('print-target').innerHTML, title, after: document.title, realTitle });
-    }, 900));
+      const printsBefore = prints;
+      printDocViewer();
+      setTimeout(() => {
+        const back = !!ov && ov.style.display === 'flex';
+        closeDocViewer();
+        window.print = realPrint;
+        res({ html: captured || document.getElementById('print-target').innerHTML, title, after: document.title, realTitle,
+          viewer, printsBefore, prints, back, closed: !!ov && ov.style.display === 'none' });
+      }, 900);
+    }, 400));
   }, jobId);
+
+  // Restated 2026-10-27: the work bar's papers open on screen first.
+  ok(doc.viewer.open, 'the Contents List opens in the document viewer first');
+  ok(/Contents List/.test(doc.viewer.title), 'the viewer is titled by the paper: ' + doc.viewer.title);
+  eq(doc.printsBefore, 0, '⚠ nothing printed before Print / Save PDF was pressed');
+  eq(doc.prints, 1, 'Print / Save PDF prints it once');
+  ok(doc.back, 'the viewer comes back after the print dialog');
+  ok(doc.closed, 'and Close takes it away');
 
   const html = doc.html || '';
   const txt = html.replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/&middot;/g, '·')
@@ -167,12 +188,15 @@ const APP = process.env.APP || 'file:///home/user/app/havellin.html';
   ok(!/carved out|Non-Probate/i.test(txt), 'nothing is carved out of it');
 
   // ── The values-tier arm, on the same estate ─────────────────────────────────
+  // Restated 2026-10-27: the work bar's papers open on screen first: the printer opens the viewer, and the viewer's
+  // Print / Save PDF (printDocViewer) prints the page; Close once the print has been captured.
   const valArm = await p.evaluate((id) => {
     const j = jobs.find(x => x.id === id); j.docTier = 'values';
     const realPrint = window.print; let cap = null;
     window.print = () => { cap = document.getElementById('print-target').innerHTML; };
     printContentsList(id);
-    return new Promise(res => setTimeout(() => { window.print = realPrint;
+    printDocViewer();
+    return new Promise(res => setTimeout(() => { window.print = realPrint; closeDocViewer();
       res(cap || document.getElementById('print-target').innerHTML); }, 900));
   }, jobId);
   const vt = String(valArm).replace(/<[^>]+>/g, ' ').replace(/&mdash;/g, '—').replace(/\s+/g, ' ');
