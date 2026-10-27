@@ -2,9 +2,10 @@
 //
 // Drives the REAL page through its own controls on the Job Admin & Inv desk and the Job Plan: a row's disposition
 // select, the row's record (▾) and its Keep the name, Removed items' Show all and Restore, the bulk bar's checkboxes,
-// its Set disposition… and Mark reviewed, the workbar's Approval Request, the Authorized By box, the Releases & signed
-// papers card, and the Job Plan's Hours Log toggle. Seeded: a probate estate with a firearm going to the decedent's
-// daughter, fourteen removed lines and a line whose photograph was binned with its two detail shots, a filed receipt
+// its Set disposition… and Mark reviewed, the workbar's Approval Request (which opens in the document viewer, and prints
+// only from the viewer's Print / Save PDF; restated 2026-10-27: the work bar's papers open on screen first), the
+// Authorized By box, the Releases & signed papers card, and the Job Plan's Hours Log toggle. Seeded: a probate estate
+// with a firearm going to the decedent's daughter, fourteen removed lines and a line whose photograph was binned with its two detail shots, a filed receipt
 // whose signer has no line now, an estate line recorded as going to the concierge, and a line two co-representatives
 // signed on different days; a living client with an inventory and an hours log whose crew name and activity carry markup.
 //
@@ -86,12 +87,25 @@ const EST = 6601, LIVING = 6603;
     const rowText = (sid) => txt('#inv-row-' + sid);
     const pick = async (sid) => { await p.click('#inv-row-' + sid + ' input[type=checkbox][title="Select for a bulk change"]'); await p.waitForTimeout(300); };
     const openRec = async (sid) => { await p.click('#inv-row-' + sid + ' button[title="Open the full record"]'); await p.waitForTimeout(400); };
+    // Restated 2026-10-27: the work bar's papers open on screen first. The Approval Request opens in the document viewer,
+    // titled by the paper, and nothing prints until the viewer's Print / Save PDF is pressed; that press prints the page,
+    // which is what this reads (as it read the page the button printed at once before), and the viewer is then closed so
+    // its overlay is off the desk.
+    const viewerOpen = () => p.evaluate(() => { const o = document.getElementById('doc-viewer-modal'); return !!o && o.style.display === 'flex'; });
     const requestOf = async (id) => {
       const before = await printCount();
       await press('#inv-workbar button[onclick="printApprovalRequest(' + id + ')"]', 'Approval Request');
+      ok(await until(viewerOpen, 4000), 'the Approval Request opens in the document viewer');
+      eq(await txt('#doc-viewer-title'), 'Release Approval Request', 'the viewer is titled by the paper');
+      eq(await printCount(), before, 'nothing printed before Print / Save PDF is pressed');
+      await press('#doc-viewer-print', 'Print / Save PDF, in the viewer');
       await until(async () => (await printCount()) > before, 4000);
+      eq(await printCount(), before + 1, 'Print / Save PDF printed the page once');
       const h = (await printCount()) > before ? await p.evaluate(() => window.__prints.slice(-1)[0]) : '';
       await printClosed();
+      ok(await until(viewerOpen, 4000), 'the viewer comes back after the print dialog');
+      await press('#doc-viewer-modal button[onclick="closeDocViewer()"]', 'Close the viewer');
+      ok(!(await viewerOpen()), 'Close takes the viewer away');
       return h;
     };
 

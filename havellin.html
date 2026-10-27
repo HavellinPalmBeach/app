@@ -1476,7 +1476,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.27 · 8:24am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.27 · 12:23pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -30886,8 +30886,10 @@ function custodyEvents(ref) {
 // caller cannot leak its filename onto whatever is printed next.
 // ⚠ `opt.view` OPENS THE PAGE IN THE DOCUMENT VIEWER FIRST (2026-10-26; Anthony, on the desk's More ▾ papers: "as soon as I
 // cancel or I launch a printer ... it just disappears"): the page is read on screen, and the viewer's Print / Save PDF comes
-// back here with `opt.after`, which reopens the viewer once the dialog has closed. The callers that print straight away are
-// unchanged; a test's stub of this function still receives the page and its title.
+// back here with `opt.after`, which reopens the viewer once the dialog has closed. Since 2026-10-27 (Anthony: "Yes") the work
+// bar's papers open the same way: the Contents List, the Estate Inventory PDF, the Release Approval Request (the bar's and the
+// selection's) and the Contents Record. The callers that print straight away are unchanged; a test's stub of this function still
+// receives the page and its title.
 function _printDocument(html, title, opt) {
   var pt = document.getElementById('print-target');
   if (!pt) return false;
@@ -31346,7 +31348,7 @@ function printContentsList(jobId, opt) {
     + '</div></div>';
   // The probate package asks for the page itself (`opt.asHtml`, P17) — see printCourtInventory.
   if (opt && opt.asHtml) return { html: html, title: _invDocName(job, 'Contents List') };
-  _printDocument(html, _invDocName(job, 'Contents List'));
+  _printDocument(html, _invDocName(job, 'Contents List'), { view: true, job: job, label: 'Contents List' });   // on screen first (2026-10-27)
 }
 
 // ── 02 · After Inventory ──────────────────────────────────────────────────────
@@ -31513,7 +31515,7 @@ function printEstateInventoryReport(jobId, opt) {
     + '</div>';
   // The probate package asks for the page itself (`opt.asHtml`, P17) — see printCourtInventory.
   if (opt && opt.asHtml) return { html: html, title: _invDocName(job, 'Estate Inventory') };
-  _printDocument(html, _invDocName(job, 'Estate Inventory'));
+  _printDocument(html, _invDocName(job, 'Estate Inventory'), { view: true, job: job, label: 'Estate Inventory' });   // on screen first (2026-10-27)
 }
 
 // ── CSV ───────────────────────────────────────────────────────────────────────
@@ -32925,7 +32927,7 @@ function printApprovalRequest(jobId, selectedOnly, opt) {
     + '</div>';
   var _title = _invDocName(job, 'Release Approval Request');   // APPROVAL_REQ_TITLE, as a literal: sandboxes lift this printer alone
   if (_asHtml) return { html: html, title: _title, items: items, asked: asked, ratify: ratify, held: held, esign: _esign, fids: fids };
-  _printDocument(html, _title);
+  _printDocument(html, _title, { view: true, job: job, label: 'Release Approval Request' });   // on screen first (2026-10-27)
 }
 
 // ═══ SENDING THE RELEASE APPROVAL REQUEST (2026-10-17; Anthony: "Build the send button") ═══
@@ -36498,7 +36500,7 @@ function printContentsRecord(jobId, opt) {
     + contentsRecordSignoff(job, rec)
     + '</div>';
   if (asHtml) return { html: html, title: _invDocName(job, 'Contents Record') };
-  _printDocument(html, _invDocName(job, 'Contents Record'));
+  _printDocument(html, _invDocName(job, 'Contents Record'), { view: true, job: job, label: 'Contents Record' });   // on screen first (2026-10-27)
 }
 // ⚠⚠ THE PAPER A LIVING FAMILY SIGNS (P25, Q51; Anthony, 2026-10-09: "One paper"). The client's signature under the record
 // of what stayed and what went, withheld while any line has no destination (as the Disposition Ledger withholds its

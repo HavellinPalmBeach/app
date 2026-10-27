@@ -21,7 +21,11 @@
 // a $40 cutlery drawer (Donate), a $2,500 dining table (Sell), a silver tray at $80 (Sell), a ceramic vase Agent One
 // noted (Look at this), a painted box both agents guessed on, a $9,000 sofa (at the appraisal threshold), a platter only
 // Agent Two was unsure of, and two brass candlesticks Agent One named alike off two photographs; and a second estate whose
-// sheet cannot be reached. Job Admin & Inv through its own nav button; Edit Client through the dashboard's own button:
+// sheet cannot be reached. Job Admin & Inv through its own nav button; Edit Client through the dashboard's own button. Each
+// paper (the Estate Inventory PDF on the work bar, the Trust Schedule under More ▾) opens in the document viewer, titled by
+// the paper, with nothing printed until its Print / Save PDF is pressed; what a paper "prints" below is the page that press
+// prints, and the viewer is shut by its Close (restated 2026-10-27: the work bar's papers open on screen first; the Estate
+// Inventory PDF printed at once until then):
 //   A. Opened, and the sheet's read landed: the work bar offers ✓ I've read the list with no other press. Not reviewed reads
 //      5 (the vase, the box, the sofa, the two candlesticks); the drawer, the table, the tray and the platter stand: their
 //      Reviewed boxes ticked, grey and enabled, with the standing tooltip; each held box's tooltip names every reason (the
@@ -262,24 +266,29 @@ const DAY = (at) => new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_Yo
     };
     // A paper as the print path hands it to the browser: window.print caught, the page's text read off #print-target, and
     // each stamp or pill on it (a box with a background of its own) with its colour, so bronze can be told from grey.
+    // Restated 2026-10-27: the work bar's papers open on screen first. Every paper this step reads (the Estate Inventory PDF
+    // on the work bar, the Trust Schedule under More ▾) opens in the document viewer titled by the paper, prints nothing
+    // until the viewer's own Print / Save PDF is pressed, and the page read is the one that press prints.
     let pills = [];
-    const printed = async (sel, what, menu) => {
+    const printed = async (sel, what, menu, title) => {
       await p.evaluate(() => { window.__printed = ''; window.print = () => { window.__printed = (document.getElementById('print-target') || {}).innerHTML || ''; }; });
       // More ▾ keeps its open state across a redraw (_renderInvWorkbar reads it), so it is opened only if it is shut.
       if (menu && !(await p.evaluate(() => !!(document.getElementById('inv-more') || {}).open))) { await p.click('#inv-more > summary'); await p.waitForTimeout(400); }
       await press(sel, what);
-      await p.waitForTimeout(menu ? 700 : 1500);
+      // Restated 2026-10-27: the work bar's papers open on screen first (the wait that let the page print now lets the viewer open).
+      await p.waitForTimeout(700);
       // Restated on merging main (2026-10-26, "The desk's More ▾ papers open on screen first"): a paper under More ▾ opens in
       // the viewer and prints nothing until the viewer's own Print / Save PDF is pressed, which prints that page; the viewer
       // comes back after the dialog and is closed by its Close (left open, it covered the work bar and every press after it).
-      // The work bar's own papers (the Estate Inventory PDF) still print at once.
-      if (menu) {
-        ok(await p.evaluate(() => { const o = document.getElementById('doc-viewer-modal'); return !!o && o.style.display === 'flex'; }),
-          what + ': opens on screen first (main, 2026-10-26)');
-        eq(await p.evaluate(() => (window.__printed || '').length), 0, what + ': nothing printed until the viewer\'s Print is pressed (characters printed)');
-        await press('#doc-viewer-print', 'the viewer\'s Print / Save PDF (' + what + ')');
-        await p.waitForTimeout(1500);
-      }
+      // Restated 2026-10-27: the work bar's papers open on screen first. The Estate Inventory PDF no longer prints at once:
+      // it takes the same road as the More ▾ papers, so the checks below are asked of every paper, not only those under More ▾.
+      ok(await p.evaluate(() => { const o = document.getElementById('doc-viewer-modal'); return !!o && o.style.display === 'flex'; }),
+        what + ': opens on screen first (' + (menu ? 'main, 2026-10-26' : '2026-10-27') + ')');
+      // Restated 2026-10-27: the work bar's papers open on screen first; the viewer is titled by the paper.
+      eq(await txt('#doc-viewer-title'), title, what + ': the viewer is titled by the paper');
+      eq(await p.evaluate(() => (window.__printed || '').length), 0, what + ': nothing printed until the viewer\'s Print is pressed (characters printed)');
+      await press('#doc-viewer-print', 'the viewer\'s Print / Save PDF (' + what + ')');
+      await p.waitForTimeout(1500);
       const got = await p.evaluate(() => {
         const d = document.createElement('div'); d.innerHTML = window.__printed || '';
         const pl = [...d.querySelectorAll('div')].filter((x) => /background:\s*#/i.test(x.getAttribute('style') || '') && /font-weight:\s*700/.test(x.getAttribute('style') || ''))
@@ -289,15 +298,18 @@ const DAY = (at) => new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_Yo
       await p.evaluate(() => { const pt = document.getElementById('print-target'); if (pt) { pt.style.display = 'none'; pt.innerHTML = ''; }
         document.querySelectorAll('.panel').forEach((x) => { if (x.dataset.wasActive === '1') x.classList.add('active'); }); });
       await p.waitForTimeout(400);
-      if (menu) { await press('#doc-viewer-modal button[onclick="closeDocViewer()"]', 'the viewer\'s Close (' + what + ')'); await p.waitForTimeout(200); }
+      // Restated 2026-10-27: the work bar's papers open on screen first, so every paper's viewer is closed by its Close (it came
+      // back after the print, and left open it covered the work bar and every press after it).
+      await press('#doc-viewer-modal button[onclick="closeDocViewer()"]', 'the viewer\'s Close (' + what + ')'); await p.waitForTimeout(200);
       pills = got.pills;
       return got.text;
     };
     // The pill or stamp carrying these words, and its colour: '#8a6d3b' bronze, '#6b6b6b' grey.
     const pillOf = (words) => { const f = pills.find((x) => x.text.indexOf(words) >= 0); return f ? [f.text, f.bg] : null; };
     const REPORT = '#inv-workbar button:has-text("Estate Inventory PDF")', SCHEDULE = '#inv-more button:has-text("Trust Schedule")';
-    const report = () => printed(REPORT, 'Estate Inventory PDF, on the work bar');
-    const schedule = () => printed(SCHEDULE, 'Trust Schedule, under More ▾', true);
+    // Restated 2026-10-27: the work bar's papers open on screen first; each is named with the title its viewer carries.
+    const report = () => printed(REPORT, 'Estate Inventory PDF, on the work bar', false, 'Estate Inventory');
+    const schedule = () => printed(SCHEDULE, 'Trust Schedule, under More ▾', true, 'Trust Schedule');
     // The report's stamp: the words from IN PROGRESS or REVIEWED up to the next sentence of the page.
     const stampOf = (doc) => { const m = /(?:IN PROGRESS|REVIEWED) — [^.]*?(?=This is a working copy|Estate of|Ellison Family Trust|Item|#|$)/.exec(doc); return m ? m[0].trim().slice(0, 160) : doc.slice(0, 160); };
     const BRONZE = '#8a6d3b', GREY = '#6b6b6b';

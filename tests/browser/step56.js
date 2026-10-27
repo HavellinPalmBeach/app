@@ -30,6 +30,9 @@
 // (trustInstrumentTitle), as the agreement and the Trust Schedule do, and "the trustees" (a co-trustee is recorded here).
 // RESTATED 2026-10-22 (the desk's G8): a person's receipt is their row under Leaving the property · sign out on the iPad, and
 // File the received copy is on the signed schedules card beside the ledger, inside Closing the job.
+// Restated 2026-10-27: the work bar's papers open on screen first. The Approval Request no longer prints at once: it opens
+// in the document viewer, titled Release Approval Request, with nothing printed, and the page B, F and G read is the one
+// the viewer's Print / Save PDF prints; the viewer is closed before the desk is pressed again. The receipt still prints at once.
 const { chromium } = require('playwright');
 const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/havellin.html'));
 let pass = 0, fail = 0;
@@ -109,6 +112,23 @@ const PDF = { name: 'signed.pdf', mimeType: 'application/pdf', buffer: Buffer.fr
     // step waits for the print to close, as they would, rather than for a fixed time that load can outrun.
     const printClosed = () => until(() => p.evaluate(() => { const pt = document.getElementById('print-target');
       return !!pt && pt.style.display === 'none' && !!document.querySelector('.panel.active'); }));
+    // Restated 2026-10-27: the work bar's papers open on screen first. The Approval Request opens in the document viewer
+    // (#doc-viewer-modal), titled by the paper, and prints nothing until its Print / Save PDF is pressed; that press prints
+    // the page (window.print, stubbed above, reads #print-target as before) and the viewer comes back once the dialog closes,
+    // so it is closed by its own Close before the desk is pressed again (its overlay covers the page).
+    const viewerOpen = () => p.evaluate(() => { const o = document.getElementById('doc-viewer-modal'); return !!o && o.style.display === 'flex'; });
+    const printCount = () => p.evaluate(() => (window.__prints || []).length);
+    const printFromViewer = async (title, before) => {
+      ok(await viewerOpen(), title + ' opens in the document viewer');
+      eq(await txt('#doc-viewer-title'), title, 'the viewer is titled by the paper');
+      eq(await printCount(), before, 'nothing printed before Print / Save PDF is pressed');
+      await press('#doc-viewer-print', 'Print / Save PDF, in the viewer');
+      await until(async () => (await printCount()) > before);
+      ok(await until(viewerOpen), 'the viewer comes back after the print dialog');
+      eq(await printCount(), before + 1, 'Print / Save PDF printed the page once');
+      await press('#doc-viewer-modal button[onclick="closeDocViewer()"]', 'Close the viewer');
+      ok(!(await viewerOpen()), 'Close takes the viewer away');
+    };
     // ⚠ THE DESK'S FOUR BARS (2026-10-22): the cards this step works in sit in fold bars that open by their own rules, so
     // each is opened first by a real press of its header, and only when its body is hidden.
     const openBar = async (fold, id) => {
@@ -221,7 +241,10 @@ const PDF = { name: 'signed.pdf', mimeType: 'application/pdf', buffer: Buffer.fr
     // ════════════════════════════════════════════════════════════════════════════════════════════════════
     await section('B. the Approval Request: both co-trustees, a line each, the designated item named, the staff rule', async () => {
       await toDesk(5601);
+      // Restated 2026-10-27: the work bar's papers open on screen first; the page read is the one its Print / Save PDF prints.
+      const reqBefore = await printCount();
       await press('#inv-workbar button[onclick="printApprovalRequest(5601)"]', 'Approval Request');
+      await printFromViewer('Release Approval Request', reqBefore);
       const h = (await lastPrint()).html, t = await T(h);
       has(h, 'Dear <strong>Ruth Adler and Daniel Adler</strong>,', '⚠⚠ addressed to both co-trustees');
       // ⚠ restated 2026-10-26: the request is a letter (Anthony approved its words); it asks each of them, and both must sign.
@@ -351,7 +374,10 @@ const PDF = { name: 'signed.pdf', mimeType: 'application/pdf', buffer: Buffer.fr
       // RESTATED 2026-10-05 (P20): who has signed is read through the one readable form ("Signed so far by …"), never the
       // field; and #2, already gone (Mary's signed receipt is filed), goes on the next request apart, for ratification (Q23).
       has(await txt('#inv-releases'), '⚠ Sam Adler has not approved it, and every co-trustee must. Signed so far by Ruth Adler; Daniel Adler (Oct 2, 2026). These lines go back on the next approval request, #2 apart, for ratification: it has already left.', 'and the desk says who is missing');
+      // Restated 2026-10-27: the work bar's papers open on screen first; the page read is the one its Print / Save PDF prints.
+      const againBefore = await printCount();
       await press('#inv-workbar button[onclick="printApprovalRequest(5601)"]', 'Approval Request again');
+      await printFromViewer('Release Approval Request', againBefore);
       const t = await T((await lastPrint()).html);
       has(t, 'Signed so far by Ruth Adler; Daniel Adler (Oct 2, 2026); still to sign: Sam Adler', 'the lines are back on the request, naming who is still to sign');
       has(t, 'signed by all 3 of you.', 'for all three');
@@ -380,7 +406,10 @@ const PDF = { name: 'signed.pdf', mimeType: 'application/pdf', buffer: Buffer.fr
       has(await txt('#inv-schedules-card'), 'Court Inventory, once the representative has adopted it', 'a probate estate offers the adopted Court Inventory');
       lacks(await txt('#inv-schedules-card'), 'Trust Schedule', 'and not the Trust Schedule');
       lacks(await txt('#inv-releases'), 'Court Inventory', 'nor on the Releases card');
+      // Restated 2026-10-27: the work bar's papers open on screen first; the page read is the one its Print / Save PDF prints.
+      const probBefore = await printCount();
       await press('#inv-workbar button[onclick="printApprovalRequest(5602)"]', 'the probate Approval Request');
+      await printFromViewer('Release Approval Request', probBefore);
       const pt = await T((await lastPrint()).html);
       has(pt, 'Dear Ann Finch,', 'addressed to the representative');
       has(pt, 'never purchase or receive estate property', 'estate property');
@@ -413,9 +442,14 @@ const PDF = { name: 'signed.pdf', mimeType: 'application/pdf', buffer: Buffer.fr
       await p.setViewportSize({ width: 816, height: 1056 });
       await toDesk(5601);
       await p.emulateMedia({ media: 'print' });
-      await p.evaluate(() => printApprovalRequest(5601, false)); await p.waitForTimeout(1000);   // the print path clears its target 650 ms on
+      // Restated 2026-10-27: the work bar's papers open on screen first, so the viewer's Print / Save PDF (printDocViewer) is
+      // what prints the request; the viewer comes back after the dialog and is closed once the print is captured.
+      const gBefore = await printCount();
+      await p.evaluate(() => { printApprovalRequest(5601, false); printDocViewer(); }); await p.waitForTimeout(1000);   // the print path clears its target 650 ms on
+      eq(await printCount(), gBefore + 1, 'the viewer\'s Print / Save PDF printed the request once');
       const pr = await lastPrint();
       ok(pr.html.length > 0 && pr.over <= 0, 'the Approval Request fits a Letter page in print (' + pr.over + ')');
+      await p.evaluate(() => closeDocViewer());
       await p.evaluate(() => printBeneficiaryReceipt(5601, 'Mary Smith')); await p.waitForTimeout(1000);
       const rc = await lastPrint();
       ok(/Receipt for Property Released/.test(rc.html) && rc.over <= 0, 'the receipt fits a Letter page in print (' + rc.over + ')');

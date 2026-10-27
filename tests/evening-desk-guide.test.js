@@ -745,7 +745,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(code(fn('invSplitItemClick')), 'added for another thing in this photograph', '…the toast says what it added');
     has(code(fn('_renderInvWorkbar')), "'every flagged item is checked'", 'papers print marked IN PROGRESS until every flagged item is checked (the work bar, 2026-10-26)');
     has(code(fn('_renderInvWorkbar')), '&mdash; they are never withheld.', '…never withheld');
-    has(t, 'Papers print marked IN PROGRESS until every flagged item is checked; they are never held back.', 'as the page says (the stamp itself is driven above)');
+    has(t, 'Papers print marked IN PROGRESS until every flagged item is checked, never held back.', 'as the page says (the stamp itself is driven above)');
     lacks(t, 'until every item is decided, valued and, where flagged, ticked', '⚠ never that every item must be decided and valued (a ticked Undecided item counts; the second review)');
     has(t, 'The Court Inventory and the Trust Schedule stay FINAL; their count of Agent Two’s values is bronze until the list is read.', 'and the schedules (Q109, driven above)');
     has(code(fn('_renderInvWorkbar')), "'+ Add line item'", '+ Add line item');
@@ -808,7 +808,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // More ▾'s papers on screen first (2026-10-26): the viewer, its Print / Save PDF.
     has(code(fn('printAsFoundRecord')), '{ view: true, job: job, label: ', 'a More ▾ paper opens in the viewer');
     has(SRC, 'onclick="printDocViewer()">&#128424; Print / Save PDF</button>', 'its Print / Save PDF');
-    has(t, 'Those under More ▾ open on screen first: Print / Save PDF from there.', 'as the page says');
+    has(t, 'Bar and More ▾ papers open on screen first: Print / Save PDF from there.', 'as the page says (the bar\'s since 2026-10-27)');
     // The letter, the hold for a taker and Discard draft (2026-10-26): each sentence on the code that makes it true.
     eq(sandbox({ vars: ['INV_LINE_INITIAL_MIN'] }).INV_LINE_INITIAL_MIN, 500, 'one initial per group under $500');
     has(code(fn('printApprovalRequest')), '!invReleaseRecipientNamed(r) && !invRatificationOwed(r, job)', 'an item with nobody to take it is held off the request');

@@ -4,11 +4,15 @@
 // them").
 //
 // Drives the REAL page: a Home Transition with a sofa to donate, a desk to a dealer, a rifle to the client's son, a brass lamp
-// sold to the concierge and a bronze flagged for appraisal sold with no value. A: the work bar's Approval Request prints the
+// sold to the concierge and a bronze flagged for appraisal sold with no value. A: the work bar's Approval Request carries the
 // rifle and the lamp alone, under the living head; the Releases bar says two wait. B: the bulk bar offers the request's three
 // buttons only once the rifle is picked. C: the Contents Record carries the bronze's badge. D: the rifle and the lamp kept, by
 // the row's own disposition box: the work bar offers no request and the bar says nothing is owed. E: overflow at 1440 and 390,
 // zero page errors.
+// Restated 2026-10-27: the work bar's papers open on screen first. The Approval Request (the work bar's and the bulk bar's)
+// and the Contents Record no longer print at once: each opens in the document viewer, titled by the paper, prints nothing
+// until its Print / Save PDF is pressed, and the page A, B and C read is the one that press prints; Close then clears the
+// viewer off the desk.
 //
 //   NODE_PATH=/path/to/node_modules node tests/browser/step112.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
@@ -69,6 +73,21 @@ const LIV = 11201;
     };
     const lastPrint = () => p.evaluate(() => { const d = document.createElement('div'); d.innerHTML = (window.__prints || []).slice(-1)[0] || '';
       return d.textContent.replace(/\s+/g, ' ').trim(); });
+    // Restated 2026-10-27: the work bar's papers open on screen first. A paper this step reads opens in the document viewer,
+    // titled by the paper, and prints nothing until its Print / Save PDF is pressed; the viewer comes back after the dialog and
+    // its Close takes it off the desk, so the next press reaches the page under it.
+    const viewerOpen = () => p.evaluate(() => { const o = document.getElementById('doc-viewer-modal'); return !!o && o.style.display === 'flex'; });
+    const printCount = () => p.evaluate(() => (window.__prints || []).length);
+    const printFromViewer = async (title, before) => {
+      ok(await viewerOpen(), title + ' opens in the document viewer');
+      eq(await txt('#doc-viewer-title'), title, 'the viewer is titled by the paper');
+      eq(await printCount(), before, 'nothing printed before Print / Save PDF is pressed');
+      await press('#doc-viewer-print', 'Print / Save PDF, in the viewer');
+      await p.waitForSelector('#doc-viewer-modal', { state: 'visible', timeout: 4000 }).catch(() => ok(false, 'the viewer comes back after the print dialog'));
+      eq(await printCount(), before + 1, 'Print / Save PDF printed the page once');
+      await press('#doc-viewer-modal button[onclick="closeDocViewer()"]', 'Close the viewer');
+      ok(!(await viewerOpen()), 'Close takes the viewer away');
+    };
     const relLine = () => p.evaluate((id) => { const el = document.getElementById('desk-stat-releases-' + id); return el ? el.textContent.replace(/\s+/g, ' ').trim() : ''; }, LIV);
     const pick = async (sid) => { await p.click('#inv-row-' + sid + ' input[type=checkbox][title="Select for a bulk change"]'); await p.waitForTimeout(400); };
     const bulkButtons = () => p.evaluate((id) => Array.from(document.querySelectorAll('#inv-bulk-' + id + ' button')).map((x) => x.getAttribute('onclick') || ''), LIV);
@@ -101,7 +120,10 @@ const LIV = 11201;
     await section('A. the request carries the rifle and the lamp to the concierge, under the living head; the bar says two wait', async () => {
       await toDesk(LIV);
       has(await relLine(), '2 items need written approval: send a request', '⚠⚠ the Releases bar: the rifle and the lamp, not the other three');
+      // Restated 2026-10-27: the work bar's papers open on screen first; the page read is the one its Print / Save PDF prints.
+      const before = await printCount();
       await press('#inv-workbar button[onclick="printApprovalRequest(' + LIV + ')"]', 'Approval Request on the work bar');
+      await printFromViewer('Release Approval Request', before);
       const t = await lastPrint();
       has(t, 'Browning rifle', 'the rifle is on it');
       has(t, 'Brass lamp', 'the lamp to the concierge is on it');
@@ -125,7 +147,10 @@ const LIV = 11201;
       btns = await bulkButtons();
       eq(['printApprovalRequest(' + LIV + ',true)', 'sendApprovalRequest(' + LIV + ',true)', 'invRecordApproval(' + LIV + ')'].map((x) => btns.indexOf(x) >= 0), [true, true, true],
         'the rifle picked too: all three');
+      // Restated 2026-10-27: the work bar's papers open on screen first; the page read is the one its Print / Save PDF prints.
+      const before = await printCount();
       await press('#inv-bulk-' + LIV + ' button[onclick="printApprovalRequest(' + LIV + ',true)"]', 'Approval request on the bulk bar');
+      await printFromViewer('Release Approval Request', before);
       const t = await lastPrint();
       has(t, 'Browning rifle', 'the selection\'s request: the rifle');
       lacks(t, 'Chesterfield sofa', '⚠ and not the sofa picked beside it');
@@ -135,7 +160,10 @@ const LIV = 11201;
     // ── C ───────────────────────────────────────────────────────────────────
     await section('C. the bronze sold with no value is named on the Contents Record', async () => {
       await toDesk(LIV);
+      // Restated 2026-10-27: the work bar's papers open on screen first; the page read is the one its Print / Save PDF prints.
+      const before = await printCount();
       await press('#inv-workbar button[onclick="printContentsRecord(' + LIV + ')"]', 'Contents Record on the work bar');
+      await printFromViewer('Contents Record', before);
       const t = await lastPrint();
       has(t, 'Bronze figure', 'fixture: the bronze is on the record');
       has(t, 'FLAGGED FOR APPRAISAL, NO VALUE RECORDED', '⚠⚠ with its badge, where the client signs');

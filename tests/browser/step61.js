@@ -19,6 +19,11 @@
 //      request; an estate's is still refused, and nothing is written
 //   F. overflow at 1440 and 390 (the card, the dialog), the request at Letter width in print, no page errors
 //
+// Restated 2026-10-27: the work bar's papers open on screen first. The Approval Request no longer prints at once: it opens
+// in the document viewer, titled Release Approval Request, with nothing printed, and the page B, E and F read is the one
+// the viewer's Print / Save PDF prints; the viewer is closed before the desk is pressed again (its overlay covers the page).
+// D's refusal opens no viewer either.
+//
 //   NODE_PATH=/opt/node22/lib/node_modules node tests/browser/step61.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
 const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/havellin.html'));
@@ -112,12 +117,26 @@ const TRUST = 6101, LIVING = 6103;
       if (typeof _invClearPicks === 'function') _invClearPicks(); });
     const rowText = (sid) => txt('#inv-row-' + sid);
     const pick = async (sid) => { await p.click('#inv-row-' + sid + ' input[type=checkbox][title="Select for a bulk change"]'); await p.waitForTimeout(300); };
+    // Restated 2026-10-27: the work bar's papers open on screen first. The Approval Request opens in the document viewer
+    // (#doc-viewer-modal), titled by the paper, and prints nothing until its Print / Save PDF is pressed; that press prints
+    // the page (window.print, stubbed above, reads #print-target as before) and the viewer comes back once the dialog closes,
+    // so it is closed by its own Close before the desk is pressed again.
+    const viewerOpen = () => p.evaluate(() => { const o = document.getElementById('doc-viewer-modal'); return !!o && o.style.display === 'flex'; });
     const requestOf = async (id) => {
       const before = await printCount();
       await press('#inv-workbar button[onclick="printApprovalRequest(' + id + ')"]', 'Approval Request');
+      // Restated 2026-10-27: the work bar's papers open on screen first; the page read is the one its Print / Save PDF prints.
+      ok(await until(viewerOpen, 4000), 'the Approval Request opens in the document viewer');
+      eq(await txt('#doc-viewer-title'), 'Release Approval Request', 'the viewer is titled by the paper');
+      eq(await printCount(), before, 'nothing printed before Print / Save PDF is pressed');
+      await press('#doc-viewer-print', 'Print / Save PDF, in the viewer');
       await until(async () => (await printCount()) > before, 4000);
       const h = (await printCount()) > before ? (await lastPrint()).html : '';
       await printClosed();
+      ok(await until(viewerOpen), 'the viewer comes back after the print dialog');
+      eq(await printCount(), before + 1, 'Print / Save PDF printed the page once');
+      await press('#doc-viewer-modal button[onclick="closeDocViewer()"]', 'Close the viewer');
+      ok(!(await viewerOpen()), 'Close takes the viewer away');
       return h;
     };
 
@@ -258,6 +277,8 @@ const TRUST = 6101, LIVING = 6103;
       const before = await printCount();
       await press('#inv-workbar button[onclick="printApprovalRequest(' + TRUST + ')"]', 'Approval Request');
       eq(await printCount(), before, 'nothing prints');
+      // Restated 2026-10-27: the work bar's papers open on screen first; a request refused opens no viewer either.
+      ok(!(await viewerOpen()), 'and nothing opens in the document viewer');
       has(dialogs.join(' | '), 'Nothing is waiting on approval.', 'nothing is waiting on approval');
     });
 
@@ -320,10 +341,18 @@ const TRUST = 6101, LIVING = 6103;
       await p.setViewportSize({ width: 816, height: 1056 });
       await toDesk(TRUST);
       await p.emulateMedia({ media: 'print' });
-      await p.evaluate((id) => printApprovalRequest(id, false), TRUST); await p.waitForTimeout(1000);   // the print path clears its target 650 ms on
+      // Restated 2026-10-27: the work bar's papers open on screen first, so the viewer's Print / Save PDF (printDocViewer) is
+      // what prints the request; the viewer comes back after the dialog and is closed once the print is captured.
+      const fBefore = await printCount();
+      await p.evaluate((id) => printApprovalRequest(id, false), TRUST); await p.waitForTimeout(400);
+      ok(await viewerOpen(), 'the request opens in the document viewer');
+      eq(await printCount(), fBefore, 'nothing printed before Print / Save PDF');
+      await p.evaluate(() => printDocViewer()); await p.waitForTimeout(1000);   // the print path clears its target 650 ms on
       const pr = await lastPrint();
+      eq(await printCount(), fBefore + 1, 'Print / Save PDF printed the request once');
       ok(/Already released: for ratification/.test(pr.html) && /Signed so far by Ruth Adler/.test(pr.html), 'fixture: the request carries both lists');
       ok(pr.html.length > 0 && pr.over <= 0, 'the request fits a Letter page in print (' + pr.over + ')');
+      await p.evaluate(() => closeDocViewer());
       await p.emulateMedia({ media: 'screen' });
       await p.setViewportSize({ width: 1440, height: 1000 });
       eq(errs, [], 'no page errors');

@@ -1,7 +1,7 @@
 'use strict';
 // ─────────────────────────────────────────────────────────────────────────────
 // The main sheet, as deployed, over a fake spreadsheet that holds a cell to 50,000 characters (P1 of the desk audit,
-// 2026-10-27). Shared by tests/p1-nothing-lost.test.js and browser step 116, so the vm tests and the real page drive the
+// 2026-10-27). Shared by tests/p1-nothing-lost.test.js and browser step 117, so the vm tests and the real page drive the
 // same server.
 //
 // The WHOLE of apps-script/main-sync.gs and saveInventory.gs is evaluated as Apps Script would evaluate it (one project, one

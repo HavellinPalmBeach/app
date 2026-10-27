@@ -15,7 +15,7 @@
 // This file is that rig turned into tests: the WHOLE of apps-script/main-sync.gs and saveInventory.gs, evaluated as they
 // are deployed, over the fake sheet; two or three devices built from the real sync code in havellin.html, their fetch
 // routed to the server's real doGet and doPost through a synchronous promise and a virtual clock, so the outbox, the
-// retry queue and the refreshes run as they do in the browser. Browser step 116 drives the same on the real page.
+// retry queue and the refreshes run as they do in the browser. Browser step 117 drives the same on the real page.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const fs = require('fs');
@@ -23,7 +23,7 @@ const path = require('path');
 const vm = require('vm');
 const { sandbox, fn, domStub } = require('./harness');
 
-// The server, the fake sheet and the synchronous promise are the rig browser step 116 drives too (tests/sheet-rig.js).
+// The server, the fake sheet and the synchronous promise are the rig browser step 117 drives too (tests/sheet-rig.js).
 const { server, SP, CELL_MAX, CELL_ERR, GS } = require('./sheet-rig');
 const SYNC = 'https://sync.example.test/exec';
 const QUIET = { log() {}, warn() {}, error() {} };
