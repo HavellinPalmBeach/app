@@ -429,11 +429,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(r.N.log.status.length, 0, '⚠⚠ inside the floor from the send: not asked');
     r.at(NOW + 21 * MIN);
     const stamp0 = JSON.stringify(r.job().at || {});
+    const upd0 = r.job().updatedAt, sync0 = r.saves.filter((x) => x === 'sync').length;
     r.N.opts.esignStatus = STATUS('sent', [['1', 'completed', '2026-10-18T14:00:00Z'], ['2', 'sent']]);
     r.c.approvalEnvelopeRefresh({ jobId: 7 });
     eq(r.N.log.status.map((b) => b.envelopeId), ['env-r1'], 'past it: asked once, for its envelope');
     eq(r.env().signedSoFar, ['Thomas Ellison'], 'who has signed so far is noted');
     eq(JSON.stringify(r.job().at || {}), stamp0, '⚠ bare: a check that recorded nothing moves no clock');
+    eq([r.job().updatedAt, r.saves.filter((x) => x === 'sync').length], [upd0, sync0], '⚠⚠ nor the job\'s own clock, and nothing is synced (a device that only looked claims nothing)');
     eq(r.row('a').authBy, undefined, '⚠⚠ nothing on a line until both have signed');
     has(text(r.card()), 'signed so far by Thomas Ellison', 'the card says so');
     r.c.approvalEnvelopeRefresh({ jobId: 7 });
