@@ -1,0 +1,656 @@
+[
+ {
+  "group": "R1",
+  "results": [
+   {
+    "id": "VAL-01",
+    "status": "STILL",
+    "note": "takeInventorySnapshot and _snapItemOf are byte-identical in both copies (fndiff), and so are saveAllJobsToSheet (clearContent, then setValues), saveJobToSheet and doGet in main-sync.gs. Neither new build touched the snapshot or the Jobs-tab writer. On app-copy-2 I pressed the real More ▾ › Snapshot on a seeded probate house. At 330 lines the job went from 1,216 to 44,840 characters (132 per line). At 420 lines it reached 56,736, and the app posted saveAllJobs at 56,771 bytes and job at 56,761, both over the 50,000-character cell. This matches the old copy to the character.",
+    "repro": "AUDIT_COPY=/tmp/claude-0/-home-user-app/107e11dc-7b83-525c-829c-97f2e5cca8f9/scratchpad/app-copy-2 NODE_PATH=/opt/node-tools/node_modules timeout 600 node /tmp/claude-0/-home-user-app/107e11dc-7b83-525c-829c-97f2e5cca8f9/scratchpad/audit/recheck/R1/VAL/x01-snapshot.js 420 -> recheck/R1/VAL/x01.txt ('after {len:56736…}', 'saveAllJobs:56771','job:56761'); node recheck/R1/fndiff.js havellin.html takeInventorySnapshot _snapItemOf -> IDENTICAL"
+   },
+   {
+    "id": "INV-02",
+    "status": "STILL",
+    "note": "This is the same defect as VAL-01, and the same identity holds: the app has no size guard, and the server writer still clears before it writes. The new copy measures the same: one real Snapshot press on 420 named lines gives a 56,736-character record and two posts over 50,000 characters. Neither the flagged-only build nor the DocuSign build added anything that keeps snapshot lines off the job record.",
+    "repro": "recheck/R1/VAL/x01-snapshot.js 330 and 420 on app-copy-2 (x01.txt); recheck/R1/fndiff.js apps-script/main-sync.gs saveAllJobsToSheet saveJobToSheet -> IDENTICAL"
+   },
+   {
+    "id": "GAP3-01",
+    "status": "STILL",
+    "note": "I re-ran GAP3's vm rig, which lifts the real app code and the real main-sync.gs and saveInventory.gs, both now from app-copy-2 (COPY repointed). I also re-ran the real-page browser.js A 450 on app-copy-2. The vm run: the snapshot record reached 76,867 characters, the server logged 'Jobs rows 2..4' cleared with 1 cell throw, and Jobs went 3 -> 0. The real page: POST saveAllJobs[3] of 81,554 B answered 'more than the maximum of 50000 characters', sheet jobsRows went 0, and A read 0 jobs 4.7 s after the press. Apart from timestamps, the output is identical to the old run. saveAllJobsToSheet is byte-identical.",
+    "repro": "cd /tmp/claude-0/-home-user-app/107e11dc-7b83-525c-829c-97f2e5cca8f9/scratchpad/audit/recheck/R1/GAP3 && NODE_PATH=/opt/node-tools/node_modules timeout 600 node scenario.js A 450 > out/A-450.txt (diff vs ../../../GAP3/out/A-450.txt after masking timestamps: SAME); timeout 600 node browser.js A 450 > out/br-A-450.txt"
+   },
+   {
+    "id": "GAP3-02",
+    "status": "STILL",
+    "note": "Server code is identical (_jobRefusal, _deletedJobIds, _stripRefusedJobKeys, doGet loadJobs), and so is the app code (_applyDroppedJobs, _purgeLocalJobRecords, loadJobs, refreshJobsFromCloud). In the new run, A's first retry was answered dropped for all 3 jobs, and A went to 0 clients under 'All changes saved ✓'. B's stale save produced '3 clients deleted elsewhere — removed from this device too'. On B's reload, doGet loadJobs answered jobs 0 with every id in deletedJobs, and showed 'Loaded 0 jobs from Sheets ✓'. On the real page, B's Clients tab read 'Total Jobs0 Active Jobs0'. In r2c.js, allowJobRestoreConfirm still leaves deletedJobs at 3 of 3. All of this matches the old run.",
+    "repro": "recheck/R1/GAP3/scenario.js A 450 (out/A-450.txt S2, S3a, S3b); browser.js A 450 (out/br-A-450.txt S3); r2c.js (out/r2c.txt, SAME as old)"
+   },
+   {
+    "id": "GAP3-03",
+    "status": "STILL",
+    "note": "_sweepDeletedJobKeys and its callers are byte-identical. In the new run, step S3d: B2 adds one client and saves its estimate, plan, hours and manifest. EstimateStore, JobPlanStore, LogStore and MediaStore each went from 3 to 1. The logger printed 'Swept records for deleted job(s): <all three ids>' four times. recovery.js R1 shows the same.",
+    "repro": "recheck/R1/GAP3/scenario.js A 450 -> out/A-450.txt step S3d; recovery.js 450 -> out/recovery-450.txt (SAME as old)"
+   },
+   {
+    "id": "GAP3-04",
+    "status": "STILL",
+    "note": "_purgeLocalJobRecords is byte-identical and still removes hav_media_pending_<id> on a server verdict. Vm run, step S3a: B held two unsent photographs (photoBytes 1). Its stale save was answered dropped, and photoBytes went to 0. The real-page run gives B photoBytes 0 after its boot loadJobs.",
+    "repro": "recheck/R1/GAP3/scenario.js A 450 (out/A-450.txt S0 'B … photoBytes 1' -> S3a 'B … photoBytes 0'); browser.js A 450 (out/br-A-450.txt S3)"
+   },
+   {
+    "id": "GAP3-05",
+    "status": "STILL",
+    "note": "_backendErrorKind, queuedPostSync, _flushOutbox and _pendingChipCopy are byte-identical. Offline variant, re-run on the new copy: A's saveAllJobs stays queued (14 tries, Failed to fetch), and the chip reads '⚠ 1 change not saved — still failing after 14 attempts'. The Jobs rows are then restored (4 rows). A's next retry clears the tab again: S5b reads 'Jobs 0', with 1 clear and 1 cell throw. The queued payload is still the old array, carrying J with its snapshot. Variant B makes 24 failing POSTs in 10 minutes. Both outputs are identical to the old ones.",
+    "repro": "recheck/R1/GAP3/scenario.js A 450 offline -> out/A-450-offline.txt (S5 Jobs 4 -> S5b Jobs 0); scenario.js B 450 -> out/B-450.txt ('A posts in those 10 min: 24')"
+   },
+   {
+    "id": "GAP3-06",
+    "status": "STILL",
+    "note": "_syncWritesOutstanding, refreshJobsFromCloud and refreshPlanAndLogFromCloud are byte-identical. Variant B, step S4b, on the new copy: 'A refreshJobsFromCloud: asked the sheet? false; A still reads \"Ellison Estate\" where the sheet says \"Renamed on B2\"'. A's two writes stayed pending for the whole 10 minutes.",
+    "repro": "recheck/R1/GAP3/scenario.js B 450 -> out/B-450.txt line S4b"
+   },
+   {
+    "id": "GAP3-07",
+    "status": "STILL",
+    "note": "_writeStoreBlob (clear rows 2.., then setValues) and _readStoreBlob are byte-identical in main-sync.gs, so this is STILL by identity. recovery.js R3 on the new code: a forced timeout after the clear left EstimateStore with 0 rows, and the tab read back as null. The next one-estimate save answered ok, and the store then held 1 key of 3.",
+    "repro": "recheck/R1/GAP3/recovery.js 450 -> out/recovery-450.txt lines R3 (SAME as old); recheck/R1/fndiff.js apps-script/main-sync.gs _writeStoreBlob _readStoreBlob -> IDENTICAL"
+   },
+   {
+    "id": "SYN-01",
+    "status": "STILL",
+    "note": "mergeMediaItems, the server _mergeMediaItems (saveInventory.gs is unchanged as a file), _avWrite, _arWrite, _invTouch and agentNameShots are identical. _agWrite only gained 'ref.agentName = ref.objectName'. I re-ran the two-device rig on app-copy-2. A typed 'Henredon walnut dresser, nine drawers' and $1,250 on e10, and both reached the sheet. Under Q105 the typed figure is the look, so the tick shows reviewed 0. B, stale, then changed e10's Qty to 2. The sheet's e10 became 'Walnut dresser', namedBy agent, fmv 900. A typed a name on e26; B then pressed 'Name 1 shot', and the sheet's e26 became 'White porcelain dinner plates', qty 8, $320 by Agent Two. A saw the same after reopening. The one change under the flagged-only rule: both overwritten lines now hold a tick (e10 'unowned', e26 'nodest'), so they do not stand silently. Nothing says another device overwrote them, and A's work is still lost.",
+    "repro": "AUDIT_COPY=…/app-copy-2 timeout 600 node /tmp/claude-0/-home-user-app/107e11dc-7b83-525c-829c-97f2e5cca8f9/scratchpad/audit/recheck/R1/SYN/v1.js -> out/v1.txt ('3 sheet e10 after B qty: {\"name\":\"Walnut dresser\",\"namedBy\":\"agent\",\"fmv\":900…}', '6 sheet e26 after B Name shots: {\"name\":\"White porcelain dinner plates\"…}'); s01.js -> out/s01.txt line 8 (holds)"
+   },
+   {
+    "id": "SYN-02",
+    "status": "STILL",
+    "note": "agentShotGroups, agentNameableRefs, agentApplyResult and both merges are identical. Re-run on app-copy-2: A's bulk bar Remove lines took off 8 lines (16 live and 8 removed on the sheet). B was stale and was offered 'Name 24 shots'; pressing it sent agentIdentify all 24 shots (20+4). All 8 came back live on the sheet, named and valued, for example 's6:LIVE \"Sterling silver candlesticks, Gorham\" $1200'. Live lines went 16 -> 26, and A read 26 after reopening. The output is identical to the old run.",
+    "repro": "recheck/R1/SYN/v2.js on app-copy-2 -> out/v2.txt ('1 sheet live after A removed: 16', '4 sheet live now: 26', '5 A after reopening, live lines: 26')"
+   },
+   {
+    "id": "SYN-04",
+    "status": "STILL",
+    "note": "invStickyValue, invMergeApprovals and INV_STICKY_FIELDS are identical in the app, and the server _invStickyValue and _invMergeApprovals are identical too. The DocuSign build's new writer (invApplyApproval) does not touch the merge. I ran the real app mergeMediaItems, lifted from app-copy-2, and the real server merge on the same pairs. A clears authBy at t=10, and B's stale edit at t=20 brings back 'Thomas Ashworth; Nora Ashworth' and 2026-10-12, in either order, on both sides. A clears the channel 'Ashley Jerome' at t=10, and B's value edit at t=20 restores 'Ashley Jerome'. Control: the clear holds when the clearing copy is newer.",
+    "repro": "recheck/R1/SYN/v4.js (sandbox now lifted from app-copy-2/tests/harness.js) -> out/v4.txt, identical to the old output"
+   },
+   {
+    "id": "SYN-05",
+    "status": "STILL",
+    "note": "_invCloudRetryArm and _scheduleInventorySync (the held-workbook branch that redraws whatever the answer) are identical. _invRefreshFromCloud changed, but it still calls renderInventoryTab() directly on 'changed || made'. It also gained a third direct trigger, 'signedIn' (approvalEnvelopeApply, the DocuSign request recorded). Only the envelope-refresh callback goes through _invRenderWhenIdle. In the re-run, (a) the 15 s retry cut the typed name to 'Mahogany secretary desk with glazed boo', unfocused; it was saved, sent to agentValue and valued at $60. (b) With the sheet unreachable, the held-workbook read cut it to 'Mahogany secretary d', which was saved and sent to agentValue.",
+    "repro": "recheck/R1/SYN/v5.js on app-copy-2 -> out/v5.txt; recheck/R1/fndiff.js havellin.html _invRefreshFromCloud (SHOW=1 shows the added signedIn trigger)"
+   },
+   {
+    "id": "SYN-06",
+    "status": "STILL",
+    "note": "_pendingCount, the beforeunload handler, _scheduleInventorySync and refreshPhotoRefs' merge path are unchanged. refreshPhotoRefs only gained a _invReadAt timestamp, and there is still no pagehide or visibilitychange flush. Re-run on app-copy-2: (1) a name typed, Tab, then reload 1 s later. No dialog appeared and 0 saveMedia were sent; the device held the name and the sheet held ''. (2) With saveMedia aborting, after 4 edits beforeunload fired once and the reload went ahead. In the 45 s after the reload only loadMedia ran, with no resend. The device held both names and $140; the sheet held '' and 'Nightstand', and the chip was gone.",
+    "repro": "recheck/R1/SYN/v6.js on app-copy-2 -> out/v6.txt (identical to the old output)"
+   },
+   {
+    "id": "SYN-07",
+    "status": "STILL",
+    "note": "saveInventory.gs is byte-identical between the copies: saveInventory and _writeInventorySheet rebuild from payload.rows, and getFilesByName is unchanged. buildInventoryPayload and _scheduleInventorySync are identical in the app. Re-run: A set #4 to $120 and the merged manifest held #4 $120 and #23 $275. B's stale workbook write came last and carried '#4 Estimated FMV=80'. The Shared Drive getFilesByName duplicate is code-read only, as before (no Drive here).",
+    "repro": "recheck/R1/SYN/v7.js on app-copy-2 -> out/v7.txt ('3 last workbook write is from B | its #4: Estimated FMV=80'); recheck/R1/fndiff.js apps-script/saveInventory.gs saveInventory _writeInventorySheet -> IDENTICAL"
+   },
+   {
+    "id": "SYN-08",
+    "status": "STILL",
+    "note": "_invManifestUnread is identical, and its readers did not grow on the desk's empty state, the work bar count, the papers or Snapshot. The flagged-only build's new invListReadRefusal does ask it, but the read line is drawn only when lines stand, so it shows nothing on an empty cold list. Re-run on a cold device with the read held: the bars read 'loading…', the work bar '0 of 0 reviewed', the body 'No items yet.', and Job Admin '0 of 5 ticked · 5 derived items still open'. The Estate Inventory PDF alerted 'There is nothing in the inventory to report yet.' After the read failed, More ▾ still offered Snapshot. It recorded 'Filed with court 0 items $0' and sent 3 job writes, while the sheet held 9 live lines.",
+    "repro": "recheck/R1/SYN/v8.js on app-copy-2 -> out/v8.txt (identical to the old output)"
+   },
+   {
+    "id": "SYN-09",
+    "status": "STILL",
+    "note": "This remains a KNOWN item. materializeVehicle (its id still minted with Date.now()), _importedSourceSet, _renderInventoryImportPanel and _invDuplicateImports are identical. Re-run: the cold desk offered 'Add →', and after the read there were two live lines, #40 at $38,500 and #41 with no value, under different stableIds. The Court Inventory listed the car on 2 rows. The desk did show 'Duplicate imports…', and agentDuplicateGroups returned 0, as the verifier found.",
+    "repro": "recheck/R1/SYN/v9.js on app-copy-2 -> out/v9.txt"
+   },
+   {
+    "id": "SYN-10",
+    "status": "STILL",
+    "note": "The print functions changed only in their stamp arguments (invAcceptCtx and the accepted words). None calls refreshPhotoRefs. exportInventoryCSV, printAppraisalWorklist and takeInventorySnapshot are identical. Re-run of the auditor's script: another device's $275 on #23 was on the sheet. The real More ▾ › Court Inventory then opened the viewer with no loadMedia call (1 before, 1 after), and the page did not carry the $275. The DocuSign request route goes through sendApprovalRequest, which still reads first, so the papers and the sends still behave two ways.",
+    "repro": "recheck/R1/SYN/s10.js (copy of SYN/e10.js; srv.js repointed to app-copy-2) -> out/s10.txt ('loadMedia calls before/after 1 1', 'the paper carries the other device's $275: false')"
+   },
+   {
+    "id": "SYN-12",
+    "status": "STILL",
+    "note": "STILL, and the reach is wider. The flag-strip cases are the same as before. A Total typed, then 'No value yet' pressed: the first press left the filter at '' and the second set 'noval'. A name typed, then 'Not yet decided' pressed: the first press did nothing. A Total typed, then Estate Inventory PDF pressed: it ran 0 times, then 1. New on app-copy-2: a name typed, then Estate Inventory PDF pressed, now fails too (it ran 1 time on the old copy and 0 on the new). A stack trace shows why. A rename starts Agent Two, and _avRepaint (via _avStart) now calls the flagged-only build's _invReadLineRepaint, which replaces the whole #inv-workbar with outerHTML. _invEdit also calls _invReadLineRepaint and _invReviewRepaint, and both replace the work bar: a Total edit now replaces it twice, where the old copy replaced it once. So every work-bar press is now exposed after a name edit as well as a figure edit. That includes the new '✓ I've read the list' press, which lives in the work bar's read line. The control case (Tab first) still works.",
+    "repro": "recheck/R1/SYN/v11.js and v11b.js on app-copy-2 -> out/v11.txt ('2 name typed -> Estate Inventory PDF: first press ran 0 times'; old: 1), out/v11b.txt; s12b.js on both copies -> out/s12b.txt (new: 'work bar rendered by: [\"_invReadLineRepaint < _avRepaint < _avStart\"]'; old: [])"
+   },
+   {
+    "id": "SYN-18",
+    "status": "STILL",
+    "note": "_pendingChipCopy, updatePendingIndicator and _writeKey (every manifest write on one 'main/saveMedia:<jobId>' key) are identical. Re-run with saveMedia aborting: after 4 edits (two names and two figures) the chip read '⚠ 1 unsaved change — retrying… ▸'.",
+    "repro": "recheck/R1/SYN/v6.js on app-copy-2 -> out/v6.txt ('2 offline after 4 edits, chip: ⚠ 1 unsaved change — retrying… ▸')"
+   },
+   {
+    "id": "RT-01",
+    "status": "STILL",
+    "note": "STILL by identity, and the exposure is wider. doGet is byte-identical: version, loadJobs, loadEstimates, loadJobPlans, loadLogs, loadContractors, loadMedia and createFolder are all answered without a credential. doPost changed only by one line, a new 'esignSendRequest' dispatch. shareFolder, unshareFolder and trashDriveFile are identical, and the Script Properties the backend reads are the same set; no key is checked anywhere. Every GAP3 rig run answered loadJobs and saveAllJobs with no credential. The DocuSign build widened what the bare URL can do. esignSendRequestEnvelope (main-sync.gs:2377) sends a live DocuSign envelope from Havellin's account. Whoever posts it chooses the PDF (data.pdfBase64), the signers' names and emails, the carbon copies and the subject, and nothing ties the request to a job or a recorded fiduciary. The real backend cannot be called here, so this half is code-checked.",
+    "repro": "node /tmp/claude-0/-home-user-app/107e11dc-7b83-525c-829c-97f2e5cca8f9/scratchpad/audit/recheck/R1/fndiff.js apps-script/main-sync.gs doGet doPost shareFolder unshareFolder trashDriveFile (doGet IDENTICAL; doPost CHANGED by '+ if (data.action === 'esignSendRequest') …'); app-copy-2/apps-script/main-sync.gs:148-206, 2377-2440"
+   }
+  ],
+  "note": "All 21 findings are STILL on app-copy-2 (7abc836). Neither new build touched the code behind any of them, apart from two places. For SYN-12 the flagged-only build widened the reach: _invReadLineRepaint and _invReviewRepaint now replace the whole work bar after a name edit as well as after a figure edit. For RT-01 the DocuSign build added a new action the bare URL can call, esignSendRequest, which sends an envelope from Havellin's DocuSign account to any addresses with any PDF.\n\nEvery script ran on app-copy-2 with AUDIT_COPY and NODE_PATH=/opt/node-tools/node_modules, one browser at a time. Copies live under /tmp/claude-0/-home-user-app/107e11dc-7b83-525c-829c-97f2e5cca8f9/scratchpad/audit/recheck/R1/ in SYN/, GAP3/ (rig.js and browser.js COPY repointed) and VAL/, with outputs in each out/ folder. fndiff.js there compares named functions across the two copies. saveInventory.gs is byte-identical between the copies, and every main-sync.gs function involved is identical except doPost.\n\nGAP3's vm rig, which lifts the real app code and the real .gs code from app-copy-2, gave output identical to the old run apart from timestamps, and so did its real-page browser.js A 450.\n\nOther changes the new builds made near these findings:\n- _invRefreshFromCloud has a new direct-render trigger, signedIn, and still does not wait for the person to leave the box (SYN-05).\n- Under the flagged-only rule, the lines a stale device overwrote now hold a tick (unowned, nodest) rather than standing silently. This does not stop the loss (SYN-01)."
+ },
+ {
+  "group": "R2",
+  "results": [
+   {
+    "id": "EST-01",
+    "status": "STILL",
+    "note": "I reran EST-verify v1 and v2 on app-copy-2 through the row's own select, its Who takes it box and its Total box. On Ashworth, e01 was approved Oct 12 for Auction to Kodner. After I moved it to Distribute to Margaret Ashworth it still read {complete:true, kind:'receipt'}, the card offered 'Sign out 1 to Margaret Ashworth', and the ledger printed 'Harbor scene oil painting Distribute Margaret Ashworth Thomas Ashworth; Nora Ashworth (Oct 12, 2026)'. I typed e02's Total to $18,000: it stayed complete, with needsAppraisal set. In v2 I sent the request, pressed I've sent it, then retyped e04 to Salvation Army Thrift. approvalRequestChanged still returned [], the Record dialog listed '#4 … Donate · Salvation Army Thrift', and saving made e04 complete. invApprovalComplete (new L31448) and approvalRequestChanged (L32730) are byte-identical to the old copy, and _invEdit only gained repaints. What the DocuSign build changed: between an envelope's send and its completion, approvalEnvelopeApply (L33272) now leaves a line unrecorded if its destination or taker moved (destSig; esign.out shows e04 re-routed and left unrecorded, with the card warning). It ties nothing once an approval is recorded. In esign.out, e07 was approved through the envelope and then re-routed to Sell to Palm Beach Estate Buyers: it stayed complete, and 'Sign out 1 to Palm Beach Estate Buyers' was offered.",
+    "repro": "recheck/R2/EST-verify/v1.js -> out/v1.out ('EST-01 after e01', 'LEDGER #1'); EST-verify/v2.js -> out/v2.out ('approvalRequestChanged after I've sent it = []', 'e04 … complete:true'); recheck/R2/esign.js -> esign.out (D: e07 after re-route post-completion complete:true); fdiff.py invApprovalComplete approvalRequestChanged -> IDENTICAL"
+   },
+   {
+    "id": "EST-02",
+    "status": "STILL",
+    "note": "I reran EST-verify v1 on the new copy. An Agent-One-named Remington, set to Donate with Goodwill Palm Beach, drew no dialog. All eight dispositions are still offered on a Firearms line. invTransportDealer returned 'Goodwill Palm Beach'. The request printed 'Serial not recorded · to Goodwill Palm Beach, a licensed dealer'. With a serial and both signatures recorded through the bulk Record approval dialog, invTransportBlocked returned '' and the record read '✓ Cleared to carry. Havellin's named principal alone takes it to Goodwill Palm Beach, in a locked case.' invTransportDealer (L30075), invTransportBlocked (L30047), _invFirearmPanelHtml and invDealerRouteOffered are identical in both copies. The new flagged-only rule makes a firearm hold a review tick, which does not touch the transport gate. The DocuSign copy of the request prints the same firearms block.",
+    "repro": "recheck/R2/EST-verify/v1.js -> out/v1.out ('EST-02 g1 after Donate', 'EST-02 request firearms block', 'EST-02 g1 after serial+approval', 'EST-02 record firearm block')"
+   },
+   {
+    "id": "EST-04",
+    "status": "STILL",
+    "note": "printApprovalRequest (new L32375) changed only to add the DocuSign copy's initials, signature and date markers. It still calls neither _invProgressStamp nor _avUnreviewedStamp. The new callers of those two are L31053, 31205, 31208, 34704, 34837, 35094 and 36186, none of them inside the request. est04.js on Ashworth found no IN PROGRESS, REVIEWED, 'not yet read' or 'not yet reviewed' anywhere on the request. Yet _invProgressStamp(request items, {fc}) reads 'IN PROGRESS — 2 of 3 items reviewed'. #10 Walnut dresser (namedBy agent, $450, Sell) still holds under the Q106 rule (hold 'unowned') and goes to the fiduciaries unmarked. The ledger and the Estate Inventory Report stamp 'IN PROGRESS — 5 of 9 items reviewed'. The DocuSign copy is just as unmarked. Under the flagged-only rule the gap is now this: the one paper that releases property carries neither the held-lines count nor the list-read stamp (Q107/Q109) that the other papers carry. evening-desk-guide.html:461 now says 'Papers print marked IN PROGRESS until every flagged item is checked', which is still untrue of this paper.",
+    "repro": "recheck/R2/est04.js -> est04.out (reqHasInProgress false; stampForRequestItems 'IN PROGRESS — 2 of 3 items reviewed'; e10 holds ['unowned']); EST-verify/v1.js -> out/v1.out ('EST-04 request stamps: IN PROGRESS false not yet reviewed false')"
+   },
+   {
+    "id": "EST-06",
+    "status": "STILL",
+    "note": "I reran EST-verify v3 on a 300-line probate house with ~13 KB thumbnails. The cache kept 149 of 306 (1,991,982 chars). The Estate Inventory Report printed 149 <img> and '151 items have no photograph available on this device … re-open this tab with a connection to include them', with 0 Drive file links, while still claiming 'Photographs are reference-numbered to the line items above'. Files are still named HVL_<id>_INV_<n>. _invPrintThumb, INV_THUMB_CACHE_MAX, _invSaveThumbCache and _invThumbTried are identical. printEstateInventoryReport changed only its stamp arguments; the footer sentences sit at L31058/31063 and L31218/31228.",
+    "repro": "recheck/R2/EST-verify/v3.js -> out/v3.out ('cache {kept:149…}', 'EIR <img> count 149', 'Drive file links 0 | reference-numbered claim true')"
+   },
+   {
+    "id": "EST-09",
+    "status": "STILL",
+    "note": "I reran EST-verify v4 on the 24-shot probate house. After the pipeline, #8 and #20 came back 'nothing to list' and stayed as lines. The Court Inventory read 'DRAFT — 2 items not yet valued'. The Unnamed shots 2 chip, then Select all, then Remove lines with one confirm took both off, and the Court Inventory went FINAL. Select all still picks them (picked ['s7','s19']). agentNameableRefs, _invPickGroup and _invPicked are identical. Under Q106 a nameless line holds and a tick cannot settle it ('noname' in INV_OPEN_HOLDS), so these lines also keep the new stamps from REVIEWED. The cleanup path is unchanged.",
+    "repro": "recheck/R2/EST-verify/v4.js -> out/v4.out ('none:[\"#8\",\"#20\"]', 'DRAFT — 2 items not yet valued', 'picked [\"s7\",\"s19\"]', 'after cleanup … FINAL')"
+   },
+   {
+    "id": "EST-13",
+    "status": "STILL",
+    "note": "Confirmed by identity. _renderLedgerCard (new L35228), ledgerSignedCopies (L34955), ledgerDerivedLines (L35643), signedCopyControlHtml, _renderSignedSchedulesCard and signedScheduleRows are byte-identical to the old copy. The ledger's File signed copy still passes no signedBy, and any live copy turns 'Disposition Ledger signed by the <approver>' green on a two-fiduciary estate. Neither build touched it: the DocuSign build records signers for the release request only.",
+    "repro": "recheck/R2/fdiff.py _renderLedgerCard ledgerSignedCopies ledgerDerivedLines _renderSignedSchedulesCard signedScheduleRows -> IDENTICAL"
+   },
+   {
+    "id": "EST-14",
+    "status": "STILL",
+    "note": "Confirmed by identity. closeOpenWorkFlag (new L24606), applyJobTransition (L24623), ledgerCloseFlag and jobCloseBlockers are identical. REL v3 and v7 on the new copy again show the close question naming only rooms and appraisal hand-offs ('4 of 4 rooms are not marked cleared … 1 line is still out with an appraiser'), with nothing on approvals, ratifications or receipts. This was so while the Releases bar read '1 for ratification · 1 signed receipt owed'.",
+    "repro": "recheck/R2/fdiff.py closeOpenWorkFlag applyJobTransition ledgerCloseFlag jobCloseBlockers -> IDENTICAL; REL-verify/out/v7.out ('close question flag'), REL-verify/out/v3.out ('close question would say')"
+   },
+   {
+    "id": "REL-01",
+    "status": "STILL",
+    "note": "I reran REL-verify v1 on the new copy. I moved e01 (approved for Auction · Kodner, $2,400) to Distribute · Cousin Pete Ashworth at $24,000, and e02 to Palm Beach Estate Buyers at $600, through the row controls. No dialog appeared, and both lines stayed complete. The card offered 'Sign out 1 to Cousin Pete Ashworth', and its dialog still says 'Only lines every co-representative has approved in writing are offered'. e02 was signed out on the glass, and the sheet prints 'Approved in writing by … Thomas Ashworth; Nora Ashworth (Oct 12, 2026)'. The ledger prints 'Distribute Cousin Pete Ashworth Thomas Ashworth; Nora Ashworth (Oct 12, 2026)'. invApprovalComplete, signoutGroups and dispositionLedger are identical. The DocuSign build's destSig guards only the window before an envelope completes (see EST-01).",
+    "repro": "recheck/R2/REL-verify/v1.js -> out/v1.out (A state complete:true; C cousin dialog; D ledger rows), out/v1-pickup-sheet.html, out/v1-ledger.html"
+   },
+   {
+    "id": "REL-02",
+    "status": "STILL",
+    "note": "The email route is unchanged. I reran REL-verify v2: once the dashboard's I've sent it was pressed, approvalRequestChanged returned [] and the card was silent. e04 re-routed to Habitat ReStore drew no flag. Record the signed request listed '#4 … Donate · Habitat ReStore' and saved e04, e07 and e10 approved, with e10 at $2,900 and no initial of its own. approvalRequestChanged and invRecordRequestApproval are identical. The new DocuSign route covers half of it. In esign.js, after the envelope went I re-routed e04 and raised e10 to $2,900. approvalEnvelopeChanged returned ['e04','e10'], neither was recorded at completion, and the card said '2 lines changed where they go or who takes them after the envelope went'. e10 was caught only because the list's destSig differed. In esign2.js I raised e10 alone to $2,900 after the envelope: approvalEnvelopeChanged returned [], and completion recorded e10 approved at $2,900 with no notice. That matches the build's 'a value moved meanwhile is not a change'. So on the DocuSign route the value half remains, and both halves remain on the email route.",
+    "repro": "recheck/R2/REL-verify/v2.js -> out/v2.out (C 'approvalRequestChanged now: []', D/E dialog, F refs); recheck/R2/esign.js -> esign.out (B approvalEnvelopeChanged [e04,e10], C applied [e07]); recheck/R2/esign2.js -> esign2.out (B [], C e10 fmv 2900 complete:true)"
+   },
+   {
+    "id": "REL-03",
+    "status": "STILL",
+    "note": "I reran REL-verify v3. Margaret's row reads 'release to a person · 2 lines (#7, #41) … Print receipt'. The printed receipt lists '41 Colt revolver' under 'I acknowledge that I received … delivered to me by Havellin Palm Beach, LLC'. The glass dialog lists only #7. invReceiptGroups (new L32059), invReceiptHtml (L33926) and printBeneficiaryReceipt are identical.",
+    "repro": "recheck/R2/REL-verify/v3.js -> out/v3.out (A rows, B 'receipt lists Colt: true'), out/v3-receipt.html"
+   },
+   {
+    "id": "REL-04",
+    "status": "STILL",
+    "note": "I reran REL-verify v4. On the unapproved estate shotgun ('⚠ held no dealer route') the Chain of custody dialog still defaults to Released. Uncle Bob Ashworth plus a date, then Add event, drew no dialog, and the list read 'Released · Uncle Bob Ashworth · Oct 25, 2026 · recorded by Ashley Jerome'. The row then read 'held no dealer route ratification owed no signed receipt', and the bar read '1 for ratification · 1 signed receipt owed'. addCustodyEvent (new L30525) is identical.",
+    "repro": "recheck/R2/REL-verify/v4.js -> out/v4.out (A, A2)"
+   },
+   {
+    "id": "REL-05",
+    "status": "STILL",
+    "note": "I reran REL-verify v5. Typing 'Thomas Ashworth; Nora Ashworth' and a date into e04's record made it complete at once, and the card offered 'Sign out 1 to Goodwill Palm Beach'. The only trace is '2 signed approvals not filed to Drive' on the bar. On Hale, Record approval for the shotgun still opens with Signed by set to 'Robert Hale'. invRecordApproval changed only to refuse lines out in a DocuSign envelope. The playbook row still says 'Record Authorized By and Approval Date in the item panel' (concierge-guide.html:1076, CONCIERGE_GUIDE.md:1068).",
+    "repro": "recheck/R2/REL-verify/v5.js -> out/v5.out (C complete true and sign-out offered; E signer value 'Robert Hale'); grep 'No written authority on file' app-copy-2/concierge-guide.html"
+   },
+   {
+    "id": "REL-06",
+    "status": "STILL",
+    "note": "I reran REL-verify v3. With the clock approved, I signed the hand-off to Carla on the glass, and the row read '⚖ with Carla Mendes since Oct 27, 2026'. 'Sign out 1 to Margaret Ashworth' was still offered with e07 ticked, and I signed it. e07 then read {out:true, gone:true, receipt:true}. Carla's row offers 'Check 1 back in', and the close question says '#7 with Carla Mendes'. signoutGroups (L31713) and invOutForAppraisal are identical.",
+    "repro": "recheck/R2/REL-verify/v3.js -> out/v3.out (C: Margaret dialog ticked e07:true; e07 state; Carla row; close question)"
+   },
+   {
+    "id": "REL-07",
+    "status": "STILL",
+    "note": "I reran REL-verify v5 and v6. With e01 (already approved), e04 and e18 (Keep) picked on the estate, invWrittenReleasePicked still returned all three. Record approval wrote 'Thomas Ashworth; Nora Ashworth' onto the Keep line. Moved to Junk · Haul-It, it stayed {complete:true, open:false}. invWrittenReleasePicked (L31304) is identical. invRecordApproval's only new check is the DocuSign envelope.",
+    "repro": "recheck/R2/REL-verify/v5.js -> out/v5.out (A); REL-verify/v6.js -> out/v6.out"
+   },
+   {
+    "id": "REL-08",
+    "status": "STILL",
+    "note": "I reran REL-verify v7. e04 (Thomas alone, then a Date of Disposition) and e10 (a date, no approval) both have invRatificationOwed=true. The ledger's gap block names only undecided lines, pending proceeds and statements. The #4 row reads 'Thomas Ashworth (Oct 21, 2026)', with no ratification or approval words anywhere. closeOpenWorkFlag returns only the rooms sentence. dispositionLedger and closeOpenWorkFlag are identical. printDispositionLedger changed only its stamp arguments.",
+    "repro": "recheck/R2/REL-verify/v7.js -> out/v7.out, out/v7-ledger.html"
+   },
+   {
+    "id": "REL-15",
+    "status": "STILL",
+    "note": "I reran REL-verify v3. The approved estate shotgun g1, on Sell to a dealer, still has signoutLineKind '' and appears on no Leaving row, with no paper route on its row. leavingGroups (L33997) and invReceiptGroups are identical. Receipts are still read only in fiduciary mode, so a living firearm still has no 'File the dealer's receipt'.",
+    "repro": "recheck/R2/REL-verify/v3.js -> out/v3.out (A leaving rows, kinds g1 kind ''); fdiff.py leavingGroups invReceiptGroups signoutLineKind -> IDENTICAL"
+   },
+   {
+    "id": "SYN-03",
+    "status": "STILL",
+    "note": "I reran SYN-verify v3. On e01 (signed for Auction · Kodner), the row select set to Donate, then Goodwill in Who takes it, drew no dialog. invApprovalComplete stayed true, and _invAwaitingApproval stayed [e04,e07,e10]. The bar was unchanged, signoutGroups offered 'donation|goodwill palm beach ready:#1', and the ledger printed 'Harbor scene oil painting Donate Goodwill Palm Beach Thomas Ashworth; Nora Ashworth (Oct 12, 2026)'. The merge half is also STILL by identity: INV_STICKY_FIELDS and mergeMediaItems are identical, and apps-script/saveInventory.gs is byte-identical (diff -q).",
+    "repro": "recheck/R2/SYN-verify/v3.js -> out/v3.txt (1-7), out/v3-ledger.html; diff -q app-copy/apps-script/saveInventory.gs app-copy-2/apps-script/saveInventory.gs"
+   },
+   {
+    "id": "FLD-01",
+    "status": "STILL",
+    "note": "I reran FLD-verify v1 through the Job Plan's selects (Kodner Confirmed), a latched Sell chip and the shutter. The shotgun came to the desk with Sell, Kodner Galleries and channelFrom 'plan', and invTransportDealer read 'Kodner Galleries'. The request printed 'Serial RS12345M · to Kodner Galleries, a licensed dealer'. After the serial and the bulk Record approval, blocked was '' and the record read '✓ Cleared to carry … to Kodner Galleries'. invFillPlanChannel (L40392), invFillPlanChannels, _captureShot and invTransportDealer are identical.",
+    "repro": "recheck/R2/FLD-verify/v1.js -> FLD-verify/v1.out ('GUN after naming', 'GUN after approval', 'RECORD carry words', 'REQUEST gun line')"
+   },
+   {
+    "id": "FLD-02",
+    "status": "STILL",
+    "note": "I reran FLD-verify v1 with six close-ups through the real Close-up shutter (up4 to up9). Agent One got [up4,up5,up6,up7] and Agent Two's research got [up9,up8,up7,up6]. The strip still shows only 'Last: detail of the item before it · shot 6', with no close-up count. invLineCloseUps (L41648), _agDetailRefs and _fieldCamPaint are identical. photography-guide.html:480-481 still says 'Most important first: the app only reads the first four'. The guide's 2026-10-26 edit added the flatware mark close-up and nothing about the order.",
+    "repro": "recheck/R2/FLD-verify/v1.js -> FLD-verify/v1.out ('AGENT ONE painting details', 'AGENT TWO kugm-3 mode comps details [up9,up8,up7,up6]')"
+   },
+   {
+    "id": "FLD-06",
+    "status": "STILL",
+    "note": "I reran FLD-verify v2. There are still two lines: #1 'Mercedes-Benz E-Class sedan, silver' (photo, room 5) and #5 '2019 Mercedes-Benz E350 sedan' (walkthrough, no photo, no room). DUP GROUPS is [] and the tab shows no Possible duplicates. _agDupEligible changed in the flagged-only build: it now admits any line with namedBy agent or an agentName, reviewed or not, keyed on agentName. A materializeVehicle line has neither, and it has no roomIdx, so it still can never join. materializeVehicle is identical.",
+    "repro": "recheck/R2/FLD-verify/v2.js -> FLD-verify/v2.out ('LINES', 'DUP GROUPS: []', 'Possible duplicates on tab: false'); fdiff.py _agDupEligible agentDuplicateGroups"
+   },
+   {
+    "id": "FLD-07",
+    "status": "STILL",
+    "note": "I reran FLD-verify v1. The intake firearms flag was false. After the shotgun was named Firearms with a firearm notice, the Job Plan had no .fa-banner, the Kitchen workspace had no .fa-line, and the desk's Urgent strip was ''. firearmsBannerHtml, firearmsWorkspaceLine, firearmsFlaggedAtIntake and deskAlertsHtml are identical.",
+    "repro": "recheck/R2/FLD-verify/v1.js -> FLD-verify/v1.out ('desk Urgent strip: \"\"', 'Job Plan .fa-banner present: false', 'Kitchen workspace .fa-line present: false')"
+   },
+   {
+    "id": "LIV-01",
+    "status": "STILL",
+    "note": "I reran LIV-verify v1 on Hale, line l03 (oil painting, ⚑, Sell to Kodner, no value). Before, its cautions were [flaggedUnvalued] and the Contents Record had the badge. After the real 'Value 5 lines' it read {fmv:1200, valuedBy:agent, valRev:false}, cautions [], and the Contents Record had no badge, while the row still reads '⚑ appraise'. INV_RELEASE_CAUTIONS (flaggedUnvalued tests !_invHasValue) and _invHasValue are identical. By code, Q106's rule now makes this line hold a review tick (the 'appraisal' hold), so the desk still asks for a look. The client's papers still lose the Q82 badge.",
+    "repro": "recheck/R2/LIV-verify/v1.js -> LIV-verify/v1.out ('l03 before … cautions:[flaggedUnvalued]', 'CR after: badge? false', 'desk row l03 … ⚑ appraise')"
+   },
+   {
+    "id": "LIV-02",
+    "status": "STILL",
+    "note": "I reran LIV-verify v2 on a 36-shot living house. Select all on Move gave 12 selected, and Mark reviewed left '12 selected'. The Unnamed shots chip showed 3 visible rows with the bar still at 12. Select all on screen made 15. Remove lines confirmed 'Remove 15 lines … #1 Tufted linen three-seat sofa …', and Move lines live went 12 to 0. _invPicked, _invPickGroup, _invPick and invBulkRemove are identical. _invBulkApply changed only in Mark reviewed's notice and still never clears the selection.",
+    "repro": "recheck/R2/LIV-verify/v2.js -> LIV-verify/v2.out ('bar after Mark reviewed 12 selected', 'after the Unnamed chip: visible rows 3 | bar 12', 'REMOVE CONFIRM', 'Move lines live before/after 12 0')"
+   },
+   {
+    "id": "LIV-08",
+    "status": "STILL",
+    "note": "I reran LIV-verify v2. Three photographs came back agentConf 'none'. The chip still reads 'Unnamed shots 3'. The Contents Record lists '3 photographed items not yet named' among its gaps and withholds the sign-off. The only way out is still chip, Select all, Remove lines, OK, which runs into LIV-02. INV_WORK_FLAGS changed only its 'unreviewed' test, and dispositionRecord and contentsRecordSignoff are identical.",
+    "repro": "recheck/R2/LIV-verify/v2.js -> LIV-verify/v2.out (STATE none:3, CHIPS 'Unnamed shots 3', 'CR gaps … 3 photographed items not yet named', 'CR signoff withheld')"
+   }
+  ],
+  "note": "All 24 findings are STILL on app-copy-2 (7abc836). I reran each one with its verifier's own script, copied into /tmp/claude-0/-home-user-app/107e11dc-7b83-525c-829c-97f2e5cca8f9/scratchpad/audit/recheck/R2/{EST,REL,SYN,FLD,LIV}-verify with paths repointed and AUDIT_COPY set to app-copy-2. Every output matches the old copy's line for line except dates. /tmp/claude-0/-home-user-app/107e11dc-7b83-525c-829c-97f2e5cca8f9/scratchpad/audit/recheck/R2/fdiff.py diffs named functions between the two copies: most functions these findings rest on are byte-identical. The DocuSign build touched this area most, and only partly: between an envelope's send and its completion it leaves a line unrecorded when its destination or taker moved (approvalEnvelopeChanged/destSig, esign.js). It still records a line whose value alone moved (esign2.js). Once an approval is on record, by either route, it still follows the line anywhere (EST-01/REL-01/SYN-03). The flagged-only build changed the stamps and review rules but not the release request, which still prints no stamp (est04.js). saveInventory.gs is byte-identical, and main-sync.gs's changes are DocuSign/request-only. Three new scripts: /tmp/claude-0/-home-user-app/107e11dc-7b83-525c-829c-97f2e5cca8f9/scratchpad/audit/recheck/R2/esign.js, esign2.js and est04.js (outputs .out beside them)."
+ },
+ {
+  "group": "R3",
+  "results": [
+   {
+    "id": "GAP2-01",
+    "status": "STILL",
+    "note": "The code is unchanged in the new copy: _invGuardrailItems, _invOnProbateSchedule and _invOnTrustSchedule are identical. printCourtInventory and printTrustSchedule differ only in _avUnreviewedStamp's new context argument. I ran GAP2/d.js on app-copy-2 (ids 9680 and 9681) with u02 ($3,200 watercolour, untracked, so Probate) as the only line awaiting an appraisal. Both papers read 'court: DRAFT — 1 item pending appraisal' and 'trust: DRAFT — 1 item pending appraisal', each with 'A signature block is withheld deliberately — Havellin engages the specialist and a final copy follows the report.' I then moved u02 to Trust through the record's Asset Track select, and both still read DRAFT for the same reason. In c.js at 1440 px, after the 30 untracked lines were moved to Trust through 60 open/close presses and 30 selects, the court read 'DRAFT — 2 items pending appraisal | Total tangible personal property (Fair Market Value): $1,780', although none of its four remaining lines awaits an appraisal.",
+    "repro": "AUDIT_COPY=.../app-copy-2 NODE_PATH=/opt/node-tools/node_modules timeout 600 node /tmp/claude-0/-home-user-app/107e11dc-7b83-525c-829c-97f2e5cca8f9/scratchpad/audit/recheck/R3/GAP2/d.js 9681 (out-d.txt); c.js 9670 1440"
+   },
+   {
+    "id": "GAP2-02",
+    "status": "STILL",
+    "note": "maivStatement_, _maivWorklistBlock, _maivSummaryNotice and maivAggregate are identical in both copies. I ran GAP2/g.js on app-copy-2 (id 9730). There are 8 MAIV lines with the unsigned bronze unvalued. The worklist still reads: '8 articles of marked artistic or intrinsic value total at least $8,480, but 1 of them still has no value recorded, so the $3,000 aggregate cannot be tested yet … The aggregate cannot be tested until every article above carries a value. An untested total is not a total under the cap'. The desk Summary notice says the same. The class table still counts lines as articles ('Silverware 1' for 12 goblets). The 'An expert appraisal must be filed with the return' sentence prints only once every article is valued: it appeared in rt05.js after typing $500 on the bronze.",
+    "repro": "node /tmp/claude-0/-home-user-app/107e11dc-7b83-525c-829c-97f2e5cca8f9/scratchpad/audit/recheck/R3/GAP2/g.js 9730 (out-g.txt), AUDIT_COPY=app-copy-2"
+   },
+   {
+    "id": "GAP2-06",
+    "status": "STILL",
+    "note": "scheduleSigners, jobFiduciaries, coFiduciaryRepRefusal/Clash and EXECUTOR_ROLES are identical. I ran GAP2/a.js clean on app-copy-2. With Thomas as 'Personal Representative', the court reads 'Reviewed and adopted by: … Thomas Ashworth · Personal Representative / authorized fiduciary', and the trust reads 'Received for the trust's records by: … First Palm Trust Co. · Successor Trustee' with Thomas absent. With Thomas as 'Trustee', the court reads 'Reviewed and adopted by: … Personal Representative / authorized fiduciary' with nobody named, and the trust lists Thomas and First Palm, both '· Successor Trustee'. In f.js, adding Thomas again as Co-Trustee is still refused ('Thomas Ashworth is the representative on this estate, so cannot also be a co-representative …'). The intake role list is unchanged and has no combined PR-and-successor-trustee role. The DocuSign request build does not touch the schedules' signers.",
+    "repro": "node /tmp/claude-0/-home-user-app/107e11dc-7b83-525c-829c-97f2e5cca8f9/scratchpad/audit/recheck/R3/GAP2/a.js 'Personal Representative' clean (out-a-clean-Pe.txt) and 'Trustee' clean (out-a-clean-Tr.txt); f.js (out-f.txt)"
+   },
+   {
+    "id": "GAP2-07",
+    "status": "STILL",
+    "note": "proceedsReconciliation, dispositionLedger, estateProceedsHolder, inventoryNetLabel and buildInventoryPayload are identical. printDispositionLedger changed only its progress stamp. I ran GAP2/e.js on app-copy-2 (9690). The Kodner statement covering u01:Probate, u06:Probate and t01:Trust, paid to 'Estate of Eleanor Ashworth', still gives agrees:true and flags:[], and proceedsLine reads '1 statement, all agree'. The ledger columns have no holder or track column. The desk Summary reads 'Net to Estate or Trust $2,880', and the payload's netLabel is 'Net to Estate or Trust' with no per-holder figure.",
+    "repro": "node /tmp/claude-0/-home-user-app/107e11dc-7b83-525c-829c-97f2e5cca8f9/scratchpad/audit/recheck/R3/GAP2/e.js 9690 (out-e.txt)"
+   },
+   {
+    "id": "GAP2-08",
+    "status": "STILL",
+    "note": "_invExportValue is identical: its default branch still returns the raw ref.assetTrack. saveInventory.gs is byte-identical. I ran GAP2/h.js on app-copy-2 (9740). On Both, the CSV gives {'(blank)':31,'Trust':4,'Non-probate':1,'Homestead':1,'Probate':3} against the screen's {'Probate':34,'Trust':4,…}. Re-answered as a trust-only matter, the CSV still gives '(blank)':31 against the screen's 'Trust':35. These are the same counts as the original run.",
+    "repro": "node /tmp/claude-0/-home-user-app/107e11dc-7b83-525c-829c-97f2e5cca8f9/scratchpad/audit/recheck/R3/GAP2/h.js 9740 (out-h.txt)"
+   },
+   {
+    "id": "GAP2-09",
+    "status": "STILL",
+    "note": "signoutSheetHtml, printDonationRecord and invReceiptFrom are identical. I ran GAP2/e.js on app-copy-2. For the Steinway on the Trust track donated to Goodwill, the sign-out sheet reads 'I received the items listed above as a charitable donation from Estate of Eleanor Ashworth'. The Donation Record reads 'Donated on behalf of the estate or the trust, as the property is held, by Thomas Ashworth, Personal Representative and First Palm Trust Co.' The beneficiary receipt for the Probate-track clock reads '…from the Estate of Eleanor Ashworth or the trustees of The Eleanor Ashworth Revocable Trust, dated March 3, 2015, as the property is held', still with the plural 'trustees'.",
+    "repro": "node /tmp/claude-0/-home-user-app/107e11dc-7b83-525c-829c-97f2e5cca8f9/scratchpad/audit/recheck/R3/GAP2/e.js 9690 (out-e.txt)"
+   },
+   {
+    "id": "GAP1-01",
+    "status": "STILL",
+    "note": "_avNameIsAgents (namedBy agent && !reviewed), _avRename, _avItemPayload (nameChecked: !_avNameIsAgents) and _avWrite are identical. The backend's Agent Two code is identical too (_avSystem, _avUserContent, _avLineText, agentValueLines, AGENT_VALUE_NOTICE_KINDS), and there is still no 'name' notice kind and no reading field. The gap auditor's real Ellison seed.json is no longer on disk, so I rebuilt #73 from the record as GAP1 printed it: a trust-only values-tier estate; Agent One's 'appear to be Italian majolica' name; Agent Two's $160 General estimate; 1 close-up; the field note 'Italian plates going to Katherine'; ticked by Anthony. I pressed Re-value in its record with Agent Two stubbed to answer the Spanish name. Ticked: sent nameChecked=true, the name stayed Italian, valNameFrom stayed empty, and the Trust Schedule (FINAL) shows Spanish x0 and Italian x1. Unticked: sent nameChecked=false, renamed to the Spanish name with valNameFrom keeping the Italian one. The record still offers no 'reads it as' and no Use this name. What changed around it: under Q106 the line now stands with no hold (holds=[]) and is reviewed without a tick. Its box is a grey tick, and a press on it still writes reviewed:true (_invSetReviewed(…, true)), so that press, or Mark reviewed, still locks the name. agentRevalue's confirm now says a tick 'goes with it', but only valReviewed is cleared; `reviewed` stays true after the re-value, so the next Re-value is locked again.",
+    "repro": "AUDIT_COPY=.../app-copy-2 NODE_PATH=/opt/node-tools/node_modules timeout 600 node /tmp/claude-0/-home-user-app/107e11dc-7b83-525c-829c-97f2e5cca8f9/scratchpad/audit/recheck/R3/GAP1/ellison.js (ellison.out, Part A)"
+   },
+   {
+    "id": "GAP1-03",
+    "status": "STILL",
+    "note": "agentNamedTwice and _agDupHtml are identical. agentDuplicateGroups and _agDupEligible changed only the name key (now agentName first), which does not touch the named-twice branch. On the rebuilt Ellison photograph INV_1, #73 and #81 come from the first naming and #87 and #88 from the second (6 min later), and neither naming listed the other. agentNamedTwice gives [#73,#81,#87,#88]. The desk draws 'One photograph named twice · Agent One read it twice, so the later lines may repeat the earlier ones · Kitchen · 4 lines' with one Remove per line plus Not duplicates. Nothing on it says which line repeats which, it has no 'Keep the first reading', and it draws no crop. I pressed the group's Remove on #81, #88 and #87 and answered the confirms. The only live bird line left is '#73 qty 8 … dinner plates', and the FINAL Trust Schedule has no salad/dessert row.",
+    "repro": "node /tmp/claude-0/-home-user-app/107e11dc-7b83-525c-829c-97f2e5cca8f9/scratchpad/audit/recheck/R3/GAP1/ellison.js (ellison.out, Part B), AUDIT_COPY=app-copy-2"
+   },
+   {
+    "id": "GAP1-05",
+    "status": "STILL",
+    "note": "This finding is backend only, and the code is STILL by identity. main-sync.gs's diff between the copies is confined to the esign lines (BACKEND_VERSION 2026-10-26c, esignSendRequest and friends). _avResultsPage, _avLineResult, _avUrlKey, _avSystem and agentValueLines are identical, and so are AGENT_VALUE_RESULTS_SEGMENTS and AGENT_VALUE_RESULTS_PARAMS. I ran GAP1/comps.js against app-copy-2's .gs, with the stored comps rebuilt from GAP1's printed record because the seed file is gone. #78's three Etsy /market/ comps sharing one URL: resultsPage=false, kept=3. #92's etsy.com/market page: kept. Probes: an etsy.com/listing page tagged sold is kept as sold (Online comps, medium); an etsy.com/market page tagged sold is the same; a replacements.com product page tagged sold is the same. eBay /sch/ and /b/ pages are still dropped as unfit.",
+    "repro": "node /tmp/claude-0/-home-user-app/107e11dc-7b83-525c-829c-97f2e5cca8f9/scratchpad/audit/recheck/R3/GAP1/comps.js x 1 (comps.out)"
+   },
+   {
+    "id": "RT-05",
+    "status": "STILL",
+    "note": "invNeedsAppraisal, maivAggregate and _invGuardrailItems are identical. In rt05.js on app-copy-2 I took the Both/706 seed and typed $500 on the bronze through its own value box, so every article is valued. The aggregate reads {total:8980, settled:true, over:true}, and the worklist now prints 'An expert appraisal must be filed with the return … not satisfied by [the per-item flags]'. Every one of the 8 MAIV articles still gives invNeedsAppraisal=false (the $1,600 Brenner oil, the $1,800 Gorham goblets and the rest). The guardrail lists only the golf cart, and the worklist names none of them as owed the sworn appraisal.",
+    "repro": "node /tmp/claude-0/-home-user-app/107e11dc-7b83-525c-829c-97f2e5cca8f9/scratchpad/audit/recheck/R3/GAP2/rt05.js (out-rt05.txt)"
+   },
+   {
+    "id": "VAL-02",
+    "status": "STILL",
+    "note": "_avTakeValue is identical. _invBulkApply changed only its Mark reviewed words (open lines and duplicates), not the valSource arm. I ran VAL-verify/x02-values.js on app-copy-2. The stubbed Agent Two valued e40 through the real 'Value 4 lines' press (fmv 4800, 3200–7500, low, Online comps). I ticked e40's row and picked Appraisal in the bar's 'Set valuation source…' select, whose options still include Appraisal. No dialog appeared. e40 became {fmv:4800, src:'Appraisal', by:'appraiser'} with the range, confidence and note gone and no apprId. The Values bar went from '2 need an appraisal' to '1 needs an appraisal, each linked'. The Court Inventory prints '| Oil on canvas still life, signed lower left | Good | appraisal | $4,800', and the Estate Inventory Report prints 'Appraisal'.",
+    "repro": "node /tmp/claude-0/-home-user-app/107e11dc-7b83-525c-829c-97f2e5cca8f9/scratchpad/audit/recheck/R3/VAL/x02-values.js (x02.out)"
+   },
+   {
+    "id": "VAL-03",
+    "status": "STILL",
+    "note": "printApprovalRequest changed for the DocuSign copy (initials markers per fiduciary, the footer's last sentence), but showVal = _fid || valueOf(items) > 0 and the 'Havellin's estimates' sentence are unchanged. I ran x04-request.js on app-copy-2. On the none and contents tiers, with no figures on the lines, it still prints 'Basis: Fair Market Value as of date of death (Apr 2, 2026)', an 'Est. value' column, '4 items · estimated value $0' and 'Values are Havellin's estimates as of the date shown and are not appraisals…'. On the none tier the request is still the primary paper (invPrimaryDoc 'approval'), while the Contents List says 'no values are stated on this list' and the Court Inventory refuses. The new DocuSign copy (opt.esign, x04-esign.js) carries the same Basis line, the $0 total and the estimates sentence, so the fiduciaries would now e-sign the same wording.",
+    "repro": "node /tmp/claude-0/-home-user-app/107e11dc-7b83-525c-829c-97f2e5cca8f9/scratchpad/audit/recheck/R3/VAL/x04-request.js (x04.out); x04-esign.js for the DocuSign copy"
+   },
+   {
+    "id": "VAL-06",
+    "status": "STILL",
+    "note": "invNeedsAppraisal and _avNoticeKinds are identical. On app-copy-2 (x02-values.js) the stubbed Agent Two returned e41 at $1,600 (800–2,400, low) with the notice {kind:'appraiser'}, and the list above the rows showed 'Appraisal advised · …'. Under Q106 this note is a hold (valnote), so the row still offers its tick. I pressed it with no dialog: reviewed and valReviewed went true, the notices list emptied, the guardrail does not mention Moran, and the Appraisal Worklist does not list e41. valNotices stays on the line, but nothing routes it to the appraisal path.",
+    "repro": "node /tmp/claude-0/-home-user-app/107e11dc-7b83-525c-829c-97f2e5cca8f9/scratchpad/audit/recheck/R3/VAL/x02-values.js (x02.out: 'AFTER e41 tick … value notices: (none)', 'guardrail mentions Moran? false', 'worklist mentions Moran? false')"
+   },
+   {
+    "id": "VAL-08",
+    "status": "STILL",
+    "note": "setValBasis and _renderValueSettings are identical. I ran x05-estate.js on app-copy-2 and picked 'Liquidation Value' in the Values bar's Basis select. No dialog appeared, and job.valBasis became Liquidation Value. The Court Inventory then prints 'Basis: Liquidation Value as of the alternate valuation date (Oct 2, 2026)', while its column header still reads 'FMV (total)'. No agent line was re-valued or flagged ('lines changed by basis? 0').",
+    "repro": "node /tmp/claude-0/-home-user-app/107e11dc-7b83-525c-829c-97f2e5cca8f9/scratchpad/audit/recheck/R3/VAL/x05-estate.js (x05.out)"
+   },
+   {
+    "id": "VAL-09",
+    "status": "STILL",
+    "note": "setEstateAVD, _renderValueSettings, printAppraisalWorklist and _invAppraisalDate are identical. In x05-estate.js on app-copy-2, with estateTaxReturn null (706 no), the §2032 tick is still drawn ('§2032 tick drawn with gate706 no: true'). Pressing it raised no dialog and left every line's valDate unchanged. The Court Inventory then reads 'as of the alternate valuation date (Oct 2, 2026)', while the worklist header still reads 'value as of date of death (Apr 2, 2026)'.",
+    "repro": "node /tmp/claude-0/-home-user-app/107e11dc-7b83-525c-829c-97f2e5cca8f9/scratchpad/audit/recheck/R3/VAL/x05-estate.js (x05.out)"
+   },
+   {
+    "id": "VAL-11",
+    "status": "STILL",
+    "note": "_apprGroups, signoutGroups, signoutLineKind, invReleaseCautions and invAppraisalInProgress are identical. In x05-estate.js on app-copy-2 I linked e41 (the $1,600 Moran oil, Auction to Kodner, approved) to Carla Mendes through the record's Appraisal Doc select. The row reads '⚑ Appraisal · Carla Mendes … · pending'. The Releases card still offers both 'Kodner Galleries · vendor pickup · 3 lines (#1, #2, #41)' and 'Carla Mendes · appraisal hand-off · 2 lines (#7, #41)' with no caution. The worklist holds only 'Antiques & Furniture Appraiser (1)', without #41.",
+    "repro": "node /tmp/claude-0/-home-user-app/107e11dc-7b83-525c-829c-97f2e5cca8f9/scratchpad/audit/recheck/R3/VAL/x05-estate.js (x05.out)"
+   },
+   {
+    "id": "VAL-13",
+    "status": "STILL",
+    "note": "_invScheduleSection is identical. printCourtInventory and printTrustSchedule changed only their unreviewed stamp's context. On app-copy-2, x03-final.js's court rows still carry no item number: '| Grandfather clock | as photographed | not stated | $3,500 || | Nightstand | as photographed | not stated | $150 …'.",
+    "repro": "node /tmp/claude-0/-home-user-app/107e11dc-7b83-525c-829c-97f2e5cca8f9/scratchpad/audit/recheck/R3/VAL/x03-final.js (x03.out, '[1] court rows')"
+   },
+   {
+    "id": "VAL-14",
+    "status": "STILL",
+    "note": "applyJobTransition, closeOpenWorkFlag, ledgerCloseFlag, jobCloseBlockers and activateOrCycle are identical. The Closing bar's reader (deskFoldState) changed only in its Releases arm (DocuSign envelope states). I ran VAL/v08-close.js on app-copy-2: after rating the three vendors, the close confirm names only 'No midpoint payment is recorded…' and 'The Disposition Ledger has no signed copy on file…', then closes (status closed) and files the ledger. The Closing bar afterwards names 'Disposition Ledger not signed yet · Adopted Court Inventory not filed yet · … 3 sold lines on no statement yet', which the question never asked about. Undecided lines, approvals owed, sold lines on no statement and pending appraisals are still not named before the close.",
+    "repro": "node /tmp/claude-0/-home-user-app/107e11dc-7b83-525c-829c-97f2e5cca8f9/scratchpad/audit/recheck/R3/VAL/v08-close.js (v08.out)"
+   },
+   {
+    "id": "VAL-17",
+    "status": "STILL",
+    "note": "invOwnInitial is identical (it reads fmv only). On app-copy-2 (x04-request.js), e50, a signed oil with Agent Two's internal range of $1,500–$2,800 and fmv blank by contract, gives ownInit50 false on the none and contents tiers and true on the values tier at $2,200. Its only initial is the group's 'Initial once for the item above going to Kodner Galleries (Auction), each under $500 or with no value recorded'. The new DocuSign copy places each fiduciary's initials marker (/hri1/ /hri2/) on the same group line only, so e50 still gets no initial of its own there either (x04-esign.js).",
+    "repro": "node /tmp/claude-0/-home-user-app/107e11dc-7b83-525c-829c-97f2e5cca8f9/scratchpad/audit/recheck/R3/VAL/x04-request.js (x04.out); x04-esign.js"
+   },
+   {
+    "id": "VAL-27",
+    "status": "STILL",
+    "note": "printEstateInventoryReport changed only its two stamps (invAcceptCtx handed in, noAccepted on the unreviewed stamp); its total line is unchanged. On app-copy-2, x08-report.js gives 'report total line: Total estimated fair market value: $9,070 | floor words? false'. The Court Inventory of the same job gives 'Total recorded so far (Fair Market Value) — not a complete total: $9,070 … this figure is a floor rather than a total: #20 Nightstand, #26 unnamed'.",
+    "repro": "node /tmp/claude-0/-home-user-app/107e11dc-7b83-525c-829c-97f2e5cca8f9/scratchpad/audit/recheck/R3/VAL/x08-report.js (x08.out)"
+   }
+  ],
+  "note": "All 20 findings in R3 still happen on app-copy-2 (7abc836). I ran every script with AUDIT_COPY pointing at app-copy-2 and NODE_PATH=/opt/node-tools/node_modules, one browser at a time; there were no page errors. The scripts and outputs are under /tmp/claude-0/-home-user-app/107e11dc-7b83-525c-829c-97f2e5cca8f9/scratchpad/audit/recheck/R3/ (GAP2/, GAP1/, VAL/, fndiff.js).\n\nThe two new builds left the functions behind this group's findings byte-identical, with two narrow exceptions:\n- The schedules, ledger and report now pass invAcceptCtx into their stamps.\n- printApprovalRequest gained a DocuSign copy, which carries VAL-03's value wording and VAL-17's group-only initials into the envelope.\n\nmain-sync.gs changed only in the esign code, so GAP1-05 is STILL by identity. saveInventory.gs is unchanged.\n\nGAP1-01 and GAP1-03 were rebuilt on a synthetic Ellison seed, because the gap auditor's real seed.json is no longer on disk. For GAP1-01 the Q106 flagged-only rule makes #73 stand with no hold, but its grey tick, and Mark reviewed, still write reviewed:true. That still sends nameChecked and blocks Agent Two's correction, and Re-value leaves `reviewed` in place."
+ },
+ {
+  "group": "R4",
+  "note": "I reran all 23 findings on app-copy-2 (7abc836). The repro was each verifier's own script, copied into /tmp/claude-0/-home-user-app/107e11dc-7b83-525c-829c-97f2e5cca8f9/scratchpad/audit/recheck/R4/{ACC,DOC,INV}-verify/ with its output paths moved there and AUDIT_COPY set to app-copy-2. They pressed the same controls in a real browser, one at a time. Every finding is STILL. Apart from dates, item stableIds and timestamps, each run printed what the old copy printed, word for word. The one exception is the ledger and Contents stamps, whose caveat now reads 'Dispositions on unreviewed lines may still change' (namesOnly). A function diff (recheck/R4/fndiff.js) matches this. These functions are IDENTICAL in both copies: _invScheduleSection, scheduleSignLines, scheduleSigners, maivAggregate, maivStatement_, printAppraisalWorklist, setValBasis, _renderValueSettings, setEstateAVD, estateValueDate, _avdDate, _avValDate, invLineCloseUps, _agDetailRefs, _invPrintThumb, _invSaveThumbCache, sendProbatePackage, _captureShot, dispositionLedger, probatePackageRecordHtml, _jobInvRefs, agentNameableRefs, agentApplyResult, collectionLinesEnsure, _arCheckable, _agContext, _agShotPayload, materializeVehicle, _importedSourceSet, agentNotDuplicate, _arDupEligible, _arStateHtml, _arWrite, probatePackageInventoryBlocker, _avWrite, agentValueAuto, _invIsExempt, _invIsProbateAsset and _invOnProbateSchedule. On the server, _avLineResult, _avSeenUrls, _avClip, _avSystem, _avTool and agentValueLines in main-sync.gs are IDENTICAL too. The two builds changed these papers only in their stamps. The printers now hand invAcceptCtx to _invProgressStamp and _avUnreviewedStamp, which adds a bronze 'values stand, list not yet read' pill. probatePackageGaps adds 'the list not yet read'. _agDupEligible and agentDuplicateGroups now key on agentName and no longer skip reviewed lines. Nothing in either build touches the FINAL/DRAFT rule, the schedules' columns, the totals, the basis sentence, the thumbnail cache, the ledger's ratification or the duplicate and collection detection.",
+  "results": [
+   {
+    "id": "ACC-01",
+    "status": "STILL",
+    "note": "Server half, STILL by identity: _avLineResult, _avSeenUrls and _avClip are identical in both copies' main-sync.gs. Lifted from app-copy-2 (gs-v.js), four invented comparables still give fmv 4200, conf low, source General estimate, 0 kept, 4 dropped, and the basis 'Four sold comparables at Christie's and Kodner, 2025 to 2026; the median.' The sibling also holds: with one real comparable of four, the line stays medium and Auction comps and the basis still says 'Four sold comparables'. App half: _avWrite is identical. v1.js pressed Name 4 shots, and naming, the room check and Agent Two ran. s0 stored valNote 'Four sold comparables at Christie's and Kodner…'. The Estate Inventory Report row still prints that sentence beside '$4,200 General estimate'. The output is identical to the old copy's.",
+    "repro": "recheck/R4/ACC-verify/gs-v.js -> out-gs-v.txt (01a, 01b); recheck/R4/ACC-verify/v1.js -> out-v1.txt 'EIR row for s0'"
+   },
+   {
+    "id": "ACC-02",
+    "status": "STILL",
+    "note": "v1.js drove the real controls. Name 4 shots ran, the room check linked s0 and s1 'high', and Agent Two researched both ('s0:comps,s1:comps'). The desk shows Possible duplicates. Court Inventory, opened from More ▾ in the viewer, reads 'FINAL 4 values not yet reviewed' with 'Total tangible personal property (Fair Market Value): $8,360', which counts $4,200 and $3,900 for one painting. The signature block is present and the page says nothing about a duplicate. The FINAL rule is unchanged: printCourtInventory's only diff hands invAcceptCtx to _avUnreviewedStamp, and agentValueAuto is identical. The flagged-only build makes an open duplicate a hold (invLineOpen), so these lines count in the 'not yet reviewed' pill. That rule does not withhold FINAL or the adoption block.",
+    "repro": "recheck/R4/ACC-verify/v1.js -> out-v1.txt (CI stamp/total/signature/rows), out/v1-court-inventory.html"
+   },
+   {
+    "id": "ACC-03",
+    "status": "STILL",
+    "note": "v2b.js: on a 706 probate, Value 4 lines returned $900, $950 and $950, each ranged $500 to $1,500, none reviewed. The Appraisal Worklist still prints '3 articles … total $2,800, under the $3,000 aggregate … Below the $3,000 aggregate, so §20.2031-6(b) does not require an expert appraisal to be filed with the return.' It carries no unreviewed warning. maivAggregate, maivStatement_ and printAppraisalWorklist are identical in both copies, and the output matches the old copy's.",
+    "repro": "recheck/R4/ACC-verify/v2b.js -> out-v2b.txt 'ACC-03 worklist MAIV'"
+   },
+   {
+    "id": "ACC-09",
+    "status": "STILL",
+    "note": "v2.js selected Replacement Value in the Values bar's real select. It raised 0 dialogs and 0 valuation calls. The Court Inventory heading became 'Total tangible personal property (Replacement Value)' with every figure unchanged. setValBasis and _renderValueSettings are identical. Server half, STILL by identity: _avSystem and _avTool are identical. gs-v.js on app-copy-2 still gives a one-sentence RV paragraph, while the rest of the prompt still says second-hand and 'auction prices realised' and the tool's low/high still say 'realistically sell'.",
+    "repro": "recheck/R4/ACC-verify/v2.js -> out-v2.txt 'ACC-09'; gs-v.js -> out-gs-v.txt 'RV paragraph', 'RV prompt still says'"
+   },
+   {
+    "id": "ACC-10",
+    "status": "STILL",
+    "note": "v2.js ticked #inv-avd on the real page, with today 2026-10-27 and death 2026-06-01. Nothing refused the tick. The EIR and the CI read 'as of the alternate valuation date (Dec 1, 2026)', a future day, and all six lines keep valDate 2026-06-01. setEstateAVD, estateValueDate, _avdDate, _invValueAsOfHtml and _avValDate are identical.",
+    "repro": "recheck/R4/ACC-verify/v2.js -> out-v2.txt 'ACC-10'"
+   },
+   {
+    "id": "ACC-15",
+    "status": "STILL",
+    "note": "v2.js: five field close-ups taken FD0 (the mark) to FD4 still reach Agent Two as FD4,FD3,FD2,FD1, so the first is dropped. invLineCloseUps (newest first) and _agDetailRefs (oldest first) are identical. photography-guide.html:480-481 still says 'Most important first: the app only reads the first four.' The flagged-only build added a guide row asking for a close-up of the mark under flatware and china (Q103), so the mismatch now touches that close-up too.",
+    "repro": "recheck/R4/ACC-verify/v2.js -> out-v2.txt 'ACC-15 a1 close-ups sent, in order: FD4,FD3,FD2,FD1'"
+   },
+   {
+    "id": "ACC-20",
+    "status": "STILL",
+    "note": "The Court Inventory captured from the viewer has no Ref, '#1' or 'Item #' anywhere (v1.js prints 'CI item numbers … false'). _invScheduleSection is identical (Description, Condition, Basis, FMV).",
+    "repro": "recheck/R4/ACC-verify/v1.js -> out-v1.txt 'CI item numbers', out/v1-court-inventory.html"
+   },
+   {
+    "id": "DOC-01",
+    "status": "STILL",
+    "note": "v1.js on Ashworth: the Court Inventory reads 'Total recorded so far (Fair Market Value) — not a complete total: $14,475' and names #20, #23 and #26. The Estate Inventory Report reads 'Total estimated fair market value: $28,475', which is $14,475 plus the $14,000 Non-probate Mercedes, with no floor note ('REPORT mentions floor … false'). printEstateInventoryReport's only diff is in the stamps, so the total row is unchanged.",
+    "repro": "recheck/R4/DOC-verify/v1.js -> v1.out '== DOC-01 totals'; out/ash_report.html, out/ash_court.html"
+   },
+   {
+    "id": "DOC-02",
+    "status": "STILL",
+    "note": "v1.js: the sofa ticked Exempt still sits under 'Exempt, Non-probate Property — carved out of the probate estate' on the Report ('REPORT sofa under carved? true'). The Court Inventory lists it under 'Exempt Property (Fla. Stat. §732.402)' with 'Exempt property is not excluded'. The carve filter is unchanged. MANUAL.md:2340 and manual.html:2412 still describe the carve-out as property that 'sits outside the probate estate'.",
+    "repro": "recheck/R4/DOC-verify/v1.js -> v1.out '== DOC-02 exempt'"
+   },
+   {
+    "id": "DOC-03",
+    "status": "STILL",
+    "note": "v3.js: a 300-line probate with 18 KB thumbnails. The server was asked for 306 in 6 batches, and the cache kept 110 (1,984,071 chars). The Report carries 110 <img> and prints '190 items have no photograph available on this device … re-open this tab with a connection to include them'. Reopening the desk still gives 110 and makes no new requests. The output is identical to the old copy's. _invPrintThumb, _invSaveThumbCache and sendProbatePackage are identical.",
+    "repro": "recheck/R4/DOC-verify/v3.js -> v3.out"
+   },
+   {
+    "id": "DOC-05",
+    "status": "STILL",
+    "note": "v1.js: the Court Inventory headers are 'Description | Condition | Basis | FMV (total)', and no row carries a number. v2.js: the Trust Schedule still lists the Remington shotgun twice with nothing to tell the two apart. _invScheduleSection is identical.",
+    "repro": "recheck/R4/DOC-verify/v1.js -> v1.out 'COURT headers'; v2.js -> out/trust_schedule_after.html"
+   },
+   {
+    "id": "DOC-06",
+    "status": "STILL",
+    "note": "The Reports saved from the new copy (ash_report.html, trust_report.html) have 0 <a href> and no Drive link on any line. Their footer still reads 'Photographs are reference-numbered to the line items above and retained for seven years.' (havellin.html:31063, 31228). _captureShot is identical: files are still named hvlId_Room_INV_seq_stamp.jpg, with no item number.",
+    "repro": "grep on recheck/R4/DOC-verify/out/ash_report.html and trust_report.html after v1.js and v2.js"
+   },
+   {
+    "id": "DOC-07",
+    "status": "STILL",
+    "note": "v1.js on Hale (living Home Transition): More ▾ offers Appraisal Worklist. Its head reads 'Robert Hale · HVL-2610-T961 Items flagged for specialist appraisal · value as of date of death · October 27, 2026'. printAppraisalWorklist is identical, and the fixed string is at havellin.html:35929.",
+    "repro": "recheck/R4/DOC-verify/v1.js -> v1.out 'HALE worklist head'"
+   },
+   {
+    "id": "DOC-11",
+    "status": "STILL",
+    "note": "v1b.js: every Ashworth line was decided, and #4 lamps were donated on Oct 18 with no written approval (ratification owed: true). The ledger row's Authorized by reads '—', and the ledger never mentions ratification. It still prints 'Sign-off Reviewed and approved as the final record of the disposition of the property listed above' for both PRs. v1.js: the Release Approvals and Chain of Custody record leaves #4 out. dispositionLedger and probatePackageRecordHtml are identical. The DocuSign build moved the approval writer into invApplyApproval, which the ledger does not read.",
+    "repro": "recheck/R4/DOC-verify/v1b.js -> v1b.out; v1.js -> v1.out '== DOC-11'"
+   },
+   {
+    "id": "DOC-13",
+    "status": "STILL",
+    "note": "v2.js on the trust: Ruth Price's recorded role is Co-Trustee. The Trust Schedule still prints 'Daniel Price · Successor Trustee || Ruth Price · Successor Trustee'. scheduleSignLines and scheduleSigners are identical, and the fixed 'Successor Trustee' capacity is at havellin.html:34887.",
+    "repro": "recheck/R4/DOC-verify/v2.js -> v2.out 'DOC-04/13 sign lines'"
+   },
+   {
+    "id": "DOC-19",
+    "status": "STILL",
+    "note": "v2.js: after the real Name 24 shots press, #8 and #20 have agentConf 'none'. The Trust Schedule reads 'DRAFT — 2 items not yet valued' with 2 blank rows. Clearing them takes 3 presses plus a confirm. _jobInvRefs and agentNameableRefs are identical.",
+    "repro": "recheck/R4/DOC-verify/v2.js -> v2.out 'DOC-19 before', 'blank rows on schedule: 2', 'presses to clear them: 3'"
+   },
+   {
+    "id": "INV-01",
+    "status": "STILL",
+    "note": "v2.js went through the real controls: Name 12 shots, Remove line, the vehicle's Add → with 6000 typed in Total, and both Waive presses. Court Inventory from More ▾ then reads 'FINAL 11 values not yet reviewed' with a total of $22,590, which counts the coin collection twice ($2,500 + $2,500) and the Jaguar twice ($6,000 + $6,000). At that moment 0 of 13 lines were reviewed, 0 decided and all 7 rooms pending. The EIR from the same state reads 'IN PROGRESS — 0 of 13 items reviewed'. The Court Inventory has no IN PROGRESS stamp, and its FINAL rule is unchanged: the only diff is invAcceptCtx handed to _avUnreviewedStamp, which can add the bronze 'list not yet read' pill but does not withhold FINAL.",
+    "repro": "recheck/R4/INV-verify/v2.js -> v2.log 'INV-01'; out2/court.html"
+   },
+   {
+    "id": "INV-03",
+    "status": "STILL",
+    "note": "v1.js: Agent One's request context keys are still categories, conditions, mustFind, fiduciary and matterType, with no collections or vehicles. 'Coin collection in red binders' (#6) and the walkthrough line 'Coin collection' (#13) give 0 duplicate groups. The collection line has no room, and _arCheckable and _agContext are identical. _agDupEligible changed (it now keys on agentName and accepts reviewed lines) but still requires roomIdx != null. The row's chip is still '📷 no photograph yet' with a tooltip only. v2.js: the Court Inventory still prints both coin lines at $2,500, the unshot one marked 'as photographed'.",
+    "repro": "recheck/R4/INV-verify/v1.js -> v1.log 'INV-03'; v2.js -> v2.log 'INV-01 coin rows'"
+   },
+   {
+    "id": "INV-04",
+    "status": "STILL",
+    "note": "v1.js: after the garage photo was named '1987 Jaguar XJ6 sedan, red' (#11, $6,000), the panel still read 'From the Estimate Walkthrough (1 to add) … 1987 Jaguar XJ6 · vehicle … Add →'. Pressing it made #14 '1987 Jaguar XJ6', and Possible duplicates showed 0 groups. materializeVehicle and _importedSourceSet are identical.",
+    "repro": "recheck/R4/INV-verify/v1.js -> v1.log 'INV-04'"
+   },
+   {
+    "id": "INV-05",
+    "status": "STILL",
+    "note": "v4.js: round 1 flagged sofa a0 with club chair a2, and Not duplicates left 0 groups with dupOK=1 on both. Then a new Items photo a9 was taken, Name 1 shot pressed, and the room check flagged a0+a9. a0 ended with dupWith=[a9] dupOK=true. The work bar says 'Room check: 1 possible double flagged under Possible duplicates', but 0 groups are shown and agentDuplicateGroups returns 0. agentNotDuplicate, _arDupEligible, _arWrite and _arStateHtml are identical. _agDupEligible changed but still skips any dupOK line.",
+    "repro": "recheck/R4/INV-verify/v4.js -> v4.log"
+   },
+   {
+    "id": "INV-07",
+    "status": "STILL",
+    "note": "v1.js: on an activated estate with 12 unnamed Items lines, before any naming, probatePackageGaps returns ['7 rooms not yet locked','1 line with no disposition']. probatePackageInventoryBlocker returns '' because the walkthrough collection's own line counts as the named line. The flagged-only build added one gap, 'the list not yet read', but only where lines stand as the agents left them, so unnamed lines still go uncounted. probatePackageInventoryBlocker is identical.",
+    "repro": "recheck/R4/INV-verify/v1.js -> v1.log 'INV-07'"
+   },
+   {
+    "id": "INV-08",
+    "status": "STILL",
+    "note": "v2.js and v5.js: photo a3 got an empty answer and stays live line #4, its row reading 'nothing to list'. The Court Inventory is 'DRAFT — 2 items pending appraisal · 1 item not yet valued' with the floor note '#4 unnamed' and 1 blank row. Removing it takes 4 presses including the confirm. agentApplyResult is identical.",
+    "repro": "recheck/R4/INV-verify/v5.js -> v5.log; v2.js -> v2.log 'INV-08'"
+   },
+   {
+    "id": "INV-10",
+    "status": "STILL",
+    "note": "v2.js: the Court Inventory headers are Description|Condition|Basis|FMV (total), with 0 '#' references, 0 room names and 0 Drive links. The EIR has 0 Drive links under the footer 'Photographs are reference-numbered to the line items above and retained for seven years.' _invScheduleSection and _captureShot are identical.",
+    "repro": "recheck/R4/INV-verify/v2.js -> v2.log 'INV-10 headers', 'EIR stamp'; out2/court.html, out2/eir.html"
+   }
+  ]
+ },
+ {
+  "group": "R5",
+  "results": [
+   {
+    "id": "NEW-01",
+    "status": "CHANGED",
+    "note": "I reran NEW-verify/v1_ashworth.js on app-copy-2, plus r5_new01b.js. The unnamed half is fixed by the flagged-only build: 'noname' is in INV_OPEN_HOLDS, so invLineOpen means a tick can no longer settle an unnamed line. The row's box on #26 is still enabled and still sets reviewed=true with no question, but the box turns bronze ('Ticked by Ashley Jerome, but still open: no name yet') and Not reviewed stays at 4 (it used to drop to 3). After Select all and Mark reviewed, the notice names '#26 unnamed item' as staying open, and the Estate Inventory prints 'IN PROGRESS — 8 of 9 items reviewed' instead of 'REVIEWED — all 9'. The floor half is still there. A tick does settle 'nofigure' and 'nodest' (they are not open holds), so once #26 is named and ticked the EIR prints 'REVIEWED — all 9 items' over two lines with no value (#20, #23). Its total is 'Total estimated fair market value: $8,410' with no floor, 'at least' or 'not valued' wording anywhere. printEstateInventoryReport's total is unchanged. What the finding is now: the EIR total is not stated as a floor while lines are unvalued, and a ticked unvalued line counts toward REVIEWED. (Undecided lines counting toward REVIEWED is decided: 'a ticked Undecided or Hold line counts'.)",
+    "repro": "AUDIT_COPY=.../app-copy-2 node audit/recheck/R5/new_v1_ashworth.js -> recheck/R5/out/new_v1.log (EIR stamps 'IN PROGRESS — 8 of 9 items reviewed', toast '1 stays open … #26'); recheck/R5/r5_new01b.js -> 'REVIEWED — all 9 items', 'Total … $8,410', floor words null, out/r5_new01b_eir.html"
+   },
+   {
+    "id": "NEW-02",
+    "status": "STILL",
+    "note": "On app-copy-2, Send request on Ashworth asked nothing (dialogs []) and drafted the request with '#10 Walnut dresser … $450 Sell Palm Beach Estate Buyers'. That line is agent-named, not reviewed (invLineReviewed false; under the new rule it is held as 'unowned') and invLineUnsure is true. The page has no IN PROGRESS or review mark: the only 'review' text on it is in its CSS. printApprovalRequest and sendApprovalRequest changed for the DocuSign route, but neither reads _invProgressStamp, invLineUnsure, invLineReviewed, _invLineHolds or invListRead (zero call sites each), so the DocuSign copy ({esign:true}) goes out the same way. The Evening Desk now reads 'Papers print marked IN PROGRESS until every flagged item is checked; they are never held back.' The request is still not marked.",
+    "repro": "recheck/R5/new_v1_ashworth.js -> out/new_v1.log ('request has e10 name true | $450 true | IN PROGRESS false', 'send dialogs []'); out/v1_request.html; call-site count by node over printApprovalRequest/sendApprovalRequest in app-copy-2"
+   },
+   {
+    "id": "NEW-03",
+    "status": "STILL",
+    "note": "signoutGroups and openSignoutDialog are identical in both copies. I reran NEW-verify/v2_signout.js on app-copy-2. The receipt dialog for Margaret Ashworth lists only '#7 Grandfather clock' and says nothing about the pending appraisal. After Sign and file, e07 is gone:true with apprId 501 and appraised:false, but signoutGroups still returns 'appraisal_out:Carla Mendes ready=1'. The card still offers 'Sign out 1 to Carla Mendes', and the Values bar still reads '1 ready to hand to Carla Mendes (under Releases & signed papers)'.",
+    "repro": "recheck/R5/new_v2_signout.js -> out/new_v2.log ('e07 after receipt {…gone:true…groups:[receipt… done=1, appraisal_out:Carla Mendes ready=1]}')"
+   },
+   {
+    "id": "NEW-04",
+    "status": "STILL",
+    "note": "closeOpenWorkFlag, ledgerCloseFlag and applyJobTransition are identical in both copies. I reran NEW-verify/v3_hale.js on app-copy-2. Before the close, jobCloseBlockers is [], l07 (the shotgun) has needs:true and complete:false, and awaitsHours is true. The single confirm names only the midpoint and '3 of 3 rooms are not marked cleared … finish the rooms and name the recipients'. OK closed the job (status closed, delivered 2026-10-27) and filed the ledger and the Contents Record with 2 lines undecided. Only after that did the band say 'No hours are logged yet'. The new build adds the list read only to the package question, not to the close.",
+    "repro": "recheck/R5/new_v3_hale.js -> out/new_v3.log (PRE-CLOSE, CLOSE DIALOGS, AFTER CLOSE)"
+   },
+   {
+    "id": "NEW-05",
+    "status": "FIXED",
+    "note": "The flagged-only build fixed this. agentDuplicateGroups feeds invAcceptCtx's dup index, and 'duplicate' is in INV_OPEN_HOLDS, so a tick never settles an open possible duplicate (invLineOpen). Rerun of NEW-verify/v4_agents.js on app-copy-2: ticking both room-check vases gives no dialog and the Possible duplicates block stays. Mark reviewed now says '✓ 6 items marked reviewed. ⚠ 2 stay open: a tick does not settle … a possible duplicate …: #1 Cobalt glass vase, #2 Cobalt glass vase, second view', and the Contents Record prints 'IN PROGRESS — 4 of 6 items reviewed', not 'REVIEWED — all 6'. The ticked rows show a bronze 'Ticked …, but still open' box in place of the proposed question. Aside, not part of this finding and not chased: in the same run, s2's box stayed drawn checked after Agent Two's re-value for a new name landed, while invLineReviewed read false.",
+    "repro": "recheck/R5/new_v4_agents.js -> out/new_v4.log ('MARK REVIEWED notice … 2 stay open …', 'CONTENTS stamp IN PROGRESS — 4 of 6 items reviewed')"
+   },
+   {
+    "id": "NEW-07",
+    "status": "STILL",
+    "note": "probatePackageGaps changed, but only by one gap appended, 'the list not yet read', which appears where a line stands as the agents left it and the read is not current. It still filters live lines to those with an objectName before counting. On app-copy-2, Ashworth returns ['4 rooms not yet locked','2 lines with no disposition','2 lines with no value'], while the desk's chips on the same seed read Unnamed shots 1, Not yet decided 3, No value yet 3, Not reviewed 4. Unnamed #26 is still in neither count, and flagged lines nobody has ticked are not named. The read gap did not fire here because no line stands (accepted 0). Severity as the verifier re-rated it: low.",
+    "repro": "recheck/R5/new_v6_papers.js -> out/new_v6.log ('package gaps [\"4 rooms not yet locked\",\"2 lines with no disposition\",\"2 lines with no value\"]'); chips in out/new_v1.log; SHOW=1 node recheck/R5/fndiff.js havellin.html probatePackageGaps"
+   },
+   {
+    "id": "AGT-01",
+    "status": "CHANGED",
+    "note": "I reran AGT-verify/v01_02.js on app-copy-2: 18 shots, with s3, s9 and s14 'nothing to list'. The three presses (Not reviewed, Select all, Mark reviewed) still set reviewed=true on all three blank lines. But 'noname' is now an open hold, so they do not count. The notice says '⚠ 3 stay open … #4 unnamed item, #10 unnamed item, #15 unnamed item', and the Estate Inventory stamp is 'IN PROGRESS — 15 of 18 items reviewed', where it used to be 'REVIEWED — all 18'. So the false REVIEWED claim is gone. What remains: the EIR still prints each blank line as a numbered item ('4 — Primary Bedroom 1 as photographed — not stated', likewise #10 and #15). They still sit under Unnamed shots, there is no chip of their own and no one-press removal, and the row's box still takes a bronze tick that settles nothing. Mark reviewed also took #15's too-dark note off the list ('now off the list (still in each record)') although #15 stays open.",
+    "repro": "recheck/R5/agt_v01_02.js -> out/agt_v01.log ('stamp: IN PROGRESS — 15 of 18 items reviewed', 'paper row near #4: 4 — Primary Bedroom 1 as photographed — not stated', msg '3 stay open …')"
+   },
+   {
+    "id": "AGT-03",
+    "status": "STILL",
+    "note": "agentNotDuplicate, _arDupEligible and agentNamedTwice are identical in both copies. _agDupEligible changed (keyed on agentName, reviewed lines included), but it still drops any line with dupOK. Rerun of AGT-verify/v03.js on app-copy-2: day two gives s0 {dupOK:1, dupWith:[s6]} and s6 {dupWith:[s0]}, while groups are [], the block is empty, and the work bar still says 'Room check: 1 possible double flagged under Possible duplicates'. The flagged-only rule makes it worse. Since the 'duplicate' hold reads only the drawn groups, once both lines are given a destination (Keep, through the row's select) both s0 and s6 stand with no tick: _invLineHolds is [] and the box reads 'Nothing flagged: the agents’ name and value stand as they are'.",
+    "repro": "recheck/R5/agt_v03.js -> out/agt_v03.log; recheck/R5/agt_v03c.js ('holds day2 [\"s0:[] rev=true box=Nothing flagged…\",\"s6:[] rev=true …\"]')"
+   },
+   {
+    "id": "AGT-06",
+    "status": "STILL",
+    "note": "agentValueNotices, _avNoticesHtml, invNeedsAppraisal, printAppraisalWorklist and _avRowBadges are identical in both copies. Rerun of AGT-verify/v06_09.js on app-copy-2: the $800 signed lithograph with an 'appraiser' notice has needs:false, the chip reads 'Needs appraiser 0' and the Worklist does not carry it. After the row's Reviewed tick the notes list is [] and needsAppr is still unset. One mitigation from the new build: the notice is a hold ('valnote'), so the line cannot stand untouched. The tick still drops the advice and nothing feeds it into the appraisal chip or the Worklist.",
+    "repro": "recheck/R5/agt_v06_09.js -> out/agt_v06.log ('appraisal advice: {needs:false, chip:\"Needs appraiser 0\", wlHasPrint:false, notes:[\"s1:Appraisal advised\"]}', 'after Reviewed tick: {reviewed:true, notes:[], needs:false}')"
+   },
+   {
+    "id": "ROW-01",
+    "status": "CHANGED",
+    "note": "My fixture (r5_row01.js) has 12 shots and no same-name pairs; ROW-verify/v01.js's 24-shot fixture is all duplicates under the new rule. On a probate and on a Home Transition, Select all and Mark reviewed still set reviewed=true on the 'nothing to list' line s7 (#8), whose box is still enabled. But 'noname' is an open hold: the notice says '⚠ 1 stays open … #8 unnamed item', and both the EIR and the Contents Record print 'IN PROGRESS — 12 of 13 items reviewed', where the old copy printed 'REVIEWED — all N'. So REVIEWED over blank lines is fixed by the flagged-only build. Proposal (2), REVIEWED only once lines are decided, conflicts with the build's decision that a ticked Undecided line counts. Proposal (3) is not done: the EIR still prints '8 — Dining Room 1 as photographed — not stated' and the Contents Record '8 — Dining Room not recorded — —' as numbered lines, beside its gap sentence '1 photographed item not yet named'.",
+    "repro": "recheck/R5/row/r5_row01.js (stamps 'IN PROGRESS — 12 of 13 items reviewed', s7 #8 printed); row/r5_row01_9851.html, r5_row01_9852.html; also row/v01.txt, v01b.txt (all-duplicate fixture, 'IN PROGRESS — 0 of 26')"
+   },
+   {
+    "id": "ROW-03",
+    "status": "STILL",
+    "note": "_renderInvFilterRow and setInvQuery are identical; renderInventoryTab changed, but it still rewrites #inv-q and restores no focus. Rerun of ROW-verify/v03.js on app-copy-2: 'harbor' typed at 400 ms a key leaves filter 'h', box 'h' and focus on BODY. At 150 ms and 80 ms a key the filter holds 'harbor', then focus goes to BODY.",
+    "repro": "recheck/R5/row/v03.js -> row/v03.txt"
+   },
+   {
+    "id": "ROW-04",
+    "status": "STILL",
+    "note": "The code that replaces the row with outerHTML when a figure stops being the agent's is unchanged in _invEdit. The new lines repaint only the review box, the duplicate pairs and the read line. Rerun of ROW-verify/v04.js on app-copy-2: A1, Total typed over Agent Two's $350 then Tab, lands focus on BODY. A2, Each typed then Where it goes tapped, lands focus on BODY. A3, a desk figure then Tab, keeps focus on Where it goes.",
+    "repro": "recheck/R5/row/v04.js -> row/v04.txt (A1/A2/A3 lines)"
+   },
+   {
+    "id": "ROW-05",
+    "status": "STILL",
+    "note": "_invPanelCols and _invRecipientInput are identical. Rerun of ROW-verify/v04.js on app-copy-2: a name edited in the record is stored ('Edited in the record') while the row's box still shows the old name. A recipient typed in the record is stored ('Habitat ReStore') while the row's box reads ''. A fix typed into the stale row box writes the old name back ('… signed , walnutlower right (illegible)'). 'Goodwill' typed on the row is stored while the record's box still reads 'Habitat ReStore'.",
+    "repro": "recheck/R5/row/v04.js -> row/v04.txt (from 'name edited in record')"
+   },
+   {
+    "id": "ROW-08",
+    "status": "STILL",
+    "note": "_invSetReviewed is identical (a full renderInventoryTab), and a ticked line still leaves the chip's view. ROW-verify/v08.js's 120-shot fixture is all same-name pairs under the new rule, so every tick there is stuck and stays put. I used my own fixture instead (r5_row08b.js: 7 rooms, 60 shots, no duplicates, lines held for no destination). Under Not reviewed, at one fixed point, each click ticked the line that had just slid under the pointer: s14, s21, s28, s35, s42, s49 (visible rows 64, then 63, 62 and on down). A quick double click ticked two (s56 and 9865_…-5). One new wrinkle: where the line sliding under is an unnamed one (s7 in r5_row08.js), its tick is a bronze stuck tick that settles nothing, and the next click unticks it.",
+    "repro": "recheck/R5/row/r5_row08b.js (click log); row/r5_row08.js (the s7 case)"
+   },
+   {
+    "id": "ROW-09",
+    "status": "FIXED",
+    "note": "The flagged-only build fixed this. _agDupEligible no longer requires !r.reviewed: it reads Agent One's own reading, agentName. And 'duplicate' is an open hold (INV_OPEN_HOLDS). Rerun of ROW-verify/v09.js on app-copy-2: after one row tick on s2 (#3), the group 's2#3 | s14#15 White porcelain dinner plates' is still listed (12 groups before and after) and both rows keep their chip. s2's box reads, in bronze, 'Ticked by Ashley Jerome, but still open: a possible duplicate: Remove one or press Not duplicates…'. The EIR still lists the plates twice, but under 'IN PROGRESS', not REVIEWED.",
+    "repro": "recheck/R5/row/v09.js -> row/v09.txt; row/r5_row09.js (stamp IN PROGRESS, s2 box bronze)"
+   },
+   {
+    "id": "ROW-17",
+    "status": "STILL",
+    "note": "INV_WORK_FLAGS still has no chip of its own for agentConf 'none': 'Unnamed shots' tests !r.objectName, so nothing-to-list lines and unread shots share it, and nothing on the work bar takes them off in one press. The concierge guide and the manual on app-copy-2 still say to press Remove line in each line's ▾. The flagged-only build adds weight: an unnamed line is now an open hold, so each one keeps Not reviewed counting and every paper at IN PROGRESS until it is removed or named (AGT-01, ROW-01 above).",
+    "repro": "app-copy-2/havellin.html INV_WORK_FLAGS (line 37656); concierge-guide.html and manual.html 'nothing to list' passages (python search); recheck/R5/agt_v01_02.js chips 'Unnamed shots 3'"
+   }
+  ],
+  "note": "All 16 were rechecked on app-copy-2 (7abc836), each by running its verifier's script again (copied under audit/recheck/R5/, AUDIT_COPY set) or by diffing the function (recheck/R5/fndiff.js). Fixed by the flagged-only build (INV_OPEN_HOLDS: a tick never settles no name or an open duplicate): NEW-05 and ROW-09. Changed, with the false REVIEWED gone but part of the finding left: NEW-01 (the EIR total is still not stated as a floor, and a ticked unvalued line still counts toward REVIEWED), AGT-01 and ROW-01 (blank numbered lines still print on the EIR and the Contents Record). Still, by identical code and the same rerun result: NEW-03, NEW-04, ROW-03, ROW-04, ROW-05, AGT-06, ROW-17. Still where the code changed but the behaviour held: NEW-02 (the request has no stamp, and neither does the new DocuSign copy), NEW-07 (it gained only the unread-list gap), ROW-08, and AGT-03. AGT-03 is worse under flagged-only: both halves of a hidden room-check double stand untouched once they have a destination. Fixture warning for later reruns: H.seedFullHouse cycles 12 catalogue names over 6 rooms, so n of 24 or more makes every line a same-name duplicate. Under the new rule that keeps every tick stuck and every stamp IN PROGRESS, which hides the behaviour under test (ROW-verify v01, v01b and v08 read '0 of 26' and '130 rows stay'). Use n=12, or 7 rooms (r5_row01.js, r5_row08b.js). Aside, not chased (seen in new_v4.log and r5_new01b.js): after Agent Two re-values a renamed line, the row's Reviewed box can stay drawn checked ('Reviewed by …') while invLineReviewed reads false."
+ }
+]
