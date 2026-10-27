@@ -1310,7 +1310,10 @@ schedule is not held at DRAFT for it); and where the engagement gives valuation 
 
 **What the documents now say.**
 - **Court Inventory and Trust Schedule:** a *Basis* column on every line naming what the figure rests on, in these words:
-  *appraisal*, *auction comps*, *online comps*, *general estimate*, *WorthPoint comps*, *dealer quote*, *PR estimate*.
+  *appraisal*, *auction comps*, *online comps*, *general estimate*, *WorthPoint comps*, *dealer quote*, *PR estimate*, and since
+  2026-10-27 *listing survey*: no sale found, but ten or more close listings of the same thing counted and the figure set at or
+  under their middle asking price (Anthony, Q110: *"A listing survey counts"*), its basis sentence saying so (*No sales found;
+  twelve close listings at $25 to $120 each; valued below them*).
 - **Court Inventory, Trust Schedule and Estate Inventory PDF:** a stamp beside the DRAFT / FINAL status reading
   *"N values not yet reviewed"* when software figures nobody at Havellin has looked at are on lines that do not stand (flagged,
   or not yet decided), and since 2026-10-26 a grey *"N accepted as valued · list read by …"* for the figures on lines nothing
@@ -1331,6 +1334,10 @@ schedule is not held at DRAFT for it); and where the engagement gives valuation 
    appraisal *by item, without a figure* amount to an opinion of value?
 4. On a living client's job the figure reaches the client's CSV and workbook. Does the standard agreement need a sentence
    that these are estimates for planning a sale, not appraisals?
+5. (2026-10-27) Fair market value is what a thing sells for, not what it is offered at. Is *listing survey*, a figure set
+   below where ten or more like items are listed with no sale found, an acceptable stated basis on a Court Inventory or a
+   Trust Schedule, or should such a line print as an estimate without a basis word of its own, or be held for an appraisal
+   above some figure?
 
 ### D14. A living client signs the Contents Record, not a ledger ⚠ NEW P25 (2026-10-09)
 

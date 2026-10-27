@@ -114,7 +114,13 @@
 // signer on the envelope (`signers`: recipientId, name, email, status, signedAt, declinedReason) and why an envelope was voided.
 // Until it is live the request goes by email only (the app offers no DocuSign send without the action), and an envelope's
 // signatures cannot be read back.
-var BACKEND_VERSION = '2026-10-26c';
+// ⚠ 2026-10-27 (Anthony, off the eBay developer account: *"if we see literally dozens of listings on eBay and Etsy, can't we use
+// that to triangulate some sort of value even if we don't have true sold comps"*; he took *"A listing survey counts"*): a research
+// line with no sale but AGENT_VALUE_SURVEY_MIN or more close listings counted (`survey` in record_values, its page a URL a tool
+// returned) and valued at or under the middle asking price for one article is medium confidence at most, source *Listing survey*,
+// where it was low and a general estimate whatever it counted (_avSurvey, _avLineResult). No action or type changes; it carries
+// 2026-10-26c's. Until it is live such a line stays low, marked unsure on the desk, and prints "general estimate".
+var BACKEND_VERSION = '2026-10-27';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive', 'esignSendRequest',
@@ -4246,6 +4252,15 @@ var AGENT_VALUE_SEARCHES    = { comps: 5, general: 8 };
 var AGENT_VALUE_FETCHES     = 2;      // comps only: reading a results page the search turned up
 var AGENT_VALUE_CONTINUES   = 2;      // `pause_turn` continuations per request before it is called unfinished
 var AGENT_VALUE_MAX_COMPS   = 6;      // comparables kept per line (the manifest lives in a ~5MB localStorage)
+// ⚠⚠ A LISTING SURVEY COUNTS (2026-10-27; Anthony: *"if we see literally dozens of listings on eBay and Etsy, can't we use that to
+// triangulate some sort of value even if we don't have true sold comps"*, and he took *"A listing survey counts"*: ten or more close
+// listings and no sale, valued below where they are listed, medium confidence, and the paper says it rests on listings, not sales;
+// a handful stays low). Listings are a ceiling: things sell for less than they are listed at, and many of one thing listed is a soft
+// market. So the survey earns medium only where the figure for one article sits at or under the middle asking price, and only off a
+// page a tool returned (the comparables' guard; a results page is allowed here, since counting a results page is the point). The
+// count is the model's, read off that page: the page is on the line's record for a person to check. eBay's Browse API, once its
+// terms allow results to reach the model, would hand over the count itself.
+var AGENT_VALUE_SURVEY_MIN  = 10;
 // ⚠⚠ A COMPARABLE IS ONE ITEM'S OWN PAGE, WITH THE PRICE THAT PAGE SHOWS (2026-10-26b; the first live testAgentValue cited an
 // eBay search page as a $50 listing, and a LiveAuctioneers price-results page as a sold pair of mirrors at $380, the top of that
 // page's range for other mirrors, with "price not shown" in its own title). A search or results page lists many things and
@@ -4304,7 +4319,7 @@ var AGENT_VALUE_TIME_BUDGET = 120000;
 // call. The header and the scalar `fallbacks:'default'` go together; pairing either with the other
 // form is a 400. A deployment whose account refuses the field answers 400 naming it, and that one
 // request is sent again without it (`_avReadResult`, `noFallbacks`) rather than the button dying.
-var AGENT_VALUE_SOURCES = { comps: ['Auction comps', 'Online comps'], general: ['General estimate'] };
+var AGENT_VALUE_SOURCES = { comps: ['Auction comps', 'Online comps'], general: ['General estimate'], survey: ['Listing survey'] };
 // "worthpoint" and "name" went on 2026-10-25: the desk shows the confidence and the WorthPoint terms beside every
 // figure, and a name Agent Two would change it now changes (`name` in the answer; Anthony: "No need to flag").
 var AGENT_VALUE_NOTICE_KINDS = ['appraiser', 'specialist', 'other'];
@@ -4376,6 +4391,24 @@ function _avTool(mode, categories, conditions) {
     }
   };
   var required = ['line', 'name', 'value', 'low', 'high', 'confidence', 'source', 'basis', 'comps', 'lookup', 'notices'];
+  // The listings counted where no sale was found, on a research line only (AGENT_VALUE_SURVEY_MIN, 2026-10-27). Strict wants every
+  // field, so a line with no survey sends a count of 0 and an empty url.
+  if (mode === 'comps') {
+    props.survey = {
+      type: 'object',
+      additionalProperties: false,
+      required: ['count', 'low', 'median', 'high', 'url'],
+      description: 'Where you found no sale: the close listings of the same thing still for sale that you counted, and the page you counted them on. A count of 0 and an empty url when you counted none.',
+      properties: {
+        count:  { type: 'integer', description: 'How many close listings of the same thing you counted: the same maker, pattern, form and size, in condition close to this one. Never everything a search turned up.' },
+        low:    { type: 'number', description: 'The lowest asking price among them, for one article as this line counts them, US dollars.' },
+        median: { type: 'number', description: 'The middle asking price among them, for one article, US dollars.' },
+        high:   { type: 'number', description: 'The highest asking price among them, for one article, US dollars.' },
+        url:    { type: 'string', description: 'The page you counted them on, copied exactly from what your search or fetch returned. A results page is fine here.' }
+      }
+    };
+    required.push('survey');
+  }
   // ⚠⚠ THE CATEGORY, UNDER THE NAME'S RULE (2026-10-26; Anthony: *"Yes, same rule as the name"*): a research line's category comes
   // back with its name, and the app writes it only where the name is still Agent One's and unreviewed (_avNameIsAgents). The list
   // rides the payload (Agent One's rule: this file holds no copy), constant within a job so the cached prefix holds; an app that
@@ -4531,15 +4564,25 @@ function _avSystem(ctx) {
     + 'you never fill one in from a range, an estimate or another lot. Comparables that fail this are thrown away.\n'
 
     + '- Say whether each comparable SOLD or was only ASKING. An asking price is not a sale. You may cite '
-    + 'one as "asking", but never set the value on asking prices alone.\n'
-    + '- If a research line has no sold comparable, give your best reading with confidence low and say in the basis '
+    + 'one as "asking", but never set the value on a few asking prices alone.\n'
+    // 2026-10-27 (Anthony: "A listing survey counts"): AGENT_VALUE_SURVEY_MIN, checked again in _avLineResult.
+    + '- LISTINGS ARE A CEILING. Where a research line has no sale but you can count many close listings of the same thing '
+    + 'still for sale (a results page your search or fetch returned may be the page you count them on), record them in '
+    + 'survey: how many, and the lowest, middle and highest asking price for one article as this line counts them, with '
+    + 'that page\'s URL. Count only listings of the same thing: the same maker, pattern, form and size, in condition close '
+    + 'to this one, never everything a search turned up. Things sell for less than they are listed at, and many of one '
+    + 'thing listed means a soft market, so value such a line below where they are listed: at or under the middle price, '
+    + 'nearer the low end, and say in the basis that it rests on that many listings and no sales. With '
+    + AGENT_VALUE_SURVEY_MIN + ' or more close listings and no sale, confidence may be medium; with fewer, it is low.\n'
+    + '- If a research line has no sold comparable and no such survey, give your best reading with confidence low and say in the basis '
     + 'what it rests on. Put a line under unvalued only when you cannot tell what it is, or it is papers or records. Do '
     + 'not dress a guess up as research.\n\n'
 
     + 'THE RANGE AND CONFIDENCE\n'
     + 'low and high bracket where the line would realistically sell; your value sits inside them. high '
     + 'confidence = several close sold comparables agree. medium = the comparables are near but not exact, '
-    + 'or few. low = a best estimate on thin or indirect evidence.'
+    + 'or few, or there is no sale but ' + AGENT_VALUE_SURVEY_MIN + ' or more close listings and the value sits below them. '
+    + 'low = a best estimate on thin or indirect evidence.'
     // 2026-10-26: the only scale was about comparables, which an ordinary lot is told it need not cite, so a literal reading put
     // every everyday lot at low, and the desk marked each one unsure.
     + ' On an ORDINARY lot, confidence says how well the going rate for that kind of lot is known, not how many sales '
@@ -4803,8 +4846,20 @@ function _avUrlKey(u) {
 
 var AGENT_VALUE_CONF_DOWN = { high: 'medium', medium: 'low', low: 'low' };
 
-// One line of the model's answer, checked. Returns the result the app writes, or {error}.
-function _avLineResult(v, mode, seen) {
+// The listings a research line counted, checked (AGENT_VALUE_SURVEY_MIN): a whole count, the three prices for one article in
+// order, and the page a tool returned. null otherwise, so a survey the server cannot check is never on the line.
+function _avSurvey(s, seen) {
+  if (!s || typeof s !== 'object') return null;
+  var n = Number(s.count), lo = _avCents(s.low), md = _avCents(s.median), hi = _avCents(s.high);
+  var url = String(s.url || '').trim();
+  if (!(n >= 1 && n === Math.floor(n)) || !(lo > 0 && md >= lo && hi >= md)) return null;
+  if (!/^https?:\/\//i.test(url) || !(seen || {})[_avUrlKey(url)]) return null;
+  return { count: n, low: lo, median: md, high: hi, url: url.slice(0, 400) };
+}
+
+// One line of the model's answer, checked. Returns the result the app writes, or {error}. `qty`, the line's count, reads the
+// figure for one article against a survey's prices (2026-10-27); absent, the line is one article.
+function _avLineResult(v, mode, seen, qty) {
   var fmv = _avCents(v.value), low = _avCents(v.low), high = _avCents(v.high);
   if (!isFinite(fmv) || fmv < 0) return { error: 'the answer carried no usable value' };
   if (!isFinite(low) || low < 0) low = fmv;
@@ -4836,12 +4891,20 @@ function _avLineResult(v, mode, seen) {
   // returned, so the rest of its reading is worth less too. And at the research depth a line with no
   // sold comparable left is low whatever else it found (§4b).
   if (dropped) conf = AGENT_VALUE_CONF_DOWN[conf];
-  if (mode === 'comps' && !soldKept) conf = 'low';
+  // ⚠⚠ A LISTING SURVEY COUNTS (2026-10-27): no sale, but AGENT_VALUE_SURVEY_MIN close listings or more on a page a tool returned,
+  // and one article's figure at or under their middle price. Medium at most, never lifted from the model's own low; anything else
+  // with no sale stays low, as before.
+  var survey = mode === 'comps' ? _avSurvey(v.survey, seen) : null;
+  var each = fmv / Math.max(1, parseInt(qty, 10) || 1);
+  var surveyed = mode === 'comps' && !soldKept && !!survey && survey.count >= AGENT_VALUE_SURVEY_MIN && each <= survey.median;
+  if (mode === 'comps' && !soldKept) conf = surveyed ? (conf === 'high' ? 'medium' : conf) : 'low';
   // ⚠⚠ NO SOLD COMPARABLE, NO "COMPS" (2026-10-26): a researched figure that rests on no sale it can show is a general estimate on
   // every paper. The research tool could answer only Auction or Online comps, so a best reading with nothing sold behind it printed
   // "auction comps" on the Court Inventory and the Estate Inventory Report (CLAUDE.md: never print a claim the app did not witness).
   // The asking prices it found stay on the line's record; `mode` stays comps, so the ceiling never re-sends it.
-  var sources = (mode === 'comps' && !soldKept) ? AGENT_VALUE_SOURCES.general : (AGENT_VALUE_SOURCES[mode] || AGENT_VALUE_SOURCES.general);
+  // A figure resting on a listing survey says so (*Listing survey*), never comps and never a bare general estimate.
+  var sources = (mode === 'comps' && !soldKept) ? (surveyed ? AGENT_VALUE_SOURCES.survey : AGENT_VALUE_SOURCES.general)
+    : (AGENT_VALUE_SOURCES[mode] || AGENT_VALUE_SOURCES.general);
   var notices = (v.notices || []).filter(function (n) {
     return n && AGENT_VALUE_NOTICE_KINDS.indexOf(n.kind) >= 0 && String(n.text || '').trim();
   }).slice(0, 4).map(function (n) { return { kind: n.kind, text: _avClip(n.text) }; });
@@ -4850,6 +4913,7 @@ function _avLineResult(v, mode, seen) {
     source: sources.indexOf(v.source) >= 0 ? v.source : sources[0],
     basis: _avClip(v.basis),
     comps: kept,
+    survey: survey,
     lookup: mode === 'comps' ? String(v.lookup || '').slice(0, 160) : '',
     name: String(v.name || '').replace(/\s+/g, ' ').trim().slice(0, 300),
     // The category it values under, on a research line only (THE CATEGORY); the app writes it under the name's rule.
@@ -4993,7 +5057,7 @@ function agentValueLines(data) {
             var hit = byLine[p.unit.labels[j]];
             if (!hit) { retry[it.stableId] = 'the model did not answer for this line'; return; }
             if (hit.why != null) { failed[it.stableId] = String(hit.why || 'could not be valued').slice(0, 200); return; }
-            var r = _avLineResult(hit.v, p.unit.mode, seen);
+            var r = _avLineResult(hit.v, p.unit.mode, seen, it.qty);
             // A grade only off a photograph this request carried, and only one of the grades it was sent (2026-10-26b).
             if (!r.error) r.condition = (p.unit.saw && p.unit.saw[p.unit.labels[j]] && (ctx.conditions || []).indexOf(hit.v.condition) >= 0) ? hit.v.condition : '';
             // A line filed Firearms is never moved out of it (2026-10-26, on review): the category is what switches the firearm
@@ -5064,6 +5128,7 @@ function testAgentValue() {
     (r.comps || []).forEach(function (c) { Logger.log('      [' + c.kind + '] ' + c.title + ' · ' + c.venue + ' · ' + c.saleDate + ' · $' + c.price + ' · ' + c.url); });
     if (r.dropped) Logger.log('      ' + r.dropped + ' comparable(s) dropped: no tool returned their link');
     if (r.unfit) Logger.log('      ' + r.unfit + ' comparable(s) left out: a search or results page, or no price of its own');
+    if (r.survey) Logger.log('      listing survey: ' + r.survey.count + ' listed, $' + r.survey.low + '-$' + r.survey.high + ' each, middle $' + r.survey.median + ' · ' + r.survey.url);
     if (r.lookup) Logger.log('      WorthPoint: ' + r.lookup);
   });
   Object.keys(out.failed).forEach(function (id) { Logger.log('  ' + id + ' NOT VALUED: ' + out.failed[id]); });
