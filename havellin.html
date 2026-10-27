@@ -1476,7 +1476,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.27 · 12:23pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.27 · 3:25pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -10079,6 +10079,10 @@ function clientMissingFields(d) {
 }
 
 function saveIntake() {
+  // ⚠⚠ NOT WHILE THE SHEET'S REFUSAL STANDS (2026-10-27, P1's review): on the deployment live until the redeploy, the first
+  // client written into an emptied Jobs tab starts the sweep of every other client's records. The form keeps what was typed.
+  var _sheetRef = typeof newClientSheetRefusal === 'function' ? newClientSheetRefusal(typeof _sheetNotice !== 'undefined' && !!_sheetNotice) : '';
+  if (_sheetRef) { showFB('i-fb', 'warn', esc(_sheetRef)); return; }
   var fname = (document.getElementById('i-fname')||{}).value ? document.getElementById('i-fname').value.trim() : '';
   var lname = (document.getElementById('i-lname')||{}).value ? document.getElementById('i-lname').value.trim() : '';
   var name = (fname + ' ' + lname).trim();
@@ -25311,6 +25315,43 @@ function sheetVerdictRefusal(ids, recorded, held) {
   return 'The sheet refused every client on this device (' + heldIds.length + '), and nobody recorded deleting them. '
     + 'Nothing on this device was changed. Tell Anthony.';
 }
+// ⚠⚠ ONLY A DELETION A PERSON RECORDED TAKES A CLIENT OFF THIS DEVICE (2026-10-27, P1's review). sheetVerdictRefusal alone
+// guarded a verdict covering EVERY client held, and on the deployment live until the redeploy (7abc836's) a client's own
+// write after the Jobs tab was emptied answers `dropped` with that one id: one of N, so it passed, and the device lost its
+// clients one save at a time (driven: one Edit Client save took Paul Hale and his estimate, one inventory save the next
+// client and its manifest, while the notice said nothing on the device was changed; a new client typed in made the save's
+// verdict cover 3 of 4, and the device dropped to 1). So the ids a verdict may take, DOM-free: those the sheet says a
+// person recorded deleting (`recorded`, which only a 2026-10-27b deployment sends: an older one, or one this device has not
+// heard from, takes none), and none at all while the sheet's refusal stands (`standing`, the notice on the Clients tab).
+// Every other id the sheet refuses is KEPT here, and said once (sheetKeptText): refusing holds a write and loses nothing.
+function sheetDropsTaken(ids, recorded, standing) {
+  if (standing) return [];
+  var rec = {};
+  (recorded || []).forEach(function(id){ if (id != null) rec[String(id)] = true; });
+  return (ids || []).filter(function(id){ return id != null && rec[String(id)]; });
+}
+function sheetKeptText(n, standing) {
+  if (!n) return '';
+  return n + ' client' + (n === 1 ? '' : 's') + ' refused by the sheet ' + (n === 1 ? 'is' : 'are') + ' kept on this device: '
+    + (standing ? 'nothing is taken off it while the sheet’s refusal stands.' : 'the sheet holds no record of anyone deleting ' + (n === 1 ? 'it' : 'them') + '.')
+    + ' Tell Anthony.';
+}
+// Each kept client is said once a session (the jobs refresh asks every 15 seconds); '' when every one was said already.
+var _sheetKeptSaid = {};
+function _sheetKeptOnce(ids, standing) {
+  var fresh = (ids || []).filter(function(id){ return id != null && !_sheetKeptSaid[String(id)]; });
+  fresh.forEach(function(id){ _sheetKeptSaid[String(id)] = true; });
+  return sheetKeptText(fresh.length, standing);
+}
+// Save Client refuses a NEW client while the sheet's refusal stands (2026-10-27, P1's review): on the deployment live until
+// the redeploy, the first client written into an emptied Jobs tab ends its emptiness, and the next save of each store sweeps
+// every other client's estimate, plan, hours, change orders and inventory off the sheet (driven on 7abc836's .gs). '' to save.
+function newClientSheetRefusal(standing) {
+  if (!standing) return '';
+  return 'Not saved yet: the sheet has refused this device’s clients (the notice on the Clients tab), and a new client saved now '
+    + 'can sweep the other clients’ records off the sheet. Leave this form as it is, tell Anthony, and press Save Client again '
+    + 'once that notice has gone.';
+}
 // The notice the sheet's refusal leaves on the Clients tab until a load lands with clients (sheetNoticeHtml): it stays on
 // screen, where a four-second toast was the only word the device that pressed Snapshot gave.
 var _sheetNotice = '';
@@ -25326,28 +25367,33 @@ function _setSheetNotice(msg) {
 }
 
 // The sheet REFUSED these job ids on a save (see JOB LEDGER in main-sync.gs): it has seen
-// them before and no longer holds them, so they were deleted — on another device, by the
-// reset script, or by clearing rows in the spreadsheet — while this device still had them.
+// them before and no longer holds them.
 // Reported 2026-09-08: Ashley's laptop, open since before Anthony cleared the sheet, added
 // one client and the whole-array save put three deleted clients back. The sheet now says
-// no; this is the device agreeing. Drop them here WITHOUT calling saveJobs() — that would
-// post the list straight back, and the point is that this device stops asserting them.
+// no. Nothing here calls saveJobs() — that would post the list straight back.
 // Returns the number of jobs removed from the list.
 // ⚠⚠ NEVER A VERDICT THAT WOULD TAKE EVERY CLIENT UNRECORDED (2026-10-27, P1): sheetVerdictRefusal is asked first, with the
 // ids the sheet says a person recorded deleting (`recorded`); refused, nothing here changes and the notice stays on the
-// Clients tab. And the words are what this device knows: the sheet REFUSED them. "Deleted elsewhere" was a claim it could not
-// make, and it is what the iPad said as the Jobs tab emptied under it. Photographs not yet in Drive stay (_purgeLocalJobRecords).
+// Clients tab. "Deleted elsewhere" was a claim the device could not make, and it is what the iPad said as the Jobs tab emptied
+// under it. Photographs not yet in Drive stay (_purgeLocalJobRecords).
+// ⚠⚠ AND ONLY THE RECORDED ONES, AND NONE WHILE THE REFUSAL STANDS (P1's review, sheetDropsTaken): a refused id nobody recorded
+// deleting is kept, with its records, and said once. A recorded one is a deletion somebody made, and goes, as it always did.
 function _applyDroppedJobs(ids, recorded) {
   if (!Array.isArray(ids) || !ids.length) return 0;
   var refused = sheetVerdictRefusal(ids, recorded, jobs);
   if (refused) { _setSheetNotice(refused); return 0; }
-  var set = {};
-  ids.forEach(function(id){ if (id != null) set[String(id)] = true; });
+  var standing = !!_sheetNotice;
+  var take = sheetDropsTaken(ids, recorded, standing);
+  var set = {}, held = {};
+  take.forEach(function(id){ set[String(id)] = true; });
+  jobs.forEach(function(j){ if (j && j.id != null) held[String(j.id)] = true; });
+  var keptIds = ids.filter(function(id){ return id != null && held[String(id)] && !set[String(id)]; });
   var before = jobs.length;
-  jobs = jobs.filter(function(j){ return !(j && set[String(j.id)]); });
+  if (take.length) jobs = jobs.filter(function(j){ return !(j && set[String(j.id)]); });
   var removed = before - jobs.length;
-  try { localStorage.setItem('havellin_jobs_v3', JSON.stringify(jobs)); } catch(e) {}
-  var kept = _purgeLocalJobRecords(ids);
+  if (take.length) try { localStorage.setItem('havellin_jobs_v3', JSON.stringify(jobs)); } catch(e) {}
+  var kept = take.length ? _purgeLocalJobRecords(take) : 0;
+  var keptWords = _sheetKeptOnce(keptIds, standing);
   if (removed) {
     var ct = document.getElementById('jct'); if (ct) ct.textContent = jobs.length + ' job' + (jobs.length!==1?'s':'');
     if (typeof rebuildDropdowns === 'function') { try { rebuildDropdowns(); } catch(e) {} }
@@ -25356,9 +25402,9 @@ function _applyDroppedJobs(ids, recorded) {
     _jobsLanded();
     // Say so. A client vanishing from the list with no explanation reads as data loss;
     // this is the opposite — the list is catching up with the sheet.
-    showSyncBadge(removed + ' client' + (removed > 1 ? 's' : '') + ' refused by the sheet, which no longer holds '
-      + (removed > 1 ? 'them' : 'it') + ': removed from this device' + (kept ? '. ' + unsentPhotosKeptText(kept) : ''), true);
-  } else if (kept) showSyncBadge(unsentPhotosKeptText(kept), true);
+    showSyncBadge(removed + ' client' + (removed > 1 ? 's' : '') + ' deleted, as the sheet records: removed from this device'
+      + (kept ? '. ' + unsentPhotosKeptText(kept) : '') + (keptWords ? '. ' + keptWords : ''), true);
+  } else if (kept || keptWords) showSyncBadge([kept ? unsentPhotosKeptText(kept) : '', keptWords].filter(Boolean).join(' '), true);
   return removed;
 }
 
@@ -26057,7 +26103,46 @@ function saveJobs() {
   // and `jobs` is REPLACED (a refusal applied, a refresh merged), never only mutated: a retry queued before the replacement
   // went on sending the old array, a client the sheet had refused included, for as long as it was retried. A getter reads
   // `jobs` at every send (JSON.stringify calls it, and so does every retry of the same body).
-  postSyncBadge({ type: 'saveAllJobs', get payload() { return jobs; } }, 'Synced \u2713', 'Sync failed \u2014 saved locally');
+  // ⚠⚠ AND NEVER A RECORD TOO LARGE FOR A CELL (2026-10-27, P1's review). One client past 50,000 characters refused the whole
+  // batch, for every client, on every save; and on the deployment live until the redeploy the batch clears the Jobs tab
+  // before the write that then throws, so each save emptied it again, the restored one included. The batch sends every
+  // other client (jobsForSheetBatch), and the one too large is held by name on the chip (_holdTooLargeJobs). (Asked through
+  // typeof because some 26 test sandboxes lift saveJobs for its other half; tests/p1-nothing-lost lifts and drives these.)
+  if (typeof _holdTooLargeJobs === 'function') _holdTooLargeJobs(jobs);
+  postSyncBadge({ type: 'saveAllJobs', get payload() { return typeof jobsForSheetBatch === 'function' ? jobsForSheetBatch(jobs) : jobs; } }, 'Synced \u2713', 'Sync failed \u2014 saved locally');
+}
+// A sheet cell holds 50,000 characters, and a client is one cell of JSON (main-sync.gs, SHEET_CELL_MAX: the server measures
+// the merged row and refuses by name; this is the app's own measure of its copy, before anything is sent). DOM-free.
+var SHEET_CELL_MAX_APP = 50000;
+function jobRecordTooLarge(j) {
+  var n = 0;
+  try { n = JSON.stringify(j).length; } catch (e) { return 0; }
+  return n > SHEET_CELL_MAX_APP ? n : 0;
+}
+function jobsForSheetBatch(list) {
+  return (list || []).filter(function (j) { return !jobRecordTooLarge(j); });
+}
+// Each client too large for the sheet is held as its own write, named, never sent by itself (the chip says so and what to do):
+// the client's own write is the one the sheet would refuse, so that is the write held. A client back under the cap is let go.
+function _holdTooLargeJobs(list) {
+  if (typeof _pendingWrites !== 'object' || !_pendingWrites) return;
+  var changed = false, big = {};
+  (list || []).forEach(function (j) {
+    if (!j || j.id == null || !jobRecordTooLarge(j)) return;
+    var key = _writeKey({ type: 'job', payload: j }, 'main');
+    big[key] = true;
+    var prev = _pendingWrites[key];
+    if (prev && prev.kind === 'toolarge') { prev.body = { type: 'job', payload: j }; prev.measured = prev.measured || !prev.lastError; return; }
+    _pendingWrites[key] = { target: 'main', body: { type: 'job', payload: j }, okMsg: '', failMsg: '', lastError: '', blocked: true, kind: 'toolarge',
+      measured: true, tries: ((prev && prev.tries) || 0) + 1 };
+    changed = true;
+  });
+  Object.keys(_pendingWrites).forEach(function (k) {
+    var w = _pendingWrites[k];
+    if (w && w.kind === 'toolarge' && w.measured && w.body && w.body.type === 'job' && !big[k] && w.body.payload && !jobRecordTooLarge(w.body.payload)
+        && (list || []).some(function (j) { return j && w.body.payload && String(j.id) === String(w.body.payload.id); })) { delete _pendingWrites[k]; changed = true; }
+  });
+  if (changed && typeof updatePendingIndicator === 'function') updatePendingIndicator();
 }
 
 function loadJobs() {
@@ -26079,18 +26164,20 @@ function loadJobs() {
         // from Sheets ✓", and with it the last copies the sheet could have been rebuilt from. One rule decides
         // (loadJobsVerdict); a refusal changes nothing on this device, says so on the Clients tab, and leaves the list
         // reading as unreachable rather than as the sheet's.
-        var verdict = loadJobsVerdict(data, jobs);
+        var verdict = loadJobsVerdict(data, jobs, !!_sheetNotice);
         if (verdict.apply) {
-          // Sheets is the source of truth \u2014 overwrite local (handles deletions)
+          // Sheets is the source of truth \u2014 overwrite local (handles deletions), keeping the clients it refused that
+          // nobody recorded deleting (verdict.kept, P1's review)
           jobs = verdict.jobs;
           try { localStorage.setItem('havellin_jobs_v3', JSON.stringify(jobs)); } catch(e) {}
-          // ...and drop the estimates, plans and logs this device still holds for jobs the
-          // sheet has deleted, or the next store save pushes them up as headless records.
-          var _kept = Array.isArray(data.deletedJobs) ? _purgeLocalJobRecords(data.deletedJobs) : 0;
+          // ...and drop the estimates, plans and logs this device still holds for jobs a person deleted (recorded on the
+          // sheet), or the next store save pushes them up as headless records. Never one nobody recorded (P1's review).
+          var _kept = verdict.drop.length ? _purgeLocalJobRecords(verdict.drop) : 0;
+          var _keptWords = _sheetKeptOnce(verdict.kept, false);
           document.getElementById('jct').textContent = jobs.length + ' job' + (jobs.length!==1?'s':'');
           rebuildDropdowns();
           _setSheetNotice('');
-          showSyncBadge('Loaded ' + jobs.length + ' job' + (jobs.length!==1?'s':'') + ' from Sheets \u2713' + (_kept ? '. ' + unsentPhotosKeptText(_kept) : ''), !!_kept);
+          showSyncBadge('Loaded ' + jobs.length + ' job' + (jobs.length!==1?'s':'') + ' from Sheets \u2713' + (_kept ? '. ' + unsentPhotosKeptText(_kept) : '') + (_keptWords ? '. ' + _keptWords : ''), !!(_kept || _keptWords));
         } else if (verdict.why) {
           _setSheetNotice(verdict.why);
           _jobsState = 'offline';
@@ -26115,13 +26202,19 @@ function loadJobs() {
   }
 }
 
-// What loadJobs does with the sheet's answer (2026-10-27, P1), DOM-free: {apply, jobs} to take the sheet's list, {why} to
-// leave this device as it is and say so, or neither (an answer that carries no list, which changes nothing, as before).
+// What loadJobs does with the sheet's answer (2026-10-27, P1), DOM-free: {apply, jobs, kept, drop} to take the sheet's list,
+// {why} to leave this device as it is and say so, or neither (an answer that carries no list, which changes nothing, as before).
 //   · JOBS_TAB_EMPTY (a 2026-10-27b deployment whose Jobs tab is empty and unexplained): the sheet has no clients right now.
 //   · an empty list over a cache holding clients: taken only where the sheet says a person recorded deleting every one of
 //     them (the editor's reset); an older deployment says nothing of the kind, so its emptied tab changes nothing here.
 //   · a `deletedJobs` covering every client this device holds: the same rule, sheetVerdictRefusal.
-function loadJobsVerdict(data, held) {
+//   · ⚠⚠ otherwise the sheet's list, and a client this device holds that the sheet names deleted is taken off it only where a
+//     person recorded the deletion and the sheet's refusal does not stand (sheetDropsTaken; P1's review): `drop`, the ids
+//     whose records go too. One the sheet names deleted with nobody recording it is KEPT, after the sheet's list (`kept`): on
+//     the deployment live until the redeploy a new client written into the emptied tab made the sheet hold one client and
+//     name the other three deleted, and taking its list emptied the device of them. A client the sheet has never seen is
+//     not this rule's: membership stays the sheet's for it, as it always was.
+function loadJobsVerdict(data, held, standing) {
   var have = held || [];
   if (data && data.error && /JOBS_TAB_EMPTY/.test(String(data.error))) return { apply: false, why: SHEET_NO_CLIENTS_TXT };
   if (!(data && Array.isArray(data.jobs) && !data.error)) return { apply: false, why: '' };
@@ -26130,7 +26223,13 @@ function loadJobsVerdict(data, held) {
   if (!cloud.length && ids.length && sheetVerdictRefusal(ids, data.recorded, have)) return { apply: false, why: SHEET_NO_CLIENTS_TXT };
   var refused = sheetVerdictRefusal(data.deletedJobs, data.recorded, have);
   if (refused) return { apply: false, why: refused };
-  return { apply: true, jobs: cloud };
+  var drop = sheetDropsTaken(data.deletedJobs, data.recorded, !!standing);
+  var inCloud = {}, gone = {}, taken = {};
+  cloud.forEach(function (c) { if (c && c.id != null) inCloud[String(c.id)] = true; });
+  (data.deletedJobs || []).forEach(function (id) { if (id != null) gone[String(id)] = true; });
+  drop.forEach(function (id) { taken[String(id)] = true; });
+  var kept = have.filter(function (j) { return j && j.id != null && !inCloud[String(j.id)] && gone[String(j.id)] && !taken[String(j.id)]; });
+  return { apply: true, jobs: cloud.concat(kept), kept: kept.map(function (j) { return j.id; }), drop: drop };
 }
 
 // The jobs arrived AFTER the screen was drawn. Redraw whatever is open that is built
@@ -26252,16 +26351,18 @@ function refreshJobsFromCloud(cb) {
   fetch(SHEETS_SYNC_URL + '?action=loadJobs')
     .then(function(r){ return r.json(); })
     .then(function(data){
-      var verdict = loadJobsVerdict(data, jobs);
+      var verdict = loadJobsVerdict(data, jobs, !!_sheetNotice);
       if (verdict.why && !(data && Array.isArray(data.jobs))) { _setSheetNotice(verdict.why); return; }
       if (!(data && Array.isArray(data.jobs) && !data.error)) return;
       _applyDroppedJobs(data.deletedJobs, data.recorded);
       if (_syncWritesOutstanding([]) || _syncWriteSeq !== seq) return;
-      verdict = loadJobsVerdict(data, jobs);
+      verdict = loadJobsVerdict(data, jobs, !!_sheetNotice);
       if (!verdict.apply) { if (verdict.why) _setSheetNotice(verdict.why); return; }
       jobs = _mergeCloudJobs(jobs, verdict.jobs, _syncWritesHeld() ? (data.deletedJobs || []) : null);
       try { localStorage.setItem('havellin_jobs_v3', JSON.stringify(jobs)); } catch(e) {}
-      if (_sheetNotice && verdict.jobs.length) _setSheetNotice('');
+      // An answer the rule applies is the sheet speaking coherently again (its clients back, or every deletion recorded):
+      // the refusal no longer stands, and the next answer may take what a person recorded deleting (P1's review).
+      if (_sheetNotice) _setSheetNotice('');
     })
     .catch(function(){})
     .then(function(){ if (cb) cb(); });
@@ -30518,19 +30619,48 @@ function takeInventorySnapshot(jobId) {
   var label = String(asked).trim();
   var totalFMV = 0;
   var snapItems = items.map(function(r){ var n = parseFloat(r.fmv); if (!isNaN(n)) totalFMV += n; return _snapItemOf(r, job); });
-  if (!job.invSnapshots) job.invSnapshots = [];
   var ts = Date.now();
-  job.invSnapshots.push({ ts: ts, label: label, valueDate: estateValueDate(job), count: items.length, totalFMV: roundCents(totalFMV) });
+  var head = { ts: ts, label: label, valueDate: estateValueDate(job), count: items.length, totalFMV: roundCents(totalFMV) };
   _snapLinesPut(jobId, ts, snapItems);
-  _jobTouch(job, 'invSnapshots', ts);
-  saveJobs();
-  if (typeof syncJobToSheets === 'function') syncJobToSheets(job);
-  postSyncBadge({ type: 'saveSnapshot', payload: { jobId: jobId, ts: ts, items: snapItems } }, 'Snapshot saved ✓', 'Snapshot lines not saved yet');
-  _snapFilePage(jobId, ts);
+  // ⚠⚠ THE HEADING ONLY ONCE THE LINES ARE ON THE SHEET (2026-10-27, P1's review). The heading went on the record at once and
+  // the lines in a write of their own after it: with only the lines' write failing (a dead spot, or the iPad discarding the tab
+  // between the two), the sheet kept "Filed with court · 450 items" for good with nothing behind it, and Print said the device
+  // could not read lines that were never there. Before P1 one record carried both, so they landed or failed together. Now the
+  // lines go first and the heading is recorded by their landing (_snapLanded); until then the row reads as saving
+  // (_snapPending, this session's). A tab closed before they land records nothing, which is the truth. (A heading recorded
+  // after its lines landed, whose own write never lands before the tab is closed, leaves lines no row points at: harmless.)
+  (_snapPending[jobId] || (_snapPending[jobId] = {}))[String(ts)] = head;
+  postSyncBadge({ type: 'saveSnapshot', payload: { jobId: jobId, ts: ts, items: snapItems } }, '', 'Snapshot lines not saved yet',
+    function (res) { _snapLanded(jobId, head, res); });
+  showSyncBadge('Snapshot taken: saving its lines to the sheet\u2026');
   // The snapshot list sits in the Removed items & snapshots bar, which never opens by itself (2026-10-22): the snapshot
   // just taken opens it, so the new row is drawn where the person can see it landed.
   deskFoldOpen(jobId, 'history');
   renderInventoryTab();
+}
+// The snapshots this session has taken whose lines have not reached the sheet yet: { jobId: { "<ts>": heading } }. Never saved.
+var _snapPending = {};
+function _snapPendingOf(jobId) {
+  var m = _snapPending[jobId] || {};
+  return Object.keys(m).map(function (t) { return m[t]; }).sort(function (a, b) { return b.ts - a.ts; });
+}
+// The lines' write landed: the heading goes on the record (a person's edit, so it reaches every device), and the page is filed.
+// A sheet that refused the client (`dropped`) records nothing.
+function _snapLanded(jobId, head, res) {
+  if (_snapPending[jobId]) delete _snapPending[jobId][String(head.ts)];
+  var job = _invJob(jobId);
+  var refused = res && Array.isArray(res.dropped) && res.dropped.some(function (id) { return String(id) === String(jobId); });
+  if (!job || refused) {
+    showSyncBadge('Snapshot not recorded: the sheet refused this client\u2019s write. Nothing was recorded.', true);
+  } else {
+    if (!job.invSnapshots) job.invSnapshots = [];
+    if (!job.invSnapshots.some(function (x) { return x && String(x.ts) === String(head.ts); })) job.invSnapshots.push(head);
+    _saveJobEdit(job, 'invSnapshots', head.ts);
+    showSyncBadge('Snapshot saved \u2713');
+    _snapFilePage(jobId, head.ts);
+  }
+  var sel = typeof document !== 'undefined' && document && document.getElementById ? document.getElementById('inv-job') : null;
+  if (sel && (parseInt(sel.value) || 0) === jobId) _invRenderWhenIdle();
 }
 // The snapshot's own page, filed to Estate Inventory under a dated name (2026-10-27, P1): a re-file of another snapshot never
 // replaces it. Recorded on the heading (filedAt, filedUrl) once Drive answers, as part of the person's press; a failure is
@@ -30632,7 +30762,14 @@ function _snapVoidedBlock(s) {
 }
 function _renderInventorySnapshots(job) {
   var snaps = (job.invSnapshots || []).filter(Boolean).slice().sort(function(a,b){ return b.ts - a.ts; });
-  if (!snaps.length) return '';
+  // Taken this session, its lines not on the sheet yet: no buttons, nothing recorded (P1's review).
+  var pend = _snapPendingOf(job.id).filter(function (p) { return !snaps.some(function (s) { return String(s.ts) === String(p.ts); }); });
+  if (!snaps.length && !pend.length) return '';
+  var pendRows = pend.map(function (s) {
+    return '<div class="snap-row snap-pending" style="padding:4px 0;border-bottom:0.5px solid var(--border);font-size:11px;color:var(--gray);">'
+      + esc(_invDateTime(s.ts)) + (s.label ? ' <strong>\u00b7 ' + esc(s.label) + '</strong>' : '') + ' \u00b7 ' + esc(String(s.count)) + ' items'
+      + ' \u00b7 <em>saving its lines to the sheet: it is recorded once they are there</em></div>';
+  }).join('');
   var rows = snaps.map(function(s){
     var v = !!s.voidedAt;
     var prev = _snapPrevLive(job, s.ts);
@@ -30649,6 +30786,7 @@ function _renderInventorySnapshots(job) {
       + (v ? '' : '<button class="btn-s" onclick="voidInventorySnapshot(' + job.id + ',' + s.ts + ')">Void</button>')
       + '</span></div>';
   }).join('');
+  rows = pendRows + rows;
   return '<div class="card" id="inv-snapshots" style="margin-bottom:1rem;">'
     + '<div class="sec" style="margin-bottom:4px;">Snapshots <span style="font-size:9px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(point-in-time inventory records)</span></div>'
     + '<div style="font-size:10.5px;color:var(--gray);margin-bottom:4px;">A snapshot is never deleted: one taken in error is voided, with the reason, and still prints. Compare sets it against the inventory now, or against the snapshot before it, by item number.</div>'
@@ -43101,8 +43239,8 @@ function postSync(body) { return postSyncTo('main', body); }
 // Fire a verified write. Delegates to the durable save queue below so a failed
 // write is never silently lost \u2014 it's retried with backoff and a persistent
 // indicator stays lit until it lands.
-function postSyncBadge(body, okMsg, failMsg) {
-  queuedPostSync(body, okMsg, failMsg);
+function postSyncBadge(body, okMsg, failMsg, onLanded) {
+  queuedPostSync(body, okMsg, failMsg, onLanded);
 }
 
 function syncToSheets(type, payload) {
@@ -43187,7 +43325,9 @@ function togglePendingDetail() { _pendingExpanded = !_pendingExpanded; updatePen
 function retryPendingWrites() {
   // Clear the blocked flag on a deliberate retry — the user is telling us they have
   // fixed the deployment. If it is still broken the next answer re-blocks it.
-  Object.keys(_pendingWrites).forEach(function(k){ _pendingWrites[k].blocked = false; });
+  // Never a record too large for the sheet: Try again does not send it (flushPendingWrites), so it stays held, or the
+  // refreshes would stand down for it and the backoff would run for ever (2026-10-27, P1's review).
+  Object.keys(_pendingWrites).forEach(function(k){ if (_pendingWrites[k].kind !== 'toolarge') _pendingWrites[k].blocked = false; });
   _retryStep = 0; flushPendingWrites();
 }
 // What each write is waiting on, in one line, for the detail panel.
@@ -43211,10 +43351,16 @@ function _pendingChipCopy() {
   // tab again on its next retry. Closing it is the safe thing: the client comes back from the sheet on reload.
   var big = keys.filter(function(k){ return _pendingWrites[k].kind === 'toolarge'; });
   if (big.length) {
+    // A client's own write names it by its own record; a batch's names the largest it carried. The client's first (P1's review:
+    // the batch no longer carries a record too large for a cell, so its words could name somebody else).
+    var _isJobW = function(k){ var b = _pendingWrites[k].body; return b && b.type === 'job' ? 1 : 0; };
+    big.sort(function(a, b){ return _isJobW(b) - _isJobW(a); });
     var tw = _tooLargeWords(_pendingWrites[big[0]]);
+    var _more = big.filter(_isJobW).length - 1;
     return {
-      head: '\u26a0 Not saved \u2014 ' + tw.who + ' is too large for the sheet' + (tw.size ? ' (' + tw.size + ' characters)' : ''),
-      note: 'A sheet cell holds 50,000 characters, so the sheet refused this client\u2019s record and wrote nothing. It would fail the same way every time, so it is not sent again by itself. Closing or reloading this tab is safe: the client comes back from the sheet as it stood before this change, and the change that made it too large is not kept. Tell Anthony.'
+      head: '\u26a0 Not saved \u2014 ' + tw.who + (_more > 0 ? ' and ' + _more + ' more client' + (_more > 1 ? 's' : '') + ' are' : ' is') + ' too large for the sheet'
+        + (tw.size ? ' (' + tw.size + ' characters)' : ''),
+      note: 'A sheet cell holds 50,000 characters, so this client\u2019s record was not saved; every other client still saves. It would fail the same way every time, so it is not sent again, Try again included. What to do: reload this tab (it is safe: the client comes back from the sheet as it stood before this change, and the change that made it too large is not kept); do not repeat on this client what you had just done, which would be refused the same way; and tell Anthony the client and what you had just done, because the app has to make this client\u2019s record smaller before that can be saved (the manual\u2019s runbook, \u201cA client too large for the sheet\u201d).'
     };
   }
   // The sheet's Jobs tab is empty and unread (JOBS_TAB_EMPTY): nothing here was changed, and the writes go again by themselves.
@@ -43381,6 +43527,12 @@ function flushPendingWrites() {
     var k = keys[i++];
     var w = _pendingWrites[k];
     if (!w) { next(); return; }   // superseded or landed while this sweep was running
+    // ⚠⚠ A RECORD TOO LARGE FOR THE SHEET IS NEVER SENT AGAIN FROM THE QUEUE (2026-10-27, P1's review): not on a refocus, a
+    // reconnect, another write's backoff or Try again. It fails the same way every time, and on the deployment live until
+    // the redeploy the batch clears the Jobs tab before the write that throws: the iPad put down and picked up again emptied
+    // the restored tab (driven on 7abc836's .gs). It stays on the chip until a newer write of the same thing lands (the
+    // client's next save under the cap, or a batch that no longer carries it: _flushOutbox) or the tab is reloaded.
+    if (w.kind === 'toolarge') { next(); return; }
     // Resolve the URL fresh on every attempt — see SYNC_TARGETS. A write queued while
     // an endpoint was misconfigured lands as soon as the URL in Settings is corrected.
     postSyncTo(w.target, w.body)
@@ -43463,30 +43615,37 @@ function _flushOutbox() {
       .then(function(res){
         if (res && res.ok) {
           if (w.okMsg) showSyncBadge(w.okMsg);
-          // The sheet took the write but refused some job ids: it has seen them before and
-          // no longer holds them, so they were deleted while this device still had them.
+          // A held write too large for the sheet is never sent again (flushPendingWrites); this newer write of the same thing
+          // has landed, so it is what the sheet holds now and the held one goes (2026-10-27, P1's review).
+          var _wk = _writeKey(w.body, w.target);
+          if (_pendingWrites[_wk] && _pendingWrites[_wk].kind === 'toolarge') { delete _pendingWrites[_wk]; updatePendingIndicator(); }
+          // The sheet took the write but refused some job ids: it has seen them before and no longer holds them. Only a
+          // deletion a person recorded takes one off this device (_applyDroppedJobs).
           if (res.dropped && res.dropped.length) _applyDroppedJobs(res.dropped, res.recorded);
+          if (typeof w.onLanded === 'function') { try { w.onLanded(res); } catch(e) {} }
         }
         // A well-formed { ok:false, error } is the SERVER talking — that text may
         // diagnose the deployment.
-        else _enqueueWrite(w.target, w.body, w.okMsg, w.failMsg, res && res.error, null, true);
+        else _enqueueWrite(w.target, w.body, w.okMsg, w.failMsg, res && res.error, w.onLanded || null, true);
       })
       // A thrown error is ours or the network's, never the server's verdict on itself.
-      .catch(function(e){ _enqueueWrite(w.target, w.body, w.okMsg, w.failMsg, e && e.message, null, false); })
+      .catch(function(e){ _enqueueWrite(w.target, w.body, w.okMsg, w.failMsg, e && e.message, w.onLanded || null, false); })
       .then(next, next);
   })();
 }
 
 // The one entry point for verified cross-device writes to the MAIN sheet.
 // Directory writes use queuedDirectoryWrite below, which shares the retry queue.
-function queuedPostSync(body, okMsg, failMsg) {
+// `onLanded(res)` (optional) runs once the write has landed, from the outbox or, after a failure, the retry queue (it rides
+// the queued entry, memory only): what must not be recorded before the sheet holds the write (a snapshot's heading, P1's review).
+function queuedPostSync(body, okMsg, failMsg, onLanded) {
   if (!SHEETS_SYNC_URL) return;
   _syncWriteSeq++;
   // Keyed the same way the retry queue keys things, so a newer full snapshot supersedes
   // an older queued one rather than both being sent. Payloads are held by reference, so
   // a store mutated between queueing and sending goes out at its newest state — which is
   // the behaviour we want and matches the newest-wins merge on the sheet.
-  _outbox[_writeKey(body, 'main')] = { target: 'main', body: body, okMsg: okMsg, failMsg: failMsg };
+  _outbox[_writeKey(body, 'main')] = { target: 'main', body: body, okMsg: okMsg, failMsg: failMsg, onLanded: onLanded };
   if (!_outboxTimer && !_outboxSending) _outboxTimer = setTimeout(_flushOutbox, _OUTBOX_WINDOW);
 }
 
@@ -43636,6 +43795,8 @@ function queuedDirectoryWrite(target, body, cb, onLanded) {
 // past within a day, on an app people close all day.
 window.addEventListener('beforeunload', function(e){
   if (!_pendingCount()) return;
+  // Nothing but records too large for the sheet: closing is safe, as the chip says (2026-10-27, P1's review).
+  if (Object.keys(_pendingWrites).every(function(k){ return _pendingWrites[k] && _pendingWrites[k].kind === 'toolarge'; })) return;
   e.preventDefault();
   e.returnValue = '';      // Chrome and Safari require this to show the prompt at all
   return '';
@@ -49634,7 +49795,8 @@ function deskFoldState(jobId, job, fold, all, today) {
   var gone = _invRemovedRows(jobId).length;
   var snaps = (job.invSnapshots || []).filter(Boolean);
   var voided = snaps.filter(function (x) { return x.voidedAt; }).length;
-  st.show = gone > 0 || snaps.length > 0;
+  var _pendSnaps = typeof _snapPendingOf === 'function' ? _snapPendingOf(jobId).length : 0;   // saving (P1's review)
+  st.show = gone > 0 || snaps.length > 0 || _pendSnaps > 0;
   if (unread && !cached) return loading();
   bit(gone + ' removed', 'grey');
   bit(s(snaps.length, 'snapshot', 'snapshots') + (voided ? ' (' + voided + ' voided)' : ''), 'grey');

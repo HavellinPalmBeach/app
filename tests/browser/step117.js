@@ -16,12 +16,20 @@
 //   C. A cold desk: the trust estate's inventory read from the sheet is aborted (a dead spot), and More ▾ › Snapshot, + Add line
 //      item and CSV each refuse by name and record nothing.
 //   D. A record too large for the sheet: a client grown past a cell on this device is saved through Edit Client's own Save
-//      Changes; the sheet refuses it by name and writes nothing; the chip names the client and the size and says closing the
-//      tab is safe; six seconds on, it has not been sent again; reloaded, the client is back as the sheet holds it.
+//      Changes; the sheet refuses it by name and writes nothing; the chip names the client and the size and says reloading the
+//      tab is safe and what to do; the list went with the other two (P1's review); six seconds on, nothing has been sent again;
+//      reloaded, the client is back as the sheet holds it.
 //   E. The Jobs tab emptied by hand on the sheet: a device opening the app keeps its three clients, the Clients tab says "The
 //      sheet has no clients right now. Nothing on this device was changed. Tell Anthony.", the photographs it had not yet got
 //      into Drive are still on it, and nothing says "Loaded 0 jobs"; once the rows are restored, a reload clears the notice.
 //      At 1440 and 390 px no horizontal overflow; zero page errors on every device.
+//   F. (P1's review) Snapshot whose lines' write is lost on the way (that request aborted, a dead spot): its row reads as saving,
+//      with nothing to press; nothing is on the record or on the sheet; once the request goes through, the queue lands the
+//      lines and the heading is recorded, on the record and the sheet.
+//   G. (P1's review) The deployment live until the redeploy (tests/old-backend, 7abc836): the Jobs tab emptied, a device on this
+//      app reloads and keeps its three clients; Edit Client's Save Changes on one client takes nobody off it (it took that
+//      client and its estimate) and the notice that nothing changed stays true; + Add New Client, a name typed, Save Client
+//      refuses by name and the form keeps the name.
 //
 //   NODE_PATH=/path/to/node_modules node tests/browser/step117.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
@@ -94,6 +102,7 @@ function seed(srv) {
     // A device: its own browser context (its own localStorage), the page booting against the sheet as a configured device does.
     const device = async (tag, opt) => {
       opt = opt || {};
+      const sv = opt.srv || srv;   // G drives the deployment live until the redeploy
       const ctx = await b.newContext({ viewport: { width: opt.width || 1440, height: 1000 }, timezoneId: 'America/New_York' });
       const d = { tag, ctx, net: [], errs: [], dialogs: [], answers: [] };
       await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
@@ -114,12 +123,13 @@ function seed(srv) {
         d.net.push({ m: req.method(), action, jobId: q.jobId || (body.payload && body.payload.jobId), bytes: (req.postData() || '').length });
         const json = (o) => r.fulfill({ status: 200, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: typeof o === 'string' ? o : JSON.stringify(o) });
         if (action === 'loadMedia' && abortMediaFor && String(q.jobId) === String(abortMediaFor)) return r.abort();
+        if (d.abortType && body.type === d.abortType) return r.abort();
         if (DRIVE.indexOf(action) >= 0) {
           if (action === 'uploadHtml') { uploads.push(body.filename); return json({ ok: true, fileUrl: 'https://drive.google.com/file/d/html' + uploads.length + '/view', fileId: 'html' + uploads.length }); }
           if (action === 'getThumbnails') return json({ ok: true, thumbs: {} });
           return json({ ok: true, subfolders: {} });
         }
-        return json(req.method() === 'POST' ? srv.exec('POST', { postData: { contents: req.postData() || '{}' } }) : srv.exec('GET', { parameter: q }));
+        return json(req.method() === 'POST' ? sv.exec('POST', { postData: { contents: req.postData() || '{}' } }) : sv.exec('GET', { parameter: q }));
       });
       const p = await ctx.newPage();
       p.setDefaultTimeout(10000);
@@ -265,14 +275,19 @@ function seed(srv) {
       const chip = await A.p.evaluate(() => _pendingChipCopy());
       has(chip.head, 'Not saved — Margaret Ellison (HVL-2610-A9701) is too large for the sheet (', '⚠ the chip names the client');
       ok(/\([\d,]+ characters\)/.test(chip.head), 'and the size: ' + chip.head);
-      has(chip.note, 'Closing or reloading this tab is safe', '⚠ and says closing the tab is safe');
+      has(chip.note, 'reload this tab (it is safe', '⚠ and says reloading the tab is safe');
+      has(chip.note, 'every other client still saves', '⚠ that every other client still saves (P1\'s review)');
+      has(chip.note, 'tell Anthony the client and what you had just done', 'and what to do');
       has(await txt(A.p, '#sync-pending-label'), 'is too large for the sheet', 'the chip on screen says so');
+      eq((await held(A.p)).pending, ['main/job:' + T], '⚠⚠ only that client is held: the list went with the other two (one client too large refused every client\'s save)');
       const sent = () => A.net.filter((n) => n.m === 'POST' && (n.action === 'saveAllJobs' || n.action === 'job')).length;
       const n0 = sent();
       await A.p.waitForTimeout(6500);
       eq(sent(), n0, '⚠⚠ six seconds on it has not been sent again (the first retry fell due at 2 s)');
-      // Reloaded: the client comes back as the sheet holds it.
+      // Reloaded: the client comes back as the sheet holds it, and the page does not ask whether to leave (nothing else is owed).
+      const dl0 = A.dialogs.length;
       await A.p.reload(); await A.p.waitForTimeout(2500);
+      eq(A.dialogs.slice(dl0).filter((x) => /^beforeunload/.test(x)), [], '⚠ the page does not challenge the reload: the chip says it is safe');
       const back = await A.p.evaluate((j) => { const x = jobs.find((y) => y.id === j); return x ? (x.signedRecords || []).length : -1; }, T);
       eq([back, (await held(A.p)).jobs], [0, 3], 'reloaded, the client is back as the sheet holds it, and every client is there');
     });
@@ -300,6 +315,66 @@ function seed(srv) {
       eq((await held(C.p)).jobs, 3, 'with every client');
       eq(C.errs, [], 'zero page errors on the third device');
       await C.ctx.close();
+    });
+
+    await section('F. A snapshot whose lines\' write is lost on the way records nothing until they land (P1\'s review)', async () => {
+      // The trust estate has no snapshot, so its Removed items & snapshots bar shows only for the one saving.
+      await toDesk(A.p, T);
+      eq((await snapsOf(A.p, T)).length, 0, 'fixture: the trust estate has no snapshot');
+      const before = 0;
+      A.abortType = 'saveSnapshot';
+      A.answers.push('Delivered to counsel');
+      await more(A.p);
+      await press(A.p, '#inv-more button:has-text("Snapshot")', 'More ▾ › Snapshot, its lines\' write lost on the way');
+      await A.p.waitForTimeout(1500);
+      ok(await A.p.locator('#inv-snapshots').first().isVisible().catch(() => false), '⚠ the bar shows for the snapshot saving, the only one this client has');
+      const row = await txt(A.p, '#inv-snapshots');
+      has(row, 'saving its lines to the sheet', '⚠ its row reads as saving');
+      eq(await A.p.locator('#inv-snapshots .snap-pending button').count(), 0, 'with nothing to press on it');
+      eq((await snapsOf(A.p, T)).length, before, '⚠⚠ nothing is on the record while its lines are not on the sheet');
+      ok(!((JSON.parse((srv.rowOf(T) || [])[11] || '{}').invSnapshots || []).some((s) => s.label === 'Delivered to counsel')),
+        '⚠⚠ nor on the sheet (a heading with nothing behind it stayed there for good)');
+      A.abortType = null;
+      await A.p.evaluate(() => { _retryStep = 0; flushPendingWrites(); });
+      await until(A.p, async () => (await snapsOf(A.p, T)).some((s) => s.label === 'Delivered to counsel'), 8000);
+      await A.p.waitForTimeout(1200);
+      ok((await snapsOf(A.p, T)).some((s) => s.label === 'Delivered to counsel'), '⚠ the lines landed, and the snapshot is recorded');
+      ok(((JSON.parse((srv.rowOf(T) || [])[11] || '{}').invSnapshots || []).some((s) => s.label === 'Delivered to counsel')), 'and its heading reached the sheet');
+      eq(await A.p.locator('#inv-snapshots .snap-pending').count(), 0, 'and its row no longer reads as saving');
+    });
+
+    await section('G. The deployment live until the redeploy: the tab emptied, no save takes a client off this device (P1\'s review)', async () => {
+      const old = R.server('A', R.OLD);
+      seed(old);
+      eq(old.jobsRows(), 3, 'fixture: the old deployment holds three clients');
+      const G = await device('G', { srv: old });
+      eq((await held(G.p)).jobs, 3, 'fixture: the device booted off it');
+      old.sheets.Jobs._rows.splice(1);   // as the page before P1 pressing Snapshot on a full house empties it there
+      await G.p.reload(); await G.p.waitForTimeout(2500);
+      await G.p.evaluate(() => { window.__badges = []; const o = showSyncBadge; showSyncBadge = function (m, e) { window.__badges.push((e ? '[err] ' : '') + m); return o.apply(this, arguments); }; });
+      await G.p.click('.nb[onclick*="\'jobs\'"]'); await G.p.waitForTimeout(600);
+      has(await txt(G.p, '#sheet-refusal-note'), 'The sheet has no clients right now. Nothing on this device was changed.', 'fixture: it keeps its three and says so');
+      await press(G.p, '#panel-jobs tr[onclick="openClientDashboard(' + LV + ')"]', 'a client\'s row');
+      await press(G.p, '#client-dashboard-view button[onclick="dashEditClient(' + LV + ')"]', '✎ Edit Client');
+      await press(G.p, '#edit-client-modal button[onclick="saveClientEdit(' + LV + ')"]', 'Save Changes');
+      await G.p.waitForTimeout(3000);
+      const h = await held(G.p);
+      eq([h.jobs, h.cache], [3, 3], '⚠⚠ Save Changes on one client takes nobody off this device (it took that client)');
+      ok(await G.p.evaluate((j) => !!estimateStore[j], LV), 'nor its estimate');
+      await G.p.click('.nb[onclick*="\'jobs\'"]'); await G.p.waitForTimeout(500);
+      has(await txt(G.p, '#sheet-refusal-note'), 'Nothing on this device was changed', '⚠ and the notice that says so is true');
+      ok(h.badges.every((x) => !/removed from this device/.test(x)), 'nothing says a client was removed');
+      // + Add New Client: Save Client refuses by name, and the form keeps what was typed.
+      await press(G.p, '#btn-add-client', '+ Add New Client');
+      await G.p.fill('#i-fname', 'Nora'); await G.p.fill('#i-lname', 'Vance');
+      const rows0 = old.jobsRows();
+      await press(G.p, 'button[onclick="saveIntake()"]', 'Save Client');
+      has(await txt(G.p, '#i-fb'), 'Not saved yet: the sheet has refused this device’s clients', '⚠⚠ Save Client refuses a new client while the notice stands');
+      eq(await G.p.inputValue('#i-fname'), 'Nora', 'and the form keeps the name typed');
+      eq([old.jobsRows(), (await held(G.p)).jobs], [rows0, 3], '⚠⚠ nothing went to the sheet, whose first new client would sweep the others\' records');
+      eq(await overflow(G.p), 0, 'no horizontal overflow at 1440');
+      eq(G.errs, [], 'zero page errors on the device');
+      await G.ctx.close();
     });
 
     eq(A.errs, [], 'zero page errors on the device that pressed Snapshot');

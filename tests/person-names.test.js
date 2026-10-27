@@ -189,8 +189,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // that overwrites it. Migrating only one leaves the name flickering back on sync.
     const paths = [
       // loadJobs' cloud arm takes the list through loadJobsVerdict since 2026-10-27 (P1), which migrates it (checked below).
-      ['function loadJobs(', "jobs=migrateRetiredNames(JSON.parse(s))", 'loadJobsVerdict(data, jobs)'],
-      ['function loadJobsVerdict(', 'var cloud = migrateRetiredNames(data.jobs);', 'return { apply: true, jobs: cloud };'],
+      // (Restated for P1's review: the verdict is asked with the refusal's standing, and keeps after the list the clients the
+      // sheet names deleted with nobody recording it.)
+      ['function loadJobs(', "jobs=migrateRetiredNames(JSON.parse(s))", 'loadJobsVerdict(data, jobs, !!_sheetNotice)'],
+      ['function loadJobsVerdict(', 'var cloud = migrateRetiredNames(data.jobs);', 'return { apply: true, jobs: cloud.concat(kept),'],
       ['function loadEstimateState(', 'estimateStore = migrateRetiredNames(JSON.parse(s))', 'migrateRetiredNames(sheetsRec)'],
       ['function loadLogData(', 'jobLogs=migrateRetiredNames(JSON.parse(s))', 'migrateRetiredNames(data.logs)'],
       ['function loadJobPlanData(', 'jobPlanStore = migrateRetiredNames(JSON.parse(s))', 'migrateRetiredNames(data.jobPlans)'],

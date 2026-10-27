@@ -609,7 +609,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         saveJobs() { log.saves++; }, syncJobToSheets() { log.syncs++; }, showSyncBadge(m, e) { log.badges.push({ m: String(m), err: !!e }); },
         renderInventoryTab() { log.renders++; }, savePhotoRefs() {}, document: domStub({}),
         jobs: [job], _photoRefs: { 7: rows }, estimateStore: {}, jobPlanStore: {},
-        SHEETS_SYNC_URL: SYNC, _invCloudSeen: { 7: true }, _backendTypes: ['saveSnapshot'], postSyncBadge(b) { log.posts.push(b); }, _snapFilePage() {} });
+        SHEETS_SYNC_URL: SYNC, _invCloudSeen: { 7: true }, _backendTypes: ['saveSnapshot'], _snapFilePage() {}, _invRenderWhenIdle() {},
+        // The lines' write lands at once here (P1's review: the heading is recorded by that landing).
+        postSyncBadge(b, o, f, landed) { log.posts.push(b); if (landed) landed({ ok: true }); } });
     c.jobs = [job]; c._photoRefs = { 7: rows };
     c.window.prompt = () => reply;
     return { c, log, job, reply: (v) => { reply = v; } };

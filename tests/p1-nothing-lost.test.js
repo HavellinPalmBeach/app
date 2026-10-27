@@ -24,24 +24,24 @@ const vm = require('vm');
 const { sandbox, fn, domStub } = require('./harness');
 
 // The server, the fake sheet and the synchronous promise are the rig browser step 117 drives too (tests/sheet-rig.js).
-const { server, SP, CELL_MAX, CELL_ERR, GS } = require('./sheet-rig');
+const { server, SP, CELL_MAX, CELL_ERR, GS, OLD } = require('./sheet-rig');
 const SYNC = 'https://sync.example.test/exec';
 const QUIET = { log() {}, warn() {}, error() {} };
 
 // ── A device: the real sync code out of havellin.html, its fetch answered by the server ──
 const DEVICE_FNS = ['saveJobs', 'loadJobs', 'loadJobsVerdict', 'refreshJobsFromCloud', '_mergeCloudJobs', '_applyDroppedJobs', '_purgeLocalJobRecords',
-  '_unsentPhotoCount', 'unsentPhotosKeptText', 'sheetVerdictRefusal', '_setSheetNotice', 'sheetNoticeHtml', 'queuedPostSync', '_flushOutbox',
+  '_unsentPhotoCount', 'unsentPhotosKeptText', 'sheetVerdictRefusal', 'sheetDropsTaken', 'sheetKeptText', '_sheetKeptOnce', 'newClientSheetRefusal', 'jobRecordTooLarge', 'jobsForSheetBatch', '_holdTooLargeJobs', '_setSheetNotice', 'sheetNoticeHtml', 'queuedPostSync', '_flushOutbox',
   '_enqueueWrite', 'flushPendingWrites', '_writeKey', '_backendErrorKind', '_writeKindHolds', '_retrySoon', '_scheduleRetry', '_pendingCount',
   'postSyncTo', '_targetUrl', 'postSync', 'postSyncBadge', 'syncToSheets', 'syncJobToSheets', '_readAppsScriptJson', '_syncWritesOutstanding',
   '_syncWritesHeld', '_pendingChipCopy', '_tooLargeWords', 'migrateRetiredNames', 'canonPersonName', '_jobTouch', '_saveJobEdit',
-  'refreshPlanAndLogFromCloud', 'takeInventorySnapshot', 'snapshotRefusal', 'invColdRefusal', '_invManifestUnread', '_snapItemOf', '_snapLinesPut',
-  '_snapLinesOf', 'loadSnapshotLines', '_withSnapLines', 'printInventorySnapshot', 'printSnapshotComparison', 'snapshotDiff', 'backendHasType',
+  'refreshPlanAndLogFromCloud', 'retryPendingWrites', 'takeInventorySnapshot', 'snapshotRefusal', 'invColdRefusal', '_invManifestUnread', '_snapItemOf', '_snapLinesPut',
+  '_snapLinesOf', '_snapPendingOf', '_snapLanded', 'loadSnapshotLines', '_withSnapLines', 'printInventorySnapshot', 'printSnapshotComparison', 'snapshotDiff', 'backendHasType',
   'invLineQty', '_invRoomName', '_invAssignItemNos', '_jobInvRefs', '_invTrack', 'estateValueDate', 'roundCents', '_snapPrevLive', '_snapVal',
   '_snapVoidedBlock', '_invItemNo', '_invMoney', '_invDateTime', '_invDocName', 'invValBasisWord', '_invHasValue', 'invAppraised',
   'invLineAppraiser', '_invLinkedAppraiser', '_jobAppraisers', '_apprLabel', '_invJob', 'fmt', '_stableJson'];
 const DEVICE_VARS = ['PERSON_NAME_ALIASES', 'SYNC_TARGETS', '_pendingWrites', '_retryTimer', '_retryStep', '_flushing', '_retryDelays', 'SYNC_STUCK_TRIES',
-  '_outbox', '_outboxTimer', '_outboxSending', '_OUTBOX_WINDOW', '_syncWriteSeq', 'SHEET_NO_CLIENTS_TXT', '_sheetNotice', 'SNAP_LINES_UNREAD_TXT',
-  '_snapLines', 'INV_COLD_TXT', '_backendTypes'];
+  '_outbox', '_outboxTimer', '_outboxSending', '_OUTBOX_WINDOW', '_syncWriteSeq', 'SHEET_NO_CLIENTS_TXT', '_sheetNotice', '_sheetKeptSaid', 'SHEET_CELL_MAX_APP', 'SNAP_LINES_UNREAD_TXT',
+  '_snapLines', '_snapPending', 'INV_COLD_TXT', '_backendTypes'];
 
 function device(name, srv, persisted, over) {
   over = over || {};
@@ -52,6 +52,8 @@ function device(name, srv, persisted, over) {
   const fetchStub = (url, opts) => {
     if (dev.offline) return SP.reject(new TypeError('Failed to fetch'));
     const isPost = opts && opts.method === 'POST';
+    // One kind of write lost on the way (a dead spot for that request alone): `failWhen(body)`.
+    if (isPost && dev.failWhen && dev.failWhen(JSON.parse(opts.body))) { net.push({ t: vnow, m: 'POST', what: JSON.parse(opts.body).type, lost: true }); return SP.reject(new TypeError('Failed to fetch')); }
     let text;
     if (isPost) {
       const body = JSON.parse(opts.body);
@@ -188,11 +190,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     A.ctx.takeInventorySnapshot(J);
     const rec = A.ctx.jobs.find((x) => x.id === J);
+    // Restated 2026-10-27 (P1's review): the heading goes on the record once the lines are on the sheet, never before.
+    eq((rec.invSnapshots || []).length, 0, '⚠⚠ nothing is on the record before the lines are on the sheet');
+    eq(A.ctx._snapPendingOf(J).map((p) => [p.count, p.label]), [[450, 'Filed with court']], 'the row reads as saving meanwhile');
+    A.run(600);
     const snap = (rec.invSnapshots || [])[0] || {};
-    eq([snap.count, snap.label], [450, 'Filed with court'], 'the snapshot was taken, 450 lines, labelled as typed');
+    eq([snap.count, snap.label], [450, 'Filed with court'], 'the snapshot was taken, 450 lines, labelled as typed, recorded as its lines landed');
+    eq(A.ctx._snapPendingOf(J), [], 'and it no longer reads as saving');
     ok(!('items' in snap), '⚠⚠ its lines are not on the client\'s record');
     ok(len(rec) < 5000, '⚠⚠ the record stays small after a 450-line snapshot (' + len(rec) + ' characters; it was 81,554)');
-    A.run(300);
     eq(srv.jobsRows(), 3, '⚠⚠ the Jobs tab still holds all three clients (it emptied 0.3 s after the press)');
     eq(srv.cellThrows, 0, 'no write ever reached the cap');
     eq(srv.clears.filter((c) => /^Jobs/.test(c)), [], '⚠⚠ nothing on the Jobs tab was cleared');
@@ -246,13 +252,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const A = device('A', srv), B = device('B', srv);
     seedDevice(A, { manifestN: 600 }); seedDevice(B, { manifestN: 600 });
     seedSheet(srv, A, 600);
-    A.ctx.takeInventorySnapshot(J); A.run(300);
-    A.label = 'As of walkthrough'; A.ctx.takeInventorySnapshot(J); A.run(300);
+    A.ctx.takeInventorySnapshot(J); A.run(600);
+    A.label = 'As of walkthrough'; A.ctx.takeInventorySnapshot(J); A.run(600);
     const rec = A.ctx.jobs.find((x) => x.id === J);
     eq((rec.invSnapshots || []).length, 2, 'fixture: two snapshots on one device');
     ok(len(rec) < 40000, '⚠⚠ two 600-line snapshots: the record is ' + len(rec) + ' characters (under 40,000)');
     // B never reloaded: its copy has no snapshot. It takes its own, and the sheet merges the two records.
-    B.label = 'Delivered to counsel'; B.ctx.takeInventorySnapshot(J); B.run(300);
+    B.label = 'Delivered to counsel'; B.ctx.takeInventorySnapshot(J); B.run(600);
     const onSheet = JSON.parse((srv.rowOf(J) || [])[11] || '{}');
     eq((onSheet.invSnapshots || []).length, 3, 'the sheet\'s record carries all three snapshot headings, merged entry by entry');
     ok(len(onSheet) < 40000, '⚠⚠ the merged record is ' + len(onSheet) + ' characters (two devices\' merge passed 50,000 before)');
@@ -453,17 +459,41 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     D.ctx._setSheetNotice('');
     D.ctx.loadJobs(); D.run(50);
     eq([D.ctx.jobs.length, D.ctx._sheetNotice], [3, 'The sheet has no clients right now. Nothing on this device was changed. Tell Anthony.'], 'JOBS_TAB_EMPTY: the same');
-    // A verdict a person recorded (the editor's reset) applies.
+    // A verdict a person recorded (the editor's reset) applies, once the sheet's refusal no longer stands (P1's review: none at
+    // all while it does). The refresh that hears it first lifts the refusal; the next takes the recorded deletions.
     D.answer = (m) => JSON.stringify(m === 'GET' ? { ok: true, success: true, jobs: [], deletedJobs: all, recorded: all } : { ok: true });
+    ok(!!D.ctx._sheetNotice, 'fixture: the refusal stands');
+    D.ctx.refreshJobsFromCloud(); D.run(50);
+    eq([D.ctx.jobs.length, D.ctx._sheetNotice], [3, ''], '⚠ while the refusal stood nothing was taken; the coherent answer lifted it');
+    D.ctx.refreshJobsFromCloud(); D.run(50);
+    eq([D.ctx.jobs.length, D.cached(), D.ctx._sheetNotice], [0, 0, ''], 'and the next answer takes the reset recorded in the editor, as it should');
     D.ctx.loadJobs(); D.run(50);
-    eq([D.ctx.jobs.length, D.cached(), D.ctx._sheetNotice], [0, 0, ''], 'a reset recorded in the editor empties the device, as it should');
+    eq([D.ctx.jobs.length, D.ctx._sheetNotice], [0, ''], 'loadJobs, the same');
     ok(D.ctx.localStorage.getItem('hav_media_pending_' + L) !== null, '⚠ and still keeps the photographs not yet in Drive');
-    // A verdict leaving clients behind applies, worded as what the device knows.
+    // ⚠⚠ A verdict leaving clients behind takes only what a person recorded deleting (P1's review): the deployment live until
+    // the redeploy answers a client's own write after the wipe with that one id dropped, nothing recorded.
     const E = device('E', srv); seedDevice(E);
     E.answer = () => JSON.stringify({ ok: true, success: true, dropped: [String(K)] });
     E.ctx.saveJobs(); E.run(400);
-    eq(E.ctx.jobs.map((j) => j.id), [J, L], 'one client refused: removed here');
-    has(E.badges.join(' | '), '1 client refused by the sheet, which no longer holds it: removed from this device', '⚠ in the words of what it knows');
+    eq(E.ctx.jobs.map((j) => j.id), [J, K, L], '⚠⚠ one client refused with nobody recording it: kept here (the device lost them one save at a time)');
+    ok(!!E.ctx.estimateStore[K], 'with its estimate');
+    has(E.badges.join(' | '), '1 client refused by the sheet is kept on this device: the sheet holds no record of anyone deleting it. Tell Anthony.', '⚠ and said');
+    lacks(E.badges.join(' | '), 'removed from this device', 'never "removed"');
+    const nSaid = E.badges.filter((b) => /kept on this device/.test(b)).length;
+    E.ctx.saveJobs(); E.run(400);
+    eq(E.badges.filter((b) => /kept on this device/.test(b)).length, nSaid, 'said once, not on every save');
+    E.answer = () => JSON.stringify({ ok: true, success: true, dropped: [String(K)], recorded: [String(K)] });
+    E.ctx.saveJobs(); E.run(400);
+    eq(E.ctx.jobs.map((j) => j.id), [J, L], 'recorded deleted: removed here');
+    ok(!E.ctx.estimateStore[K], 'with its estimate');
+    has(E.badges.join(' | '), '1 client deleted, as the sheet records: removed from this device', '⚠ in the words of what it knows');
+    // While the sheet's refusal stands, a recorded one is kept too.
+    const G = device('G', srv); seedDevice(G);
+    G.ctx._setSheetNotice(G.ctx.SHEET_NO_CLIENTS_TXT);
+    G.answer = () => JSON.stringify({ ok: true, success: true, dropped: [String(K)], recorded: [String(K)] });
+    G.ctx.saveJobs(); G.run(400);
+    eq(G.ctx.jobs.length, 3, '⚠⚠ nothing at all is taken while the refusal stands');
+    has(G.badges.join(' | '), 'nothing is taken off it while the sheet’s refusal stands', 'and it says so');
     // hardDeleteJob, a person's act behind the PIN, is the one path that takes the photographs.
     const F = device('F', srv, null, { stubs: { renderJobs() {} } });
     F.ctx.localStorage.setItem('hav_media_pending_' + K, JSON.stringify({ a: 'x' }));
@@ -484,26 +514,54 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     j.signedRecords = Array.from({ length: 400 }, (_, i) => ({ id: 's' + i, note: 'y'.repeat(140) }));
     j.updatedAt = later();
     A.ctx.saveJobs(); A.run(300);
-    eq(A.held(), ['main/saveAllJobs'], '⚠⚠ the refused write is held');
-    eq(A.ctx._pendingWrites['main/saveAllJobs'].kind, 'toolarge', 'as too large');
-    const posts = () => A.net.filter((n) => n.what === 'saveAllJobs').length;
+    // Restated 2026-10-27 (P1's review): the batch no longer carries a record too large for a cell, so one client too large
+    // never refuses every client's save; that client is held, by name, as its own write.
+    eq(A.held(), ['main/job:' + J], '⚠⚠ the client too large for a cell is held, as its own write');
+    eq(A.ctx._pendingWrites['main/job:' + J].kind, 'toolarge', 'as too large');
+    const lastBatch = A.net.filter((n) => n.what === 'saveAllJobs').slice(-1)[0] || {};
+    eq(lastBatch.n, 2, '⚠⚠ the batch went with the other two clients');
+    eq(A.pending(), ['main/job:' + J], 'and landed: nothing else is outstanding');
+    const posts = () => A.net.filter((n) => n.what === 'saveAllJobs' || n.what === 'job').length;
     const n0 = posts();
     A.run(600000);
-    eq(posts(), n0, '⚠⚠ ten minutes on, it has not been sent again (24 posts in ten minutes before)');
+    eq(posts(), n0, '⚠⚠ ten minutes on, nothing has been sent again (24 posts in ten minutes before)');
+    A.ctx._retryStep = 0; A.ctx.flushPendingWrites(); A.run(300);
+    eq(posts(), n0, '⚠⚠ nor on a refocus or a reconnect (the page\'s handlers run flushPendingWrites)');
+    A.ctx.retryPendingWrites(); A.run(300);
+    eq(posts(), n0, '⚠ nor on Try again: it fails the same way every time');
+    eq(A.held(), ['main/job:' + J], 'it stays held, so the refreshes still read the sheet');
     const chip = A.ctx._pendingChipCopy();
     has(chip.head, 'Not saved — Ellison Estate (HVL-260) is too large for the sheet (', '⚠ the chip names the client');
     ok(/\([\d,]+ characters\)/.test(chip.head), 'and the size');
-    has(chip.note, 'Closing or reloading this tab is safe', '⚠ and says closing the tab is safe (it said not to)');
+    has(chip.note, 'reload this tab (it is safe', '⚠ and says reloading the tab is safe (it said not to close it)');
     lacks(chip.note, 'do not close', 'never the opposite');
+    has(chip.note, 'every other client still saves', 'that every other client still saves');
+    has(chip.note, 'tell Anthony the client and what you had just done', '⚠ and what to do');
     eq(srv.jobsRows(), 3, 'and the sheet is whole');
-    // The queued body reads the list when it is sent: a client refused and dropped since is not sent again.
-    const body = A.ctx._pendingWrites['main/saveAllJobs'].body;
+    // The queued body reads the list when it is sent: a client refused and dropped since is not sent again, nor one too large.
+    A.ctx.saveJobs();
+    const body = A.ctx._outbox['main/saveAllJobs'].body;
     A.ctx.jobs = A.ctx.jobs.filter((x) => x.id !== L);
-    eq(JSON.parse(JSON.stringify(body)).payload.map((x) => x.id), [J, K], '⚠ the held save carries the list as it is now, not the array it was queued with');
+    eq(JSON.parse(JSON.stringify(body)).payload.map((x) => x.id), [K], '⚠ the save carries the list as it is now, and never the client too large');
+    A.run(300);
+    // Back under the cap, the client is let go and saved with the rest.
+    j.signedRecords = j.signedRecords.slice(0, 10); j.updatedAt = later();
+    A.ctx.saveJobs(); A.run(300);
+    eq(A.pending(), [], '⚠ back under the cap: nothing held');
+    eq((JSON.parse((srv.rowOf(J) || [])[11] || '{}').signedRecords || []).length, 10, 'and it is on the sheet');
     // An older deployment's Sheets error names nobody: the app measures the record itself.
     eq(A.ctx._backendErrorKind(CELL_ERR, true), 'toolarge', 'the cell cap\'s own words are the same kind');
+    j.signedRecords = Array.from({ length: 400 }, (_, i) => ({ id: 's' + i, note: 'y'.repeat(140) }));
     const tw = A.ctx._tooLargeWords({ lastError: CELL_ERR, body: { type: 'saveAllJobs', payload: A.ctx.jobs } });
     eq(tw.who, 'Ellison Estate (HVL-260)', 'and the largest record in the write is named');
+    // A batch an older deployment refused unnamed (its own measure names the largest it carried, which is no longer the client
+    // too large) held beside that client's own write: the chip names the client (P1's review).
+    const kk = A.ctx.jobs.find((x) => x.id === K); kk.notes = 'z'.repeat(3000);
+    A.ctx._pendingWrites = {};
+    A.ctx._pendingWrites['main/saveAllJobs'] = { target: 'main', body: { type: 'saveAllJobs', get payload() { return A.ctx.jobsForSheetBatch(A.ctx.jobs); } }, kind: 'toolarge', blocked: true, lastError: CELL_ERR };
+    A.ctx._pendingWrites['main/job:' + J] = { target: 'main', body: { type: 'job', payload: j }, kind: 'toolarge', blocked: true, lastError: '' };
+    has(A.ctx._pendingChipCopy().head, 'Not saved — Ellison Estate (HVL-260) is too large', '⚠ the chip names the client\'s own held write, not the largest the batch carried');
+    A.ctx._pendingWrites = {};
     eq(A.ctx._backendErrorKind('JOBS_TAB_EMPTY: x', true), 'empty', 'the empty tab is its own kind');
     eq([A.ctx._writeKindHolds('toolarge'), A.ctx._writeKindHolds('empty'), A.ctx._writeKindHolds('')], [true, false, false], 'held: the size; retried: the empty tab, a network drop');
   });
@@ -512,14 +570,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const srv = server('A');
     const A = device('A', srv); seedDevice(A); seedSheet(srv, A, 3);
     const B = device('B', srv); seedDevice(B);
+    // Restated 2026-10-27 (P1's review): a write held because one client is too large no longer carries that client, so the
+    // held batch is the one the sheet refuses only at the merge: B's copy of J and A's, each under the cap, together over it.
+    const big = (tag) => Array.from({ length: 160 }, (_, i) => ({ id: tag + i, kind: 'receipt', note: 'x'.repeat(180) }));
+    const jb = B.ctx.jobs.find((x) => x.id === J); jb.signedRecords = big('b'); jb.updatedAt = later();
+    B.ctx.saveJobs(); B.run(300);
     const j = A.ctx.jobs.find((x) => x.id === J);
-    j.signedRecords = Array.from({ length: 400 }, (_, i) => ({ id: 's' + i, note: 'y'.repeat(140) }));
+    j.signedRecords = big('a');
     j.updatedAt = later();
     // A adds a client too: its save is the held one, so the sheet has never seen it.
     const Nid = later();
     A.ctx.jobs.push({ id: Nid, name: 'Added on A', created: new Date(Nid).toISOString(), updatedAt: Nid });
     A.ctx.saveJobs(); A.run(300);
-    eq(A.held(), ['main/saveAllJobs'], 'fixture: A holds a refused write');
+    eq(A.held(), ['main/saveAllJobs'], 'fixture: A holds a write the sheet refused by name at the merge');
+    has(A.ctx._pendingWrites['main/saveAllJobs'].lastError, 'TOO_LARGE: Ellison Estate', 'fixture: named by the sheet');
     const k = B.ctx.jobs.find((x) => x.id === K); k.name = 'Renamed on B'; k.updatedAt = later();
     B.ctx.saveJobs(); B.run(300);
     const asked = A.net.length;
@@ -527,12 +591,18 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(A.net.length > asked, '⚠⚠ A asks the sheet although its write is held');
     eq((A.ctx.jobs.find((x) => x.id === K) || {}).name, 'Renamed on B', '⚠ and sees B\'s change');
     ok(A.ctx.jobs.some((x) => x.id === Nid), '⚠ and keeps the client it added, which only its held write carries');
-    eq((A.ctx.jobs.find((x) => x.id === J) || {}).signedRecords.length, 400, 'and its own newer record of J');
+    eq((A.ctx.jobs.find((x) => x.id === J) || {}).signedRecords[0].id, 'a0', 'and its own newer record of J');
     // A held write of a store the read replaces still waits.
     A.ctx._pendingWrites['main/saveAllJobPlans'] = { target: 'main', body: { type: 'saveAllJobPlans', payload: {} }, blocked: true, kind: 'stale' };
     eq(A.ctx._syncWritesOutstanding(['saveAllJobPlans', 'saveAllLogs']), true, 'the plan read still stands down for a held plan write');
     eq(A.ctx._syncWritesOutstanding([]), false, 'the jobs read does not');
     eq(A.ctx._syncWritesOutstanding(), true, 'and with no argument every held write counts, as before');
+    delete A.ctx._pendingWrites['main/saveAllJobPlans'];
+    // The held batch is never sent again; a newer batch that lands lets it go (P1's review): A's copy back under the merge's cap.
+    j.signedRecords = j.signedRecords.slice(0, 5); j.updatedAt = later();
+    A.ctx.saveJobs(); A.run(300);
+    eq(A.held(), [], '⚠ a newer save of the list landed, so the held one is let go (it stayed on the chip for good)');
+    ok(srv.jobIds().indexOf(String(Nid)) >= 0, 'and the client only it carried is on the sheet');
     has(fn('refreshPlanAndLogFromCloud'), "_syncWritesOutstanding(_replaces)", 'the plan refresh names the stores it replaces');
   });
 
@@ -580,7 +650,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const A = device('A', srv); seedDevice(A, { manifestN: 6 }); seedSheet(srv, A, 6);
     A.ctx.jobs[0].appraisers = [{ id: 'ap1', name: 'R. Kodner', firm: 'Kodner Galleries' }];
     A.ctx._photoRefs[J][3].valSource = 'Appraisal'; A.ctx._photoRefs[J][3].apprId = 'ap1';
-    A.ctx.takeInventorySnapshot(J);
+    A.ctx.takeInventorySnapshot(J); A.run(600);
     const ts = A.ctx.jobs[0].invSnapshots[0].ts;
     const line = A.ctx._snapLinesOf(J, ts)[3];
     eq([line.qty, line.room, line.condition, line.basis, line.valDate], [4, 'Room 4', '', 'appraisal · R. Kodner · Kodner Galleries', '2026-08-14'],
@@ -648,6 +718,18 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(v.apply, false, '⚠ a deletion covering every client here, unrecorded, is refused although the sheet holds another');
     has(v.why || '', 'The sheet refused every client on this device (3)', 'and says so');
     eq(A.ctx.loadJobsVerdict({ ok: true, jobs: [{ id: 999 }], deletedJobs: [String(held[0].id)] }, held).apply, true, 'one client of three named deleted: applies');
+    // ⚠⚠ Applies, and takes only what a person recorded deleting (P1's review).
+    const v2 = A.ctx.loadJobsVerdict({ ok: true, jobs: [{ id: 999 }, held[1], held[2]], deletedJobs: [String(J)] }, held);
+    eq([v2.apply, v2.kept, v2.drop, v2.jobs.map((j) => j.id)], [true, [J], [], [999, K, L, J]],
+      '⚠⚠ one client named deleted with nobody recording it: kept, after the sheet\'s list, its records with it');
+    const v3 = A.ctx.loadJobsVerdict({ ok: true, jobs: [{ id: 999 }, held[1], held[2]], deletedJobs: [String(J)], recorded: [String(J)] }, held);
+    eq([v3.kept, v3.drop, v3.jobs.map((j) => j.id)], [[], [String(J)], [999, K, L]], 'recorded: taken, its records with it');
+    const v4 = A.ctx.loadJobsVerdict({ ok: true, jobs: [{ id: 999 }, held[1], held[2]], deletedJobs: [String(J)], recorded: [String(J)] }, held, true);
+    eq([v4.kept, v4.drop], [[J], []], '⚠ and kept while the sheet\'s refusal stands');
+    const v5 = A.ctx.loadJobsVerdict({ ok: true, jobs: [held[1], held[2]], deletedJobs: [] }, held);
+    eq([v5.kept, v5.jobs.map((j) => j.id)], [[], [K, L]], 'a client the sheet has never seen is not this rule\'s: membership stays the sheet\'s');
+    eq([A.ctx.sheetDropsTaken([1, 2, 3], ['2', 3]), A.ctx.sheetDropsTaken([1, 2], [1, 2], true), A.ctx.sheetDropsTaken([1, 2])], [[2, 3], [], []],
+      'sheetDropsTaken: the recorded ids; none while the refusal stands; none with nothing recorded (an older deployment)');
     eq(A.ctx.loadJobsVerdict({ ok: true, jobs: [] }, []).apply, true, 'a device holding nothing has nothing to protect');
     // The server: deleted, allowed back and written back, then removed by hand. Its old deletion went when it was written
     // back, so the hand removal is unrecorded and its records stay.
@@ -705,6 +787,160 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(fn('_invRefreshFromCloud'), '_invColdRepaint(jobId);', 'the read that moved nothing asks it');
   });
 
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // P1's review (2026-10-27): the app reaches Pages before Anthony redeploys, so it meets the deployment live until then. These
+  // run against that deployment's own code (tests/old-backend: 7abc836, 2026-10-26c; its ledger is every older deployment's).
+  guard('[the deployment live until the redeploy] after the tab is emptied, no save takes a client off a device (P1\'s review)', () => {
+    const srv = server('A', OLD);
+    ok(/var BACKEND_VERSION = '2026-10-26c'/.test(OLD.GS) && OLD.GS.indexOf('_jobsTabUnread') < 0, 'fixture: the old deployment\'s own code, without P1');
+    const Y = device('Y', srv);
+    seedDevice(Y, { manifestN: 40 }); seedSheet(srv, Y, 40);
+    eq(srv.state(), { jobs: 3, est: 3, plan: 3, log: 3, media: 3, co: 1 }, 'fixture: the old sheet holds three clients and their records');
+    // An iPad still on the page before P1 presses Snapshot on a full house: its record carries the lines, and the old batch clears
+    // the tab before the write that throws.
+    const oldRec = JSON.parse(JSON.stringify(Y.ctx.jobs[0]));
+    oldRec.invSnapshots = [{ ts: 5, label: 'Filed with court', count: 450, items: manifest(J, 450) }]; oldRec.updatedAt = later();
+    const r0 = srv.post({ type: 'saveAllJobs', payload: [oldRec] });
+    eq([r0.ok, srv.jobsRows()], [false, 0], 'fixture: the old deployment emptied the Jobs tab');
+    Y.ctx.refreshJobsFromCloud(); Y.run(100);
+    eq([Y.ctx.jobs.length, Y.ctx._sheetNotice], [3, Y.ctx.SHEET_NO_CLIENTS_TXT], 'Y keeps its three and says the sheet has none');
+    // One Save Changes in Edit Client: the batch, and the client's own write, which the old deployment answers with that one id dropped.
+    const k = Y.ctx.jobs.find((j) => j.id === K); k.notes = 'called the attorney'; Y.ctx._saveJobEdit(k, 'notes', '');
+    Y.run(400);
+    ok(Y.net.some((n) => n.what === 'job'), 'fixture: the client\'s own write went');
+    eq(Y.ctx.jobs.map((j) => j.name), NAMES, '⚠⚠ one edit takes nobody off this device (it took the client it saved, and its estimate)');
+    ok(!!Y.ctx.estimateStore[K] && Y.cached() === 3, 'its estimate and the cache are whole');
+    has(Y.ctx._sheetNotice, 'Nothing on this device was changed', '⚠ and the notice that says so is true');
+    const said = Y.badges.join(' | ');
+    lacks(said, 'removed from this device', 'nothing is said to be removed');
+    has(said, 'kept on this device: nothing is taken off it while the sheet’s refusal stands', 'the client the sheet refused is said to be kept');
+    // The desk saves the first client's inventory: the old deployment answers it with that client dropped.
+    Y.ctx._photoRefs[J][0].objectName = 'renamed'; Y.ctx.saveMediaNow(J); Y.run(400);
+    eq(Y.ctx.jobs.length, 3, '⚠⚠ nor does an inventory save (it took the client and its manifest)');
+    ok(Y.ctx.localStorage.getItem('hav_media_' + J) !== null, 'its manifest stays in localStorage');
+    // A new client: Save Client refuses while the notice stands, so this device never starts the old deployment's sweep.
+    has(Y.ctx.newClientSheetRefusal(!!Y.ctx._sheetNotice), 'a new client saved now can sweep the other clients’ records off the sheet', '⚠⚠ Save Client refuses');
+    eq(Y.ctx.newClientSheetRefusal(false), '', 'and saves with no refusal standing');
+    // Another device that has not heard adds one anyway: the old deployment takes it and names the other three deleted.
+    const X = device('X', srv); seedDevice(X);
+    const Nid = later();
+    X.ctx.jobs.push({ id: Nid, hvlId: 'HVL-NEW', name: 'New client', svc: 'downsizing', created: new Date(Nid).toISOString(), updatedAt: Nid });
+    X.ctx.saveJobs();
+    X.ctx.estimateStore[Nid] = { savedAt: later(), estimate: { jobId: Nid } }; X.ctx.saveAllEstimatesNow();
+    X.run(400);
+    eq(srv.jobsRows(), 1, 'fixture: the old deployment took the new client');
+    eq(X.ctx.jobs.length, 4, '⚠⚠ the device whose new client made the sheet name the other three deleted keeps all four (it dropped to 1)');
+    eq(Object.keys(X.ctx.estimateStore).length, 4, 'and their estimates (it kept 1)');
+    eq(srv.keys('EstimateStore').length, 1, 'fixture: the old deployment swept the other estimates off the sheet');
+    Y.ctx.refreshJobsFromCloud(); Y.run(100);
+    eq(Y.ctx.jobs.length, 3, 'Y, hearing the sheet name its three deleted with nobody recording it, keeps them');
+    // The runbook on that deployment: the Jobs rows and the five stores back from the copy. Here: the rows back, and the devices'
+    // copies are what put the swept estimates back.
+    seedSheet(srv, Y, 40);
+    srv.post({ type: 'saveAllJobs', payload: X.ctx.jobs });
+    eq(srv.jobsRows(), 4, 'fixture: the rows restored, the new client kept');
+    X.ctx.estimateStore[J].savedAt = later(); X.ctx.saveAllEstimatesNow(); X.run(400);
+    eq(srv.keys('EstimateStore').length, 4, '⚠ and a device that kept its copy puts every estimate back');
+  });
+
+  guard('[the deployment live until the redeploy] a client too large for a cell never empties the Jobs tab (P1\'s review)', () => {
+    const srv = server('A', OLD);
+    const X = device('X', srv);
+    seedDevice(X); seedSheet(srv, X, 3);
+    const j = X.ctx.jobs[0];
+    j.signedRecords = Array.from({ length: 420 }, (_, i) => ({ id: 'sr' + i, kind: 'receipt', ref: 'x', note: 'y'.repeat(130) }));
+    ok(len(j) > CELL_MAX, 'fixture: the record is ' + len(j) + ' characters');
+    X.ctx._saveJobEdit(j, 'signedRecords', 'sr0');
+    X.run(400);
+    eq(srv.jobsRows(), 3, '⚠⚠ the old Jobs tab is still whole: the batch never carried the client too large (it emptied the tab)');
+    eq(X.held(), ['main/job:' + J], 'the client is held, as its own write');
+    eq(X.ctx.jobs.length, 3, 'and kept here (its own write took it off the device)');
+    has(X.ctx._pendingChipCopy().head, 'Ellison Estate (HVL-260) is too large for the sheet (', '⚠ the chip names it, not another client');
+    X.ctx._retryStep = 0; X.ctx.flushPendingWrites(); X.run(300);
+    eq(srv.jobsRows(), 3, '⚠⚠ the page shown again (its handler runs the queue) sends nothing that could empty it (it emptied the restored tab)');
+    X.offline = true; X.ctx.estimateStore[K].savedAt = later(); X.ctx.saveAllEstimatesNow(); X.run(300); X.offline = false;
+    X.run(6000);
+    ok(X.pending().indexOf('main/saveAllEstimates') < 0, 'fixture: another write failed once and its backoff ran the queue');
+    eq(srv.jobsRows(), 3, '⚠⚠ nor does another write\'s backoff');
+    X.ctx.saveJobs(); X.run(300);
+    eq(srv.jobsRows(), 3, 'nor the next save of the list');
+  });
+
+  // ───────────────────────────────────────────────────────────────────────────
+  guard('a snapshot whose lines do not reach the sheet records nothing; once they land it is recorded (P1\'s review)', () => {
+    const srv = server('A');
+    const A = device('A', srv); seedDevice(A, { manifestN: 450 }); seedSheet(srv, A, 450);
+    const onSheet = () => (JSON.parse((srv.rowOf(J) || [])[11] || '{}').invSnapshots || []);
+    A.failWhen = (b) => b.type === 'saveSnapshot';   // only the lines' write is lost
+    A.ctx.takeInventorySnapshot(J);
+    A.ctx.jobs[1].notes = 'another edit meanwhile'; A.ctx._saveJobEdit(A.ctx.jobs[1], 'notes', '');   // any save carries the record
+    A.run(800);
+    ok(A.net.some((n) => n.what === 'saveSnapshot' && n.lost), 'fixture: the lines\' write was lost');
+    ok(A.net.some((n) => n.what === 'saveAllJobs' && !n.lost), 'fixture: and the list saved meanwhile');
+    eq(onSheet(), [], '⚠⚠ the sheet holds no heading while its lines are not there (it kept "Filed with court · 450 items" with nothing behind it)');
+    eq((A.ctx.jobs[0].invSnapshots || []).length, 0, 'nor does this device\'s record');
+    eq(A.ctx._snapPendingOf(J).length, 1, 'the row reads as saving');
+    ok(A.pending().some((k) => k.indexOf('main/saveSnapshot:' + J + ':') === 0), 'and the lines wait in the queue');
+    eq(A.filed, [], 'no page is filed for a snapshot not taken');
+    // The tab discarded now and reopened: nothing recorded anywhere, which is the truth.
+    const A2 = device('A2', srv, A.dump()); A2.ctx.loadJobs(); A2.run(100);
+    eq((A2.ctx.jobs.find((x) => x.id === J).invSnapshots || []).length, 0, '⚠ a reload shows no row (it showed one whose lines no device could read, for good)');
+    // Or the connection comes back: the queue lands the lines, then the heading.
+    A.failWhen = null; A.run(10000);
+    eq(onSheet().map((x) => [x.count, x.label]), [[450, 'Filed with court']], '⚠ once its lines land the heading is recorded and reaches the sheet');
+    const store = srv.store('SnapshotStore')[String(J)] || {};
+    eq(Object.keys(store).map((t) => store[t].items.length), [450], 'its lines in the store');
+    eq([A.ctx._snapPendingOf(J).length, A.pending(), A.filed.length], [0, [], 1], 'nothing left saving or queued, and its page filed');
+    has(A.badges.join(' | '), 'Snapshot saved ✓', 'and it says so');
+    // The sheet answering busy once (the server's own words, not the network's): the queue lands it later, and only then is it recorded.
+    let busy = 1;
+    A.answer = (m, b) => (m === 'POST' && b.type === 'saveSnapshot' && busy-- > 0
+      ? JSON.stringify({ ok: false, success: false, error: 'busy: the sheet is in use, try again' })
+      : srv.exec(m === 'POST' ? 'POST' : 'GET', m === 'POST' ? { postData: { contents: JSON.stringify(b) } } : { parameter: b }));
+    A.label = 'As of walkthrough'; A.ctx.takeInventorySnapshot(J); A.run(600);
+    eq(onSheet().length, 1, 'fixture: refused once by the sheet, nothing recorded yet');
+    A.run(10000);
+    eq(onSheet().map((x) => x.label), ['Filed with court', 'As of walkthrough'], '⚠ the queue lands it, and the heading is recorded then (the server\'s refusal carries it too)');
+    A.answer = null;
+    // The card draws the row as saving with no buttons while it is; a refused client records nothing.
+    const C = sandbox({ fns: ['_renderInventorySnapshots', '_snapPendingOf', '_snapPrevLive'], vars: ['_snapPending'],
+      stubs: { _invDateTime: () => 'Oct 27', _money: (x) => '$' + x, fmtDate2: (x) => x, _ymdLocal: (d) => '' } });
+    C._snapPending[7] = { 9: { ts: 9, label: 'Filed with court', count: 3 } };
+    const card = C._renderInventorySnapshots({ id: 7, invSnapshots: [] });
+    has(card, 'saving its lines to the sheet', 'the card says it is saving');
+    lacks(card, 'Print</button>', 'and offers nothing to press');
+    const R = sandbox({ fns: ['_snapLanded'], vars: ['_snapPending'], stubs: { _invJob: () => ({ id: 7 }), _saveJobEdit() { R.__saved = true; },
+      showSyncBadge: (m) => { R.__said = m; }, _snapFilePage() {}, _invRenderWhenIdle() {}, document: { getElementById: () => null } } });
+    R._snapPending[7] = { 9: { ts: 9 } };
+    R._snapLanded(7, { ts: 9 }, { ok: true, dropped: ['7'] });
+    eq([R.__saved, R._snapPending[7]], [undefined, {}], 'a client the sheet refused: nothing recorded');
+    has(R.__said, 'Snapshot not recorded', 'and said');
+  });
+
+  // ───────────────────────────────────────────────────────────────────────────
+  guard('a 600-line estate whose request went to two fiduciaries is past the cell with no snapshot: the batch saves every other client (P1\'s review)', () => {
+    const srv = server('A');
+    const A = device('A', srv); seedDevice(A); seedSheet(srv, A, 3);
+    // Stable ids in the app's own shape: jobId_rROOM_inventory_uid.
+    const ids = Array.from({ length: 600 }, (_, i) => J + '_r' + (i % 14) + '_inventory_' + (1790000000000 + i * 7919).toString(36) + '-' + i);
+    const j = A.ctx.jobs.find((x) => x.id === J);
+    j.docState.approvalRequest = { draftedAt: 1, sentAt: 2, req: { to: ['a@b.c', 'd@e.f'], cc: ['x@y.z'], stableIds: ids.slice(), asked: 600, ratify: 0, sig: 'abc123' } };
+    const rec = (day) => ({ id: 'esr_env-1234_' + day, kind: 'approval', ref: 'approval:' + day + ':Ruth Adler; Daniel Adler', stableIds: ids.slice(),
+      label: 'Signed release approval', signedBy: 'Ruth Adler', signedOn: day, esign: true, filedBy: 'DocuSign' });
+    j.signedRecords = [rec('2026-10-26'), rec('2026-10-28')];
+    ok(len(j) > CELL_MAX, 'fixture: the record is ' + len(j) + ' characters with no snapshot (the request and two signing days carry every line)');
+    const k = A.ctx.jobs.find((x) => x.id === K); k.notes = 'bare change on another client'; k.updatedAt = later();
+    A.ctx._saveJobEdit(j, 'signedRecords', rec('2026-10-28').id);
+    A.run(400);
+    eq(JSON.parse((srv.rowOf(K) || [])[11] || '{}').notes, 'bare change on another client', '⚠⚠ every other client\'s change still reaches the sheet (the batch was refused for all of them)');
+    eq(A.held(), ['main/job:' + J], 'the one too large is held, by name');
+    const chip = A.ctx._pendingChipCopy();
+    has(chip.head, 'Ellison Estate (HVL-260) is too large for the sheet', 'named');
+    has(chip.note, 'the app has to make this client’s record smaller before that can be saved', '⚠ and the chip says what happens next');
+    eq(srv.jobsRows(), 3, 'the sheet is whole');
+  });
+
   // ───────────────────────────────────────────────────────────────────────────
   guard('the deployment and the app agree on what this needs', () => {
     const bv = (GS.match(/var BACKEND_VERSION = '([^']+)';/) || [])[1];
@@ -717,6 +953,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const app = fs.readFileSync(path.join(__dirname, '..', 'havellin.html'), 'utf8').split('\n').filter((l) => !/^\s*\/\//.test(l)).join('\n');
     eq((app.match(/sheetVerdictRefusal\(/g) || []).length, 4, 'sheetVerdictRefusal: its definition and three readers (the dropped answer, and loadJobsVerdict twice)');
     eq((app.match(/loadJobsVerdict\(/g) || []).length, 4, 'loadJobsVerdict: its definition, loadJobs, and the refresh twice');
+    eq((app.match(/sheetDropsTaken\(/g) || []).length, 3, 'sheetDropsTaken: its definition and two readers (the dropped answer and loadJobsVerdict)');
+    eq((app.match(/newClientSheetRefusal\(/g) || []).length, 2, 'newClientSheetRefusal: its definition and Save Client');
+    has(fn('saveIntake'), "newClientSheetRefusal(typeof _sheetNotice !== 'undefined' && !!_sheetNotice)", 'Save Client asks it, first');
   });
 
   // ───────────────────────────────────────────────────────────────────────────

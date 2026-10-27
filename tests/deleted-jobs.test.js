@@ -326,8 +326,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     let saves = 0, badges = [], redraws = 0, listRedraws = 0;
     const ctx = sandbox({
       fns: ['_applyDroppedJobs', '_purgeLocalJobRecords', '_jobsLanded', '_asBackgroundRedraw',
-        'sheetVerdictRefusal', '_setSheetNotice', 'sheetNoticeHtml', '_unsentPhotoCount', 'unsentPhotosKeptText'],
-      vars: ['_dashKeepNotice', '_sheetNotice'],
+        'sheetVerdictRefusal', '_setSheetNotice', 'sheetNoticeHtml', '_unsentPhotoCount', 'unsentPhotosKeptText',
+        'sheetDropsTaken', '_sheetKeptOnce', 'sheetKeptText'],
+      vars: ['_dashKeepNotice', '_sheetNotice', '_sheetKeptSaid'],
       stubs: {
         // The Win / Loss lists name lost prospects BY NAME. A client deleted on the other device
         // stays on this one's list until something repaints it, so the drop has to reach that
@@ -350,7 +351,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ctx.localStorage.setItem('hav_media_thumb_' + A, '{}');
     ctx.localStorage.setItem('hav_media_' + B, '[2]');
 
-    const n = ctx._applyDroppedJobs([String(A), C]);   // ids arrive as strings or numbers from JSON
+    // Restated 2026-10-27 (P1's review): a deletion a person recorded (the sheet's `recorded`) is the one a verdict takes.
+    const n = ctx._applyDroppedJobs([String(A), C], [String(A), C]);   // ids arrive as strings or numbers from JSON
     eq(n, 2, 'two jobs removed');
     eq(idsOf(ctx.jobs), [B], 'only the surviving job remains in memory');
     eq(JSON.parse(ctx.localStorage.getItem('havellin_jobs_v3')).map((j) => j.id), [B], 'and in localStorage');
@@ -370,9 +372,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(fn('renderJobs'), 'renderWinLoss()',
        '\u2026because renderJobs paints the Win / Loss row, so there is no second surface to reach');
     eq(badges.length, 1, 'one message');
-    // Restated 2026-10-27 (P1): the words are what the device knows, that the sheet refused them; "deleted elsewhere" was a
-    // claim it could not make, and it is what the iPad said as an emptied Jobs tab took every client off it.
-    has(badges[0], '2 clients refused by the sheet, which no longer holds them: removed from this device', 'that says what happened, not "lost"');
+    // Restated 2026-10-27 (P1, and its review): the words are what the device knows, that the sheet records the deletion;
+    // "deleted elsewhere" was a claim it could not make, and it is what the iPad said as an emptied Jobs tab took every client off it.
+    has(badges[0], '2 clients deleted, as the sheet records: removed from this device', 'that says what happened, not "lost"');
     lacks(badges[0], 'deleted elsewhere', 'and never "deleted elsewhere"');
     eq(ctx._applyDroppedJobs([]), 0, 'an empty list is a no-op');
     eq(ctx._applyDroppedJobs(['nope']), 0, 'an unknown id removes nothing');
@@ -386,7 +388,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const fl = APP.slice(APP.indexOf('function flushPendingWrites('));
     has(fl.slice(0, fl.indexOf('\n}\n')), '_applyDroppedJobs(res.dropped, res.recorded)', 'so does the retry queue');
     const lj = APP.slice(APP.indexOf('function loadJobs('));
-    has(lj.slice(0, lj.indexOf('\n}\n')), '_purgeLocalJobRecords(data.deletedJobs)', 'loadJobs purges local records for deleted jobs');
+    has(lj.slice(0, lj.indexOf('\n}\n')), '_purgeLocalJobRecords(verdict.drop)', 'loadJobs purges local records for deleted jobs (a recorded deletion, P1\'s review)');
     // ⚠ RESTATED 2026-09-29, not deleted. refreshJobsFromCloud stands down while this device's
     // own writes are outstanding (audit H4), and the sheet's deletions must still reach it then —
     // so they go through _applyDroppedJobs, which purges the records AND takes the jobs off the

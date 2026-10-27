@@ -72,10 +72,12 @@ const SYNC_FNS = ['refreshJobsFromCloud', '_mergeCloudJobs', '_syncWritesOutstan
   '_flushOutbox', '_writeKey', '_enqueueWrite', '_backendErrorKind', '_retrySoon',
   '_scheduleRetry', 'flushPendingWrites', '_pendingCount',
   // 2026-10-27 (P1): the sheet's verdicts asked first, a held write, and the kinds that hold.
-  'loadJobsVerdict', 'sheetVerdictRefusal', '_syncWritesHeld', '_setSheetNotice', 'sheetNoticeHtml', '_unsentPhotoCount', 'unsentPhotosKeptText', '_writeKindHolds'];
+  'loadJobsVerdict', 'sheetVerdictRefusal', '_syncWritesHeld', '_setSheetNotice', 'sheetNoticeHtml', '_unsentPhotoCount', 'unsentPhotosKeptText', '_writeKindHolds',
+  // P1's review: only a recorded deletion is taken; a client too large never rides the batch.
+  'sheetDropsTaken', 'sheetKeptText', '_sheetKeptOnce', 'jobRecordTooLarge', 'jobsForSheetBatch', '_holdTooLargeJobs'];
 const SYNC_VARS = ['_outbox', '_outboxTimer', '_outboxSending', '_OUTBOX_WINDOW', '_syncWriteSeq',
   '_pendingWrites', '_retryTimer', '_retryStep', '_flushing', '_retryDelays', 'SYNC_STUCK_TRIES',
-  'PERSON_NAME_ALIASES', 'SHEET_NO_CLIENTS_TXT', '_sheetNotice'];
+  'PERSON_NAME_ALIASES', 'SHEET_NO_CLIENTS_TXT', '_sheetNotice', '_sheetKeptSaid', 'SHEET_CELL_MAX_APP'];
 
 const INTAKE_FNS = ['saveIntake', 'intakeAsksHouseContents', 'houseFlagsOf', 'resolveExecutorAuth',
   'docTierScope', 'docTierScopeMirror', 'docTierDef', 'clientMissingFields', 'courtRecordRequired', 'isDecedentJob', 'readReferralInputs', 'referralSourceKind', 'lookupReferralById', 'referralIdOf', 'readHouseFlagInputs', 'houseFlagAsked', 'trustRecordShown', 'propertySaleAsked', 'saveCoFiduciaryRows', 'matterDef', 'courtRecordShown', 'matterTypeOf', 'jobOnProbateTrack', 'invFiduciaryMode'];
@@ -394,12 +396,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       sheet: [{ id: 1, name: 'Tripp Butler', updatedAt: 100 }], deleted: ['4'],
       estimateStore: { 1: { estimate: { svc: 'downsizing' } }, 4: { estimate: { svc: 'downsizing' } } },
     });
+    // Restated 2026-10-27 (P1's review): a deletion a person recorded (the sheet's `recorded`) is taken; one nobody recorded is kept.
     a.refresh();
-    a.answer();
+    a.answer({ recorded: ['4'] });
     eq(a.ids(), [1], 'the deleted client leaves this device');
     ok(!a.c.estimateStore[4] && !!a.c.estimateStore[1], 'and takes its estimate with it, not anybody else\'s');
-    // In the words of what the device knows since 2026-10-27 (P1): the sheet refused it.
-    ok(a.badges.some((m) => m.indexOf('1 client refused by the sheet, which no longer holds it') >= 0), 'and it says so — a client vanishing with no word reads as data loss');
+    ok(a.badges.some((m) => m.indexOf('1 client deleted, as the sheet records: removed from this device') >= 0), 'and it says so — a client vanishing with no word reads as data loss');
     eq(a.landedCount(), 1, 'every surface built from the list is redrawn');
 
     // Discarded: a write went out while the read was in flight. The list is not taken — but the
@@ -414,12 +416,26 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     });
     b.refresh();
     b.c._driveFolderFailed(b.c.jobs[0], 'the server refused', '');   // a write that ties — see above
-    b.answer();
+    b.answer({ recorded: ['4'] });
     eq(b.ids(), [1], '⚠ the deleted client leaves even though the list was not taken');
     ok(!b.c.estimateStore[4], 'with its records');
-    ok(b.badges.some((m) => m.indexOf('refused by the sheet') >= 0), 'and says so');
+    ok(b.badges.some((m) => m.indexOf('deleted, as the sheet records') >= 0), 'and says so');
     eq(b.c.jobs[0].notes, 'mine', 'while the local record is left exactly as it was');
     ok(!!b.c.jobs[0].driveFolderError, 'including the change still on its way');
+
+    // ⚠⚠ A deletion nobody recorded (a deployment older than 2026-10-27b sends no `recorded`; a row cleared by hand) is kept.
+    const k = rig({
+      local: [{ id: 1, name: 'Tripp Butler', updatedAt: 100 }, { id: 4, name: 'Refused', updatedAt: 100 }],
+      sheet: [{ id: 1, name: 'Tripp Butler', updatedAt: 100 }], deleted: ['4'],
+      estimateStore: { 4: { estimate: { svc: 'downsizing' } } },
+    });
+    k.refresh();
+    k.answer();
+    eq(k.ids(), [1, 4], '⚠⚠ kept: only a recorded deletion takes a client off a device');
+    ok(!!k.c.estimateStore[4], 'with its records');
+    ok(k.badges.some((m) => m.indexOf('1 client refused by the sheet is kept on this device') >= 0), 'and it says so');
+    k.refresh(); k.answer();
+    eq(k.badges.filter((m) => m.indexOf('kept on this device') >= 0).length, 1, 'once, not on every refresh');
   }
 
   // ───────────────────────────────────────────────────────────────────────────

@@ -366,7 +366,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const drive = (url, mode, data) => {
       let landed = 0;
       const ctx = sandbox({
-        fns: ['loadJobs', 'loadJobsVerdict', 'sheetVerdictRefusal', '_setSheetNotice', 'sheetNoticeHtml'], vars: ['SHEET_NO_CLIENTS_TXT', '_sheetNotice'],
+        fns: ['loadJobs', 'loadJobsVerdict', 'sheetVerdictRefusal', '_setSheetNotice', 'sheetNoticeHtml', 'sheetDropsTaken', '_sheetKeptOnce', 'sheetKeptText'], vars: ['SHEET_NO_CLIENTS_TXT', '_sheetNotice', '_sheetKeptSaid'],
         stubs: {
           document: { getElementById: () => ({ textContent: '' }) },
           SHEETS_SYNC_URL: url,

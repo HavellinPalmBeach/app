@@ -538,7 +538,9 @@ function groupB({ group, ok, eq, has, lacks }) {
     // Since 2026-10-27 (P1) a snapshot is taken only off a list this device has read, and its lines go to the sheet's store.
     const S = lift(['takeInventorySnapshot'], { jobs: [job], document: domStub({}), _invAssignItemNos: () => [], _snapItemOf: () => ({}), estateValueDate: () => '',
       _jobTouch() {}, saveJobs() {}, syncJobToSheets() {}, renderInventoryTab() { seen.push(hist()); },
-      snapshotRefusal: () => '', postSyncBadge() {}, _snapFilePage() {} });
+      // The lines' write lands at once here (P1's review: the heading is recorded by that landing).
+      snapshotRefusal: () => '', postSyncBadge(b, o, f, landed) { if (landed) landed({ ok: true }); }, _snapFilePage() {}, _invRenderWhenIdle() {}, _invJob: () => job,
+      showSyncBadge() {} });
     S.window.prompt = () => 'Filed with court';
     const r = attempt(() => S.takeInventorySnapshot(7));
     ok(r.ok, 'the snapshot runs (' + (r.err || 'ok') + ')');

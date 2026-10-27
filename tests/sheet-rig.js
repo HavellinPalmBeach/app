@@ -19,6 +19,14 @@ const vm = require('vm');
 
 const GS = fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'main-sync.gs'), 'utf8');
 const GS_INV = fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'saveInventory.gs'), 'utf8');
+// The deployment live until the redeploy, as it stood at 7abc836 (2026-10-26c; the job ledger is the same on every deployment
+// older than 2026-10-27b): its batch clears the Jobs tab before the write, an id seen and absent is deleted, and a store save
+// sweeps such an id once the tab holds any client. Kept as a fixture, never deployed, so the app is driven against the server
+// it meets until Anthony redeploys (P1's review, 2026-10-27). server(variant, OLD) evaluates it.
+const OLD = {
+  GS: fs.readFileSync(path.join(__dirname, 'old-backend', 'main-sync.7abc836.gs'), 'utf8'),
+  GS_INV: fs.readFileSync(path.join(__dirname, 'old-backend', 'saveInventory.7abc836.gs'), 'utf8'),
+};
 const CELL_MAX = 50000;
 const CELL_ERR = 'Exception: Your input contains more than the maximum of 50000 characters in a single cell.';
 const QUIET = { log() {}, warn() {}, error() {} };
@@ -83,7 +91,7 @@ function fakeSheet(name, header, srv) {
   };
 }
 
-function server(variant) {
+function server(variant, src) {
   const sheets = {}, log = [];
   const srv = {
     console: QUIET,
@@ -102,7 +110,7 @@ function server(variant) {
     },
   };
   vm.createContext(srv);
-  vm.runInContext(GS + '\n\n' + GS_INV, srv, { filename: 'apps-script (whole)' });
+  vm.runInContext(((src && src.GS) || GS) + '\n\n' + ((src && src.GS_INV) || GS_INV), srv, { filename: 'apps-script (whole)' });
   // One HTTP request is one execution: checkpoint the sheets so variant B can roll it back.
   srv.exec = (kind, e) => {
     srv.checkpoint = {};
@@ -124,4 +132,4 @@ function server(variant) {
   return srv;
 }
 
-module.exports = { server, fakeSheet, mk, SP, CELL_MAX, CELL_ERR, GS, GS_INV };
+module.exports = { server, fakeSheet, mk, SP, CELL_MAX, CELL_ERR, GS, GS_INV, OLD };
