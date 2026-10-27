@@ -546,13 +546,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     // it.itemNo || (i + 1) — a snapshot row taken before item numbers existed carries
     // none, and a position printed in that column reads as a number that was issued.
-    const snapFns = ['_invDocPartyHead', 'printInventorySnapshot', '_invDocName', '_invItemNo', '_invMoney', '_invDateTime', 'roundCents', 'fmt', '_snapVoidedBlock'];
-    const sctx = sandbox({ fns: snapFns, vars: [] });
+    // The snapshot's lines are this device's copy of the sheet's snapshot store since 2026-10-27 (P1), never the record's.
+    const snapFns = ['_invDocPartyHead', 'printInventorySnapshot', '_invDocName', '_invItemNo', '_invMoney', '_invDateTime', 'roundCents', 'fmt', '_snapVoidedBlock', '_snapLinesOf'];
+    const sctx = sandbox({ fns: snapFns, vars: ['_snapLines', 'SNAP_LINES_UNREAD_TXT'] });
     sctx.jobs.push({ id: 1, name: 'Estate of Doe', hvlId: 'HVL-1001', invSnapshots: [{
-      ts: 1757000000000, label: 'At filing', count: 2, totalFMV: 5100,
-      items: [{ itemNo: 6, object: 'Console', category: 'Furniture', fmv: '100', track: 'Probate' },
-              { itemNo: '',  object: 'Credenza', category: 'Furniture', fmv: '5000', track: 'Probate' }],
-    }] });
+      ts: 1757000000000, label: 'At filing', count: 2, totalFMV: 5100 }] });
+    sctx._snapLines[1] = { 1757000000000: [{ itemNo: 6, object: 'Console', category: 'Furniture', fmv: '100', track: 'Probate' },
+              { itemNo: '',  object: 'Credenza', category: 'Furniture', fmv: '5000', track: 'Probate' }] };
     sctx.printInventorySnapshot(1, 1757000000000);
     has(sctx.__printed, '>6<', 'a recorded number prints');
     has(sctx.__printed, '>—<', 'and a row that never had one says so rather than printing its position');

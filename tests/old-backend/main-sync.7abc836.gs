@@ -1,0 +1,5072 @@
+/**
+ * Havellin Google Sheets Sync + Drive Folder Creation
+ * Syncs jobs, estimates, change orders, logs, and hours across all devices via a
+ * Google Sheet; creates an organized Drive folder structure per client.
+ *
+ * Cross-device safety: every shared store MERGES by record id instead of replacing
+ * the whole collection, so two people working on different devices can't overwrite
+ * each other's clients/estimates/etc. (This is the fix for the disappearing-client
+ * bug.) Real deletions go through the explicit deleteJob action.
+ *
+ * The saveInventory(payload) handler lives in a separate file (saveInventory.gs) in
+ * this same project — it's referenced from doPost below.
+ */
+
+// ══ DEPLOYMENT IDENTITY ═════════════════════════════════════════════════════════
+// ⚠ THE APP HAS SHIPPED THREE FEATURES AGAINST A DEPLOYMENT THAT DID NOT HAVE THEM, AND
+// EACH TIME IT READ AS A BUG IN THE APP: saveMedia (2026-08-24, the inventory manifest
+// never synced), htmlToPdf (2026-09-08, no PDF on any client email — reported three times)
+// and the Shared-Drive fix to uploadHtmlToDrive (2026-09-09, duplicate estimates in Drive).
+//
+// THE CAUSE, found only from a screenshot of the browser address bar: the file was being
+// copied from a DEAD BRANCH SIX WEEKS STALE, not from main. Every redeploy was performed
+// correctly — on ancient code. Nothing named the vintage that was answering, so a perfect
+// redeploy of July's file was indistinguishable from a fresh one.
+//
+// Two further ways a redeploy looks done when it is not, both worth knowing: pressing Save
+// changes NOTHING about what the live /exec URL serves (that needs Deploy → Manage
+// deployments → edit → New version), and "Deploy → New deployment" mints a DIFFERENT URL
+// the app is not calling.
+//
+// So the deployment says who it is, and the app checks on load. BACKEND_ACTIONS/TYPES are
+// what this file can actually do; a test asserts they match the dispatch in doPost exactly,
+// in BOTH directions, so the lists cannot drift from the code beneath them — a list that
+// over-claims would be worse than no list at all.
+//
+// ⚠ BUMP BACKEND_VERSION IN THE SAME COMMIT AS ANY CHANGE TO THIS FILE.
+// ⚠ 2026-09-21a, -21b AND -22a ARE ALL `saveInventory.gs`, not this file — one project, one
+// deployment, and this constant is the ONLY thing the app can read to tell which vintage is
+// serving. The Summary sheet branches on `payload.docSet` from -21a, on `payload.onProbate`
+// from -21b and on `payload.statesValues` from -22a. An older deployment ignores whichever flag
+// it predates: before -21a it prints Date of Death, Letters Issued and a §733.604 court
+// deadline on a LIVING client's own workbook; before -21b it prints Letters and the deadline on
+// a TRUST estate's; and before -22a it prints a Total Estimated FMV, an Items Awaiting
+// Valuation count and an FMV BY CATEGORY rollup on an estate CONTRACTED AT `contents` or
+// `none`, where the agreement says counsel does the valuing.
+// ⚠ 2026-09-30b (P16): a payment keeps a void, a clear, its Stripe intent and its cheque photo from either
+// copy when the sheet merges a job (_paymentSticky) — the app's BACKEND_MIN_VERSION names it, because no
+// action name can — and the editor-only folder sweep runs from the Run menu with no argument.
+// ⚠ 2026-10-01 (P17): esignArchive files the executed agreement and its certificate through _fileBlobByName, the
+// replace-by-name rule uploadHtml has always followed, so the app's File signed copy button replaces a copy already
+// in the Agreement folder instead of adding a second one beside it. No action or type changes.
+// ⚠ 2026-10-03 (P19): the six record lists above merge entry by entry on their id (JOB_KEYED_LISTS), so a
+// co-trustee added on one device and a signed receipt filed on another both survive. No action or type changes.
+// ⚠ 2026-10-05 (P20): esignSend puts every co-representative the app names on the envelope beside the client
+// (routing order 1, their own tabs) and answers with who it put there; esignStatus finds the client by recipientId
+// '1' and reports each co-signer. No action or type changes. An older deployment sends to the client and Anthony
+// alone, and the app records that the co-representatives were not on the envelope.
+// ⚠ 2026-10-06 (P22): saveInventory.gs only — the manifest merge unions each line's approval signers, and the client's
+// workbook states its money to the cent. No action or type changes; the app's BACKEND_MIN_VERSION names it.
+// ⚠ 2026-10-06b (P23): Agent Two, `agentValue` — the desk values its unvalued lines (AGENT_TWO_SPEC.md). A new action,
+// so an older deployment is named by the action the app finds missing, not by version.
+// ⚠ 2026-10-06c (P24): the room check, `agentRoomCheck` — a room's photographs read together for one thing counted
+// twice. A new action, so an older deployment is named by the action the app finds missing.
+// ⚠ 2026-10-06d (P24, after the first live run): the room check reads runs of 12 photographs, not 24, so one request
+// answers inside UrlFetchApp's limit; its sentence is short, plain and cut at a word; testAgentRoomCheck times one full
+// run. No action or type changes: an older deployment still answers, and a big room there fails as *took too long*.
+// ⚠ 2026-10-16: the job's two key and access custody lists (`accessItems`, `accessEvents`; KEY_CUSTODY_SPEC.md) merge entry
+// by entry on their id like the six record lists before them, so a receipt on one device and a handoff on another both
+// survive. No action or type changes; the app's BACKEND_MIN_VERSION names it.
+// ⚠ 2026-10-16 (P26): `incidents` (anything that goes wrong on a job: INCIDENT_REPORTING_SPEC.md) joins the record lists
+// merged entry by entry (JOB_KEYED_LISTS, JOB_LIST_KEY). No action or type changes; the app names an older deployment by version.
+// ⚠ 2026-10-19: Agent One's naming prompt (`_agSystem`) carries three rules *Photographing a House* promises: the surface
+// or container a thing sits on or in is background, never a line; a drawer or shelf of mixed small everyday things is
+// one line named for the container; opened consumables, worn underwear and household rubbish are not inventoriable.
+// No action or type changes; until it is live a photograph of socks in a drawer still comes back as the socks and the dresser.
+// ⚠ 2026-10-19b: one client's inventory reset (`previewResetInventory` / `resetInventoryConfirm`, editor-only) stamps the
+// job's MediaStore entry `invResetAt`, and saveMediaStore drops every line from before it (`_invResetDrops`,
+// saveInventory.gs) on every save, so a device still holding the old lines cannot merge them back. No action or type
+// changes; an older deployment merges them back, and the app names it by version.
+// ⚠ 2026-10-24: Agent One is told what is already listed off a photograph (`_agListedText`, off the app's `listed`), so a
+// blank line added to a photograph already named is answered with what is not on the list, never a second reading of
+// the whole photograph; and its names carry no count (the count is qty's, taken from the crew's note where it gives one).
+// No action or type changes; until it is live a blank line on a named photograph puts every object in it on the list
+// twice, and a stack photographed from the top is named "approx. 7 in stack". The app names it by version.
+// ⚠ 2026-10-25: Agent Two hands back the name it values each line under (`name` in record_values), the name given or its
+// correction, where it flagged "Name may be wrong" before; values the count as given; reads condition off the photograph;
+// and raises a notice only for something to do ("name" and "worthpoint" are gone from its kinds). Agent One keeps a name
+// to one short line and files everyday dishes, glassware and kitchen things under General/Household unless a mark is
+// readable. No action or type changes; it carries 2026-10-24's. The app names it by version.
+// ⚠ 2026-10-25b (Anthony: *"have the agents working together to get the best view of what an item is and what it is worth"*,
+// *"what if … something that gets valued at $25 as a wooden mirror, is really a restoration hardware mirror"*): a name a person
+// typed or reviewed at the desk is marked to Agent Two (`nameChecked`) and given back as it was and valued as named, so a name
+// changed on the desk is priced as that thing; a brand in a name is priced as that brand; the line is valued at its Quantity,
+// which the desk divides by for Each; and Agent One puts a brand the crew names into the name. No action or type changes; it
+// carries 2026-10-25's. Until it is live Agent Two may "correct" a name a person typed back to the generic thing and value that.
+// ⚠ 2026-10-26 (Anthony: *"do a once over on the two agents … as accurate as possible on the first pass … TC oversight minimized"*;
+// *"make sure the agents update the model when there are new models so they are always the most accurate"*): every agent call runs on
+// the newest top-tier model read off Anthropic's model list, with the newest Opus as its fallback when a request runs long, is busy
+// or is rejected (_agModels, _agSendAll); one slow photograph no longer throws a naming call away; Agent One's naming, notes,
+// cabinet, category and basis rules; Agent Two sees the photograph of a guessed name, the room and what else a photograph shows,
+// corrects the category on a research line, prints a figure with no sale behind it as a general estimate, and hands back passing
+// failures as `retry`. No action or type changes; it carries 2026-10-25b's. Until it is live the agents stay on their old models,
+// Agent Two never looks at a guessed name's photograph, and one slow request can mark a batch "not valued".
+// ⚠ 2026-10-26b (the first live testAgentValue, the same day; Anthony: "Fix it now"): a comparable is one item's own page with the
+// price that page shows (_avResultsPage, AGENT_VALUE_NO_PRICE_RE in _avLineResult, and the prompt's EVIDENCE rule); a note or a
+// basis that runs long ends at a whole sentence or a word (_avClip), and a note is asked for in under forty words; and both agents
+// grade an item's condition off its photograph (AGENT_CONDITION_TEXT; Anthony: "Agents grade it"), Agent Two's kept only off a
+// photograph the request carried. No action or type changes; it carries 2026-10-26's. Until it is live a search page or a sale with no price shown can stand as a sold comparable, a
+// researched line resting on one prints "auction comps", a long note stops mid-phrase, and no condition is graded.
+// ⚠ 2026-10-26c (Anthony: the estate release approval request "definitely docusign"; a representative with no email refuses the
+// envelope by name, "Refuse, name them"): esignSendRequest sends the request to every fiduciary at once (routing order 1, no
+// countersignature), each with their own initials, signature and date markers ('/hri<n>/', '/hrs<n>/', '/hrd<n>/', the app's
+// ESIGN_REQUEST_ANCHOR), agreements@ and the estate attorney copied once every one has signed; and esignStatus reports every
+// signer on the envelope (`signers`: recipientId, name, email, status, signedAt, declinedReason) and why an envelope was voided.
+// Until it is live the request goes by email only (the app offers no DocuSign send without the action), and an envelope's
+// signatures cannot be read back.
+var BACKEND_VERSION = '2026-10-26c';
+var BACKEND_ACTIONS = [
+  'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
+  'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive', 'esignSendRequest',
+  'stripeLink', 'stripeStatus', 'agentIdentify', 'agentValue', 'agentRoomCheck'
+];
+var BACKEND_TYPES = [
+  'job', 'saveAllEstimates', 'saveAllJobs', 'saveAllJobPlans',
+  'saveAllChangeOrders', 'saveAllLogs', 'saveAllContractors', 'deleteContractor',
+  'deleteJob', 'saveInventory', 'saveMedia', 'log'
+];
+
+var SHEET_ID = '16Z3yiRYbhYLsia0aG4v5znWo_O2eDRnB0dcldECjAJM';
+var ROOT_FOLDER_ID = '1X2bmAAjbruL5lLip-UgwwmPNo7y_Ubrb';
+
+function jsonOut(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// A successful write that refused some job ids says which. `dropped` is only present when
+// non-empty, so every other write's response is byte-identical to what it always was.
+function _okWithDrops(r) {
+  var out = { ok: true, success: true };
+  if (r && r.dropped && r.dropped.length) out.dropped = r.dropped;
+  return out;
+}
+
+// ══ ROUTERS ════════════════════════════════════════════════════════════════════
+
+function doGet(e) {
+  try {
+    var action = e.parameter.action;
+
+    // Answered by every deployment that carries it; an OLD one answers 'Unknown action',
+    // which is itself the signal the app is looking for.
+    if (action === 'version') {
+      return jsonOut({ ok: true, success: true, version: BACKEND_VERSION,
+                       actions: BACKEND_ACTIONS, types: BACKEND_TYPES });
+    }
+
+    if (action === 'loadJobs') {
+      // `deletedJobs` is every id the sheet has seen and no longer holds (see JOB LEDGER), so a
+      // device can drop the estimates, plans and logs it still carries for a job that is gone.
+      var jobsNow = getJobsFromSheet();
+      return jsonOut({ ok: true, success: true, jobs: jobsNow,
+                       deletedJobs: _deletedJobIds(_presentJobIds(jobsNow), getJobLedger()) });
+    }
+    if (action === 'loadEstimates')    { return jsonOut({ ok: true, success: true, estimates: getEstimateStore() }); }
+    if (action === 'loadJobPlans')     { return jsonOut({ ok: true, success: true, jobPlans: getJobPlanStore() }); }
+    if (action === 'loadChangeOrders') { return jsonOut({ ok: true, success: true, changeOrders: getChangeOrderStore() }); }
+    if (action === 'loadLogs')         { return jsonOut({ ok: true, success: true, logs: getLogStore() }); }
+    if (action === 'loadContractors')  { return jsonOut({ ok: true, success: true, contractors: getContractorStore() }); }
+    // The inventory manifest — the durable copy of the item record. `jobId` scopes it
+    // to one estate; without it the whole store comes back, which grows forever.
+    if (action === 'loadMedia')        { return jsonOut({ ok: true, success: true, media: getMediaForJob(e.parameter.jobId) }); }
+
+    if (action === 'createFolder') {
+      var hvlId = e.parameter.hvlId || '';
+      var clientName = e.parameter.clientName || 'Client';
+      var svc = e.parameter.svc || '';
+      return jsonOut(createJobFolder(hvlId, clientName, svc));
+    }
+
+    return jsonOut({ ok: false, success: false, error: 'Unknown action' });
+
+  } catch (error) {
+    Logger.log('doGet error: ' + error.toString());
+    return jsonOut({ ok: false, success: false, error: error.toString() });
+  }
+}
+
+function doPost(e) {
+  try {
+    var data = JSON.parse(e.postData.contents);
+
+    if (data.action === 'createFolder')  { return jsonOut(createJobFolder(data.hvlId, data.clientName, data.svc, data.subfolders, data.parentFolderId)); }
+    if (data.action === 'uploadFile')    { return jsonOut(uploadFileToDrive(data.folderId, data.filename, data.dataUrl)); }
+    if (data.action === 'uploadHtml')    { return jsonOut(uploadHtmlToDrive(data.folderId, data.filename, data.html)); }
+    if (data.action === 'htmlToPdf')     { return jsonOut(htmlToPdfBase64(data.html)); }
+    if (data.action === 'getSubfolders') { return handleGetSubfolders(data); }
+    if (data.action === 'getThumbnails')  { return jsonOut(getDriveThumbnails(data.fileIds)); }
+    if (data.action === 'trashFile')      { return jsonOut(trashDriveFile(data.fileId)); }
+    if (data.action === 'shareFolder')   { return jsonOut(shareFolder(data.folderId, data.email)); }
+    if (data.action === 'unshareFolder') { return jsonOut(unshareFolder(data.folderId, data.email)); }
+    if (data.action === 'esignSend')     { return jsonOut(esignSendEnvelope(data)); }
+    if (data.action === 'esignStatus')   { return jsonOut(esignEnvelopeStatus(data)); }
+    if (data.action === 'esignArchive')  { return jsonOut(esignArchiveEnvelope(data)); }
+    if (data.action === 'esignSendRequest') { return jsonOut(esignSendRequestEnvelope(data)); }
+    if (data.action === 'stripeLink')    { return jsonOut(stripeCreatePaymentLink(data)); }
+    if (data.action === 'stripeStatus')  { return jsonOut(stripePaymentsForLink(data)); }
+    if (data.action === 'agentIdentify') { return jsonOut(agentIdentifyShots(data)); }
+    if (data.action === 'agentValue')    { return jsonOut(agentValueLines(data)); }
+    if (data.action === 'agentRoomCheck') { return jsonOut(agentCheckRooms(data)); }
+
+    var type = data.type;
+    var payload = data.payload;
+    // The job and job-keyed writes answer with `dropped`: ids the sheet REFUSED because it
+    // has seen them before and no longer holds them (see JOB LEDGER). The app removes those
+    // from the device that sent them, which is how a stale browser stops resurrecting them.
+    if      (type === 'job')                 { return jsonOut(_okWithDrops(saveJobToSheet(payload))); }
+    else if (type === 'saveAllEstimates')    { return jsonOut(_okWithDrops(saveEstimateStore(payload))); }
+    else if (type === 'saveAllJobs')         { return jsonOut(_okWithDrops(saveAllJobsToSheet(payload))); }
+    else if (type === 'saveAllJobPlans')     { return jsonOut(_okWithDrops(saveJobPlanStore(payload))); }
+    else if (type === 'saveAllChangeOrders') { return jsonOut(_okWithDrops(saveChangeOrderStore(payload))); }
+    else if (type === 'saveAllLogs')         { return jsonOut(_okWithDrops(saveLogStore(payload))); }
+    else if (type === 'saveAllContractors')  { saveContractorStore(payload); }
+    else if (type === 'deleteContractor')    { deleteContractorFromStore(payload.id); }
+    else if (type === 'deleteJob')           { deleteJobFromSheet(payload.id); }
+    else if (type === 'saveInventory')       { return jsonOut(saveInventory(payload)); }
+    else if (type === 'saveMedia')           { return jsonOut(saveMediaStore(payload)); }
+    else if (type === 'log')                 { /* redundant single-entry log; saveAllLogs is authoritative — ignore */ }
+    else { return jsonOut({ ok: false, success: false, error: 'Unknown type: ' + type }); }
+
+    return jsonOut({ ok: true, success: true });
+
+  } catch (error) {
+    Logger.log('doPost error: ' + error.toString());
+    return jsonOut({ ok: false, success: false, error: error.toString() });
+  }
+}
+
+// ══ DRIVE THUMBNAILS ═════════════════════════════════════════════════════════════
+// The Inventory tab shows a photo beside every line. It cannot fetch those photos from
+// Drive directly and MUST NOT TRY: shareFolder grants access with folder.addViewer(email)
+// — named viewers only, never "anyone with the link" — so drive.google.com demands an
+// authenticated session, and the app is served from GitHub Pages, which makes that a
+// cross-site request. Safari blocks third-party cookies by default, so an <img> pointed
+// at drive.google.com/thumbnail renders on desktop Chrome and fails on the iPad. Failing
+// on one device only is worse than failing on all of them: it looks like missing photos
+// on exactly the machine the work is done on.
+//
+// This script runs AS the Havellin account and already holds full Drive access, so it can
+// simply hand the bytes back. Nothing about how the folder is shared changes.
+//
+// Returns { ok, thumbs: { fileId: dataUri }, missing: [fileId] }. A file that cannot be
+// read is reported in `missing` rather than failing the batch — one deleted photo must
+// not blank out the other forty.
+var THUMB_MAX_IDS    = 60;      // one tab-load's worth; the app pages beyond this
+var THUMB_PX         = 240;     // long edge of the thumbnail we ask Drive for
+var THUMB_MAX_BYTES  = 60000;   // per image, before base64 - a real thumbnail is ~10KB
+var THUMB_BUDGET     = 1200000; // total per response, so one batch cannot blow the limit
+
+// A REAL thumbnail, not the whole photograph. This matters more than it looks: the app
+// compresses to 900px before upload, so a full item photo is ~130KB, and 300 of those is
+// 40MB - past the Apps Script response limit, past the browser's localStorage quota, and
+// far too much to paint on every re-render.
+//
+// EVERY SOURCE IS SIZE-CHECKED, and that is the lesson. `getThumbnail()` is documented as
+// returning the file's thumbnail; on a real Havellin photo it returned the whole 130KB
+// image, and an earlier version trusted it and shipped exactly what this function exists
+// to avoid. Trust the measurement, not the method name.
+function _thumbAccept(blob, via) {
+  if (!blob) return null;
+  try { if (blob.getBytes().length > THUMB_MAX_BYTES) return null; } catch (e) { return null; }
+  return { blob: blob, via: via };
+}
+
+// The Drive API's thumbnailLink, requested at our own size. Official route, and the only
+// one where we choose the dimensions.
+//
+// `supportsAllDrives` is not optional decoration: without it drive.files.get answers
+// "File not found" for a file DriveApp opens perfectly well, because the folder lives in a
+// Shared Drive. That is exactly the error this hit on the real Havellin folder.
+function _thumbViaLink(file) {
+  var meta = null;
+  var args = { fields: 'thumbnailLink', supportsAllDrives: true };
+  try { meta = Drive.Files.get(file.getId(), args); }              // v3
+  catch (eV3) { meta = Drive.Files.get(file.getId(), { supportsAllDrives: true }); }  // v2
+  var link = meta && meta.thumbnailLink;
+  if (!link) return null;
+  return _fetchThumbUrl(link.replace(/=s\d+(-c)?$/, '') + '=s' + THUMB_PX);
+}
+
+// Drive's own thumbnail endpoint, sized. This needs NO advanced service — just the script's
+// OAuth token — so it is the fallback when the Drive API is unavailable or refuses the id.
+//
+// NOTE the asymmetry with the browser: the app must never point an <img> at this URL,
+// because a browser sends cookies rather than a token and Safari blocks them cross-site
+// (see _invThumbHTML in havellin.html). Server-side, with a Bearer token, it is fine.
+function _thumbViaEndpoint(file) {
+  return _fetchThumbUrl('https://drive.google.com/thumbnail?id=' + encodeURIComponent(file.getId())
+    + '&sz=w' + THUMB_PX);
+}
+
+function _fetchThumbUrl(url) {
+  var r = UrlFetchApp.fetch(url, {
+    headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+    muteHttpExceptions: true,
+    followRedirects: true
+  });
+  if (r.getResponseCode() !== 200) return null;
+  var blob = r.getBlob();
+  // An auth wall comes back as 200 with an HTML body. A thumbnail is an image.
+  var type = String(blob.getContentType() || '');
+  if (type.indexOf('image/') !== 0) return null;
+  return blob;
+}
+
+function _thumbBlobFor(file) {
+  var got = null;
+  try { got = _thumbAccept(_thumbViaLink(file), 'thumbnailLink'); if (got) return got; } catch (e) {}
+  try { got = _thumbAccept(_thumbViaEndpoint(file), 'thumbnailEndpoint'); if (got) return got; } catch (e) {}
+  try { got = _thumbAccept(file.getThumbnail(), 'getThumbnail'); if (got) return got; } catch (e) {}
+  // The file itself, and only when it is genuinely small - a manual line item's snapshot,
+  // say. Never ship a full photograph to fill a 40px box.
+  try { got = _thumbAccept(file.getBlob(), 'fullBlob'); if (got) return got; } catch (e) {}
+  return null;
+}
+
+function getDriveThumbnails(fileIds) {
+  if (!fileIds || !fileIds.length) return { ok: true, thumbs: {}, missing: [] };
+  var ids = fileIds.slice(0, THUMB_MAX_IDS);
+  var thumbs = {}, missing = [], spent = 0;
+  for (var i = 0; i < ids.length; i++) {
+    var id = String(ids[i] || '').trim();
+    if (!id) continue;
+    try {
+      var got = _thumbBlobFor(DriveApp.getFileById(id));
+      if (!got) { missing.push(id); continue; }
+      var type = got.blob.getContentType() || 'image/jpeg';
+      var uri = 'data:' + type + ';base64,' + Utilities.base64Encode(got.blob.getBytes());
+      // Stop before the response gets too large rather than failing the whole batch. The
+      // app asks again for whatever it still does not have.
+      if (spent + uri.length > THUMB_BUDGET) break;
+      spent += uri.length;
+      thumbs[id] = uri;
+    } catch (err) {
+      missing.push(id);
+    }
+  }
+  return { ok: true, success: true, thumbs: thumbs, missing: missing };
+}
+
+// Run this from the Apps Script editor (Run menu) after pasting a new version, BEFORE
+// relying on the app. It takes no arguments, because the Run menu cannot pass any — the
+// same reason pruneQuoStale works the way it does. It finds the newest image anywhere
+// under the Havellin root folder and thumbnails it, so a green log line here proves the
+// whole path: the function is deployed, Drive is reachable, and thumbnails come back.
+function testDriveThumbnails() {
+  var root = DriveApp.getFolderById(ROOT_FOLDER_ID);
+  var found = null;
+  var stack = [root], guard = 0;
+  while (stack.length && !found && guard++ < 400) {
+    var f = stack.pop();
+    var files = f.getFilesByType('image/jpeg');
+    if (files.hasNext()) { found = files.next(); break; }
+    var subs = f.getFolders();
+    while (subs.hasNext()) stack.push(subs.next());
+  }
+  if (!found) {
+    Logger.log('No JPEG found under the root folder yet — take a photo on the Job Plan first.');
+    return;
+  }
+  // Probe every source and print what each one gave back. When this path misbehaves the
+  // useful question is always "which source, and how big", and guessing at it from a
+  // single OK line is what let a 130KB "thumbnail" through the first time.
+  Logger.log('File: ' + found.getName());
+  var kb = function(blob) {
+    try { return Math.round(blob.getBytes().length / 1024) + ' KB'; } catch (e) { return 'unreadable'; }
+  };
+  var link = null, endp = null, thumb = null, full = null;
+  try { link  = _thumbViaLink(found); } catch (e) { Logger.log('thumbnailLink threw: ' + e); }
+  try { endp  = _thumbViaEndpoint(found); } catch (e) { Logger.log('thumbnailEndpoint threw: ' + e); }
+  try { thumb = found.getThumbnail(); } catch (e) {}
+  try { full  = found.getBlob(); } catch (e) {}
+  Logger.log('  thumbnailLink     : ' + (link  ? kb(link)  : 'nothing returned'));
+  Logger.log('  thumbnailEndpoint : ' + (endp  ? kb(endp)  : 'nothing returned'));
+  Logger.log('  getThumbnail      : ' + (thumb ? kb(thumb) : 'nothing returned'));
+  Logger.log('  full file         : ' + (full  ? kb(full)  : 'nothing returned'));
+
+  var got = _thumbBlobFor(found);
+  if (!got) {
+    Logger.log('FAILED - nothing came back under the ' + Math.round(THUMB_MAX_BYTES / 1024)
+      + ' KB cap. Send the four lines above on; the app will show category glyphs meanwhile, '
+      + 'and every record still works.');
+    return;
+  }
+  Logger.log('USING: ' + got.via + ' at ' + kb(got.blob) + ' - good.');
+}
+
+// ══ RESETTING THE DUMMY DATA ═════════════════════════════════════════════════════
+// Written 2026-09-02 to clear the practice clients before real jobs start.
+//
+// TWO STEPS ON PURPOSE, the same shape as pruneQuoStale / pruneQuoStaleConfirm: the
+// preview tells you exactly what will go, and a separately-named function is the only
+// thing that actually removes it. Nothing here is reachable over HTTP — it is not in
+// doGet or doPost — so a stray request can never trigger it.
+//
+// WHAT IT DOES NOT TOUCH, deliberately:
+//   - the Vendor Directory and Referral Partners sheets. Different spreadsheets, real
+//     data, 150+ rows you spent real time on.
+//   - ContractorStore. Contractors are your crew, not practice clients. Pass true to
+//     resetAllJobDataConfirm to include it.
+//   - Drive. Job folders and their photos are left alone — see trashJobFoldersConfirm.
+var RESET_JOB_STORES = ['EstimateStore', 'JobPlanStore', 'ChangeOrderStore', 'LogStore', 'MediaStore'];
+// ⚠ 'Estimates' and 'Hours' are DEAD TABS and this is worth knowing before you go looking
+// for data in them. The app has never posted type:'estimate' or type:'hours'; the two
+// handlers that answered them were deleted on 2026-09-11 along with their dispatch lines
+// and their BACKEND_TYPES entries, so nothing can write to either tab again. The tabs
+// themselves are left in the reset list: an old deployment really did create them, and a
+// sheet that still has one wants it cleared with the rest of the practice data.
+// The real estimate data is the EstimateStore blob, the real hours are LogStore, and both
+// look like unreadable JSON rather than a friendly table. Someone clearing the practice data
+// by hand will empty 'Estimates', see it was already empty, and conclude the estimates are
+// gone. They are not.
+var RESET_JOB_SHEETS = ['Jobs', 'Estimates', 'Hours'];
+
+function previewReset() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  Logger.log('This is a PREVIEW. Nothing has been deleted.');
+  Logger.log('Spreadsheet: ' + ss.getName());
+  RESET_JOB_SHEETS.forEach(function(name) {
+    var sh = ss.getSheetByName(name);
+    var rows = sh ? Math.max(0, sh.getLastRow() - 1) : 0;
+    Logger.log('  ' + name + ' sheet: ' + rows + ' data row' + (rows === 1 ? '' : 's') + ' would be cleared');
+  });
+  RESET_JOB_STORES.forEach(function(name) {
+    // A store tab only exists once something has been written to it — a job with no hours
+    // logged never creates LogStore. Say "not present" rather than "0 records": they mean
+    // different things and only one of them is a reason to go looking for missing data.
+    if (!ss.getSheetByName(name)) { Logger.log('  ' + name + ': not present — nothing was ever written'); return; }
+    var obj = {};
+    try { obj = _readStoreBlob(name) || {}; } catch (e) {}
+    var n = Object.keys(obj).length;
+    Logger.log('  ' + name + ': ' + n + ' record' + (n === 1 ? '' : 's') + ' would be cleared');
+  });
+  var cont = {};
+  try { cont = _readStoreBlob('ContractorStore') || {}; } catch (e) {}
+  Logger.log('  ContractorStore: ' + Object.keys(cont).length + ' KEPT (your crew, not clients)');
+  var led = _readStoreBlob(JOB_LEDGER_STORE, null);
+  Logger.log('  JobLedger: ' + (led && led.seen ? Object.keys(led.seen).length : 0)
+    + ' job id(s) remembered — KEPT, and every id cleared below is added to it');
+  Logger.log('');
+  Logger.log('Job folders in Drive that trashJobFoldersConfirm() would move to Trash:');
+  var folders = _jobFolders();
+  if (!folders.length) Logger.log('  (none found under the Havellin root folder)');
+  folders.forEach(function(f){ Logger.log('  ' + f.getName()); });
+  Logger.log('');
+  Logger.log('To go ahead: run resetAllJobDataConfirm(). Drive is separate and stays until');
+  Logger.log('you run trashJobFoldersConfirm().');
+}
+
+function resetAllJobDataConfirm(alsoContractors) {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    // FIRST, before anything is cleared: make sure the ledger has seen every job that is
+    // about to go, so a device still holding one is refused when it next saves rather than
+    // merged straight back in. Ids come from the Jobs sheet AND the keyed stores — an
+    // estimate can outlive its job row, and a stale device pushes both.
+    var ledger = getJobLedger();
+    var going = getJobsFromSheet().map(function(j) { return j && j.id; });
+    ['EstimateStore', 'JobPlanStore', 'LogStore', 'MediaStore'].forEach(function(name) {
+      try { going = going.concat(Object.keys(_readStoreBlob(name, {}) || {})); } catch (e) {}
+    });
+    try { (_readStoreBlob('ChangeOrderStore', []) || []).forEach(function(co) { if (co && co.jobId != null) going.push(co.jobId); }); } catch (e) {}
+    _ledgerMarkSeen(ledger, going);
+    Logger.log('Ledger now remembers ' + Object.keys(ledger.seen).length + ' job id(s) as deleted-if-absent');
+
+    RESET_JOB_SHEETS.forEach(function(name) {
+      var sh = ss.getSheetByName(name);
+      if (!sh) return;
+      var last = sh.getLastRow();
+      // Row 1 is the header and stays — the app writes against those column names.
+      if (last > 1) sh.deleteRows(2, last - 1);
+      Logger.log('Cleared ' + name);
+    });
+    RESET_JOB_STORES.forEach(function(name) {
+      // Never CREATE a tab just to empty it — _writeStoreBlob inserts a missing sheet, so
+      // an unconditional call leaves behind empty stores the estate never had.
+      if (!ss.getSheetByName(name)) { Logger.log('Skipped ' + name + ' — not present'); return; }
+      _writeStoreBlob(name, {});
+      Logger.log('Cleared ' + name);
+    });
+    if (alsoContractors === true && ss.getSheetByName('ContractorStore')) {
+      _writeStoreBlob('ContractorStore', {});
+      Logger.log('Cleared ContractorStore (you asked for it explicitly)');
+    } else {
+      Logger.log('KEPT ContractorStore — pass true if you really want the crew gone too');
+    }
+  } finally {
+    lock.releaseLock();
+  }
+  Logger.log('');
+  Logger.log('Done on the sheet. A device that still has the app open will SHOW the old clients');
+  Logger.log('until it reloads or saves — but its next save is refused for those ids and it drops');
+  Logger.log('them itself, so nothing comes back. Settings → This Device → Clear still works to');
+  Logger.log('tidy a device straight away.');
+}
+
+// Job folders sit directly under the Havellin root and are named "Client - HVL-....".
+// Matching on that suffix means an unrelated folder someone filed there is left alone.
+function _jobFolders() {
+  var out = [];
+  var it = DriveApp.getFolderById(ROOT_FOLDER_ID).getFolders();
+  while (it.hasNext()) {
+    var f = it.next();
+    if (/ - HVL-/i.test(f.getName())) out.push(f);
+  }
+  return out;
+}
+
+// Separate from the sheet wipe, and separate on purpose: this is the photography. It goes
+// to Drive's Trash, not shredded, so there are ~30 days to change your mind.
+function trashJobFoldersConfirm() {
+  var folders = _jobFolders();
+  if (!folders.length) { Logger.log('No job folders found.'); return; }
+  folders.forEach(function(f) {
+    f.setTrashed(true);
+    Logger.log('Moved to Trash: ' + f.getName());
+  });
+  Logger.log('');
+  Logger.log(folders.length + ' folder(s) moved to Drive Trash — recoverable for about 30 days.');
+}
+
+// ══ RESET ONE CLIENT'S INVENTORY (2026-10-19) ══════════════════════════════════════════
+// Anthony, the first Ellison run: the drawers were photographed as hundreds of lines, and deleting the rows in the
+// client's Drive workbook and the Estate Inventory photographs reset nothing, because neither is the record: the
+// workbook is rebuilt from MediaStore on the next edit and the photographs are only linked. The record is this store's
+// entry for the job, cached on every device and merged as a union, so lines removed from the sheet by hand come back
+// from the first device that saves. This pair takes the Items pass off ONE job's entry (`_invResetDrops`,
+// saveInventory.gs: the lines and their close-ups; the as-found pass, the after shots, the collection and appraisal
+// documents and the walkthrough's unphotographed collection lines stay) and stamps the entry `invResetAt`, which
+// saveMediaStore and the app read from then on: a device still holding the old lines drops them when it next reads the
+// job, and on the 2026-10-19b deployment a save that still carries them is refused line by line. Everything else about
+// the client (the record, the estimate, the agreement, the plan, the hours, the signed papers) is untouched; the item
+// numbers start again from the highest number still on the entry. Editor-only, like previewReset: never reachable from
+// doGet/doPost. The Run menu passes no argument, so with none they list the jobs and change nothing.
+function previewResetInventory(jobId) {
+  var plan = _invResetPlan(jobId, 'previewResetInventory');
+  if (!plan) return;
+  Logger.log('This is a PREVIEW. Nothing has been changed.');
+  _invResetLog(plan);
+  Logger.log('');
+  Logger.log('To go ahead: run resetInventoryConfirm(' + plan.key + ').');
+}
+
+function resetInventoryConfirm(jobId) {
+  var lock = LockService.getScriptLock();
+  _lockOrBusy(lock);
+  try {
+    var plan = _invResetPlan(jobId, 'resetInventoryConfirm');
+    if (!plan) return;
+    var store = plan.store;
+    store[plan.key] = { savedAt: plan.at, items: plan.kept, invResetAt: plan.at };
+    _writeStoreBlob('MediaStore', store);
+    _invResetLog(plan);
+    Logger.log('');
+    Logger.log('Done on the sheet: ' + plan.dropped.length + ' record(s) off the inventory of ' + plan.name + '; the entry is stamped invResetAt=' + plan.at + '.');
+    Logger.log('On every device: reload the app and reopen the client (Settings → This Device → Clear does the same and more). A device reads the stamp when it next opens the job and drops the lines it still holds. On the 2026-10-19b deployment a save that still carries them is refused line by line; on an older one it merges them back, so reload every device before anybody photographs or edits a line.');
+    Logger.log('The client\'s inventory workbook in Drive is rebuilt from the record on the next edit or photograph; the photographs already in Drive are not touched (trash the Estate Inventory folder\'s files by hand if they should go).');
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
+  }
+}
+
+// What a reset of this job does, read once for the preview and the confirm. Null, after saying why, when there is
+// nothing to do: no id (the jobs are listed instead), or a job the Jobs sheet does not hold.
+function _invResetPlan(jobId, fnName) {
+  var jobsNow = getJobsFromSheet();
+  var store = getMediaStore();
+  if (jobId == null || jobId === '') {
+    Logger.log(fnName + ' needs the job\'s id, the first column of the Jobs sheet: ' + fnName + '(1727390000000). The jobs on the sheet, with their inventory:');
+    jobsNow.forEach(function(j) {
+      if (!j || j.id == null) return;
+      var items = (store[String(j.id)] && store[String(j.id)].items) || [];
+      var live = 0;
+      items.forEach(function(r) { if (r && r.label === 'inventory' && !r.collId && !r.deletedAt) live++; });
+      Logger.log('  ' + j.id + '  ' + (j.hvlId || '') + '  ' + (j.name || '') + '  — ' + live + ' live line(s), ' + items.length + ' record(s) in all');
+    });
+    return null;
+  }
+  var key = String(jobId);
+  var job = null;
+  for (var i = 0; i < jobsNow.length; i++) if (jobsNow[i] && String(jobsNow[i].id) === key) { job = jobsNow[i]; break; }
+  if (!job) {
+    Logger.log('No job ' + key + ' on the Jobs sheet. Nothing done. Run ' + fnName + '() with no argument to list the jobs and their ids.');
+    return null;
+  }
+  var entry = store[key] || {};
+  var items = entry.items || [];
+  var at = new Date().getTime();
+  var dropped = [], kept = [];
+  items.forEach(function(r) { (_invResetDrops(r, at) ? dropped : kept).push(r); });
+  return { key: key, name: (job.name || '(unnamed)') + ' (' + (job.hvlId || key) + ')', at: at, items: items, dropped: dropped, kept: kept,
+           store: store, priorResetAt: Number(entry.invResetAt) || 0 };
+}
+
+function _invResetLog(plan) {
+  var count = function(list, f) { var n = 0; list.forEach(function(r) { if (f(r)) n++; }); return n; };
+  Logger.log('Inventory of ' + plan.name + ': ' + plan.items.length + ' record(s) on MediaStore'
+    + (plan.priorResetAt ? ', reset before on ' + new Date(plan.priorResetAt).toISOString() : ''));
+  Logger.log('  OFF: ' + count(plan.dropped, function(r) { return r.label === 'inventory' && !r.deletedAt; }) + ' live line(s), '
+    + count(plan.dropped, function(r) { return r.label === 'inventory' && r.deletedAt; }) + ' removed line(s), '
+    + count(plan.dropped, function(r) { return r.label === 'detail'; }) + ' close-up(s)');
+  Logger.log('  KEPT: ' + count(plan.kept, function(r) { return r.label === 'before'; }) + ' as-found shot(s), '
+    + count(plan.kept, function(r) { return r.label === 'after'; }) + ' after shot(s), '
+    + count(plan.kept, function(r) { return r.label === 'inventory'; }) + ' walkthrough collection line(s) not yet photographed, '
+    + count(plan.kept, function(r) { return r.label !== 'before' && r.label !== 'after' && r.label !== 'inventory'; }) + ' other record(s) (collection and appraisal documents)');
+}
+
+// ══ STORE HELPERS ════════════════════════════════════════════════════════════════
+
+// A Google Sheets cell holds at most 50,000 characters. Every store here is one JSON
+// blob, and setValue() on a longer string THROWS — "Exceeds the maximum number of
+// characters allowed in a cell" — which fails the whole doPost. The app then reports a
+// failed sync, and because opening a job lets the sheet's copy win, the next open serves
+// the last SUCCESSFUL (older, smaller) blob straight over the work that never landed.
+// Silent revert: you save, come back, and the rooms you scored are gone.
+//
+// Measured on the real app: one fully-scored estimate serializes to about 16,250
+// characters, so EstimateStore blew the cap at the fourth such job. Chunked across rows
+// instead — column B of rows 2..N, reassembled on read. Reading an existing single-row
+// blob is unchanged, so no migration step.
+var _BLOB_CHUNK = 45000;   // headroom under the 50,000 cap
+
+function _writeStoreBlob(sheetName, obj) {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sheet = ss.getSheetByName(sheetName);
+  if (!sheet) { sheet = ss.insertSheet(sheetName); sheet.appendRow(['Updated', 'JSON']); }
+  var json = JSON.stringify(obj);
+  var chunks = [];
+  for (var i = 0; i < json.length; i += _BLOB_CHUNK) chunks.push(json.substr(i, _BLOB_CHUNK));
+  if (!chunks.length) chunks.push('');
+  var stamp = new Date().toISOString();
+  // Clear every old data row first. Without this a blob that shrinks leaves the tail of
+  // the previous, longer one behind, and the reader concatenates JSON + garbage.
+  var last = sheet.getLastRow();
+  if (last > 1) sheet.getRange(2, 1, last - 1, 2).clearContent();
+  var rows = chunks.map(function(c, n) { return [n === 0 ? stamp : '', c]; });
+  sheet.getRange(2, 1, rows.length, 2).setValues(rows);
+}
+
+// Reassemble a chunked blob. Falls back cleanly to the old single-cell layout, and to
+// the caller's empty value when the sheet is missing, blank, or holds unparseable JSON.
+function _readStoreBlob(sheetName, empty) {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sheet = ss.getSheetByName(sheetName);
+  if (!sheet) return empty;
+  var last = sheet.getLastRow();
+  if (last < 2) return empty;
+  var col = sheet.getRange(2, 2, last - 1, 1).getValues();
+  var json = '';
+  for (var i = 0; i < col.length; i++) {
+    var v = col[i][0];
+    if (v === '' || v === null || v === undefined) break;   // first blank ends the blob
+    json += String(v);
+  }
+  if (!json) return empty;
+  // ⚠⚠ UNREADABLE IS NOT EMPTY (P11, 2026-09-30, audit M9). This returned the caller's empty value
+  // when the JSON would not parse, and every save merges INTO what it reads: the next save of that
+  // store then wrote back only what that one save carried, and every other job's estimates, plans,
+  // hours or change orders were gone. It throws instead, so the read and the write both refuse, the
+  // tab is left exactly as it is, and the app's retry holds the unsent write until someone restores
+  // the tab from the spreadsheet's version history.
+  try { return JSON.parse(json); }
+  catch (e) {
+    throw new Error('STORE_UNREADABLE: the ' + sheetName + ' tab holds data that is not valid JSON ('
+      + json.length + ' characters), so nothing was read from it or written to it. Restore the tab from '
+      + 'File > Version history in the spreadsheet; the app sends its waiting saves again by itself.');
+  }
+}
+
+// ⚠⚠ A SAVE THAT CANNOT GET THE LOCK DOES NOT WRITE (P11, 2026-09-30, audit M9). Nine save paths did
+// `try { lock.waitLock(20000); } catch (e) {}` and went on to read-merge-write the store WITHOUT the
+// lock after a timeout, which is exactly the interleaving the lock exists to stop: two saves read the
+// same blob and the second write erases the first. It throws `busy` instead; doPost answers
+// {ok:false, error}, and the app's outbox holds the write and sends it again.
+function _lockOrBusy(lock) {
+  if (!lock.tryLock(20000)) {
+    throw new Error('busy: another save held the sheet for 20 seconds, so this one was not written; the app sends it again by itself.');
+  }
+}
+
+// Merge two {key: entry} stores. Per key keep the entry with the newer savedAt;
+// never drop a key present on only one side (absence != delete).
+function _mergeStoreByKey(existing, incoming) {
+  var out = {};
+  for (var k in existing) out[k] = existing[k];
+  for (var k in incoming) {
+    var inc = incoming[k], cur = out[k];
+    var inT  = inc && inc.savedAt ? Number(inc.savedAt) : 0;
+    var curT = cur && cur.savedAt ? Number(cur.savedAt) : -1;
+    if (!cur || inT >= curT) out[k] = inc;
+  }
+  return out;
+}
+
+// ══ JOB LEDGER — the sheet's memory of every job it has ever held ════════════════
+// Reported 2026-09-08. Anthony cleared every row of the Jobs sheet by hand to start over.
+// Ashley's laptop still had the app open from before, holding the old clients in memory.
+// She added one new client; saveAllJobs sent the whole array; and the merge below — which
+// unions by id and never drops a job missing from the payload — took the three deleted
+// clients straight back. That union is the right rule for two devices that each hold a
+// client the other has not seen. It is the wrong rule for a device holding a client the
+// sheet DELIBERATELY no longer has, and the merge could not tell the two cases apart.
+//
+// Now it can. JobLedger is { since: ms, seen: { "<id>": firstSeenMs }, restore: {...} } —
+// every job id the sheet has ever written. A job the ledger has seen and the Jobs sheet no
+// longer holds was DELETED — by the deleteJob action, by resetAllJobDataConfirm, or by
+// somebody deleting the row in the spreadsheet — and an incoming copy is refused, not
+// merged. A job the ledger has never seen is new and goes in.
+//
+// Why a LEDGER of what was seen, rather than tombstones written by deleteJob: nothing runs
+// when a row is deleted in the spreadsheet, so a tombstone written by the delete action
+// would not exist for exactly the case that was reported.
+//
+// `since` closes the bootstrap gap. The ledger is seeded from the Jobs sheet the first time
+// it is needed, so a job deleted BEFORE this deployment is in neither the sheet nor the
+// ledger and would otherwise be taken as new. A job id is its creation time (id: Date.now()
+// in the app), so a never-seen job created before the ledger existed, that the sheet does
+// not hold, is refused too. That loses nothing: the sheet overwrites a device's job list
+// wholesale on every reload, so such a job was already gone from every device that had
+// reloaded since.
+//
+// ⚠ The ledger is NOT in RESET_JOB_STORES and must never be: it is the memory of the reset.
+// To let a device put a job back on purpose, see allowJobRestoreConfirm.
+var JOB_LEDGER_STORE = 'JobLedger';
+
+function getJobLedger() {
+  var led = _readStoreBlob(JOB_LEDGER_STORE, null);
+  if (led && led.seen && led.since) { if (!led.restore) led.restore = {}; return led; }
+  // First use: everything the sheet holds right now has been seen, as of now.
+  led = { since: Date.now(), seen: {}, restore: {} };
+  getJobsFromSheet().forEach(function(j) { if (j && j.id != null) led.seen[String(j.id)] = led.since; });
+  _writeStoreBlob(JOB_LEDGER_STORE, led);
+  return led;
+}
+
+// Record ids the Jobs sheet now holds. `seen` only ever grows; an id written after being
+// allowed back (restore) is spent from that list, so the permission is single-use.
+function _ledgerMarkSeen(ledger, ids) {
+  var now = Date.now(), changed = false;
+  (ids || []).forEach(function(id) {
+    if (id == null || id === '') return;
+    var k = String(id);
+    if (!ledger.seen[k]) { ledger.seen[k] = now; changed = true; }
+    if (ledger.restore && ledger.restore[k]) { delete ledger.restore[k]; changed = true; }
+  });
+  if (changed) _writeStoreBlob(JOB_LEDGER_STORE, ledger);
+}
+
+// '' to accept an incoming job (or a store record keyed by its id), else why it is refused:
+//   'deleted'  — the ledger has seen this id and the Jobs sheet no longer holds it.
+//   'predates' — never seen, not held, and created before the ledger existed.
+// `present` is the { "<id>": true } map of what the Jobs sheet holds right now.
+function _jobRefusal(id, created, present, ledger) {
+  if (id == null || id === '') return '';
+  var k = String(id);
+  if (present[k]) return '';
+  if (ledger.restore && ledger.restore[k]) return '';
+  if (ledger.seen[k]) return 'deleted';
+  var born = Number(id);
+  if (!isFinite(born) || born < 1e12) born = Date.parse(created || '') || 0;
+  if (born && born < ledger.since) return 'predates';
+  return '';
+}
+
+function _presentJobIds(jobsArr) {
+  var m = {};
+  (jobsArr || []).forEach(function(j) { if (j && j.id != null) m[String(j.id)] = true; });
+  return m;
+}
+
+// Every id the ledger has seen that the Jobs sheet no longer holds.
+function _deletedJobIds(present, ledger) {
+  return Object.keys(ledger.seen).filter(function(k) { return !present[k]; });
+}
+
+// Strip records for refused jobs out of a { jobId: ... } payload, returning the ids dropped.
+// The keyed stores are what a stale device pushes right behind its job list, and each of
+// their merges unions — so a refused job would come back as a headless estimate, plan or
+// hours log if these were left alone.
+function _stripRefusedJobKeys(obj, ctx) {
+  if (!obj || typeof obj !== 'object') return [];
+  ctx = ctx || _jobRefusalCtx();
+  var present = ctx.present, ledger = ctx.ledger, dropped = [];
+  Object.keys(obj).forEach(function(k) {
+    if (_jobRefusal(k, null, present, ledger)) { delete obj[k]; dropped.push(k); }
+  });
+  if (dropped.length) Logger.log('Refused records for deleted job(s): ' + dropped.join(', '));
+  return dropped;
+}
+
+// One read of the Jobs sheet and the ledger, shared by the strip and the sweep below.
+// They ask the same two questions on every save; reading twice doubles the slowest part
+// of the write for no benefit.
+function _jobRefusalCtx() {
+  return { present: _presentJobIds(getJobsFromSheet()), ledger: getJobLedger() };
+}
+
+// THE STANDING CLEANUP. Drop records already IN a store whose job the ledger has seen and
+// the Jobs sheet no longer holds. _stripRefusedJobKeys refuses a deleted job's record on
+// the way IN; nothing removed one that was already sitting in the store when its row was
+// deleted, so orphans accumulated forever — invisible in the app (no job row means the
+// estimate never renders), invisible in the sheet (they are inside a 45,000-character JSON
+// cell), and serialized into every subsequent write, pushing the blob toward the per-cell
+// character cap for no benefit at all.
+//
+// ⚠ ONLY the 'deleted' verdict, NEVER 'predates'. 'deleted' rests on a positive record:
+// the ledger watched that id go into the sheet and the sheet no longer has it. 'predates'
+// is an INFERENCE from absence, and an inference is not a thing to act on automatically on
+// every save — one bad read of the Jobs sheet would take the whole store with it. Pre-ledger
+// orphans are cleared by pruneOrphanRecordsConfirm, where a person decides.
+//
+// ⚠ AND IT REFUSES TO RUN AGAINST AN EMPTY JOBS SHEET, for the same reason: no jobs present
+// makes every seen id look deleted. A genuinely empty sheet is what resetAllJobDataConfirm
+// is for. Returns the keys removed; mutates the store in place.
+function _sweepDeletedJobKeys(store, present, ledger) {
+  var gone = [];
+  if (!store || !present || !Object.keys(present).length) return gone;
+  Object.keys(store).forEach(function(k) {
+    if (_jobRefusal(k, null, present, ledger) === 'deleted') { delete store[k]; gone.push(k); }
+  });
+  if (gone.length) Logger.log('Swept records for deleted job(s): ' + gone.join(', '));
+  return gone;
+}
+
+// Remove every keyed record belonging to these job ids, across ALL FIVE stores. ONE
+// definition, shared by deleteJobFromSheet and pruneOrphanRecordsConfirm — two copies of
+// "which stores hold job-keyed records" is precisely how MediaStore and ChangeOrderStore
+// came to be missed by the delete path while the other three were purged correctly.
+// Returns { StoreName: [ids removed] } so a caller can report what it really did.
+function _purgeJobFromStores(ids) {
+  var keys = {}, removed = {};
+  (ids || []).forEach(function(id) { if (id != null && id !== '') keys[String(id)] = true; });
+  if (!Object.keys(keys).length) return removed;
+  // Four of the five are objects keyed by job id. _readStoreBlob answers null for a tab
+  // that does not exist, which is left alone — never CREATE a store just to empty it.
+  ['EstimateStore', 'JobPlanStore', 'LogStore', 'MediaStore'].forEach(function(name) {
+    try {
+      var store = _readStoreBlob(name, null);
+      if (!store) return;
+      var hit = Object.keys(store).filter(function(k) { return keys[k]; });
+      if (!hit.length) return;
+      hit.forEach(function(k) { delete store[k]; });
+      _writeStoreBlob(name, store);
+      removed[name] = hit;
+    } catch (e) { Logger.log('purge ' + name + ': ' + e); }
+  });
+  // ChangeOrderStore is an ARRAY, filed under co.jobId rather than under its own key.
+  try {
+    var cos = _readStoreBlob('ChangeOrderStore', null);
+    if (cos && cos.length) {
+      var gone = [];
+      var keep = cos.filter(function(co) {
+        if (co && co.jobId != null && keys[String(co.jobId)]) {
+          if (gone.indexOf(String(co.jobId)) < 0) gone.push(String(co.jobId));
+          return false;
+        }
+        return true;
+      });
+      if (gone.length) { _writeStoreBlob('ChangeOrderStore', keep); removed.ChangeOrderStore = gone; }
+    }
+  } catch (e) { Logger.log('purge ChangeOrderStore: ' + e); }
+  return removed;
+}
+
+// Run from the editor. Lists the ids the ledger will refuse — i.e. what a stale device
+// would be prevented from putting back — with the client name where the estimate store
+// still knows it.
+function previewDeletedJobs() {
+  var present = _presentJobIds(getJobsFromSheet()), ledger = getJobLedger();
+  var gone = _deletedJobIds(present, ledger);
+  Logger.log(gone.length + ' deleted job id(s) the sheet will refuse to take back:');
+  var est = _readStoreBlob('EstimateStore', {}) || {};
+  gone.forEach(function(k) {
+    var name = est[k] && est[k].estimate && est[k].estimate.clientName ? ' — ' + est[k].estimate.clientName : '';
+    Logger.log('  ' + k + name + '  (first seen ' + new Date(ledger.seen[k]).toISOString() + ')');
+  });
+  Logger.log("To let a device restore one on purpose, edit the call and run allowJobRestoreConfirm(['<id>']).");
+}
+
+// The escape hatch for a row deleted by mistake. Before the ledger a stale device would
+// have put it back by accident; now nothing can, unless you say so here. Single-use: the
+// permission is spent the moment a device writes the job. Takes the ids as an argument, so
+// it cannot be run from the Run menu by accident — you edit the call.
+function allowJobRestoreConfirm(ids) {
+  if (!ids || !ids.length) { Logger.log("Pass the job id(s) to allow back, e.g. allowJobRestoreConfirm(['1757000000000'])"); return; }
+  var ledger = getJobLedger();
+  if (!ledger.restore) ledger.restore = {};
+  ids.forEach(function(id) { ledger.restore[String(id)] = Date.now(); });
+  _writeStoreBlob(JOB_LEDGER_STORE, ledger);
+  Logger.log('The next device that saves ' + ids.join(', ') + ' will be allowed to put it back.');
+}
+
+// ORPHANED RECORDS — an estimate, plan, log or manifest whose job row is gone ══════
+// Reported 2026-09-09: "why do they ever stay there? these are all dummy jobs." The sheet
+// held FIVE estimates against ONE job — four practice clients cleared out of the Jobs tab
+// by hand in July and August, whose estimates nobody ever removed. Invisible in the app (no
+// job row, so the estimate never renders) and invisible in the sheet (they live inside a
+// 45,000-character JSON cell), which is exactly why they went unnoticed for six weeks.
+//
+// From 2026-09-09 the save path sweeps this class automatically — see _sweepDeletedJobKeys.
+// These two are for the records that predate the ledger, where the only evidence is absence
+// and a person should look before anything is deleted. Same preview/confirm split as
+// pruneQuoStale and resetAllJobDataConfirm, and deliberately NOT in doGet or doPost, so no
+// HTTP request can reach them.
+
+// Every job-keyed record the Jobs sheet has no row for, with the reason.
+function _orphanJobRecords() {
+  var present = _presentJobIds(getJobsFromSheet()), ledger = getJobLedger(), found = {};
+  function note(k, name, why) {
+    if (!found[k]) found[k] = { why: why, stores: [] };
+    if (found[k].stores.indexOf(name) < 0) found[k].stores.push(name);
+  }
+  ['EstimateStore', 'JobPlanStore', 'LogStore', 'MediaStore'].forEach(function(name) {
+    var store = _readStoreBlob(name, null);
+    if (!store) return;
+    Object.keys(store).forEach(function(k) {
+      var why = _jobRefusal(k, null, present, ledger);
+      if (why) note(k, name, why);
+    });
+  });
+  (_readStoreBlob('ChangeOrderStore', null) || []).forEach(function(co) {
+    if (!co || co.jobId == null) return;
+    var why = _jobRefusal(co.jobId, null, present, ledger);
+    if (why) note(String(co.jobId), 'ChangeOrderStore', why);
+  });
+  return { present: present, orphans: found };
+}
+
+function previewOrphanRecords() {
+  var r = _orphanJobRecords(), ids = Object.keys(r.orphans);
+  var est = _readStoreBlob('EstimateStore', {}) || {};
+  Logger.log('This is a PREVIEW. Nothing has been deleted.');
+  Logger.log('Jobs sheet holds ' + Object.keys(r.present).length + ' job(s).');
+  if (!ids.length) { Logger.log('No orphaned records — every stored record has a job row.'); return; }
+  Logger.log(ids.length + ' job id(s) with records but no row in Jobs:');
+  ids.forEach(function(k) {
+    var o = r.orphans[k], e = est[k] && est[k].estimate ? est[k].estimate : null;
+    // The client NAME lived on the Jobs row and went with it; the estimate snapshot carries
+    // only the service and the money. Print those so a person can still recognise the job.
+    var what = e ? ('  ' + (e.svc || '?') + ' $' + (e.havellinTotal || 0)) : '';
+    Logger.log('  ' + k + '  (' + (o.why === 'deleted' ? 'deleted' : 'predates the ledger')
+      + ')  in ' + o.stores.join(', ') + what
+      + '  created ' + new Date(Number(k)).toISOString().slice(0, 10));
+  });
+  Logger.log('');
+  Logger.log('To clear them: run pruneOrphanRecordsConfirm().');
+}
+
+// Removes them. Contractors, vendors, referral partners and Drive are untouched — this
+// only ever deletes records filed under a job id the Jobs sheet does not have.
+function pruneOrphanRecordsConfirm(force) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    var r = _orphanJobRecords(), ids = Object.keys(r.orphans);
+    if (!ids.length) { Logger.log('Nothing to do — no orphaned records.'); return; }
+    // ⚠ An empty Jobs sheet makes EVERY stored record look orphaned. That is either a bad
+    // read or a sheet somebody just cleared by hand, and neither is a reason to delete every
+    // estimate the business has. resetAllJobDataConfirm is the deliberate way to clear
+    // everything; pass true here only if you really mean this one.
+    if (!Object.keys(r.present).length && force !== true) {
+      Logger.log('REFUSED: the Jobs sheet has no jobs, so all ' + ids.length
+        + ' stored record(s) look orphaned.');
+      Logger.log('Use resetAllJobDataConfirm() to clear everything, or');
+      Logger.log('pruneOrphanRecordsConfirm(true) if you really mean to delete these.');
+      return;
+    }
+    // Remember them before they go, so a stale device cannot push them back afterwards.
+    _ledgerMarkSeen(getJobLedger(), ids);
+    var removed = _purgeJobFromStores(ids);
+    Object.keys(removed).forEach(function(name) {
+      Logger.log('Cleared ' + removed[name].length + ' record(s) from ' + name);
+    });
+    Logger.log('Done — ' + ids.length + ' orphaned job id(s) cleared: ' + ids.join(', '));
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// ══ THE JOB RECORD MERGES PER KEY TOO ════════════════════════════════════════════
+//
+// ⚠⚠ A JOB IS NOT A SCALAR, AND MERGING IT AS ONE DESTROYS MONEY. Found 2026-09-12 by
+// auditing what else still merged the way the job plan did before the 09-11 fix. Both
+// job paths took the newer WHOLE record on updatedAt — and a job carries several
+// independently-edited sub-records: job.payments[] (what the client actually paid),
+// job.docState{} (which documents have gone out and been filed), job.appraisers[] and
+// job.invSnapshots[]. Driven on this function, both devices holding the morning's copy:
+// the desk records a $12,857 deposit cheque at 2pm; the house marks the agreement signed
+// at 3pm without having reloaded; the sheet ends up with the signature and NO PAYMENT.
+// Nothing on either screen says so.
+//
+// ⚠ The rule is the job plan's rule, and deliberately the same mechanism rather than a
+// second one: keyed sub-records resolve KEY BY KEY against `job.at['<kind>:<key>']`, and
+// AN UNSTAMPED KEY IS THE WEAKEST CLAIM — it means that device never touched it, so it
+// loses to a stamped one whatever updatedAt says. Everything else on the job is a scalar
+// somebody sets, and there the newer record is genuinely right.
+//
+// ⚠ A STAMP WITH NO VALUE IS A REMOVAL. That is what lets removeAppraiser and
+// removeInventorySnapshot survive a merge from a device that still holds the record live:
+// absence ALONE is never a deletion (that is how a stale laptop resurrects things), but
+// absence plus a touch means this device took it out. The stamps union newest-per-key, so
+// the removal keeps winning against every later stale save.
+// ⚠ AND THE JOB'S RECORD LISTS (2026-10-03, P19): co-representatives, beneficiaries, specific bequests, signed
+// copies filed to Drive, finds on site (an original will, cash) and proceeds statements, each entry keyed on its
+// own `id`. Two people add to these at once, so riding the whole record would let the newer copy drop the other's
+// entry; incidents (P26, 2026-10-16) too. The app's JOB_RECORD_LISTS names the same seven, and a test holds the two lists level.
+var JOB_KEYED_LISTS = ['payments', 'appraisers', 'invSnapshots',
+                       'coFiduciaries', 'beneficiaries', 'bequests', 'signedRecords', 'siteFinds', 'proceedsStatements',
+                       'accessItems', 'accessEvents', 'incidents'];   // the keys and access items, and every act on them (2026-10-16)
+// `mustFound` (2026-09-19): the Found ticks against intake's must-find list, one key per
+// line — ticked in the house, corrected at the desk, which is exactly the two-device shape
+// docState has. The app stamps every tick AND every untick (an untick with no stamp would
+// read as absence, and absence alone is never a removal).
+// ⚠⚠ AND THE MAPS TWO PEOPLE EDIT AT ONCE (P11, 2026-09-30, the C2 follow-up). Vendor quotes and
+// statuses (four sourcing buckets), the job team, vendor ratings, the review ask and the house
+// checklist all used to ride the WHOLE record, so a device that saved ANY part of a job on its morning
+// copy put back its stale copy of every one of these: a confirmed $23,400 painter, a confirmed team
+// and an $850 dumpster came off one job that way. The app stamps each key it changes
+// (`_saveJobEdit(job, kind, key)`, `_stampChangedKeys`), including removals, so each merges alone.
+// The crew merges by its top-level parts (tc, tc2, ps, the sign-off fields); the review ask and the
+// checklist by field and by row.
+var JOB_KEYED_MAPS  = ['docState', 'mustFound', 'vendorSourcing', 'prepSourcing', 'logisticsSourcing',
+                       'collSourcing', 'crew', 'vendorRatings', 'reviewAsk', 'houseFlags'];
+// Per-list identity. ⚠ `payments` used to be minted `max(id)+1` PER DEVICE, so two people
+// each recording a payment both produced the same id and union-by-id would fuse two real
+// payments into one. The app mints a uid now; `id` stays the fallback so a payment written
+// before this deployment still has a key, exactly as _srcLineKey keeps its index fallback.
+var JOB_LIST_KEY = { payments: 'uid', appraisers: 'id', invSnapshots: 'ts',
+                     coFiduciaries: 'id', beneficiaries: 'id', bequests: 'id', signedRecords: 'id', siteFinds: 'id', proceedsStatements: 'id',
+                     accessItems: 'id', accessEvents: 'id', incidents: 'id' };
+
+// ⚠⚠ WHAT A PAYMENT KEEPS ONCE EITHER COPY HAS IT (2026-09-30b, P16). A payment merges as one value on its
+// `payments:<uid>` stamp, and the stamp alone lets a device that had NOT seen a void — an iPad offline in
+// the field, a laptop that had not reloaded — write the payment back live by touching it later on its
+// older copy (marking it cleared, attaching the cheque photo): its stamp is newer, so its copy won and the
+// void was gone, with nothing on either screen saying so. The app has no un-void and no un-clear, so each
+// group below, once set on either side, survives a copy that lacks it — the rule INV_STICKY_FIELDS already
+// applies to the inventory manifest. The winning copy's own values are never overwritten, only filled.
+//   voidedAt …   a void: the payment stays on the record and counts toward nothing
+//   clearedOn …  the bank (or Stripe) confirmed it
+//   stripePiId … the Stripe intent the payment is; the app never records an intent twice
+//   evidence     the Drive link to the cheque photograph
+var JOB_PAYMENT_STICKY = [['voidedAt', 'voidedBy', 'voidReason'], ['clearedOn', 'clearedBy'],
+                          ['stripePiId', 'stripeMatchedAt'], ['evidence']];
+
+function _paymentSticky(chosen, other) {
+  if (!chosen || !other || chosen === other) return chosen;
+  var blank = function (v) { return v === undefined || v === null || v === ''; };
+  var out = null;
+  for (var g = 0; g < JOB_PAYMENT_STICKY.length; g++) {
+    var grp = JOB_PAYMENT_STICKY[g];
+    if (!blank(chosen[grp[0]]) || blank(other[grp[0]])) continue;
+    if (!out) { out = {}; for (var f in chosen) out[f] = chosen[f]; }
+    for (var j = 0; j < grp.length; j++) {
+      if (!blank(other[grp[j]])) out[grp[j]] = other[grp[j]];
+    }
+  }
+  return out || chosen;
+}
+
+function _jobStamp(job, kind, key) {
+  var at = job && job.at;
+  var v = at && at[kind + ':' + key];
+  return (v === undefined || v === null || v === '') ? null : Number(v);
+}
+
+function _jobListKey(kind, rec) {
+  if (!rec) return null;
+  var v = rec[JOB_LIST_KEY[kind]];
+  if (v === undefined || v === null || v === '') v = rec.id;
+  return (v === undefined || v === null || v === '') ? null : String(v);
+}
+
+// Resolve one keyed collection given both sides as {key: value} views. Shared by the list
+// and the map shapes so there is ONE copy of the rule; two copies is how the two shapes
+// would come to disagree about what a stamp means.
+function _mergeJobKeyed(cur, inc, kind, a, b, incIsNewer) {
+  var keys = {}, k;
+  for (k in a) keys[k] = 1;
+  for (k in b) keys[k] = 1;
+  var out = {}, order = [];
+  for (k in a) order.push(k);
+  for (k in b) if (!Object.prototype.hasOwnProperty.call(a, k)) order.push(k);
+  for (var i = 0; i < order.length; i++) {
+    k = order[i];
+    var inA = Object.prototype.hasOwnProperty.call(a, k);
+    var inB = Object.prototype.hasOwnProperty.call(b, k);
+    var sA = _jobStamp(cur, kind, k), sB = _jobStamp(inc, kind, k);
+    if (!inA) {
+      // Stamped on the side that does NOT have it, and no newer stamp opposite: removed.
+      if (sA !== null && (sB === null || sA > sB)) continue;
+      out[k] = b[k]; continue;
+    }
+    if (!inB) {
+      if (sB !== null && (sA === null || sB > sA)) continue;
+      out[k] = a[k]; continue;
+    }
+    if (sA !== null && sB !== null) out[k] = sB >= sA ? b[k] : a[k];
+    else if (sA !== null)           out[k] = a[k];
+    else if (sB !== null)           out[k] = b[k];
+    else                            out[k] = incIsNewer ? b[k] : a[k];
+  }
+  out.__order = order;
+  return out;
+}
+
+function _mergeJobRecord(cur, inc) {
+  if (!cur) return inc;
+  if (!inc) return cur;
+  var curT = Number(cur.updatedAt || 0), incT = Number(inc.updatedAt || 0);
+  var incIsNewer = incT >= curT;
+
+  // Scalars follow the newer record; the keyed sub-records are resolved below.
+  var out = {}, k;
+  var newer = incIsNewer ? inc : cur;
+  for (k in newer) out[k] = newer[k];
+
+  JOB_KEYED_LISTS.forEach(function(kind) {
+    var aArr = (cur[kind] && cur[kind].length !== undefined) ? cur[kind] : null;
+    var bArr = (inc[kind] && inc[kind].length !== undefined) ? inc[kind] : null;
+    if (!aArr && !bArr) return;
+    var a = {}, b = {}, i, key;
+    for (i = 0; i < (aArr || []).length; i++) { key = _jobListKey(kind, aArr[i]); if (key !== null && !(key in a)) a[key] = aArr[i]; }
+    for (i = 0; i < (bArr || []).length; i++) { key = _jobListKey(kind, bArr[i]); if (key !== null && !(key in b)) b[key] = bArr[i]; }
+    var m = _mergeJobKeyed(cur, inc, kind, a, b, incIsNewer);
+    var order = m.__order; delete m.__order;
+    var list = [];
+    for (i = 0; i < order.length; i++) {
+      var k2 = order[i];
+      if (!Object.prototype.hasOwnProperty.call(m, k2)) continue;
+      var v = m[k2];
+      // A payment both sides hold keeps a void, a clear, its Stripe intent and its photo from the copy
+      // that lost the stamp (see JOB_PAYMENT_STICKY). The both-sides test is belt and braces, and states the
+      // intent: _paymentSticky also hands back the chosen copy untouched when the other side has none, so the
+      // revert sweep cannot tell the two apart (2026-09-30b).
+      if (kind === 'payments' && Object.prototype.hasOwnProperty.call(a, k2) && Object.prototype.hasOwnProperty.call(b, k2)) {
+        v = _paymentSticky(v, v === a[k2] ? b[k2] : a[k2]);
+      }
+      list.push(v);
+    }
+    out[kind] = list;
+  });
+
+  JOB_KEYED_MAPS.forEach(function(kind) {
+    var a = (cur[kind] && typeof cur[kind] === 'object') ? cur[kind] : null;
+    var b = (inc[kind] && typeof inc[kind] === 'object') ? inc[kind] : null;
+    if (!a && !b) return;
+    var m = _mergeJobKeyed(cur, inc, kind, a || {}, b || {}, incIsNewer);
+    delete m.__order;
+    out[kind] = m;
+  });
+
+  // The stamps themselves union, newest per key — a device that did not touch a payment
+  // would otherwise drop the proof that the other one did, and the record would be
+  // contested again on the next save.
+  var at = {};
+  [cur.at || {}, inc.at || {}].forEach(function(src) {
+    for (var key in src) {
+      var v = Number(src[key]);
+      if (!(key in at) || v > at[key]) at[key] = v;
+    }
+  });
+  for (var _k in at) { out.at = at; break; }
+  return out;
+}
+
+// ══ ESTIMATE STORE (merge by jobId) ══════════════════════════════════════════════
+
+function saveEstimateStore(incoming) {
+  if (!incoming) return { dropped: [] };
+  var lock = LockService.getScriptLock();
+  _lockOrBusy(lock);
+  try {
+    var ctx = _jobRefusalCtx();
+    var dropped = _stripRefusedJobKeys(incoming, ctx);
+    var merged = _mergeStoreByKey(getEstimateStore(), incoming);
+    _sweepDeletedJobKeys(merged, ctx.present, ctx.ledger);
+    _writeStoreBlob('EstimateStore', merged);
+    return { dropped: dropped };
+  }
+  finally { try { lock.releaseLock(); } catch (e) {} }
+}
+
+function getEstimateStore() {
+  return _readStoreBlob('EstimateStore', {});
+}
+
+// ══ JOB PLAN STORE (merge by jobId) ══════════════════════════════════════════════
+
+// ⚠⚠ A JOB PLAN MERGES PER KEY, NOT AS ONE RECORD. Reported 2026-09-11: Ashley locked
+// every room on a job from the desk and none of it reached Anthony's machine. This store
+// used _mergeStoreByKey, which keeps the newer WHOLE record for a jobId — right for a
+// scalar, categorically wrong for the one surface two people work at the same time, one in
+// the house and one at the desk. The last device to save any part of a plan overwrote all
+// of it: her eight locked rooms lost to his one changed checkbox.
+//
+// ⚠ UNION BY KEY IS NOT ENOUGH ON ITS OWN. Every device posts the WHOLE store, so the
+// loser's payload carries a value for every room the winner locked — the stale one it
+// loaded beforehand. The choice per key therefore needs each key's OWN last-write time,
+// which the app now stamps into `plan.at` as `'<kind>:<key>'`.
+//
+// ⚠ AN UNSTAMPED KEY IS THE WEAKEST CLAIM, NOT THE FRESHEST: it means that device never
+// touched it, so it loses to a stamped one whatever the record's savedAt says. Falling back
+// to savedAt would hand every untouched room to whoever saved last, which IS the defect.
+// Only when NEITHER side carries a stamp does savedAt decide — exactly how a plan written
+// before this deployment already behaved, so nothing legacy changes meaning.
+var PLAN_KEYED_MAPS = ['rooms', 'collections', 'notes', 'tasks'];
+
+function _planStamp(plan, kind, key) {
+  var at = plan && plan.at;
+  var v = at && at[kind + ':' + key];
+  return (v === undefined || v === null || v === '') ? null : Number(v);
+}
+
+function _mergePlanRecord(cur, inc) {
+  if (!cur) return inc;
+  if (!inc) return cur;
+  var curT = cur.savedAt ? Number(cur.savedAt) : 0;
+  var incT = inc.savedAt ? Number(inc.savedAt) : 0;
+  var newer = incT >= curT ? inc : cur;
+  var older = newer === inc ? cur : inc;
+
+  // Scalars follow the newer record; the keyed maps are resolved key by key below.
+  var out = {};
+  for (var k in newer) out[k] = newer[k];
+
+  PLAN_KEYED_MAPS.forEach(function(kind) {
+    var a = (cur && cur[kind]) || {}, b = (inc && inc[kind]) || {};
+    var map = {}, key;
+    for (key in a) map[key] = 1;
+    for (key in b) map[key] = 1;
+    var merged = {}, any = false;
+    for (key in map) {
+      any = true;
+      var inA = Object.prototype.hasOwnProperty.call(a, key);
+      var inB = Object.prototype.hasOwnProperty.call(b, key);
+      if (!inA) { merged[key] = b[key]; continue; }
+      if (!inB) { merged[key] = a[key]; continue; }
+      var sA = _planStamp(cur, kind, key), sB = _planStamp(inc, kind, key);
+      if (sA !== null && sB !== null) merged[key] = sB >= sA ? b[key] : a[key];
+      else if (sA !== null)           merged[key] = a[key];
+      else if (sB !== null)           merged[key] = b[key];
+      else                            merged[key] = newer[kind] ? newer[kind][key] : b[key];
+    }
+    if (any) out[kind] = merged;
+  });
+
+  // The stamps themselves union, newest per key, or a device that did not touch a room
+  // would drop the proof that the other one did.
+  var at = {};
+  [cur.at || {}, inc.at || {}].forEach(function(src) {
+    for (var k in src) {
+      var v = Number(src[k]);
+      if (!(k in at) || v > at[k]) at[k] = v;
+    }
+  });
+  for (var _k in at) { out.at = at; break; }
+  return out;
+}
+
+function _mergePlanStore(existing, incoming) {
+  var out = {};
+  for (var k in existing) out[k] = existing[k];
+  for (var k in incoming) out[k] = _mergePlanRecord(out[k], incoming[k]);
+  return out;
+}
+
+function saveJobPlanStore(incoming) {
+  if (!incoming) return { dropped: [] };
+  var lock = LockService.getScriptLock();
+  _lockOrBusy(lock);
+  try {
+    var ctx = _jobRefusalCtx();
+    var dropped = _stripRefusedJobKeys(incoming, ctx);
+    var merged = _mergePlanStore(getJobPlanStore(), incoming);
+    _sweepDeletedJobKeys(merged, ctx.present, ctx.ledger);
+    _writeStoreBlob('JobPlanStore', merged);
+    return { dropped: dropped };
+  }
+  finally { try { lock.releaseLock(); } catch (e) {} }
+}
+
+function getJobPlanStore() {
+  return _readStoreBlob('JobPlanStore', {});
+}
+
+// ══ CHANGE ORDER STORE (merge a flat array by co.id) ═════════════════════════════
+// Payload is the full changeOrders ARRAY from the app. Union by id; newer updatedAt
+// wins (id is the creation timestamp, a safe fallback). Never drops a change order.
+
+function saveChangeOrderStore(incoming) {
+  if (!incoming) return { dropped: [] };
+  var lock = LockService.getScriptLock();
+  _lockOrBusy(lock);
+  try {
+    // Change orders are keyed by their own id but belong to a job; refuse the ones whose job
+    // the sheet has seen and no longer holds, the same way the job-keyed stores do.
+    var ctx = _jobRefusalCtx();
+    var present = ctx.present, ledger = ctx.ledger, dropped = [];
+    incoming = (incoming || []).filter(function(co) {
+      if (!co || co.jobId == null || !_jobRefusal(co.jobId, null, present, ledger)) return true;
+      if (dropped.indexOf(co.jobId) < 0) dropped.push(co.jobId);
+      return false;
+    });
+    var byId = {}, order = [];
+    getChangeOrderStore().forEach(function(co) {
+      if (co && co.id != null) { if (!(co.id in byId)) order.push(co.id); byId[co.id] = co; }
+    });
+    (incoming || []).forEach(function(co) {
+      if (!co || co.id == null) return;
+      var cur = byId[co.id];
+      var inT  = Number(co.updatedAt || co.id || 0);
+      var curT = cur ? Number(cur.updatedAt || cur.id || 0) : -1;
+      if (!cur) order.push(co.id);
+      if (!cur || inT >= curT) byId[co.id] = co;
+    });
+    // The array equivalent of _sweepDeletedJobKeys: same 'deleted'-only rule, same refusal
+    // to act on an empty Jobs read, applied to the merged result rather than to a key set.
+    var out = order.map(function(id) { return byId[id]; });
+    if (Object.keys(present).length) {
+      var swept = [];
+      out = out.filter(function(co) {
+        if (co && co.jobId != null && _jobRefusal(co.jobId, null, present, ledger) === 'deleted') {
+          if (swept.indexOf(String(co.jobId)) < 0) swept.push(String(co.jobId));
+          return false;
+        }
+        return true;
+      });
+      if (swept.length) Logger.log('Swept change orders for deleted job(s): ' + swept.join(', '));
+    }
+    _writeStoreBlob('ChangeOrderStore', out);
+    return { dropped: dropped };
+  } finally { try { lock.releaseLock(); } catch (e) {} }
+}
+
+function getChangeOrderStore() {
+  return _readStoreBlob('ChangeOrderStore', []);
+}
+
+// ══ LOG STORE (merge { jobId: [entries] } by entry.id) ═══════════════════════════
+// Payload is the jobLogs OBJECT keyed by jobId. Per job, union entries by id so log
+// lines added on two devices for the same job are both kept.
+
+function saveLogStore(incoming) {
+  if (!incoming) return { dropped: [] };
+  var lock = LockService.getScriptLock();
+  _lockOrBusy(lock);
+  try {
+    var ctx = _jobRefusalCtx();
+    var dropped = _stripRefusedJobKeys(incoming, ctx);
+    var out = getLogStore();
+    Object.keys(incoming).forEach(function(jid) {
+      var inArr = incoming[jid] || [];
+      var cur = out[jid] || [];
+      // ⚠⚠ A DELETED HOURS ENTRY USED TO BE UNDELETABLE. This unioned by id and only ever
+      // ADDED, so deleteLogEntry's splice never reached the sheet at all: the entry came
+      // straight back to the deleting device on its next page load, and it bills the
+      // client, because the final invoice trues labour to this log. Measured 2026-09-12 —
+      // delete a mis-typed 8 hr line, log tomorrow's hours, and the job goes 21 hrs to 26.
+      //
+      // ⚠ A VOID WINS OVER A LIVE COPY, from either side, and the removal has to travel as
+      // a RECORD rather than as an absence. Every device posts the whole log, so a device
+      // that simply has not seen an entry omits it too — absence can never mean deletion
+      // here. Same rule the inventory and the custody log already follow.
+      var byId = {}, order = [];
+      cur.forEach(function(en) { if (en && en.id != null) { if (!(en.id in byId)) order.push(en.id); byId[en.id] = en; } });
+      inArr.forEach(function(en) {
+        if (!en || en.id == null) return;
+        var was = byId[en.id];
+        if (!was) { order.push(en.id); byId[en.id] = en; return; }
+        if (en.deletedAt && !was.deletedAt) byId[en.id] = en;
+      });
+      out[jid] = order.map(function(id) { return byId[id]; });
+    });
+    _sweepDeletedJobKeys(out, ctx.present, ctx.ledger);
+    _writeStoreBlob('LogStore', out);
+    return { dropped: dropped };
+  } finally { try { lock.releaseLock(); } catch (e) {} }
+}
+
+function getLogStore() {
+  return _readStoreBlob('LogStore', {});
+}
+
+// ══ CONTRACTOR STORE (merge added[] and defaults[] by id) ════════════════════════
+// The shared contractor directory (Transition Concierges + Property Specialists).
+// Payload is { added:[...], defaults:[...] }: `added` are the contractors staff create
+// in the app (id = 'c'+timestamp); `defaults` carries edits to the three built-in team
+// members (id = 'default-N'). Both merge by id with the newer updatedAt winning, so a
+// device that only knows the built-ins can never wipe another device's additions — the
+// same disappearing-record protection the Jobs/Estimate stores use. Real removals of an
+// added contractor go through the explicit deleteContractor action.
+
+// Union two record arrays by id; newer updatedAt wins (missing timestamp counts oldest).
+// Preserves records present on only one side (absence != delete).
+function _mergeArrayById(existing, incoming) {
+  var byId = {}, order = [];
+  (existing || []).forEach(function(c) {
+    if (c && c.id != null) { if (!(c.id in byId)) order.push(c.id); byId[c.id] = c; }
+  });
+  (incoming || []).forEach(function(c) {
+    if (!c || c.id == null) return;
+    var cur = byId[c.id];
+    var inT  = Number(c.updatedAt || 0);
+    var curT = cur ? Number(cur.updatedAt || 0) : -1;
+    if (!cur) order.push(c.id);
+    if (!cur || inT >= curT) byId[c.id] = c;
+  });
+  return order.map(function(id) { return byId[id]; });
+}
+
+function getContractorStore() {
+  var obj = _readStoreBlob('ContractorStore', null) || {};
+  return { added: obj.added || [], defaults: obj.defaults || [] };
+}
+
+function saveContractorStore(incoming) {
+  if (!incoming) return;
+  var lock = LockService.getScriptLock();
+  _lockOrBusy(lock);
+  try {
+    var cur = getContractorStore();
+    _writeStoreBlob('ContractorStore', {
+      added:    _mergeArrayById(cur.added,    incoming.added),
+      defaults: _mergeArrayById(cur.defaults, incoming.defaults)
+    });
+  } finally { try { lock.releaseLock(); } catch (e) {} }
+}
+
+function deleteContractorFromStore(id) {
+  if (!id) return;
+  var lock = LockService.getScriptLock();
+  _lockOrBusy(lock);
+  try {
+    var cur = getContractorStore();
+    cur.added = (cur.added || []).filter(function(c) { return c && String(c.id) !== String(id); });
+    _writeStoreBlob('ContractorStore', cur);
+  } finally { try { lock.releaseLock(); } catch (e) {} }
+}
+
+// ══ JOBS ═════════════════════════════════════════════════════════════════════════
+
+function getJobsFromSheet() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sheet = ss.getSheetByName('Jobs');
+  if (!sheet) {
+    sheet = ss.insertSheet('Jobs');
+    sheet.appendRow(['ID', 'HVL ID', 'Name', 'Email', 'Phone', 'Address', 'City', 'Zip', 'Service', 'Status', 'Created', 'Data JSON']);
+    return [];
+  }
+  var data = sheet.getDataRange().getValues();
+  if (data.length <= 1) return [];
+  var jobs = [];
+  for (var i = 1; i < data.length; i++) {
+    var row = data[i];
+    if (row[11]) {
+      try {
+        jobs.push(JSON.parse(row[11]));
+      } catch (e) {
+        jobs.push({ id: row[0], hvlId: row[1], name: row[2], email: row[3], phone: row[4], addr: row[5], city: row[6], zip: row[7], svc: row[8], status: row[9], created: row[10] });
+      }
+    }
+  }
+  return jobs;
+}
+
+// Merge the incoming jobs into the Jobs sheet by id (newer updatedAt wins). Never
+// deletes a job missing from the payload — that absence-means-delete behavior is what
+// let a second device wipe another device's client. Real deletions go through deleteJob,
+// and a job the sheet has seen and no longer holds is REFUSED rather than merged back (see
+// JOB LEDGER). Returns { dropped: [ids refused] } so the sender can drop them too.
+function saveAllJobsToSheet(jobsArr) {
+  var result = { dropped: [] };
+  if (!jobsArr || !jobsArr.length) return result;
+  var lock = LockService.getScriptLock();
+  _lockOrBusy(lock);
+  try {
+    var ss = SpreadsheetApp.openById(SHEET_ID);
+    var sheet = ss.getSheetByName('Jobs');
+    if (!sheet) {
+      sheet = ss.insertSheet('Jobs');
+      sheet.appendRow(['ID', 'HVL ID', 'Name', 'Email', 'Phone', 'Address', 'City', 'Zip', 'Service', 'Status', 'Created', 'Data JSON']);
+    }
+
+    // Start from what's already stored, keyed by id (preserves jobs this device never had).
+    var stored = getJobsFromSheet();
+    var present = _presentJobIds(stored), ledger = getJobLedger();
+    var byId = {}, order = [];
+    stored.forEach(function(j) {
+      if (j && j.id != null) { if (!(j.id in byId)) order.push(j.id); byId[j.id] = j; }
+    });
+
+    // Upsert each incoming job; newer updatedAt wins (missing timestamp counts as oldest).
+    jobsArr.forEach(function(j) {
+      if (!j || j.id == null) return;
+      // A job the sheet has seen before and no longer holds was deleted while this device
+      // still had it. Refuse it: merging it is how a cleared sheet refilled itself.
+      if (_jobRefusal(j.id, j.created, present, ledger)) { result.dropped.push(j.id); return; }
+      var cur = byId[j.id];
+      // Per key, not per record — see _mergeJobRecord. Taking the newer whole job here is
+      // what destroyed a recorded deposit cheque when the other device marked the
+      // agreement signed against its own morning copy.
+      if (!cur) { order.push(j.id); byId[j.id] = j; return; }
+      byId[j.id] = _mergeJobRecord(cur, j);
+    });
+
+    // Rewrite the data rows from the merged set.
+    var rows = order.map(function(id) {
+      var job = byId[id];
+      return [job.id || '', job.hvlId || '', job.name || '', job.email || '', job.phone || '',
+              job.addr || '', job.city || '', job.zip || '', job.svc || '', job.status || '',
+              job.created || new Date().toISOString(), JSON.stringify(job)];
+    });
+    var lastRow = sheet.getLastRow();
+    if (lastRow > 1) sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).clearContent();
+    if (rows.length) sheet.getRange(2, 1, rows.length, 12).setValues(rows);
+    _ledgerMarkSeen(ledger, order);
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
+  }
+  if (result.dropped.length) Logger.log('saveAllJobs refused ' + result.dropped.length + ' deleted job(s): ' + result.dropped.join(', '));
+  return result;
+}
+
+// Single-job upsert. Takes the SAME script lock and applies the SAME newest-wins
+// guard as saveAllJobsToSheet, so this per-record path (fired from ~20 edit sites)
+// can no longer race the bulk write and clobber a job row. Two devices editing two
+// different jobs are always safe; two editing the SAME job resolve by updatedAt.
+function saveJobToSheet(job) {
+  var result = { dropped: [] };
+  if (!job || job.id == null) return result;
+  var lock = LockService.getScriptLock();
+  _lockOrBusy(lock);
+  try {
+    var ss = SpreadsheetApp.openById(SHEET_ID);
+    var sheet = ss.getSheetByName('Jobs');
+    if (!sheet) {
+      sheet = ss.insertSheet('Jobs');
+      sheet.appendRow(['ID', 'HVL ID', 'Name', 'Email', 'Phone', 'Address', 'City', 'Zip', 'Service', 'Status', 'Created', 'Data JSON']);
+    }
+    var data = sheet.getDataRange().getValues();
+    var rowIndex = -1;
+    for (var i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === String(job.id)) { rowIndex = i + 1; break; }
+    }
+    // Same refusal as the bulk path: ~20 edit sites fire this per record, and an edit made
+    // on a stale device to a job the sheet has deleted must not re-create the row.
+    var ledger = getJobLedger();
+    if (rowIndex < 0 && _jobRefusal(job.id, job.created, {}, ledger)) {
+      result.dropped.push(job.id);
+      Logger.log('saveJob refused deleted job ' + job.id);
+      return result;
+    }
+    // Newest-wins on the SCALARS, per key on the sub-records. This used to return early
+    // when the stored row was newer, which threw away the incoming device's payments and
+    // docState wholesale; and when the incoming row was newer it overwrote the stored
+    // ones. ~20 edit sites fire this per record, so both directions were live.
+    if (rowIndex > 0) {
+      var stored = null;
+      try { stored = JSON.parse(data[rowIndex - 1][11]); } catch (e) {}
+      if (stored) job = _mergeJobRecord(stored, job);
+    }
+    var rowData = [
+      job.id || '', job.hvlId || '', job.name || '', job.email || '', job.phone || '',
+      job.addr || '', job.city || '', job.zip || '', job.svc || '', job.status || '',
+      job.created || new Date().toISOString(), JSON.stringify(job)
+    ];
+    if (rowIndex > 0) {
+      sheet.getRange(rowIndex, 1, 1, rowData.length).setValues([rowData]);
+    } else {
+      sheet.appendRow(rowData);
+      _ledgerMarkSeen(ledger, [job.id]);
+    }
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
+  }
+  return result;
+}
+
+function deleteJobFromSheet(id) {
+  if (!id) return;
+  var ss = SpreadsheetApp.openById(SHEET_ID);          // was getActiveSpreadsheet() — null in a web app
+  var sheet = ss.getSheetByName('Jobs');
+  if (!sheet) return;
+  var data = sheet.getDataRange().getValues();
+  var idCol = data[0].indexOf('ID');                   // header is 'ID', not 'id'
+  if (idCol < 0) idCol = 0;
+  for (var r = data.length - 1; r >= 1; r--) {
+    if (String(data[r][idCol]) === String(id)) { sheet.deleteRow(r + 1); break; }
+  }
+  // Remember it. Normally already seen; this covers a row somebody typed into the sheet by
+  // hand, which no write ever recorded. Absent from the sheet + seen = refused from now on.
+  try { _ledgerMarkSeen(getJobLedger(), [id]); } catch (e) { Logger.log('ledger on delete ' + id + ': ' + e); }
+  // Purge the job's records from the keyed stores too. Deleting a job used to remove only
+  // the Jobs row, so its estimate, job plan and logs stayed behind forever — invisible in
+  // the app, but still serialized into every subsequent write. That is how the sheet ends
+  // up holding more estimates than the app has jobs, and every orphan pushes the blob
+  // closer to the per-cell character cap for no benefit at all.
+  //
+  // Deliberately keyed on the same id the app uses, and silent about a miss: a job with no
+  // estimate is normal, not an error.
+  // ⚠ THIS USED TO PURGE ONLY THREE OF THE FIVE STORES — MediaStore and ChangeOrderStore
+  // were missed, so deleting a client through the app left their whole inventory manifest
+  // (photo refs, custody log, appraisal waivers) and every change order in the sheet
+  // forever. _purgeJobFromStores is the one list; add a store there, not here.
+  var removed = _purgeJobFromStores([id]);
+  Object.keys(removed).forEach(function(name) { Logger.log('Purged ' + name + ' for ' + id); });
+}
+
+// ══ DRIVE ════════════════════════════════════════════════════════════════════════
+
+function createJobFolder(hvlId, clientName, svc, subfolderNames, parentFolderId) {
+  try {
+    var rootFolder = DriveApp.getFolderById(parentFolderId || ROOT_FOLDER_ID);
+    var folderName = clientName + ' - ' + hvlId;
+    // Idempotent by name: REUSE an existing job folder instead of creating another.
+    // createFolder fires from more than one place (auto on client creation + the
+    // manual button) and across devices; without this each call minted a fresh
+    // "Client - HVLID" folder, which is how one client ended up with 4 folders.
+    var existing = rootFolder.getFoldersByName(folderName);
+    var reused = existing.hasNext();
+    var clientFolder = reused ? existing.next() : rootFolder.createFolder(folderName);
+    // ⚠ 'As-Found Record' JOINED THIS LIST ON 2026-09-20 and the app names it explicitly on
+    // every createFolder call, so this default only decides a folder made by the legacy GET
+    // fallback. Reuse-by-name below means re-running against an existing client folder ADDS
+    // the missing one rather than duplicating anything — which is how an old job gets split.
+    var names = subfolderNames || ['Estate Inventory', 'As-Found Record', 'Walkthrough Notes', 'Estimate', 'Agreement', 'Change Orders', 'Invoice', 'Job Log'];
+    var subfolders = {};
+    names.forEach(function(name) {
+      // Same reuse-by-name rule for each subfolder, so re-running never duplicates them.
+      var subIt = clientFolder.getFoldersByName(name);
+      var sub = subIt.hasNext() ? subIt.next() : clientFolder.createFolder(name);
+      subfolders[name] = { id: sub.getId(), url: sub.getUrl() };
+    });
+    return { ok: true, success: true, folderUrl: clientFolder.getUrl(), folderId: clientFolder.getId(), folderName: folderName, subfolders: subfolders, reused: reused };
+  } catch (error) {
+    Logger.log('createJobFolder error: ' + error.toString());
+    return { ok: false, success: false, error: error.toString() };
+  }
+}
+
+function uploadFileToDrive(folderId, filename, dataUrl) {
+  try {
+    var folder = DriveApp.getFolderById(folderId);
+    var base64 = dataUrl.split(',')[1];
+    var mimeMatch = dataUrl.match(/^data:([^;]+);/);
+    var mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+    var blob = Utilities.newBlob(Utilities.base64Decode(base64), mime, filename);
+    var file = folder.createFile(blob);
+    return { ok: true, fileUrl: file.getUrl(), fileId: file.getId() };
+  } catch (error) {
+    Logger.log('uploadFileToDrive error: ' + error.toString());
+    return { ok: false, error: error.toString() };
+  }
+}
+
+// A shot binned in the field really leaves Drive.
+//
+// ⚠ IT TRASHES RATHER THAN PURGES, which is the same call `trashJobFoldersConfirm` already
+// makes for a whole job folder: Drive's own bin holds it for 30 days. A photograph is the one
+// thing on an estate that cannot be re-typed, and "delete" made irreversible by us buys
+// nothing that Drive's bin does not already give for free.
+//
+// ⚠⚠ BOTH SOURCES ARE ASKED, for exactly the reason `_filesNamedInFolder` below records:
+// the estate folders live on a SHARED DRIVE, where DriveApp and the advanced Drive service
+// disagree about what they can see, and the advanced one needs `supportsAllDrives` to answer
+// at all. A single-path version of this would work on the desk and fail in the field.
+function trashDriveFile(fileId) {
+  fileId = String(fileId || '').trim();
+  if (!fileId) return { ok: false, error: 'No fileId given.' };
+  var why = '';
+  try {
+    DriveApp.getFileById(fileId).setTrashed(true);
+    return { ok: true, trashed: true, fileId: fileId, via: 'DriveApp' };
+  } catch (e) { why = e.toString(); }
+  try {
+    if (typeof Drive !== 'undefined' && Drive.Files && Drive.Files.update) {
+      Drive.Files.update({ trashed: true }, fileId, null, { supportsAllDrives: true });
+      return { ok: true, trashed: true, fileId: fileId, via: 'Drive API' };
+    }
+  } catch (e2) { why = why + ' | ' + e2.toString(); }
+  Logger.log('trashDriveFile ' + fileId + ': ' + why);
+  return { ok: false, error: why || 'The file could not be trashed.' };
+}
+
+// Every file in `folder` carrying exactly this name.
+//
+// ⚠ DO NOT COLLAPSE THIS BACK TO folder.getFilesByName(). That is what uploadHtmlToDrive
+// used, and on a SHARED DRIVE it can come back empty for files that are plainly there —
+// the same class of failure this project already hit with drive.files.get answering
+// "File not found" for a file DriveApp opens fine (see _driveThumbnail). When the lookup
+// finds nothing, the caller's "remove the old copy first" step silently does nothing and
+// every save creates another file. Reported 2026-09-09: "save to drive creates dupes
+// endlessly if you keep hitting it."
+//
+// So both sources are asked and the results unioned by id: DriveApp for the ordinary case,
+// and the advanced Drive service WITH supportsAllDrives/includeItemsFromAllDrives, which is
+// the one that actually answers on a Shared Drive.
+function _filesNamedInFolder(folder, name) {
+  var byId = {}, out = [];
+  function add(f) { if (f && !byId[f.getId()]) { byId[f.getId()] = 1; out.push(f); } }
+
+  try {
+    var it = folder.getFilesByName(name);
+    while (it.hasNext()) add(it.next());
+  } catch (e) { Logger.log('_filesNamedInFolder DriveApp: ' + e); }
+
+  try {
+    if (typeof Drive !== 'undefined' && Drive.Files && Drive.Files.list) {
+      var q = "'" + folder.getId() + "' in parents and title = '" + String(name).replace(/'/g, "\\'") +
+              "' and trashed = false";
+      var res = Drive.Files.list({
+        q: q, maxResults: 100,
+        supportsAllDrives: true, includeItemsFromAllDrives: true
+      });
+      var items = (res && (res.items || res.files)) || [];
+      for (var i = 0; i < items.length; i++) {
+        try { add(DriveApp.getFileById(items[i].id)); } catch (e2) {}
+      }
+    }
+  } catch (e3) { Logger.log('_filesNamedInFolder Drive API: ' + e3); }
+
+  return out;
+}
+
+// Render HTML to a PDF and put it in the job folder under a STABLE name, replacing what is
+// already there rather than adding beside it.
+//
+// The first match is updated IN PLACE where the advanced Drive service allows it, so the
+// file keeps its id — which matters because the app stamps job.estimateDriveUrl with it and
+// counsel may already have the link. Any further copies under the same name are trashed
+// (never deleted — Drive's 30-day undo is the safety net), so the first save after this
+// change collapses a folder that has already accumulated duplicates back down to one file.
+function uploadHtmlToDrive(folderId, filename, html) {
+  try {
+    var folder = DriveApp.getFolderById(folderId);
+    var pdfName = filename.replace(/\.(html?|pdf)$/i, '') + '.pdf';
+    var htmlBlob = Utilities.newBlob(html, 'text/html', pdfName);
+    var pdfBlob = htmlBlob.getAs('application/pdf').setName(pdfName);
+
+    var put = _fileBlobByName(folder, pdfBlob);
+
+    return { ok: true, fileUrl: put.file.getUrl(), fileId: put.file.getId(),
+             replaced: put.replaced, duplicatesRemoved: put.removed };
+  } catch (error) {
+    Logger.log('uploadHtmlToDrive error: ' + error.toString());
+    return { ok: false, error: error.toString() };
+  }
+}
+
+// ⚠ ONE RULE FOR A FILE FILED UNDER A STABLE NAME: REPLACE WHAT IS THERE, NEVER ADD BESIDE IT (2026-10-01, P17).
+// This was the body of uploadHtmlToDrive, and esignArchiveEnvelope did not use it: it called folder.createFile, so a
+// second filing of one envelope — the app's File signed copy button, pressed after a certificate of completion that
+// did not come back — left two "… - SIGNED" copies in the Agreement folder (measured on the real function before the
+// change: two filings, four files). Both callers file through this now.
+// The oldest copy is updated IN PLACE where the advanced Drive service allows it, so the file keeps its id — the app
+// records the link and counsel may already hold it. Any further copies under the name are trashed (never deleted —
+// Drive's 30-day undo is the safety net), so a folder that has already accumulated duplicates collapses to one file.
+// With nothing under the name, the file is created.
+function _fileBlobByName(folder, blob) {
+  var existing = _filesNamedInFolder(folder, blob.getName());
+  var file = null, replaced = false, removed = 0;
+
+  if (existing.length) {
+    // Update the oldest copy in place; that is the one whose link has been handed out.
+    existing.sort(function(a, b){ return a.getDateCreated() - b.getDateCreated(); });
+    var keep = existing[0];
+    try {
+      if (typeof Drive !== 'undefined' && Drive.Files && Drive.Files.update) {
+        Drive.Files.update({}, keep.getId(), blob, { supportsAllDrives: true });
+        file = keep; replaced = true;
+      }
+    } catch (eUpd) { Logger.log('_fileBlobByName in-place update failed: ' + eUpd); }
+    if (!file) { try { keep.setTrashed(true); removed++; } catch (eT) {} }
+    for (var i = 1; i < existing.length; i++) {
+      try { existing[i].setTrashed(true); removed++; } catch (eT2) {}
+    }
+  }
+
+  if (!file) file = folder.createFile(blob);
+  return { file: file, replaced: replaced, removed: removed };
+}
+
+// Report the duplicate PDFs the job folders are holding, then collapse each name down to its newest
+// copy. Run from the editor when a folder looks wrong: previewFolderDuplicates first, read the log,
+// then dedupeFolderConfirm.
+//
+// Deliberately NOT reachable over HTTP and split preview/confirm, the same shape as
+// previewReset / resetAllJobDataConfirm — this trashes files, and a destructive action must
+// not be one malformed URL away.
+//
+// ⚠⚠ THE RUN MENU PASSES NO ARGUMENT, AND BOTH OF THESE NEEDED ONE (fixed 2026-09-30b, P16). They took a
+// folder id, so pressing Run threw on `getFolderById(undefined)` before reading anything. With no argument
+// they now sweep every folder under ROOT_FOLDER_ID — each job folder and every subfolder in it; an id,
+// passed from a one-line wrapper, sweeps that folder and everything under it instead.
+// ⚠ PDFs ONLY. The duplicates this exists for are the documents the app files under a stable name (the
+// Shared-Drive re-file defect of 2026-09-09: "save to drive creates dupes endlessly"). A photograph is never
+// swept by name: cheque photos are named by a payment id that two devices can both mint, so two different
+// cheques can share a name, and trashing one would lose the only copy of that evidence.
+// ⚠ Both sides are listed — DriveApp and the advanced Drive service with supportsAllDrives — for the reason
+// _filesNamedInFolder gives: on a Shared Drive DriveApp's own listing can come back short. Trashed, never
+// deleted (trashDriveFile tries both sources too); Drive keeps them for 30 days.
+function _folderDuplicatePlan(folderId) {
+  var start = DriveApp.getFolderById(folderId || ROOT_FOLDER_ID);
+  var plan = [], folders = 0, pdfs = 0;
+  var walk = function (folder, path) {
+    folders++;
+    var byName = _pdfsByNameInFolder(folder);
+    Object.keys(byName).sort().forEach(function (name) {
+      var list = byName[name];
+      pdfs += list.length;
+      if (list.length < 2) return;
+      list.sort(function (a, b) { return b.getLastUpdated() - a.getLastUpdated(); });  // newest first: kept
+      plan.push({ path: path, name: name, keep: list[0], trash: list.slice(1) });
+    });
+    var sub = folder.getFolders();
+    while (sub.hasNext()) { var s = sub.next(); walk(s, path + ' / ' + s.getName()); }
+  };
+  walk(start, start.getName());
+  return { plan: plan, folders: folders, pdfs: pdfs, root: start.getName() };
+}
+
+// Every PDF directly in `folder`, grouped by name, from both sources and unioned by id.
+function _pdfsByNameInFolder(folder) {
+  var byId = {}, byName = {};
+  var add = function (f) {
+    if (!f || byId[f.getId()]) return;
+    if (String(f.getMimeType ? f.getMimeType() : '') !== 'application/pdf') return;
+    byId[f.getId()] = 1;
+    (byName[f.getName()] = byName[f.getName()] || []).push(f);
+  };
+  try {
+    var it = folder.getFiles();
+    while (it.hasNext()) add(it.next());
+  } catch (e) { Logger.log('_pdfsByNameInFolder DriveApp: ' + e); }
+  try {
+    if (typeof Drive !== 'undefined' && Drive.Files && Drive.Files.list) {
+      var q = "'" + folder.getId() + "' in parents and mimeType = 'application/pdf' and trashed = false";
+      var token = null;
+      do {
+        var opt = { q: q, maxResults: 100, supportsAllDrives: true, includeItemsFromAllDrives: true };
+        if (token) opt.pageToken = token;
+        var res = Drive.Files.list(opt) || {};
+        var items = res.items || res.files || [];
+        for (var i = 0; i < items.length; i++) { try { add(DriveApp.getFileById(items[i].id)); } catch (e2) {} }
+        token = res.nextPageToken || null;
+      } while (token);
+    }
+  } catch (e3) { Logger.log('_pdfsByNameInFolder Drive API: ' + e3); }
+  return byName;
+}
+
+function previewFolderDuplicates(folderId) {
+  var r = _folderDuplicatePlan(folderId);
+  var extra = 0;
+  r.plan.forEach(function (d) { extra += d.trash.length; });
+  Logger.log('Swept %s folder(s) under "%s": %s PDF(s), %s name(s) held more than once, %s extra cop(ies).',
+             r.folders, r.root, r.pdfs, r.plan.length, extra);
+  r.plan.forEach(function (d) {
+    Logger.log('  %s / %s x%s   <-- DUPLICATE (keeps the newest, updated %s)', d.path, d.name, d.trash.length + 1, d.keep.getLastUpdated());
+  });
+  if (!r.plan.length) Logger.log('Nothing to do.');
+  else Logger.log('Run dedupeFolderConfirm to trash the %s extra cop(ies). Nothing has been changed yet.', extra);
+  return r.plan;
+}
+
+function dedupeFolderConfirm(folderId) {
+  var plan = _folderDuplicatePlan(folderId).plan, removed = 0, failed = 0;
+  plan.forEach(function (d) {
+    d.trash.forEach(function (f) {
+      var t = trashDriveFile(f.getId());
+      if (t && t.ok) removed++; else { failed++; Logger.log('  could not trash %s / %s: %s', d.path, d.name, t && t.error); }
+    });
+  });
+  Logger.log('Trashed %s duplicate file(s)%s. They are recoverable from Drive trash for 30 days.',
+             removed, failed ? ' (' + failed + ' could not be trashed; see above)' : '');
+  return removed;
+}
+
+// Convert HTML to a PDF and hand the BYTES back, without writing anything to Drive.
+//
+// This exists so the app can attach the client estimate to a Gmail draft. The alternative
+// was to read back the copy already filed to Drive, which needs a Drive scope on top of
+// the Gmail one and only works for a signed-in user who can see that Shared Drive — the
+// browser is not necessarily the Havellin account. This runs AS the Havellin account,
+// needs no extra scope, and reuses the SAME conversion that produces the filed copy, so
+// the attachment and the document in the client's folder cannot be different renderings.
+//
+// Deliberately no folderId: nothing is stored. The response is base64, so it inflates by
+// ~33% — Apps Script caps a response around 50MB and these documents run well under 1MB.
+function htmlToPdfBase64(html) {
+  try {
+    if (!html) return { ok: false, error: 'No html supplied' };
+    var pdf = Utilities.newBlob(html, 'text/html', 'estimate.pdf').getAs('application/pdf');
+    return { ok: true, base64: Utilities.base64Encode(pdf.getBytes()), bytes: pdf.getBytes().length };
+  } catch (error) {
+    Logger.log('htmlToPdfBase64 error: ' + error.toString());
+    return { ok: false, error: error.toString() };
+  }
+}
+
+function handleGetSubfolders(data) {
+  try {
+    var folder = DriveApp.getFolderById(data.folderId);
+    var result = {};
+    var it = folder.getFolders();
+    while (it.hasNext()) {
+      var sub = it.next();
+      result[sub.getName()] = { id: sub.getId(), url: sub.getUrl() };
+    }
+    return jsonOut({ ok: true, subfolders: result });
+  } catch(e) {
+    return jsonOut({ ok: false, error: e.message });
+  }
+}
+
+// Grant a person read-only (Viewer) access to one folder — used to share the merged
+// "Estate Inventory" folder with an estate attorney or trust officer. Named-person
+// share, not "anyone with the link", so it can be revoked with unshareFolder.
+function shareFolder(folderId, email) {
+  try {
+    if (!folderId || !email) return { ok: false, success: false, error: 'Missing folderId or email' };
+    var folder = DriveApp.getFolderById(folderId);
+    folder.addViewer(email);
+    return { ok: true, success: true, url: folder.getUrl() };
+  } catch (e) {
+    return { ok: false, success: false, error: String(e) };
+  }
+}
+function unshareFolder(folderId, email) {
+  try {
+    if (!folderId || !email) return { ok: false, success: false, error: 'Missing folderId or email' };
+    var folder = DriveApp.getFolderById(folderId);
+    folder.removeViewer(email);
+    return { ok: true, success: true };
+  } catch (e) {
+    return { ok: false, success: false, error: String(e) };
+  }
+}
+
+// ══ DOCUSIGN — JWT GRANT, ENVELOPE SEND, STATUS POLL ════════════════════════════
+// Anthony, 2026-09-17: *"I want to start wiring up DocuSign so we can actually send out an
+// agreement for signature."* The app-side signature RECORD shipped 2026-09-11 (Slice 6)
+// shaped for exactly this; what follows is the provider behind it.
+//
+// ⚠⚠ THIS IS IN main-sync.gs RATHER THAN ITS OWN FILE, AND THAT IS A DELIBERATE REVERSAL OF
+// THE quo-sync.gs PRECEDENT. Quo is a second file in the same project and that is right for
+// it: nothing in the app calls it, it runs on a trigger, and it can be a version behind
+// without the app ever noticing. THIS is on the app's REQUEST PATH, so it must move in
+// lockstep with BACKEND_VERSION, BACKEND_ACTIONS and the dispatch-parity test. A second
+// file somebody has to remember to paste is precisely the failure this project already
+// paid six weeks for — see DEPLOYMENT IDENTITY at the top of this file.
+//
+// ⚠⚠ EVERY SECRET IS IN SCRIPT PROPERTIES AND NONE IS IN THIS FILE. This repo is public and
+// havellin.html is served from GitHub Pages, so a private key in either is not a key. These go in
+// THIS project's Script Properties — the jobs backend, beside STRIPE_SECRET_KEY and ANTHROPIC_API_KEY.
+// (Not "where QUO_API_KEY lives", as this line said until 2026-09-30: quo-sync.gs runs in the Referral
+// Partners project, and its key is in that project's properties.) Set these five (Project Settings ▸
+// Script Properties):
+//     DS_INTEGRATION_KEY  the app's client id — a GUID, semi-public like any OAuth client id
+//     DS_USER_ID          the user the integration impersonates (API Username on Apps & Keys)
+//     DS_ACCOUNT_ID       API Account ID
+//     DS_BASE_URI         https://demo.docusign.net  (sandbox)  or the production base URI
+//     DS_PRIVATE_KEY      the RSA private key, INCLUDING the BEGIN/END lines
+//
+// ⚠ THE ENVIRONMENT IS DERIVED FROM DS_BASE_URI, NEVER CONFIGURED SEPARATELY. Two fields
+// that must agree is two fields that can disagree, and the failure mode is silent: a demo
+// key against the production auth host answers `consent_required` forever, which reads as
+// "consent was never granted" rather than "you are pointed at the wrong environment".
+var DS_AUTH_HOST_DEMO = 'account-d.docusign.com';
+var DS_AUTH_HOST_PROD = 'account.docusign.com';
+var DS_JWT_SCOPES     = 'signature impersonation';
+var DS_TOKEN_TTL_SEC  = 3600;   // DocuSign's own ceiling for a JWT assertion
+
+// ⚠ THE ANCHOR STRINGS, AND THEY MUST MATCH havellin.html's `esignAnchor` EXACTLY. These
+// are the invisible markers DocuSign finds in the PDF text layer to place each signature
+// box. Two copies of one string is how the tab silently stops being placed, so a test in
+// tests/esign-docusign.test.js asserts this table and the app's agree, key for key.
+var DS_ANCHORS = {
+  clientSig:  '/hsc/',
+  clientDate: '/hdc/',
+  havSig:     '/hsh/',
+  havDate:    '/hdh/',
+  mktOptOut:  '/mko/'
+};
+// ⚠⚠ THE FOUR THAT ARE ON EVERY AGREEMENT, AND THE ONE THAT IS NOT. `mktOptOut` renders on the
+// living-client form and on no estate one — Havellin does not market estate work — so placing it
+// blind would make DocuSign refuse every estate envelope over an anchor that is correctly absent.
+// The APP measures the document it is sending (`esignAnchorsPresent`) and names what it carries;
+// this list is what gets placed regardless, because their absence really is a defect.
+var DS_REQUIRED_ANCHORS = ['clientSig', 'clientDate', 'havSig', 'havDate'];
+// ⚠⚠ EACH CO-REPRESENTATIVE'S OWN PAIR (2026-10-05, P20; Anthony, Q22: every co-executor and co-trustee recorded on the
+// job signs in DocuSign beside the client). The estate agreement's signature page gives the co-signer numbered n its own
+// signature and date markers, '#' replaced by n: '/hcs1/' and '/hcd1/' for the first. MUST MATCH havellin.html's
+// ESIGN_COSIGNER_ANCHOR; a test holds the two equal for every n, as it holds DS_ANCHORS to ESIGN_ANCHORS.
+// ⚠ DOCUSIGN MATCHES AN ANCHOR AS A SUBSTRING (anchorMatchWholeWord defaults to false), so no marker may sit inside
+// another. Every marker here is wrapped in slashes and none contains one inside, so one can only appear in another if
+// the two are equal: '/hcs1/' is not in '/hcs12/', nor in any of the five above. A test checks every pair, and every
+// two markers run together, which is how adjacent text reaches the PDF's text layer.
+// ⚠ A KEY NAMES THE MARKER ON THE WIRE ('coSig1', 'coDate1'), as 'clientSig' does: the app measures the document and
+// names what it carries for each co-signer, and _dsCoSignerAnchor reads the key back into the string placed.
+var DS_COSIGNER_ANCHOR = { sig: '/hcs#/', date: '/hcd#/' };
+function _dsCoSignerAnchor(key) {
+  var m = /^co(Sig|Date)([1-9][0-9]{0,2})$/.exec(String(key || ''));
+  if (!m) return null;
+  var kind = m[1] === 'Sig' ? 'sig' : 'date';
+  return { kind: kind, n: Number(m[2]), anchor: DS_COSIGNER_ANCHOR[kind].replace('#', m[2]) };
+}
+// ⚠⚠ THE RELEASE APPROVAL REQUEST'S MARKERS (2026-10-26c): the fiduciary numbered n (the job's fiduciary order, the
+// representative first) initials at every '/hri<n>/' (each group's line, each item initialled on its own, the firearms
+// line), signs at '/hrs<n>/' and dates at '/hrd<n>/'. MUST MATCH havellin.html's ESIGN_REQUEST_ANCHOR; a test holds the
+// two equal for every n and nets every pair against each other and against the agreement's markers above.
+// ⚠ ONE INITIALS TAB, EVERY PLACE ITS MARKER STANDS: DocuSign places an anchor tab at each occurrence of its string in the
+// document, so one entry covers every initial point on the page. A request of items already gone asks for no initials, so
+// its marker is absent and the tab is added only where the app measured it (as _dsClientTabs adds the opt-out box).
+var DS_REQUEST_ANCHOR = { init: '/hri#/', sig: '/hrs#/', date: '/hrd#/' };
+function _dsRequestAnchor(key) {
+  var m = /^req(Init|Sig|Date)([1-9][0-9]{0,2})$/.exec(String(key || ''));
+  if (!m) return null;
+  var kind = m[1] === 'Init' ? 'init' : m[1] === 'Sig' ? 'sig' : 'date';
+  return { kind: kind, n: Number(m[2]), anchor: DS_REQUEST_ANCHOR[kind].replace('#', m[2]) };
+}
+
+// ⚠ ONE PLACE TO TUNE THE TAB POSITION, AND IT NEEDS ONE VISUAL CHECK IN THE SANDBOX BEFORE
+// ANYTHING GOES TO A CLIENT. The anchor sits at the TOP of a 36px `.sig-line` box whose
+// visible rule is at its foot, so the tab has to be pushed DOWN to land on the line. The
+// figure below is a considered first guess and nothing more — it cannot be derived, because
+// it depends on how Apps Script's HTML-to-PDF conversion lays the box out. Send one envelope
+// to yourself, look at where the box lands, change this number, send another.
+var DS_TAB_Y_OFFSET = '14';
+
+function _dsProp(name) {
+  return (PropertiesService.getScriptProperties().getProperty(name) || '').trim();
+}
+function _dsIsDemo()   { return _dsProp('DS_BASE_URI').indexOf('demo.') !== -1; }
+function _dsAuthHost() { return _dsIsDemo() ? DS_AUTH_HOST_DEMO : DS_AUTH_HOST_PROD; }
+
+// Which of the five are missing, named. A single "not configured" is what turns a
+// twenty-second fix into a support thread — this file already records that lesson on the
+// PDF-conversion error, which took three rounds because it carried no cause.
+function _dsMissingProps() {
+  return ['DS_INTEGRATION_KEY', 'DS_USER_ID', 'DS_ACCOUNT_ID', 'DS_BASE_URI', 'DS_PRIVATE_KEY']
+    .filter(function (k) { return !_dsProp(k); });
+}
+
+// ─── ACCESS TOKEN ────────────────────────────────────────────────────────────────
+// ⚠ CACHED, AND THAT IS NOT AN OPTIMISATION. The status poll runs every five minutes, so an
+// uncached mint is ~288 assertions a day against an endpoint DocuSign rate-limits, and a
+// throttled token failure would surface as "the envelope vanished". Held 50 minutes against
+// a 60-minute token, so a request can never set off with a token that expires mid-flight.
+function _dsAccessToken() {
+  var missing = _dsMissingProps();
+  if (missing.length) return { ok: false, error: 'DocuSign is not configured — missing Script Properties: ' + missing.join(', ') };
+
+  var cache = CacheService.getScriptCache();
+  try {
+    var hit = cache.get('ds_access_token');
+    if (hit) return { ok: true, token: hit, cached: true };
+  } catch (e) { /* a cache miss must never be fatal — fall through and mint */ }
+
+  var now = Math.floor(Date.now() / 1000);
+  var header = { alg: 'RS256', typ: 'JWT' };
+  var claims = {
+    iss:   _dsProp('DS_INTEGRATION_KEY'),
+    sub:   _dsProp('DS_USER_ID'),
+    aud:   _dsAuthHost(),          // the HOST alone, no scheme and no trailing slash
+    iat:   now,
+    exp:   now + DS_TOKEN_TTL_SEC,
+    scope: DS_JWT_SCOPES
+  };
+
+  var signingInput = _dsB64Url(JSON.stringify(header)) + '.' + _dsB64Url(JSON.stringify(claims));
+
+  // ⚠⚠ DOCUSIGN ISSUES PKCS#1 AND APPS SCRIPT SIGNS ONLY WITH PKCS#8, SO THE SCRIPT CONVERTS IT
+  // ITSELF. "+ GENERATE RSA" hands back `-----BEGIN RSA PRIVATE KEY-----`;
+  // `Utilities.computeRsaSha256Signature` accepts only `-----BEGIN PRIVATE KEY-----` and throws on
+  // the other. The first build REFUSED a PKCS#1 key and printed an `openssl` command — correct, and
+  // the wrong answer: it put a terminal session and a clipboard dance between a person and a
+  // working integration, and the one person who tried it pasted the key onto the same line as the
+  // command and put it through his shell history. Converting is a fixed ASN.1 wrap, so the script
+  // does it and the property holds whatever DocuSign gave you.
+  var key = _dsSigningKey();
+  if (key && key.dsError) return { ok: false, error: key.dsError };
+
+  var sig;
+  try {
+    sig = Utilities.base64EncodeWebSafe(
+      Utilities.computeRsaSha256Signature(signingInput, key)
+    ).replace(/=+$/, '');
+  } catch (e) {
+    // Past the format check, so this is the other half: BEGIN/END lines missing outright, or the
+    // line breaks eaten by a copy through a chat window.
+    return { ok: false, error: 'Could not sign the JWT — check DS_PRIVATE_KEY is the full key including the BEGIN and END lines. (' + e + ')' };
+  }
+
+  var res = UrlFetchApp.fetch('https://' + _dsAuthHost() + '/oauth/token', {
+    method: 'post',
+    payload: {
+      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+      assertion: signingInput + '.' + sig
+    },
+    muteHttpExceptions: true
+  });
+
+  var code = res.getResponseCode();
+  var body = {};
+  try { body = JSON.parse(res.getContentText()); } catch (e) {}
+
+  if (code !== 200 || !body.access_token) {
+    // ⚠ `consent_required` IS THE ONE ERROR WITH A SPECIFIC, ACTIONABLE FIX, so it gets the
+    // consent URL built from the live values rather than a generic failure. Everything else
+    // prescribes nothing — the rule this project already learned on _pdfFailAdvice.
+    if (String(body.error || '') === 'consent_required') {
+      return { ok: false, needsConsent: true, consentUrl: dsConsentUrl(),
+               error: 'DocuSign has not been granted consent to impersonate this user yet. Open the consent URL once and click Allow.' };
+    }
+    return { ok: false, error: 'DocuSign auth failed (HTTP ' + code + '): ' + (body.error_description || body.error || res.getContentText().slice(0, 300)) };
+  }
+
+  try { cache.put('ds_access_token', body.access_token, 3000); } catch (e) {}
+  return { ok: true, token: body.access_token, cached: false };
+}
+
+// Base64url with the padding stripped — a JWT segment is not standard base64 and a trailing
+// '=' is rejected outright by the token endpoint.
+function _dsB64Url(str) {
+  return Utilities.base64EncodeWebSafe(Utilities.newBlob(str).getBytes()).replace(/=+$/, '');
+}
+
+// ─── PKCS#1 → PKCS#8 ─────────────────────────────────────────────────────────────
+// A PKCS#1 RSAPrivateKey becomes a PKCS#8 PrivateKeyInfo by wrapping it, unchanged, in:
+//   SEQUENCE { INTEGER 0, SEQUENCE { OID rsaEncryption, NULL }, OCTET STRING { <the PKCS#1 DER> } }
+// No key material is touched — only a header is added — so this cannot alter or weaken the key.
+// Verified byte-for-byte against `openssl pkcs8 -topk8` on a real 2048-bit key, and the output
+// re-validated with `openssl rsa -check`.
+//
+// ⚠ APPS SCRIPT BYTE ARRAYS ARE SIGNED (-128..127). `Utilities.base64Decode` returns signed bytes
+// and `Utilities.base64Encode` expects them, while DER is naturally unsigned 0..255 — every byte in
+// the fixed prefix below is above 127. Everything is built unsigned and converted once at each
+// edge; mixing the two silently produces a corrupt key that fails as an opaque signing error.
+var DS_RSA_ALG_ID = [0x30,0x0d,0x06,0x09,0x2a,0x86,0x48,0x86,0xf7,0x0d,0x01,0x01,0x01,0x05,0x00];
+
+function _dsDerLen(n) {
+  if (n < 0x80)    return [n];
+  if (n < 0x100)   return [0x81, n];
+  if (n < 0x10000) return [0x82, (n >> 8) & 0xff, n & 0xff];
+  return [0x83, (n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff];
+}
+
+// The key the signer actually uses. A PKCS#8 key is handed back untouched; a PKCS#1 one is wrapped.
+// Returns {dsError} rather than throwing, so the caller can report a cause instead of a stack.
+function _dsSigningKey() {
+  var pem = _dsProp('DS_PRIVATE_KEY');
+  if (!pem) return { dsError: 'DS_PRIVATE_KEY is empty.' };
+  if (pem.indexOf('BEGIN RSA PRIVATE KEY') === -1) return pem;   // already PKCS#8, or not a PEM
+
+  try {
+    var der = Utilities.base64Decode(pem.replace(/-----[^-]+-----/g, '').replace(/\s+/g, ''));
+    var i, body = [0x02, 0x01, 0x00].concat(DS_RSA_ALG_ID, [0x04], _dsDerLen(der.length));
+    // ⚠ THE DECODED BYTES GO IN AS THEY CAME — SIGNED — AND ARE NOT NORMALISED FIRST. Doing it at
+    // both edges is a round trip that cancels itself out (a signed -34 and an unsigned 222 are the
+    // same byte and encode identically), so it reads as a safeguard while testing nothing. One
+    // normalisation, at the output edge, where it is the only thing standing between the fixed
+    // prefix below and a corrupt key.
+    for (i = 0; i < der.length; i++) body.push(der[i]);
+    var out = [0x30].concat(_dsDerLen(body.length), body);
+    // Every byte of DS_RSA_ALG_ID and most DER lengths are above 127; Utilities.base64Encode takes
+    // a SIGNED Byte[] and an out-of-range value is not silently coerced.
+    for (i = 0; i < out.length; i++) if (out[i] > 127) out[i] -= 256;
+    return '-----BEGIN PRIVATE KEY-----\n'
+         + (Utilities.base64Encode(out).match(/.{1,64}/g) || []).join('\n')
+         + '\n-----END PRIVATE KEY-----';
+  } catch (e) {
+    return { dsError: 'DS_PRIVATE_KEY could not be read. Paste the whole key from DocuSign, '
+           + 'including the BEGIN and END lines. (' + e + ')' };
+  }
+}
+
+// The one-time consent URL, built from the live properties so it can never name a different
+// integration key than the one actually failing.
+function dsConsentUrl(redirectUri) {
+  var redirect = redirectUri || 'https://havellinpalmbeach.github.io/app/';
+  return 'https://' + _dsAuthHost() + '/oauth/auth'
+       + '?response_type=code'
+       + '&scope=' + encodeURIComponent(DS_JWT_SCOPES)
+       + '&client_id=' + encodeURIComponent(_dsProp('DS_INTEGRATION_KEY'))
+       + '&redirect_uri=' + encodeURIComponent(redirect);
+}
+
+function _dsApi(method, path, payload) {
+  var tok = _dsAccessToken();
+  if (!tok.ok) return { ok: false, code: 0, body: tok };
+
+  var opts = {
+    method: method,
+    headers: { Authorization: 'Bearer ' + tok.token },
+    contentType: 'application/json',
+    muteHttpExceptions: true
+  };
+  if (payload) opts.payload = JSON.stringify(payload);
+
+  var url = _dsProp('DS_BASE_URI').replace(/\/+$/, '')
+          + '/restapi/v2.1/accounts/' + _dsProp('DS_ACCOUNT_ID') + path;
+  var res = UrlFetchApp.fetch(url, opts);
+  var body = {};
+  try { body = JSON.parse(res.getContentText()); } catch (e) { body = { raw: res.getContentText().slice(0, 300) }; }
+  return { ok: res.getResponseCode() < 300, code: res.getResponseCode(), body: body };
+}
+
+// ─── SEND FOR SIGNATURE ──────────────────────────────────────────────────────────
+// ⚠⚠ TWO RECIPIENTS WITH A ROUTING ORDER, NOT ONE, AND THE DOCUMENT IS WHY. Both agreement
+// forms carry a Havellin signature block beside the client's, and the probate form states
+// outright that *"No work will begin until both signatures are obtained"*. A client-only
+// envelope would come back `completed` over a contract Havellin never signed — and
+// applyEsignStatus would then record it as signed, which is the exact false claim the
+// signature record exists to prevent. Client signs first (order 1), Havellin countersigns
+// (order 2); DocuSign only reports `completed` when BOTH are done, so the app-side rule
+// "only `completed` is a signature" carries the countersignature for free.
+//
+// ⚠ TABS ARE PLACED BY ANCHOR, NEVER BY x/y. The signing packet's length varies with the
+// estimate attached as Exhibit A, so a fixed page-and-coordinate would drift onto the wrong
+// page the moment a job has one more room than the last one.
+//
+// ⚠⚠ AND EVERY RECORDED CO-REPRESENTATIVE SIGNS BESIDE THE CLIENT (2026-10-05, P20; Anthony, Q22). Until now a
+// co-executor or co-trustee signed a printed copy and nothing recorded it, while DocuSign reported the agreement
+// `completed` on the client's and Anthony's signatures alone. Each co-signer the app names (`coSigners`, in the order
+// the signature page prints them) is a signer at ROUTING ORDER 1, in parallel with the client, so Anthony's
+// countersignature (2) still comes last and `completed` now means every one of them has signed. recipientIds stay
+// unique and the client keeps '1' (esignEnvelopeStatus finds the client by it, since order 1 is shared now); Havellin
+// keeps '2', the carbon copy '3', and the co-signers take '4' onward.
+// ⚠ A CO-SIGNER'S TABS GO ONLY WHERE THE APP SAYS THE DOCUMENT CARRIES THEIR MARKERS: the pair of keys it measured
+// for them (`anchors`), read back through _dsCoSignerAnchor, with anchorIgnoreIfNotPresent 'false' as on the four
+// required markers, so a marker named and missing makes DocuSign refuse the envelope. A co-signer the app gives no
+// name, no email or no complete pair is refused here, by name and all at once, before DocuSign is asked: a signer with
+// no tab would be free to sign anywhere, and one with no email cannot be sent anything.
+// ⚠ THE ANSWER SAYS WHO WAS PUT ON THE ENVELOPE (`coSigners`: name, email, recipientId), so the app records what
+// DocuSign holds rather than what it asked for. A deployment older than this one ignores `coSigners`, sends the
+// envelope to the client and Anthony alone, and answers without the list: the app reads that as no co-signer on the
+// envelope, and the co-representatives sign a printed copy.
+function esignSendEnvelope(data) {
+  try {
+    if (!data || !data.pdfBase64) return { ok: false, error: 'No document supplied to send.' };
+    if (!data.signerEmail || !data.signerName) return { ok: false, error: 'The envelope needs the signer name and email.' };
+
+    var coSigners = [], coWhy = [], coSeen = {};
+    (Array.isArray(data.coSigners) ? data.coSigners : []).forEach(function (c, i) {
+      var name = String((c && c.name) || '').trim(), email = String((c && c.email) || '').trim();
+      var who = name || ('co-signer ' + (i + 1));
+      if (!name || !email) { coWhy.push(who + ' needs a name and an email'); return; }
+      var pair = {};
+      ((c && Array.isArray(c.anchors)) ? c.anchors : []).forEach(function (k) {
+        var a = _dsCoSignerAnchor(k);
+        if (a) pair[a.kind] = a;
+      });
+      // One pair, from one block on the page, and no block twice: a signature on one co-signer's line and a date on
+      // another's, or two co-signers on one line, would put a person's tabs on somebody else's block.
+      if (!pair.sig || !pair.date || pair.sig.n !== pair.date.n || coSeen[pair.sig.n]) {
+        coWhy.push(who + ' has no signature line of their own on the agreement'); return;
+      }
+      coSeen[pair.sig.n] = true;
+      coSigners.push({
+        email: email,
+        name: name,
+        recipientId: String(4 + coSigners.length),
+        routingOrder: '1',
+        roleName: 'Co-Signer',
+        tabs: _dsTabs(pair.sig.anchor, pair.date.anchor)
+      });
+    });
+    if (coWhy.length) return { ok: false, error: 'The envelope was not created: ' + coWhy.join('; ') + '.' };
+
+    // ⚠⚠ THE COUNTERSIGNATURE GOES TO A PERSON, NOT TO THE DEPARTMENT GROUP, AND THAT IS A
+    // CORRECTNESS RULE RATHER THAN A PREFERENCE. It used to default to agreements@, which is a
+    // Google Group: whoever opened it first would sign, and the certificate of completion would
+    // record that signature as *Anthony Graziano* regardless of who actually clicked. On a
+    // contract, the audit trail naming the wrong human is the one failure it exists to prevent.
+    // Anthony: *"let's make it simple and have me responsible for signing all agreements on
+    // behalf of Havellin."*
+    // ⚠ agreements@ IS STILL ON THE ENVELOPE — as a CARBON COPY below, which is what actually
+    // delivers the executed agreement to the firm's file. That is the half the group address was
+    // really doing, and a CC does it without also claiming to be a signatory.
+    var havEmail = data.havellinEmail || 'anthony@havellinpalmbeach.com';
+    var havName  = data.havellinName  || 'Anthony Graziano';
+    var fileEmail = data.fileCopyEmail || 'agreements@havellinpalmbeach.com';
+
+    var env = {
+      emailSubject: data.subject || ('Havellin Services Agreement — ' + (data.hvlId || '')),
+      emailBlurb: data.blurb || '',
+      documents: [{
+        documentBase64: data.pdfBase64,
+        name: data.filename || 'Havellin Services Agreement.pdf',
+        fileExtension: 'pdf',
+        documentId: '1'
+      }],
+      recipients: {
+        // The client, then each co-signer (order 1, beside the client), then Havellin (order 2). With no co-signer the
+        // list is the two signers it always was, byte for byte.
+        signers: [
+          {
+            email: data.signerEmail,
+            name: data.signerName,
+            recipientId: '1',
+            routingOrder: '1',
+            roleName: 'Client',
+            tabs: _dsClientTabs(data.anchors)
+          }
+        ].concat(coSigners, [
+          {
+            email: havEmail,
+            name: havName,
+            recipientId: '2',
+            routingOrder: '2',
+            roleName: 'Havellin',
+            tabs: _dsTabs(DS_ANCHORS.havSig, DS_ANCHORS.havDate)
+          }
+        ]),
+        // ⚠⚠ THIS IS WHAT PUTS THE EXECUTED AGREEMENT IN THE FIRM'S FILE, AND IT COSTS NOTHING
+        // TO RUN. DocuSign mails every recipient — signers and carbon copies alike — the completed
+        // envelope with the signed PDF attached the moment the last signature lands. So the client
+        // gets their copy, Anthony gets his, and agreements@ gets one for the record, with no
+        // second send path in this app to go wrong. The Drive archive still runs and is still the
+        // durable copy; this is the mailbox copy Anthony asked for.
+        // ⚠ ROUTING ORDER 3, AFTER BOTH SIGNATURES. A carbon copy at order 1 would mail the firm
+        // an UNSIGNED agreement the moment it went out, which reads in the inbox exactly like an
+        // executed one.
+        carbonCopies: [
+          {
+            email: fileEmail,
+            name: 'Havellin Palm Beach — Agreements',
+            recipientId: '3',
+            routingOrder: '3'
+          }
+        ]
+      },
+      status: 'sent'
+    };
+
+    var res = _dsApi('post', '/envelopes', env);
+    if (!res.ok) {
+      var b = res.body || {};
+      if (b.needsConsent) return b;   // carries the consent URL through untouched
+      return { ok: false, error: 'DocuSign refused the envelope (HTTP ' + res.code + '): '
+                                 + (b.message || b.error || JSON.stringify(b).slice(0, 300)) };
+    }
+    return { ok: true, envelopeId: res.body.envelopeId, status: res.body.status || 'sent',
+             sentAt: res.body.statusDateTime || '',
+             // Who is on the envelope beside the client: the app records exactly this (P20).
+             coSigners: coSigners.map(function (s) { return { name: s.name, email: s.email, recipientId: s.recipientId }; }) };
+  } catch (error) {
+    Logger.log('esignSendEnvelope error: ' + error);
+    return { ok: false, error: String(error) };
+  }
+}
+
+// ─── THE RELEASE APPROVAL REQUEST (2026-10-26c) ───────────────────────────────────
+// Every fiduciary signs the one paper at once (routing order 1): the representative and each co-representative or
+// co-trustee, recipientId '1'..'N' in the app's order, roleName 'Fiduciary', each with their own signature and date tabs and,
+// where the page asks for initials, their own initials tab at every initial point. No countersignature: the paper is the
+// estate's written direction to Havellin, not a contract Havellin signs. agreements@ and the estate attorney are carbon
+// copies at order 2, so each receives the executed request once every fiduciary has signed and never an unsigned one.
+// ⚠ EVERY SIGNER NEEDS A NAME, AN EMAIL AND THEIR OWN SIGNATURE AND DATE MARKERS, ONE NUMBER EACH, OR NOTHING IS CREATED
+// (as esignSendEnvelope refuses a co-signer): a tab on somebody else's line, or a fiduciary with no line, would put a
+// signature where it does not belong. The app refuses the same things first, by name; this is the last word.
+function esignSendRequestEnvelope(data) {
+  try {
+    if (!data || !data.pdfBase64) return { ok: false, error: 'No document supplied to send.' };
+    var list = Array.isArray(data.signers) ? data.signers : [];
+    if (!list.length) return { ok: false, error: 'The request names nobody to sign it.' };
+    var signers = [], why = [], seen = {}, emails = {};
+    list.forEach(function (c, i) {
+      var name = String((c && c.name) || '').trim(), email = String((c && c.email) || '').trim();
+      var who = name || ('signer ' + (i + 1));
+      if (!name || !email) { why.push(who + ' needs a name and an email'); return; }
+      var marks = {};
+      ((c && Array.isArray(c.anchors)) ? c.anchors : []).forEach(function (k) {
+        var a = _dsRequestAnchor(k);
+        if (a) marks[a.kind] = a;
+      });
+      if (!marks.sig || !marks.date || marks.sig.n !== marks.date.n || (marks.init && marks.init.n !== marks.sig.n) || seen[marks.sig.n]) {
+        why.push(who + ' has no signature line of their own on the request'); return;
+      }
+      seen[marks.sig.n] = true;
+      var tabs = _dsTabs(marks.sig.anchor, marks.date.anchor);
+      if (marks.init) {
+        tabs.initialHereTabs = [{
+          anchorString: marks.init.anchor, anchorUnits: 'pixels',
+          anchorXOffset: '0', anchorYOffset: DS_REQUEST_INIT_Y_OFFSET, anchorIgnoreIfNotPresent: 'false'
+        }];
+      }
+      emails[email.toLowerCase()] = true;
+      signers.push({ email: email, name: name, recipientId: String(signers.length + 1), routingOrder: '1',
+                     roleName: 'Fiduciary', tabs: tabs, n: marks.sig.n });
+    });
+    if (why.length) return { ok: false, error: 'The envelope was not created: ' + why.join('; ') + '.' };
+    var ccList = [String(data.fileCopyEmail || 'agreements@havellinpalmbeach.com').trim()]
+      .concat(Array.isArray(data.cc) ? data.cc.map(function (e) { return String(e || '').trim(); }) : []);
+    var carbonCopies = [], ccSeen = {};
+    ccList.forEach(function (e) {
+      if (!e || ccSeen[e.toLowerCase()] || emails[e.toLowerCase()]) return;
+      ccSeen[e.toLowerCase()] = true;
+      carbonCopies.push({ email: e, name: carbonCopies.length ? e : 'Havellin Palm Beach — Agreements',
+                          recipientId: String(signers.length + carbonCopies.length + 1), routingOrder: '2' });
+    });
+    var env = {
+      emailSubject: data.subject || ('Havellin — Release Approval Request — ' + (data.hvlId || '')),
+      emailBlurb: data.blurb || '',
+      documents: [{ documentBase64: data.pdfBase64, name: data.filename || 'Release Approval Request.pdf', fileExtension: 'pdf', documentId: '1' }],
+      recipients: {
+        signers: signers.map(function (s) { return { email: s.email, name: s.name, recipientId: s.recipientId, routingOrder: s.routingOrder, roleName: s.roleName, tabs: s.tabs }; }),
+        carbonCopies: carbonCopies
+      },
+      status: 'sent'
+    };
+    var res = _dsApi('post', '/envelopes', env);
+    if (!res.ok) {
+      var b = res.body || {};
+      if (b.needsConsent) return b;
+      return { ok: false, error: 'DocuSign refused the envelope (HTTP ' + res.code + '): '
+                                 + (b.message || b.error || JSON.stringify(b).slice(0, 300)) };
+    }
+    return { ok: true, envelopeId: res.body.envelopeId, status: res.body.status || 'sent', sentAt: res.body.statusDateTime || '',
+             // Who is on the envelope, with the number of the line each signs: the app records exactly this.
+             signers: signers.map(function (s) { return { name: s.name, email: s.email, recipientId: s.recipientId, n: s.n }; }) };
+  } catch (error) {
+    Logger.log('esignSendRequestEnvelope error: ' + error);
+    return { ok: false, error: String(error) };
+  }
+}
+// The initials box sits on the line its marker opens, so the tab goes down less than a signature's does (DS_TAB_Y_OFFSET
+// is tuned for the agreement's 36 px .sig-line box). A first guess, like that one: look at one sent envelope in the sandbox.
+var DS_REQUEST_INIT_Y_OFFSET = '0';
+
+function _dsTabs(sigAnchor, dateAnchor) {
+  return {
+    signHereTabs: [{
+      anchorString: sigAnchor, anchorUnits: 'pixels',
+      anchorXOffset: '0', anchorYOffset: DS_TAB_Y_OFFSET, anchorIgnoreIfNotPresent: 'false'
+    }],
+    dateSignedTabs: [{
+      anchorString: dateAnchor, anchorUnits: 'pixels',
+      anchorXOffset: '0', anchorYOffset: DS_TAB_Y_OFFSET, anchorIgnoreIfNotPresent: 'false'
+    }]
+  };
+}
+
+// ⚠⚠ THE CLIENT CARRIES THE MARKETING OPT-OUT AND HAVELLIN DOES NOT, and that asymmetry is the
+// whole reason this is a separate builder rather than an argument to _dsTabs. A media release is
+// the client's decision about their own home; putting the same tab on the countersignature would
+// ask Havellin to consent to Havellin.
+//
+// ⚠⚠ IT IS ONE OPTIONAL CHECKBOX, AND THE REQUIRED RADIO PAIR IT REPLACED DID NOT RENDER ON A
+// REAL ENVELOPE. Anthony, off the first one DocuSign actually sent: *"docusign did not recognize
+// the marketing tic boxes or the required signature."* `testEsignTabs` had come back ACCEPTED on
+// all four shapes — but it created DRAFTS (`status:'created'`), and **a draft accepting a field
+// definition does not prove the field survives SENDING**. That is the lesson; the field type is
+// only the consequence. `checkboxTabs` is the most basic field DocuSign has.
+//
+// ⚠ OPTIONAL IS CORRECT HERE AND WOULD HAVE BEEN WRONG BEFORE. DocuSign's guided navigation steps
+// through required fields and jumps past optional ones, which under an OPT-IN meant a consent
+// nobody was ever asked for. Under an opt-out, a box nobody reaches lands on the documented default
+// — authorized — which is exactly what §10.2 says happens when nothing is ticked. Making it
+// required would instead block the client's own signature on a question the contract says they need
+// not answer.
+//
+// ⚠⚠ AND IT IS PLACED ONLY WHEN THE DOCUMENT CARRIES THE ANCHOR. The estate form has no marketing
+// clause at all, so `anchorIgnoreIfNotPresent:'false'` would make DocuSign refuse every estate
+// envelope. `anchors` is the list the app measured off the very html it converted, so what is
+// placed follows the document rather than a second copy of the rule that renders it. A caller that
+// names nothing gets the four required tabs and no optional one — the safe direction, because a
+// missing opt-out box leaves the stated default in place while a refused envelope sends nothing.
+function _dsClientTabs(anchors) {
+  var t = _dsTabs(DS_ANCHORS.clientSig, DS_ANCHORS.clientDate);
+  var has = {};
+  (anchors || []).forEach(function (k) { has[k] = true; });
+
+  if (has.mktOptOut) {
+    t.checkboxTabs = [{
+      anchorString: DS_ANCHORS.mktOptOut, anchorUnits: 'pixels',
+      anchorXOffset: '0', anchorYOffset: '0', anchorIgnoreIfNotPresent: 'false',
+      tabLabel: 'marketing_opt_out', name: 'Do not authorize marketing use',
+      selected: 'false', required: 'false'
+    }];
+  }
+
+  return t;
+}
+
+// ─── STATUS ──────────────────────────────────────────────────────────────────────
+// ⚠ THE SIGNER IS THE CLIENT, NOT "whoever signed last". Order 2 is Havellin countersigning,
+// and recording OUR name as the person who bound the estate is byte for byte the defect Slice
+// 6 exists to undo (`agrSignedBy` holding the manager who approved the price). A test drives
+// a two-signer envelope and asserts the client comes back.
+// ⚠⚠ AND THE CLIENT IS FOUND BY recipientId '1' NOW, NEVER BY ROUTING ORDER (2026-10-05, P20). This read the first
+// signer at order 1, which was the client while nobody else signed at order 1; every co-representative signs there
+// now (esignSendEnvelope), and DocuSign need not list the client first, so a co-trustee would have been recorded as the
+// person who signed for the estate. The client has been recipientId '1' on every envelope this file has ever sent;
+// roleName 'Client' is the second test, for an answer that somehow lacks the id. Every other signer except Havellin
+// ('2', roleName 'Havellin') is a co-signer, and comes back with the day DocuSign says they signed (`signedAt`).
+function esignEnvelopeStatus(data) {
+  try {
+    var id = data && data.envelopeId;
+    if (!id) return { ok: false, error: 'No envelope id supplied.' };
+
+    var res = _dsApi('get', '/envelopes/' + encodeURIComponent(id) + '?include=recipients', null);
+    if (!res.ok) {
+      var b = res.body || {};
+      if (b.needsConsent) return b;
+      return { ok: false, error: 'DocuSign status check failed (HTTP ' + res.code + '): '
+                                 + (b.message || b.error || '') };
+    }
+
+    var signers = ((res.body.recipients || {}).signers) || [];
+    var client = null, i;
+    for (i = 0; i < signers.length && !client; i++) {
+      if (String(signers[i].recipientId) === '1') client = signers[i];
+    }
+    for (i = 0; i < signers.length && !client; i++) {
+      if (signers[i].roleName === 'Client') client = signers[i];
+    }
+    var coSigners = [];
+    for (i = 0; i < signers.length; i++) {
+      var s = signers[i];
+      if (s === client || String(s.recipientId) === '2' || s.roleName === 'Havellin') continue;
+      coSigners.push({ name: s.name || '', email: s.email || '', recipientId: String(s.recipientId || ''),
+                       signedAt: s.signedDateTime || '' });
+    }
+
+    return {
+      ok: true,
+      envelopeId: id,
+      status: res.body.status || '',
+      completedAt: res.body.completedDateTime || '',
+      signerName: (client && client.name) || '',
+      signerEmail: (client && client.email) || '',
+      signedAt: (client && client.signedDateTime) || '',
+      coSigners: coSigners,
+      // ⚠ EVERY SIGNER, AS DOCUSIGN HOLDS THEM (2026-10-26c): the release approval request has no client and no countersigner,
+      // so its fiduciaries are read off this list by recipientId; a declined signer says why. The agreement's fields above
+      // are unchanged.
+      signers: signers.map(function (s) {
+        return { recipientId: String(s.recipientId || ''), name: s.name || '', email: s.email || '', status: s.status || '',
+                 signedAt: s.signedDateTime || '', declinedReason: s.declinedReason || '' };
+      }),
+      voidedReason: res.body.voidedReason || ''
+    };
+  } catch (error) {
+    Logger.log('esignEnvelopeStatus error: ' + error);
+    return { ok: false, error: String(error) };
+  }
+}
+
+// ─── RETRIEVING THE EXECUTED AGREEMENT ───────────────────────────────────────────
+// ⚠⚠ THIS IS THE HALF MOST LIKELY TO BE SKIPPED, BECAUSE THE SEND ALREADY LOOKS FINISHED — and it
+// is the half that matters legally. DocuSign's Document Retention can purge a completed envelope
+// and the DOCUMENTS are then permanently unrecoverable (the certificate and history survive with a
+// Purged flag; the documents do not). Account closure takes everything. ESIGN Act §101(e) puts the
+// retain-and-accurately-reproduce burden on the party RELYING on the record — us — not the vendor.
+// And Florida's five-year limitation on a written contract (Fla. Stat. §95.11) runs from the
+// BREACH, so a 2026 agreement is litigable well into the 2030s, longer than any confidence in
+// holding one particular subscription.
+//
+// ⚠ ON A PROBATE MATTER THE CERTIFICATE MAY BE THE MORE IMPORTANT FILE. A personal representative
+// binds an estate; counsel may later ask who bound it. The certificate of completion is the audit
+// trail — signer identity, timestamps, IP, authentication method — and is a separate document.
+//
+// ⚠⚠ `_dsApi` CANNOT BE USED HERE AND THAT IS NOT A STYLE POINT. It ends in
+// `JSON.parse(res.getContentText())`, and `getContentText()` decodes bytes as UTF-8 — lossy and
+// irreversible for a PDF. A document fetched through it arrives as mangled text, silently. This
+// keeps the blob and never calls getContentText().
+function _dsFetchBlob(path, filename) {
+  var tok = _dsAccessToken();
+  if (!tok.ok) return { ok: false, error: tok.error, needsConsent: !!tok.needsConsent, consentUrl: tok.consentUrl || '' };
+
+  var url = _dsProp('DS_BASE_URI').replace(/\/+$/, '')
+          + '/restapi/v2.1/accounts/' + _dsProp('DS_ACCOUNT_ID') + path;
+  var res = UrlFetchApp.fetch(url, {
+    method: 'get',
+    headers: { Authorization: 'Bearer ' + tok.token, Accept: 'application/pdf' },
+    muteHttpExceptions: true
+  });
+  if (res.getResponseCode() >= 300) {
+    // Safe to read as text HERE: a failure is JSON or HTML, never a PDF.
+    return { ok: false, error: 'HTTP ' + res.getResponseCode() + ': ' + res.getContentText().slice(0, 300) };
+  }
+  var blob = res.getBlob().setName(filename);
+  return { ok: true, blob: blob, bytes: blob.getBytes().length };
+}
+
+// Files the executed agreement AND the certificate into the job's Drive Agreement folder.
+//
+// ⚠⚠ `certificate=true` DEFAULTS TO FALSE ON THE COMBINED DOWNLOAD — read from DocuSign's own
+// OpenAPI spec, and it contradicts several third-party write-ups. Omit it and you silently retain a
+// perfectly good-looking signed PDF with no audit trail: the silent-omission shape this file
+// records over and over. A test pins the query string.
+//
+// ⚠ THE STANDALONE CERTIFICATE IS FETCHED SEPARATELY ON PURPOSE, not as duplication. A tenant-wide
+// admin setting ("Attach certificate of completion to envelope") may suppress it from the combined
+// PDF, and no source could establish whether the explicit query parameter overrides that. The
+// separate call has no dependence on the setting, so the audit trail cannot go missing quietly.
+//
+// ⚠ NAMES MUST DIFFER FROM THE UNSIGNED PACKET. `uploadHtmlToDrive` overwrites BY FILENAME — that
+// is what makes a re-file replace rather than accumulate — so a packet re-filed after signature
+// would otherwise destroy the executed copy.
+// ⚠⚠ AND A SECOND FILING OF THE SAME ENVELOPE REPLACES THE FIRST (2026-10-01, P17). This used folder.createFile,
+// which adds a file whatever is already there; the app now offers File signed copy whenever either file is
+// missing, so a press after a certificate that did not come back would have added a second executed agreement
+// beside the first. Both files go through _fileBlobByName, the rule uploadHtmlToDrive has always followed.
+function esignArchiveEnvelope(data) {
+  try {
+    var id = data && data.envelopeId;
+    if (!id) return { ok: false, error: 'No envelope id supplied.' };
+    // What was signed, in the error's words: the agreement, or since 2026-10-26c the release approval request (`what`).
+    var what = String(data.what || 'agreement');
+    if (!data.folderId) return { ok: false, error: 'No Drive folder supplied to file the signed ' + what + ' into.' };
+    var base = data.baseName || ('Agreement ' + id);
+    var enc = encodeURIComponent(id);
+
+    var signed = _dsFetchBlob('/envelopes/' + enc + '/documents/combined?certificate=true',
+                              base + ' - SIGNED.pdf');
+    if (!signed.ok) return { ok: false, error: 'Could not retrieve the signed ' + what + ' — ' + signed.error,
+                             needsConsent: signed.needsConsent, consentUrl: signed.consentUrl };
+
+    var cert = _dsFetchBlob('/envelopes/' + enc + '/documents/certificate',
+                            base + ' - Certificate of Completion.pdf');
+
+    var folder = DriveApp.getFolderById(data.folderId);
+    var out = { ok: true };
+    var f1 = _fileBlobByName(folder, signed.blob).file;
+    out.signedUrl = f1.getUrl(); out.signedId = f1.getId(); out.signedBytes = signed.bytes;
+
+    // ⚠ A MISSING CERTIFICATE IS REPORTED, NEVER SILENT. The executed agreement is the thing that
+    // had to be kept; losing the audit trail without saying so is how a probate matter discovers it
+    // two years later.
+    if (cert.ok) {
+      var f2 = _fileBlobByName(folder, cert.blob).file;
+      out.certUrl = f2.getUrl(); out.certId = f2.getId(); out.certBytes = cert.bytes;
+    } else {
+      out.certError = cert.error;
+    }
+    return out;
+  } catch (error) {
+    Logger.log('esignArchiveEnvelope error: ' + error);
+    return { ok: false, error: String(error) };
+  }
+}
+
+// ─── WHAT IS ACTUALLY IN DS_PRIVATE_KEY ──────────────────────────────────────────
+// ⚠⚠ THIS EXISTS BECAUSE I GUESSED THREE TIMES AND WAS WRONG THREE TIMES. `no_valid_keys_or_
+// signatures` says only "the signature did not verify", which is consistent with a truncated
+// paste, a key from a deleted keypair, or a bug in the conversion above — and nothing on either
+// screen tells them apart. This measures the property instead: how much of it arrived, what the
+// DER really is, and what public key it implies. Editor-only and argument-free, like testEsignAuth.
+//
+// ⚠ IT PRINTS THE PUBLIC HALF ONLY. The public key is not a secret (DocuSign displays it), and the
+// private half must never reach an execution log, which is retained and shared.
+function dsKeyReport() {
+  var raw = _dsProp('DS_PRIVATE_KEY');
+  if (!raw) { Logger.log('DS_PRIVATE_KEY is empty.'); return; }
+
+  Logger.log('Property length : ' + raw.length + ' chars');
+  var isP1 = raw.indexOf('BEGIN RSA PRIVATE KEY') !== -1;
+  var isP8 = raw.indexOf('BEGIN PRIVATE KEY') !== -1 && !isP1;
+  Logger.log('Header          : ' + (isP1 ? 'PKCS#1 (BEGIN RSA PRIVATE KEY) — will be converted'
+                                    : isP8 ? 'PKCS#8 (BEGIN PRIVATE KEY) — used as-is'
+                                    : 'NONE FOUND — this is not a PEM private key'));
+  Logger.log('END line present: ' + (raw.indexOf('END') !== -1 ? 'yes' : 'NO — the paste is truncated'));
+
+  var b64 = raw.replace(/-----[^-]+-----/g, '').replace(/\s+/g, '');
+  var der;
+  try { der = Utilities.base64Decode(b64); }
+  catch (e) { Logger.log('Body            : NOT VALID BASE64 — the paste is damaged. (' + e + ')'); return; }
+  Logger.log('Body            : ' + b64.length + ' base64 chars -> ' + der.length + ' DER bytes');
+  Logger.log('                  (a 2048-bit PKCS#1 key is about 1190 DER bytes)');
+
+  if (!isP1) { Logger.log('Stopping — the modulus check below reads PKCS#1 only.'); return; }
+
+  // RSAPrivateKey ::= SEQUENCE { version INTEGER, modulus INTEGER, publicExponent INTEGER, ... }
+  var u = [], i;
+  for (i = 0; i < der.length; i++) u.push(der[i] < 0 ? der[i] + 256 : der[i]);
+  var p = { i: 0 };
+  function readLen() {
+    var b = u[p.i++];
+    if (b < 0x80) return b;
+    var n = b & 0x7f, v = 0;
+    while (n-- > 0) v = (v << 8) | u[p.i++];
+    return v;
+  }
+  function expect(tag) {
+    if (u[p.i] !== tag) throw new Error('expected tag 0x' + tag.toString(16) + ' at ' + p.i);
+    p.i++;
+    return readLen();
+  }
+  try {
+    // ⚠ THE OUTER SEQUENCE DECLARES ITS OWN LENGTH, so comparing that against what actually
+    // arrived catches a partial paste outright — including one that kept its END line, which the
+    // check above cannot see. This is the single most likely cause of a key that parses and then
+    // fails to verify.
+    var declared = expect(0x30);            // SEQUENCE
+    var actual = der.length - p.i;
+    if (actual < declared) {
+      Logger.log('*** TRUNCATED: the key declares ' + declared + ' bytes of content and only '
+                 + actual + ' arrived. Re-copy the WHOLE private key block from DocuSign. ***');
+      return;
+    }
+    var vlen = expect(0x02); p.i += vlen;   // version
+    var mlen = expect(0x02);                // modulus
+    var lead = (u[p.i] === 0x00) ? 1 : 0;   // DER sign byte
+    Logger.log('Modulus         : ' + ((mlen - lead) * 8) + ' bits');
+    Logger.log('                  (DocuSign generates 2048)');
+    var mod = u.slice(p.i, p.i + mlen); p.i += mlen;
+    var elen = expect(0x02);
+    var exp = u.slice(p.i, p.i + elen);
+
+    // SubjectPublicKeyInfo { AlgorithmIdentifier, BIT STRING { SEQUENCE { n, e } } }
+    var inner = [0x02].concat(_dsDerLen(mod.length), mod, [0x02], _dsDerLen(exp.length), exp);
+    var seq = [0x30].concat(_dsDerLen(inner.length), inner);
+    var bits = [0x03].concat(_dsDerLen(seq.length + 1), [0x00], seq);
+    var spki = [0x30].concat(_dsDerLen(DS_RSA_ALG_ID.length + bits.length), DS_RSA_ALG_ID, bits);
+    for (i = 0; i < spki.length; i++) if (spki[i] > 127) spki[i] -= 256;
+    Logger.log('\nThe PUBLIC key this private key implies — compare it with the one DocuSign shows\n'
+      + 'for the keypair on your integration key. If they differ, the wrong key is in the property.\n\n'
+      + '-----BEGIN PUBLIC KEY-----\n'
+      + (Utilities.base64Encode(spki).match(/.{1,64}/g) || []).join('\n')
+      + '\n-----END PUBLIC KEY-----');
+  } catch (e) {
+    Logger.log('Could not parse the key structure: ' + e);
+    Logger.log('That almost always means the paste is partial — re-copy the WHOLE private key block.');
+  }
+}
+
+// ─── RUN THIS FIRST ──────────────────────────────────────────────────────────────
+// ⚠ EDITOR-ONLY, AND IT TAKES NO ARGUMENTS — the Apps Script Run menu passes none, which is
+// the same rule testQuoAuth and previewDeletedJobs already follow. Read-only: it proves the
+// five properties, the key and the consent in one call WITHOUT creating an envelope, so an
+// auth failure can never masquerade as a sending bug. That distinction is why testQuoAuth
+// exists, and this file records the cost of not having had one.
+function testEsignAuth() {
+  var missing = _dsMissingProps();
+  if (missing.length) {
+    Logger.log('NOT CONFIGURED — add these Script Properties: ' + missing.join(', '));
+    return false;
+  }
+  Logger.log('Environment : ' + (_dsIsDemo() ? 'DEMO / sandbox' : 'PRODUCTION') + '  (' + _dsProp('DS_BASE_URI') + ')');
+  Logger.log('Auth host   : ' + _dsAuthHost());
+
+  var tok = _dsAccessToken();
+  if (!tok.ok) {
+    Logger.log('FAILED — ' + tok.error);
+    if (tok.needsConsent) Logger.log('Consent URL (open once, click Allow):\n' + tok.consentUrl);
+    return false;
+  }
+  Logger.log('Token       : OK (' + (tok.cached ? 'from cache' : 'freshly minted') + ')');
+
+  var res = _dsApi('get', '', null);   // the account itself — the cheapest authenticated read
+  if (!res.ok) {
+    Logger.log('Token minted but the API refused it (HTTP ' + res.code + '): ' + JSON.stringify(res.body).slice(0, 300));
+    return false;
+  }
+  Logger.log('Account     : ' + (res.body.accountName || _dsProp('DS_ACCOUNT_ID')));
+  Logger.log('ALL GOOD — DocuSign is reachable and consented.');
+  return true;
+}
+
+// ─── WHAT WILL THIS ACCOUNT ACTUALLY ACCEPT? ─────────────────────────────────────
+// ⚠⚠ THIS EXISTS BECAUSE A SCREENSHOT OF THE FIELD PALETTE IS NOT AN ANSWER, AND THE
+// THREE QUESTIONS IT LOOKS LIKE IT ANSWERS ARE DIFFERENT QUESTIONS.
+//   (1) which FIELD TYPES the drag-and-drop sender UI offers;
+//   (2) which TAB TYPES the REST API accepts on this plan;
+//   (3) whether CONDITIONAL LOGIC on a tab is permitted.
+// Nothing here ever touches the drag-and-drop palette — every envelope in this file is built
+// by API — so (1) is at best a proxy for (2). And (3) is not a field type at all: it is a
+// property ON a tab, so it appears in no palette screenshot either way. Measure it.
+//
+// ⚠ ONE CAPABILITY PER ENVELOPE, DELIBERATELY. Putting all four in one draft and reading a
+// single pass/fail says nothing about WHICH one the account refused — the same reason
+// `testDriveThumbnails` probes its three sources separately and prints the size of each.
+// The baseline case is the control: if IT fails, the probe is broken, not the account.
+//
+// ⚠ TABS ARE PLACED BY x/y HERE AND BY ANCHOR EVERYWHERE ELSE, AND THAT IS THE POINT.
+// This asks ONE question — will the account take this tab type — so the anchor text layer is
+// deliberately removed as a variable. Anchor placement is a separate question answered by a
+// real envelope on a real agreement.
+//
+// ⚠ EVERY ENVELOPE IS status:'created' — A DRAFT. Nothing is mailed to anyone, so this is
+// safe against a live account, and each draft is deleted again at the end. Editor-only and
+// argument-free, like testEsignAuth: the Run menu passes no arguments.
+//
+// ⚠⚠ CORRECTED 2026-09-18, AND THE CORRECTION MATTERS MORE THAN THE RESULT: THIS PROBE PROVED
+// LESS THAN IT LOOKED LIKE IT PROVED. All four came back ACCEPTED, so the marketing consent
+// shipped as a required radio pair plus a conditional signature — and on the first envelope
+// DocuSign really SENT, the radios were not on the page. A draft accepts a field DEFINITION;
+// whether that field survives the transition to `status:'sent'` is a different question and this
+// function does not ask it. It is still the right tool for "will the account take this shape at
+// all", and its answer is still a floor rather than a guarantee. **If a capability has to be
+// certain, send one real envelope and look at it.** The marketing consent is now one
+// `checkboxTabs` — the most basic field DocuSign has — chosen for exactly that reason.
+function testEsignTabs() {
+  var missing = _dsMissingProps();
+  if (missing.length) {
+    Logger.log('NOT CONFIGURED — add these Script Properties: ' + missing.join(', '));
+    return false;
+  }
+  Logger.log('Environment : ' + (_dsIsDemo() ? 'DEMO / sandbox' : 'PRODUCTION'));
+
+  var pdf = htmlToPdfBase64('<html><body><p>Havellin tab capability probe.</p></body></html>');
+  if (!pdf.ok) { Logger.log('FAILED to build the probe PDF — ' + pdf.error); return false; }
+
+  // ⚠ ADDRESSED TO OURSELVES, NOT A PLACEHOLDER. A draft can be sent by hand from the
+  // DocuSign web console by anyone who finds it; addressed to the firm, the worst case is
+  // an odd email to ourselves rather than a probe document reaching a client.
+  var me = { email: 'agreements@havellinpalmbeach.com', name: 'Havellin Palm Beach' };
+
+  function tabsFor(kind) {
+    var base = { signHereTabs: [{ documentId: '1', pageNumber: '1', xPosition: '100', yPosition: '200' }] };
+    if (kind === 'baseline') return base;
+
+    if (kind === 'optional signature') {
+      return { signHereTabs: [
+        { documentId: '1', pageNumber: '1', xPosition: '100', yPosition: '200' },
+        { documentId: '1', pageNumber: '1', xPosition: '100', yPosition: '300', optional: 'true' }
+      ]};
+    }
+
+    if (kind === 'radio group') {
+      return {
+        signHereTabs: base.signHereTabs,
+        radioGroupTabs: [{
+          documentId: '1', groupName: 'marketing_consent', requireInitialOnSharedChange: 'false',
+          radios: [
+            { pageNumber: '1', xPosition: '100', yPosition: '350', value: 'authorize', required: 'true' },
+            { pageNumber: '1', xPosition: '100', yPosition: '380', value: 'decline',   required: 'true' }
+          ]
+        }]
+      };
+    }
+
+    if (kind === 'conditional signature') {
+      return {
+        signHereTabs: [
+          { documentId: '1', pageNumber: '1', xPosition: '100', yPosition: '200' },
+          { documentId: '1', pageNumber: '1', xPosition: '100', yPosition: '420',
+            tabLabel: 'marketing_signature', optional: 'true',
+            conditionalParentLabel: 'marketing_consent', conditionalParentValue: 'authorize' }
+        ],
+        radioGroupTabs: [{
+          documentId: '1', groupName: 'marketing_consent',
+          radios: [
+            { pageNumber: '1', xPosition: '100', yPosition: '350', value: 'authorize', required: 'true' },
+            { pageNumber: '1', xPosition: '100', yPosition: '380', value: 'decline',   required: 'true' }
+          ]
+        }]
+      };
+    }
+    return base;
+  }
+
+  var KINDS = ['baseline', 'optional signature', 'radio group', 'conditional signature'];
+  var drafts = [], verdict = {};
+
+  KINDS.forEach(function (kind) {
+    var env = {
+      emailSubject: 'Havellin capability probe — ' + kind + ' (draft, never sent)',
+      documents: [{ documentBase64: pdf.base64, name: 'probe.pdf', fileExtension: 'pdf', documentId: '1' }],
+      recipients: { signers: [{
+        email: me.email, name: me.name, recipientId: '1', routingOrder: '1', tabs: tabsFor(kind)
+      }]},
+      status: 'created'   // ⚠ DRAFT. Never 'sent'.
+    };
+    var res = _dsApi('post', '/envelopes', env);
+    if (res.ok) {
+      verdict[kind] = 'ACCEPTED';
+      if (res.body.envelopeId) drafts.push(res.body.envelopeId);
+    } else {
+      var b = res.body || {};
+      verdict[kind] = 'REFUSED (HTTP ' + res.code + ') — ' + (b.message || b.errorCode || JSON.stringify(b).slice(0, 200));
+    }
+    Logger.log(_pad(kind, 24) + ' : ' + verdict[kind]);
+  });
+
+  // ⚠ CLEAN UP, AND SAY SO IF IT FAILS. A probe that leaves drafts behind on every run turns
+  // the account's envelope list into a bin nobody trusts.
+  drafts.forEach(function (id) {
+    var del = _dsApi('put', '/envelopes/' + encodeURIComponent(id), { status: 'voided', voidedReason: 'Capability probe — never sent' });
+    if (!del.ok) Logger.log('  (could not void draft ' + id + ' — remove it by hand)');
+  });
+
+  Logger.log('');
+  if (verdict['baseline'] !== 'ACCEPTED') {
+    Logger.log('⚠ THE BASELINE FAILED, so read nothing into the other three — the probe itself is the problem, not the plan.');
+    return false;
+  }
+  Logger.log('Baseline passed, so the three results above are real answers about this account.');
+  return verdict;
+}
+
+function _pad(s, n) { s = String(s); while (s.length < n) s += ' '; return s; }
+// ═══════════════════════════════════════════════════════════════════════════════════
+// STRIPE — ACH ONLY
+// ═══════════════════════════════════════════════════════════════════════════════════
+// ⚠⚠ THIS LIVES IN main-sync.gs RATHER THAN THE SEPARATE STRIPE PROJECT, AND THAT IS THE
+// WHOLE POINT OF THE MOVE. Until 2026-09-18 the payment link was minted by a second Apps
+// Script deployment behind STRIPE_SCRIPT_URL — fine while it was fire-and-forget, and wrong
+// the moment anything reads back, because read-back is on the app's REQUEST PATH and has to
+// move in lockstep with BACKEND_VERSION, BACKEND_ACTIONS and the dispatch-parity test.
+// `checkBackendVersion` cannot reach a second deployment, so a stale one would fail exactly
+// the way the stale main-sync.gs did: silently, and read as an app bug. This file records
+// that costing six weeks. Same reasoning as the DocuSign build on 2026-09-17.
+//
+// ⚠ ACH ONLY, AND IT IS DECIDED RATHER THAN DEFAULTED. Anthony, 2026-09-18, asked directly:
+// "No cards at all." ACH is 0.8% capped at $5; a card is 2.9% + 30c, which on one $25,715
+// job is $747 against $16.50. A 3% surcharge cannot close that gap legally — the cap is the
+// LOWER of 3% or actual cost of acceptance, and the blended card rate is 2.9023% at these
+// ticket sizes, so 3% is only compliant at or below $300. See STRIPE_PAYMENTS_SPEC.md §1.
+var STRIPE_API             = 'https://api.stripe.com/v1';
+var STRIPE_API_VERSION     = '2024-06-20';
+var STRIPE_ALLOWED_METHODS = ['us_bank_account'];   // ⚠ ACH. Adding a card here is a pricing decision, not a config change.
+
+function _stProp(name) {
+  return (PropertiesService.getScriptProperties().getProperty(name) || '').trim();
+}
+
+// Named individually, never "not configured" — the lesson this file already records twice, on
+// the PDF conversion and on the five DocuSign properties.
+function _stMissingProps() {
+  return ['STRIPE_SECRET_KEY'].filter(function (k) { return !_stProp(k); });
+}
+
+function _stErr(res) {
+  var e = (res && res.body && res.body.error) || {};
+  return e.message || e.type || (res && res.body && res.body.raw) || 'no reason given';
+}
+
+// ⚠ STRIPE TAKES FORM ENCODING, NOT JSON, AND NESTS WITH BRACKETS. `line_items[0][price_data]
+// [currency]=usd`. Posting JSON to this API returns a 400 that reads like a bad key, which is
+// the wrong place to start debugging.
+function _stForm(obj, prefix, out) {
+  out = out || [];
+  for (var k in obj) {
+    if (!Object.prototype.hasOwnProperty.call(obj, k)) continue;
+    var v = obj[k];
+    if (v === null || v === undefined) continue;
+    var key = prefix ? prefix + '[' + k + ']' : k;
+    if (Object.prototype.toString.call(v) === '[object Array]') {
+      for (var i = 0; i < v.length; i++) {
+        if (v[i] !== null && typeof v[i] === 'object') _stForm(v[i], key + '[' + i + ']', out);
+        else out.push(encodeURIComponent(key + '[' + i + ']') + '=' + encodeURIComponent(String(v[i])));
+      }
+    } else if (typeof v === 'object') {
+      _stForm(v, key, out);
+    } else {
+      out.push(encodeURIComponent(key) + '=' + encodeURIComponent(String(v)));
+    }
+  }
+  return out.join('&');
+}
+
+function _stApi(method, path, params) {
+  var key = _stProp('STRIPE_SECRET_KEY');
+  if (!key) return { ok: false, code: 0, body: { error: { message: 'STRIPE_SECRET_KEY is not set in Script Properties.' } } };
+
+  var url  = STRIPE_API + path;
+  var opts = {
+    method: method,
+    headers: { Authorization: 'Bearer ' + key, 'Stripe-Version': STRIPE_API_VERSION },
+    muteHttpExceptions: true
+  };
+  if (params) {
+    if (String(method).toLowerCase() === 'get') {
+      url += (url.indexOf('?') === -1 ? '?' : '&') + _stForm(params);
+    } else {
+      opts.contentType = 'application/x-www-form-urlencoded';
+      opts.payload = _stForm(params);
+    }
+  }
+  var res  = UrlFetchApp.fetch(url, opts);
+  var body = {};
+  try { body = JSON.parse(res.getContentText()); } catch (e) { body = { raw: res.getContentText().slice(0, 300) }; }
+  return { ok: res.getResponseCode() < 300, code: res.getResponseCode(), body: body };
+}
+
+// ─── CREATING THE PAYMENT LINK ───────────────────────────────────────────────────
+// ⚠⚠ A PAYMENT LINK, NOT A CHECKOUT SESSION, AND THE REASON IS THE CALENDAR. A Checkout
+// Session expires — 24 hours is Stripe's hard maximum — and a deposit invoice is routinely
+// paid days later by a trust officer who has to get it approved first. An expired link is a
+// client who tried to pay and could not, which is worse than never sending one. A Payment
+// Link does not expire until it is deactivated.
+function stripeCreatePaymentLink(data) {
+  try {
+    var miss = _stMissingProps();
+    if (miss.length) {
+      return { ok: false, error: 'Stripe is not configured — missing Script Propert'
+                                 + (miss.length > 1 ? 'ies' : 'y') + ': ' + miss.join(', ') + '.' };
+    }
+    var cents = Math.round(Number(data && data.amount) * 100);
+    if (!(cents > 0)) return { ok: false, error: 'There is no amount to charge on this stage.' };
+
+    var res = _stApi('post', '/payment_links', {
+      line_items: [{
+        quantity: 1,
+        price_data: {
+          currency: 'usd',
+          unit_amount: cents,
+          product_data: { name: (data.description || 'Havellin Palm Beach').slice(0, 250) }
+        }
+      }],
+      payment_method_types: STRIPE_ALLOWED_METHODS,
+      // ⚠ THE METADATA IS HOW A PAYMENT FINDS ITS WAY HOME. Stripe is the only record of which
+      // job and stage a bank transfer belongs to once it lands days later.
+      metadata: {
+        jobId: String((data && data.jobId) || ''),
+        hvlId: String((data && data.hvlId) || ''),
+        stage: String((data && data.stage) || '')
+      }
+    });
+    if (!res.ok) return { ok: false, error: 'Stripe refused the request (HTTP ' + res.code + '): ' + _stErr(res) };
+
+    // ⚠⚠ VERIFY WHAT CAME BACK; DO NOT TRUST THE PARAMETER. Whether /v1/payment_links honours
+    // `payment_method_types` could not be confirmed from the build environment — docs.stripe.com
+    // is blocked by the egress proxy. So the link is READ BACK and checked, and a link that would
+    // also take a card is DEACTIVATED rather than returned. This is the rule this file already
+    // records paying for on DriveApp.getThumbnail(), which returned a 130KB archival photograph
+    // under a name promising a thumbnail: trust the measurement, never the method name.
+    //
+    // ⚠ AN EMPTY LIST IS A FAILURE, NOT A PASS. Stripe returns null there when it defers to the
+    // Dashboard's own payment-method settings, and those may include cards. We cannot prove
+    // ACH-only in that case, so we refuse and name the fix.
+    var got = res.body.payment_method_types || [];
+    var bad = [];
+    for (var i = 0; i < got.length; i++) {
+      if (STRIPE_ALLOWED_METHODS.indexOf(got[i]) === -1) bad.push(got[i]);
+    }
+    if (!got.length || bad.length) {
+      try { _stApi('post', '/payment_links/' + encodeURIComponent(res.body.id), { active: false }); } catch (e) {}
+      return { ok: false, error: 'Stripe created a link that is not ACH-only ('
+        + (bad.length ? 'it also accepts ' + bad.join(', ') : 'it did not say which methods it accepts')
+        + '), so it was deactivated and NOT sent. Fix it in the Stripe Dashboard: '
+        + 'Settings > Payments > Payment methods — turn OFF cards and turn ON ACH Direct Debit.' };
+    }
+
+    return { ok: true, linkId: res.body.id, url: res.body.url, amount: cents / 100, methods: got };
+  } catch (error) {
+    Logger.log('stripeCreatePaymentLink error: ' + error);
+    return { ok: false, error: String(error) };
+  }
+}
+
+// ─── READING BACK WHAT WAS PAID ──────────────────────────────────────────────────
+// ⚠⚠ NO WEBHOOK, AND THE REASON IS THE SAME ONE THAT RULED OUT DOCUSIGN CONNECT. `doPost(e)`
+// does not expose request HEADERS, and Stripe signs every webhook with `Stripe-Signature`
+// with no query-parameter alternative. An Apps Script endpoint therefore cannot authenticate
+// a delivery — leaving an open URL, on a public repo, that marks a $12,858 deposit received.
+//
+// ⚠ BUT THE DOCUSIGN HAZARD DOES NOT TRANSFER, which is why polling is the answer here and was
+// not there. DocuSign publishes a hard one-request-per-resource-per-15-minutes floor and names
+// REVOCATION as the penalty. Stripe has no such rule. And ACH takes ~4 business days to settle,
+// so checking on arrival loses nothing a webhook would have bought.
+//
+// ⚠ ONE LIST CALL, NOT LIST-THEN-GET-EACH. `expand[]=data.payment_intent` returns the intent
+// inline; fetching each one separately is N+1 calls for the same answer.
+function stripePaymentsForLink(data) {
+  try {
+    var id = data && data.linkId;
+    if (!id) return { ok: false, error: 'No payment link supplied.' };
+
+    var res = _stApi('get', '/checkout/sessions', {
+      limit: 100,
+      payment_link: id,
+      expand: ['data.payment_intent']
+    });
+    if (!res.ok) return { ok: false, error: 'Stripe status check failed (HTTP ' + res.code + '): ' + _stErr(res) };
+
+    var out = [];
+    var rows = (res.body && res.body.data) || [];
+    for (var i = 0; i < rows.length; i++) {
+      var s  = rows[i];
+      var pi = s.payment_intent;
+      if (!pi || typeof pi !== 'object') continue;   // unexpanded id, or a session that never got as far as an intent
+      var cd = s.customer_details || {};
+      out.push({
+        sessionId: s.id,
+        piId:      pi.id,
+        // ⚠ THE INTENT'S STATUS, NEVER THE SESSION'S. On ACH the session reads `complete` the
+        // moment the client authorises, while the money is still days away — the intent sits at
+        // `processing` until it actually settles. Reading the session would record money that
+        // has not arrived, which is the whole defect this build exists to avoid.
+        status:    pi.status || '',
+        amount:    (pi.amount_received || pi.amount || 0) / 100,
+        payer:     cd.name || cd.email || '',
+        createdAt: pi.created ? new Date(pi.created * 1000).toISOString() : ''
+      });
+    }
+    return { ok: true, linkId: id, payments: out };
+  } catch (error) {
+    Logger.log('stripePaymentsForLink error: ' + error);
+    return { ok: false, error: String(error) };
+  }
+}
+
+// ⚠ EDITOR-ONLY, ARGUMENT-FREE, READ-ONLY — the testQuoAuth / testEsignAuth pattern, and the
+// thing to run first. The Apps Script Run menu passes no arguments. It proves the key and the
+// account WITHOUT creating a payment link, so an auth failure can never masquerade as a
+// sending bug. It also reports whether the account can actually take ACH, because a key that
+// authenticates against an account with ACH switched off fails later and further away.
+function testStripeAuth() {
+  var miss = _stMissingProps();
+  if (miss.length) { Logger.log('MISSING Script Property: ' + miss.join(', ')); return; }
+
+  var bal = _stApi('get', '/balance', null);
+  if (!bal.ok) { Logger.log('FAILED (HTTP ' + bal.code + '): ' + _stErr(bal)); return; }
+
+  var acct = _stApi('get', '/account', null);
+  var live = _stProp('STRIPE_SECRET_KEY').indexOf('sk_live_') === 0;
+  Logger.log('ALL GOOD — Stripe is reachable.');
+  Logger.log('  mode:    ' + (live ? 'LIVE' : 'TEST'));
+  if (acct.ok) {
+    Logger.log('  account: ' + (acct.body.business_profile && acct.body.business_profile.name || acct.body.id));
+    var caps = acct.body.capabilities || {};
+    Logger.log('  ACH (us_bank_account_ach_payments): ' + (caps.us_bank_account_ach_payments || 'not enabled'));
+    if (caps.us_bank_account_ach_payments !== 'active') {
+      Logger.log('  >> ACH IS NOT ACTIVE. Enable it: Dashboard > Settings > Payments > Payment methods.');
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// AGENT ONE — IDENTIFYING WHAT IS IN A PHOTOGRAPH
+// ═══════════════════════════════════════════════════════════════════════════════════
+// Spec: AGENT_ONE_SPEC.md. Step 2 of the inventory pipeline Anthony scoped 2026-09-19.
+//
+// ⚠⚠ THIS RUNS HERE AND NOT IN THE APP BECAUSE THE KEY CANNOT LIVE IN `havellin.html`. One
+// public file, served from GitHub Pages. This project already records the same lesson twice —
+// a Google client secret pasted into a chat on 2026-09-08, and the DocuSign private key that
+// had to come here because a private key in a View-Source-able page is not a secret.
+//
+// ⚠ AND IT IS ON THE APP'S REQUEST PATH, so it moves in lockstep with BACKEND_VERSION and the
+// dispatch-parity test. A second Apps Script project somebody must remember to paste is the
+// failure this repo paid six weeks for.
+//
+// WHAT IT WRITES, VIA THE APP: objectName, category, qty. NOTHING ELSE. Values are Agent Two's
+// and the `contents` tier promises "no opinion of value" on a signed agreement; disposition
+// stays Undecided by design; flagNFA is a gate with no override. The app enforces that on the
+// way in — this end simply never asks for those fields.
+
+var AGENT_API          = 'https://api.anthropic.com/v1/messages';
+var AGENT_API_VERSION  = '2023-06-01';
+// ─── WHICH MODEL: THE NEWEST, BY ITSELF ────────────────────────────────────────────
+// ⚠⚠ 2026-10-26 (Anthony, asked whether Agent One should move from Opus 5 to Opus 5.5: *"Move to Opus 5.5"*; then *"Make sure the
+// agents update the model when there are new models so they are always the most accurate"*, and, told the top tier costs about
+// two and a half times Opus a house: *"our jobs are $10,000 to $40,000 plus. So is this a real expense? … at most 1 to 5 a month"*).
+// Every agent call (Agent One, the room check, Agent Two) asks _agModels(task) for two models: the newest of the top line (Fable)
+// first, the newest Opus as its fallback. The newest is read off Anthropic's own model list (GET /v1/models, _agModelList) at most
+// every AGENT_MODEL_LIST_SECS and cached; the floors below are the answer whenever the list cannot be read, and nothing is ever
+// chosen below them. A model nobody has tested runs the day it is released: that is the instruction, and the fallback is the net.
+// ⚠ URLFETCHAPP CUTS A REQUEST OFF AT ABOUT 60 SECONDS (undocumented, not configurable) and the top line thinks longer than Opus, so
+// a request that runs long, is cut off at its token ceiling, is busy (429, 529, 5xx), or is rejected outright (a 400 or 404 that is
+// not about the refusal fallback: a parameter or a tool version a new model does not take) is sent again at once on the fallback
+// (_agSendAll; Agent Two's own loop). A task whose first choice runs long AGENT_MODEL_SLOW_LIMIT times in a day, or whose fallback
+// answered what the first choice rejected, runs on the fallback for six hours (_agDemote), so a model that does not fit
+// stops costing a minute a request. AGENT_MODEL_PIN in Script Properties pins one model for every call (the escape hatch).
+var AGENT_MODELS_API        = 'https://api.anthropic.com/v1/models';
+var AGENT_MODEL_FLOORS      = { top: 'claude-fable-5-1', opus: 'claude-opus-5-5' };
+var AGENT_MODEL_LINES       = { top: 'claude-fable', opus: 'claude-opus' };
+var AGENT_MODEL_LIST_SECS   = 21600;  // six hours between readings of the model list
+var AGENT_MODEL_DEMOTE_SECS = 21600;  // six hours on the fallback once the first choice has not fitted: CacheService's own ceiling
+                                      // (expirationInSeconds is 1 to 21,600; a day was asked for on review, 2026-10-26, and refused)
+var AGENT_MODEL_SLOW_LIMIT  = 2;      // requests that ran long in a day before a task stops trying its first choice
+// ⚠ THE SERVER-SIDE REFUSAL FALLBACK on every agent call: a photograph or a line the model's classifier declines (a firearm in a
+// safe, say) is re-run on the model Anthropic recommends for that category inside the same call, instead of coming back unnamed
+// and being sent again on every run. An account that refuses the field answers 400 naming it, and that request is sent once more
+// without it. One constant for the three calls (Agent Two's own copy went with it).
+var AGENT_FALLBACK_BETA = 'server-side-fallback-2026-07-01';
+
+// The version a model id carries in its line (claude-fable-5-1 -> [5, 1]; claude-opus-6 -> [6, 0]), or null for another line, a
+// dated snapshot or anything else: only the bare aliases Anthropic recommends are chosen.
+function _agModelVersion(id, line) {
+  var pre = AGENT_MODEL_LINES[line] + '-', s = String(id || '');
+  if (s.indexOf(pre) !== 0) return null;
+  var parts = s.slice(pre.length).split('-');
+  if (parts.length > 2 || !parts.every(function (x) { return /^\d{1,2}$/.test(x); })) return null;
+  return [parseInt(parts[0], 10), parts.length > 1 ? parseInt(parts[1], 10) : 0];
+}
+function _agVerCmp(a, b) { return (a[0] - b[0]) || (a[1] - b[1]); }
+
+// The newest model of a line on the list that reads images, never below the line's floor.
+function _agNewestOf(list, line) {
+  var best = AGENT_MODEL_FLOORS[line], bestV = _agModelVersion(best, line);
+  (list || []).forEach(function (m) {
+    var v = m && _agModelVersion(m.id, line);
+    if (!v || _agVerCmp(v, bestV) <= 0) return;
+    var img = m.capabilities && m.capabilities.image_input;
+    if (img && img.supported === false) return;
+    best = m.id; bestV = v;
+  });
+  return best;
+}
+
+function _agCache() { try { return CacheService.getScriptCache(); } catch (e) { return null; } }
+
+// {top, opus}: the newest of each line, cached. A list that cannot be read answers the floors, remembered ten minutes so one run
+// does not ask again for every slice.
+function _agModelList(key) {
+  var cache = _agCache(), hit = null;
+  if (cache) { try { hit = cache.get('agent_models'); } catch (e) {} }
+  if (hit) { try { return JSON.parse(hit); } catch (e) {} }
+  var out = { top: AGENT_MODEL_FLOORS.top, opus: AGENT_MODEL_FLOORS.opus }, secs = 600;
+  try {
+    var res = UrlFetchApp.fetch(AGENT_MODELS_API + '?limit=1000', {
+      method: 'get', headers: { 'x-api-key': key, 'anthropic-version': AGENT_API_VERSION }, muteHttpExceptions: true
+    });
+    if (res.getResponseCode() < 300) {
+      var data = (JSON.parse(res.getContentText()) || {}).data || [];
+      out = { top: _agNewestOf(data, 'top'), opus: _agNewestOf(data, 'opus') };
+      secs = AGENT_MODEL_LIST_SECS;
+    }
+  } catch (e) { Logger.log('model list not read: ' + e); }
+  if (cache) { try { cache.put('agent_models', JSON.stringify(out), secs); } catch (e) {} }
+  return out;
+}
+
+function _agDemoted(task) {
+  var c = _agCache();
+  try { return !!c && c.get('agent_demote_' + task) === '1'; } catch (e) { return false; }
+}
+function _agDemote(task, why) {
+  var c = _agCache();
+  Logger.log('agent ' + task + ': the first-choice model is set aside for six hours (' + why + ')');
+  try { if (c) c.put('agent_demote_' + task, '1', AGENT_MODEL_DEMOTE_SECS); } catch (e) {}
+}
+function _agSlow(task) {
+  var c = _agCache();
+  try {
+    if (!c) return;
+    var n = (parseInt(c.get('agent_slow_' + task), 10) || 0) + 1;
+    c.put('agent_slow_' + task, String(n), AGENT_MODEL_DEMOTE_SECS);
+    if (n >= AGENT_MODEL_SLOW_LIMIT) _agDemote(task, n + ' requests ran past the time limit today');
+  } catch (e) {}
+}
+
+// The two models one call uses: {first, fallback}. `task` is 'name', 'rooms' or 'value'.
+function _agModels(task, key) {
+  var list = _agModelList(key), pin = _agProp('AGENT_MODEL_PIN');
+  // A pin is one model for every call, the fallback included (2026-10-26, on review): pinned away from a new Opus that misbehaves,
+  // a busy or slow request must not go to it.
+  var first = pin || list.top, fallback = pin || list.opus;
+  if (!pin && _agDemoted(task)) first = fallback;
+  return { first: first, fallback: fallback };
+}
+
+// ⚠ SEND, AND SEND AGAIN WHERE ANOTHER TRY CAN HELP (Agent One and the room check; Agent Two runs its own loop because a research
+// request can pause and be continued). `build(item, model, noFallbacks)` makes the request (and may throw, a photograph not yet in
+// Drive: that item fails by name); `read(res, item)` answers {ok, …} or {ok:false, error, fallbackRefused, retryable}. An item goes
+// at most three times: once, once more without the refusal-fallback field where the account refused it, and once on the fallback
+// model. A fetchAll that throws (one request past UrlFetchApp's limit throws the lot) sends the whole slice to the fallback while
+// `deadline` allows, else fails it as taking too long. Answers in item order: [{ok, …, model} | {ok:false, error}], plus timedOut.
+function _agSendAll(items, build, read, models, task, deadline, state) {
+  var out = new Array(items.length), timedOut = false;
+  state = state || {};
+  var queue = items.map(function (it, k) { return { k: k, model: models.first, noFb: false }; });
+  while (queue.length) {
+    var reqs = [], sent = [];
+    queue.forEach(function (q) {
+      try { reqs.push(build(items[q.k], q.model, q.noFb || !!state.noFallbacks)); sent.push(q); }
+      catch (e) { out[q.k] = { ok: false, error: String(e.message || e) }; }
+    });
+    queue = [];
+    if (!reqs.length) break;
+    var responses;
+    try {
+      responses = UrlFetchApp.fetchAll(reqs);
+    } catch (fetchErr) {
+      timedOut = true;
+      var why = 'took too long to come back (' + String(fetchErr.message || fetchErr).slice(0, 80) + ')';
+      if (sent.some(function (q) { return q.model !== models.fallback; })) _agSlow(task);
+      sent.forEach(function (q) {
+        if (q.model !== models.fallback && new Date().getTime() < deadline) queue.push({ k: q.k, model: models.fallback, noFb: q.noFb });
+        else out[q.k] = { ok: false, error: why };
+      });
+      continue;
+    }
+    responses.forEach(function (res, j) {
+      var q = sent[j], r = read(res, items[q.k]) || { ok: false, error: 'no answer' };
+      if (r.ok) {
+        r.model = q.model;
+        out[q.k] = r;
+        if (q.rejectedFirst) _agDemote(task, 'the first choice rejected a request the fallback answered');
+        return;
+      }
+      // ⚠ EVERY REQUEST THE FIELD WAS REFUSED ON GOES AGAIN WITHOUT IT (2026-10-26, on review): the whole first slice carried it,
+      // so all of it answers 400 together; only the first went again and the rest were failures.
+      var inTime = new Date().getTime() < deadline;
+      if (r.fallbackRefused && !q.noFb && inTime) {
+        state.noFallbacks = true;
+        queue.push({ k: q.k, model: q.model, noFb: true, rejectedFirst: q.rejectedFirst });
+        return;
+      }
+      // Past the deadline it is answered as it stands (the app asks again on the next run): a second fetchAll of up to a minute
+      // after a slice started late would run into Apps Script's six minutes.
+      if (r.retryable && q.model !== models.fallback && inTime) {
+        queue.push({ k: q.k, model: models.fallback, noFb: q.noFb, rejectedFirst: r.retryable === 'rejected' });
+        return;
+      }
+      out[q.k] = r;
+    });
+  }
+  return { answers: out, timedOut: timedOut };
+}
+
+// ⚠ IDENTIFICATION IS PERCEPTION, NOT REASONING, so this is deliberately not `high`. It is also
+// what keeps a call inside UrlFetchApp's timeout. Sweep low/medium/high on one real room and
+// measure naming quality against cost before changing it — do not tune it by argument.
+var AGENT_EFFORT       = 'medium';
+var AGENT_MAX_TOKENS   = 16000;  // thinking counts against this; a naming answer needs ~400. Was 4,096: with adaptive
+                                 // thinking a dense frame could stop at the cap and fail as 'cut off' (P11, 2026-09-30).
+                                 // 16,000 is the documented ceiling for a non-streaming request; it caps, it does not spend.
+var AGENT_PARALLEL     = 8;      // fetchAll width — request bodies carry base64, so not 50
+var AGENT_MAX_SHOTS    = 80;     // hard cap on one invocation whatever the caller asks for
+var AGENT_TIME_BUDGET  = 240000; // 4 min of Apps Script's 6, leaving margin to answer
+var AGENT_MAX_IMG      = 4500000;// per-image byte ceiling before base64; ours run ~130KB
+
+function _agProp(name) {
+  return (PropertiesService.getScriptProperties().getProperty(name) || '').trim();
+}
+
+// Named individually, never "not configured" — the lesson this file records on the PDF
+// conversion (three rounds, because the error carried no cause) and on DocuSign's five.
+function _agMissingProps() {
+  return ['ANTHROPIC_API_KEY'].filter(function (k) { return !_agProp(k); });
+}
+
+// ⚠⚠ `getBlob()`, NEVER `getContentText()`. The latter decodes bytes as UTF-8 and is lossy with
+// no way back — the trap `_dsFetchBlob` was written to avoid on the signed-agreement PDF.
+// ⚠ AND NOT THE THUMBNAIL CHAIN. `_thumbBlobFor` deliberately returns something small; an object
+// cannot be named from a 240px crop. This wants the real image, which is already compressed to
+// 900px at capture, so "the full file" here is ~130KB rather than a camera original.
+function _agImageBlock(fileId) {
+  var blob = DriveApp.getFileById(String(fileId)).getBlob();
+  var type = blob.getContentType() || '';
+  if (type.indexOf('image/') !== 0) throw new Error('not an image (' + (type || 'unknown type') + ')');
+  var bytes = blob.getBytes();
+  if (bytes.length > AGENT_MAX_IMG) throw new Error('image is ' + Math.round(bytes.length / 1024) + 'KB, too large to send');
+  return {
+    type: 'image',
+    source: { type: 'base64', media_type: type, data: Utilities.base64Encode(bytes) }
+  };
+}
+
+// ─── THE TOOL THE MODEL FILLS IN ──────────────────────────────────────────────────
+// ⚠ `strict: true` WITH `tool_choice: auto` PLUS AN INSTRUCTION, never a forced tool_choice.
+// Forced tool use is removed on the newest models and interacts badly with thinking elsewhere;
+// this shape works on every model and still guarantees the arguments validate. `strict` needs
+// `additionalProperties:false` and every property in `required`, hence `basis` and `crop` being
+// mandatory rather than optional — the prompt says what to send when there is nothing to say.
+// ⚠⚠ CONDITION, GRADED OFF THE PHOTOGRAPH (2026-10-26b; Anthony: "why doesn't it just grade that excellent condition or why can't
+// it see that my couch doesn't have any tears or rips in it"; he took "Agents grade it"). The grades ride the payload (the app's
+// AGENT_CONDITIONS, as the categories do; this end holds no copy), and with no list there is no field. One sentence of what each
+// grade means, read by both agents' prompts. Empty where the photograph cannot show it; the app writes a grade only over a blank or
+// an agent's own unreviewed grade (_invCondIsAgents), and the line's one tick confirms it.
+var AGENT_CONDITION_TEXT = 'Excellent = like new, no visible wear. Good = ordinary light wear for its age, nothing damaged. '
+  + 'Fair = visible wear, marks, fading or small damage. Poor = broken, torn, stained or missing parts. Grade only what the '
+  + 'photograph shows of the thing itself; leave it empty where it cannot show it (a closed box, a thing mostly hidden or '
+  + 'too small to see, a group whose pieces differ).';
+
+function _agTool(categories, conditions) {
+  var conds = (conditions || []).filter(function (c) { return !!String(c || '').trim(); });
+  var tool = {
+    name: 'record_contents',
+    description: 'Record every distinct inventoriable object visible in the photograph, and any '
+               + 'notice a person needs to see. Call this exactly once.',
+    strict: true,
+    input_schema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['objects', 'notices'],
+      properties: {
+        objects: {
+          type: 'array',
+          description: 'One entry per inventory LINE. A lot is one entry with qty set. Empty if '
+                     + 'the frame holds nothing inventoriable.',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['name', 'category', 'qty', 'confidence', 'basis', 'crop'],
+            properties: {
+              name:       { type: 'string',  description: 'Describe it as fully as the photograph and the crew\'s note support, never with a count: how many goes in qty.' },
+              category:   { type: 'string',  enum: categories },
+              qty:        { type: 'integer', description: 'Articles on this line. 1 for a single object; the count for a lot, from the crew\'s note where it gives one.' },
+              confidence: { type: 'string',  enum: ['high', 'medium', 'low'] },
+              // ⚠ THE BASIS ROUTES THE VALUATION (2026-10-26): the app sends a line to sold-comparable research when its basis says a
+              // mark was read (agentValueMode). Free text failed both ways ("mark too faint to read" went to research; "nameplate reads
+              // Steinway" did not), so a mark actually read begins "Read:" and an unread one is not called a mark at all.
+              basis:      { type: 'string',  description: 'Why you named it what you did, in a few words. Where the name rests on a maker\'s mark, signature, hallmark, backstamp, label, badge, nameplate or logo you read in the photograph or a close-up, begin with "Read:" and quote what it says ("Read: GORHAM STERLING hallmark in close-up"). Where nothing on it is legible, say what you went on (shape, glaze, construction) and do not mention a mark, label, signature or maker. Never begin with "Read:" for a mark you could not read, a label written by hand on a box, or a brand taken from the crew\'s note. Read by the desk and the valuer, never printed for a client.' },
+              crop:       { type: 'array',   description: 'x0,y0,x1,y1 normalised 0-1. Use 0,0,1,1 when the object fills the frame or you cannot place it.',
+                            items: { type: 'number' } }
+            }
+          }
+        },
+        notices: {
+          type: 'array',
+          description: 'Things a person must look at. Never a substitute for an object entry.',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['kind', 'text'],
+            properties: {
+              kind: { type: 'string', enum: ['mustfind', 'firearm', 'nfa', 'other'] },
+              text: { type: 'string' }
+            }
+          }
+        }
+      }
+    }
+  };
+  if (conds.length) {
+    var obj = tool.input_schema.properties.objects.items;
+    obj.properties.condition = { type: 'string', enum: conds.concat(['']),
+      description: 'Its condition as the photograph shows it, empty where it cannot show it. ' + AGENT_CONDITION_TEXT };
+    obj.required = obj.required.concat(['condition']);
+  }
+  return tool;
+}
+
+// ─── THE SYSTEM PROMPT ────────────────────────────────────────────────────────────
+// Stable for every photograph on one job, so it carries `cache_control` and is written to be
+// byte-identical across the run. Job-specific context (the must-find list, the matter type) is
+// in here too rather than in the user turn: it is constant within a job, which is the whole
+// span the cache has to cover.
+function _agSystem(ctx) {
+  var cats = (ctx.categories || []).join('\n  - ');
+  var must = (ctx.mustFind || []);
+  var s = ''
+    + 'You are identifying the contents of a home so that a concierge can build an estate '
+    + 'inventory. You are looking at photographs taken room by room. Your entire job is to say '
+    + 'WHAT each object is. You do not decide what happens to it and you do not say what it is '
+    + 'worth.\n\n'
+
+    + 'HOW MANY LINES\n'
+    + 'Group ordinary household goods into one line with a quantity: books, flatware, glassware, '
+    + 'linens, kitchenware, tools, garage consumables. "Sterling flatware service" is one entry '
+    + 'with qty 30, not thirty entries.\n'
+    + 'Give a line of its own to anything in these categories: Art & Décor, Antiques, Jewelry & '
+    + 'Watches, Silver & Precious Metal, Rugs & Carpets, Collectibles, Firearms, Wine & Spirits, '
+    + 'Musical Instruments. Also to anything carrying a readable maker\'s mark, signature or '
+    + 'hallmark, and to anything visibly individual or valuable.\n'
+    // 2026-10-26: read literally, "a line of its own" for Silver contradicted the sterling service lotted with qty 30 above it,
+    // and the crock example gave no count: a group of one kind carries its count, a mixed group is one line of qty 1 (the desk
+    // multiplies the value by qty, so a mixed drawer given a count is valued many times over).
+    + 'A line of its own means never folded into a group of other things: a matched set of one kind (a sterling flatware '
+    + 'service, matching candlesticks) is still one line, with the count in qty. A group of one kind carries its count in '
+    + 'qty; a group of mixed things (a crock of utensils, a drawer of odds and ends) is one line with qty 1.\n'
+    + 'Aim for the count a person would actually work through. A large house should come out in '
+    + 'the hundreds of lines, not the thousands.\n'
+    // 2026-10-19 (Anthony, the first practice job: a photograph of socks in an open drawer came back as the socks AND
+    // "Wood dresser with white-lined drawer", and a kitchen drawer as twelve lines). Three rules the field guide,
+    // *Photographing a House*, promises: the surface is background, a mixed drawer is one line, rubbish is not inventory.
+    + 'The photograph is OF one thing or one group. What it sits on or in is background, not an object: '
+    + 'never record the table, bed, dresser, shelf, cloth or floor under the subject, or the drawer, '
+    + 'cabinet or closet it is shown in, unless that piece of furniture is itself the only thing in the frame.'
+    // 2026-10-26: the field guide has the crew photograph a full bookcase or china cabinet it cannot empty once, as it stands, so
+    // there is no other photograph of the piece, and the background rule left the breakfront off the inventory.
+    + ' One exception: a freestanding bookcase, china cabinet or display cabinet photographed full, the whole piece in the '
+    + 'frame, is both: one line for the piece of furniture, and its contents under the rules here.\n'
+    + 'A drawer, shelf, box, bin or bag of mixed small everyday things is ONE line for the whole of it, '
+    + 'named for the container and what it holds ("Kitchen drawer contents: tape, batteries, golf balls, '
+    + 'stationery"), qty 1, never a line per kind. Take something out of it onto a line of its own only '
+    + 'when it is in the categories above, carries a readable mark, or is visibly individual or valuable.\n'
+    + 'Opened or used-up consumables (food, toiletries and cosmetics, cleaning supplies, medicines), worn '
+    + 'underwear and socks, hangers, cables and chargers, packaging and ordinary household rubbish are not '
+    + 'inventoriable: leave them out. A frame holding nothing else is an empty list. Sealed, unused '
+    + 'supplies may be one group line.\n\n'
+
+    + 'HOW TO NAME IT\n'
+    + 'Be as specific as the photograph supports. Name the maker, model, period, material and '
+    + 'pattern whenever you can see them. A generic name is a wasted line, because the desk '
+    + 'cannot add detail it was never shown.\n'
+    // 2026-10-26: most lines are valued later from these words alone (an ordinary lot travels as text), and "Wood dresser",
+    // "Framed floral print" or "Area rug" is priced as the generic thing.
+    + 'Most lines are read later only as your words, without the photograph, so put in the name what tells this one apart '
+    + 'from others of its kind, as far as the photograph or a close-up shows it: for furniture the wood or material and '
+    + 'the form ("walnut six-drawer dresser, mid-century style"); for a painting or print the medium and whether it '
+    + 'appears original or printed (oil on canvas, watercolour, lithograph, poster), the subject and the frame; for a rug '
+    + 'its style, and hand-knotted or machine-made where the back or a close-up shows it ("Heriz-style rug, appears '
+    + 'hand-knotted"); for electronics and appliances the maker, and the model where a label is legible; for lighting the '
+    + 'material and form ("brass and crystal chandelier"); for books what kind they are ("hardcover history and '
+    + 'biography"); for tools the brand where it shows. Hedge what you infer, as below.\n'
+    + 'State flatly only what is READABLE in the frame. When you are inferring from form, style '
+    + 'or proportion, hedge in the words themselves: "appears to be", "likely", "in the style '
+    + 'of". Both are useful; only one of them is a claim.\n'
+    // 2026-10-25 (Anthony, the Ellison kitchen: one line listed fifteen utensils by kind and ran off the desk's row).
+    + 'Keep a name to one short line, about fifteen words at most: what it is first, then what tells it '
+    + 'apart. A group line names the kind and what it holds in a few words, never every piece.\n'
+    + '  Good: "Bang & Olufsen Beolab 8000 speakers" (qty 2) when the badge is legible.\n'
+    + '  Good: "appears to be Bang & Olufsen, floor-standing column speakers" (qty 2) when it is the shape.\n'
+    + '  Good: "Banksy print, likely a reproduction" when the image is recognisable but the edition is not.\n'
+    + '  Good: "Kitchen utensils: wooden spoons, spatulas, whisks, tongs" for a crock of them.\n'
+    + '  Bad:  "Speakers." Bad: "Banksy original." Bad: "Tiffany lamp" on an unmarked leaded shade nobody named.\n'
+    + 'Some photographs are close-ups of a maker\'s mark, signature or hallmark belonging to an '
+    + 'object in the main frame. Read them and use them. They are why they were taken.\n'
+    + 'In basis, begin with "Read:" and quote what you read when the name rests on a mark, signature, hallmark, label, '
+    + 'badge, nameplate or logo you could read. When nothing on it is legible, say what you went on and do not mention a '
+    + 'mark, label, signature or maker in the basis.\n'
+    // 2026-10-24 (Anthony, off a stack of plates named "approx. 7 in stack" that was eight: *"I don't think we should put
+    // the number of items in a name … I took the picture of the top of a stack of plates, and it only registered as 1, but
+    // there were 7 more underneath it"*). The count is qty's alone, where a person corrects it in one box.
+    + 'Never put how many there are in the name: no "set of 8", "pair", "30 pieces", "approx. 7 in '
+    + 'stack" or "stack of 6". The count goes in qty and nowhere else, because a stack or a box hides '
+    + 'what is under the top one and a person corrects the count in one place. When the crew\'s note '
+    + 'gives a count ("set of 8", "twelve of them"), use it for qty; otherwise qty is what you can see.\n'
+    // 2026-10-25b (Anthony: *"if we're taking a picture of something, we just say Crate and Barrel coffee table"*). The crew
+    // stood in front of it; a maker or brand they say belongs in the name.
+    + 'When the crew\'s note names the maker or brand ("Crate & Barrel coffee table"), put it in the name as '
+    + 'they said it, unless the photograph plainly shows something else.\n\n'
+    // 2026-10-26: the field guide has the crew say "who it is going to, family history, the maker … the size of a painting or
+    // rug" over a photograph ("Mom's, from Venice, going to Karen"), and nothing kept a relative's or a recipient's name out of an
+    // item's name, which prints on the family's and the court's papers.
+    + 'THE NOTES WITH A PHOTOGRAPH\n'
+    + 'The crew\'s note was said standing in front of the thing. Use what it says about the thing itself: the count and '
+    + 'the maker as above, and the size, which goes into the name as they said it ("oil on canvas, 24 x 36 in", "rug, 9 x '
+    + '12 ft"). Where the note passes on what the family says about where it is from or how old it is, hedge it in the '
+    + 'name like any inference ("likely Venetian glass vase"). The rest of a note is for the people at the desk and never '
+    + 'goes in the name: who it is going to, who it belonged to, family history and instructions. Never put the name of '
+    + 'the owner, a relative or a recipient in a name.\n'
+    + 'The walkthrough note was written at the estimate about the whole room. Use it to recognise what this photograph '
+    + 'shows; never record something because the note mentions it.\n\n'
+
+    + 'CATEGORY — pick exactly one from this list for every object:\n  - ' + cats + '\n'
+    + 'Use General/Household when nothing else fits. Do not invent a category.\n'
+    // 2026-10-25 (the Ellison kitchen: decorative plates filed as Collectibles were researched against sold comparables,
+    // found none and came back with three notes each). Everyday table and kitchen things are household goods.
+    + 'Everyday dishes, glassware, cookware, kitchen tools and table linens are General/Household, however '
+    + 'decorative or hand-painted, unless a maker\'s mark, signature or hallmark is readable on them. '
+    + 'Collectibles is for things people collect as such: figurines, coins, stamps, memorabilia, toys, '
+    + 'limited editions.\n'
+    // 2026-10-26 (Anthony, asked whether antiques and decor should get a rule like the dishes: *"Yes, both"*). Each line filed
+    // in an intrinsic category is researched one at a time and, on an estate with no value yet, counts as needing an appraisal.
+    // A painting the agent cannot tell from a decorator print stays Art & Décor, the safe side on an estate.
+    + 'Antiques is for pieces that look about a hundred years old or more by their construction and wear; a recent piece '
+    + 'made in a period style is Furniture, named "Queen Anne style" or "in the style of". Art & Décor is for original art '
+    + '(paintings, drawings, sculpture), fine prints, and decorative pieces by a maker or of evident quality. Mass-produced '
+    + 'decor (decorator canvases and prints, artificial plants and flowers, candles, empty picture frames, decorative '
+    + 'pillows, store-bought vases, bowls and baskets) is General/Household unless a signature, an edition number or a '
+    + 'maker\'s mark is readable on it. Where you cannot tell an original from a decorator print, it is Art & Décor.\n\n'
+
+    + 'WHAT YOU MUST NEVER DO\n'
+    + '- Never state or estimate a value, a price, a range or a worth. Not in the name, not in '
+    + 'the basis, not in a notice. Somebody else does that, and on some engagements we are '
+    + 'contractually barred from it.\n'
+    + '- Never say what should happen to an object: keep, sell, donate, junk, auction. That is '
+    + 'the family\'s decision and it is recorded elsewhere.\n'
+    + '- Never describe a person who appears in the photograph (in the room, in a mirror, in a photograph on display), and '
+    + 'never read or transcribe private papers, correspondence, '
+    + 'financial statements or medical records. If a frame is mostly documents, record it as a '
+    + 'quantity of papers and say nothing about the contents. The subject of a painting, print or sculpture is part of '
+    + 'the object and is described like any other.\n'
+    + '- Never guess at an object you cannot see. An empty room is an empty list.\n\n'
+
+    + 'CONFIDENCE\n'
+    + 'high = you can read it or it is unmistakable. medium = a confident reading of the form. '
+    + 'low = your best guess. Always give your best name even at low confidence; a person will '
+    + 'check it, and a blank is worse than a guess because nobody can tell it from a photograph '
+    + 'you never saw.\n\n'
+
+    + 'NOTICES\n'
+    + 'kind "firearm": anything that is or may be a firearm, a receiver, or a part of one. Say '
+    + 'so even if you are unsure.\n'
+    + 'kind "nfa": something that may be a suppressor, a short-barrelled rifle or shotgun, or a '
+    + 'machine gun. A suppressor looks like a plain metal tube and is easy to miss — that is '
+    + 'exactly why this matters. Describe what you see; do not state the law.\n';
+
+  if (must.length) {
+    s += 'kind "mustfind": the family asked us to find these specific things. Raise a notice the '
+       + 'moment a frame shows one, or shows where one would be kept — a safe, a strongbox, a '
+       + 'locked drawer, a filing cabinet:\n  - ' + must.join('\n  - ') + '\n';
+  }
+  s += 'kind "other": anything else a person must see or do that the name cannot carry, such as a mark or label that is '
+     + 'there but too small or blurred to read, or a frame too dark or blurred to name. Never to repeat a name, a hedge or '
+     + 'your confidence. Use sparingly.\n\n';
+  // After the notices, never inside them (2026-10-26b, on review: it split the list and left kind "other" under CONDITION, right
+  // after the sentence that keeps damage out of the name).
+  if ((ctx.conditions || []).length) {
+    s += 'CONDITION\nGrade each line\'s condition from the photograph. ' + AGENT_CONDITION_TEXT + ' A scratch, chip, tear or '
+       + 'stain you can see goes in the grade, never in the name.\n\n';
+  }
+  s += 'Call record_contents exactly once with everything you found.';
+
+  if (ctx.fiduciary) {
+    s += '\n\nThis is a decedent\'s estate. The inventory may be read by an attorney, a personal '
+       + 'representative, a beneficiary or a court, so an overstated attribution is a real '
+       + 'problem for real people. That is the reason for the hedging rule above, not caution '
+       + 'for its own sake.';
+  }
+  return s;
+}
+
+function _agUserContent(shot) {
+  var content = [];
+  content.push(_agImageBlock(shot.fileId));
+  var details = shot.details || [];
+  for (var i = 0; i < details.length && i < 4; i++) {
+    content.push(_agImageBlock(details[i].fileId));
+  }
+  var txt = 'Room: ' + (shot.room || 'not recorded') + '.';
+  if (details.length) {
+    txt += ' The ' + (details.length === 1 ? 'photograph' : details.length + ' photographs')
+        +  ' after the first ' + (details.length === 1 ? 'is a close-up' : 'are close-ups')
+        +  ' of the thing photographed: a mark, signature, hallmark or label, its back, a corner, a title page or damage. Read any words or marks on '
+        +  (details.length === 1 ? 'it' : 'them') + ' and use '
+        +  (details.length === 1 ? 'it' : 'them') + ' to name the object, and do NOT record '
+        +  (details.length === 1 ? 'it' : 'them') + ' as objects of their own.';
+  }
+  if (shot.fieldNote) txt += '\nThe crew said: "' + String(shot.fieldNote).slice(0, 400) + '"';
+  if (shot.roomNote)  txt += '\nWalkthrough note for this room: "' + String(shot.roomNote).slice(0, 400) + '"';
+  txt += _agListedText(shot.listed);
+  content.push({ type: 'text', text: txt });
+  return content;
+}
+
+// ⚠⚠ THE LINES ALREADY LISTED OFF THIS PHOTOGRAPH (2026-10-24; the Ellison plates: a blank line added to a photograph
+// already named was answered with a fresh reading of the whole photograph, and every object in it went on the list
+// twice, in other words). The app sends them (`agentListedOff`), and the request asks only for what is not among them;
+// an empty list is the answer when nothing else is there. No list, no sentence: a photograph named for the first time
+// reads exactly as before.
+var AGENT_LISTED_MAX = 30;
+// What a count in a name looks like, for testAgentIdentify's warning only: nothing is rewritten by it.
+var AGENT_COUNT_IN_NAME_RE = /\b(?:set|pair|stack|box|lot|group) of\b|\b\d+\s*(?:pieces|pcs|in (?:a )?stack|total)\b|\bapprox(?:\.|imately)?\s*\d+|,\s*pair\b/i;
+function _agListedText(listed) {
+  var rows = (listed || []).filter(function(l) { return l && String(l.name || '').trim(); }).slice(0, AGENT_LISTED_MAX);
+  if (!rows.length) return '';
+  return '\nThis photograph is already on the inventory. These objects in it are listed already:\n'
+    + rows.map(function(l) {
+        var q = parseInt(l.qty, 10);
+        return '  - ' + String(l.name).trim().slice(0, 300) + (q > 1 ? ' (qty ' + q + ')' : '');
+      }).join('\n')
+    + '\nRecord ONLY the objects in it that are NOT already listed above, under the same rules. Never record '
+    + 'a listed object again, however you would word it. If everything inventoriable in it is already '
+    + 'listed, record an empty list.';
+}
+
+function _agRequestFor(shot, ctx, key, model, noFallbacks) {
+  var body = {
+    model: model,
+    max_tokens: AGENT_MAX_TOKENS,
+    thinking: { type: 'adaptive' },
+    output_config: { effort: AGENT_EFFORT },
+    system: [{ type: 'text', text: _agSystem(ctx), cache_control: { type: 'ephemeral' } }],
+    tools: [_agTool(ctx.categories || [], ctx.conditions || [])],
+    tool_choice: { type: 'auto' },
+    messages: [{ role: 'user', content: _agUserContent(shot) }]
+  };
+  var headers = { 'x-api-key': key, 'anthropic-version': AGENT_API_VERSION };
+  if (!noFallbacks) { body.fallbacks = 'default'; headers['anthropic-beta'] = AGENT_FALLBACK_BETA; }
+  return {
+    url: AGENT_API,
+    method: 'post',
+    contentType: 'application/json',
+    headers: headers,
+    payload: JSON.stringify(body),
+    muteHttpExceptions: true
+  };
+}
+
+// One HTTP failure, classified for _agSendAll and Agent Two's loop (2026-10-26): the refusal-fallback field refused (sent again
+// without it); busy (429, 529, 5xx: the fallback model has capacity of its own); or rejected (any other 400 or 404: a parameter, a
+// tool version or the model itself that this model does not take). Busy and rejected are each worth one try on the fallback model.
+function _agHttpFailure(code, body) {
+  var err = (body && body.error) || {};
+  var msg = String(err.message || err.type || ('HTTP ' + code));
+  var fbRefused = code === 400 && /fallback/i.test(msg);
+  var retryable = fbRefused ? '' : (code === 429 || code === 529 || code >= 500) ? 'busy' : (code === 400 || code === 404) ? 'rejected' : '';
+  return { ok: false, error: msg, fallbackRefused: fbRefused, retryable: retryable };
+}
+
+// Pull the tool call out of a response. Returns {ok, objects, notices, error}.
+function _agReadResult(res) {
+  var code = res.getResponseCode();
+  var body = {};
+  try { body = JSON.parse(res.getContentText()); }
+  catch (e) { return { ok: false, error: 'unreadable answer (HTTP ' + code + ')', retryable: code >= 500 ? 'busy' : '' }; }
+
+  if (code >= 300) return _agHttpFailure(code, body);
+  // ⚠ A REFUSAL IS AN HTTP 200 AND MUST BE CHECKED BEFORE READING content. With the fallback on, this is the whole chain
+  // declining (the fallback model too), never the first model alone.
+  if (body.stop_reason === 'refusal') {
+    var d = body.stop_details || {};
+    return { ok: false, error: 'the model declined this image' + (d.category ? ' (' + d.category + ')' : '') };
+  }
+  if (body.stop_reason === 'max_tokens') {
+    return { ok: false, error: 'the answer was cut off before it finished', retryable: 'cutoff' };
+  }
+  var blocks = body.content || [];
+  for (var i = 0; i < blocks.length; i++) {
+    if (blocks[i].type === 'tool_use' && blocks[i].name === 'record_contents') {
+      var input = blocks[i].input || {};
+      return { ok: true, objects: input.objects || [], notices: input.notices || [] };
+    }
+  }
+  // ⚠ NOT A CRASH AND NOT AN EMPTY ROOM. tool_choice is `auto`, so the model CAN answer in
+  // prose; that is a failure to record, not a finding of nothing, and conflating the two would
+  // silently mark a full room as empty. It lands in `failed` and the app asks again.
+  return { ok: false, error: 'the model answered in prose instead of recording anything' };
+}
+
+// ─── THE ACTION ───────────────────────────────────────────────────────────────────
+// ⚠ BUDGET AND RESUME, never fail a batch whole. Exactly what getDriveThumbnails does: stop
+// before the clock runs out, hand back what is done and how many are left, and let the app ask
+// again for the remainder.
+function agentIdentifyShots(data) {
+  try {
+    var miss = _agMissingProps();
+    if (miss.length) {
+      return { ok: false, error: 'Agent One is not configured — missing Script Property: '
+                                 + miss.join(', ') + '. Add it in Project Settings > Script Properties.' };
+    }
+    var ctx   = (data && data.context) || {};
+    var shots = (data && data.shots) || [];
+    if (!shots.length) return { ok: true, results: {}, done: [], failed: {}, remaining: 0 };
+
+    // ⚠⚠ THE CATEGORY LIST RIDES THE PAYLOAD AND THIS FILE HOLDS NO COPY. saveInventory.gs once
+    // kept its own and it drifted to 6 against 13, silently dropping seven categories off the
+    // client's workbook. An absent list is a refusal, never a guess.
+    if (!ctx.categories || !ctx.categories.length) {
+      return { ok: false, error: 'The app sent no category list, so nothing could be filed. This is an app bug, not a setup problem.' };
+    }
+
+    var key     = _agProp('ANTHROPIC_API_KEY');
+    var started = new Date().getTime();
+    var todo    = shots.slice(0, AGENT_MAX_SHOTS);
+    var results = {}, done = [], failed = {}, i = 0, timedOut = false, sendState = {};
+    var models = _agModels('name', key);
+    var build = function (shot, model, noFallbacks) { return _agRequestFor(shot, ctx, key, model, noFallbacks); };
+
+    while (i < todo.length) {
+      if (new Date().getTime() - started > AGENT_TIME_BUDGET) break;
+      var slice = todo.slice(i, i + AGENT_PARALLEL);
+      // ⚠ A SLOW PHOTOGRAPH NO LONGER THROWS THE CALL AWAY (2026-10-26): one request past UrlFetchApp's own limit throws the
+      // whole fetchAll, and it threw out of this action, so the photographs already named in earlier slices were paid for and
+      // never written, and the app, seeing an error, started neither the room check nor Agent Two. _agSendAll sends that slice to
+      // the fallback model, or fails it by name (unnamed, asked again on the next run), and the call goes on and answers.
+      var sentAll = _agSendAll(slice, build, function (res) { return _agReadResult(res); }, models, 'name',
+                               started + AGENT_TIME_BUDGET, sendState);
+      if (sentAll.timedOut) timedOut = true;
+      sentAll.answers.forEach(function (read, k) {
+        var id = slice[k].stableId;
+        if (read && read.ok) {
+          results[id] = { objects: read.objects, notices: read.notices, model: read.model };
+          done.push(id);
+        } else {
+          failed[id] = (read && read.error) || 'no answer';
+        }
+      });
+      i += slice.length;
+    }
+
+    var out = {
+      ok: true, success: true,
+      results: results,
+      done: done,
+      failed: failed,
+      remaining: Math.max(0, shots.length - i),
+      model: models.first
+    };
+    if (timedOut) out.timedOut = true;
+    return out;
+  } catch (error) {
+    Logger.log('agentIdentifyShots error: ' + error);
+    return { ok: false, error: String(error) };
+  }
+}
+
+// ⚠ RUN THIS FROM THE EDITOR FIRST, BEFORE TRUSTING THE BUTTON. Argument-free, because the Run
+// menu cannot pass any — the same reason testEsignAuth and testDriveThumbnails work the way they
+// do. It finds a real Havellin photograph, sends one, and prints what came back, so an auth
+// failure can never masquerade as a naming bug.
+function testAgentIdentify() {
+  var miss = _agMissingProps();
+  if (miss.length) { Logger.log('MISSING Script Property: ' + miss.join(', ')); return; }
+
+  // ⚠ AN ITEMS PHOTOGRAPH, AS PRODUCTION SENDS (2026-10-26): the first JPEG anywhere could be an as-found shot (never sent to Agent
+  // One), a cheque photograph or an incident photograph. A name with `_INV_` is an Items shot (testAgentRoomCheck's rule).
+  var root = DriveApp.getFolderById(ROOT_FOLDER_ID);
+  var found = null, stack = [root], guard = 0;
+  while (stack.length && !found && guard++ < 400) {
+    var f = stack.pop();
+    var files = f.getFilesByType('image/jpeg');
+    while (files.hasNext()) { var x = files.next(); if (x.getName().indexOf('_INV_') >= 0) { found = x; break; } }
+    if (found) break;
+    var subs = f.getFolders();
+    while (subs.hasNext()) stack.push(subs.next());
+  }
+  if (!found) { Logger.log('No Items photograph under the root folder yet — take one on the Job Plan first.'); return; }
+
+  Logger.log('Photo: ' + found.getName());
+  var ctx = {
+    categories: ['Art & Décor', 'Antiques', 'Collectibles', 'Electronics & Appliances',
+                 'Firearms', 'Furniture', 'General/Household', 'Jewelry & Watches',
+                 'Musical Instruments', 'Rugs & Carpets', 'Silver & Precious Metal',
+                 'Vehicles & Watercraft', 'Wine & Spirits'],
+    mustFind: ['a coin collection'], fiduciary: true,
+    conditions: ['Excellent', 'Good', 'Fair', 'Poor']   // the app's AGENT_CONDITIONS (2026-10-26b)
+  };
+  var t0 = new Date().getTime();
+  var out = agentIdentifyShots({ context: ctx, shots: [{ stableId: 'probe', fileId: found.getId(), room: 'probe' }] });
+  var secs = Math.round((new Date().getTime() - t0) / 1000);
+
+  if (!out.ok) { Logger.log('FAILED after ' + secs + 's: ' + out.error); return; }
+  var r = out.results.probe;
+  if (!r) { Logger.log('FAILED after ' + secs + 's: ' + (out.failed.probe || 'no result and no reason')); return; }
+  Logger.log('ALL GOOD — ' + (r.model || out.model) + ' answered in ' + secs + 's (first choice ' + out.model + ').');
+  if (secs > 45) Logger.log('⚠ CLOSE TO THE LIMIT: UrlFetchApp cuts a request off at about 60 s.');
+  Logger.log('  objects: ' + r.objects.length);
+  for (var i = 0; i < r.objects.length; i++) {
+    var o = r.objects[i];
+    Logger.log('   - [' + o.confidence + '] ' + o.name + '  (' + o.category + ', qty ' + o.qty + (o.condition ? ', ' + o.condition : ', condition not graded') + ') — ' + o.basis);
+    // 2026-10-24: a name carries no count. Said here, so the first run after a redeploy shows whether the prompt holds.
+    if (AGENT_COUNT_IN_NAME_RE.test(String(o.name || ''))) Logger.log('     WARNING: a count in the name; the count belongs in qty alone.');
+  }
+  for (var n = 0; n < (r.notices || []).length; n++) {
+    Logger.log('  NOTICE [' + r.notices[n].kind + '] ' + r.notices[n].text);
+  }
+  // ⚠ THE LISTED PATH (2026-10-24's rule, first met live until now): the same photograph again, told what the first reading
+  // listed. What it adds is printed; a warning only where an added name is one already listed, once case, spacing and
+  // punctuation are set aside (a second reading may rightly find something the first missed).
+  if (!r.objects.length) return;
+  var key = function (t) { return String(t || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(); };
+  var listed = r.objects.map(function (o) { return { name: o.name, qty: o.qty }; });
+  var again = agentIdentifyShots({ context: ctx, shots: [{ stableId: 'probe', fileId: found.getId(), room: 'probe', listed: listed }] });
+  var r2 = again.ok && again.results.probe;
+  if (!r2) { Logger.log('  listed pass: no answer (' + ((again.failed || {}).probe || again.error || 'none') + ')'); return; }
+  Logger.log('  listed pass: ' + r2.objects.length + ' more' + (r2.objects.length ? ': ' + r2.objects.map(function (o) { return o.name; }).join('; ') : ''));
+  var names = listed.map(function (l) { return key(l.name); });
+  r2.objects.forEach(function (o) {
+    if (names.indexOf(key(o.name)) >= 0) Logger.log('     WARNING: a photograph already on the list was read again: ' + o.name);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// THE ROOM CHECK — ONE THING PHOTOGRAPHED TWICE (P24, 2026-10-06)
+// ═══════════════════════════════════════════════════════════════════════════════════
+// Anthony, offered a field rule that set every photographed thing aside so no later frame caught it: *"Fix option 2
+// above with room level check. That's an obvious fix and will help with our fake client we are doing tomorrow with
+// full inventory."* Agent One names every Items shot alone (`agentIdentifyShots`: one request per photograph, no memory
+// between them), so a vase shot on the dresser and again close up, or a lamp at the edge of two frames, comes back as
+// two lines. This reads a ROOM's photographs together, each introduced by the lines already named off it, and answers
+// which lines are one physical object.
+// ⚠⚠ IT ANSWERS AND NEVER MERGES. The app flags the lines under Possible duplicates with both pictures side by side and a
+// person removes one or says they are separate: two matching nightstands are two real objects, and only somebody who
+// can see both photographs can say which (CLAUDE.md, Decided: no auto-merging of possible duplicates).
+// ⚠ THE LINE LABELS ARE PLAIN STRINGS CHECKED HERE, never an enum (Agent Two's rule): a label this request did not carry
+// is dropped, and so is a "double" whose lines all came off one photograph, which is two things the namer saw at once.
+// The model: _agModels('rooms'), the newest top-tier model first and the newest Opus behind it (2026-10-26, Agent One's section).
+// ⚠ AGENT_ROOM_WINDOW was timed on Opus 5.5 (six photographs in 15 s, eight in 32 s): a run on the top line that passes UrlFetchApp's
+// limit goes to the fallback by itself, and twice in a day sets the top line aside for the room check that day (_agSlow).
+var AGENT_ROOM_EFFORT      = 'low';     // a run of pictures has to answer inside UrlFetchApp's per-request limit
+var AGENT_ROOM_MAX_TOKENS  = 16000;     // the non-streaming ceiling Agent One settled on; it caps, it does not spend
+// ⚠⚠ MEASURED, NOT GUESSED (Anthony's first live run of testAgentRoomCheck, 2026-10-06): eight photographs in one request
+// took 32 s, and UrlFetchApp cuts a request off at about 60 s (undocumented, and no option raises it). At that pace a run
+// of 24 runs past the limit and its room fails as *took too long*, so a room is read in runs of 12 sharing 6. Re-time
+// one full run with testAgentRoomCheck before raising either figure.
+var AGENT_ROOM_WINDOW      = 12;        // photographs in one request
+var AGENT_ROOM_OVERLAP     = 6;         // photographs a run shares with the one before: two shots within six always meet
+var AGENT_ROOM_MAX_SHOTS   = 160;       // a room's photographs read in one call, whatever the caller sends
+var AGENT_ROOM_MAX_ROOMS   = 12;        // rooms in one call; the rest come back as remaining
+var AGENT_ROOM_PARALLEL    = 6;         // fetchAll width: 6 runs of 12 pictures, fewer in flight than the 4 runs of 24 it replaced
+var AGENT_ROOM_TIME_BUDGET = 240000;    // 4 min of Apps Script's 6, as Agent One
+var AGENT_ROOM_CONF_RANK   = { high: 3, medium: 2, low: 1 };
+var AGENT_ROOM_WHY_MAX     = 200;       // characters of the sentence the desk shows: cut at a word, never mid-word
+
+// The runs a room's photographs are read in, as [from, to) in the order taken. A room of up to AGENT_ROOM_WINDOW is one
+// run; a bigger one is read in runs overlapping by AGENT_ROOM_OVERLAP. Two shots within AGENT_ROOM_OVERLAP of each other
+// always share a run, so a close-up taken straight after its wide shot, or a neighbouring frame's background, meets its
+// pair; two shots AGENT_ROOM_WINDOW or more apart never do, and between the two it depends where they fall. The guide
+// says so.
+function _arWindows(n) {
+  if (!(n > 0)) return [];
+  if (n <= AGENT_ROOM_WINDOW) return [[0, n]];
+  var out = [], step = AGENT_ROOM_WINDOW - AGENT_ROOM_OVERLAP;
+  for (var s = 0; ; s += step) {
+    var e = Math.min(n, s + AGENT_ROOM_WINDOW);
+    out.push([s, e]);
+    if (e >= n) break;
+  }
+  return out;
+}
+
+// ⚠ `strict` with `tool_choice: auto` plus an instruction, never a forced tool choice — Agent One's shape and its reasons.
+function _arTool() {
+  return {
+    name: 'record_doubles',
+    description: 'Record every object that is on more than one line because it shows in more than one photograph. '
+               + 'Call this exactly once.',
+    strict: true,
+    input_schema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['doubles'],
+      properties: {
+        doubles: {
+          type: 'array',
+          description: 'One entry per object counted more than once. Empty when nothing is.',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['lines', 'why', 'confidence'],
+            properties: {
+              lines:      { type: 'array', items: { type: 'string' },
+                            description: 'The labels (L1, L2 ...) of the lines that are this one object, each from a different photograph.' },
+              why:        { type: 'string', description: 'One short sentence, under 25 words, for the person at the desk who sees the '
+                                                   + 'photographs side by side: what the object is and what shows it is the same one. '
+                                                   + 'Plain words only: never a label (no P1, no L2).' },
+              confidence: { type: 'string', enum: ['high', 'medium', 'low'] }
+            }
+          }
+        }
+      }
+    }
+  };
+}
+
+// Stable for every room of one job, so it carries `cache_control` like Agent One's.
+function _arSystem(ctx) {
+  var s = ''
+    + 'You are checking one room of a home inventory for things counted twice.\n\n'
+    + 'A concierge photographed the room\'s contents one photograph at a time, and each photograph was then named by a '
+    + 'model that could not see any of the others. So one physical object that shows in two photographs can come back '
+    + 'as two inventory lines: a closer second shot of something already in a wider one, a piece at the edge or in the '
+    + 'background of a neighbouring shot, or the same piece shot twice.\n\n'
+    + 'You get the room\'s photographs in the order they were taken, labelled P1, P2 and so on. Each is introduced by '
+    + 'the lines already named from it, labelled L1, L2 and so on, with their names and categories.\n\n'
+    + 'WHAT COUNTS AS COUNTED TWICE\n'
+    + '- Two or more lines, from different photographs, that are the same physical object or the same lot of things.\n'
+    + '- Look at the pictures, not the names. The names were written separately and often differ: "Blue vase" in a wide '
+    + 'shot and "Cobalt art glass vase, likely Murano" in a close one can be one vase.\n'
+    + '- Two lines from the same photograph are never one object.\n'
+    + '- Matching things are separate unless the photographs show the very same piece: the same place in the room, the '
+    + 'same surroundings, the same marks, wear or damage. A pair of nightstands, a set of dining chairs and two prints '
+    + 'of one image are separate objects.\n'
+    + '- A lot that overlaps another lot counts: the same shelf of books shot twice, in whole or in part. Say which part '
+    + 'overlaps.\n'
+    + '- Something that shows in two photographs but was named from only one of them is not counted twice. Only lines '
+    + 'count.\n\n'
+    + 'HOW SURE\n'
+    + 'high = the photographs plainly show the same piece. medium = very likely the same piece. low = possibly the same '
+    + 'piece. When you are unsure, record it as low: a person looks at both photographs before anything is removed, and '
+    + 'an object counted twice that nobody is shown stays counted twice.\n\n'
+    + 'WHAT YOU NEVER DO\n'
+    + '- Never say what anything is worth or what should happen to it.\n'
+    + '- Never describe a person.\n'
+    + '- Never use a line label you were not given.\n\n'
+    + 'For each object counted twice give its line labels, how sure you are, and one short sentence (under 25 words) '
+    + 'for the person at the desk, who sees the photographs side by side but never your labels: what the object is and '
+    + 'what shows it is the same one, in plain words, with no P or L label in it. For example: "The cobalt vase: on the '
+    + 'sideboard in one, close up in the other." Call record_doubles exactly once, with an empty list when nothing in '
+    + 'the room is counted twice.';
+  if (ctx && ctx.fiduciary) {
+    s += '\n\nThis is a decedent\'s estate. The inventory may be read by an attorney, a personal representative, a '
+       + 'beneficiary or a court, so an object counted twice overstates the estate.';
+  }
+  return s;
+}
+
+// One request's user turn: the room, then each photograph introduced by the lines named off it, then the ask. The
+// labels are minted here and never leave this file; the answer is read back through them. `cache` holds each picture
+// once per call, because overlapping runs send the same photograph twice.
+function _arWindowContent(room, shots, from, total, cache) {
+  var content = [], labels = {}, n = 0;
+  content.push({ type: 'text', text: 'Room: ' + ((room && room.room) || 'not recorded') + '. ' + shots.length
+    + ' photograph' + (shots.length === 1 ? '' : 's') + ' in the order taken'
+    + (shots.length < total ? ' (numbers ' + (from + 1) + ' to ' + (from + shots.length) + ' of the ' + total + ' taken in this room)' : '')
+    + '.' });
+  for (var i = 0; i < shots.length; i++) {
+    var p = 'P' + (i + 1), shot = shots[i] || {};
+    var named = (shot.lines || []).map(function (l) {
+      var lab = 'L' + (++n);
+      labels[lab] = { id: String(l.id), photo: p };
+      var q = parseInt(l.qty, 10);
+      return lab + ' "' + String(l.name || '').replace(/"/g, '\'').slice(0, 160) + '"'
+        + (l.category ? ' (' + l.category + (q > 1 ? ', ' + q + ' pieces' : '') + ')' : '');
+    });
+    content.push({ type: 'text', text: p + ' · lines named from it: ' + (named.length ? named.join('; ') : 'none') });
+    var fid = String(shot.fileId || '');
+    if (!cache[fid]) cache[fid] = _agImageBlock(fid);
+    content.push(cache[fid]);
+  }
+  content.push({ type: 'text', text: 'Which lines are one object counted twice? Call record_doubles exactly once.' });
+  return { content: content, labels: labels };
+}
+
+function _arRequestFor(content, ctx, key, model, noFallbacks) {
+  var body = {
+    model: model,
+    max_tokens: AGENT_ROOM_MAX_TOKENS,
+    thinking: { type: 'adaptive' },
+    output_config: { effort: AGENT_ROOM_EFFORT },
+    system: [{ type: 'text', text: _arSystem(ctx), cache_control: { type: 'ephemeral' } }],
+    tools: [_arTool()],
+    tool_choice: { type: 'auto' },
+    messages: [{ role: 'user', content: content }]
+  };
+  var headers = { 'x-api-key': key, 'anthropic-version': AGENT_API_VERSION };
+  if (!noFallbacks) { body.fallbacks = 'default'; headers['anthropic-beta'] = AGENT_FALLBACK_BETA; }
+  return {
+    url: AGENT_API,
+    method: 'post',
+    contentType: 'application/json',
+    headers: headers,
+    payload: JSON.stringify(body),
+    muteHttpExceptions: true
+  };
+}
+
+// Agent One's reading, for this tool. A refusal and a cut-off answer are failures, and so is prose: tool_choice is
+// `auto`, and an answer that recorded nothing is not a room with nothing counted twice.
+function _arReadResult(res, labels) {
+  var code = res.getResponseCode();
+  var body = {};
+  try { body = JSON.parse(res.getContentText()); }
+  catch (e) { return { ok: false, error: 'unreadable answer (HTTP ' + code + ')', retryable: code >= 500 ? 'busy' : '' }; }
+  if (code >= 300) return _agHttpFailure(code, body);
+  if (body.stop_reason === 'refusal') return { ok: false, error: 'the model declined these photographs' };
+  if (body.stop_reason === 'max_tokens') return { ok: false, error: 'the answer was cut off before it finished', retryable: 'cutoff' };
+  var blocks = body.content || [];
+  for (var i = 0; i < blocks.length; i++) {
+    if (blocks[i].type === 'tool_use' && blocks[i].name === 'record_doubles') {
+      return { ok: true, doubles: _arDoubles((blocks[i].input || {}).doubles, labels) };
+    }
+  }
+  return { ok: false, error: 'the model answered in prose instead of recording anything' };
+}
+
+// The desk's sentence: one line of plain words, at most AGENT_ROOM_WHY_MAX characters, cut at a word with an ellipsis when
+// the model ran on (its first live run wrote 300 characters and the cut fell mid-clause: "…so the overlap is").
+function _arWhy(s) {
+  var t = String(s || '').replace(/\s+/g, ' ').trim();
+  if (t.length <= AGENT_ROOM_WHY_MAX) return t;
+  var cut = t.slice(0, AGENT_ROOM_WHY_MAX - 1), sp = cut.lastIndexOf(' ');
+  if (sp > AGENT_ROOM_WHY_MAX / 2) cut = cut.slice(0, sp);
+  return cut.replace(/[\s,;:.\u2013\u2014(-]+$/, '') + '\u2026';
+}
+
+// Each answer back through the labels this request minted. An unknown label is dropped, a line named twice counts once,
+// and an entry left with fewer than two lines, or with every line off one photograph, is not a double.
+function _arDoubles(list, labels) {
+  var out = [];
+  (list || []).forEach(function (d) {
+    if (!d) return;
+    var seen = {}, ids = [], photos = {};
+    (d.lines || []).forEach(function (l) {
+      var lab = String(l).trim().toUpperCase();
+      // Belt-and-braces (P24 sweep): an upper-cased label can name nothing on Object.prototype, so a plain lookup would do.
+      if (!Object.prototype.hasOwnProperty.call(labels, lab)) return;
+      var hit = labels[lab];
+      if (seen[hit.id]) return;
+      seen[hit.id] = 1; ids.push(hit.id); photos[hit.photo] = 1;
+    });
+    if (ids.length < 2 || Object.keys(photos).length < 2) return;
+    out.push({ ids: ids, why: _arWhy(d.why),
+               confidence: AGENT_ROOM_CONF_RANK[d.confidence] ? d.confidence : 'low' });
+  });
+  return out;
+}
+
+// Overlapping runs can find one double twice: once, at the higher confidence.
+function _arMergeDoubles(list) {
+  var by = {}, order = [];
+  (list || []).forEach(function (d) {
+    var k = d.ids.slice().sort().join('|');
+    if (!by[k]) { by[k] = d; order.push(k); return; }
+    if ((AGENT_ROOM_CONF_RANK[d.confidence] || 0) > (AGENT_ROOM_CONF_RANK[by[k].confidence] || 0)) by[k] = d;
+  });
+  return order.map(function (k) { return by[k]; });
+}
+
+// ⚠ BUDGET AND RESUME, as Agent One: a room is answered only when every run of it came back, a room that failed says
+// why, and a room the clock did not reach comes back in `remaining` for the app to send again.
+function agentCheckRooms(data) {
+  try {
+    var miss = _agMissingProps();
+    if (miss.length) {
+      return { ok: false, error: 'The room check is not configured — missing Script Property: '
+                                 + miss.join(', ') + '. Add it in Project Settings > Script Properties.' };
+    }
+    var ctx = (data && data.context) || {};
+    var all = (data && data.rooms) || [];
+    var rooms = all.slice(0, AGENT_ROOM_MAX_ROOMS);
+    var remaining = all.slice(AGENT_ROOM_MAX_ROOMS).map(function (r) { return String(r && r.key); });
+    var key = _agProp('ANTHROPIC_API_KEY');
+    if (!rooms.length) return { ok: true, success: true, results: {}, failed: {}, remaining: remaining };
+    var models = _agModels('rooms', key), sendState = {};
+    var started = new Date().getTime();
+    var cache = {}, runs = [];
+    var state = rooms.map(function (room) {
+      var shots = ((room && room.shots) || []).slice(0, AGENT_ROOM_MAX_SHOTS);
+      // One photograph has nothing to be compared with, and is answered without a call.
+      var wins = shots.length >= 2 ? _arWindows(shots.length) : [];
+      var st = { key: String(room && room.key), room: room || {}, shots: shots, wins: wins.length, done: 0, doubles: [], error: '' };
+      wins.forEach(function (w) { runs.push({ st: st, from: w[0], to: w[1] }); });
+      return st;
+    });
+
+    var i = 0;
+    while (i < runs.length) {
+      if (new Date().getTime() - started > AGENT_ROOM_TIME_BUDGET) break;
+      var slice = runs.slice(i, i + AGENT_ROOM_PARALLEL);
+      var keep = [];
+      slice.forEach(function (run) {
+        if (run.st.error) return;
+        try {
+          var built = _arWindowContent(run.st.room, run.st.shots.slice(run.from, run.to), run.from, run.st.shots.length, cache);
+          run.labels = built.labels;
+          run.content = built.content;
+          keep.push(run);
+        } catch (imgErr) {
+          // A photograph not in Drive yet, or not an image: the room fails by name rather than being read without it.
+          run.st.error = String(imgErr.message || imgErr);
+        }
+      });
+      if (keep.length) {
+        // UrlFetchApp's own per-request limit throws the whole slice (Agent Two's lesson): _agSendAll sends it to the fallback
+        // model while the budget allows, else those rooms took too long.
+        var sentAll = _agSendAll(keep, function (run, model, noFb) { return _arRequestFor(run.content, ctx, key, model, noFb); },
+                                 function (res, run) { return _arReadResult(res, run.labels); }, models, 'rooms',
+                                 started + AGENT_ROOM_TIME_BUDGET, sendState);
+        sentAll.answers.forEach(function (read, k) {
+          var run = keep[k];
+          if (read && read.ok) { run.st.done++; run.st.doubles = run.st.doubles.concat(read.doubles); run.st.model = read.model; }
+          else run.st.error = (read && read.error) || 'no answer';
+        });
+      }
+      i += slice.length;
+    }
+
+    var results = {}, failed = {};
+    state.forEach(function (st) {
+      if (st.error) failed[st.key] = st.error;
+      else if (st.done === st.wins) {
+        results[st.key] = { doubles: _arMergeDoubles(st.doubles), photos: st.shots.length };
+        if (st.model) results[st.key].model = st.model;
+      }
+      else remaining.push(st.key);
+    });
+    return { ok: true, success: true, results: results, failed: failed, remaining: remaining, model: models.first };
+  } catch (error) {
+    Logger.log('agentCheckRooms error: ' + error);
+    return { ok: false, error: String(error) };
+  }
+}
+
+// ⚠ RUN THIS FROM THE EDITOR AFTER EVERY REDEPLOY, BEFORE TRUSTING THE BUTTON, and note the time it prints: it times ONE
+// FULL RUN, the longest single request the room check makes, and UrlFetchApp cuts a request off at about 60 s. Running it
+// needs no new deployment (the editor runs the saved file). Argument-free, because the Run menu passes none: it finds the
+// room with the most Items photographs in Drive (a name with `_INV_`; a close-up is never a line, so it is never sent) and
+// reads the first AGENT_ROOM_WINDOW of them, in the order taken. One line a photograph, so the timing errs long.
+function testAgentRoomCheck() {
+  var miss = _agMissingProps();
+  if (miss.length) { Logger.log('MISSING Script Property: ' + miss.join(', ')); return; }
+  var stack = [DriveApp.getFolderById(ROOT_FOLDER_ID)], guard = 0, rooms = {}, best = '';
+  while (stack.length && guard++ < 400) {
+    var f = stack.pop();
+    var files = f.getFilesByType('image/jpeg');
+    while (files.hasNext()) {
+      var file = files.next(), name = file.getName(), at = name.indexOf('_INV_');
+      if (at < 0) continue;
+      var key = f.getId() + '|' + name.slice(0, at);
+      (rooms[key] = rooms[key] || []).push(file);
+      if (!best || rooms[key].length > rooms[best].length) best = key;
+    }
+    var subs = f.getFolders();
+    while (subs.hasNext()) stack.push(subs.next());
+  }
+  var all = best ? rooms[best] : [];
+  if (all.length < 2) { Logger.log('No room in Drive has two Items photographs yet: shoot a room on the Job Plan first.'); return; }
+  // The order taken: each name ends in the day and time of its shot.
+  var taken = function (file) { var m = /_(\d{4}-\d{2}-\d{2}_\d{6})\.\w+$/.exec(file.getName()); return m ? m[1] : file.getName(); };
+  all.sort(function (a, b) { var x = taken(a), y = taken(b); return x < y ? -1 : x > y ? 1 : 0; });
+  var picked = all.slice(0, AGENT_ROOM_WINDOW);
+  Logger.log('Room ' + best.split('|')[1] + ': ' + all.length + ' Items photographs; reading the first ' + picked.length
+    + (picked.length === AGENT_ROOM_WINDOW ? ', one full run.' : ' (fewer than a full run of ' + AGENT_ROOM_WINDOW + ').'));
+  Logger.log('Photographs: ' + picked.map(function (x) { return x.getName(); }).join(', '));
+  var t0 = new Date().getTime();
+  var out = agentCheckRooms({
+    context: { fiduciary: true },
+    rooms: [{ key: 'probe', room: 'probe', shots: picked.map(function (file, n) {
+      return { fileId: file.getId(), lines: [{ id: 'line' + (n + 1), name: 'everything in this photograph', category: 'General/Household', qty: 1 }] };
+    }) }]
+  });
+  var secs = Math.round((new Date().getTime() - t0) / 1000);
+  if (!out.ok) { Logger.log('FAILED after ' + secs + 's: ' + out.error); return; }
+  if (out.failed.probe) { Logger.log('FAILED after ' + secs + 's: ' + out.failed.probe); return; }
+  var r = out.results.probe;
+  if (!r) { Logger.log('NOT FINISHED after ' + secs + 's: the time budget ran out before the room was read.'); return; }
+  Logger.log('ALL GOOD — ' + (r.model || out.model) + ' read ' + picked.length + ' photographs in one run in ' + secs
+    + 's. UrlFetchApp cuts a request off at about 60s.');
+  if (secs > 45) Logger.log('⚠ CLOSE TO THE LIMIT: lower AGENT_ROOM_WINDOW before a full house.');
+  Logger.log('  counted twice: ' + r.doubles.length);
+  for (var d = 0; d < r.doubles.length; d++) {
+    Logger.log('   - [' + r.doubles[d].confidence + '] ' + r.doubles[d].ids.join(' + ') + ' — ' + r.doubles[d].why);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// AGENT TWO — VALUING THE INVENTORY
+// ═══════════════════════════════════════════════════════════════════════════════════
+// Spec: AGENT_TWO_SPEC.md (P23, 2026-10-06). Step 3 of the inventory pipeline Anthony scoped on
+// 2026-09-19: the field shoots, Agent One names, Agent Two values, the desk confirms. Anthony:
+// *"the whole point is to save time, not have a human re-enter numbers where we don't have to."*
+//
+// ⚠⚠ IT RUNS HERE FOR AGENT ONE'S REASON: the key cannot live in a public file. Same project, same
+// deployment, same `ANTHROPIC_API_KEY`, and it moves in lockstep with BACKEND_VERSION and the
+// dispatch-parity test like every other action.
+//
+// ⚠⚠ THIS END VALUES WHAT IT IS ASKED, AS IT IS ASKED, AND DECIDES NOTHING ELSE. Which lines are
+// valued, at which depth (`mode`), whether a figure is written as the line's value or kept internal
+// on a tier where counsel values (spec §8), and what a range does to the appraisal rule are all the
+// app's, each in one place. The one thing decided here is the guard that only this end can apply:
+// a comparable must cite a page a tool actually returned (§4b), because only this end sees the
+// tool results.
+//
+// ⚠ AND IT IS NEVER TOLD A THRESHOLD (§6). It values; the app's rules decide. A figure taught to the
+// model is a second copy of `invAppraisalThreshold`, the drift this codebase keeps paying for.
+
+// The model: _agModels('value'), the newest top-tier model first and the newest Opus behind it (2026-10-26, Agent One's section).
+// ⚠ `medium` TO START, which is also Opus 5.5's default — set explicitly so a default moving on
+// the API side cannot change what an estate costs. Sweep low/medium/high on one real estate and
+// measure against the comps a person would have found before tuning it.
+var AGENT_VALUE_EFFORT      = 'medium';
+var AGENT_VALUE_MAX_TOKENS  = 16000;  // the non-streaming ceiling Agent One settled on (P11); it caps, it does not spend
+var AGENT_VALUE_PARALLEL    = 8;      // fetchAll width, as Agent One
+var AGENT_VALUE_MAX_LINES   = 40;     // hard cap on one invocation whatever the caller sends
+var AGENT_VALUE_GENERAL_BATCH = 8;    // ordinary lots per request ("about ten", spec §3)
+// Searches each request may run. ⚠ A CONSTANT PER MODE, never sized to the batch: the tool list is
+// the first thing in the prompt, so a `max_uses` that varied with the batch would give every
+// request a different prefix and the cached system prompt would never be read back.
+var AGENT_VALUE_SEARCHES    = { comps: 5, general: 8 };
+var AGENT_VALUE_FETCHES     = 2;      // comps only: reading a results page the search turned up
+var AGENT_VALUE_CONTINUES   = 2;      // `pause_turn` continuations per request before it is called unfinished
+var AGENT_VALUE_MAX_COMPS   = 6;      // comparables kept per line (the manifest lives in a ~5MB localStorage)
+// ⚠⚠ A COMPARABLE IS ONE ITEM'S OWN PAGE, WITH THE PRICE THAT PAGE SHOWS (2026-10-26b; the first live testAgentValue cited an
+// eBay search page as a $50 listing, and a LiveAuctioneers price-results page as a sold pair of mirrors at $380, the top of that
+// page's range for other mirrors, with "price not shown" in its own title). A search or results page lists many things and
+// changes from day to day, so nobody can check the sale against it later; such a link, a price of nothing, or a comparable whose
+// own words say its price was not shown is left out of the line (`unfit`, _avLineResult), so it can never be the sold comparable
+// that earns "comps" on the Court Inventory. No level of confidence is taken off for it, because a tool did return the page. A URL
+// shape and a word list: the prompt's EVIDENCE rule is the first net, these the second.
+var AGENT_VALUE_RESULTS_SEGMENTS = ['search', 'sch', 'search-results', 'searchresults', 'results', 'price-result', 'price-results'];
+var AGENT_VALUE_RESULTS_PARAMS = ['q', 'query', 'keyword', 'keywords', '_nkw', 'k', 'kw', 'searchterm', 'search_query', 'searchtext'];
+var AGENT_VALUE_NO_PRICE_RE = /\bprices?\s+(?:(?:is|was|were|are)\s+)?(?:not|(?:is|was|were|are)n['\u2019]t)\s+(?:shown|disclosed|available|listed|given|published|visible|stated|public)\b|\bundisclosed\b|\bno\s+(?:sold\s+|hammer\s+|realized\s+|realised\s+)?price\b|\bprice\s+(?:unknown|hidden|withheld|on\s+request)\b/i;
+
+// ⚠ A NOTE OR A BASIS THAT RUNS LONG ENDS AT A WHOLE SENTENCE, OR AT A WORD WITH "…", NEVER MID-PHRASE (2026-10-26b; Anthony, off a
+// cabbage-ware line's note that ended "Check whether this is": "it seems to be cut off at the end"). The basis prints on the Estate
+// Inventory Report the attorney reads. The last full stop past half the room is kept whole; failing one, the last space.
+var AGENT_VALUE_TEXT_MAX = 300;
+var AGENT_VALUE_ABBREV_RE = /^(?:[A-Za-z]|ca|co|no|nos|mfg|inc|ltd|st|jr|sr|approx|vs|etc|mr|mrs|ms|dr|est|ed|vol|fig|pp)$/i;
+function _avClip(x, max) {
+  var t = String(x || '').replace(/\s+/g, ' ').trim(), n = max || AGENT_VALUE_TEXT_MAX;
+  if (t.length <= n) return t;
+  // A full stop is a point followed in the WHOLE text by a space and a capital (2026-10-26b, on review: "$12.50" cut at the point
+  // read as one, and so did "Gorham Mfg. Co." and "c. 1895"); a point closing an initial or a short abbreviation is not.
+  var cut = t.slice(0, n - 1), end = -1, m, re = /[.!?]/g;
+  while ((m = re.exec(cut))) {
+    var i = m.index, rest = t.slice(i + 1);
+    if (!/^ \S/.test(rest)) continue;
+    if (cut.charAt(i) === '.' && (/^ [a-z0-9]/.test(rest)
+        || AGENT_VALUE_ABBREV_RE.test((cut.slice(0, i).match(/(\S+)$/) || ['', ''])[1]))) continue;
+    end = i;
+  }
+  if (end >= n / 2) return cut.slice(0, end + 1);
+  var sp = cut.lastIndexOf(' ');
+  if (sp > n / 2) cut = cut.slice(0, sp);
+  return cut.replace(/[\s,;:.\u2013\u2014(-]+$/, '') + '\u2026';
+}
+
+// A search or results page: a path segment that names one (`/search`, eBay's `/sch/`, LiveAuctioneers' `/price-result/`, Heritage's
+// `search-results.zx`; an extension is ignored), eBay's browse and shop pages, or a search term in the query (`?q=`, `?_nkw=`).
+function _avResultsPage(u) {
+  var m = String(u || '').trim().match(/^https?:\/\/([^\/?#]+)([^?#]*)(?:\?([^#]*))?/i);
+  if (!m) return false;
+  var host = m[1].toLowerCase().replace(/^www\./, '');
+  var segs = m[2].toLowerCase().split('/').filter(Boolean).map(function (x) { return x.replace(/\.[a-z0-9]+$/, ''); });
+  if (segs.some(function (x) { return AGENT_VALUE_RESULTS_SEGMENTS.indexOf(x) >= 0; })) return true;
+  if (/(^|\.)ebay\.[a-z.]+$/.test(host) && (segs[0] === 'b' || segs[0] === 'shop')) return true;
+  return String(m[3] || '').split('&').some(function (kv) {
+    var eq = kv.indexOf('=');
+    return eq > 0 && eq < kv.length - 1 && AGENT_VALUE_RESULTS_PARAMS.indexOf(kv.slice(0, eq).toLowerCase()) >= 0;
+  });
+}
+// ⚠ A SLICE IS STARTED ONLY INSIDE THIS, and it is half of Agent One's budget for a reason: a
+// valuing request researches for tens of seconds and may be continued twice, so the slice started
+// at the budget's edge still has to finish inside Apps Script's six minutes.
+var AGENT_VALUE_TIME_BUDGET = 120000;
+// ⚠ SERVER-SIDE REFUSAL FALLBACK, opted into by default as Anthropic's guidance asks (AGENT_FALLBACK_BETA, Agent One's section):
+// a classifier decline is re-run on the model Anthropic recommends for its category, inside the same
+// call. The header and the scalar `fallbacks:'default'` go together; pairing either with the other
+// form is a 400. A deployment whose account refuses the field answers 400 naming it, and that one
+// request is sent again without it (`_avReadResult`, `noFallbacks`) rather than the button dying.
+var AGENT_VALUE_SOURCES = { comps: ['Auction comps', 'Online comps'], general: ['General estimate'] };
+// "worthpoint" and "name" went on 2026-10-25: the desk shows the confidence and the WorthPoint terms beside every
+// figure, and a name Agent Two would change it now changes (`name` in the answer; Anthony: "No need to flag").
+var AGENT_VALUE_NOTICE_KINDS = ['appraiser', 'specialist', 'other'];
+
+// Money to the cent, half away from zero, read at fifteen significant digits so 1.005 is 1.01: the
+// app's `roundCents`, which this file cannot lift. A test holds the two to the same answers.
+function _avCents(x) {
+  // ⚠ A MISSING FIGURE IS NOT ZERO: Number(null) and Number('') are 0, and a value of $0 is a claim that the line is
+  // worthless. Absent stays NaN, so the line is failed rather than valued at nothing.
+  if (x === null || x === undefined || x === '') return NaN;
+  var n = Number(x);
+  if (!isFinite(n)) return NaN;
+  var s = n < 0 ? -1 : 1;
+  return s * Math.round(parseFloat((Math.abs(n) * 100).toPrecision(15))) / 100;
+}
+
+// ─── THE TOOL THE MODEL FILLS IN ──────────────────────────────────────────────────
+// ⚠ `strict: true` WITH `tool_choice: auto` AND AN INSTRUCTION, as Agent One: forced tool use is a
+// 400 on this model, and strict still guarantees the arguments validate. Strict wants every property
+// required, so a general estimate sends an empty `lookup` and may send no comps.
+// ⚠ `line` IS A PLAIN STRING, NOT AN ENUM OF THIS REQUEST'S LABELS. An enum would make the tool, and
+// with it the cached prefix, different on every request; the labels are checked here instead and an
+// answer for a line nobody asked about is dropped.
+function _avTool(mode, categories, conditions) {
+  var cats = (categories || []).filter(function (c) { return !!String(c || '').trim(); });
+  var conds = (conditions || []).filter(function (c) { return !!String(c || '').trim(); });
+  var props = {
+    line:       { type: 'string', description: 'The label the line was given, for example L1.' },
+    name:       { type: 'string', description: 'The line\'s name as you value it: the name given where it is right (always the name given on a line whose name a person checked), else your corrected name. One short line, about fifteen words, never with a count.' },
+    value:      { type: 'number', description: 'Your point value for the WHOLE line, in US dollars: every article on it together, never a per-piece price.' },
+    low:        { type: 'number', description: 'The low end of the range it would realistically sell for, whole line, US dollars.' },
+    high:       { type: 'number', description: 'The high end of that range, whole line, US dollars.' },
+    confidence: { type: 'string', enum: ['high', 'medium', 'low'] },
+    source:     { type: 'string', enum: AGENT_VALUE_SOURCES[mode] || AGENT_VALUE_SOURCES.general },
+    // ⚠ PRINTED, NOT DESK SHORTHAND (2026-10-26): it is the line's valNote, printed under the line on the Estate Inventory Report
+    // the attorney reads and in the workbook, and since the desk rescales a figure when a person corrects the count, it must
+    // never carry the count (a "seven plates at $8" sentence printed beside Qty 8).
+    basis:      { type: 'string', description: 'One plain sentence, about twenty words at most, saying what the figure rests on ("Four sold comparables, 2025 to 2026; the median, less for one chipped rim"; "The going used rate for everyday stainless flatware"), with the valuation-date caveat where the instructions ask for one, and never with this line\'s count or its name. It is printed beside the figure on the inventory the family, their attorney or a trustee reads.' },
+    comps: {
+      type: 'array',
+      description: 'The sales you relied on. Each must be one item\'s own page (the lot, the listing) that your search or fetch returned, with its URL copied exactly: never a search or results page, and never a sale whose page shows no price.',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['title', 'venue', 'saleDate', 'price', 'url', 'kind'],
+        properties: {
+          title:    { type: 'string' },
+          venue:    { type: 'string', description: 'Who sold it: the auction house, the platform or the dealer.' },
+          saleDate: { type: 'string', description: 'YYYY-MM-DD, or YYYY-MM, or empty when the page gives no date.' },
+          price:    { type: 'number', description: 'The price that page shows: realised (sold) or asked (asking), US dollars, for what that listing covered. Never one filled in from a range, an estimate or another lot.' },
+          url:      { type: 'string' },
+          kind:     { type: 'string', enum: ['sold', 'asking'] }
+        }
+      }
+    },
+    lookup: { type: 'string', description: 'The terms a person would type into WorthPoint to check this line: maker, pattern, mark, form, period. Empty for a general estimate.' },
+    notices: {
+      type: 'array',
+      description: 'Things a person should look at. Never a substitute for a value.',
+      items: {
+        type: 'object',
+        additionalProperties: false,
+        required: ['kind', 'text'],
+        properties: {
+          kind: { type: 'string', enum: AGENT_VALUE_NOTICE_KINDS },
+          text: { type: 'string', description: 'One or two short sentences, under forty words.' }
+        }
+      }
+    }
+  };
+  var required = ['line', 'name', 'value', 'low', 'high', 'confidence', 'source', 'basis', 'comps', 'lookup', 'notices'];
+  // ⚠⚠ THE CATEGORY, UNDER THE NAME'S RULE (2026-10-26; Anthony: *"Yes, same rule as the name"*): a research line's category comes
+  // back with its name, and the app writes it only where the name is still Agent One's and unreviewed (_avNameIsAgents). The list
+  // rides the payload (Agent One's rule: this file holds no copy), constant within a job so the cached prefix holds; an app that
+  // sends none gets the tool without the field, as before.
+  if (cats.length) {
+    props.category = { type: 'string', enum: cats, description: 'The line\'s category as you value it: the one given, unless on a RESEARCH line the photograph and your research plainly put it elsewhere. Always the one given on an ORDINARY lot, on a line whose name or category a person checked, and on a line filed Firearms.' };
+    required.push('category');
+  }
+  // Condition off the photograph (2026-10-26b, AGENT_CONDITION_TEXT): kept by the server only for a line whose photograph this
+  // request carried (`unit.saw`, _avUserContent), so a lot valued as text alone never comes back graded.
+  if (conds.length) {
+    props.condition = { type: 'string', enum: conds.concat(['']), description: 'Its condition from the photograph you were shown of this line, empty where you were shown none or it cannot show it. ' + AGENT_CONDITION_TEXT };
+    required.push('condition');
+  }
+  return {
+    name: 'record_values',
+    description: 'Record a value for every line you were given, or say why a line could not be valued. '
+               + 'Call this exactly once, after your research.',
+    strict: true,
+    input_schema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['values', 'unvalued'],
+      properties: {
+        values: {
+          type: 'array',
+          description: 'One entry per line you could value.',
+          items: { type: 'object', additionalProperties: false, required: required, properties: props }
+        },
+        unvalued: {
+          type: 'array',
+          // 2026-10-26 (Anthony: *"Best estimate, marked unsure"*): a best estimate on thin evidence is a figure at low confidence,
+          // which the desk marks unsure and every paper prints as a general estimate (_avLineResult); unvalued left the person to
+          // type a figure from nothing.
+          description: 'Only a line you cannot value at all, with the reason: you cannot tell what it is, or it is papers or records, which are never valued for their contents. A best estimate on thin evidence goes under values with confidence low, never here.',
+          items: {
+            type: 'object',
+            additionalProperties: false,
+            required: ['line', 'reason'],
+            properties: { line: { type: 'string' }, reason: { type: 'string' } }
+          }
+        }
+      }
+    }
+  };
+}
+
+// The tools for one request: search (and, for the research depth, reading a page it found) and the
+// tool the answer comes back through. ⚠ `_20260209` CARRIES DYNAMIC FILTERING ITSELF, so no
+// `code_execution` tool is declared beside it (a second execution environment confuses the model).
+// It runs on every model the agents choose (dynamic filtering is on Claude 4.6 and later, Anthropic's docs, 2026-10-26).
+function _avTools(mode, categories, conditions) {
+  var tools = [{ type: 'web_search_20260209', name: 'web_search', max_uses: AGENT_VALUE_SEARCHES[mode] || 1 }];
+  if (mode === 'comps') tools.push({ type: 'web_fetch_20260209', name: 'web_fetch', max_uses: AGENT_VALUE_FETCHES });
+  tools.push(_avTool(mode, categories, conditions));
+  return tools;
+}
+
+// ─── THE SYSTEM PROMPT ────────────────────────────────────────────────────────────
+// Stable for every request on one job, so it carries `cache_control`: the valuation date, the basis
+// and whether this is an estate are constant within a job, which is the span the cache has to cover.
+function _avSystem(ctx) {
+  var estate = !!ctx.estate;
+  var basis = String(ctx.basis || 'Fair Market Value');
+  var vdate = String(ctx.valuationDate || '');
+  var cats = (ctx.categories || []).length > 0;
+  var s = ''
+    + 'You are putting a value on the contents of a home so that a concierge can complete '
+    + (estate ? 'an estate inventory' : 'an inventory for a client who is moving or clearing their home')
+    + '. Each line has already been named by someone else from the photograph. Your job is to confirm or '
+    + 'correct that name, say what each line is WORTH, show the sales that figure rests on, and say plainly '
+    + 'when you cannot tell.\n\n'
+
+    + 'WHAT A VALUE MEANS HERE\n'
+    + 'The basis is ' + basis + '.'
+    + (basis === 'Fair Market Value'
+        ? ' That is the price at which the property would change hands between a willing buyer and a '
+        + 'willing seller, neither being under any compulsion and both having reasonable knowledge of the '
+        + 'facts. In practice it is what the thing actually SELLS for on the secondary market: auction '
+        + 'prices realised and completed sales. It is not retail, not an asking price and not an insurance '
+        + 'replacement figure.'
+        : ' Value every line on that basis and say so in the basis sentence where it matters.')
+    + '\n'
+    + (vdate
+        ? 'Value as of ' + vdate + (estate ? ', the valuation date for this estate' : '') + '. Prefer sales '
+        + 'near that date; if the only good comparables are much later, say so in the basis sentence.\n'
+        : (estate
+            ? 'The valuation date for this estate is not recorded yet, so value at the current market and say so '
+            + 'in the basis sentence.\n'
+            : 'Value at the current market.\n'))
+    + 'The property is in Palm Beach County, Florida. Bulky furniture usually sells locally, so its market '
+    + 'is regional; small valuable things sell nationally.\n'
+    // 2026-10-26 (the Restoration Hardware mirror, *"maybe it's worth $1500 new, and then not $25 used"*): a search for a branded
+    // piece finds the brand's own retail page first, and nothing said how a retail brand's used price relates to it.
+    + 'Furniture and decor from a retail or designer brand (Restoration Hardware, Pottery Barn, Crate & Barrel, Arhaus, '
+    + 'Ethan Allen and the like) sells used for a fraction of its retail price: value it at what that brand fetches '
+    + 'second-hand, never at the price its own site or a retailer asks. Mass-market and dated furniture often fetches '
+    + 'little. Modern electronics and appliances lose most of their value within a few years, while vintage audio and '
+    + 'other collected electronics can hold theirs: the model and its age matter as much as the brand.\n'
+    + 'A line is a whole lot. "Sterling flatware service" with Quantity 72 is ONE figure for all 72 '
+    + 'pieces, never a per-piece price. Value the quantity on the line as given: a stack or a box hides '
+    + 'what is under the top one, so never question the count from the photograph. The desk reads one '
+    + 'article\'s value as the line\'s value divided by its Quantity and multiplies it again when a person '
+    + 'corrects the count, so a stack of eight plates is valued as eight plates, never as one.\n'
+    // 2026-10-25 (the Ellison kitchen: "Condition not recorded" on nearly every line it valued). The crew photographs rather
+    // than writes, and every document prints a line with no condition as photographed.
+    + 'Condition is usually not written on the line, because the crew photographs rather than writes. Read '
+    + 'it from the photograph wherever one is sent, assume ordinary used condition on a lot sent as text alone, and '
+    + 'adjust for any condition that is recorded.\n'
+    // 2026-10-26b (Anthony: "Agents grade it"): the grade it reads goes on the line too, where a photograph was sent.
+    + ((ctx.conditions || []).length
+        ? 'A condition on the line may be the first agent\'s grade from the same photograph. Give back the condition '
+          + 'you see wherever you were sent the line\'s photograph, from these grades: ' + AGENT_CONDITION_TEXT + ' Leave it '
+          + 'empty on a lot sent as text alone. A condition set by a person stands, whatever the photograph shows: value the '
+          + 'line in it and give it back as given.\n'
+        : '')
+    // 2026-10-26: a line split off a photograph is sent the whole photograph and its close-ups, and nothing said the photograph
+    // showed other lines; the line now says what else is listed off it (_avLineText).
+    + 'A photograph may show other things that are lines of their own, and the line says so: value only the thing this '
+    + 'line names. A close-up may be of one of those other things.\n\n'
+
+    + 'THE TWO DEPTHS\n'
+    // 2026-10-26: since 2026-10-25b research also takes Agent One's unsure guesses and the names a person just typed, so it is
+    // no longer only "a line that may be worth real money", and branded furniture and electronics sell through resale, not auctions.
+    + 'A request marked RESEARCH is one line to look at closely: it may be worth real money (art, antiques, jewellery, '
+    + 'silver, rugs, collectibles, firearms, wine, instruments, or anything carrying a maker, a model or a mark), its name '
+    + 'may be a guess for you to confirm from the photograph, or a person may have just named it. Search for SOLD results '
+    + 'where that kind of thing actually sells: auction prices realised (LiveAuctioneers and Invaluable results pages, '
+    + 'auction house archives) and dealer sales for art, antiques, silver, jewellery and rugs; resale and consignment '
+    + 'sales for branded furniture, decor and electronics. Find three or more sold comparables where they '
+    + 'exist and read the photographs, because the maker\'s mark is what makes a comparable a match. '
+    + 'Your value is your reading of those sales, adjusted for condition and for any difference between '
+    + 'them and this line.\n'
+    + 'A request marked ORDINARY is a batch of everyday lots: kitchenware, linens, books, everyday '
+    + 'furniture and decor. Search for the going used rate of each kind of lot in the batch, not of each line: lots of '
+    + 'one kind (kitchenware, linens, books) share one search. You need not cite a comparable. This is a figure for a '
+    + 'schedule, not research: "Stainless flatware, everyday brand", Quantity 60, $40 to $60 for the lot, is the whole '
+    + 'job. A maker or brand in the name is '
+    + 'part of what the lot is: price that brand ("Henckels kitchen shears"), never the generic kind.\n'
+    // ⚠ AGENT ONE GUESSES, AGENT TWO LOOKS (2026-10-26; Anthony, 2026-10-25: "agent 1 guess and agent 2 confirm or update upon
+    // pricing"): an ordinary lot whose name is Agent One's hedged guess comes with its photograph (the app's agentValueLooks).
+    + 'Some ordinary lots come with their photograph, labelled with the line\'s label, because the name is a guess: look at '
+    + 'it, confirm or correct the name from what you see, price a brand the name only guesses at as far as the photograph '
+    + 'supports it, and read the condition off it. It is still an ordinary lot.\n\n'
+
+    + 'EVIDENCE\n'
+    + '- A comparable must be a page your search or fetch actually returned. Copy its URL exactly. A sale '
+    + 'you remember, or a link you construct, is not evidence: never invent a sale, a price, a date or a '
+    + 'link. Comparables without a returned URL are thrown away.\n'    // 2026-10-26b: the first live run cited an eBay search page and a price-results page whose price it had not seen.
+    + '- A comparable is one item\'s own page: the lot, the listing, the sale. Never cite a search or results page: '
+    + 'open the item from it, or let what you saw there inform your reading without citing it. Its price is the '
+    + 'price that page shows for that sale or listing; a sale whose page shows no price is not a comparable, and '
+    + 'you never fill one in from a range, an estimate or another lot. Comparables that fail this are thrown away.\n'
+
+    + '- Say whether each comparable SOLD or was only ASKING. An asking price is not a sale. You may cite '
+    + 'one as "asking", but never set the value on asking prices alone.\n'
+    + '- If a research line has no sold comparable, give your best reading with confidence low and say in the basis '
+    + 'what it rests on. Put a line under unvalued only when you cannot tell what it is, or it is papers or records. Do '
+    + 'not dress a guess up as research.\n\n'
+
+    + 'THE RANGE AND CONFIDENCE\n'
+    + 'low and high bracket where the line would realistically sell; your value sits inside them. high '
+    + 'confidence = several close sold comparables agree. medium = the comparables are near but not exact, '
+    + 'or few. low = a best estimate on thin or indirect evidence.'
+    // 2026-10-26: the only scale was about comparables, which an ordinary lot is told it need not cite, so a literal reading put
+    // every everyday lot at low, and the desk marked each one unsure.
+    + ' On an ORDINARY lot, confidence says how well the going rate for that kind of lot is known, not how many sales '
+    + 'you cited: high where lots like it resell at a familiar rate, medium where the rate turns on a brand, model or '
+    + 'size the line does not give, and low only where you cannot tell what the lot is or what lots like it fetch.\n'
+    + 'The basis sentence is printed beside the figure on the inventory the family, their attorney or a trustee reads: '
+    + 'write it as the evidence, in plain words, never with this line\'s count or its name, so it stays true if a '
+    + 'person corrects the count.\n\n'
+
+    + 'THE WORTHPOINT LOOKUP\n'
+    + 'For a research line, write in lookup the words a person would type into WorthPoint\'s price guide to '
+    + 'check it: maker, pattern, mark, form, period. Leave it empty for an ordinary lot.\n\n'
+
+    // 2026-10-25 (Anthony, the Ellison plates, named "likely Italian" and flagged "Name may be wrong" on every line: "Why
+    // doesn't agent 1 guess and agent 2 confirm or update upon pricing. No need to flag inconsistencies. Just update to the
+    // best of their ability and if I see something that is off on the desk review, I'll change it.").
+    + 'THE NAME\n'
+    + 'Give every line\'s name back in name, as you value it: the same words where they are right, or the '
+    + 'name your research and the photograph support ("Hand-painted tin-glazed plates, yellow bird pattern, '
+    + 'likely Spanish, Puente del Arzobispo type"). Keep what was right, keep it one short line (about fifteen words: '
+    + 'what it is first, then what tells it apart), never put a '
+    + 'count in it (how many is the Quantity), and hedge an attribution you are inferring rather than reading '
+    + '("likely", "appears to be"). Keep a maker or brand the crew named in their note unless the photograph plainly '
+    + 'shows otherwise, and never put the name of the owner, a relative or a recipient in a name, whatever the crew '
+    + 'noted. Value the line as you name it. On an ordinary lot sent as text alone, give the name back as it was unless '
+    + 'it is plainly wrong; on one sent with its photograph, confirm or correct it from the photograph. Never write that '
+    + 'a name was wrong: correct it, and a person checks it at the desk.\n'
+    // 2026-10-25b: a name a person typed or reviewed (the wooden mirror that is Restoration Hardware) is the truth to price.
+    + 'A line marked "Name checked by a person" was named or checked by someone who saw the thing itself: give '
+    + 'that name back exactly as given and value the line as that, even where the photograph looks plainer.\n\n'
+    + (cats
+        ? 'THE CATEGORY\n'
+        + 'Give every line\'s category back in category: the one given, unless on a RESEARCH line the photograph and your '
+        + 'research plainly put it elsewhere (a piece filed as Antiques that is a recent reproduction is Furniture). Always '
+        + 'the one given on an ORDINARY lot, on a line whose name or category a person checked, and on a line filed Firearms '
+        + '(an antique gun stays Firearms). The categories mean: everyday dishes, '
+        + 'glassware, cookware, kitchen tools and table linens are General/Household unless a maker\'s mark, signature or '
+        + 'hallmark is readable; Antiques is for pieces about a hundred years old or more, a recent piece in a period style '
+        + 'being Furniture; Art & Décor is for original art, fine prints, sculpture and decorative pieces by a maker or of '
+        + 'evident quality, mass-produced decor being General/Household; Collectibles is for things people collect as such.\n\n'
+        : '')
+
+    + 'NOTICES\n'
+    // 2026-10-25 (Anthony, the Ellison kitchen: "Agent Two raised 23 things to look at", nine lines' worth, most of them
+    // the name, the condition, the count, a search that ran short or a WorthPoint check the desk already offers).
+    + 'A notice is for something a person must DO about the line, in one or two short sentences, under forty '
+    + 'words. Most lines need none; never give a line more than one.\n'
+    + 'kind "appraiser": a qualified appraisal is advisable - the piece is signed, marked, rare, or the '
+    + 'comparables disagree widely.\n'
+    + 'kind "specialist": it should sell through a specialist auction house or dealer, not a general sale.\n'
+    + 'kind "other": anything else a person must see before relying on the figure. Rarely.\n'
+    + 'Never raise a notice about the name (correct it instead), because the condition is not recorded, '
+    + 'because a count is approximate, because your search ran out or found no sold comparable, or to '
+    + 'suggest a WorthPoint check: the desk already shows your confidence and the WorthPoint terms beside '
+    + 'the figure.\n\n'
+
+    + 'WHAT YOU MUST NEVER DO\n'
+    + (cats
+        ? '- Never change a line\'s quantity, and change its category only as THE CATEGORY says.\n'
+        : '- Never change a line\'s category or its quantity.\n')
+    + '- Never rename a line whose name a person checked: give its name back as it was.\n'
+    + '- Never say what should happen to a line (keep, sell, donate, junk) beyond the notices above. That '
+    + 'is the family\'s decision.\n'
+    + '- Never give legal or tax advice, and never describe a person.\n'
+    + '- Never value private papers, correspondence or records for their contents.\n\n'
+
+    + 'Call record_values exactly once, after your research, with every line you were given: each one '
+    + 'either under values or under unvalued, using the label it was given.';
+
+  if (estate) {
+    // 2026-10-26: understated as well as overstated. On a Form 706 estate an undervalued figure costs the beneficiaries and the
+    // estate (a sale at too low a price, a valuation penalty) as surely as an overstated one.
+    s += '\n\nThis is a decedent\'s estate. The schedule may be read by an attorney, a personal representative '
+       + 'or trustee, a beneficiary, a court or the IRS, so an overstated or understated figure or an invented comparable '
+       + 'is a real problem for real people. That is the reason for the evidence rules above.';
+  }
+  return s;
+}
+
+// One line, as the model reads it. Everything a person recorded that bears on value, and nothing the
+// model must not act on (no disposition, no recipient field, no flags; a crew's note can name a recipient, and THE NAME bars it).
+function _avLineText(label, it) {
+  var t = label + '. ' + String(it.name || '').slice(0, 300)
+        + ' | Category: ' + String(it.category || 'not recorded')
+        + ' | Quantity: ' + (parseInt(it.qty, 10) > 1 ? parseInt(it.qty, 10) : 1)
+        + ' | Condition: ' + String(it.condition || 'not written down')
+        // Marked as a person's, as a checked name is (2026-10-26b, on review): a tear the photograph does not show is theirs to know.
+        + (it.conditionChecked && it.condition ? ' (set by a person: value it in this condition)' : '');
+  // 2026-10-26: the room (Agent One had it, Agent Two did not), and on a photograph several lines share, the crew's note said over
+  // it, marked as possibly about another thing, and what else is listed off it.
+  if (it.room)       t += ' | Room: ' + String(it.room).slice(0, 60);
+  if (it.fieldNote)  t += ' | The crew noted: "' + String(it.fieldNote).slice(0, 300) + '"';
+  if (it.photoNote)  t += ' | The crew said over the photograph this line shares (it may be about another thing in it): "' + String(it.photoNote).slice(0, 300) + '"';
+  var also = (it.alsoListed || []).filter(function (n) { return !!String(n || '').trim(); }).slice(0, 12);
+  if (also.length)   t += ' | Its photograph also shows, listed as lines of their own: ' + also.map(function (n) { return String(n).slice(0, 120); }).join('; ');
+  if (it.agentBasis) t += ' | Named from: ' + String(it.agentBasis).slice(0, 200);
+  // ⚠ WHO HAS THE NAME (2026-10-25b): a name a person typed or reviewed is given back and valued as named (THE NAME).
+  if (it.nameChecked) t += ' | Name checked by a person';
+  else if (it.categoryChecked) t += ' | Category checked by a person';
+  return t;
+}
+
+// The user turn for one request. A research line carries its photograph and close-ups (Agent One's image block, the same full
+// file), each labelled so the main frame is never taken for a close-up; an ordinary batch is text, with the photograph of any lot
+// sent with one (a guessed name, agentValueLooks), labelled with its line. ⚠ An ordinary lot's photograph that cannot be read costs
+// that lot its picture, never the batch its answer.
+function _avUserContent(unit) {
+  var content = [];
+  unit.saw = {};   // the labels whose photograph this request carries: only they may come back with a condition (2026-10-26b)
+  if (unit.mode === 'comps') {
+    var it = unit.items[0];
+    var details = it.fileId ? (it.details || []).slice(0, 4) : [];
+    if (it.fileId) {
+      content.push({ type: 'text', text: 'The photograph:' });
+      content.push(_agImageBlock(it.fileId));
+      unit.saw[unit.labels[0]] = 1;
+      for (var i = 0; i < details.length; i++) {
+        content.push({ type: 'text', text: 'Close-up ' + (i + 1) + ':' });
+        content.push(_agImageBlock(details[i].fileId));
+      }
+    }
+    content.push({ type: 'text', text: 'RESEARCH. One line to value'
+      + (it.fileId ? ', with its photograph' + (details.length ? ' and close-ups taken of it (a mark, a label, its back, a corner or damage)' : '') : '')
+      + ':\n' + _avLineText(unit.labels[0], it)
+      + (it.roomNote ? '\nWalkthrough note for this room: "' + String(it.roomNote).slice(0, 400) + '"' : '') });
+  } else {
+    var lines = unit.items.map(function (x, k) {
+      if (x.fileId) {
+        try {
+          var img = _agImageBlock(x.fileId);
+          content.push({ type: 'text', text: unit.labels[k] + '\'s photograph:' });
+          content.push(img);
+          unit.saw[unit.labels[k]] = 1;
+          return _avLineText(unit.labels[k], x) + ' | Its photograph is above, labelled ' + unit.labels[k]
+            + (x.roomNote ? ' | Walkthrough note for its room: "' + String(x.roomNote).slice(0, 300) + '"' : '');
+        } catch (e) { /* a photograph not in Drive yet: valued as text */ }
+      }
+      return _avLineText(unit.labels[k], x);
+    });
+    content.push({ type: 'text', text: 'ORDINARY. ' + unit.items.length + ' everyday lot'
+      + (unit.items.length === 1 ? '' : 's') + ' to value:\n' + lines.join('\n') });
+  }
+  return content;
+}
+
+function _avBody(unit, ctx, noFallbacks, model) {
+  var body = {
+    model: model,
+    max_tokens: AGENT_VALUE_MAX_TOKENS,
+    thinking: { type: 'adaptive' },
+    output_config: { effort: AGENT_VALUE_EFFORT },
+    system: [{ type: 'text', text: _avSystem(ctx), cache_control: { type: 'ephemeral' } }],
+    tools: _avTools(unit.mode, ctx.categories, ctx.conditions),
+    tool_choice: { type: 'auto' },
+    messages: [{ role: 'user', content: _avUserContent(unit) }]
+  };
+  if (!noFallbacks) body.fallbacks = 'default';
+  return body;
+}
+
+function _avHttp(body, key) {
+  var headers = { 'x-api-key': key, 'anthropic-version': AGENT_API_VERSION };
+  if (body.fallbacks) headers['anthropic-beta'] = AGENT_FALLBACK_BETA;
+  return {
+    url: AGENT_API,
+    method: 'post',
+    contentType: 'application/json',
+    headers: headers,
+    payload: JSON.stringify(body),
+    muteHttpExceptions: true
+  };
+}
+
+// ⚠ ECHOING A PAUSED TURN BACK. After a refusal fallback the turn carries a `fallback` marker, and
+// what came before the last one is the declined model's: its thinking, a tool call it never finished
+// and any server tool call without its result must not be replayed. A non-streaming answer omits the
+// declined partial already, so this normally changes nothing; it is the documented rule, kept here so
+// a continuation can never be the request that 400s.
+function _avEcho(content) {
+  var blocks = content || [];
+  var last = -1;
+  for (var i = 0; i < blocks.length; i++) if (blocks[i] && blocks[i].type === 'fallback') last = i;
+  if (last < 0) return blocks;
+  var results = {};
+  blocks.forEach(function (b) { if (b && b.tool_use_id && /_tool_result$/.test(b.type || '')) results[b.tool_use_id] = 1; });
+  return blocks.filter(function (b, k) {
+    if (k > last || !b) return true;
+    if (b.type === 'text') return true;
+    if (b.type === 'server_tool_use') return !!results[b.id];
+    if (/_tool_result$/.test(b.type || '')) return true;
+    return false;
+  });
+}
+
+// Pull the answer out of one HTTP response. {ok, input} | {pause, content} | {ok:false, error, fallbackRefused}.
+function _avReadResult(res) {
+  var code = res.getResponseCode();
+  var body = {};
+  try { body = JSON.parse(res.getContentText()); }
+  catch (e) { return { ok: false, error: 'unreadable answer (HTTP ' + code + ')', retryable: code >= 500 ? 'busy' : '' }; }
+  if (code >= 300) return _agHttpFailure(code, body);
+  // ⚠ A REFUSAL IS AN HTTP 200 AND IS CHECKED BEFORE content IS READ.
+  if (body.stop_reason === 'refusal') {
+    var d = body.stop_details || {};
+    return { ok: false, error: 'the model declined to value this' + (d.category ? ' (' + d.category + ')' : '') };
+  }
+  if (body.stop_reason === 'max_tokens') return { ok: false, error: 'the answer was cut off before it finished', retryable: 'cutoff' };
+  // ⚠ THE SERVER'S OWN TOOL LOOP STOPPED AT ITS ITERATION LIMIT. Not an answer and not a failure: the
+  // caller sends the turn back and the API resumes where it left off (never with a "continue" message).
+  if (body.stop_reason === 'pause_turn') return { pause: true, content: body.content || [] };
+  var blocks = body.content || [];
+  for (var i = 0; i < blocks.length; i++) {
+    if (blocks[i].type === 'tool_use' && blocks[i].name === 'record_values') {
+      return { ok: true, input: blocks[i].input || {}, content: blocks };
+    }
+  }
+  // ⚠ PROSE IS A FAILURE TO RECORD, NOT A FINDING THAT NOTHING IS WORTH ANYTHING (Agent One's rule).
+  return { ok: false, error: 'the model answered in prose instead of recording a value' };
+}
+
+// ─── NO INVENTED SALES (spec §4b) ─────────────────────────────────────────────────
+// Every URL a TOOL returned on this request, from the result blocks only: a web search result, a
+// fetched page, and whatever the dynamic filter's code printed. ⚠ NEVER THE MODEL'S OWN BLOCKS: a
+// `server_tool_use` input carries the URL the model ASKED to fetch, which it may have made up, and
+// its text is the thing being checked.
+function _avSeenUrls(contents) {
+  var seen = {};
+  var add = function (u) { var k = _avUrlKey(u); if (k) seen[k] = 1; };
+  var walk = function (v) {
+    if (v == null) return;
+    if (typeof v === 'string') {
+      var m = v.match(/https?:\/\/[^\s"'<>\]\)]+/g);
+      if (m) m.forEach(add);
+      return;
+    }
+    if (Array.isArray(v)) { v.forEach(walk); return; }
+    if (typeof v === 'object') {
+      Object.keys(v).forEach(function (k) {
+        if (k === 'encrypted_content' || k === 'encrypted_index') return;
+        if (k === 'url' && typeof v[k] === 'string') add(v[k]);
+        else walk(v[k]);
+      });
+    }
+  };
+  (contents || []).forEach(function (blocks) {
+    (blocks || []).forEach(function (b) {
+      if (b && /_tool_result$/.test(String(b.type || ''))) walk(b.content);
+    });
+  });
+  return seen;
+}
+
+// A URL as a comparison key: no scheme, no `www.`, no fragment, no trailing slash or punctuation,
+// the host lowercased. The query stays: a results page's query IS the page.
+function _avUrlKey(u) {
+  var s = String(u || '').trim().replace(/[.,;:]+$/, '');
+  var m = s.match(/^https?:\/\/([^\/?#]+)([^#]*)/i);
+  if (!m) return '';
+  return m[1].toLowerCase().replace(/^www\./, '') + m[2].replace(/\/+$/, '');
+}
+
+var AGENT_VALUE_CONF_DOWN = { high: 'medium', medium: 'low', low: 'low' };
+
+// One line of the model's answer, checked. Returns the result the app writes, or {error}.
+function _avLineResult(v, mode, seen) {
+  var fmv = _avCents(v.value), low = _avCents(v.low), high = _avCents(v.high);
+  if (!isFinite(fmv) || fmv < 0) return { error: 'the answer carried no usable value' };
+  if (!isFinite(low) || low < 0) low = fmv;
+  if (!isFinite(high) || high < 0) high = fmv;
+  // A range that does not hold its own point value is put round it rather than refused: the point is
+  // the agent's reading and the range is its spread, so the spread widens to include the reading.
+  if (low > fmv) low = fmv;
+  if (high < fmv) high = fmv;
+  var kept = [], dropped = 0, unfit = 0;
+  (v.comps || []).forEach(function (c) {
+    if (!c || !seen[_avUrlKey(c.url)]) { dropped++; return; }
+    var price = _avCents(c.price);
+    // One item's own page with the price that page shows, or it is not a comparable (AGENT_VALUE_RESULTS_SEGMENTS, 2026-10-26b).
+    if (!(isFinite(price) && price > 0) || _avResultsPage(c.url)
+        || AGENT_VALUE_NO_PRICE_RE.test(String(c.title || '') + ' ' + String(c.venue || ''))) { unfit++; return; }
+    kept.push({
+      title: String(c.title || '').slice(0, 160),
+      venue: String(c.venue || '').slice(0, 80),
+      saleDate: (String(c.saleDate || '').trim().match(/^\d{4}(?:-\d{2}(?:-\d{2})?)?/) || [''])[0],
+      price: price,
+      url: String(c.url || '').slice(0, 400),
+      kind: c.kind === 'sold' ? 'sold' : 'asking'
+    });
+  });
+  kept = kept.slice(0, AGENT_VALUE_MAX_COMPS);
+  var conf = ['high', 'medium', 'low'].indexOf(v.confidence) >= 0 ? v.confidence : 'low';
+  var soldKept = kept.some(function (c) { return c.kind === 'sold'; });
+  // ⚠ A DROPPED COMPARABLE COSTS THE LINE A LEVEL OF CONFIDENCE: the model cited something no tool
+  // returned, so the rest of its reading is worth less too. And at the research depth a line with no
+  // sold comparable left is low whatever else it found (§4b).
+  if (dropped) conf = AGENT_VALUE_CONF_DOWN[conf];
+  if (mode === 'comps' && !soldKept) conf = 'low';
+  // ⚠⚠ NO SOLD COMPARABLE, NO "COMPS" (2026-10-26): a researched figure that rests on no sale it can show is a general estimate on
+  // every paper. The research tool could answer only Auction or Online comps, so a best reading with nothing sold behind it printed
+  // "auction comps" on the Court Inventory and the Estate Inventory Report (CLAUDE.md: never print a claim the app did not witness).
+  // The asking prices it found stay on the line's record; `mode` stays comps, so the ceiling never re-sends it.
+  var sources = (mode === 'comps' && !soldKept) ? AGENT_VALUE_SOURCES.general : (AGENT_VALUE_SOURCES[mode] || AGENT_VALUE_SOURCES.general);
+  var notices = (v.notices || []).filter(function (n) {
+    return n && AGENT_VALUE_NOTICE_KINDS.indexOf(n.kind) >= 0 && String(n.text || '').trim();
+  }).slice(0, 4).map(function (n) { return { kind: n.kind, text: _avClip(n.text) }; });
+  return {
+    fmv: fmv, low: low, high: high, confidence: conf,
+    source: sources.indexOf(v.source) >= 0 ? v.source : sources[0],
+    basis: _avClip(v.basis),
+    comps: kept,
+    lookup: mode === 'comps' ? String(v.lookup || '').slice(0, 160) : '',
+    name: String(v.name || '').replace(/\s+/g, ' ').trim().slice(0, 300),
+    // The category it values under, on a research line only (THE CATEGORY); the app writes it under the name's rule.
+    category: mode === 'comps' ? String(v.category || '').trim().slice(0, 60) : '',
+    notices: notices,
+    dropped: dropped,
+    unfit: unfit,
+    mode: mode
+  };
+}
+
+// ─── THE ACTION ───────────────────────────────────────────────────────────────────
+// ⚠ BUDGET AND RESUME, never fail a batch whole (getDriveThumbnails, agentIdentifyShots). Every line
+// it was sent comes back in `results` or in `failed`, or is counted in `remaining` and simply not
+// answered; the app re-asks for what it did not get back, by id, so the order lines were answered in
+// never matters to it.
+function agentValueLines(data) {
+  try {
+    var miss = _agMissingProps();
+    if (miss.length) {
+      return { ok: false, error: 'Agent Two is not configured — missing Script Property: '
+                                 + miss.join(', ') + '. Add it in Project Settings > Script Properties.' };
+    }
+    var ctx = (data && data.context) || {};
+    var items = (data && data.items) || [];
+    if (!items.length) return { ok: true, success: true, results: {}, failed: {}, retry: {}, remaining: 0 };
+
+    var key = _agProp('ANTHROPIC_API_KEY');
+    var started = new Date().getTime();
+    var todo = items.slice(0, AGENT_VALUE_MAX_LINES);
+    var models = _agModels('value', key);
+
+    // Research lines go one to a request with their photographs; ordinary lots in batches, labelled
+    // L1, L2 … within each request so the answer can be matched back without trusting the model with ids.
+    var units = [], general = [];
+    todo.forEach(function (it) {
+      if (it.mode === 'comps') units.push({ mode: 'comps', items: [it], labels: ['L1'] });
+      else general.push(it);
+    });
+    for (var g = 0; g < general.length; g += AGENT_VALUE_GENERAL_BATCH) {
+      var chunk = general.slice(g, g + AGENT_VALUE_GENERAL_BATCH);
+      units.push({ mode: 'general', items: chunk, labels: chunk.map(function (x, k) { return 'L' + (k + 1); }) });
+    }
+
+    // ⚠⚠ TWO KINDS OF "NOT VALUED" (2026-10-26). `failed` is a verdict: the model's own unvalued, a refusal, a cut-off on the
+    // fallback, prose, research that ran long; the app stamps it on the line and the automatic run leaves it alone. `retry` is a
+    // passing failure: a request past UrlFetchApp's limit, a busy service, a line the model skipped; the app sends it once more in
+    // the same run and stamps nothing (one slow request had stamped every line in flight "not valued", and the automatic run
+    // never asked again).
+    var results = {}, failed = {}, retry = {}, timedOut = false, noFallbacks = false, u = 0;
+    var failUnit = function (unit, why) { unit.items.forEach(function (it) { failed[it.stableId] = why; }); };
+    var retryUnit = function (unit, why) { unit.items.forEach(function (it) { retry[it.stableId] = why; }); };
+    // A unit sent afresh on the fallback model: a paused turn is never replayed to another model.
+    // Its continuations start again too (`cont`, per request, 2026-10-26 on review: a shared round counter left a unit sent to the
+    // fallback in round 1 with one continuation, and its research was stamped as having run long).
+    var onFallback = function (p) {
+      p.model = models.fallback;
+      p.body = _avBody(p.unit, ctx, noFallbacks, p.model);
+      p.user = p.body.messages[0]; p.turns = []; p.said = []; p.cont = 0;
+      return p;
+    };
+
+    while (u < units.length) {
+      if (new Date().getTime() - started > AGENT_VALUE_TIME_BUDGET) break;
+      var slice = units.slice(u, u + AGENT_VALUE_PARALLEL);
+      var pending = [];
+      slice.forEach(function (unit) {
+        try {
+          var body = _avBody(unit, ctx, noFallbacks, models.first);
+          pending.push({ unit: unit, body: body, user: body.messages[0], turns: [], said: [], model: models.first, cont: 0 });
+        } catch (imgErr) {
+          // A photograph that has not reached Drive yet is ordinary, not fatal (Agent One's rule).
+          failUnit(unit, String(imgErr.message || imgErr));
+        }
+      });
+      while (pending.length) {
+        var responses;
+        try {
+          responses = UrlFetchApp.fetchAll(pending.map(function (p) { return _avHttp(p.body, key); }));
+        } catch (fetchErr) {
+          // ⚠ ONE REQUEST THAT RUNS PAST URLFETCH'S OWN LIMIT THROWS FOR THE WHOLE fetchAll. What was on the first-choice model
+          // goes again on the fallback while the budget allows; the rest come back as `retry` and the app asks again. Nothing is
+          // written for them.
+          timedOut = true;
+          var why = 'the valuation took too long to come back (' + String(fetchErr.message || fetchErr).slice(0, 80) + ')';
+          if (pending.some(function (p) { return p.model !== models.fallback; })) _agSlow('value');
+          var canFall = new Date().getTime() - started <= AGENT_VALUE_TIME_BUDGET;
+          var again = [];
+          pending.forEach(function (p) {
+            if (canFall && p.model !== models.fallback) {
+              try { again.push(onFallback(p)); } catch (imgErr2) { failUnit(p.unit, String(imgErr2.message || imgErr2)); }
+            } else retryUnit(p.unit, why);
+          });
+          pending = again;
+          continue;
+        }
+        var next = [];
+        responses.forEach(function (res, k) {
+          var p = pending[k];
+          var read = _avReadResult(res);
+          if (read.pause) {
+            p.turns = p.turns.concat(read.content);
+            p.said.push(read.content);
+            if ((p.cont || 0) < AGENT_VALUE_CONTINUES) {
+              p.cont = (p.cont || 0) + 1;
+              p.body.messages = [p.user, { role: 'assistant', content: _avEcho(p.turns) }];
+              next.push(p);
+            } else {
+              failUnit(p.unit, 'the research ran long and stopped before it finished');
+            }
+            return;
+          }
+          if (!read.ok) {
+            if (read.fallbackRefused && p.body.fallbacks) {
+              noFallbacks = true;
+              delete p.body.fallbacks;
+              next.push(p);
+              return;
+            }
+            // Busy, cut off at its ceiling, or rejected outright by a model that does not take this request: once on the fallback,
+            // inside the time budget; past it, asked again by the app on its next call (2026-10-26, on review: Apps Script's six
+            // minutes).
+            if (read.retryable && p.model !== models.fallback) {
+              if (new Date().getTime() - started > AGENT_VALUE_TIME_BUDGET) { retryUnit(p.unit, read.error); return; }
+              try { p.rejected = read.retryable === 'rejected'; next.push(onFallback(p)); }
+              catch (imgErr3) { failUnit(p.unit, String(imgErr3.message || imgErr3)); }
+              return;
+            }
+            if (read.retryable === 'busy') retryUnit(p.unit, read.error);
+            else failUnit(p.unit, read.error);
+            return;
+          }
+          if (p.rejected) _agDemote('value', 'the first choice rejected a request the fallback answered');
+          p.said.push(read.content);
+          var seen = _avSeenUrls(p.said);
+          var input = read.input || {};
+          var byLine = {};
+          (input.values || []).forEach(function (v) { if (v && byLine[v.line] == null) byLine[v.line] = { v: v }; });
+          (input.unvalued || []).forEach(function (x) { if (x && byLine[x.line] == null) byLine[x.line] = { why: x.reason }; });
+          p.unit.items.forEach(function (it, j) {
+            var hit = byLine[p.unit.labels[j]];
+            if (!hit) { retry[it.stableId] = 'the model did not answer for this line'; return; }
+            if (hit.why != null) { failed[it.stableId] = String(hit.why || 'could not be valued').slice(0, 200); return; }
+            var r = _avLineResult(hit.v, p.unit.mode, seen);
+            // A grade only off a photograph this request carried, and only one of the grades it was sent (2026-10-26b).
+            if (!r.error) r.condition = (p.unit.saw && p.unit.saw[p.unit.labels[j]] && (ctx.conditions || []).indexOf(hit.v.condition) >= 0) ? hit.v.condition : '';
+            // A line filed Firearms is never moved out of it (2026-10-26, on review): the category is what switches the firearm
+            // protocol on in the app, which refuses the move too.
+            if (!r.error && String(it.category || '') === 'Firearms') r.category = '';
+            if (r.error) failed[it.stableId] = r.error;
+            else { r.model = p.model; results[it.stableId] = r; }
+          });
+        });
+        pending = next;
+      }
+      u += slice.length;
+    }
+
+    var answered = Object.keys(results).length + Object.keys(failed).length + Object.keys(retry).length;
+    var out = {
+      ok: true, success: true,
+      results: results,
+      failed: failed,
+      retry: retry,
+      remaining: Math.max(0, items.length - answered),
+      model: models.first
+    };
+    if (timedOut) out.timedOut = true;
+    return out;
+  } catch (error) {
+    Logger.log('agentValueLines error: ' + error);
+    return { ok: false, error: String(error) };
+  }
+}
+
+// ⚠ RUN THIS FROM THE EDITOR FIRST, BEFORE TRUSTING THE BUTTON. Argument-free, because the Run menu
+// cannot pass any. Three known lines with no photographs (one researched, two ordinary), so an auth,
+// beta or timeout failure can never masquerade as a valuing bug, and it prints how long the call took:
+// that figure is the one to send back if it fails with "took too long".
+function testAgentValue() {
+  var miss = _agMissingProps();
+  if (miss.length) { Logger.log('MISSING Script Property: ' + miss.join(', ')); return; }
+  var t0 = new Date().getTime();
+  var probes = [
+    // 2026-10-26: no count in a probe's name either (a faithful echo of 'set of 8' tripped the probe's own warning).
+    { stableId: 'probe-comps', mode: 'comps', name: 'Herend Rothschild Bird dinner plates',
+      category: 'Antiques', qty: 8, condition: 'Good' },
+    { stableId: 'probe-flatware', mode: 'general', name: 'Stainless steel flatware, everyday brand',
+      category: 'General/Household', qty: 60, condition: 'Good' },
+    { stableId: 'probe-books', mode: 'general', name: 'Hardcover books, general fiction',
+      category: 'General/Household', qty: 40, condition: 'Fair' },
+    // 2026-10-25b: a name a person checked comes back as given (the warning below says so if it does not).
+    { stableId: 'probe-checked', mode: 'general', name: 'Restoration Hardware wall mirror, weathered oak frame',
+      category: 'Furniture', qty: 1, condition: 'Good', nameChecked: true }
+  ];
+  var out = agentValueLines({
+    context: { estate: true, basis: 'Fair Market Value', valuationDate: '2026-06-14',
+               categories: ['Antiques', 'Art & Décor', 'Collectibles', 'Furniture', 'General/Household'] },
+    items: probes
+  });
+  var secs = Math.round((new Date().getTime() - t0) / 1000);
+  if (!out.ok) { Logger.log('FAILED after ' + secs + 's: ' + out.error); return; }
+  Logger.log((out.timedOut ? 'PARTLY TIMED OUT' : 'ANSWERED') + ' in ' + secs + 's — first choice ' + out.model);
+  Object.keys(out.results).forEach(function (id) {
+    var r = out.results[id];
+    Logger.log('  ' + id + ' [' + (r.model || out.model) + ']: $' + r.fmv + ' ($' + r.low + '–$' + r.high + ', ' + r.confidence + ', ' + r.source + ') — ' + r.basis);
+    // The name it valued under (2026-10-25b): printed where it differs from the probe's, with a warning on a count in it.
+    var sent = ''; for (var k = 0; k < probes.length; k++) if (probes[k].stableId === id) sent = probes[k].name;
+    var norm = function (x) { return String(x || '').toLowerCase().replace(/\s+/g, ' ').trim(); };
+    if (r.name && norm(r.name) !== norm(sent)) Logger.log('      renamed: ' + r.name + (id === 'probe-checked' ? '   WARNING: a name a person checked was changed' : ''));
+    if (AGENT_COUNT_IN_NAME_RE.test(String(r.name || ''))) Logger.log('      WARNING: a count in the name; the count belongs in qty alone.');
+    (r.comps || []).forEach(function (c) { Logger.log('      [' + c.kind + '] ' + c.title + ' · ' + c.venue + ' · ' + c.saleDate + ' · $' + c.price + ' · ' + c.url); });
+    if (r.dropped) Logger.log('      ' + r.dropped + ' comparable(s) dropped: no tool returned their link');
+    if (r.unfit) Logger.log('      ' + r.unfit + ' comparable(s) left out: a search or results page, or no price of its own');
+    if (r.lookup) Logger.log('      WorthPoint: ' + r.lookup);
+  });
+  Object.keys(out.failed).forEach(function (id) { Logger.log('  ' + id + ' NOT VALUED: ' + out.failed[id]); });
+  Object.keys(out.retry || {}).forEach(function (id) { Logger.log('  ' + id + ' TO ASK AGAIN: ' + out.retry[id]); });
+  if (out.remaining) Logger.log('  ' + out.remaining + ' line(s) left for another call (the time budget ran out)');
+}

@@ -535,8 +535,12 @@ function groupB({ group, ok, eq, has, lacks }) {
     const job = { id: 7, invSnapshots: [] };
     // Read defensively: on a revert that drops the open, `_deskOpen` is not even reached from the snapshot's call graph.
     const hist = () => (S._deskOpen || {})['7:history'];
+    // Since 2026-10-27 (P1) a snapshot is taken only off a list this device has read, and its lines go to the sheet's store.
     const S = lift(['takeInventorySnapshot'], { jobs: [job], document: domStub({}), _invAssignItemNos: () => [], _snapItemOf: () => ({}), estateValueDate: () => '',
-      _jobTouch() {}, saveJobs() {}, syncJobToSheets() {}, renderInventoryTab() { seen.push(hist()); } });
+      _jobTouch() {}, saveJobs() {}, syncJobToSheets() {}, renderInventoryTab() { seen.push(hist()); },
+      // The lines' write lands at once here (P1's review: the heading is recorded by that landing).
+      snapshotRefusal: () => '', postSyncBadge(b, o, f, landed) { if (landed) landed({ ok: true }); }, _snapFilePage() {}, _invRenderWhenIdle() {}, _invJob: () => job,
+      showSyncBadge() {} });
     S.window.prompt = () => 'Filed with court';
     const r = attempt(() => S.takeInventorySnapshot(7));
     ok(r.ok, 'the snapshot runs (' + (r.err || 'ok') + ')');
@@ -2131,8 +2135,10 @@ function groupJ({ group, ok, eq, has, lacks }) {
     // RESTATED ON THE BUILD'S REVIEW (2026-10-23): the read itself asks it too, to arm the retry after a failed read.
     // RESTATED IN THE REVIEWS' THIRD ROUND (2026-10-26): the list read (Q107) is pressed only on a copy that has read the sheet,
     // so its refusal asks the same answer (invListReadRefusal: the press and the work bar's line read it, never a copy of it).
-    eq(callersOf('_invManifestUnread'), ['_apprFormIsOpen', '_invCloudRetryArm', '_invRefreshFromCloud', 'deskFoldState', 'invListReadRefusal'],
-      '⚠ an unread manifest: one answer, read by the bars, the form, the read that asks the sheet again, and the list read\'s refusal');
+    // RESTATED 2026-10-27 (P1 of the desk audit, SYN-08): a cold desk records nothing, so the one refusal Snapshot, the papers,
+    // CSV and + Add line item ask (invColdRefusal) asks the same answer, and so do the work bar's and the list's words (invColdWords).
+    eq(callersOf('_invManifestUnread'), ['_apprFormIsOpen', '_invCloudRetryArm', '_invRefreshFromCloud', 'deskFoldState', 'invColdRefusal', 'invColdWords', 'invListReadRefusal'],
+      '⚠ an unread manifest: one answer, read by the bars, the form, the read that asks the sheet again, the list read\'s refusal and the cold desk\'s');
     eq(callersOf('_bqFormIsOpen'), ['_renderInvBequestCard'], 'the bequests card\'s two forms: the same');
     eq(callersOf('_invBqClear'), ['invSaveBeneficiary', 'invSaveBequest', 'invToggleBqForm'], 'the boxes a save and Cancel clear: one list (INV_BQ_FORM_FIELDS)');
     ['_apprFormIsOpen', 'invToggleApprForm', '_apprFormPaint', '_apprFormRepaint', '_bqFormIsOpen', 'invToggleBqForm', '_invBqFormPaint', '_renderValueSettings'].forEach((f) =>

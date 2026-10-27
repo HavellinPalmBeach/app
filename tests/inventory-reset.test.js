@@ -94,7 +94,7 @@ function gsServer() {
   };
   vm.createContext(ctx);
   const names = ['_readStoreBlob', '_writeStoreBlob', '_lockOrBusy', 'getJobLedger', '_jobRefusal', '_presentJobIds', '_deletedJobIds',
-    '_ledgerMarkSeen', 'getJobsFromSheet', '_jobRefusalCtx', '_sweepDeletedJobKeys',
+    '_ledgerMarkSeen', 'getJobsFromSheet', '_jobRefusalCtx', '_sweepDeletedJobKeys', '_jobsTabUnread', '_recordedDeletes', '_jobDeletionRecorded',
     'previewResetInventory', 'resetInventoryConfirm', '_invResetPlan', '_invResetLog'];
   const invNames = ['saveMediaStore', 'getMediaStore', 'getMediaForJob', '_invResetDrops', '_invApprovalEntries', '_invApprovalSetAt',
     '_invMergeApprovals', '_mergeMediaItems', '_mergeCustodyLogs', '_custodyEventId', '_invStickyValue', '_invHasVal'];

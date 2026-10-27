@@ -100,8 +100,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The outbox: a { ok:false } body is the server; a thrown error never is.
     const ob = src.slice(src.indexOf('function _flushOutbox('));
     const obBody = ob.slice(0, ob.indexOf('\n}\n'));
-    has(obBody, 'res && res.error, null, true', 'a server rejection is flagged as such');
-    has(obBody, 'e && e.message, null, false', 'a thrown error is not');
+    // (Since P1's review, 2026-10-27, the write's onLanded rides into the retry queue in place of the null.)
+    has(obBody, 'res && res.error, w.onLanded || null, true', 'a server rejection is flagged as such');
+    has(obBody, 'e && e.message, w.onLanded || null, false', 'a thrown error is not');
 
     // The directory path shares one callback for both, so the data has to carry it.
     const post = src.slice(src.indexOf('function _appsScriptPost('));
@@ -125,7 +126,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const scheduled = [];
     const ctx = sandbox({
-      fns: ['_backendErrorKind', '_writeKey', '_pendingCount', '_enqueueWrite', '_pendingChipCopy'],
+      fns: ['_backendErrorKind', '_writeKey', '_pendingCount', '_enqueueWrite', '_pendingChipCopy', '_writeKindHolds', '_tooLargeWords'],
       vars: ['_pendingWrites', 'SYNC_STUCK_TRIES'],
       stubs: {
         showSyncBadge() {},

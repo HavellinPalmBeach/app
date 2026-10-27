@@ -188,7 +188,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Each store, on both arms: localStorage for the instant render and the cloud copy
     // that overwrites it. Migrating only one leaves the name flickering back on sync.
     const paths = [
-      ['function loadJobs(', "jobs=migrateRetiredNames(JSON.parse(s))", 'migrateRetiredNames(data.jobs)'],
+      // loadJobs' cloud arm takes the list through loadJobsVerdict since 2026-10-27 (P1), which migrates it (checked below).
+      // (Restated for P1's review: the verdict is asked with the refusal's standing, and keeps after the list the clients the
+      // sheet names deleted with nobody recording it.)
+      ['function loadJobs(', "jobs=migrateRetiredNames(JSON.parse(s))", 'loadJobsVerdict(data, jobs, !!_sheetNotice)'],
+      ['function loadJobsVerdict(', 'var cloud = migrateRetiredNames(data.jobs);', 'return { apply: true, jobs: cloud.concat(kept),'],
       ['function loadEstimateState(', 'estimateStore = migrateRetiredNames(JSON.parse(s))', 'migrateRetiredNames(sheetsRec)'],
       ['function loadLogData(', 'jobLogs=migrateRetiredNames(JSON.parse(s))', 'migrateRetiredNames(data.logs)'],
       ['function loadJobPlanData(', 'jobPlanStore = migrateRetiredNames(JSON.parse(s))', 'migrateRetiredNames(data.jobPlans)'],

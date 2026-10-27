@@ -123,8 +123,10 @@ function server(opts = {}) {
     // A job plan merges PER KEY now (see _mergePlanRecord) — two people work one plan.
     '_planStamp', '_mergePlanRecord', '_mergePlanStore',
     'saveJobPlanStore', 'getJobPlanStore', 'saveLogStore', 'getLogStore', 'saveChangeOrderStore',
-    'getChangeOrderStore', 'resetAllJobDataConfirm', 'allowJobRestoreConfirm', 'previewDeletedJobs', '_lockOrBusy'];
-  const code = [gsVar(GS, 'SHEET_ID'), gsVar(GS, 'RESET_JOB_STORES'), gsVar(GS, 'RESET_JOB_SHEETS'),
+    'getChangeOrderStore', 'resetAllJobDataConfirm', 'allowJobRestoreConfirm', 'previewDeletedJobs', '_lockOrBusy',
+    // 2026-10-27 (P1): the empty tab, the recorded deletion and the measured row.
+    '_jobsTabUnread', '_recordedDeletes', '_jobDeletionRecorded', '_ledgerRecordDeleted', '_jobRowOf', '_jobRowTooLarge', '_commas'];
+  const code = [gsVar(GS, 'SHEET_ID'), gsVar(GS, 'RESET_JOB_STORES'), gsVar(GS, 'RESET_JOB_SHEETS'), gsVar(GS, 'JOB_KEYED_STORES'), gsVar(GS, 'SHEET_CELL_MAX'),
     gsVar(GS, 'JOB_LEDGER_STORE'), gsVar(GS, 'PLAN_KEYED_MAPS'),
     gsVar(GS, 'JOB_KEYED_LISTS'), gsVar(GS, 'JOB_KEYED_MAPS'), gsVar(GS, 'JOB_LIST_KEY'), gsVar(GS, 'JOB_PAYMENT_STICKY'), ...names.map((n) => gsFn(GS, n)),
     // saveMediaStore lives in the other file and leans on getMediaStore + _mergeMediaItems.
@@ -159,12 +161,22 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     s.__sheets.Jobs._rows.splice(1);
     eq(s.getJobsFromSheet(), [], 'the sheet is empty');
 
-    // Ashley's laptop, open since before, adds one client and saves its whole array.
+    // ⚠⚠ RESTATED 2026-10-27 (P1 of the desk audit, GAP3-02), not deleted. An EMPTY tab cleared by hand is no longer read as
+    // every client deleted: a failed write emptied it the same way, and the answer that every client was gone emptied every
+    // device and let the first new client sweep everyone's records. The empty tab is UNREAD until the editor's reset records
+    // the deletions; nothing is written to it, the new client included.
     const N = s.__tick(STEP);
+    let refused = '';
+    try { s.saveAllJobsToSheet([job(A, 'Alpha'), job(B, 'Bravo'), job(N, 'New client')]); } catch (e) { refused = String(e && e.message); }
+    has(refused, 'JOBS_TAB_EMPTY', '⚠⚠ the laptop\'s save is refused while the tab is unread');
+    eq(s.getJobsFromSheet(), [], 'and nothing was written to it');
+    // Starting over goes through the reset, which records every deletion; then the laptop's save does what it did before.
+    s.resetAllJobDataConfirm();
     const r = s.saveAllJobsToSheet([job(A, 'Alpha'), job(B, 'Bravo'), job(N, 'New client')]);
-    eq(idsOf(s.getJobsFromSheet()), [N], 'ONLY the new client lands — the deleted two are refused, not merged');
+    eq(idsOf(s.getJobsFromSheet()), [N], 'after the reset ONLY the new client lands — the deleted two are refused, not merged');
     eq(r.dropped.sort(), [A, B], 'and the response names the refused ids so the laptop can drop them too');
-    eq(s._okWithDrops(r), { ok: true, success: true, dropped: r.dropped }, 'doPost hands them back as `dropped`');
+    eq(s._okWithDrops(r), { ok: true, success: true, dropped: r.dropped, recorded: r.recorded }, 'doPost hands them back as `dropped`, each recorded');
+    eq(r.recorded.slice().sort(), [A, B], 'the reset recorded both deletions');
     eq(s._okWithDrops({ dropped: [] }), { ok: true, success: true }, 'a clean write answers exactly as it always did');
   }
 
@@ -270,7 +282,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     s.deleteJobFromSheet(A);
     const led = s.getJobLedger();
     eq(s._deletedJobIds(s._presentJobIds(s.getJobsFromSheet()), led), [String(A)], '`deletedJobs` on loadJobs is the seen-but-absent set');
-    has(GS, 'deletedJobs: _deletedJobIds(_presentJobIds(jobsNow), getJobLedger())', 'and doGet loadJobs sends it');
+    has(GS, 'deletedJobs: goneNow', 'and doGet loadJobs sends it');
+    has(GS, 'var goneNow = _deletedJobIds(presentNow, ledgerNow);', 'off the one reader');
 
     // The escape hatch: a row deleted by mistake. Single-use permission.
     s.allowJobRestoreConfirm([A]);
@@ -312,8 +325,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     let saves = 0, badges = [], redraws = 0, listRedraws = 0;
     const ctx = sandbox({
-      fns: ['_applyDroppedJobs', '_purgeLocalJobRecords', '_jobsLanded', '_asBackgroundRedraw'],
-      vars: ['_dashKeepNotice'],
+      fns: ['_applyDroppedJobs', '_purgeLocalJobRecords', '_jobsLanded', '_asBackgroundRedraw',
+        'sheetVerdictRefusal', '_setSheetNotice', 'sheetNoticeHtml', '_unsentPhotoCount', 'unsentPhotosKeptText',
+        'sheetDropsTaken', '_sheetKeptOnce', 'sheetKeptText'],
+      vars: ['_dashKeepNotice', '_sheetNotice', '_sheetKeptSaid'],
       stubs: {
         // The Win / Loss lists name lost prospects BY NAME. A client deleted on the other device
         // stays on this one's list until something repaints it, so the drop has to reach that
@@ -336,7 +351,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ctx.localStorage.setItem('hav_media_thumb_' + A, '{}');
     ctx.localStorage.setItem('hav_media_' + B, '[2]');
 
-    const n = ctx._applyDroppedJobs([String(A), C]);   // ids arrive as strings or numbers from JSON
+    // Restated 2026-10-27 (P1's review): a deletion a person recorded (the sheet's `recorded`) is the one a verdict takes.
+    const n = ctx._applyDroppedJobs([String(A), C], [String(A), C]);   // ids arrive as strings or numbers from JSON
     eq(n, 2, 'two jobs removed');
     eq(idsOf(ctx.jobs), [B], 'only the surviving job remains in memory');
     eq(JSON.parse(ctx.localStorage.getItem('havellin_jobs_v3')).map((j) => j.id), [B], 'and in localStorage');
@@ -356,7 +372,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(fn('renderJobs'), 'renderWinLoss()',
        '\u2026because renderJobs paints the Win / Loss row, so there is no second surface to reach');
     eq(badges.length, 1, 'one message');
-    has(badges[0], '2 clients deleted elsewhere', 'that says what happened, not "lost"');
+    // Restated 2026-10-27 (P1, and its review): the words are what the device knows, that the sheet records the deletion;
+    // "deleted elsewhere" was a claim it could not make, and it is what the iPad said as an emptied Jobs tab took every client off it.
+    has(badges[0], '2 clients deleted, as the sheet records: removed from this device', 'that says what happened, not "lost"');
+    lacks(badges[0], 'deleted elsewhere', 'and never "deleted elsewhere"');
     eq(ctx._applyDroppedJobs([]), 0, 'an empty list is a no-op');
     eq(ctx._applyDroppedJobs(['nope']), 0, 'an unknown id removes nothing');
     eq(badges.length, 1, 'and says nothing');
@@ -365,20 +384,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('app: both send paths and both load paths listen');
   {
     const ob = APP.slice(APP.indexOf('function _flushOutbox('));
-    has(ob.slice(0, ob.indexOf('\n}\n')), '_applyDroppedJobs(res.dropped)', 'the outbox applies dropped ids on success');
+    has(ob.slice(0, ob.indexOf('\n}\n')), '_applyDroppedJobs(res.dropped, res.recorded)', 'the outbox applies dropped ids on success, with what was recorded');
     const fl = APP.slice(APP.indexOf('function flushPendingWrites('));
-    has(fl.slice(0, fl.indexOf('\n}\n')), '_applyDroppedJobs(res.dropped)', 'so does the retry queue');
+    has(fl.slice(0, fl.indexOf('\n}\n')), '_applyDroppedJobs(res.dropped, res.recorded)', 'so does the retry queue');
     const lj = APP.slice(APP.indexOf('function loadJobs('));
-    has(lj.slice(0, lj.indexOf('\n}\n')), '_purgeLocalJobRecords(data.deletedJobs)', 'loadJobs purges local records for deleted jobs');
+    has(lj.slice(0, lj.indexOf('\n}\n')), '_purgeLocalJobRecords(verdict.drop)', 'loadJobs purges local records for deleted jobs (a recorded deletion, P1\'s review)');
     // ⚠ RESTATED 2026-09-29, not deleted. refreshJobsFromCloud stands down while this device's
     // own writes are outstanding (audit H4), and the sheet's deletions must still reach it then —
     // so they go through _applyDroppedJobs, which purges the records AND takes the jobs off the
     // list, on both paths. The requirement was never the byte sequence; jobs-refresh.test.js
     // drives it.
     const rj = APP.slice(APP.indexOf('function refreshJobsFromCloud('));
-    has(rj.slice(0, rj.indexOf('\n}\n')), '_applyDroppedJobs(data.deletedJobs)', 'so does refreshJobsFromCloud, through _applyDroppedJobs');
+    has(rj.slice(0, rj.indexOf('\n}\n')), '_applyDroppedJobs(data.deletedJobs, data.recorded)', 'so does refreshJobsFromCloud, through _applyDroppedJobs');
     const hd = APP.slice(APP.indexOf('function hardDeleteJob('));
-    has(hd.slice(0, hd.indexOf('\n}\n')), '_purgeLocalJobRecords([id])', 'the deliberate delete shares the purge rather than carrying a second copy');
+    has(hd.slice(0, hd.indexOf('\n}\n')), '_purgeLocalJobRecords([id], { photos: true })', 'the deliberate delete shares the purge rather than carrying a second copy, and alone takes the unsent photographs');
     // The one thing _applyDroppedJobs must never do.
     const ad = APP.slice(APP.indexOf('function _applyDroppedJobs('));
     lacks(ad.slice(0, ad.indexOf('\n}\n')), 'saveJobs()', '_applyDroppedJobs never calls saveJobs()');

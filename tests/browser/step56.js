@@ -64,6 +64,9 @@ const PDF = { name: 'signed.pdf', mimeType: 'application/pdf', buffer: Buffer.fr
         }
         return json({ ok: true });
       }
+      // The sheet's copy of a manifest. Since 2026-10-27 (P1) a desk that has not read it refuses its papers by name; the sheet
+      // holds nothing newer than this device's own copy, so its lines stand.
+      if (/[?&]action=loadMedia\b/.test(req.url())) return json({ ok: true, media: {} });
       return json({ ok: false, error: 'not in this test' });
     });
     const p = await ctx.newPage();

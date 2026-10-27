@@ -126,8 +126,9 @@ function server(opts = {}) {
     // A job plan merges PER KEY now (see _mergePlanRecord) — two people work one plan.
     '_planStamp', '_mergePlanRecord', '_mergePlanStore',
     'saveJobPlanStore', 'getJobPlanStore', 'saveLogStore', 'getLogStore',
-    'saveChangeOrderStore', 'getChangeOrderStore', 'resetAllJobDataConfirm', '_lockOrBusy'];
-  let code = [gsVar(GS, 'SHEET_ID'), gsVar(GS, 'RESET_JOB_STORES'), gsVar(GS, 'RESET_JOB_SHEETS'),
+    'saveChangeOrderStore', 'getChangeOrderStore', 'resetAllJobDataConfirm', '_lockOrBusy',
+    '_jobsTabUnread', '_recordedDeletes', '_jobDeletionRecorded', '_ledgerRecordDeleted', '_jobRowOf', '_jobRowTooLarge', '_commas'];
+  let code = [gsVar(GS, 'SHEET_ID'), gsVar(GS, 'RESET_JOB_STORES'), gsVar(GS, 'JOB_KEYED_STORES'), gsVar(GS, 'SHEET_CELL_MAX'), gsVar(GS, 'RESET_JOB_SHEETS'),
     gsVar(GS, 'JOB_LEDGER_STORE'), gsVar(GS, 'PLAN_KEYED_MAPS'), ...names.map((n) => gsFn(GS, n)),
     gsFn(GS_INV, 'saveMediaStore'), gsFn(GS_INV, 'getMediaStore'), gsFn(GS_INV, '_invResetDrops'), gsFn(GS_INV, '_invApprovalEntries'), gsFn(GS_INV, '_invApprovalSetAt'), gsFn(GS_INV, '_invMergeApprovals'), gsFn(GS_INV, '_mergeMediaItems'),
     gsFn(GS_INV, '_mergeCustodyLogs'), gsFn(GS_INV, '_custodyEventId'),
@@ -237,7 +238,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }
 
   // ── PART 2: the standing sweep ──────────────────────────────────────────────────────
-  group('orphans: a row deleted BY HAND is swept on the next save — the forever half');
+  // ⚠⚠ RESTATED 2026-10-27 (P1 of the desk audit, GAP3-03), not deleted. A row deleted by hand was swept from every store on
+  // the next save, on the strength of "seen and now absent". After a failed write emptied the Jobs tab, the first new client
+  // made `present` non-empty again, and one estimate saved for it swept every other client's records off the sheet. Removal
+  // is a recorded act: a hand deletion is refused from a stale device (deleted-jobs.test.js) but its records stay until the
+  // orphan prune, which a person runs and which records the deletion; the standing sweep acts on a recorded deletion only.
+  group('orphans: a row deleted BY HAND is not swept; the prune takes it, and the sweep acts on a recorded deletion');
   {
     const s = server();
     s.__sheets.Jobs = fakeSheet('Jobs', HDR);
@@ -254,17 +260,27 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     s.__sheets.Jobs._rows.splice(1, 1);
     eq(s.getJobsFromSheet().map((j) => j.id), [B], 'only Bravo has a row now');
 
-    // The very next ordinary save of ANY job-keyed store sweeps Alpha out of that store.
+    // The next ordinary save of each job-keyed store leaves Alpha's records where they are: nobody recorded a deletion.
     s.saveEstimateStore({ [B]: rec(B) });
-    eq(Object.keys(s.getEstimateStore()), [String(B)], 'estimate swept');
+    eq(Object.keys(s.getEstimateStore()).map(Number).sort(num), [A, B], '⚠⚠ estimate kept: an unrecorded absence sweeps nothing');
     s.saveJobPlanStore({ [B]: { savedAt: B } });
-    eq(Object.keys(s.getJobPlanStore()), [String(B)], 'job plan swept');
+    eq(Object.keys(s.getJobPlanStore()).map(Number).sort(num), [A, B], 'job plan kept');
     s.saveLogStore({ [B]: [{ id: 2 }] });
-    eq(Object.keys(s.getLogStore()), [String(B)], 'hours log swept');
+    eq(Object.keys(s.getLogStore()).map(Number).sort(num), [A, B], 'hours log kept');
     s.saveChangeOrderStore([{ id: 10, jobId: B }]);
-    eq(s.getChangeOrderStore().map((c) => c.jobId), [B], 'change order swept');
+    eq(s.getChangeOrderStore().map((c) => c.jobId).sort(num), [A, B], 'change order kept');
     s.saveMediaStore({ jobId: B, savedAt: B, items: [{ stableId: 'p2' }] });
-    eq(Object.keys(s._readStoreBlob('MediaStore', {})), [String(B)], 'manifest swept');
+    eq(Object.keys(s._readStoreBlob('MediaStore', {})).map(Number).sort(num), [A, B], 'manifest kept');
+    lacks(s.__log.join('\n'), 'Swept records for deleted job(s)', 'and nothing says it swept');
+    // The prune is the person's way to clear them, and it records the deletion as it goes.
+    s.pruneOrphanRecordsConfirm();
+    eq(Object.keys(s.getEstimateStore()), [String(B)], 'the prune clears the estimate');
+    eq(Object.keys(s._readStoreBlob('MediaStore', {})), [String(B)], 'and the manifest');
+    ok(!!(s.getJobLedger().deleted || {})[String(A)], '⚠ and records the deletion');
+    // A record of a recorded deletion that reaches a store afterwards is swept by the next save.
+    s._writeStoreBlob('EstimateStore', { [A]: rec(A), [B]: rec(B) });
+    s.saveEstimateStore({ [B]: rec(B) });
+    eq(Object.keys(s.getEstimateStore()), [String(B)], '⚠ the standing sweep acts on a recorded deletion');
     has(s.__log.join('\n'), 'Swept records for deleted job(s)', 'and it says so in the log');
   }
 
@@ -290,7 +306,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     s.saveAllJobsToSheet([job(A, 'Alpha'), job(B, 'Bravo')]);
     s._writeStoreBlob('EstimateStore', { [A]: rec(A), [B]: rec(B) });
     s.__sheets.Jobs._rows.splice(1);                    // every row gone: a bad read looks like this
-    const ctx = s._jobRefusalCtx();
+    // Since 2026-10-27 (P1) every save refuses an empty tab the ledger cannot explain before it reaches the sweep.
+    let threw = '';
+    try { s._jobRefusalCtx(); } catch (e) { threw = String(e && e.message); }
+    has(threw, 'JOBS_TAB_EMPTY', '⚠ every job-keyed save refuses an unexplained empty tab outright');
+    const ctx = { present: s._presentJobIds(s.getJobsFromSheet()), ledger: s.getJobLedger() };
     eq(ctx.present, {}, 'nothing present');
     eq(s._sweepDeletedJobKeys(s.getEstimateStore(), ctx.present, ctx.ledger), [],
       'no jobs present means every seen id LOOKS deleted — so the sweep stands down entirely');
@@ -360,11 +380,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(del, '_purgeJobFromStores', 'deleteJobFromSheet delegates to the shared purge');
     lacks(del, "getEstimateStore]", 'and keeps no private store list');
     const purge = gsFn(GS, '_purgeJobFromStores');
-    ['EstimateStore', 'JobPlanStore', 'LogStore', 'MediaStore', 'ChangeOrderStore']
-      .forEach((n) => has(purge, n, 'the shared purge covers ' + n));
+    // Since 2026-10-27 (P1) the object stores are one list, JOB_KEYED_STORES, read by the purge, the reset and the orphan check.
+    has(purge, 'JOB_KEYED_STORES.forEach', 'the shared purge reads the one list of object stores');
+    has(purge, 'ChangeOrderStore', 'and the array store beside it');
+    ['EstimateStore', 'JobPlanStore', 'LogStore', 'MediaStore', 'SnapshotStore']
+      .forEach((n) => has(gsVar(GS, 'JOB_KEYED_STORES'), "'" + n + "'", 'the one list covers ' + n));
     // RESET_JOB_STORES is the other list of the same five; they must agree.
     const reset = gsVar(GS, 'RESET_JOB_STORES');
-    ['EstimateStore', 'JobPlanStore', 'LogStore', 'MediaStore', 'ChangeOrderStore']
+    ['EstimateStore', 'JobPlanStore', 'LogStore', 'MediaStore', 'ChangeOrderStore', 'SnapshotStore']
       .forEach((n) => has(reset, n, 'and RESET_JOB_STORES agrees on ' + n));
   }
 
@@ -391,8 +414,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     // (a) deleteJob without MediaStore in the shared purge.
     const s = server({
-      patch: (c) => c.replace("['EstimateStore', 'JobPlanStore', 'LogStore', 'MediaStore'].forEach(function(name) {\n    try {\n      var store = _readStoreBlob(name, null);",
-        "['EstimateStore', 'JobPlanStore', 'LogStore'].forEach(function(name) {\n    try {\n      var store = _readStoreBlob(name, null);"),
+      patch: (c) => c.replace("var JOB_KEYED_STORES = ['EstimateStore', 'JobPlanStore', 'LogStore', 'MediaStore', 'SnapshotStore'];",
+        "var JOB_KEYED_STORES = ['EstimateStore', 'JobPlanStore', 'LogStore', 'SnapshotStore'];"),
     });
     s.__sheets.Jobs = fakeSheet('Jobs', HDR);
     s.saveAllJobsToSheet([job(A, 'Alpha')]);
@@ -401,15 +424,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(Object.keys(s._readStoreBlob('MediaStore', {})), [String(A)],
       'REVERTED: dropping MediaStore from the purge leaves the manifest behind — the original defect');
 
-    // (b) the standing sweep removed from saveEstimateStore.
+    // (b) the standing sweep removed from saveEstimateStore: a record of a RECORDED deletion stays (restated 2026-10-27, P1).
     const s2 = server({ patch: (c) => c.replace('_sweepDeletedJobKeys(merged, ctx.present, ctx.ledger);', '') });
     s2.__sheets.Jobs = fakeSheet('Jobs', HDR);
     s2.saveAllJobsToSheet([job(A, 'Alpha'), job(B, 'Bravo')]);
-    s2.saveEstimateStore({ [A]: rec(A), [B]: rec(B) });
-    s2.__sheets.Jobs._rows.splice(1, 1);
+    s2.deleteJobFromSheet(A);
+    s2._writeStoreBlob('EstimateStore', { [A]: rec(A), [B]: rec(B) });
     s2.saveEstimateStore({ [B]: rec(B) });
     eq(Object.keys(s2.getEstimateStore()).map(Number).sort(num), [A, B],
-      'REVERTED: without the sweep the hand-deleted job keeps its estimate forever');
+      'REVERTED: without the sweep a deleted job keeps its estimate forever');
 
     // (c) the empty-Jobs guard removed from the sweep.
     const s3 = server({
@@ -419,10 +442,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     s3.saveAllJobsToSheet([job(A, 'Alpha'), job(B, 'Bravo')]);
     s3._writeStoreBlob('EstimateStore', { [A]: rec(A), [B]: rec(B) });
     s3.__sheets.Jobs._rows.splice(1);
-    const c3 = s3._jobRefusalCtx();
+    // ⚠ BELT AND BRACES SINCE 2026-10-27 (P1): the sweep acts on a recorded deletion only, so an empty read with nothing
+    // recorded sweeps nothing even with the guard gone. The guard stays as the second line, and this says so rather than
+    // asserting a revert that cannot go red.
+    const c3 = { present: s3._presentJobIds(s3.getJobsFromSheet()), ledger: s3.getJobLedger() };
     const st3 = s3.getEstimateStore();
-    eq(s3._sweepDeletedJobKeys(st3, c3.present, c3.ledger).map(Number).sort(num), [A, B],
-      'REVERTED: without the guard one empty read of the Jobs sheet wipes every estimate');
+    eq(s3._sweepDeletedJobKeys(st3, c3.present, c3.ledger), [],
+      'REVERTED guard: an empty read still sweeps nothing nobody recorded deleting (the recorded rule holds it)');
 
     // (d) NOT a revert case, and worth saying why rather than writing one that cannot fail.
     // The prune marks the ledger before deleting, but that is belt-and-braces: a 'deleted'

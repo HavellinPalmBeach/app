@@ -120,7 +120,20 @@
 // returned) and valued at or under the middle asking price for one article is medium confidence at most, source *Listing survey*,
 // where it was low and a general estimate whatever it counted (_avSurvey, _avLineResult). No action or type changes; it carries
 // 2026-10-26c's. Until it is live such a line stays low, marked unsure on the desk, and prints "general estimate".
-var BACKEND_VERSION = '2026-10-27';
+// ⚠⚠ 2026-10-27b (P1 of the desk audit, "Nothing is lost"): one inventory Snapshot of a full house put a client's record past
+// a sheet cell's 50,000 characters, saveAllJobsToSheet cleared the Jobs tab before the setValues that then threw, and the
+// ledger read every client as deleted on every device. So: no tab is cleared before it is written (the Jobs tab, every store
+// tab and the ledger: the new rows go over the old, then only the rows past them are cleared); every Jobs row is built and
+// measured BEFORE the sheet is touched, and a record too large for a cell is refused by name with nothing written (TOO_LARGE,
+// after the merge, because two devices' copies pass the cap only together); an empty Jobs tab the ledger cannot explain is
+// unread, never "every client deleted" (JOBS_TAB_EMPTY: loadJobs and every job and job-keyed write refuse until the rows are
+// restored or a reset run in the editor records the deletions); a deletion is a recorded act (ledger.deleted, written by
+// deleteJob, the reset and the orphan prune), and only a recorded one is swept from the stores; the snapshot's lines live
+// in a store of their own (SnapshotStore, type saveSnapshot, action loadSnapshots), never in the client's one cell. New type
+// saveSnapshot and GET action loadSnapshots. Until it is live a failed write can still empty the Jobs tab, an empty tab still
+// tells every device that every client was deleted, the first new client after that sweeps every other client's records,
+// and the app takes no Snapshot (it needs the store).
+var BACKEND_VERSION = '2026-10-27b';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive', 'esignSendRequest',
@@ -129,7 +142,7 @@ var BACKEND_ACTIONS = [
 var BACKEND_TYPES = [
   'job', 'saveAllEstimates', 'saveAllJobs', 'saveAllJobPlans',
   'saveAllChangeOrders', 'saveAllLogs', 'saveAllContractors', 'deleteContractor',
-  'deleteJob', 'saveInventory', 'saveMedia', 'log'
+  'deleteJob', 'saveInventory', 'saveMedia', 'saveSnapshot', 'log'
 ];
 
 var SHEET_ID = '16Z3yiRYbhYLsia0aG4v5znWo_O2eDRnB0dcldECjAJM';
@@ -146,6 +159,9 @@ function jsonOut(obj) {
 function _okWithDrops(r) {
   var out = { ok: true, success: true };
   if (r && r.dropped && r.dropped.length) out.dropped = r.dropped;
+  // Which of them a person recorded deleting (2026-10-27, P1): the app applies a verdict covering every client it holds
+  // only when each one was recorded, so an emptied tab answered by an older deployment can never empty a device.
+  if (r && r.recorded && r.recorded.length) out.recorded = r.recorded;
   return out;
 }
 
@@ -165,10 +181,18 @@ function doGet(e) {
     if (action === 'loadJobs') {
       // `deletedJobs` is every id the sheet has seen and no longer holds (see JOB LEDGER), so a
       // device can drop the estimates, plans and logs it still carries for a job that is gone.
-      var jobsNow = getJobsFromSheet();
-      return jsonOut({ ok: true, success: true, jobs: jobsNow,
-                       deletedJobs: _deletedJobIds(_presentJobIds(jobsNow), getJobLedger()) });
+      // ⚠⚠ AN EMPTY TAB THE LEDGER CANNOT EXPLAIN IS UNREAD (2026-10-27, P1): it answered `jobs: []` with every client in
+      // `deletedJobs`, and every device that asked emptied itself. It refuses now, as the writes do (_jobsTabUnread).
+      // `recorded` is which of the deleted ids a person recorded deleting; the app needs it before it lets a verdict take
+      // every client it holds.
+      var jobsNow = getJobsFromSheet(), presentNow = _presentJobIds(jobsNow), ledgerNow = getJobLedger();
+      var unreadNow = _jobsTabUnread(presentNow, ledgerNow);
+      if (unreadNow) return jsonOut({ ok: false, success: false, error: unreadNow });
+      var goneNow = _deletedJobIds(presentNow, ledgerNow);
+      return jsonOut({ ok: true, success: true, jobs: jobsNow, deletedJobs: goneNow, recorded: _recordedDeletes(goneNow, ledgerNow) });
     }
+    // A snapshot's lines (2026-10-27, P1): kept in their own store, never on the client's record. One client's.
+    if (action === 'loadSnapshots')    { return jsonOut({ ok: true, success: true, snapshots: getSnapshotsForJob(e.parameter.jobId) }); }
     if (action === 'loadEstimates')    { return jsonOut({ ok: true, success: true, estimates: getEstimateStore() }); }
     if (action === 'loadJobPlans')     { return jsonOut({ ok: true, success: true, jobPlans: getJobPlanStore() }); }
     if (action === 'loadChangeOrders') { return jsonOut({ ok: true, success: true, changeOrders: getChangeOrderStore() }); }
@@ -232,6 +256,7 @@ function doPost(e) {
     else if (type === 'deleteJob')           { deleteJobFromSheet(payload.id); }
     else if (type === 'saveInventory')       { return jsonOut(saveInventory(payload)); }
     else if (type === 'saveMedia')           { return jsonOut(saveMediaStore(payload)); }
+    else if (type === 'saveSnapshot')        { return jsonOut(_okWithDrops(saveSnapshotStore(payload))); }
     else if (type === 'log')                 { /* redundant single-entry log; saveAllLogs is authoritative — ignore */ }
     else { return jsonOut({ ok: false, success: false, error: 'Unknown type: ' + type }); }
 
@@ -416,7 +441,10 @@ function testDriveThumbnails() {
 //   - ContractorStore. Contractors are your crew, not practice clients. Pass true to
 //     resetAllJobDataConfirm to include it.
 //   - Drive. Job folders and their photos are left alone — see trashJobFoldersConfirm.
-var RESET_JOB_STORES = ['EstimateStore', 'JobPlanStore', 'ChangeOrderStore', 'LogStore', 'MediaStore'];
+var RESET_JOB_STORES = ['EstimateStore', 'JobPlanStore', 'ChangeOrderStore', 'LogStore', 'MediaStore', 'SnapshotStore'];
+// The stores that are OBJECTS keyed by job id (ChangeOrderStore is the array beside them, filed under co.jobId). ONE list,
+// read by the reset, the purge and the orphan check: four copies of it is how MediaStore was once missed by the delete.
+var JOB_KEYED_STORES = ['EstimateStore', 'JobPlanStore', 'LogStore', 'MediaStore', 'SnapshotStore'];
 // ⚠ 'Estimates' and 'Hours' are DEAD TABS and this is worth knowing before you go looking
 // for data in them. The app has never posted type:'estimate' or type:'hours'; the two
 // handlers that answered them were deleted on 2026-09-11 along with their dispatch lines
@@ -453,7 +481,7 @@ function previewReset() {
   Logger.log('  ContractorStore: ' + Object.keys(cont).length + ' KEPT (your crew, not clients)');
   var led = _readStoreBlob(JOB_LEDGER_STORE, null);
   Logger.log('  JobLedger: ' + (led && led.seen ? Object.keys(led.seen).length : 0)
-    + ' job id(s) remembered — KEPT, and every id cleared below is added to it');
+    + ' job id(s) remembered — KEPT, and every id cleared below is added to it, recorded as deleted');
   Logger.log('');
   Logger.log('Job folders in Drive that trashJobFoldersConfirm() would move to Trash:');
   var folders = _jobFolders();
@@ -475,12 +503,19 @@ function resetAllJobDataConfirm(alsoContractors) {
     // estimate can outlive its job row, and a stale device pushes both.
     var ledger = getJobLedger();
     var going = getJobsFromSheet().map(function(j) { return j && j.id; });
-    ['EstimateStore', 'JobPlanStore', 'LogStore', 'MediaStore'].forEach(function(name) {
+    JOB_KEYED_STORES.forEach(function(name) {
       try { going = going.concat(Object.keys(_readStoreBlob(name, {}) || {})); } catch (e) {}
     });
     try { (_readStoreBlob('ChangeOrderStore', []) || []).forEach(function(co) { if (co && co.jobId != null) going.push(co.jobId); }); } catch (e) {}
-    _ledgerMarkSeen(ledger, going);
-    Logger.log('Ledger now remembers ' + Object.keys(ledger.seen).length + ' job id(s) as deleted-if-absent');
+    // ⚠ THE RESET RECORDS EVERY DELETION AND STAMPS ITSELF (2026-10-27, P1). An empty Jobs tab is unread unless every client
+    // the ledger has seen is recorded as deleted (_jobsTabUnread), so this is what lets a new client in after a start-over;
+    // a tab emptied any other way stays refused until its rows are restored.
+    // And every client the ledger has ever seen: starting over deletes all of them, including rows somebody already cleared
+    // by hand, which is how the tab came to need a reset (their ids are on neither the sheet nor a store any more).
+    _ledgerRecordDeleted(ledger, going.concat(Object.keys(ledger.seen)));
+    ledger.resetAt = Date.now();
+    _writeStoreBlob(JOB_LEDGER_STORE, ledger);
+    Logger.log('Ledger now remembers ' + Object.keys(ledger.seen).length + ' job id(s), every one cleared here recorded as deleted');
 
     RESET_JOB_SHEETS.forEach(function(name) {
       var sh = ss.getSheetByName(name);
@@ -648,12 +683,18 @@ function _writeStoreBlob(sheetName, obj) {
   for (var i = 0; i < json.length; i += _BLOB_CHUNK) chunks.push(json.substr(i, _BLOB_CHUNK));
   if (!chunks.length) chunks.push('');
   var stamp = new Date().toISOString();
-  // Clear every old data row first. Without this a blob that shrinks leaves the tail of
-  // the previous, longer one behind, and the reader concatenates JSON + garbage.
+  // ⚠⚠ WRITE FIRST, THEN CLEAR ONLY WHAT IS LEFT OVER (2026-10-27, P1, GAP3-07). This cleared every old row and then
+  // wrote: one failed setValues between the two (a timeout, a quota) left the tab empty, it read back as an empty store,
+  // and the next ordinary save wrote only what that device carried (driven: EstimateStore 3 -> 1). The new chunks now go
+  // over the old rows, with one blank row after them in the same setValues where an older, longer blob ran on: the reader
+  // stops at the first blank, so the blob reads whole even if the clear of the leftover tail below never runs. A failed
+  // write leaves the old blob exactly as it was.
   var last = sheet.getLastRow();
-  if (last > 1) sheet.getRange(2, 1, last - 1, 2).clearContent();
   var rows = chunks.map(function(c, n) { return [n === 0 ? stamp : '', c]; });
+  if (last > rows.length + 1) rows.push(['', '']);
   sheet.getRange(2, 1, rows.length, 2).setValues(rows);
+  var end = rows.length + 1;
+  if (last > end) sheet.getRange(end + 1, 1, last - end, 2).clearContent();
 }
 
 // Reassemble a chunked blob. Falls back cleanly to the old single-cell layout, and to
@@ -740,20 +781,34 @@ function _mergeStoreByKey(existing, incoming) {
 //
 // ⚠ The ledger is NOT in RESET_JOB_STORES and must never be: it is the memory of the reset.
 // To let a device put a job back on purpose, see allowJobRestoreConfirm.
+//
+// ⚠⚠ "SEEN AND NOW ABSENT WAS DELETED" NO LONGER HOLDS FOR AN EMPTY TAB, AND A DELETION IS A RECORDED ACT (2026-10-27, P1 of
+// the desk audit, GAP3-02 and GAP3-03). One Snapshot of a full house made a client's record too large for a cell; the old
+// saveAllJobsToSheet cleared the tab before the write that then threw; and the rule above read every client as deleted. The
+// server answered ok with every id dropped, every device purged its own copy, and the first new client typed in afterwards
+// swept every other client's estimate, plan, hours and inventory off the stores. Two changes:
+//   · `deleted` ({ "<id>": ms }) records each deletion somebody made: deleteJob, the reset, the orphan prune. Only a recorded
+//     deletion is swept from the stores (_sweepDeletedJobKeys). Refusing a stale device's copy still reads seen-and-absent,
+//     because refusing holds a write and loses nothing, and a row deleted by hand in the spreadsheet must still stay gone.
+//   · an EMPTY Jobs tab is unread while any client the ledger has seen is neither recorded deleted nor allowed back
+//     (_jobsTabUnread): loadJobs and every job and job-keyed write refuse with JOBS_TAB_EMPTY until the rows are restored
+//     from version history, or the reset (resetAllJobDataConfirm), which records every deletion and stamps `resetAt`.
+//     Starting over goes through the editor's reset; clearing the tab by hand no longer does it.
 var JOB_LEDGER_STORE = 'JobLedger';
 
 function getJobLedger() {
   var led = _readStoreBlob(JOB_LEDGER_STORE, null);
-  if (led && led.seen && led.since) { if (!led.restore) led.restore = {}; return led; }
+  if (led && led.seen && led.since) { if (!led.restore) led.restore = {}; if (!led.deleted) led.deleted = {}; return led; }
   // First use: everything the sheet holds right now has been seen, as of now.
-  led = { since: Date.now(), seen: {}, restore: {} };
+  led = { since: Date.now(), seen: {}, restore: {}, deleted: {} };
   getJobsFromSheet().forEach(function(j) { if (j && j.id != null) led.seen[String(j.id)] = led.since; });
   _writeStoreBlob(JOB_LEDGER_STORE, led);
   return led;
 }
 
 // Record ids the Jobs sheet now holds. `seen` only ever grows; an id written after being
-// allowed back (restore) is spent from that list, so the permission is single-use.
+// allowed back (restore) is spent from that list, so the permission is single-use, and an id on the sheet again is no
+// longer deleted (a row brought back from version history, or a restore allowed in the editor).
 function _ledgerMarkSeen(ledger, ids) {
   var now = Date.now(), changed = false;
   (ids || []).forEach(function(id) {
@@ -761,8 +816,52 @@ function _ledgerMarkSeen(ledger, ids) {
     var k = String(id);
     if (!ledger.seen[k]) { ledger.seen[k] = now; changed = true; }
     if (ledger.restore && ledger.restore[k]) { delete ledger.restore[k]; changed = true; }
+    if (ledger.deleted && ledger.deleted[k]) { delete ledger.deleted[k]; changed = true; }
   });
   if (changed) _writeStoreBlob(JOB_LEDGER_STORE, ledger);
+}
+
+// A deletion somebody made, recorded (2026-10-27, P1): deleteJobFromSheet, resetAllJobDataConfirm, pruneOrphanRecordsConfirm.
+// Each id is remembered as seen too (a row typed by hand was never written by a save), so a stale device is still refused.
+// Writes the ledger; the reset writes it once more after stamping itself.
+function _ledgerRecordDeleted(ledger, ids) {
+  var now = Date.now(), changed = false;
+  if (!ledger.deleted) ledger.deleted = {};
+  (ids || []).forEach(function(id) {
+    if (id == null || id === '') return;
+    var k = String(id);
+    if (!ledger.seen[k]) { ledger.seen[k] = now; changed = true; }
+    if (!ledger.deleted[k]) { ledger.deleted[k] = now; changed = true; }
+    if (ledger.restore && ledger.restore[k]) { delete ledger.restore[k]; changed = true; }
+  });
+  if (changed) _writeStoreBlob(JOB_LEDGER_STORE, ledger);
+}
+
+// Is this id's absence a deletion somebody recorded? The ONE answer the sweeps act on (the keyed stores', the change
+// orders'). Seen-and-absent alone is never enough to delete anything.
+function _jobDeletionRecorded(id, present, ledger) {
+  var k = String(id);
+  return !(present && present[k]) && !!(ledger && ledger.deleted && ledger.deleted[k]);
+}
+function _recordedDeletes(ids, ledger) {
+  return (ids || []).filter(function(id) { return _jobDeletionRecorded(id, null, ledger); });
+}
+
+// '' while the Jobs tab may be read as it stands, else why it is UNREAD: it holds no client while the ledger has seen one
+// that nobody recorded deleting and nobody allowed back. That is a tab emptied by a failed write, a bad read or a hand
+// clearing it, never a decision, so nothing is read from it or written to it (the app keeps every device's copy as it is).
+// A deployment that has never held a client, and a tab emptied by the reset, read as they are.
+function _jobsTabUnread(present, ledger) {
+  if (present && Object.keys(present).length) return '';
+  var seen = Object.keys((ledger && ledger.seen) || {});
+  var unexplained = seen.filter(function(k) {
+    return !(ledger.deleted && ledger.deleted[k]) && !(ledger.restore && ledger.restore[k]);
+  });
+  if (!unexplained.length) return '';
+  return 'JOBS_TAB_EMPTY: the Jobs tab is empty, but the sheet has held ' + unexplained.length + ' client'
+    + (unexplained.length === 1 ? '' : 's') + ' nobody recorded deleting, so nothing was read from it or written to it. '
+    + 'Restore the Jobs rows from File > Version history (the manual’s runbook); to start over on purpose, run '
+    + 'resetAllJobDataConfirm() in the Apps Script editor.';
 }
 
 // '' to accept an incoming job (or a store record keyed by its id), else why it is refused:
@@ -787,9 +886,11 @@ function _presentJobIds(jobsArr) {
   return m;
 }
 
-// Every id the ledger has seen that the Jobs sheet no longer holds.
+// Every id the ledger has seen that the Jobs sheet no longer holds, less the ids allowed back (2026-10-27, P1, GAP3-02:
+// after allowJobRestoreConfirm loadJobs still listed them, so the device whose copy was the one to restore them emptied
+// itself on opening the app before it could save).
 function _deletedJobIds(present, ledger) {
-  return Object.keys(ledger.seen).filter(function(k) { return !present[k]; });
+  return Object.keys(ledger.seen).filter(function(k) { return !present[k] && !(ledger.restore && ledger.restore[k]); });
 }
 
 // Strip records for refused jobs out of a { jobId: ... } payload, returning the ids dropped.
@@ -810,8 +911,14 @@ function _stripRefusedJobKeys(obj, ctx) {
 // One read of the Jobs sheet and the ledger, shared by the strip and the sweep below.
 // They ask the same two questions on every save; reading twice doubles the slowest part
 // of the write for no benefit.
+// ⚠ AND IT REFUSES THE WRITE OUTRIGHT WHILE THE JOBS TAB IS UNREAD (2026-10-27, P1): every job-keyed save reads its context
+// here first, so an emptied tab stops all of them before anything is merged, swept or written (doPost answers {ok:false}
+// with the reason, and the app holds the write and sends it again once the rows are back).
 function _jobRefusalCtx() {
-  return { present: _presentJobIds(getJobsFromSheet()), ledger: getJobLedger() };
+  var ctx = { present: _presentJobIds(getJobsFromSheet()), ledger: getJobLedger() };
+  var unread = _jobsTabUnread(ctx.present, ctx.ledger);
+  if (unread) throw new Error(unread);
+  return ctx;
 }
 
 // THE STANDING CLEANUP. Drop records already IN a store whose job the ledger has seen and
@@ -831,11 +938,16 @@ function _jobRefusalCtx() {
 // ⚠ AND IT REFUSES TO RUN AGAINST AN EMPTY JOBS SHEET, for the same reason: no jobs present
 // makes every seen id look deleted. A genuinely empty sheet is what resetAllJobDataConfirm
 // is for. Returns the keys removed; mutates the store in place.
+// ⚠⚠ AND ONLY ON A DELETION SOMEBODY RECORDED (2026-10-27, P1, GAP3-03). 'deleted' was seen-and-absent, and after a failed
+// write emptied the Jobs tab the first new client made `present` non-empty again: one estimate saved for it swept every
+// other client's estimate, plan, hours and 450-line inventory off the sheet ("Swept records for deleted job(s)" four times).
+// Removal is a recorded act, never an absence: _jobDeletionRecorded reads ledger.deleted, written only by deleteJob, the
+// reset and the orphan prune.
 function _sweepDeletedJobKeys(store, present, ledger) {
   var gone = [];
   if (!store || !present || !Object.keys(present).length) return gone;
   Object.keys(store).forEach(function(k) {
-    if (_jobRefusal(k, null, present, ledger) === 'deleted') { delete store[k]; gone.push(k); }
+    if (_jobDeletionRecorded(k, present, ledger)) { delete store[k]; gone.push(k); }
   });
   if (gone.length) Logger.log('Swept records for deleted job(s): ' + gone.join(', '));
   return gone;
@@ -850,9 +962,9 @@ function _purgeJobFromStores(ids) {
   var keys = {}, removed = {};
   (ids || []).forEach(function(id) { if (id != null && id !== '') keys[String(id)] = true; });
   if (!Object.keys(keys).length) return removed;
-  // Four of the five are objects keyed by job id. _readStoreBlob answers null for a tab
+  // Five of the six are objects keyed by job id (JOB_KEYED_STORES). _readStoreBlob answers null for a tab
   // that does not exist, which is left alone — never CREATE a store just to empty it.
-  ['EstimateStore', 'JobPlanStore', 'LogStore', 'MediaStore'].forEach(function(name) {
+  JOB_KEYED_STORES.forEach(function(name) {
     try {
       var store = _readStoreBlob(name, null);
       if (!store) return;
@@ -886,12 +998,17 @@ function _purgeJobFromStores(ids) {
 // still knows it.
 function previewDeletedJobs() {
   var present = _presentJobIds(getJobsFromSheet()), ledger = getJobLedger();
+  // The empty tab first (2026-10-27, P1): while it is unread the sheet refuses everything, so say so before the list.
+  var unread = _jobsTabUnread(present, ledger);
+  if (unread) { Logger.log('⚠ ' + unread); Logger.log(''); }
   var gone = _deletedJobIds(present, ledger);
   Logger.log(gone.length + ' deleted job id(s) the sheet will refuse to take back:');
   var est = _readStoreBlob('EstimateStore', {}) || {};
   gone.forEach(function(k) {
     var name = est[k] && est[k].estimate && est[k].estimate.clientName ? ' — ' + est[k].estimate.clientName : '';
-    Logger.log('  ' + k + name + '  (first seen ' + new Date(ledger.seen[k]).toISOString() + ')');
+    var how = _jobDeletionRecorded(k, present, ledger) ? 'deletion recorded ' + new Date(ledger.deleted[k]).toISOString()
+      : 'NOT recorded: the row went without a delete, a reset or a prune';
+    Logger.log('  ' + k + name + '  (first seen ' + new Date(ledger.seen[k]).toISOString() + '; ' + how + ')');
   });
   Logger.log("To let a device restore one on purpose, edit the call and run allowJobRestoreConfirm(['<id>']).");
 }
@@ -907,6 +1024,41 @@ function allowJobRestoreConfirm(ids) {
   ids.forEach(function(id) { ledger.restore[String(id)] = Date.now(); });
   _writeStoreBlob(JOB_LEDGER_STORE, ledger);
   Logger.log('The next device that saves ' + ids.join(', ') + ' will be allowed to put it back.');
+}
+
+// ⚠ THE CELL-CAP PROBE (2026-10-27, P1 of the desk audit, GAP3-09; its Appendix B). Editor only: run it from the Run menu,
+// it takes no argument, and it is in neither doGet nor doPost. It answers one question nobody could answer from outside
+// Google: when a setValues refuses a cell over 50,000 characters, does a clearContent run earlier in the same execution
+// STAY (variant A: before P1 one oversized client record emptied the Jobs tab) or roll back with it (variant B: the write
+// only failed)? P1 means neither empties the tab any more (nothing is cleared before it is written, and an oversized row is
+// refused before the sheet is touched); the answer still says how a sheet emptied before this redeploy behaved, and whether
+// the cap sits where the code assumes. It makes a throwaway spreadsheet, repeats the old save's two calls on it, logs the
+// variant and trashes the file. Nothing of Havellin's is read or written. Record the answer in CLAUDE.md under Backend.
+function probeClearThenOversizeWrite() {
+  var ss = SpreadsheetApp.create('Havellin cell-cap probe (safe to delete)');
+  var sh = ss.getSheets()[0];
+  sh.getRange(1, 1, 4, 2).setValues([['ID', 'Data JSON'], ['1', 'row one'], ['2', 'row two'], ['3', 'row three']]);
+  SpreadsheetApp.flush();
+  var big = new Array(50002).join('x');           // 50,001 characters
+  var atCall = '', atFlush = '';
+  try {
+    var last = sh.getLastRow();
+    if (last > 1) sh.getRange(2, 1, last - 1, sh.getLastColumn()).clearContent();
+    sh.getRange(2, 1, 3, 2).setValues([['1', 'row one'], ['2', big], ['3', 'row three']]);
+  } catch (e) { atCall = String(e); }
+  try { SpreadsheetApp.flush(); } catch (e2) { atFlush = String(e2); }
+  var left = sh.getLastRow() - 1, kept = left > 0 ? sh.getRange(2, 2, left, 1).getValues().map(function (r) { return String(r[0]).length; }) : [];
+  var verdict = atCall
+    ? (left === 0 ? 'VARIANT A: the clear stayed when setValues threw. Before P1 one oversized client record emptied the Jobs tab.'
+                  : 'VARIANT B: the clear was undone when setValues threw (' + left + ' rows still there).')
+    : (atFlush ? 'DEFERRED: setValues did not throw at the call; the flush did (' + atFlush + '). doPost would have answered ok.'
+               : 'NO ERROR: a 50,001-character cell was accepted here; the cap is not where the code assumes.');
+  Logger.log('setValues threw at the call: ' + (atCall || 'no'));
+  Logger.log('flush threw: ' + (atFlush || 'no'));
+  Logger.log('rows left after the failed write: ' + left + ' (cell lengths ' + JSON.stringify(kept) + ')');
+  Logger.log(verdict);
+  try { DriveApp.getFileById(ss.getId()).setTrashed(true); } catch (e3) { Logger.log('Trash the probe file by hand: ' + ss.getUrl()); }
+  return verdict;
 }
 
 // ORPHANED RECORDS — an estimate, plan, log or manifest whose job row is gone ══════
@@ -929,7 +1081,7 @@ function _orphanJobRecords() {
     if (!found[k]) found[k] = { why: why, stores: [] };
     if (found[k].stores.indexOf(name) < 0) found[k].stores.push(name);
   }
-  ['EstimateStore', 'JobPlanStore', 'LogStore', 'MediaStore'].forEach(function(name) {
+  JOB_KEYED_STORES.forEach(function(name) {
     var store = _readStoreBlob(name, null);
     if (!store) return;
     Object.keys(store).forEach(function(k) {
@@ -984,8 +1136,9 @@ function pruneOrphanRecordsConfirm(force) {
       Logger.log('pruneOrphanRecordsConfirm(true) if you really mean to delete these.');
       return;
     }
-    // Remember them before they go, so a stale device cannot push them back afterwards.
-    _ledgerMarkSeen(getJobLedger(), ids);
+    // Remember them before they go, so a stale device cannot push them back afterwards, and record each as deleted: the
+    // standing sweep acts only on a deletion somebody recorded (2026-10-27, P1).
+    _ledgerRecordDeleted(getJobLedger(), ids);
     var removed = _purgeJobFromStores(ids);
     Object.keys(removed).forEach(function(name) {
       Logger.log('Cleared ' + removed[name].length + ' record(s) from ' + name);
@@ -1195,7 +1348,7 @@ function saveEstimateStore(incoming) {
     var merged = _mergeStoreByKey(getEstimateStore(), incoming);
     _sweepDeletedJobKeys(merged, ctx.present, ctx.ledger);
     _writeStoreBlob('EstimateStore', merged);
-    return { dropped: dropped };
+    return { dropped: dropped, recorded: _recordedDeletes(dropped, ctx.ledger) };
   }
   finally { try { lock.releaseLock(); } catch (e) {} }
 }
@@ -1294,7 +1447,7 @@ function saveJobPlanStore(incoming) {
     var merged = _mergePlanStore(getJobPlanStore(), incoming);
     _sweepDeletedJobKeys(merged, ctx.present, ctx.ledger);
     _writeStoreBlob('JobPlanStore', merged);
-    return { dropped: dropped };
+    return { dropped: dropped, recorded: _recordedDeletes(dropped, ctx.ledger) };
   }
   finally { try { lock.releaseLock(); } catch (e) {} }
 }
@@ -1333,13 +1486,13 @@ function saveChangeOrderStore(incoming) {
       if (!cur) order.push(co.id);
       if (!cur || inT >= curT) byId[co.id] = co;
     });
-    // The array equivalent of _sweepDeletedJobKeys: same 'deleted'-only rule, same refusal
+    // The array equivalent of _sweepDeletedJobKeys: same recorded-deletion rule (_jobDeletionRecorded, 2026-10-27), same refusal
     // to act on an empty Jobs read, applied to the merged result rather than to a key set.
     var out = order.map(function(id) { return byId[id]; });
     if (Object.keys(present).length) {
       var swept = [];
       out = out.filter(function(co) {
-        if (co && co.jobId != null && _jobRefusal(co.jobId, null, present, ledger) === 'deleted') {
+        if (co && co.jobId != null && _jobDeletionRecorded(co.jobId, present, ledger)) {
           if (swept.indexOf(String(co.jobId)) < 0) swept.push(String(co.jobId));
           return false;
         }
@@ -1348,7 +1501,7 @@ function saveChangeOrderStore(incoming) {
       if (swept.length) Logger.log('Swept change orders for deleted job(s): ' + swept.join(', '));
     }
     _writeStoreBlob('ChangeOrderStore', out);
-    return { dropped: dropped };
+    return { dropped: dropped, recorded: _recordedDeletes(dropped, ctx.ledger) };
   } finally { try { lock.releaseLock(); } catch (e) {} }
 }
 
@@ -1393,12 +1546,55 @@ function saveLogStore(incoming) {
     });
     _sweepDeletedJobKeys(out, ctx.present, ctx.ledger);
     _writeStoreBlob('LogStore', out);
-    return { dropped: dropped };
+    return { dropped: dropped, recorded: _recordedDeletes(dropped, ctx.ledger) };
   } finally { try { lock.releaseLock(); } catch (e) {} }
 }
 
 function getLogStore() {
   return _readStoreBlob('LogStore', {});
+}
+
+// ══ SNAPSHOT STORE (one client's inventory snapshots, line by line) ═══════════════
+// ⚠⚠ A SNAPSHOT'S LINES NEVER RIDE THE CLIENT'S RECORD (2026-10-27, P1 of the desk audit, VAL-01, INV-02). They did: every
+// line of the inventory went into job.invSnapshots, about 132 characters a line, and a Jobs row is ONE cell of JSON, so a
+// snapshot of about 295 named lines (or two of 150, or two devices' of 180 each, merged) passed the 50,000-character cell
+// and emptied the Jobs tab. The record keeps the snapshot's heading (when, the label, the count, the total, a void); the
+// lines live here, { "<jobId>": { "<ts>": { ts, savedAt, items } } }, chunked across rows like every store, so a snapshot of
+// any size, and any number of them, leaves the client's cell as it was.
+// A snapshot is a record of a day and never changes once taken: the first copy of a ts is kept, and a second send of it
+// (a retry, the other device's copy of the same snapshot) changes nothing. Two devices' snapshots are two ts, both kept.
+// Payload { jobId, ts, items } for ONE snapshot of ONE client. Refused like every job-keyed store for a deleted client.
+var SNAPSHOT_STORE = 'SnapshotStore';
+function saveSnapshotStore(payload) {
+  if (!payload || payload.jobId == null || payload.ts == null || !Array.isArray(payload.items)) {
+    throw new Error('saveSnapshot needs a jobId, the snapshot’s ts and its items; nothing was written.');
+  }
+  var lock = LockService.getScriptLock();
+  _lockOrBusy(lock);
+  try {
+    var ctx = _jobRefusalCtx();
+    var key = String(payload.jobId);
+    if (_jobRefusal(key, null, ctx.present, ctx.ledger)) {
+      Logger.log('saveSnapshot refused deleted job ' + key);
+      return { dropped: [key], recorded: _recordedDeletes([key], ctx.ledger) };
+    }
+    var store = _readStoreBlob(SNAPSHOT_STORE, {}) || {};
+    var mine = store[key] || {};
+    var t = String(payload.ts);
+    if (!mine[t]) mine[t] = { ts: Number(payload.ts), savedAt: new Date().getTime(), items: payload.items };
+    store[key] = mine;
+    _sweepDeletedJobKeys(store, ctx.present, ctx.ledger);
+    _writeStoreBlob(SNAPSHOT_STORE, store);
+    return { dropped: [] };
+  } finally { try { lock.releaseLock(); } catch (e) {} }
+}
+
+// One client's snapshots ({ "<ts>": { ts, savedAt, items } }); {} for a client with none. The app asks for the client it
+// prints or compares, never the whole store.
+function getSnapshotsForJob(jobId) {
+  var store = _readStoreBlob(SNAPSHOT_STORE, {}) || {};
+  if (jobId == null || jobId === '') return {};
+  return store[String(jobId)] || {};
 }
 
 // ══ CONTRACTOR STORE (merge added[] and defaults[] by id) ════════════════════════
@@ -1504,6 +1700,9 @@ function saveAllJobsToSheet(jobsArr) {
     // Start from what's already stored, keyed by id (preserves jobs this device never had).
     var stored = getJobsFromSheet();
     var present = _presentJobIds(stored), ledger = getJobLedger();
+    // An empty tab the ledger cannot explain is unread: nothing is merged into it or written (2026-10-27, P1).
+    var unread = _jobsTabUnread(present, ledger);
+    if (unread) throw new Error(unread);
     var byId = {}, order = [];
     stored.forEach(function(j) {
       if (j && j.id != null) { if (!(j.id in byId)) order.push(j.id); byId[j.id] = j; }
@@ -1523,23 +1722,49 @@ function saveAllJobsToSheet(jobsArr) {
       byId[j.id] = _mergeJobRecord(cur, j);
     });
 
-    // Rewrite the data rows from the merged set.
-    var rows = order.map(function(id) {
-      var job = byId[id];
-      return [job.id || '', job.hvlId || '', job.name || '', job.email || '', job.phone || '',
-              job.addr || '', job.city || '', job.zip || '', job.svc || '', job.status || '',
-              job.created || new Date().toISOString(), JSON.stringify(job)];
-    });
+    // Build every row from the merged set, and measure every cell, BEFORE the sheet is touched (2026-10-27, P1).
+    var rows = order.map(function(id) { return _jobRowOf(byId[id]); });
+    var tooLarge = order.map(function(id, n) { return _jobRowTooLarge(byId[id], rows[n]); }).filter(Boolean);
+    if (tooLarge.length) throw new Error(tooLarge.join(' '));
+    // ⚠⚠ NEVER CLEAR THE TAB BEFORE WRITING IT (2026-10-27, P1, GAP3-01). This cleared every data row and then wrote them
+    // all in one setValues, which throws on a cell over 50,000 characters: one Snapshot of a full house left the Jobs tab
+    // EMPTY (driven on this code over a sheet that enforces the cap, and on the real page: every client gone 2.25 s after
+    // the press, under "All changes saved"). The merged set never shrinks (it starts from every stored row), so the rows go
+    // over rows 2..n+1, and only the rows past them are cleared, after the write has landed.
     var lastRow = sheet.getLastRow();
-    if (lastRow > 1) sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).clearContent();
     if (rows.length) sheet.getRange(2, 1, rows.length, 12).setValues(rows);
+    var end = rows.length + 1;
+    if (lastRow > end) sheet.getRange(end + 1, 1, lastRow - end, Math.max(12, sheet.getLastColumn())).clearContent();
     _ledgerMarkSeen(ledger, order);
+    result.recorded = _recordedDeletes(result.dropped, ledger);
   } finally {
     try { lock.releaseLock(); } catch (e) {}
   }
   if (result.dropped.length) Logger.log('saveAllJobs refused ' + result.dropped.length + ' deleted job(s): ' + result.dropped.join(', '));
   return result;
 }
+
+// One Jobs row: the eleven columns a person reads in the sheet, and the whole record as JSON in the twelfth. The one
+// definition both writers use, so the row measured is the row written.
+function _jobRowOf(job) {
+  return [job.id || '', job.hvlId || '', job.name || '', job.email || '', job.phone || '',
+          job.addr || '', job.city || '', job.zip || '', job.svc || '', job.status || '',
+          job.created || new Date().toISOString(), JSON.stringify(job)];
+}
+
+// A Google Sheets cell holds 50,000 characters, and setValues THROWS on a longer one (the store blobs are chunked for it;
+// a Jobs row is one cell of JSON). '' when every cell of the row fits, else the refusal BY NAME, after the merge: two
+// devices' snapshots each under the cap passed it only together (GAP3-01, driven), so no check on the app's side can stand
+// in for this one.
+var SHEET_CELL_MAX = 50000;
+function _jobRowTooLarge(job, row) {
+  var big = 0;
+  (row || []).forEach(function(c) { var n = String(c == null ? '' : c).length; if (n > big) big = n; });
+  if (big <= SHEET_CELL_MAX) return '';
+  var who = (job && job.name ? String(job.name) : 'A client') + (job && job.hvlId ? ' (' + job.hvlId + ')' : '');
+  return 'TOO_LARGE: ' + who + ' is ' + _commas(big) + ' characters; a sheet cell holds ' + _commas(SHEET_CELL_MAX) + '. Nothing was written.';
+}
+function _commas(n) { return String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
 
 // Single-job upsert. Takes the SAME script lock and applies the SAME newest-wins
 // guard as saveAllJobsToSheet, so this per-record path (fired from ~20 edit sites)
@@ -1558,15 +1783,20 @@ function saveJobToSheet(job) {
       sheet.appendRow(['ID', 'HVL ID', 'Name', 'Email', 'Phone', 'Address', 'City', 'Zip', 'Service', 'Status', 'Created', 'Data JSON']);
     }
     var data = sheet.getDataRange().getValues();
-    var rowIndex = -1;
+    var rowIndex = -1, present = {};
     for (var i = 1; i < data.length; i++) {
-      if (String(data[i][0]) === String(job.id)) { rowIndex = i + 1; break; }
+      if (data[i][11]) present[String(data[i][0])] = true;
+      if (rowIndex < 0 && String(data[i][0]) === String(job.id)) rowIndex = i + 1;
     }
+    var ledger = getJobLedger();
+    // An empty tab the ledger cannot explain is unread: nothing is written to it, a new client included (2026-10-27, P1).
+    var unread = _jobsTabUnread(present, ledger);
+    if (unread) throw new Error(unread);
     // Same refusal as the bulk path: ~20 edit sites fire this per record, and an edit made
     // on a stale device to a job the sheet has deleted must not re-create the row.
-    var ledger = getJobLedger();
     if (rowIndex < 0 && _jobRefusal(job.id, job.created, {}, ledger)) {
       result.dropped.push(job.id);
+      result.recorded = _recordedDeletes(result.dropped, ledger);
       Logger.log('saveJob refused deleted job ' + job.id);
       return result;
     }
@@ -1579,11 +1809,10 @@ function saveJobToSheet(job) {
       try { stored = JSON.parse(data[rowIndex - 1][11]); } catch (e) {}
       if (stored) job = _mergeJobRecord(stored, job);
     }
-    var rowData = [
-      job.id || '', job.hvlId || '', job.name || '', job.email || '', job.phone || '',
-      job.addr || '', job.city || '', job.zip || '', job.svc || '', job.status || '',
-      job.created || new Date().toISOString(), JSON.stringify(job)
-    ];
+    var rowData = _jobRowOf(job);
+    // Measured after the merge and before the write, as the bulk path is (2026-10-27, P1): refused by name, nothing written.
+    var tooLarge = _jobRowTooLarge(job, rowData);
+    if (tooLarge) throw new Error(tooLarge);
     if (rowIndex > 0) {
       sheet.getRange(rowIndex, 1, 1, rowData.length).setValues([rowData]);
     } else {
@@ -1609,7 +1838,9 @@ function deleteJobFromSheet(id) {
   }
   // Remember it. Normally already seen; this covers a row somebody typed into the sheet by
   // hand, which no write ever recorded. Absent from the sheet + seen = refused from now on.
-  try { _ledgerMarkSeen(getJobLedger(), [id]); } catch (e) { Logger.log('ledger on delete ' + id + ': ' + e); }
+  // ⚠ AND RECORDED AS DELETED (2026-10-27, P1): the one act that lets the stores sweep its records, and that explains its
+  // absence if the tab is left empty (the last client deleted is a deletion, not an unread tab).
+  try { _ledgerRecordDeleted(getJobLedger(), [id]); } catch (e) { Logger.log('ledger on delete ' + id + ': ' + e); }
   // Purge the job's records from the keyed stores too. Deleting a job used to remove only
   // the Jobs row, so its estimate, job plan and logs stayed behind forever — invisible in
   // the app, but still serialized into every subsequent write. That is how the sheet ends

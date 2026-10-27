@@ -76,7 +76,7 @@ function rig(opts) {
 
   const ctx = sandbox({
     fns: ['_backendErrorKind', '_writeKey', '_pendingCount', '_pendingWriteLabel',
-          '_pendingChipCopy', '_enqueueWrite', '_retrySoon', '_scheduleRetry',
+          '_pendingChipCopy', '_enqueueWrite', '_retrySoon', '_scheduleRetry', '_writeKindHolds', '_tooLargeWords',
           'flushPendingWrites', 'retryPendingWrites', '_flushOutbox', 'queuedPostSync'],
     vars: ['_pendingWrites', '_retryTimer', '_retryStep', '_flushing', '_retryDelays',
            'SYNC_STUCK_TRIES', '_outbox', '_outboxTimer', '_outboxSending', '_OUTBOX_WINDOW',

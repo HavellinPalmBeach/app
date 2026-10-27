@@ -95,8 +95,9 @@ function server() {
   };
   vm.createContext(ctx);
   const names = ['getJobsFromSheet', 'saveAllJobsToSheet', 'saveJobToSheet',
-    '_jobStamp', '_jobListKey', '_mergeJobKeyed', '_mergeJobRecord', '_paymentSticky', '_lockOrBusy'];
-  vm.runInContext([gsVar('SHEET_ID'), gsVar('JOB_KEYED_LISTS'), gsVar('JOB_KEYED_MAPS'),
+    '_jobStamp', '_jobListKey', '_mergeJobKeyed', '_mergeJobRecord', '_paymentSticky', '_lockOrBusy',
+    '_jobsTabUnread', '_recordedDeletes', '_jobDeletionRecorded', '_jobRowOf', '_jobRowTooLarge', '_commas'];
+  vm.runInContext([gsVar('SHEET_ID'), gsVar('SHEET_CELL_MAX'), gsVar('JOB_KEYED_LISTS'), gsVar('JOB_KEYED_MAPS'),
     gsVar('JOB_LIST_KEY'), gsVar('JOB_PAYMENT_STICKY'), ...names.map(gsFn)].join('\n\n'), ctx, { filename: 'main-sync.gs (extracted)' });
   // Land a device's wire, in the order its outbox would send it.
   ctx.land = (wire) => wire.forEach((b) => {
