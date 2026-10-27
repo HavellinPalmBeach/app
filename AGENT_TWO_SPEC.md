@@ -470,8 +470,9 @@ and browser step 69.
 - **Anthony at the desk (2026-10-26b, Apps Script `2026-10-26b`):** off a client the earlier agents had valued.
   **Whole dollars each** (*"Do we say $10 or do we say $12?"*; he took *"Whole dollars each"*): `_avWrite` writes the figure
   and both ends of its range through `agentValueWhole(x, qty)`, one article's share to the nearest dollar times the count
-  ($75 for seven plates is $11 each, $77), under a dollar each in cents; a typed figure stays as typed. (Between $1 and $10
-  each the rounding can move a group a long way, sixty forks at $1.25 becoming $60: put to him, not yet answered.)
+  ($75 for seven plates is $11 each, $77), from `AGENT_VALUE_WHOLE_FROM` ($10) each, under it in cents; a typed figure stays
+  as typed. (Between $1 and $10 each the rounding moved a group a long way, sixty forks at $1.25 becoming $60; asked, Anthony
+  took *"From $10 each"* on 2026-10-27, and the threshold moved up from a dollar.)
   **Condition** (*"Agents grade it"*): `record_values` carries `condition` where the app sends its grades; the server keeps it
   only for a line whose photograph the request carried (`unit.saw`), and `_avItemPayload` sends a line nobody has graded with
   its photograph (`agentValueGradesCondition`), still an ordinary lot. **Re-value across a selection** (`invBulkRevalue`, *"Re-value

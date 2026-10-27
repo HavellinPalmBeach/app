@@ -128,7 +128,7 @@ const AV_FNS = ['agentValueMode', 'agentValueInternal', '_avHasFigure', 'agentVa
   'gateDispute', '_gateYes', 'invNeedsAppraisal', 'fmt', '_invMoney', '_invNamed', '_invItemNo', '_andJoin',
   'moneyToNumber', '_readAppsScriptJson', '_invJob', '_invRenderWhenIdle', '_invHasPhoto', 'agentValueLooks', '_avPhotoContext', '_invPhotoSource',
   '_invRoomName', 'agentListedOff', '_invDerivedRefs', '_invPhotoSiblings', '_invCondIsAgents', '_invAgentCondition'];
-const AV_VARS = ['_avRun', 'AGENT_CONDITIONS', '_avForceComps', '_avAfter', '_avAutoAgain', 'AGENT_VALUE_BATCH', 'AGENT_VALUE_GENERAL_CEILING', 'AGENT_VALUE_MAX_COMPS',
+const AV_VARS = ['_avRun', 'AGENT_CONDITIONS', '_avForceComps', '_avAfter', '_avAutoAgain', 'AGENT_VALUE_BATCH', 'AGENT_VALUE_GENERAL_CEILING', 'AGENT_VALUE_WHOLE_FROM', 'AGENT_VALUE_MAX_COMPS',
   'AGENT_VALUE_MARK_RE', 'AGENT_VALUE_NO_MARK_RE', 'AGENT_VALUE_READ_RE', 'AGENT_VALUE_HEDGE_RE', 'AGENT_VALUE_CONFS', 'AGENT_VALUE_SOURCES', 'AGENT_VALUE_OWN',
   'AGENT_VALUE_SALE_DATE_RE', 'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
   'DECEDENT_SERVICES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'AGENT_MAX_DETAILS', 'INV_VAL_SOURCES', 'AGENT_LISTED_MAX'];
@@ -905,17 +905,22 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(gsFn('testAgentIdentify'), "conditions: ['Excellent', 'Good', 'Fair', 'Poor']", 'the naming probe asks for grades and prints them');
   }
 
-  group('⚠⚠ B5 · an agent\'s figure reads in whole dollars each (Anthony: "Whole dollars each"): Total = Each × Qty; under a dollar each stays in cents');
+  group('⚠⚠ B5 · an agent\'s figure reads in whole dollars each from $10 each (Anthony: "Whole dollars each", then "From $10 each"): Total = Each × Qty; under $10 each stays in cents');
   {
-    const S = sandbox({ fns: ['agentValueWhole', 'roundCents'] });
+    const S = sandbox({ fns: ['agentValueWhole', 'roundCents'], vars: ['AGENT_VALUE_WHOLE_FROM'] });
+    eq(sandbox({ vars: ['AGENT_VALUE_WHOLE_FROM'] }).AGENT_VALUE_WHOLE_FROM, 10, 'the threshold is $10 each, one constant');
     eq([S.agentValueWhole(75, 7), S.agentValueWhole(45, 60), S.agentValueWhole(175.4, 1), S.agentValueWhole(0.5, 1), S.agentValueWhole(640, 8), S.agentValueWhole(0, 3)],
        [77, 45, 175, 0.5, 640, 0], '⚠ the cabbage-ware plates read $11 × 7 = $77; sixty forks at 75¢ stay $45; a single item to the dollar');
+    // Restated 2026-10-27 ("From $10 each"): between $1 and $10 each the figure keeps its cents, where rounding from $1 moved it a long way.
+    eq([S.agentValueWhole(75, 60), S.agentValueWhole(12, 7), S.agentValueWhole(69.93, 7), S.agentValueWhole(9.4, 1), S.agentValueWhole(70.35, 7), S.agentValueWhole(10.4, 1)],
+       [75, 11.97, 69.93, 9.4, 70, 10], '⚠⚠ sixty forks at $75 ($1.25 each) stay $75, never $60; seven at $12 read $1.71 each, $11.97 (Each × Qty holds in cents); $9.99 each keeps its cents; from $10.05 each, whole dollars');
     ok(isNaN(S.agentValueWhole('', 2)) && isNaN(S.agentValueWhole(null, 2)) && isNaN(S.agentValueWhole(-5, 1)), 'no figure stays no figure, never $0');
     const job = ESTATE();
     const R = rig(job, [ROW({ stableId: 'cab', qty: 7 })]);
     R.ctx._avWrite(7, 'cab', RES({ fmv: 75, low: 45, high: 120 }), job);
     const c = R.ctx._getPhotoRef(7, 'cab');
-    eq([c.fmv, c.valLow, c.valHigh], [77, 42, 119], 'written whole each, its range with it');
+    // Restated 2026-10-27: the range's low end, $45 for seven, is $6.43 each, under $10, so it keeps its cents ($6.43 × 7 = $45.01).
+    eq([c.fmv, c.valLow, c.valHigh], [77, 45.01, 119], 'written whole each from $10 each, its range with it ($6.43 each, $45.01)');
     lacks(fn('_invEdit'), 'agentValueWhole', 'a figure a person types stays as typed');
     eq((src.match(/agentValueWhole\(/g) || []).length, 4, 'one definition, read by the one writer for the figure and both ends of its range');
   }

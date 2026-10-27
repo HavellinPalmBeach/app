@@ -212,8 +212,9 @@ const jpeg = Buffer.from('/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP////////////////////
       const it = ((net.value[net.value.length - 1] || {}).items || [])[0] || {};
       eq([it.stableId, it.mode], ['fw', 'comps'], 'for the flatware, researched');
       ok((it.details || []).some((d) => d.fileId === 'cu1'), '⚠ with the close-up just added');
-      // Restated 2026-10-26b, whole dollars each (agentValueWhole): $75 for sixty is $1.25 each, so $1 each, $60.
-      eq((await line('fw')).fmv, 60, 'its new figure on the line, in whole dollars each');
+      // Restated 2026-10-27, whole dollars from $10 each (agentValueWhole, Anthony: "From $10 each"): $75 for sixty is $1.25 each,
+      // which keeps its cents, so $75 (rounding from $1 made it $60).
+      eq((await line('fw')).fmv, 75, 'its new figure on the line, its cents kept under $10 each');
       eq(await overflow(), 0, 'no horizontal overflow at 1440');
       await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(600);
       eq(await overflow(), 0, 'no horizontal overflow at 390');

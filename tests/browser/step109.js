@@ -199,7 +199,8 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
       eq([sent.cab && sent.cab.fileId, sent.print && sent.print.fileId], ['FID_CAB', 'FID_PR'], '⚠ each with its photograph, since nobody has graded it');
       eq(((net.value[net.value.length - 1] || {}).context || {}).conditions, ['Excellent', 'Good', 'Fair', 'Poor'], 'the grades ride the request');
       const cab = await line('cab'), print = await line('print'), sofa = await line('sofa');
-      eq([cab.fmv, cab.each, cab.lo, cab.hi], [77, 11, 42, 119], '⚠⚠ $75 for seven reads $11 each, $77, the range with it (Anthony: "Whole dollars each")');
+      // Restated 2026-10-27 ("From $10 each"): the range's low end, $45 for seven, is $6.43 each and keeps its cents, $45.01.
+      eq([cab.fmv, cab.each, cab.lo, cab.hi], [77, 11, 45.01, 119], '⚠⚠ $75 for seven reads $11 each, $77, the range with it, whole dollars from $10 each (Anthony: "Whole dollars each", "From $10 each")');
       eq([cab.cond, cab.condBy, print.cond, print.condBy], ['Good', 'agent', 'Excellent', 'agent'], '⚠⚠ condition graded off the photograph (Anthony: "Agents grade it")');
       eq(cab.name, 'Green cabbage-leaf majolica crescent salad plates, likely Portuguese', 'the old name, with its count, corrected');
       eq([sofa.cond, sofa.fmv, sofa.by], ['Fair', 400, 'desk'], 'the sofa\'s grade and figure, a person\'s, untouched');

@@ -263,7 +263,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       comps: [], lookup: 'Spanish bird plate', notices: [], mode: 'comps', name: 'Hand-painted tin-glazed plates, yellow bird pattern, likely Spanish' }, over || {});
     const W = (refs) => sandbox({ fns: ['_avWrite', 'agentValueWhole', 'invLineQty', '_avRename', '_agNameKey', '_avHasFigure', '_invHasValue', 'agentValueInternal', '_avValDate', '_avComp',
       'agentValueStale', '_getPhotoRef', '_setPhotoRef', 'roundCents', 'estateValueDate', '_avdDate', '_ymdLocal', '_todayStr', '_avNameIsAgents', '_invCondIsAgents', '_invAgentCondition'],
-      vars: ['AGENT_CONDITIONS', 'AGENT_VALUE_MAX_COMPS', 'AGENT_VALUE_CONFS', 'AGENT_VALUE_SOURCES', 'AGENT_VALUE_SALE_DATE_RE'],
+      vars: ['AGENT_CONDITIONS', 'AGENT_VALUE_MAX_COMPS', 'AGENT_VALUE_CONFS', 'AGENT_VALUE_SOURCES', 'AGENT_VALUE_SALE_DATE_RE', 'AGENT_VALUE_WHOLE_FROM'],
       stubs: { _photoRefs: { 7: refs }, _invTouch: (r) => r, invFiduciaryMode: () => true, docTierProduces: () => true } });
     const job = { id: 7, svc: 'cleanout', docTier: 'values', deathDate: '2026-08-14' };
     let A = W([R()]);

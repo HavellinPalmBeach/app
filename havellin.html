@@ -1476,7 +1476,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.27 · 1:09am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.27 · 5:02am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -39402,13 +39402,17 @@ var AGENT_VALUE_OWN = ['valLow', 'valHigh', 'valComps', 'valLookup', 'valConf', 
 // ⚠⚠ AN AGENT'S FIGURE READS IN WHOLE DOLLARS EACH (2026-10-26b; Anthony, off seven cabbage-ware plates Agent Two valued at $75, so
 // $10.71 each: "Do we say $10 or do we say $12? Like, is it accurate down to the penny"; he took "Whole dollars each"): one article's
 // share of the agent's figure to the nearest dollar, and the line's figure that times its count ($11 × 7 = $77), so Each × Qty = Total
-// holds in whole dollars. Under a dollar each it stays in cents (sixty forks at 75¢ are $45, never $60). A value is a reading, not
-// money owed: the cents rule (roundCents, P17) is for what the client is billed, and a figure a person types stays as typed. Read by
-// the one writer for the figure and both ends of its range.
+// holds in whole dollars. Under AGENT_VALUE_WHOLE_FROM ($10) each it stays in cents (2026-10-27; Anthony, asked whether a group of
+// cheap things should round from $1 or from $10 each, took "From $10 each": sixty forks at $75 are $1.25 each and stay $75, where
+// rounding from $1 made them $60). A value is a reading, not money owed: the cents rule (roundCents,
+// P17) is for what the client is billed, and a figure a person types stays as typed. Read by the one writer for the figure and both
+// ends of its range; rounding only at or above the threshold keeps low ≤ figure ≤ high (anything rounded is at least $10, anything
+// below it is under $10).
+var AGENT_VALUE_WHOLE_FROM = 10;
 function agentValueWhole(x, qty) {
   var q = Math.max(1, parseInt(qty, 10) || 1), each = Number(x) / q;
   if (x === '' || x == null || !isFinite(each) || each < 0) return NaN;
-  return roundCents((each >= 1 ? Math.round(each) : roundCents(each)) * q);
+  return roundCents((each >= AGENT_VALUE_WHOLE_FROM ? Math.round(each) : roundCents(each)) * q);
 }
 
 // ─── THE ONE WRITER ─────────────────────────────────────────────────────────────
