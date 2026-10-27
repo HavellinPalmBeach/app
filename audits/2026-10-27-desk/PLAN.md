@@ -1620,6 +1620,8 @@ Severity is the verifier's re-rating, or the reviewer's for RT rows. Pack is one
 
 ### B. The cell-cap probe, and the runbook until P1 lands
 
+*P1 landed on 2026-10-27 (backend `2026-10-27b`): the probe is committed in `apps-script/main-sync.gs` and runs from the jobs script's editor once that redeploy is live, and the runbook, rewritten for it, is in the manual (the note headed "If the client list empties: the runbook"). This appendix stays as written, for a deployment older than `2026-10-27b`.*
+
 **The probe** (GAP3-09).
 1. Paste the function below into a new standalone project (script.google.com › New project). Nothing of Havellin's is touched, and no redeploy is needed.
 2. Run it once and read the log. It makes a throwaway spreadsheet, repeats the Jobs save's two calls on it, says which variant this account has, and trashes the file.
