@@ -48,14 +48,14 @@ const attempt = (f) => { try { return { val: f() }; } catch (e) { return { err: 
 function gs() {
   const ctx = { JSON, Math, Number, String, Object, Array, Error, parseInt, parseFloat, isFinite };
   vm.createContext(ctx);
-  vm.runInContext(['AGENT_VALUE_SOURCES', 'AGENT_VALUE_NOTICE_KINDS', 'AGENT_VALUE_MAX_COMPS', 'AGENT_VALUE_CONF_DOWN', 'AGENT_VALUE_RESULTS_SEGMENTS', 'AGENT_VALUE_RESULTS_PARAMS', 'AGENT_VALUE_NO_PRICE_RE', 'AGENT_VALUE_TEXT_MAX', 'AGENT_VALUE_ABBREV_RE'].map(gsVar)
-    .concat(['_avCents', '_avUrlKey', '_avResultsPage', '_avClip', '_avLineResult'].map(gsFn)).join('\n'), ctx);
+  vm.runInContext(['AGENT_VALUE_SOURCES', 'AGENT_VALUE_NOTICE_KINDS', 'AGENT_VALUE_MAX_COMPS', 'AGENT_VALUE_CONF_DOWN', 'AGENT_VALUE_RESULTS_SEGMENTS', 'AGENT_VALUE_RESULTS_PARAMS', 'AGENT_VALUE_NO_PRICE_RE', 'AGENT_VALUE_TEXT_MAX', 'AGENT_VALUE_ABBREV_RE', 'AGENT_VALUE_SURVEY_MIN'].map(gsVar)
+    .concat(['_avCents', '_avUrlKey', '_avResultsPage', '_avClip', '_avLineResult', '_avSurvey'].map(gsFn)).join('\n'), ctx);
   return ctx;
 }
 function backend() {
   const ctx = { JSON, Math, Number, String, Object, Array, Error, parseInt, parseFloat, isFinite };
   vm.createContext(ctx);
-  vm.runInContext(['AGENT_VALUE_SOURCES', 'AGENT_VALUE_NOTICE_KINDS', 'AGENT_COUNT_IN_NAME_RE'].map(gsVar)
+  vm.runInContext(['AGENT_VALUE_SOURCES', 'AGENT_VALUE_NOTICE_KINDS', 'AGENT_COUNT_IN_NAME_RE', 'AGENT_VALUE_SURVEY_MIN'].map(gsVar)
     .concat(['_agSystem', '_avSystem', '_avTool', '_avLineText'].map(gsFn)).join('\n'), ctx);
   return ctx;
 }
@@ -262,8 +262,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const RESV = (over) => Object.assign({ fmv: 75, low: 40, high: 120, confidence: 'low', source: 'Online comps', basis: 'No sold comparable',
       comps: [], lookup: 'Spanish bird plate', notices: [], mode: 'comps', name: 'Hand-painted tin-glazed plates, yellow bird pattern, likely Spanish' }, over || {});
     const W = (refs) => sandbox({ fns: ['_avWrite', 'agentValueWhole', 'invLineQty', '_avRename', '_agNameKey', '_avHasFigure', '_invHasValue', 'agentValueInternal', '_avValDate', '_avComp',
-      'agentValueStale', '_getPhotoRef', '_setPhotoRef', 'roundCents', 'estateValueDate', '_avdDate', '_ymdLocal', '_todayStr', '_avNameIsAgents', '_invCondIsAgents', '_invAgentCondition'],
-      vars: ['AGENT_CONDITIONS', 'AGENT_VALUE_MAX_COMPS', 'AGENT_VALUE_CONFS', 'AGENT_VALUE_SOURCES', 'AGENT_VALUE_SALE_DATE_RE'],
+      'agentValueStale', '_getPhotoRef', '_setPhotoRef', 'roundCents', 'estateValueDate', '_avdDate', '_ymdLocal', '_todayStr', '_avNameIsAgents', '_invCondIsAgents', '_invAgentCondition', '_avSurveyOf'],
+      vars: ['AGENT_CONDITIONS', 'AGENT_VALUE_MAX_COMPS', 'AGENT_VALUE_CONFS', 'AGENT_VALUE_SOURCES', 'AGENT_VALUE_SALE_DATE_RE', 'AGENT_VALUE_WHOLE_FROM'],
       stubs: { _photoRefs: { 7: refs }, _invTouch: (r) => r, invFiduciaryMode: () => true, docTierProduces: () => true } });
     const job = { id: 7, svc: 'cleanout', docTier: 'values', deathDate: '2026-08-14' };
     let A = W([R()]);
@@ -300,7 +300,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(kept && JSON.parse(kept)[0].valNameFrom, 'Agent One\'s name', '⚠ valNameFrom survives the save');
     // The record says what it replaced, quietly; the list above the rows says nothing of it.
     const V = sandbox({ fns: ['_avPanelHtml', '_avNoticeLabel', '_avNoticeKinds', 'agentValueUnreviewed', 'agentValueStale', '_avHasFigure', '_invHasValue', 'agentValueInternal', '_agNameKey',
-      'agentValueNotices', '_avNoticesHtml', 'agentValueSpecialistWorth', '_deskShowBtnHtml', '_invNamed', '_invItemNo', 'agentValueAgain', '_avState'], vars: ['_avRun', '_avAfter', '_avForceComps'],
+      'agentValueNotices', '_avNoticesHtml', 'agentValueSpecialistWorth', '_deskShowBtnHtml', '_invNamed', '_invItemNo', 'agentValueAgain', '_avState', '_avSurveyOf'], vars: ['_avRun', '_avAfter', '_avForceComps'],
       stubs: { esc: (x) => String(x == null ? '' : x), fmt: (x) => '$' + x, _invMoney: (x) => '$' + x, invFiduciaryMode: () => true, docTierProduces: () => true, invNeedsAppraisal: () => false } });
     const renamed = R({ objectName: 'Hand-painted tin-glazed plates, yellow bird pattern, likely Spanish', valNameFrom: 'Hand-painted majolica dinner plates, likely Italian',
       valuedBy: 'agent', fmv: 75, valLow: 40, valHigh: 120, valConf: 'low', valNameAt: 'Hand-painted tin-glazed plates, yellow bird pattern, likely Spanish', valNotices: [] });
@@ -334,7 +334,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const ROWV = (id, n, notices, over) => Object.assign({ stableId: id, itemNo: n, label: 'inventory', roomIdx: 2, objectName: 'Line ' + n, category: 'General/Household',
       fmv: 50, valLow: 25, valHigh: 90, valConf: 'low', valSource: 'Online comps', valuedBy: 'agent', valNameAt: 'Line ' + n, valNotices: notices }, over || {});
     const V = sandbox({ fns: ['agentValueNotices', '_avNoticeKinds', '_avNoticeLabel', '_avNoticesHtml', '_deskShowBtnHtml', '_invNamed', '_invItemNo',
-      'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', '_avHasFigure', '_invHasValue', '_avPanelHtml', 'agentValueInternal', '_agNameKey', 'agentValueAgain', '_avState'], vars: ['_avRun', '_avAfter', '_avForceComps'],
+      'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', '_avHasFigure', '_invHasValue', '_avPanelHtml', 'agentValueInternal', '_agNameKey', 'agentValueAgain', '_avState', '_avSurveyOf'], vars: ['_avRun', '_avAfter', '_avForceComps'],
       stubs: { esc: (x) => String(x == null ? '' : x), fmt: (x) => '$' + x, _invMoney: (x) => '$' + x, invFiduciaryMode: () => true, docTierProduces: () => true,
         invNeedsAppraisal: () => false } });
     const job = { id: 7, svc: 'cleanout' };

@@ -7,7 +7,8 @@
 // move-in contact and the header printing it; a damage incident recorded through the real dialog turning the Move day line
 // red; the Bill of Lading filed through the real control over a routed Apps Script; a closed Home Transition's dashboard
 // carrying the *Settling in* reminder on day 12; a living client's ⚑ Sell line with no value badged on the printed Contents
-// Record; overflow at 1440 and 390; zero page errors.
+// Record (since 2026-10-27 the work bar's Contents Record opens in the document viewer first, titled by the paper, and is
+// printed from the viewer's Print / Save PDF); overflow at 1440 and 390; zero page errors.
 //
 //   NODE_PATH=/path/to/node_modules node tests/browser/step85.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
@@ -230,8 +231,23 @@ const PHOTO = { name: 'bol.png', mimeType: 'image/png', buffer: Buffer.from('895
       if (String(await p.evaluate(() => document.getElementById('inv-job').value)) !== String(LIV)) { await p.selectOption('#inv-job', String(LIV)); await p.waitForTimeout(900); }
       await p.evaluate(() => { window.__prints = []; });
       await press('#inv-workbar button[onclick="printContentsRecord(' + LIV + ')"]', 'Contents Record (the work bar)');
+      // Restated 2026-10-27: the work bar's papers open on screen first. The Contents Record opens in the document viewer,
+      // titled by the paper, and nothing prints until its Print / Save PDF is pressed; that press prints the page read below
+      // (through _printDocument's timer), the viewer comes back once the dialog closes, and Close takes it away so the plan
+      // under it can be pressed in H.
+      const viewerOpen = () => p.evaluate(() => { const o = document.getElementById('doc-viewer-modal'); return !!o && o.style.display === 'flex'; });
+      ok(await viewerOpen(), 'the Contents Record opens in the document viewer');
+      eq(await txt('#doc-viewer-title'), 'Contents Record', 'the viewer is titled by the paper');
+      await p.waitForTimeout(900);   // past _printDocument's timer, so a print made by opening it would have landed
+      eq(await p.evaluate(() => window.__prints.length), 0, 'nothing printed before Print / Save PDF is pressed');
+      await press('#doc-viewer-print', 'Print / Save PDF, in the viewer');
       await p.waitForTimeout(900);   // _printDocument prints on a timer
+      eq(await p.evaluate(() => window.__prints.length), 1, 'Print / Save PDF printed the page once');
       const printed = await p.evaluate(() => window.__prints[0] || '');
+      for (let i = 0; i < 20 && !(await viewerOpen()); i++) await p.waitForTimeout(150);
+      ok(await viewerOpen(), 'the viewer comes back after the print dialog');
+      await press('#doc-viewer-modal button[onclick="closeDocViewer()"]', 'Close the viewer');
+      ok(!(await viewerOpen()), 'Close takes the viewer away');
       has(printed, 'Side table', 'the Contents Record prints the line');
       has(printed, 'FLAGGED FOR APPRAISAL, NO VALUE RECORDED', '⚠ badged on the client’s paper');
       lacks(printed, 'NOT YET APPRAISED', 'never the estate’s badge');

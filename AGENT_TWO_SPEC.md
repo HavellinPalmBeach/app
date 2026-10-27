@@ -82,7 +82,7 @@ A test holds the write path to the fields in §5 and fails on any key above.
 |---|---|---|
 | **Claude web search** (`web_search_20260209`, with `web_fetch_20260209` to read a results page) | Server tool on the Messages API; about $10 per 1,000 searches plus tokens | Every line. The default |
 | **WorthPoint** | Subscription only, no public API found. Browser automation ruled out: no server to run it on (Apps Script cannot drive a browser), the terms very likely forbid bots, and it breaks on every redesign | By hand on `comps` lines: the agent writes the lookup (§4a); a person pastes the best record back |
-| **eBay** | Sold data is closed: Marketplace Insights is not open to new developers, `findCompletedItems` was shut down in February 2025, the Browse API returns active listings only, and the sold search now needs a login | None. An active listing is an asking price; the agent may cite one only as `asking` |
+| **eBay** | Sold data is closed: Marketplace Insights is not open to new developers, `findCompletedItems` was shut down in February 2025, the Browse API returns active listings only, and the sold search now needs a login | None. An active listing is an asking price; the agent may cite one only as `asking`. Since 2026-10-27 ten or more close listings and no sale are a listing survey (§4b). A developer account was opened that day: the Browse API could hand the survey its count, but eBay's 2025 license restricts sending its data to an outside AI, so nothing is built on it until eBay confirms in writing that it may |
 | **LiveAuctioneers, Invaluable** | No public API; third-party scrapers exist | Through web search only, on pages it can reach. Never a scraper: these numbers can end up in a court filing |
 
 ### 4a · The WorthPoint lookup
@@ -100,8 +100,15 @@ else in this design moves.
 - **A comp must cite a URL the search actually returned.** The server reads the `web_search_tool_result`
   and `web_fetch_tool_result` blocks of the response and drops any comp whose link is not among them,
   then downgrades the confidence. A model asked for sources can invent plausible ones; this is the guard.
-- A comp states `sold` or `asking`. An asking price never sets the point value alone; a line with no
+- A comp states `sold` or `asking`. A few asking prices never set the point value alone (since 2026-10-27, a listing
+  survey of ten or more may: the bullet below); a line with no
   sold comp is `confidence:'low'` whatever else it found.
+- **A listing survey counts (2026-10-27; Anthony: *"A listing survey counts"*).** Where research turns up no sale, the agent
+  may count the close listings of the same thing still for sale and report them (`survey`: count, the lowest, middle and
+  highest asking price for one article, and the page counted, which may be a results page). Listings are a ceiling. With
+  `AGENT_VALUE_SURVEY_MIN` (10) or more on a page a tool returned, and one article's figure at or under the middle price, the
+  line is `medium` at most (never `high`, never lifted from the model's own `low`) and its source *Listing survey*; anything
+  less stays `low` and a *General estimate*. A sale found always decides.
 - The point value is the agent's reading of the sold comps adjusted for condition, and `valNote`
   says how in one sentence (*"Median of 4 sold, 2024–2026; chip to rim, low end"*).
 
@@ -113,12 +120,13 @@ Written by the agent:
 
 | Field | Meaning |
 |---|---|
-| `fmv` | The point value, to the cent (`roundCents`) |
+| `fmv` | The point value: whole dollars each from $10 each, to the cent below it (`agentValueWhole`, §13; 2026-10-26b and 2026-10-27) |
 | `valLow`, `valHigh` | The range |
 | `valDate` | The valuation date: the date of death on an estate (`job.deathDate`), the day of the run on a living job (`_todayStr`) |
-| `valSource` | `Auction comps`, `Online comps` or `General estimate` |
+| `valSource` | `Auction comps`, `Online comps`, `General estimate` or (since 2026-10-27) `Listing survey` |
 | `valNote` | One sentence of basis, as today (*Valuation Basis / Comps*) |
 | `valComps` | `[{title, venue, saleDate, price, url, kind}]` |
+| `valSurvey` | `{count, low, median, high, url}`: the close listings counted where no sale was found (§4b, 2026-10-27) |
 | `valLookup` | The WorthPoint search terms (`comps` lines only) |
 | `valuedBy` | `'agent'`, `'desk'` or `'appraiser'` |
 | `valAgentAt`, `valConf` | When it ran; `high`, `medium` or `low` |
@@ -470,8 +478,9 @@ and browser step 69.
 - **Anthony at the desk (2026-10-26b, Apps Script `2026-10-26b`):** off a client the earlier agents had valued.
   **Whole dollars each** (*"Do we say $10 or do we say $12?"*; he took *"Whole dollars each"*): `_avWrite` writes the figure
   and both ends of its range through `agentValueWhole(x, qty)`, one article's share to the nearest dollar times the count
-  ($75 for seven plates is $11 each, $77), under a dollar each in cents; a typed figure stays as typed. (Between $1 and $10
-  each the rounding can move a group a long way, sixty forks at $1.25 becoming $60: put to him, not yet answered.)
+  ($75 for seven plates is $11 each, $77), from `AGENT_VALUE_WHOLE_FROM` ($10) each, under it in cents; a typed figure stays
+  as typed. (Between $1 and $10 each the rounding moved a group a long way, sixty forks at $1.25 becoming $60; asked, Anthony
+  took *"From $10 each"* on 2026-10-27, and the threshold moved up from a dollar.)
   **Condition** (*"Agents grade it"*): `record_values` carries `condition` where the app sends its grades; the server keeps it
   only for a line whose photograph the request carried (`unit.saw`), and `_avItemPayload` sends a line nobody has graded with
   its photograph (`agentValueGradesCondition`), still an ordinary lot. **Re-value across a selection** (`invBulkRevalue`, *"Re-value
@@ -587,3 +596,20 @@ and browser step 69.
   flagged*, a desk figure *Reviewed: a figure recorded on the desk, nothing flagged*. `_invEdit` repaints, through
   `_invReviewRepaint`, the box of every other line whose membership in `_agDupSet` the edit changed. No backend
   changed.
+- **A listing survey counts (2026-10-27, Apps Script `2026-10-27`; Q110):** Anthony, off a new eBay developer account:
+  *"if we see literally dozens of listings on eBay and Etsy, can't we use that to triangulate some sort of value even if we
+  don't have true sold comps"*; he took *"A listing survey counts"*. Server: `record_values` on a research line requires
+  `survey` (`count` an integer, `low`, `median`, `high` for one article, `url`; a count of 0 and an empty url where none was
+  counted); `_avSurvey(s, seen)` keeps it only with a whole count of one or more, three prices in order and above nothing,
+  and a URL a tool result returned (a results page allowed: counting one is the point); `_avLineResult(v, mode, seen, qty)`
+  reads one article's figure (`fmv` over the line's `qty`, which `agentValueLines` passes) against the middle price, and
+  with no sold comparable kept, `AGENT_VALUE_SURVEY_MIN` (10) or more and that figure at or under the middle price answers
+  `medium` at most and source `Listing survey` (`AGENT_VALUE_SOURCES.survey`), after a dropped comparable has cost its level;
+  otherwise `low` and `General estimate`, as before. A sold comparable decides over a survey, which still rides the answer.
+  The prompt's EVIDENCE rule (*LISTINGS ARE A CEILING*) and the confidence scale read the constant; `testAgentValue()`
+  prints a survey. App: `_avSurveyOf` checks it again and `_avWrite` writes `valSurvey` (removed by a Re-value that counted
+  none; on `AGENT_VALUE_OWN`, so an appraisal takes it off; on `savePhotoRefs`' whitelist); *Listing survey* joins
+  `INV_VAL_SOURCES` (the schedules' word *listing survey*) and the app's `AGENT_VALUE_SOURCES` (a desk figure typed over it
+  drops it); `_avPanelHtml` draws *LISTED · N close listings for sale, $low to $high each, middle $median* with *the page
+  counted*. `invLineUnsure` reads `valConf`, so a medium survey figure carries no *unsure*. `BACKEND_MIN_VERSION`
+  `2026-10-27`. `tests/listing-survey.test.js`, browser step 115.

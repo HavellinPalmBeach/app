@@ -46,10 +46,10 @@ const GS_VARS = ['AGENT_API', 'AGENT_API_VERSION', 'AGENT_MAX_IMG', 'AGENT_MODEL
   'AGENT_VALUE_MAX_TOKENS', 'AGENT_VALUE_PARALLEL', 'AGENT_VALUE_MAX_LINES', 'AGENT_VALUE_GENERAL_BATCH',
   'AGENT_VALUE_SEARCHES', 'AGENT_VALUE_FETCHES', 'AGENT_VALUE_CONTINUES', 'AGENT_VALUE_MAX_COMPS',
   'AGENT_VALUE_TIME_BUDGET', 'AGENT_VALUE_SOURCES', 'AGENT_VALUE_NOTICE_KINDS',
-  'AGENT_VALUE_CONF_DOWN', 'AGENT_VALUE_RESULTS_SEGMENTS', 'AGENT_VALUE_RESULTS_PARAMS', 'AGENT_VALUE_NO_PRICE_RE', 'AGENT_VALUE_TEXT_MAX', 'AGENT_VALUE_ABBREV_RE'];
+  'AGENT_VALUE_CONF_DOWN', 'AGENT_VALUE_RESULTS_SEGMENTS', 'AGENT_VALUE_RESULTS_PARAMS', 'AGENT_VALUE_NO_PRICE_RE', 'AGENT_VALUE_TEXT_MAX', 'AGENT_VALUE_ABBREV_RE', 'AGENT_VALUE_SURVEY_MIN'];
 const GS_FNS = ['_agProp', '_agMissingProps', '_agImageBlock', '_avCents', '_avTool', '_avTools', '_avSystem',
   '_avLineText', '_avUserContent', '_avBody', '_avHttp', '_avEcho', '_avReadResult', '_avSeenUrls', '_avUrlKey', '_avResultsPage', '_avClip',
-  '_avLineResult', 'agentValueLines', '_agModelVersion', '_agVerCmp', '_agNewestOf', '_agCache', '_agModelList', '_agDemoted', '_agDemote', '_agSlow', '_agModels', '_agSendAll', '_agHttpFailure'];
+  '_avLineResult', 'agentValueLines', '_agModelVersion', '_agVerCmp', '_agNewestOf', '_agCache', '_agModelList', '_agDemoted', '_agDemote', '_agSlow', '_agModels', '_agSendAll', '_agHttpFailure', '_avSurvey'];
 
 // `reply(body, i, call)` answers each request of each fetchAll; `throwOn(call)` makes a fetchAll throw, as
 // UrlFetchApp does when one request outruns its own limit. `tick` is the clock's step per reading.
@@ -117,8 +117,8 @@ const AV_FNS = ['_avValueButtonHtml', 'agentValueMode', 'agentValueInternal', '_
   'invFiduciaryMode', 'isDecedentJob', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep', 'estateValueDate',
   '_avdDate', '_ymdLocal', 'resolveValBasis', '_agNameKey', '_agDetailRefs', 'invLineCloseUps', '_invFileId', 'invAppraisalThreshold',
   'gateDispute', '_gateYes', 'invNeedsAppraisal', 'fmt', '_invMoney', '_invNamed', '_invItemNo', '_andJoin',
-  'moneyToNumber', '_readAppsScriptJson', '_invJob', '_avNameIsAgents', '_invStampLineReviewed', '_invRenderWhenIdle', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', 'agentValueLooks', '_avPhotoContext', '_invPhotoSource', '_invRoomName', 'agentListedOff', 'agentValueAgain', 'invLineQty', 'invLineReviewed', 'invLineOpen'];
-const AV_VARS = ['_avRun', '_avForceComps', '_avAfter', 'AGENT_VALUE_BATCH', 'AGENT_VALUE_GENERAL_CEILING', 'AGENT_VALUE_MAX_COMPS', 'AGENT_CONDITIONS',
+  'moneyToNumber', '_readAppsScriptJson', '_invJob', '_avNameIsAgents', '_invStampLineReviewed', '_invRenderWhenIdle', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', 'agentValueLooks', '_avPhotoContext', '_invPhotoSource', '_invRoomName', 'agentListedOff', 'agentValueAgain', 'invLineQty', 'invLineReviewed', 'invLineOpen', '_avSurveyOf'];
+const AV_VARS = ['_avRun', '_avForceComps', '_avAfter', 'AGENT_VALUE_BATCH', 'AGENT_VALUE_GENERAL_CEILING', 'AGENT_VALUE_WHOLE_FROM', 'AGENT_VALUE_MAX_COMPS', 'AGENT_CONDITIONS',
   'AGENT_VALUE_MARK_RE', 'AGENT_VALUE_NO_MARK_RE', 'AGENT_VALUE_CONFS', 'AGENT_VALUE_SOURCES', 'AGENT_VALUE_OWN', 'AGENT_VALUE_SALE_DATE_RE',
   'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'DECEDENT_SERVICES', 'DOC_TIERS',
   'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'AGENT_MAX_DETAILS', 'INV_VAL_SOURCES', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', 'AGENT_VALUE_READ_RE', 'AGENT_VALUE_HEDGE_RE', 'AGENT_LISTED_MAX', '_avAutoAgain', 'INV_CATEGORIES'];
@@ -370,14 +370,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(JSON.stringify(g._avTool('comps')), 'One or two short sentences, under forty words.', 'and the note\'s field says so');
   }
 
-  group('S3c · the deployment: 2026-10-26b, the app relies on it, and the banner leads with the comparable gap');
+  group('S3c · the deployment: at least 2026-10-26b, the app relies on it, and the banner names the comparable gap by its vintage');
   {
     // RESTATED 2026-10-26c: the release request's DocuSign action rides the next deployment; the agents' floor is unchanged.
-    eq((GS.match(/var BACKEND_VERSION = '([^']+)';/) || [])[1], '2026-10-26c', 'main-sync.gs is 2026-10-26c, carrying 2026-10-26b');
+    // RESTATED 2026-10-27: the listing survey (listing-survey.test.js S6) leads the banner now; this build's gap follows, by its vintage.
+    ok((GS.match(/var BACKEND_VERSION = '([^']+)';/) || [])[1] >= '2026-10-26c', 'main-sync.gs is 2026-10-26c or later, carrying 2026-10-26b');
     const B = sandbox({ vars: ['BACKEND_MIN_VERSION', 'BACKEND_FEATURE_COST'] });
-    eq(B.BACKEND_MIN_VERSION, '2026-10-26b', 'and the app relies on it');
-    ok(/^a search page, or a sale whose price was not shown, can stand as a sold comparable, so a researched figure resting on one prints \u201cauction comps\u201d; a long note from Agent Two stops mid-sentence; and neither agent grades an item\u2019s condition; on a deployment older than 2026-10-26, /.test(B.BACKEND_FEATURE_COST.version),
-      'the banner names the newest gap first, by consequence, then 2026-10-26\'s by its vintage');
+    ok(B.BACKEND_MIN_VERSION >= '2026-10-26b', 'and the app relies on it');
+    has(B.BACKEND_FEATURE_COST.version, 'on a deployment older than 2026-10-26b, a search page, or a sale whose price was not shown, can stand as a sold comparable, so a researched figure resting on one prints “auction comps”; a long note from Agent Two stops mid-sentence; and neither agent grades an item’s condition; on a deployment older than 2026-10-26, ',
+      'the banner names this gap by consequence and its vintage, then 2026-10-26\'s by its vintage');
   }
 
   group('S4 · the figures are checked: cents, a range round its point, a negative or missing value refused');
@@ -493,7 +494,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // 2026-10-25 (Anthony: "agent 2 confirm or update upon pricing. No need to flag"): the name comes back with the value,
     // and the category and the count stay the line's (agent-named-twice.test.js E, E2).
     has(sys, 'Never change a line\'s category or its quantity.', 'its category and count are never its to change');
-    has(sys, 'never set the value on asking prices alone', 'asking prices are not sales');
+    // RESTATED 2026-10-27 (Anthony: "A listing survey counts"): a few asking prices still never set it; ten close listings may
+    // (listing-survey.test.js holds that rule).
+    has(sys, 'never set the value on a few asking prices alone', 'asking prices are not sales');
     has(sys, 'Copy its URL exactly', 'the evidence rule is stated to the model as well as enforced');
     has(g._avSystem(CTXP), 'Value as of 2026-06-14, the valuation date for this estate', 'the estate\'s valuation date');
     has(g._avSystem({ estate: true }), 'not recorded yet', 'an estate with no valuation date says so');
@@ -871,7 +874,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             'invBequestFor', 'jobListEntries', 'invApprovalGap', 'invReceiptOwed', '_invBenListAttr',
             'invRatificationOwed', 'invFiduciaryMode', 'isDecedentJob', 'invReleaseCautions', 'invBequestElsewhere', '_invJob', 'invHavellinRecipient', 'invWrittenReleaseNeeded',
             // P22 (merged): the row reads a pickup record and a name left on a line moved off To a person.
-            'invPickupRecord', 'signedRecordsOf', 'invChannelLeftover', 'invChannelLeftoverText', '_invPanelLeftoverHtml', 'invLineUnsure', '_invEachInput', 'invUnitValue', 'invLineQty', '_invInputStyle', '_invCtrlMinW', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invNeedsAppraisal', 'invIsIntrinsic', 'invCatMeta', 'invLineAcceptedOnly', '_invRevBoxHtml', 'invIsMAIV', 'invMAIVDefaultCat', '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_jobInvRefs', '_agDupEligible', 'agentNamedTwice', 'agentNoticesOn'],
+            'invPickupRecord', 'signedRecordsOf', 'invChannelLeftover', 'invChannelLeftoverText', '_invPanelLeftoverHtml', 'invLineUnsure', '_invEachInput', 'invUnitValue', 'invLineQty', '_invInputStyle', '_invCtrlMinW', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invNeedsAppraisal', 'invIsIntrinsic', 'invCatMeta', 'invLineAcceptedOnly', '_invRevBoxHtml', 'invIsMAIV', 'invMAIVDefaultCat', '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_jobInvRefs', '_agDupEligible', 'agentNamedTwice', 'agentNoticesOn', '_avSurveyOf'],
       vars: ['INV_PLAN_CHANNEL_KINDS', 'INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick', '_agDupSet', 'DECEDENT_SERVICES', 'INV_RELEASE_CAUTIONS', '_avRun', '_avAfter', '_avForceComps',
              'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'INV_APPRAISAL_THRESHOLD', 'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', '_agDupSetJob', 'INV_HOLD_WORDS', 'INV_OPEN_HOLDS', 'INV_ACCEPT_AMMO_RE'],
       stubs: {

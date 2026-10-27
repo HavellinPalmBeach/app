@@ -6,6 +6,8 @@
 // Record went straight to the print dialog, and Cancel left nothing on screen. Each now opens in the document viewer
 // (_printDocument's `view`), titled by the paper's name with its client under it; the viewer's Print / Save PDF prints the page
 // it holds and the viewer comes back once the dialog closes (`after`), Cancel included; Close drops it.
+//   · Since 2026-10-27 the work bar's papers open the same way (Anthony: "Yes"): the Contents List, the Estate Inventory PDF,
+//     the Release Approval Request (the bar's and the selection's) and the Contents Record.
 //   · Every other caller of _printDocument prints straight away, as before; a test's stub still receives the page and title.
 // Driven on the real _printDocument, _openViewer, printDocViewer and closeDocViewer over the DOM stub, with the timers held so
 // the order is read: the page set, the dialog, the restore.
@@ -104,16 +106,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(after, [1], 'and `after` runs once the dialog has closed');
   }
 
-  group('V5 · the five More ▾ papers open in the viewer; the work bar’s papers and the rest print straight away');
+  // Restated 2026-10-27 (Anthony, asked whether the work bar's papers should open the same way: "Yes"): the Contents List, the
+  // Estate Inventory PDF, the Release Approval Request (the bar's and the selection's, one printer) and the Contents Record.
+  group('V5 · the five More ▾ papers and the work bar’s four open in the viewer; the rest print straight away');
   {
     const VIEW = { printAsFoundRecord: "'As-Found Record'", printCourtInventory: "'Court Inventory'", printTrustSchedule: "'Trust Schedule'",
-                   printAppraisalWorklist: "'Appraisal Worklist'", printIncidentRecord: 'title' };
+                   printAppraisalWorklist: "'Appraisal Worklist'", printIncidentRecord: 'title',
+                   printContentsList: "'Contents List'", printEstateInventoryReport: "'Estate Inventory'",
+                   printApprovalRequest: "'Release Approval Request'", printContentsRecord: "'Contents Record'" };
     Object.keys(VIEW).forEach((f) => {
       const b = noComments(fn(f));
       eq(count(b, '_printDocument('), 1, f + ': one print call');
       has(b, '{ view: true, job: job, label: ' + VIEW[f] + ' }', '⚠ ' + f + ' opens in the viewer, named');
     });
-    ['printContentsList', 'printEstateInventoryReport', 'printApprovalRequest', 'printContentsRecord', 'printDispositionLedger'].forEach((f) => {
+    ['printDispositionLedger'].forEach((f) => {
       lacks(noComments(fn(f)), 'view: true', f + ' prints straight away (not asked)');
     });
     has(noComments(fn('printDocViewer')), 'if (s.paper) {', 'the viewer prints a desk paper from the page it holds');

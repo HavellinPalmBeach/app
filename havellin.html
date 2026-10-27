@@ -1476,7 +1476,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.27 · 1:09am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.27 · 7:50am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6465,7 +6465,10 @@ var BACKEND_NEEDS_TYPES = ['saveMedia', 'saveInventory', 'job', 'saveAllJobs', '
 // AGENT_VALUE_NO_PRICE_RE); a long note ends at a whole sentence (_avClip); both agents grade condition off the photograph
 // (AGENT_CONDITIONS, sent). An older deployment keeps a search page, or a sale whose price was not shown, as a sold
 // comparable, so a researched figure resting on one prints "auction comps", cuts a long note mid-sentence, and grades nothing.
-var BACKEND_MIN_VERSION = '2026-10-26b';
+// 2026-10-27: a researched line with no sale but ten or more close listings counted, and valued under their middle price, is medium
+// confidence with its source *Listing survey* (the server's _avSurvey, AGENT_VALUE_SURVEY_MIN). An older deployment sends no survey,
+// so such a line stays low, marked unsure, and prints "general estimate".
+var BACKEND_MIN_VERSION = '2026-10-27';
 var _backendVersion = null;
 // The actions the deployment says it has (2026-10-26c), once the version probe answers; null until then. A route the app
 // offers only on a deployment that has it reads this (backendHas): the release request's DocuSign send.
@@ -6529,7 +6532,7 @@ var BACKEND_FEATURE_COST = {
   deleteJob:     'a client deleted here comes back from the other device',
   // One line for any deployment older than BACKEND_MIN_VERSION, so it names the newest gap first and says
   // which vintage the older one belongs to (the banner's title prints the version that answered).
-  version:       'a search page, or a sale whose price was not shown, can stand as a sold comparable, so a researched figure resting on one prints \u201cauction comps\u201d; a long note from Agent Two stops mid-sentence; and neither agent grades an item\u2019s condition; on a deployment older than 2026-10-26, the agents never move to a newer model by themselves (Agent One still runs on the older Opus 5), Agent Two never looks at the photograph of an item whose name is a guess or fixes a wrong category, a figure with no sale behind it prints as \u201cauction comps\u201d, and one slow request can mark a whole batch \u201cnot valued\u201d or lose a batch of names; on a deployment older than 2026-10-25b, a name you type or review on the desk (a wooden mirror retyped as Restoration Hardware) can come back from Agent Two as the generic thing and be valued as that, and a brand the crew says at the camera is not put into the name; on a deployment older than 2026-10-25, Agent Two flags a name it disagrees with (\u201cName may be wrong\u201d) instead of correcting it, puts a note on nearly every item it values (no condition recorded, a rough count, a search that ran short), and Agent One files everyday dishes as collectibles; on a deployment older than 2026-10-24, a blank line added to a photograph already named (Another item in this photo) makes Agent One read the whole photograph again, so every object in it goes on the list a second time, and its names carry a count (\u201capprox. 7 in stack\u201d) that the Qty box contradicts once corrected; on a deployment older than 2026-10-19b, a client\u2019s inventory reset in the Apps Script editor (resetInventoryConfirm) is undone by the first device that saves a line from before it, unless every device reloads first; on a deployment older than 2026-10-16, an incident reported on one device, or a key or fob received there while another device records a handoff, can be dropped when the sheet merges the job (the Incidents and Keys & access cards\u2019 lists are not yet merged entry by entry); on a deployment older than 2026-10-06, two devices\u2019 release signers are not merged and the client\u2019s workbook rounds its money; on a deployment older than 2026-10-05, a co-executor or co-trustee is not put on the DocuSign envelope beside the client, so they sign a printed copy of the agreement and the page they signed has to be filed from the timeline; on a deployment older than 2026-10-03, a co-trustee, a beneficiary, a signed copy filed to Drive, a find on site or a proceeds statement added on one device can be dropped by another device saving an older copy of the job, and the client\u2019s inventory workbook heads a trust\u2019s net proceeds \u201cNet to Estate\u201d; on a deployment older than 2026-10-01, File signed copy adds a second copy of the signed agreement to the client\u2019s Agreement folder instead of replacing the one there; on a deployment older than 2026-09-30b, a payment voided or marked cleared on one device can come back as it was from another device that changed the same payment before reloading, and count again; a firearm\u2019s serial, recipient or dealer route, recorded on one device, can be dropped from the sheet by another device\u2019s older copy of the item, until the first device next saves the inventory; and on a deployment older than 2026-09-30, two people editing different parts of one job (a vendor quote here, the team there) can also undo each other\u2019s work, a damaged store tab is emptied by the next save instead of refused, and Agent One can stop mid-answer on a busy photograph',
+  version:       'an item Agent Two researched and found no sale for stays marked unsure, and its paper reads general estimate, however many close listings it counted; on a deployment older than 2026-10-26b, a search page, or a sale whose price was not shown, can stand as a sold comparable, so a researched figure resting on one prints \u201cauction comps\u201d; a long note from Agent Two stops mid-sentence; and neither agent grades an item\u2019s condition; on a deployment older than 2026-10-26, the agents never move to a newer model by themselves (Agent One still runs on the older Opus 5), Agent Two never looks at the photograph of an item whose name is a guess or fixes a wrong category, a figure with no sale behind it prints as \u201cauction comps\u201d, and one slow request can mark a whole batch \u201cnot valued\u201d or lose a batch of names; on a deployment older than 2026-10-25b, a name you type or review on the desk (a wooden mirror retyped as Restoration Hardware) can come back from Agent Two as the generic thing and be valued as that, and a brand the crew says at the camera is not put into the name; on a deployment older than 2026-10-25, Agent Two flags a name it disagrees with (\u201cName may be wrong\u201d) instead of correcting it, puts a note on nearly every item it values (no condition recorded, a rough count, a search that ran short), and Agent One files everyday dishes as collectibles; on a deployment older than 2026-10-24, a blank line added to a photograph already named (Another item in this photo) makes Agent One read the whole photograph again, so every object in it goes on the list a second time, and its names carry a count (\u201capprox. 7 in stack\u201d) that the Qty box contradicts once corrected; on a deployment older than 2026-10-19b, a client\u2019s inventory reset in the Apps Script editor (resetInventoryConfirm) is undone by the first device that saves a line from before it, unless every device reloads first; on a deployment older than 2026-10-16, an incident reported on one device, or a key or fob received there while another device records a handoff, can be dropped when the sheet merges the job (the Incidents and Keys & access cards\u2019 lists are not yet merged entry by entry); on a deployment older than 2026-10-06, two devices\u2019 release signers are not merged and the client\u2019s workbook rounds its money; on a deployment older than 2026-10-05, a co-executor or co-trustee is not put on the DocuSign envelope beside the client, so they sign a printed copy of the agreement and the page they signed has to be filed from the timeline; on a deployment older than 2026-10-03, a co-trustee, a beneficiary, a signed copy filed to Drive, a find on site or a proceeds statement added on one device can be dropped by another device saving an older copy of the job, and the client\u2019s inventory workbook heads a trust\u2019s net proceeds \u201cNet to Estate\u201d; on a deployment older than 2026-10-01, File signed copy adds a second copy of the signed agreement to the client\u2019s Agreement folder instead of replacing the one there; on a deployment older than 2026-09-30b, a payment voided or marked cleared on one device can come back as it was from another device that changed the same payment before reloading, and count again; a firearm\u2019s serial, recipient or dealer route, recorded on one device, can be dropped from the sheet by another device\u2019s older copy of the item, until the first device next saves the inventory; and on a deployment older than 2026-09-30, two people editing different parts of one job (a vendor quote here, the team there) can also undo each other\u2019s work, a damaged store tab is emptied by the next save instead of refused, and Agent One can stop mid-answer on a busy photograph',
   preVersion:    'it predates the version check itself (2026-09-09), so client PDFs, photographs, DocuSign, Stripe and Agent One may all be missing as well'
 };
 
@@ -27555,7 +27558,7 @@ function savePhotoRefs(jobId) {
                dupOK:r.dupOK,
                // ⚠ AGENT TWO'S FIELDS (P23): its figure's range, comparables, WorthPoint lookup, confidence, notices,
                // who valued the line and when, the name it valued, a failure's reason, and the desk's acceptance.
-               valLow:r.valLow, valHigh:r.valHigh, valComps:r.valComps, valLookup:r.valLookup, valConf:r.valConf,
+               valLow:r.valLow, valHigh:r.valHigh, valComps:r.valComps, valSurvey:r.valSurvey, valLookup:r.valLookup, valConf:r.valConf,
                valNotices:r.valNotices, valuedBy:r.valuedBy, valAgentAt:r.valAgentAt, valNameAt:r.valNameAt, valNameFrom:r.valNameFrom,
                unitVal:r.unitVal,   // one article's value, typed on the row (Each × Qty = Total, 2026-10-25b)
                catBy:r.catBy,       // a category a person set on the bulk bar, which Agent Two never moves (2026-10-26)
@@ -28248,7 +28251,9 @@ function _invAgentCondition(ref, grade) {
 function invConditionText(ref) { return String((ref && ref.condition) || '').trim() || 'as photographed'; }
 // ⚠ 'General estimate' AND 'WorthPoint comps' ARE AGENT TWO'S (P23): an ordinary lot's going rate, and a sale a person
 // checked on WorthPoint. Each has its word on the schedules in INV_VAL_BASIS_WORDS, and a test holds the two lists together.
-var INV_VAL_SOURCES = ['Appraisal','Auction comps','Dealer quote','General estimate','Online comps','PR estimate','WorthPoint comps'];
+// 'Listing survey' (2026-10-27; Anthony: *"A listing survey counts"*) is a figure resting on many close listings and no sale: Agent
+// Two's where it counted them, or a person's who did the same.
+var INV_VAL_SOURCES = ['Appraisal','Auction comps','Dealer quote','General estimate','Listing survey','Online comps','PR estimate','WorthPoint comps'];
 // Personal-property appraiser credential bodies (ISA/ASA/AAA), gemology (GIA), and the
 // USPAP standard a qualified appraisal follows.
 var INV_APPRAISER_CREDS = ['ISA','ASA','AAA','USPAP-compliant','GIA','Other'];
@@ -30606,8 +30611,10 @@ function custodyEvents(ref) {
 // caller cannot leak its filename onto whatever is printed next.
 // ⚠ `opt.view` OPENS THE PAGE IN THE DOCUMENT VIEWER FIRST (2026-10-26; Anthony, on the desk's More ▾ papers: "as soon as I
 // cancel or I launch a printer ... it just disappears"): the page is read on screen, and the viewer's Print / Save PDF comes
-// back here with `opt.after`, which reopens the viewer once the dialog has closed. The callers that print straight away are
-// unchanged; a test's stub of this function still receives the page and its title.
+// back here with `opt.after`, which reopens the viewer once the dialog has closed. Since 2026-10-27 (Anthony: "Yes") the work
+// bar's papers open the same way: the Contents List, the Estate Inventory PDF, the Release Approval Request (the bar's and the
+// selection's) and the Contents Record. The callers that print straight away are unchanged; a test's stub of this function still
+// receives the page and its title.
 function _printDocument(html, title, opt) {
   var pt = document.getElementById('print-target');
   if (!pt) return false;
@@ -31064,7 +31071,7 @@ function printContentsList(jobId, opt) {
     + '</div></div>';
   // The probate package asks for the page itself (`opt.asHtml`, P17) — see printCourtInventory.
   if (opt && opt.asHtml) return { html: html, title: _invDocName(job, 'Contents List') };
-  _printDocument(html, _invDocName(job, 'Contents List'));
+  _printDocument(html, _invDocName(job, 'Contents List'), { view: true, job: job, label: 'Contents List' });   // on screen first (2026-10-27)
 }
 
 // ── 02 · After Inventory ──────────────────────────────────────────────────────
@@ -31229,7 +31236,7 @@ function printEstateInventoryReport(jobId, opt) {
     + '</div>';
   // The probate package asks for the page itself (`opt.asHtml`, P17) — see printCourtInventory.
   if (opt && opt.asHtml) return { html: html, title: _invDocName(job, 'Estate Inventory') };
-  _printDocument(html, _invDocName(job, 'Estate Inventory'));
+  _printDocument(html, _invDocName(job, 'Estate Inventory'), { view: true, job: job, label: 'Estate Inventory' });   // on screen first (2026-10-27)
 }
 
 // ── CSV ───────────────────────────────────────────────────────────────────────
@@ -32637,7 +32644,7 @@ function printApprovalRequest(jobId, selectedOnly, opt) {
     + '</div>';
   var _title = _invDocName(job, 'Release Approval Request');   // APPROVAL_REQ_TITLE, as a literal: sandboxes lift this printer alone
   if (_asHtml) return { html: html, title: _title, items: items, asked: asked, ratify: ratify, held: held, esign: _esign, fids: fids };
-  _printDocument(html, _title);
+  _printDocument(html, _title, { view: true, job: job, label: 'Release Approval Request' });   // on screen first (2026-10-27)
 }
 
 // ═══ SENDING THE RELEASE APPROVAL REQUEST (2026-10-17; Anthony: "Build the send button") ═══
@@ -36200,7 +36207,7 @@ function printContentsRecord(jobId, opt) {
     + contentsRecordSignoff(job, rec)
     + '</div>';
   if (asHtml) return { html: html, title: _invDocName(job, 'Contents Record') };
-  _printDocument(html, _invDocName(job, 'Contents Record'));
+  _printDocument(html, _invDocName(job, 'Contents Record'), { view: true, job: job, label: 'Contents Record' });   // on screen first (2026-10-27)
 }
 // ⚠⚠ THE PAPER A LIVING FAMILY SIGNS (P25, Q51; Anthony, 2026-10-09: "One paper"). The client's signature under the record
 // of what stayed and what went, withheld while any line has no destination (as the Disposition Ledger withholds its
@@ -39238,7 +39245,7 @@ var AGENT_VALUE_NO_MARK_RE = /\b(?:no|not|illegible|unreadable|unread|indistinct
 // Olufsen"), and an ordinary lot travelled as text, so the guess was priced as fact. Still an ordinary lot: no research, no close-ups.
 var AGENT_VALUE_HEDGE_RE = /\b(?:appears? to be|likely|possibly|probably|in the style of|attributed to)\b/i;
 var AGENT_VALUE_CONFS = ['high', 'medium', 'low'];
-var AGENT_VALUE_SOURCES = ['Auction comps', 'Online comps', 'General estimate'];
+var AGENT_VALUE_SOURCES = ['Auction comps', 'Online comps', 'General estimate', 'Listing survey'];
 var _avRun = {};          // jobId -> the run on screen (session only, like Agent One's)
 var _avForceComps = {};   // stableId -> 1: sent to research by a person (Re-value) or by the ceiling (session only)
 
@@ -39396,19 +39403,33 @@ function _avComp(c) {
 }
 
 // The agent's own fields: what an appraisal takes off the line (spec §2.3), and what a Re-value replaces.
-var AGENT_VALUE_OWN = ['valLow', 'valHigh', 'valComps', 'valLookup', 'valConf', 'valNotices', 'valNameAt',
+var AGENT_VALUE_OWN = ['valLow', 'valHigh', 'valComps', 'valSurvey', 'valLookup', 'valConf', 'valNotices', 'valNameAt',
                        'valAgentAt', 'valFailed', 'valReviewed', 'valReviewedBy', 'valReviewedAt'];
+
+// ⚠ THE LISTINGS AGENT TWO COUNTED WHERE NO SALE WAS FOUND (2026-10-27; Anthony: *"A listing survey counts"*): how many, the lowest,
+// middle and highest asking price for one article, and the page it counted them on, as the server checked them (its _avSurvey).
+// Kept on the line's record so a person can open the page; the figure's source says *Listing survey* where the survey earned it.
+function _avSurveyOf(sv) {
+  if (!sv || typeof sv !== 'object') return null;
+  var n = Number(sv.count), lo = Number(sv.low), md = Number(sv.median), hi = Number(sv.high), url = String(sv.url || '').trim();
+  if (!(n >= 1 && n === Math.floor(n)) || !(lo > 0 && md >= lo && hi >= md) || !/^https?:\/\//i.test(url)) return null;
+  return { count: n, low: roundCents(lo), median: roundCents(md), high: roundCents(hi), url: url.slice(0, 400) };
+}
 
 // ⚠⚠ AN AGENT'S FIGURE READS IN WHOLE DOLLARS EACH (2026-10-26b; Anthony, off seven cabbage-ware plates Agent Two valued at $75, so
 // $10.71 each: "Do we say $10 or do we say $12? Like, is it accurate down to the penny"; he took "Whole dollars each"): one article's
 // share of the agent's figure to the nearest dollar, and the line's figure that times its count ($11 × 7 = $77), so Each × Qty = Total
-// holds in whole dollars. Under a dollar each it stays in cents (sixty forks at 75¢ are $45, never $60). A value is a reading, not
-// money owed: the cents rule (roundCents, P17) is for what the client is billed, and a figure a person types stays as typed. Read by
-// the one writer for the figure and both ends of its range.
+// holds in whole dollars. Under AGENT_VALUE_WHOLE_FROM ($10) each it stays in cents (2026-10-27; Anthony, asked whether a group of
+// cheap things should round from $1 or from $10 each, took "From $10 each": sixty forks at $75 are $1.25 each and stay $75, where
+// rounding from $1 made them $60). A value is a reading, not money owed: the cents rule (roundCents,
+// P17) is for what the client is billed, and a figure a person types stays as typed. Read by the one writer for the figure and both
+// ends of its range; rounding only at or above the threshold keeps low ≤ figure ≤ high (anything rounded is at least $10, anything
+// below it is under $10).
+var AGENT_VALUE_WHOLE_FROM = 10;
 function agentValueWhole(x, qty) {
   var q = Math.max(1, parseInt(qty, 10) || 1), each = Number(x) / q;
   if (x === '' || x == null || !isFinite(each) || each < 0) return NaN;
-  return roundCents((each >= 1 ? Math.round(each) : roundCents(each)) * q);
+  return roundCents((each >= AGENT_VALUE_WHOLE_FROM ? Math.round(each) : roundCents(each)) * q);
 }
 
 // ─── THE ONE WRITER ─────────────────────────────────────────────────────────────
@@ -39432,6 +39453,8 @@ function _avWrite(jobId, stableId, res, job, opts) {
   ref.valLow = lo;
   ref.valHigh = hi;
   ref.valComps = (res.comps || []).slice(0, AGENT_VALUE_MAX_COMPS).map(_avComp);
+  var _sv = _avSurveyOf(res.survey);
+  if (_sv) ref.valSurvey = _sv; else delete ref.valSurvey;
   ref.valLookup = String(res.lookup || '').slice(0, 160);
   ref.valConf = AGENT_VALUE_CONFS.indexOf(res.confidence) >= 0 ? res.confidence : 'low';
   ref.valNotices = (res.notices || []).filter(function(n) { return n && String(n.text || '').trim(); }).slice(0, 4)
@@ -40068,6 +40091,14 @@ function _avPanelHtml(job, ref) {
       return '<div style="color:var(--bronze);"><strong>' + esc(_avNoticeLabel(n.kind)) + '</strong> &middot; ' + esc(n.text) + '</div>';
     }).join('') + '</div>';
   }
+  // The listings it counted where no sale was found (2026-10-27): a ceiling, with the page to open.
+  var sv = _avSurveyOf(ref.valSurvey);
+  if (sv) {
+    body += '<div class="av-survey" style="margin-top:6px;font-size:10.5px;">'
+      + '<span style="color:var(--gray);font-weight:700;">LISTED</span> '
+      + esc(sv.count + ' close listing' + (sv.count === 1 ? '' : 's') + ' for sale, ' + fmt(sv.low) + ' to ' + fmt(sv.high) + ' each, middle ' + fmt(sv.median))
+      + ' &middot; <a href="' + esc(sv.url) + '" target="_blank" rel="noopener">the page counted</a></div>';
+  }
   var comps = ref.valComps || [];
   if (comps.length) {
     body += '<div style="margin-top:6px;font-size:10.5px;">' + comps.map(function(c) {
@@ -40110,7 +40141,7 @@ function invValBasisWord(ref, jobId) {
   if (invAppraised(ref)) { var _who = invLineAppraiser(ref, jobId); return 'appraisal' + (_who ? ' \u00b7 ' + _who : ''); }
   var s = String((ref && ref.valSource) || '').trim();
   var words = { 'Appraisal': 'appraisal', 'Auction comps': 'auction comps', 'Dealer quote': 'dealer quote',
-    'General estimate': 'general estimate', 'Online comps': 'online comps', 'PR estimate': 'PR estimate', 'WorthPoint comps': 'WorthPoint comps' };
+    'General estimate': 'general estimate', 'Listing survey': 'listing survey', 'Online comps': 'online comps', 'PR estimate': 'PR estimate', 'WorthPoint comps': 'WorthPoint comps' };
   return words[s] || s;
 }
 

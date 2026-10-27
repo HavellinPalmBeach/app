@@ -734,9 +734,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(t, 'Each photo is graded Excellent, Good, Fair or Poor. If it is wrong, change it in the ▾ record; yours is never written over. Blank means the photo could not show it.', 'condition, as the page says');
     eq(sandbox({ vars: ['AGENT_CONDITIONS'] }).AGENT_CONDITIONS, ['Excellent', 'Good', 'Fair', 'Poor'], '…the grades the agents give');
     has(code(fn('_invEdit')), "if (key === 'condition') ref.condBy = 'desk';", '…and a grade typed in the record is never written over');
-    has(t, 'Seven plates at $75 read $11 each, $77; under a dollar each keeps its cents. A value you type stays as typed. A value well under what dealers ask is not wrong: asking is not selling; a close-up of a maker’s mark moves it.', 'whole dollars each, as the page says');
-    const W = sandbox({ fns: ['agentValueWhole', 'roundCents'] });
-    eq([W.agentValueWhole(75, 7), W.agentValueWhole(45, 60)], [77, 45], '…$11 × 7 = $77; sixty at 75¢ stay $45');
+    // Restated 2026-10-27 (Anthony: "From $10 each").
+    has(t, 'Values are whole dollars from $10 each. Seven plates at $75 read $11 each, $77; under $10 each keeps its cents. A value you type stays as typed. A value well under what dealers ask is not wrong: asking is not selling; a close-up of a maker’s mark moves it.', 'whole dollars from $10 each, as the page says');
+    const W = sandbox({ fns: ['agentValueWhole', 'roundCents'], vars: ['AGENT_VALUE_WHOLE_FROM'] });
+    eq([W.agentValueWhole(75, 7), W.agentValueWhole(75, 60)], [77, 75], '…$11 × 7 = $77; sixty forks at $75 ($1.25 each) stay $75');
     has(t, 'Tick its rows and press Re-value on the selection bar. Values you or an appraiser typed are left alone.', 'Re-value on the selection bar, as the page says');
     has(code(fn('_renderInvBulk')), '>Re-value</button>', '…the selection bar carries it');
     has(code(fn('invBulkRevalue')), "r.valuedBy !== 'agent'", '…and leaves a figure a person or an appraiser recorded');
@@ -744,7 +745,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(code(fn('invSplitItemClick')), 'added for another thing in this photograph', '…the toast says what it added');
     has(code(fn('_renderInvWorkbar')), "'every flagged item is checked'", 'papers print marked IN PROGRESS until every flagged item is checked (the work bar, 2026-10-26)');
     has(code(fn('_renderInvWorkbar')), '&mdash; they are never withheld.', '…never withheld');
-    has(t, 'Papers print marked IN PROGRESS until every flagged item is checked; they are never held back.', 'as the page says (the stamp itself is driven above)');
+    has(t, 'Papers print marked IN PROGRESS until every flagged item is checked, never held back.', 'as the page says (the stamp itself is driven above)');
     lacks(t, 'until every item is decided, valued and, where flagged, ticked', '⚠ never that every item must be decided and valued (a ticked Undecided item counts; the second review)');
     has(t, 'The Court Inventory and the Trust Schedule stay FINAL; their count of Agent Two’s values is bronze until the list is read.', 'and the schedules (Q109, driven above)');
     has(code(fn('_renderInvWorkbar')), "'+ Add line item'", '+ Add line item');
@@ -807,7 +808,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // More ▾'s papers on screen first (2026-10-26): the viewer, its Print / Save PDF.
     has(code(fn('printAsFoundRecord')), '{ view: true, job: job, label: ', 'a More ▾ paper opens in the viewer');
     has(SRC, 'onclick="printDocViewer()">&#128424; Print / Save PDF</button>', 'its Print / Save PDF');
-    has(t, 'Those under More ▾ open on screen first: Print / Save PDF from there.', 'as the page says');
+    has(t, 'Bar and More ▾ papers open on screen first: Print / Save PDF from there.', 'as the page says (the bar\'s since 2026-10-27)');
     // The letter, the hold for a taker and Discard draft (2026-10-26): each sentence on the code that makes it true.
     eq(sandbox({ vars: ['INV_LINE_INITIAL_MIN'] }).INV_LINE_INITIAL_MIN, 500, 'one initial per group under $500');
     has(code(fn('printApprovalRequest')), '!invReleaseRecipientNamed(r) && !invRatificationOwed(r, job)', 'an item with nobody to take it is held off the request');
