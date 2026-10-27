@@ -466,9 +466,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(r.barLine(), 'not filed', 'the bar owes no filing');
     // Once: running it again writes nothing more.
     const before = JSON.stringify([r.c._photoRefs[7], r.job().signedRecords]);
+    const upd1 = r.job().updatedAt, sync1 = r.saves.filter((x) => x === 'sync').length;
     eq(r.c.approvalEnvelopeApply(7), 0, 'applied once');
     r.c.approvalEnvelopeFile(7, { auto: true });
     eq(JSON.stringify([r.c._photoRefs[7], r.job().signedRecords]), before, '⚠ and a second pass changes nothing');
+    eq([r.job().updatedAt, r.saves.filter((x) => x === 'sync').length], [upd1, sync1], '⚠⚠ nor stamps the job and syncs it again (the desk reads every 15 s)');
+    // An approval a person takes off by hand afterwards stays off: the envelope is not written over it again.
+    r.edit('a', (x) => { delete x.authBy; delete x.approvalDate; });
+    r.at(NOW + 46 * MIN);
+    r.c._invReadAt[7] = NOW + 46 * MIN;
+    r.c.approvalEnvelopeApply(7);
+    eq(r.row('a').authBy, undefined, '⚠⚠ a hand correction after DocuSign is not undone by the next read');
   });
 
   // ═══════════════════════════════════════════════════════════════════════
