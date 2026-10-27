@@ -29775,14 +29775,8 @@ function _invEdit(jobId, stableId, key, el) {
     });
   }
   if (invLineReviewed(ref, _invAcceptCtxOf(_invJob(jobId))) !== _revWas && typeof _invReviewRepaint === 'function') _invReviewRepaint(jobId, ref);
-  // And the list's read (Q107): a change to the list after it makes it the read of an earlier list, and the work bar (its read
-  // line and its sentence) is redrawn when what it drew no longer holds.
-  var _rdEl = document.getElementById('inv-read-' + jobId), _rdJob = _invJob(jobId);
-  if (_rdEl && _rdJob && typeof _renderInvWorkbar === 'function'
-      && (_rdEl.getAttribute ? _rdEl.getAttribute('data-rk') : null) !== _invReadKey(_rdJob, _invReviewStats(_jobInvRefs(jobId), _invAcceptCtxOf(_rdJob)))) {
-    var _wbEl = document.getElementById('inv-workbar');
-    if (_wbEl) _wbEl.outerHTML = _renderInvWorkbar(_rdJob, _jobInvRefs(jobId));
-  }
+  // And the list's read (Q107): a change to the list after it makes it the read of an earlier list.
+  if (typeof _invReadLineRepaint === 'function') _invReadLineRepaint(jobId);
   // And Agent One's (Q90): a name or a category typed on a decided line reviews it, and its Look at this goes quiet.
   if ((key === 'objectName' || key === 'category') && typeof _invRefreshAgentNotices === 'function') _invRefreshAgentNotices(jobId);
   // These feed the Summary rollups; refresh only the summary (table inputs keep focus).
@@ -36453,6 +36447,7 @@ function waiveAppraisal(jobId, stableId) {
   _invRefreshGuardrail(jobId); _invRefreshSummary(jobId); _scheduleInventorySync(jobId);
   // A waiver answers the appraisal's hold (invLineHold), so the row's box, its group and the work bar follow (the second review).
   if (typeof _invReviewRepaint === 'function') _invReviewRepaint(jobId, ref);
+  if (typeof _invRefreshFlagStrip === 'function') _invRefreshFlagStrip(jobId);   // the Not reviewed chip (the build's step)
 }
 // The six counts, repainted in place. Naming an item clears it off the Unnamed chip and
 // filing it can move it onto the appraisal one, and neither redraws the list, deliberately,
@@ -36732,7 +36727,11 @@ function _invRefreshFromCloud() {
     // client picked, never on a timer that could redraw over somebody typing.
     // ⚠ AND A READ THAT CHANGED NOTHING STILL ENDS THE BARS' "loading…" (2026-10-22): the heads alone, no redraw.
     if (changed || made) renderInventoryTab();
-    else if (typeof _deskFoldHeadsRepaint === 'function') _deskFoldHeadsRepaint(jobId);
+    else {
+      if (typeof _deskFoldHeadsRepaint === 'function') _deskFoldHeadsRepaint(jobId);
+      // And the read's line, which waited on this read too (the build's browser step: it kept "still loading" after it).
+      if (typeof _invReadLineRepaint === 'function') _invReadLineRepaint(jobId);
+    }
     if (typeof _invCloudRetryArm === 'function' && _invManifestUnread(jobId) && _invCloudFailed[jobId]) _invCloudRetryArm(jobId);
   });
 }
@@ -37071,7 +37070,7 @@ function _invGroupItems(job, items) {
 // The words pair a calibre or a gauge with a round, a shell or the calibre's own suffix ("22 LR", "45 ACP", "300 Win Mag"),
 // and read Agent One's first reading too (`valNameFrom`). The reviews' lists (2026-10-26) are in review-flagged.test.js:
 // "Box of 22 LR rounds" held, black powder-coated patio chairs, gunpowder tea, sea shells and a 12-gauge cord not.
-var INV_ACCEPT_AMMO_RE = /\b(?:ammunition|ammo|shotshells?|shotgun shells?|smokeless powder|buckshot|birdshot|rimfire|centerfire|percussion caps|reloading (?:press|dies|supplies|equipment))\b|\bgunpowder\b(?!\s+(?:green\s+)?tea)|\bblack powder\b(?![- ]?coat)|\b(?:(?:small|large)\s+(?:pistol|rifle)(?:\s+magnum)?|shotshell|209|CCI(?:\s+\w+)?)\s+primers\b|(?:^|[^\w.])\.(?:17|22|220|223|243|25|257|270|30|300|303|308|32|338|35|357|38|380|40|410|44|45|50)(?![\d.])(?=\s*(?:[,;)]|$)|[\s-]*(?:LR|WMR|HMR|Mag(?:num)?|Special|Spl|ACP|Auto|S&W|Win(?:chester)?|Rem(?:ington)?|Short|Long|BMG|cal(?:iber)?|bore|gauge|ga|rifle|pistol|revolver|derringer|shotgun|rounds?|cartridges?|shells?|bullets?|ammo|ammunition|brass|FMJ|JHP)\b|-\d{2,3}\b)|\b\d{1,3}[- ]?(?:gauge|ga|bore)\.?\s+(?:[a-z&-]+\s+){0,4}(?:shells?|shotshells?|loads?|slugs?|shot|ammo|ammunition|rounds?|cartridges?|buckshot|birdshot)\b|\b\d{1,2}(?:\.\d{1,2})?\s?mm\s+(?:(?:rounds?|cartridges?|ammo|ammunition|luger|parabellum|makarov|bullets?|FMJ|JHP|hollow\s?points?)\b|\+P)|\b(?:17|22|25|32|35|38|40|41|44|45|50|204|222|223|243|257|260|270|280|300|303|308|338|357|380|6\.5|5\.56|7\.62|6mm|7mm)\s?(?:LR|WMR|HMR|Mag(?:num)?|Special|Spl|ACP|Auto|S&W|Win(?:chester)?(?:\s?Mag(?:num)?)?|Rem(?:ington)?|Creedmoor|Grendel|PRC|NATO|BMG|Blackout|AAC|(?:Long\s)?Colt|Swift|x\s?(?:39|51|54R?)|cal(?:iber)?|FMJ|JHP)\b|\b(?:204|222|223|243|257|260|270|280|303|308|338|357|380)\s(?:rounds?|cartridges?|ammo|ammunition|brass|bullets?)\b|\b(?:30-06|25-06|30-30|7\.62\s?x\s?(?:39|51|54R?)|5\.56\s?(?:NATO|mm)|6\.5\s?Creedmoor)(?!\d)|\b(?:rounds?|cartridges?|bullets?|shells?)\s+(?:of|for)\s+(?:a\s+|an\s+|the\s+)?(?:\.\d{2,3}\b|\d{1,3}\s?(?:mm|ga|gauge|cal(?:iber)?)\b|rifle|pistol|shotgun|revolver|handgun)/i;
+var INV_ACCEPT_AMMO_RE = /\b(?:ammunition|ammo|shotshells?|shotgun shells?|smokeless powder|buckshot|birdshot|rimfire|centerfire|percussion caps|reloading (?:press|dies|supplies|equipment))\b|\bgunpowder\b(?!\s+(?:green\s+)?tea)|\bblack powder\b(?![- ]?coat)|\b(?:(?:small|large)\s+(?:pistol|rifle)(?:\s+magnum)?|shotshell|209|CCI(?:\s+\w+)?)\s+primers\b|(?:^|[^\w.])\.(?:17|22|220|223|243|25|257|270|30|300|303|308|32|338|35|357|38|380|40|410|44|45|50)(?![\d.])(?=\s*(?:[,;)]|$)|[\s-]*(?:LR|WMR|HMR|Mag(?:num)?|Special|Spl|ACP|Auto|S&W|Win(?:chester)?|Rem(?:ington)?|Short|Long|BMG|cal(?:iber)?|bore|gauge|ga|rifle|pistol|revolver|derringer|shotgun|rounds?|cartridges?|shells?|bullets?|ammo|ammunition|brass|FMJ|JHP)\b|-\d{2,3}\b)|\b\d{1,3}[- ]?(?:gauge|ga|bore)\.?\s+(?:[a-z&-]+\s+){0,4}(?:shells?|shotshells?|loads?|slugs?|shot|ammo|ammunition|rounds?|cartridges?|buckshot|birdshot)\b|\b\d{1,2}(?:\.\d{1,2})?\s?mm\s+(?:(?:rounds?|cartridges?|ammo|ammunition|luger|parabellum|makarov|bullets?|FMJ|JHP|hollow\s?points?)\b|\+P)|\b(?:17|22|25|32|35|38|40|41|44|45|50|204|222|223|243|257|260|270|280|300|303|308|338|357|380|6\.5|5\.56|7\.62|6mm|7mm)\s?(?:LR|WMR|HMR|Mag(?:num)?|Special|Spl|ACP|Auto|S&W|Win(?:chester)?(?:\s?Mag(?:num)?)?|Rem(?:ington)?|Creedmoor|Grendel|PRC|NATO|BMG|Blackout|AAC|(?:Long\s)?Colt|Swift|x\s?(?:39|51|54R?)|cal(?:iber)?|FMJ|JHP)\b|\b(?:204|222|223|243|257|260|270|280|303|308|338|357|380)\s(?:rounds?|cartridges?|ammo|ammunition|brass|bullets?)\b|\b(?:30-06|25-06|30-30|7\.62\s?x\s?(?:39|51|54R?)|5\.56\s?(?:NATO|mm)|6\.5\s?Creedmoor)(?!\d)|\b(?:rounds?|cartridges?|bullets?|shells?)\s+(?:of|for)\s+(?:a\s+|an\s+|the\s+)?(?:\.\d{2,3}\b|\d{1,3}\s?(?:mm|ga|gauge|cal(?:iber)?)\b|rifle|pistol|shotgun|revolver|handgun)|\b(?:rifle|pistol|handgun|revolver|shotgun)\s+(?:primers|cartridges?|rounds?|ammo|ammunition|shells?|bullets?|brass)\b|\bprimers,?\s+(?:small|large)\s+(?:pistol|rifle)\b|\b(?:shells?|rounds?|cartridges?|bullets?|ammo|ammunition)\s*,\s*(?:\.\d{2,3}\b|\d{1,3}\s?(?:mm|ga|gauge|cal(?:iber)?)\b)|\b9\s?mm\s*(?=$|[,;)])|\b(?:Hodgdon|IMR|Alliant|Vihtavuori|Ramshot)\b[^;]{0,40}\bpowder\b|\bpowder\b[^;]{0,40}\b(?:Hodgdon|IMR|Alliant|Vihtavuori|Ramshot)\b|\breloading powder\b/i;
 // The job-wide facts the rule reads: the job, every line in an open Possible duplicates group, and the lines by id (a search
 // of the manifest per line was half of a 3,000-line pass, the second review). ⚠ NO CONTEXT, NO LINE STANDS BY ITSELF.
 function invAcceptCtx(job, all) {
@@ -37240,8 +37239,9 @@ function invListReadWords(rd) {
 // Pressed only on a copy that has read the sheet: while it is loading, or its last read failed, the list on screen can be
 // missing what another device changed (the second reviews pressed it over "sheet unreachable: this device's copy").
 function invListReadRefusal(jobId) {
-  if (_invManifestUnread(jobId)) return 'the list is still loading from the sheet';
+  // Unreachable first: a failed first read leaves the manifest unread as well, and the bars say unreachable (deskFoldState).
   if (typeof _invCloudFailed !== 'undefined' && _invCloudFailed[jobId]) return 'the sheet is unreachable: this is this device’s copy';
+  if (_invManifestUnread(jobId)) return 'the list is still loading from the sheet';
   return '';
 }
 function invMarkListRead(jobId) {
@@ -37259,11 +37259,21 @@ function invMarkListRead(jobId) {
 function _invReadKey(job, st) {
   if (!st || !st.total) return '';
   var rd = invListRead(job);
-  return (st.complete ? 'c' : 'o') + (st.accepted ? 'a' : '') + (rd ? (rd.current ? 'r' : 's') : 'n') + (invListReadRefusal(job.id) ? 'w' : '');
+  return (st.complete ? 'c' : 'o') + (st.accepted ? 'a' : '') + (rd ? (rd.current ? 'r' : 's') : 'n') + invListReadRefusal(job.id);
+}
+// The work bar redrawn where what its read line drew (`data-rk`) no longer holds: after an edit (_invEdit), and after a
+// sheet read that changed nothing (_invRefreshFromCloud), which still ends "the list is still loading from the sheet".
+function _invReadLineRepaint(jobId) {
+  var el = document.getElementById('inv-read-' + jobId), job = _invJob(jobId);
+  if (!el || !job || typeof _renderInvWorkbar !== 'function') return false;
+  if ((el.getAttribute ? el.getAttribute('data-rk') : null) === _invReadKey(job, _invReviewStats(_jobInvRefs(jobId), _invAcceptCtxOf(job)))) return false;
+  var wb = document.getElementById('inv-workbar');
+  if (wb) wb.outerHTML = _renderInvWorkbar(job, _jobInvRefs(jobId));
+  return !!wb;
 }
 function _invListReadHtml(job, st) {
   var host = function(inner, ok) {
-    return '<div id="inv-read-' + job.id + '" data-rk="' + _invReadKey(job, st) + '" style="font-size:10.5px;color:'
+    return '<div id="inv-read-' + job.id + '" data-rk="' + esc(_invReadKey(job, st)) + '" style="font-size:10.5px;color:'
       + (ok ? 'var(--ok-tx)' : 'var(--gray)') + ';' + (inner ? 'margin-top:7px;' : '') + '">' + inner + '</div>';
   };
   if (!st || !st.total || !st.accepted) return host('', false);
