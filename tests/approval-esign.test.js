@@ -62,6 +62,16 @@ function sr(e) {
 }
 const res = (obj, status) => ({ ok: (status || 200) < 300, status: status || 200, json: () => sp(obj), text: () => sp(JSON.stringify(obj)) });
 
+// An answer held back until the test releases it: each step chained on it waits, and runs in order on release.
+function held() {
+  const chain = [];
+  const p = { __sync: true, then(f) { chain.push(f); return p; }, catch() { return p; }, finally() { return p; } };
+  return { p, release(v) {
+    let x = v;
+    chain.forEach((f) => { if (!f) return; x = f(x); if (x && x.__sync) { let y; x.then((z) => { y = z; }); x = y; } });
+  } };
+}
+
 // The fake network: the Apps Script /exec (GET loadMedia; POST uploadHtml, htmlToPdf, getSubfolders), Google's userinfo
 // and the Gmail drafts endpoint. Everything posted is kept for the assertions.
 const SYNC = 'https://script.google.com/macros/s/APPROVALSEND/exec';
@@ -85,6 +95,7 @@ function net(opts) {
       if (body.action === 'getSubfolders') return sp(res({ ok: true, subfolders: null }));
       if (body.action === 'esignSendRequest') {
         log.esign.push(body);
+        if (o.esignHold) return o.esignHold.p;
         return sp(res(o.esignSend || { ok: true, envelopeId: 'env-r1', status: 'sent',
           signers: (body.signers || []).map((s, i) => ({ name: s.name, email: s.email, recipientId: String(i + 1), n: i + 1 })) }));
       }
@@ -395,6 +406,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     r.c._invPick = { a: 1 };
     eq(r.c.invRecordApproval(7), false, 'the bulk bar\'s Record approval refuses a line on the envelope');
     has(r.alerts.join(' | '), '#1 is out for signature in DocuSign', 'naming it');
+    // Only what the page carries is sent: a request of lines already gone asks for signatures and no initials, so DocuSign is
+    // told of no initials marker (an anchor it cannot find refuses the envelope).
+    const goneRows = ROWS().map((x) => (x.disposition === 'Keep' ? x : Object.assign(x, { dispDate: '2026-10-15' })));
+    const g2 = dsRig({ rows: goneRows });
+    g2.c.sendApprovalRequestEsign(7);
+    const gp = g2.N.log.esign[0] || {};
+    lacks(g2.N.log.pdfs[0] || '', '/hri1/', 'the page of lines already gone carries no initials marker');
+    eq((gp.signers || []).map((x) => x.anchors), [['reqSig1', 'reqDate1'], ['reqSig2', 'reqDate2']], '⚠⚠ so each trustee is sent with their signature and date markers alone');
     // DocuSign refuses: nothing recorded.
     const no = dsRig({ net: { esignSend: { ok: false, error: 'DocuSign refused the envelope (HTTP 400): ANCHOR_TAB_STRING_NOT_FOUND' } } });
     no.c.sendApprovalRequestEsign(7);
@@ -612,6 +631,45 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     d.c.approvalEnvelopeRefresh({ jobId: 7 });
     ['a', 'b', 'd'].forEach((id) => d.edit(id, (x) => { x.authBy = 'Thomas Ellison; Catherine Ellison-Reyes'; x.approvalDate = '2026-10-20'; }));
     eq((d.bar().bits || []).filter((x) => x.tone === 'red').length, 0, 'every line approved by hand since: no red bar');
+    // DocuSign answers after the watchdog let go: the envelope went, so it is recorded all the same (the watchdog's notice has
+    // already spoken; nothing is finished twice). A refusal after the watchdog writes nothing and says nothing.
+    const lateRun = (answer) => {
+      const L = dsRig();
+      if (answer) L.N.opts.esignSend = answer;
+      const job = L.job();
+      const page = attempt(() => L.c.printApprovalRequest(7, false, { asHtml: true, esign: true })).val || {};
+      const ids = (page.asked || []).concat(page.ratify || []).map((x) => String(x.stableId));
+      let finished = 0;
+      attempt(() => L.c.approvalRequestSendEsign(job, page, 'JVBERi0xLjQ=', '', 'https://drive.google.com/file/d/up1/view', ids,
+        L.c.approvalRequestRecipients(job), () => {}, () => { finished++; }, () => true));
+      return { L, finished, n: L.notices.length };
+    };
+    const late = lateRun(null);
+    eq(late.L.N.log.esign.length, 1, 'the request was posted once');
+    eq((late.L.env() || {}).id, 'env-r1', '⚠⚠ an answer after the watchdog still records the envelope');
+    eq((late.L.st() || {}).sentAt ? 'sent' : 'not', 'sent', 'and records the request as sent');
+    eq(late.finished, 0, 'the watchdog already finished the press: not finished twice');
+    has(late.L.last().m, 'DocuSign answered late, and the request did go: Sent through DocuSign to Thomas Ellison and Catherine Ellison-Reyes', 'saying it went, late');
+    eq(late.L.c._approvalEsignOut[7], undefined, 'the in-flight mark is off once DocuSign answers');
+    // While DocuSign has not answered, the in-flight mark itself refuses a second send by either route.
+    const h = held();
+    const H = dsRig({ net: { esignHold: h } });
+    H.c.sendApprovalRequestEsign(7);
+    eq(H.N.log.esign.length, 1, 'the first send is posted and waits on DocuSign');
+    eq(H.env(), null, 'nothing recorded yet');
+    eq(H.c._approvalEsignOut[7], true, '⚠⚠ the send marks itself out until DocuSign answers');
+    const nAsk = H.N.log.esign.length;
+    H.c.sendApprovalRequestEsign(7);
+    H.c.sendApprovalRequest(7);
+    eq(H.N.log.esign.length, nAsk, '⚠ a second press posts nothing meanwhile');
+    eq(H.N.log.drafts.length, 0, 'and the email route drafts nothing');
+    h.release(res({ ok: true, envelopeId: 'env-r1', status: 'sent', signers: [] }));
+    eq((H.env() || {}).id, 'env-r1', 'the answer lands and is recorded');
+    eq(H.c._approvalEsignOut[7], undefined, 'and the mark comes off');
+    const lateNo = lateRun({ ok: false, error: 'DocuSign refused the envelope' });
+    eq(lateNo.L.env(), null, 'a refusal after the watchdog records no envelope');
+    eq(lateNo.n, 0, 'and adds no second notice');
+    eq(lateNo.L.c._approvalEsignOut[7], undefined, 'the in-flight mark is off');
   });
 
   G('J · the version probe records what the deployment has, and the DocuSign send is offered only on one that has it', () => {
