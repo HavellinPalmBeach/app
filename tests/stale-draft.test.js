@@ -622,8 +622,8 @@ function run({ group, ok, eq, has, lacks }) {
     // The net: which redraws keep, which clear — by what they ARE.
     ['approvalWatchTick', '_jobsLanded', '_estStoreLanded'].forEach((n) =>
       has(live(fn(n)), '_asBackgroundRedraw(', n + ' is a redraw the app makes on its own'));
-    eq((live(fn('openClientDashboard')).match(/_asBackgroundRedraw\(/g) || []).length, 2,
-       'and so are the two arrival checks on opening a client (DocuSign, Stripe)');
+    eq((live(fn('openClientDashboard')).match(/_asBackgroundRedraw\(/g) || []).length, 3,
+       'and so are the three arrival checks on opening a client (DocuSign, the release request in DocuSign since 2026-10-26c, Stripe)');
     // …and ONLY those two: opening a client is a person's press, so its own paint must clear the last
     // message rather than carry it onto the next client. Checked directly, not left to the count above,
     // which would still read 2 if one arrival check were unwrapped and the main paint wrapped instead.

@@ -555,6 +555,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const liv = attempt(() => P.approvalRequestRecipients(LIVING()));
     eq(liv.ok ? liv.val.to : null, ['meg@ellis.example'], 'to the client on living work');
     has(t, 'Send request makes a Gmail draft with the request as a PDF: to every representative with an email, the estate attorney copied, or to the client on living work.', 'as the page says');
+    // DocuSign on an estate (2026-10-26c): the card's own label, and the signatures recorded by the arrival check, not a press.
+    has(card, "'&#9997;&#65039; Send through DocuSign'", 'Send through DocuSign is the card\'s label');
+    has(code(fn('approvalEnvelopeApply')), 'invApplyApproval(', '…and its signatures are written on the lines by themselves');
+    has(t, 'On an estate Send through DocuSign leads: everyone initials and signs on screen, and the signatures record themselves.', 'as the page says');
     // What a living request carries (2026-10-26; Anthony: "Drop it, firearms aside"), on the real rule.
     const W = lift(['invWrittenReleaseNeeded'], {});
     const need = (o) => attempt(() => W.invWrittenReleaseNeeded(Object.assign({ stableId: 'x', label: 'inventory' }, o), LIVING({ tc: 'Ashley Jerome' }))).val;

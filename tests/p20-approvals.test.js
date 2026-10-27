@@ -523,7 +523,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ['invApprovalSigners', 'invApprovalSignedText', 'invApprovalWithSigners', 'invRecordedGone', 'invRatificationOwed', 'invStaffRefused',
      'invApprovalLeftOpen', 'invApprovalOpenText', 'invApprovalDialogNote', 'invHavellinRecipient', 'invApprovalBatches']
       .forEach((n) => eq((SRC.match(new RegExp('\\nfunction ' + n + '\\(', 'g')) || []).length, 1, n + ' is defined once'));
-    eq(callers('invApprovalWithSigners'), ['invApprovalLeftOpen', 'invSaveApproval'], 'the writer\'s rule: the save and what the dialog says it will leave open');
+    // invApplyApproval since 2026-10-26c: the save's body, lifted so a request signed in DocuSign writes through it too.
+    eq(callers('invApprovalWithSigners'), ['invApplyApproval', 'invApprovalLeftOpen'], 'the writer\'s rule: the save and what the dialog says it will leave open');
     // P25 (Q43): the Collection Partners' *Released, with its receipt on record* line reads it of the collection's lines.
     // ⚠ restated 2026-10-22: the desk's Closing bar asks it too (a donated or sold line gone with its paper owed), for its shut line.
     eq(callers('invRecordedGone'), ['collectionPartnerLines', 'deskFoldState', 'invRatificationOwed', 'invReleasedToPerson'], '⚠ recorded as gone: one definition, four readers');

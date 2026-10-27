@@ -127,7 +127,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The signed copy has to come back onto the items in ONE action.
     // RESTATED 2026-10-03 (P19): Record approval opens a dialog (invRecordApproval) and its save writes the lines
     // (invSaveApproval), so the writer read here is the save; tests/p19-releases.test.js drives both.
-    const rec = src.slice(src.indexOf('function invSaveApproval('));
+    // RESTATED 2026-10-26c: the save's body is invApplyApproval, lifted so a request signed in DocuSign writes through it too.
+    has(src.slice(src.indexOf('function invSaveApproval('), src.indexOf('function invSaveApproval(') + 4000), 'invApplyApproval(jobId, refs, names, when)', 'the save writes through the one writer');
+    const rec = src.slice(src.indexOf('function invApplyApproval('));
     const recBody = rec.slice(0, rec.indexOf('\n}\n'));
     // RESTATED 2026-10-05 (P20, Q24): the save adds the signers to whoever each line records already, each keeping their
     // own date (invApprovalWithSigners), so it writes the merged result rather than the dialog's names as they stand.
