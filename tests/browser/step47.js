@@ -11,18 +11,24 @@
 //   A. A5: a firearm going to a named person records its dealer route through the line's record (the
 //      prompt names the dealer), the Approval Request names the route, the bulk bar records the signed
 //      authority, and the worklist then clears it to carry; an NFA line is offered no route and stays
-//      blocked; the route survives a reload
+//      blocked; the route survives a reload. Restated 2026-10-27: the work bar's papers open on screen
+//      first. The Approval Request (like the More ▾ worklist since 2026-10-26) opens in the document
+//      viewer, titled by the paper, with nothing printed; its Print / Save PDF prints the page the checks
+//      read, the viewer comes back after the dialog, and Close takes it away before the desk is pressed
 //   B. B22b: Remove line on a photographed line and on a split one (the photograph stays, the split
 //      line keeps it); a cancelled confirm removes nothing; Removed items names who; the sheet is sent
 //      the tombstone; after a reload a stale copy from the sheet does not bring the line back; Restore
 //   C. B11: a detail shot taken with no signal gets a tile with Retry and 🗑 in the room; Retry lands it
 //      and the room card's "⚠ not saved" clears; a second failed detail is binned the same way
-//   D. B10: a living client's Approval Request carries no "not yet valued … under oath" notice
+//   D. B10: a living client's Approval Request carries no "not yet valued … under oath" notice (read off
+//      the page the viewer's Print / Save PDF prints; restated 2026-10-27, as in A)
 //   E. B12: the living bulk bar offers no valuation source; the estate one does
 //   F. B22a: the None tier's workbar draws Approval Request once; Share w/ Counsel names both folders;
 //      the Job Plan names a walkthrough collection waiting for its photograph (P24; it named the import tab)
 //   G. overflow at 1440 and 390 (the desk with a record open, the room workspace); the Approval
-//      Request under print media at Letter width; no page errors
+//      Request under print media at Letter width (restated 2026-10-27: the work bar's papers open on
+//      screen first, so it opens in the viewer and is printed from the viewer's Print / Save PDF, the
+//      way a person prints it); no page errors
 //
 //   NODE_PATH=/opt/node22/lib/node_modules node tests/browser/step47.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
@@ -110,6 +116,21 @@ const T0 = Date.parse('2026-09-24T15:00:00Z');   // a past day, so each desk ope
     const T = (h) => p.evaluate((h) => { const d = document.createElement('div');
       d.innerHTML = String(h).replace(/<\/td>/g, ' </td>').replace(/<br>/g, ' '); return d.textContent.replace(/\s+/g, ' '); }, h);
     const lastPrint = () => p.evaluate(() => (window.__prints || []).slice(-1)[0] || { html: '', over: 0 });
+    // Restated 2026-10-27: the work bar's papers open on screen first. A paper this step reads opens in the document viewer,
+    // titled by the paper, and nothing prints until its Print / Save PDF is pressed; that press prints the page (what lastPrint
+    // reads), the viewer comes back once the dialog closes, and Close takes it away so the desk under it can be pressed again.
+    const viewerOpen = () => p.evaluate(() => { const o = document.getElementById('doc-viewer-modal'); return !!o && o.style.display === 'flex'; });
+    const printCount = () => p.evaluate(() => (window.__prints || []).length);
+    const printFromViewer = async (title, before) => {
+      ok(await viewerOpen(), title + ' opens in the document viewer');
+      eq(await txt('#doc-viewer-title'), title, 'the viewer is titled by the paper');
+      eq(await printCount(), before, 'nothing printed before Print / Save PDF is pressed');
+      await press('#doc-viewer-print', 'Print / Save PDF, in the viewer');
+      await p.waitForSelector('#doc-viewer-modal', { state: 'visible', timeout: 4000 }).catch(() => ok(false, 'the viewer comes back after the print dialog'));
+      eq(await printCount(), before + 1, 'Print / Save PDF printed the page once');
+      await press('#doc-viewer-modal button[onclick="closeDocViewer()"]', 'Close the viewer');
+      ok(!(await viewerOpen()), 'Close takes the viewer away');
+    };
     const overflow = () => p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     const toDesk = async (id) => {
       await p.evaluate((id) => { setCurrentJob(id); populateInventorySelect(); }, id);
@@ -189,8 +210,11 @@ const T0 = Date.parse('2026-09-24T15:00:00Z');   // a past day, so each desk ope
       eq(await p.locator('button[onclick="invSetDealerRoute(4701,\'n1\',true)"]').count(), 0, '⚠⚠ an NFA line is offered no route');
       has(await txt('#inv-row-n1'), 'NFA item — never transported by Havellin', 'and says it never travels');
       // The Approval Request names the route on the line the representative initials.
+      // Restated 2026-10-27: the work bar's papers open on screen first; the page read is the one its Print / Save PDF prints.
+      const reqBefore = await printCount();
       await press('#inv-workbar button[onclick="printApprovalRequest(4701)"]', 'Approval Request');
       await p.waitForTimeout(400);
+      await printFromViewer('Release Approval Request', reqBefore);
       const req = await T((await lastPrint()).html);
       has(req, 'through Palm Beach Arms (FFL), a licensed dealer', '⚠⚠ the Approval Request names the dealer route');
       has(req, 'A firearm going to a named person goes to the dealer as well', 'and its firearms note says how a firearm reaches a person');
@@ -330,8 +354,11 @@ const T0 = Date.parse('2026-09-24T15:00:00Z');   // a past day, so each desk ope
     // ── D. a living client's Approval Request ──────────────────────────────
     await section('D. a living client\'s Approval Request carries no valuation notice', async () => {
       await toDesk(4703);
+      // Restated 2026-10-27: the work bar's papers open on screen first; the page read is the one its Print / Save PDF prints.
+      const reqBefore = await printCount();
       await press('#inv-workbar button[onclick="printApprovalRequest(4703)"]', 'Approval Request (living)');
       await p.waitForTimeout(400);
+      await printFromViewer('Release Approval Request', reqBefore);
       const req = await T((await lastPrint()).html);
       has(req, 'Purdey shotgun', 'fixture: the shotgun is on the request');
       lacks(req, 'Floor lamp', '⚠⚠ the lamp to Goodwill is not: the client\'s word approves it (2026-10-26)');
@@ -376,9 +403,20 @@ const T0 = Date.parse('2026-09-24T15:00:00Z');   // a past day, so each desk ope
       await p.setViewportSize({ width: 816, height: 1056 });
       await toDesk(4701);
       await p.emulateMedia({ media: 'print' });
-      await p.evaluate(() => printApprovalRequest(4701, false)); await p.waitForTimeout(500);
+      // Restated 2026-10-27: the work bar's papers open on screen first. The request opens in the viewer, titled by the paper,
+      // with nothing printed; the viewer's Print / Save PDF prints the page measured below, and the viewer is closed once the
+      // print has been captured.
+      const prBefore = await printCount();
+      eq(await p.evaluate(() => { printApprovalRequest(4701, false); const o = document.getElementById('doc-viewer-modal');
+        return [!!o && o.style.display === 'flex', (document.getElementById('doc-viewer-title') || {}).textContent || '']; }),
+         [true, 'Release Approval Request'], 'the Approval Request opens in the viewer, titled by the paper');
+      await p.waitForTimeout(400);
+      eq(await printCount(), prBefore, 'nothing printed before Print / Save PDF');
+      await p.evaluate(() => printDocViewer()); await p.waitForTimeout(500);
+      eq(await printCount(), prBefore + 1, 'Print / Save PDF printed the request');
       const pr = await lastPrint();
       ok(pr.html.length > 0 && pr.over <= 0, 'the Approval Request fits a Letter page in print (' + pr.over + ')');
+      await p.evaluate(() => closeDocViewer());
       await p.emulateMedia({ media: 'screen' });
       await p.setViewportSize({ width: 1440, height: 1000 });
       eq(errs, [], 'no page errors');

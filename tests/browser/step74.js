@@ -9,6 +9,10 @@
 //   D. the close asks a rating of the auction house and the charity named on lines, and of the buyer on a filed pickup list (Q48)
 //   E. overflow at 1440 and 390; no page errors
 //
+// Restated 2026-10-27: the work bar's papers open on screen first. The Approval Request (A) and the Estate Inventory PDF (B)
+// no longer print at once: each opens in the document viewer, titled by the paper, with nothing printed, and the page this
+// step reads is the one the viewer's Print / Save PDF prints; the viewer is then closed, since its overlay covers the desk.
+//
 //   NODE_PATH=/opt/node22/lib/node_modules node tests/browser/step74.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
 const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/havellin.html'));
@@ -65,6 +69,21 @@ const EST = 7401;
     const txt = (sel) => p.evaluate((s) => { const el = document.querySelector(s); return el ? el.textContent.replace(/\s+/g, ' ').trim() : ''; }, sel);
     const val = (sel) => p.evaluate((s) => { const el = document.querySelector(s); return el ? el.value : null; }, sel);
     const overflow = () => p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    // Restated 2026-10-27: the work bar's papers open on screen first. A paper this step reads opens in the document viewer,
+    // titled by the paper, with nothing printed; its Print / Save PDF prints the page (read by lastPrint) and the viewer comes
+    // back once the dialog closes; Close takes it away, so the desk under its overlay can be pressed again.
+    const viewerOpen = () => p.evaluate(() => { const m = document.getElementById('doc-viewer-modal'); return !!m && m.style.display === 'flex'; });
+    const printCount = () => p.evaluate(() => (window.__prints || []).length);
+    const printFromViewer = async (title, before) => {
+      ok(await viewerOpen(), title + ' opens in the document viewer');
+      eq(await txt('#doc-viewer-title'), title, 'the viewer is titled by the paper');
+      eq(await printCount(), before, 'nothing printed before Print / Save PDF is pressed');
+      await press('#doc-viewer-print', 'Print / Save PDF, in the viewer');
+      await p.waitForSelector('#doc-viewer-modal', { state: 'visible', timeout: 4000 }).catch(() => ok(false, 'the viewer comes back after the print dialog'));
+      eq(await printCount(), before + 1, 'Print / Save PDF printed the page once');
+      await press('#doc-viewer-modal button[onclick="closeDocViewer()"]', 'Close the viewer');
+      ok(!(await viewerOpen()), 'Close takes the viewer away');
+    };
     const lastPrint = () => p.evaluate(() => { const h = (window.__prints || []).slice(-1)[0] || ''; const d = document.createElement('div');
       d.innerHTML = String(h).replace(/<\/td>/g, ' </td>').replace(/<br>/g, ' '); return d.textContent.replace(/\s+/g, ' '); });
     // ⚠ THE DESK'S FOUR BARS (2026-10-22): the cards this step works in sit in fold bars that open by their own rules, so
@@ -112,8 +131,11 @@ const EST = 7401;
     // ── A ───────────────────────────────────────────────────────────────────
     await section('A. the release request: one initial per destination under $500; a line\'s own over $500 or with a caution', async () => {
       await toDesk(EST);
+      // Restated 2026-10-27: the work bar's papers open on screen first; the page read is the one its Print / Save PDF prints.
+      const before = await printCount();
       await press('#inv-workbar button[onclick="printApprovalRequest(' + EST + ')"]', 'Approval Request');
       await p.waitForTimeout(500);
+      await printFromViewer('Release Approval Request', before);
       const t = await lastPrint();
       ['Paperback books', 'Table lamp', 'Harbor painting', 'Mantel clock', 'Writing desk', 'Old mattress'].forEach((n) => has(t, n, n + ' is listed'));
       has(t, 'Initial once for the 2 items above going to Goodwill Palm Beach (Donate), each under $500', '⚠⚠ the books and the lamp share one initial');
@@ -133,8 +155,11 @@ const EST = 7401;
       ok(await vis('select[onchange*="\'condition\'"]'), 'the bulk bar offers Set condition…');
       await p.selectOption('select[onchange*="\'condition\'"]', 'Good'); await p.waitForTimeout(600);
       eq([(await line('a')).condition, (await line('b')).condition, (await line('f')).condition], ['Good', 'Good', 'Poor'], '⚠⚠ Good on the two picked, the exception left as it was');
+      // Restated 2026-10-27: the work bar's papers open on screen first; the page read is the one its Print / Save PDF prints.
+      const before = await printCount();
       await press('#inv-workbar button[onclick="printEstateInventoryReport(' + EST + ')"]', 'Estate Inventory PDF');
       await p.waitForTimeout(500);
+      await printFromViewer('Estate Inventory', before);
       const t = await lastPrint();
       has(t, 'as photographed', '⚠⚠ a line with no condition prints "as photographed"');
       lacks(t, 'Furniture — ', 'never an em dash for it');

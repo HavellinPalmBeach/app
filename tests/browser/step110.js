@@ -4,7 +4,9 @@
 //
 // Drives the REAL page: a probate estate with a representative and a co-representative, a painting going to auction, a lamp
 // to a charity and a sofa to be donated with nobody named. A: the card and the Releases bar say the sofa waits for a taker;
-// the print is a letter, the sofa off it, one initial box (the painting's). B: the card's Send request, pressed: the notice
+// the work bar's Approval Request opens in the document viewer first (restated 2026-10-27: the work bar's papers open on
+// screen first), and its Print / Save PDF prints a letter, the sofa off it, one initial box (the painting's); Close takes the
+// viewer away. B: the card's Send request, pressed: the notice
 // names the held sofa; the card offers Discard draft. C: the sofa's taker typed on its row: it joins what waits for the next
 // request. D: the lamp's value typed on its row: the card flags the draft, the tap and Discard draft stay (restated on review:
 // the first build refused the tap). E: Discard draft pressed: asked first, the card forgets it and offers the send; a fresh
@@ -134,7 +136,20 @@ const EST = 11001;
       has(card, '2 lines await written approval; nothing has been sent from the app.', 'and the two that can go');
       has(await relLine(), '1 item waits for somebody to be named to take it', 'the Releases bar says so too');
       ok(await vis('#inv-releases button[onclick="sendApprovalRequest(' + EST + ')"]'), 'Send request on screen');
+      // Restated 2026-10-27: the work bar's papers open on screen first. The Approval Request opens in the document viewer,
+      // titled by the paper, and nothing prints until its Print / Save PDF is pressed; that press prints the page (what the
+      // checks below read), the viewer comes back once the dialog closes, and Close takes it away so the desk can be pressed.
+      const viewerOpen = () => p.evaluate(() => { const o = document.getElementById('doc-viewer-modal'); return !!o && o.style.display === 'flex'; });
+      const printsBefore = await p.evaluate(() => (window.__prints || []).length);
       await press('#inv-workbar button[onclick="printApprovalRequest(' + EST + ')"]', 'Approval Request (the print)');
+      ok(await viewerOpen(), 'the Approval Request opens in the document viewer');
+      eq(await txt('#doc-viewer-title'), 'Release Approval Request', 'the viewer is titled by the paper');
+      eq(await p.evaluate(() => (window.__prints || []).length), printsBefore, 'nothing printed before Print / Save PDF is pressed');
+      await press('#doc-viewer-print', 'Print / Save PDF, in the viewer');
+      await p.waitForSelector('#doc-viewer-modal', { state: 'visible', timeout: 4000 }).catch(() => ok(false, 'the viewer comes back after the print dialog'));
+      eq(await p.evaluate(() => (window.__prints || []).length), printsBefore + 1, 'Print / Save PDF printed the page once');
+      await press('#doc-viewer-modal button[onclick="closeDocViewer()"]', 'Close the viewer');
+      ok(!(await viewerOpen()), 'Close takes the viewer away');
       const h = await p.evaluate(() => (window.__prints || []).slice(-1)[0] || '');
       const letter = await p.evaluate((h) => { const d = document.createElement('div'); d.innerHTML = h; const l = d.querySelector('.inv-req-letter'); return l ? l.textContent.replace(/\s+/g, ' ').trim() : ''; }, h);
       has(letter, 'Dear Thomas Whitcombe and Nora Whitcombe,', '⚠ the letter is addressed to both');

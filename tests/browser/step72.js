@@ -9,7 +9,10 @@
 //      due needs its reason (Q49)
 //   F. the desk: a living family's Contents Record card (no ledger with nothing sold), its record saying "Disposed of" and
 //      carrying the sign-off (Q51); an estate's guardrail saying an appraisal is in progress (Q36); the release request as
-//      the firearms' transport authority under one initial (Q35)
+//      the firearms' transport authority under one initial (Q35). Restated 2026-10-27: the work bar's papers open on screen
+//      first: the Contents Record and the Approval Request each open in the document viewer, titled by the paper, with
+//      nothing printed, and the page read is the one the viewer's Print / Save PDF prints; Close then takes the viewer away
+//      so the desk under it can be pressed again
 //   G. overflow at 1440 and 390; no page errors
 //
 //   NODE_PATH=/opt/node22/lib/node_modules node tests/browser/step72.js [/abs/path/to/havellin.html]
@@ -67,6 +70,21 @@ const PB_COURT = 'Circuit Court for Palm Beach County, Florida, Probate Division
     const overflow = () => p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     const lastPrint = () => p.evaluate(() => { const h = (window.__prints || []).slice(-1)[0] || ''; const d = document.createElement('div');
       d.innerHTML = String(h).replace(/<\/td>/g, ' </td>').replace(/<br>/g, ' '); return d.textContent.replace(/\s+/g, ' '); });
+    // Restated 2026-10-27: the work bar's papers open on screen first. A paper pressed on the work bar opens in the document
+    // viewer (titled by the paper, nothing printed); its Print / Save PDF prints the page (the viewer steps aside for the
+    // dialog and comes back once it closes), and Close takes the viewer away, since its overlay covers the desk.
+    const viewerOpen = () => p.evaluate(() => { const o = document.getElementById('doc-viewer-modal'); return !!o && o.style.display === 'flex'; });
+    const printCount = () => p.evaluate(() => (window.__prints || []).length);
+    const printFromViewer = async (title, before) => {
+      ok(await viewerOpen(), title + ' opens in the document viewer');
+      eq(await txt('#doc-viewer-title'), title, 'the viewer is titled by the paper');
+      eq(await printCount(), before, 'nothing printed before Print / Save PDF is pressed');
+      await press('#doc-viewer-print', 'Print / Save PDF, in the viewer');
+      await p.waitForSelector('#doc-viewer-modal', { state: 'visible', timeout: 4000 }).catch(() => ok(false, 'the viewer comes back after the print dialog'));
+      eq(await printCount(), before + 1, 'Print / Save PDF printed the page once');
+      await press('#doc-viewer-modal button[onclick="closeDocViewer()"]', 'Close the viewer');
+      ok(!(await viewerOpen()), 'Close takes the viewer away');
+    };
     const dash = async (id) => { await p.evaluate((id) => { showPanel('jobs', document.querySelector('.nb[onclick*="\'jobs\'"]')); openClientDashboard(id); }, id); await p.waitForTimeout(700); };
     // ⚠ THE DESK'S FOUR BARS (2026-10-22): the cards this step works in sit in fold bars that open by their own rules, so
     // each is opened first by a real press of its header, and only when its body is hidden.
@@ -226,16 +244,22 @@ const PB_COURT = 'Circuit Court for Palm Beach County, Florida, Probate Division
       await toDesk(LIVE);
       ok(await vis('#inv-contents-card'), '⚠⚠ a living job\'s desk carries the Contents Record card');
       eq(await p.locator('#inv-ledger-card').count(), 0, '…and no ledger card, with nothing sold');
+      // Restated 2026-10-27: the work bar's papers open on screen first; the page read is the one its Print / Save PDF prints.
+      const recBefore = await printCount();
       await press('#inv-workbar button[onclick="printContentsRecord(' + LIVE + ')"]', 'Contents Record');
       await p.waitForTimeout(500);
+      await printFromViewer('Contents Record', recBefore);
       const rec = await lastPrint();
       has(rec, 'Disposed of', '⚠ the family reads "Disposed of"');
       lacks(rec, 'Junk', '…never "Junk"');
       has(rec, 'Reviewed and accepted as the record of what stayed and what left the property', '⚠⚠ and signs it');
       await toDesk(EST);
       has(await txt('#inv-guardrail'), 'Appraisal in progress', '⚠⚠ a linked painting with no report reads as in progress, not appraised');
+      // Restated 2026-10-27: the work bar's papers open on screen first; the page read is the one its Print / Save PDF prints.
+      const reqBefore = await printCount();
       await press('#inv-workbar button[onclick="printApprovalRequest(' + EST + ')"]', 'Approval Request');
       await p.waitForTimeout(500);
+      await printFromViewer('Release Approval Request', reqBefore);
       const req = await lastPrint();
       has(req, 'Firearms: written authority', '⚠⚠ the request is the firearms\' transport authority');
       has(req, 'Initial once for all 2 firearms above', '…under one initial for the batch');
