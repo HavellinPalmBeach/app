@@ -1,36 +1,27 @@
-// Step 115 — Nothing is lost: the Jobs sheet and every device's copy (P1 of the desk audit, 2026-10-27).
+// Step 115 — a listing survey counts (2026-10-27; Anthony, off the new eBay developer account: *"if we see literally dozens of
+// listings on eBay and Etsy, can't we use that to triangulate some sort of value even if we don't have true sold comps"*; he
+// took *"A listing survey counts"*).
 //
-// The audit drove it on the real page (GAP3, browser.js): More ▾ › Snapshot on a 450-line probate desk posted a client record
-// of 81,554 characters; the sheet's writer cleared the Jobs tab before the write that then threw; 2.25 s later the iPad that
-// pressed it held 0 clients under "All changes saved ✓"; every other device emptied itself at first contact ("Loaded 0 jobs
-// from Sheets ✓"); photographs not yet in Drive went with them. Here the page's every call to the main sheet is answered by
-// the REAL apps-script/main-sync.gs and saveInventory.gs (tests/sheet-rig.js) over a fake spreadsheet that holds a cell to
-// 50,000 characters, as Sheets does, the page booting off it as a device does:
-//   A. The desk: More ▾ › Snapshot pressed on a 450-line probate estate, labelled as typed. The Jobs tab still holds all three
-//      clients, the estate's cell on the sheet is small, the snapshot store holds its 450 lines, every write landed, the page
-//      still holds three clients and says nothing was deleted; the snapshot's page is filed to Drive under a dated name; five
-//      seconds on, all still whole.
-//   B. A second device, reloaded off the sheet: three clients; the estate's desk lists the snapshot; Compare with now, pressed
-//      on its row, reads the snapshot's lines from the sheet, then prints: 450 items, a count corrected since named under
-//      Count changed.
-//   C. A cold desk: the trust estate's inventory read from the sheet is aborted (a dead spot), and More ▾ › Snapshot, + Add line
-//      item and CSV each refuse by name and record nothing.
-//   D. A record too large for the sheet: a client grown past a cell on this device is saved through Edit Client's own Save
-//      Changes; the sheet refuses it by name and writes nothing; the chip names the client and the size and says closing the
-//      tab is safe; six seconds on, it has not been sent again; reloaded, the client is back as the sheet holds it.
-//   E. The Jobs tab emptied by hand on the sheet: a device opening the app keeps its three clients, the Clients tab says "The
-//      sheet has no clients right now. Nothing on this device was changed. Tell Anthony.", the photographs it had not yet got
-//      into Drive are still on it, and nothing says "Loaded 0 jobs"; once the rows are restored, a reload clears the notice.
-//      At 1440 and 390 px no horizontal overflow; zero page errors on every device.
+// Drives the REAL page with an active probate estate whose kitchen holds two researched lines Agent One named with confidence:
+// twelve Franciscan Desert Rose dinner plates and a Lladró figurine. The route answers Agent Two's request through the REAL
+// server check (`_avLineResult`, lifted off apps-script/main-sync.gs), fed what a model would say: no sale for either, twelve
+// close listings counted for the plates ($25 to $120 each, the middle $48, the figure $30 each), four for the figurine.
+//   A. Value 2 lines on the work bar: the request carries each line's count and depth; the plates come back medium, Listing
+//      survey, with no unsure on their row; the figurine low, General estimate, unsure.
+//   B. The plates' record: LISTED · 12 close listings for sale, $25 to $120 each, middle $48, and the page counted, opening the
+//      results page in a new tab; the figure's source and confidence beside it; Valuation Source reads Listing survey.
+//   C. More ▾ → Court Inventory, on screen: the plates' Basis reads listing survey, the figurine's general estimate.
+//   At 1440 and 390 px no horizontal overflow; zero page errors throughout.
 //
 //   NODE_PATH=/path/to/node_modules node tests/browser/step115.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
+const vm = require('vm');
+const fs = require('fs');
 const path = require('path');
-const R = require(path.join(__dirname, '..', 'sheet-rig.js'));
+const { matchBrace } = require('../harness');
 const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/havellin.html'));
 const SYNC = 'https://sync.example.test/exec';
-const E = 9700, T = 9701, LV = 9702, LINES = 450;
-const ME = 'Ashley Jerome';
+const J = 11501;
 let pass = 0, fail = 0;
 let b = null;
 const ok = (c, m) => { if (c) { pass++; } else { fail++; console.log('  ✗ ' + m); } };
@@ -38,272 +29,181 @@ const eq = (a, e, m) => ok(JSON.stringify(a) === JSON.stringify(e), m + '  [got 
 const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + ']');
 const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n + ']');
 
-// ── The sheet: three clients as two devices saving normally leave them ──
-const NOW = Date.UTC(2026, 9, 20, 14);   // the clients' own clock readings; the ledger is born a month before
-const ROOMS = ['Living Room', 'Dining Room', 'Kitchen', 'Primary Bedroom', 'Guest Bedroom', 'Garage'];
-const OBJ = ['Tufted linen three-seat sofa, oatmeal, rolled arms', 'Pair of brass table lamps with pleated linen shades',
-  'Herend Rothschild Bird porcelain dinner plates, hand-painted', 'Oil on canvas harbor scene in a carved gilt frame, signed lower right',
-  'Mahogany drop-leaf side table on turned legs, likely 1940s', 'Sterling silver candlesticks, Gorham, weighted bases',
-  'Wool area rug, Persian style, hand-knotted, about 8 x 10 ft', 'Box of hardcover novels and biographies, mixed authors'];
-const CATS = ['Furniture', 'General/Household', 'Collectibles', 'Art & Décor', 'Furniture', 'Silver & Precious Metal', 'Rugs & Textiles', 'Books & Media'];
-const DISPS = ['Sell', 'Donate', 'Distribute', 'Auction', 'Keep', 'Consign', 'Junk', 'Hold'];
-function estate(id, hvl, first, last, o) {
-  return Object.assign({ id, hvlId: hvl, fname: first, lname: last, name: first + ' ' + last, svc: 'probate', matterType: 'probate',
-    addr: '9 Audit Way', city: 'Palm Beach', zip: '33480', ptype: 'Single Family Home', src: 'Family', sqft: 3600,
-    executor: 'Daniel Price', executorFname: 'Daniel', executorLname: 'Price', executorRole: 'Personal Representative', executorPhone: '(561) 555-0110',
-    executorEmail: 'dan@example.com', deathDate: '2026-06-01', executorAuth: 'received', probateAttyName: 'Ann Lowe', probateAttyEmail: 'ann@lowe.law',
-    probateCase: '50-2026-CP-004321', docTier: 'values', gate706: 'no', gateDispute: '', status: 'active', won: true, wonAt: '2026-10-01', approved: true, tc: ME,
-    created: '2026-09-28', start: '2026-10-12', activatedOn: '2026-10-10', agrApproved: true, agrSent: true, agrSigned: true,
-    driveFolder: 'https://drive.google.com/drive/folders/R' + id, driveSubfolders: { 'Estate Inventory': 'INV' + id, 'As-Found Record': 'AF' + id, 'Signed Records': 'SR' + id },
-    at: {}, updatedAt: NOW, payments: [{ uid: 'd' + id, stage: 'deposit', amount: 12000, receivedOn: '2026-10-08', method: 'wire', clearedOn: '2026-10-08' }] }, o || {});
-}
-const JOBS = [
-  estate(E, 'HVL-2610-A9700', 'Walter', 'Price'),
-  estate(T, 'HVL-2610-A9701', 'Margaret', 'Ellison', { matterType: 'trust', probateCase: '', executor: 'Katherine Ellison', executorFname: 'Katherine',
-    executorLname: 'Ellison', executorRole: 'Trustee', executorEmail: 'kate@example.com', trustName: 'Ellison Family Trust' }),
-  { id: LV, hvlId: 'HVL-2610-A9702', fname: 'Joan', lname: 'Whitfield', name: 'Joan Whitfield', svc: 'downsizing_move', addr: '1 Hale Road', city: 'Jupiter', zip: '33458',
-    email: 'joan@example.com', phone: '(561) 555-0199', status: 'active', won: true, tc: ME, created: '2026-09-29', updatedAt: NOW, at: {} }];
-const EST = {};
-JOBS.forEach((j) => { EST[j.id] = { approved: true, submitted: true, approvedBy: 'Anthony Graziano', savedAt: NOW,
-  estimate: { jobId: j.id, svc: j.svc, havellinTotal: 30000, fixedPrice: true, fixedAmount: 30000, fixedLines: true, totTC: 80, totPS: 120, days: 8,
-    vendors: [], prepItems: [], rooms: ROOMS.map((nm, i) => ({ idx: i, name: nm, st: 'in', vol: 3, cplx: 3 })) } }; });
-const T0 = NOW - 3 * 3600000;
-const line = (id, k) => ({ stableId: 'L' + id + '_' + k, label: 'inventory', roomIdx: k % ROOMS.length, seq: k + 1, itemNo: k + 1, status: 'uploaded', ts: T0 + k * 30000,
-  updatedAt: T0 + k * 30000 + 5000, filename: 'HVL_' + id + '_INV_' + k + '.jpg', driveFileId: 'f' + id + k, driveFileUrl: 'https://drive.google.com/file/d/f' + id + k + '/view',
-  objectName: OBJ[k % OBJ.length] + ' (' + (k + 1) + ')', namedBy: 'agent', category: CATS[k % CATS.length], disposition: DISPS[k % DISPS.length],
-  fmv: String(25 + (k * 37) % 1900), valSource: 'General estimate', valuedBy: 'agent', qty: 1 });
-const MEDIA = { [E]: Array.from({ length: LINES }, (_, k) => line(E, k)), [T]: Array.from({ length: 9 }, (_, k) => line(T, k)), [LV]: [] };
-
-function seed(srv) {
-  srv._writeStoreBlob('JobLedger', { since: NOW - 30 * 86400000, seen: {}, restore: {} });
-  srv.post({ type: 'saveAllJobs', payload: JOBS });
-  srv.post({ type: 'saveAllEstimates', payload: EST });
-  [E, T].forEach((id) => srv.post({ type: 'saveMedia', payload: { jobId: id, savedAt: NOW, items: MEDIA[id] } }));
-}
+// ─── The real server check, off the backend beside this page ───
+const GS = fs.readFileSync(path.join(__dirname, '..', '..', 'apps-script', 'main-sync.gs'), 'utf8');
+const gsFn = (name) => { const re = new RegExp('(^|\\n)function\\s+' + name + '\\s*\\(', 'g'); const m = re.exec(GS);
+  if (!m) throw new Error('not in .gs: ' + name); return GS.slice(m.index + (m[1] ? m[1].length : 0), matchBrace(GS, GS.indexOf('{', re.lastIndex)) + 1); };
+const gsVar = (name) => { const m = GS.match(new RegExp('(^|\\n)(var\\s+' + name + '\\s*=[\\s\\S]*?;)\\s*(?:\\/\\/[^\\n]*)?\\n'));
+  if (!m) throw new Error('var not in .gs: ' + name); return m[2]; };
+const SERVER = { JSON, Math, Number, String, Object, Array, Error, parseInt, parseFloat, isFinite, RegExp };
+vm.createContext(SERVER);
+vm.runInContext(['AGENT_VALUE_SOURCES', 'AGENT_VALUE_NOTICE_KINDS', 'AGENT_VALUE_CONF_DOWN', 'AGENT_VALUE_MAX_COMPS', 'AGENT_VALUE_RESULTS_SEGMENTS',
+  'AGENT_VALUE_RESULTS_PARAMS', 'AGENT_VALUE_NO_PRICE_RE', 'AGENT_VALUE_TEXT_MAX', 'AGENT_VALUE_ABBREV_RE', 'AGENT_VALUE_SURVEY_MIN'].map(gsVar)
+  .concat(['_avCents', '_avUrlKey', '_avResultsPage', '_avClip', '_avSurvey', '_avLineResult'].map(gsFn)).join('\n'), SERVER);
+const RESULTS = 'https://www.ebay.com/sch/i.html?_nkw=franciscan+desert+rose+dinner+plate';
+const FIG = 'https://www.ebay.com/sch/i.html?_nkw=lladro+girl+with+goose';
+const ASK = 'https://www.etsy.com/listing/123/franciscan-desert-rose-dinner-plate';
+// The pages the search "returned" on the request: the results pages and one listing.
+const SEEN = {};
+[RESULTS, FIG, ASK].forEach((u) => { SEEN[SERVER._avUrlKey(u)] = 1; });
+// What the model would say for each line (no sale for either), run through the real check with the count the app sent.
+const MODEL = {
+  rose: { line: 'L1', name: 'Franciscan Desert Rose dinner plates', value: 360, low: 300, high: 480, confidence: 'medium', source: 'Online comps',
+    basis: 'No sales found; twelve close listings at $25 to $120 each; valued below them', lookup: 'franciscan desert rose dinner plate', notices: [],
+    comps: [{ title: 'Franciscan Desert Rose dinner plate', venue: 'Etsy', saleDate: '', price: 45, url: ASK, kind: 'asking' }],
+    survey: { count: 12, low: 25, median: 48, high: 120, url: RESULTS } },
+  fig: { line: 'L1', name: 'Lladro porcelain figurine, girl with goose', value: 60, low: 40, high: 90, confidence: 'medium', source: 'Online comps',
+    basis: 'No sales found; four listings', lookup: 'lladro girl with goose', notices: [], comps: [],
+    survey: { count: 4, low: 55, median: 85, high: 140, url: FIG } },
+};
 
 (async () => {
   try {
     b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-    const srv = R.server('A');
-    seed(srv);
-    eq(srv.state(), { jobs: 3, est: 3, plan: 0, log: 0, media: 2, co: 0 }, 'fixture: the sheet holds three clients and two inventories');
-    const uploads = [];
-    let abortMediaFor = null;
-    const DRIVE = ['uploadHtml', 'uploadFile', 'getSubfolders', 'getThumbnails', 'htmlToPdf', 'createFolder'];
-
-    // A device: its own browser context (its own localStorage), the page booting against the sheet as a configured device does.
-    const device = async (tag, opt) => {
-      opt = opt || {};
-      const ctx = await b.newContext({ viewport: { width: opt.width || 1440, height: 1000 }, timezoneId: 'America/New_York' });
-      const d = { tag, ctx, net: [], errs: [], dialogs: [], answers: [] };
-      await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
-      await ctx.addInitScript(([url, who, ls]) => {
-        if (sessionStorage.getItem('__seeded')) return;
-        sessionStorage.setItem('__seeded', '1');
-        Object.keys(ls || {}).forEach((k) => localStorage.setItem(k, ls[k]));
-        localStorage.setItem('hav_sheets_url', url);
-        localStorage.setItem('hav_device_user', who);
-      }, [SYNC, ME, opt.ls || null]);
-      await ctx.route(SYNC + '**', async (r) => {
-        const req = r.request();
-        let body = {};
-        if (req.method() === 'POST') { try { body = JSON.parse(req.postData() || '{}'); } catch (e) {} }
-        const q = {};
-        (req.url().split('?')[1] || '').split('&').forEach((kv) => { if (kv) { const i = kv.indexOf('='); q[kv.slice(0, i)] = decodeURIComponent(kv.slice(i + 1) || ''); } });
-        const action = body.action || body.type || q.action || '';
-        d.net.push({ m: req.method(), action, jobId: q.jobId || (body.payload && body.payload.jobId), bytes: (req.postData() || '').length });
-        const json = (o) => r.fulfill({ status: 200, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: typeof o === 'string' ? o : JSON.stringify(o) });
-        if (action === 'loadMedia' && abortMediaFor && String(q.jobId) === String(abortMediaFor)) return r.abort();
-        if (DRIVE.indexOf(action) >= 0) {
-          if (action === 'uploadHtml') { uploads.push(body.filename); return json({ ok: true, fileUrl: 'https://drive.google.com/file/d/html' + uploads.length + '/view', fileId: 'html' + uploads.length }); }
-          if (action === 'getThumbnails') return json({ ok: true, thumbs: {} });
-          return json({ ok: true, subfolders: {} });
+    const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 }, timezoneId: 'America/New_York' });
+    const net = { value: [] };
+    let sheet = {};
+    await ctx.route(SYNC + '**', async (r) => {
+      const req = r.request();
+      const json = (o) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(o) });
+      if (req.method() === 'POST') {
+        let body = {}; try { body = JSON.parse(req.postData() || '{}'); } catch (e) {}
+        if (body.action === 'agentValue') {
+          net.value.push(body);
+          const results = {}, failed = {};
+          (body.items || []).forEach((it) => {
+            const v = MODEL[it.stableId];
+            if (!v) { failed[it.stableId] = 'not in the fixture'; return; }
+            const res = SERVER._avLineResult(JSON.parse(JSON.stringify(v)), it.mode, SEEN, it.qty);
+            res.condition = '';
+            results[it.stableId] = Object.assign(JSON.parse(JSON.stringify(res)), { model: 'claude-fable-5-1' });
+          });
+          return json({ ok: true, success: true, results: results, failed: failed, retry: {}, remaining: 0, model: 'claude-fable-5-1' });
         }
-        return json(req.method() === 'POST' ? srv.exec('POST', { postData: { contents: req.postData() || '{}' } }) : srv.exec('GET', { parameter: q }));
-      });
-      const p = await ctx.newPage();
-      p.setDefaultTimeout(10000);
-      p.on('pageerror', (e) => d.errs.push(String(e)));
-      p.on('dialog', async (dl) => {
-        d.dialogs.push(dl.type() + ': ' + dl.message());
-        if (dl.type() === 'prompt') { const a = d.answers.shift(); return dl.accept(a == null ? 'Filed with court' : a); }
-        return dl.accept();
-      });
-      d.p = p;
-      await p.goto(APP);
-      await p.waitForTimeout(2500);
-      await p.evaluate(() => {
-        window.open = function () { return null; };
-        window.__badges = [];
-        const o = showSyncBadge; showSyncBadge = function (m, e) { window.__badges.push((e ? '[err] ' : '') + m); return o.apply(this, arguments); };
-        window.__printed = '';
-        window.print = function () { window.__printed = (document.getElementById('print-target') || {}).innerHTML || ''; };
-      });
-      return d;
-    };
+        if (body.action === 'getSubfolders') return json({ ok: true, subfolders: null });
+        return json({ ok: true });
+      }
+      if (/action=loadMedia/.test(req.url())) return json({ ok: true, media: sheet });
+      return json({ ok: true });
+    });
+    await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+    const p = await ctx.newPage();
+    p.setDefaultTimeout(10000);
+    const errs = []; p.on('pageerror', (e) => errs.push(String(e)));
+    const said = [];
+    p.on('dialog', async (d) => { said.push(d.message()); await d.accept(); });
     const section = async (name, body) => {
       console.log('\n## ' + name);
       try { await body(); } catch (e) { fail++; console.log('  ✗ ' + name + ' threw: ' + String(e && e.message || e).split('\n')[0]); }
     };
-    const until = async (p, f, ms) => { const t0 = Date.now(); while (Date.now() - t0 < (ms || 8000)) { if (await f()) return true; await p.waitForTimeout(150); } return false; };
-    const press = async (p, sel, what) => {
+    const vis = (sel) => p.locator(sel).first().isVisible().catch(() => false);
+    const press = async (sel, what) => {
       const n = await p.locator(sel).count();
-      const v = n >= 1 && await p.locator(sel).first().isVisible().catch(() => false);
+      const v = n >= 1 && await vis(sel);
       ok(v, (what || sel) + ' — on screen (' + n + ')');
-      if (v) { await p.locator(sel).first().click({ timeout: 5000 }).catch((e) => ok(false, (what || sel) + ' — ' + e.message.split('\n')[0])); await p.waitForTimeout(700); }
+      if (v) { await p.locator(sel).first().click({ timeout: 5000 }).catch((e) => ok(false, (what || sel) + ' — ' + e.message.split('\n')[0])); await p.waitForTimeout(800); }
       return v;
     };
-    const txt = (p, sel) => p.evaluate((s) => { const el = document.querySelector(s); return el ? el.textContent.replace(/\s+/g, ' ').trim() : ''; }, sel);
-    const overflow = (p) => p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-    const held = (p) => p.evaluate(() => ({ jobs: jobs.length, cache: (JSON.parse(localStorage.getItem('havellin_jobs_v3') || '[]')).length, pending: Object.keys(_pendingWrites), badges: (window.__badges || []).slice() }));
-    const toDesk = async (p, id) => {
-      await p.click('.nb[onclick*="\'inventory\'"]'); await p.waitForTimeout(800);
-      if (String(await p.evaluate(() => (document.getElementById('inv-job') || {}).value)) !== String(id)) await p.selectOption('#inv-job', String(id));
-      await until(p, () => p.evaluate((j) => !!_invCloudSeen[j] || !!(_invCloudFailed || {})[j], id), 10000);
-      await p.waitForTimeout(800);
+    const txt = (sel) => p.evaluate((s) => { const el = document.querySelector(s); return el ? el.textContent.replace(/\s+/g, ' ').trim() : ''; }, sel);
+    const overflow = () => p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    const line = (id) => p.evaluate(([j, id]) => { const r = (_photoRefs[j] || []).find((x) => x.stableId === id) || {};
+      return { fmv: r.fmv, conf: r.valConf, src: r.valSource, by: r.valuedBy, survey: r.valSurvey || null }; }, [J, id]);
+    const viewerOpen = () => p.evaluate(() => { const o = document.getElementById('doc-viewer-modal'); return !!o && o.style.display === 'flex'; });
+
+    await p.goto(APP); await p.waitForTimeout(1600);
+    sheet = await p.evaluate(([J, SYNC]) => {
+      SHEETS_SYNC_URL = SYNC;
+      window.print = function () {};
+      try { localStorage.setItem('hav_device_user', 'Anthony Graziano'); } catch (e) {}
+      const T = Date.now() - 2 * 86400000;
+      jobs.unshift({ id: J, hvlId: 'HVL-2610-LS1', name: 'Dorothy Pruitt', svc: 'probate', matterType: 'probate', addr: '40 Seaspray Ave', city: 'Palm Beach', zip: '33480',
+        executor: 'Ellen Pruitt', executorRole: 'Personal Representative', executorEmail: 'ellen@example.com', deathDate: '2026-07-02', executorAuth: 'received',
+        probateAttyName: 'Ann Lowe', probateAttyEmail: 'ann@lowe.law', probateCase: '50-2026-CP-004321', docTier: 'values', gate706: 'no',
+        status: 'active', won: true, wonAt: '2026-10-01', approved: true, tc: 'Ashley Jerome', created: '2026-09-28', start: '2026-10-12', activatedOn: '2026-10-10',
+        agrApproved: true, agrSent: true, agrSigned: true,
+        driveFolder: 'https://drive.google.com/drive/folders/R' + J, driveSubfolders: { 'Estate Inventory': 'INV_LS', 'As-Found Record': 'AF_LS' }, at: {}, docState: {},
+        payments: [{ uid: 'd' + J, stage: 'deposit', amount: 15000, receivedOn: '2026-10-08', method: 'wire', clearedOn: '2026-10-08' }] });
+      estimateStore[J] = { approved: true, submitted: true, approvedBy: 'Anthony Graziano', savedAt: T,
+        estimate: { jobId: J, svc: 'probate', havellinTotal: 30000, fixedPrice: true, fixedAmount: 30000, fixedLines: true, totTC: 80, totPS: 120, days: 6,
+          vendors: [], prepItems: [], rooms: [{ idx: 2, name: 'Kitchen', st: 'in', vol: 3, cplx: 3 }] } };
+      const photo = (id, file, n) => ({ label: 'inventory', collId: null, roomIdx: 2, seq: n, status: 'uploaded', ts: T + n * 60000,
+        filename: 'HVL-2610-LS1_Kitchen_INV_' + id + '.jpg', driveFileId: file, driveFileUrl: 'https://drive.google.com/file/d/' + file + '/view' });
+      const agent = (n) => ({ namedBy: 'agent', agentConf: 'high', agentAt: T + n * 60000 + 5000, category: 'Collectibles', disposition: 'Sell', channel: 'Kodner Galleries',
+        condition: 'Good', condBy: 'desk', updatedAt: T + n * 60000 + 5000 });
+      _photoRefs[J] = [
+        { stableId: 'af1', label: 'before', roomIdx: 2, seq: 1, collId: null, status: 'uploaded', ts: T, updatedAt: T, filename: 'HVL-2610-LS1_Kitchen_before_1.jpg',
+          driveFileId: 'F_AF', driveFileUrl: 'https://drive.google.com/file/d/F_AF/view' },
+        Object.assign({ stableId: 'rose', itemNo: 21, qty: 12, objectName: 'Franciscan Desert Rose dinner plates' }, photo('21', 'FID_ROSE', 1), agent(1)),
+        Object.assign({ stableId: 'fig', itemNo: 22, qty: 1, objectName: 'Lladro porcelain figurine, girl with goose' }, photo('22', 'FID_FIG', 2), agent(2))];
+      savePhotoRefs(J); saveJobs(); localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore));
+      const out = {}; out[J] = { items: JSON.parse(localStorage.getItem('hav_media_' + J) || '[]') };
+      return out;
+    }, [J, SYNC]);
+
+    const toDesk = async () => {
+      await p.evaluate((id) => { setCurrentJob(id); populateInventorySelect(); }, J);
+      await p.click('.nb[onclick*="\'inventory\'"]'); await p.waitForTimeout(900);
+      const cur = await p.evaluate(() => (document.getElementById('inv-job') || {}).value);
+      if (String(cur) !== String(J)) { await p.selectOption('#inv-job', String(J)); await p.waitForTimeout(1300); }
+      if (await p.locator('#panel-inventory button[onclick="setInvWhen(\'all\')"]').count()) { await p.click('#panel-inventory button[onclick="setInvWhen(\'all\')"]'); await p.waitForTimeout(600); }
     };
-    const more = async (p) => { if (!(await p.evaluate(() => !!(document.getElementById('inv-more') || {}).open))) { await p.click('#inv-more > summary'); await p.waitForTimeout(300); } };
-    const snapsOf = (p, id) => p.evaluate((j) => ((jobs.find((x) => x.id === j) || {}).invSnapshots || []).map((s) => ({ ts: s.ts, label: s.label, count: s.count, filedUrl: s.filedUrl || '' })), id);
+    const open = async (id) => {
+      if (!(await p.evaluate((id) => !!document.getElementById('inv-cu-' + id), id))) { await p.click('button[onclick="_invToggleOpen(\'' + id + '\')"]'); await p.waitForTimeout(700); }
+      return p.evaluate((id) => !!document.getElementById('inv-cu-' + id), id);
+    };
+    const unsureOn = (id) => p.evaluate((id) => { const r = document.getElementById('inv-row-' + id); return r ? !!r.querySelector('.inv-unsure') : null; }, id);
 
-    const A = await device('A');
-    let lsBefore = null, snapTs = 0;
-
-    await section('A. More ▾ › Snapshot on a 450-line probate desk: the sheet and this device stay whole', async () => {
-      eq((await held(A.p)).jobs, 3, 'fixture: the device booted off the sheet with its three clients');
-      ok(await A.p.evaluate(() => typeof backendHasType === 'function' && backendHasType('saveSnapshot')), 'the version probe answered: the deployment keeps a snapshot\'s lines');
-      await toDesk(A.p, E);
-      eq(await A.p.evaluate((j) => (_photoRefs[j] || []).filter((r) => r.label === 'inventory').length, E), LINES, 'fixture: the desk read the 450 lines from the sheet');
-      lsBefore = await A.p.evaluate(() => { const o = {}; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); o[k] = localStorage.getItem(k); } return o; });
-      await more(A.p);
-      await press(A.p, '#inv-more button:has-text("Snapshot")', 'More ▾ › Snapshot');
-      await A.p.waitForTimeout(2500);
-      const sn = await snapsOf(A.p, E);
-      eq(sn.map((s) => [s.label, s.count]), [['Filed with court', LINES]], 'the snapshot was taken, labelled as typed');
-      snapTs = (sn[0] || {}).ts;
-      const recLen = await A.p.evaluate((j) => JSON.stringify(jobs.find((x) => x.id === j)).length, E);
-      ok(recLen < 10000, '⚠⚠ the client\'s record stays small (' + recLen + ' characters; it was 81,554)');
-      eq(srv.jobsRows(), 3, '⚠⚠ the Jobs tab still holds all three clients (it emptied 0.3 s after the press)');
-      eq(srv.cellThrows, 0, 'no write reached the 50,000-character cell');
-      eq(srv.clears.filter((c) => /^Jobs/.test(c)), [], 'nothing on the Jobs tab was cleared');
-      const cell = (srv.rowOf(E) || [])[11] || '';
-      ok(cell.length > 0 && cell.length < 10000, '⚠ the estate\'s cell on the sheet is ' + cell.length + ' characters');
-      const st = srv.store('SnapshotStore') || {};
-      eq((((st[String(E)] || {})[String(snapTs)] || {}).items || []).length, LINES, '⚠⚠ the snapshot store holds its 450 lines');
-      const h = await held(A.p);
-      eq([h.jobs, h.cache, h.pending], [3, 3, []], 'the device holds its three clients, and every write landed');
-      ok(h.badges.every((x) => !/deleted elsewhere|refused by the sheet/.test(x)), 'nothing says a client was deleted or refused');
-      ok(uploads.some((f) => /^HVL-2610-A9700 - Havellin Inventory Snapshot - Oct \d+ 2026 .* - Filed with court\.html$/.test(f)), '⚠ the snapshot\'s page is filed to Drive under a dated name (' + uploads.slice(-1)[0] + ')');
-      ok(/drive\.google\.com/.test(((await snapsOf(A.p, E))[0] || {}).filedUrl), 'and its link recorded on the snapshot');
-      has(await txt(A.p, '#inv-snapshots'), '450 items', 'the snapshot is listed under Removed items & snapshots');
-      await A.p.waitForTimeout(5000);
-      eq(srv.state().jobs, 3, '⚠⚠ five seconds on, the sheet still holds every client');
-      eq((await held(A.p)).jobs, 3, 'and so does the device');
+    // ── A ─────────────────────────────────────────────────────────────────────────────────────
+    await section('A. Value 2 lines: twelve close listings carry the plates to medium and Listing survey; four leave the figurine unsure', async () => {
+      await toDesk();
+      await press('#inv-workbar button:has-text("Value 2 lines")', 'Value 2 lines on the work bar');
+      for (let i = 0; i < 30 && net.value.length === 0; i++) await p.waitForTimeout(150);
+      await p.waitForTimeout(1500);
+      eq(net.value.length, 1, 'one request to Agent Two');
+      const sent = {}; ((net.value[0] || {}).items || []).forEach((it) => { sent[it.stableId] = it; });
+      eq([sent.rose && sent.rose.mode, sent.rose && sent.rose.qty, sent.fig && sent.fig.mode], ['comps', 12, 'comps'], '⚠ both researched, the plates with their count of twelve');
+      const rose = await line('rose'), fig = await line('fig');
+      eq([rose.fmv, rose.conf, rose.src, rose.by], [360, 'medium', 'Listing survey', 'agent'], '⚠⚠ the plates: $360 for twelve ($30 each, under the $48 middle), medium, Listing survey');
+      eq(rose.survey, { count: 12, low: 25, median: 48, high: 120, url: RESULTS }, 'the survey kept on the line');
+      eq([fig.fmv, fig.conf, fig.src], [60, 'low', 'General estimate'], '⚠ the figurine: four listings is a handful, low, a general estimate');
+      eq(await unsureOn('rose'), false, '⚠⚠ no unsure on the plates\' row (Anthony: "no unsure hint")');
+      eq(await unsureOn('fig'), true, 'unsure on the figurine\'s');
     });
 
-    const B = await device('B', { ls: lsBefore });
-    await section('B. A second device, reloaded off the sheet: Compare with now reads the snapshot\'s lines first', async () => {
-      eq((await held(B.p)).jobs, 3, '⚠⚠ the second device opens with three clients (it opened with 0)');
-      // A count corrected since, on the sheet.
-      const items = MEDIA[E].map((r, k) => (k === 7 ? Object.assign({}, r, { qty: 4, updatedAt: NOW + 3600000 }) : r));
-      srv.post({ type: 'saveMedia', payload: { jobId: E, savedAt: NOW + 3600000, items } });
-      await toDesk(B.p, E);
-      // The snapshots are under the last bar, which a device that did not take the snapshot finds shut: opened by its header.
-      if (!(await B.p.locator('#inv-snapshots').first().isVisible().catch(() => false))) {
-        await press(B.p, '#panel-inventory .sec-hdr.sec-toggle:has-text("Removed items")', 'the Removed items & snapshots bar');
-      }
-      const n0 = B.net.length;
-      await press(B.p, '#inv-snapshots button[onclick="printSnapshotComparison(' + E + ',' + snapTs + ',\'now\')"]', 'Compare with now, on the snapshot\'s row');
-      await until(B.p, () => B.p.evaluate(() => !!window.__printed), 6000);
-      ok(B.net.slice(n0).some((n) => n.action === 'loadSnapshots'), '⚠ the device asked the sheet for the snapshot\'s lines');
-      const page = await B.p.evaluate(() => { const d = document.createElement('div'); d.innerHTML = window.__printed || ''; return d.textContent.replace(/\s+/g, ' '); });
-      ok(/Items\s*450 → 450/.test(page), '⚠⚠ the comparison prints, all 450 lines  [' + ((/Items\s*\d+ → \d+/.exec(page) || [''])[0]) + ']');
-      has(page, 'Count changed 1', '⚠ and names the count corrected since (it read "Unchanged 400")');
-      has(page, 'Unchanged 449', 'the rest unchanged');
-      await B.p.evaluate(() => { const pt = document.getElementById('print-target'); if (pt) { pt.style.display = 'none'; pt.innerHTML = ''; } document.querySelectorAll('.panel').forEach((x) => { if (x.dataset.wasActive === '1') x.classList.add('active'); }); });
+    // ── B ─────────────────────────────────────────────────────────────────────────────────────
+    await section('B. The plates\' record: what was counted, and the page to open', async () => {
+      ok(await open('rose'), 'the plates\' record is open');
+      const sv = await txt('#inv-row-rose ~ div .av-survey');
+      const svAny = sv || await p.evaluate(() => { const el = document.querySelector('.av-survey'); return el ? el.textContent.replace(/\s+/g, ' ').trim() : ''; });
+      eq(svAny, 'LISTED 12 close listings for sale, $25 to $120 each, middle $48 · the page counted', '⚠⚠ how many, at what prices, in plain words');
+      const link = await p.evaluate(() => { const a = document.querySelector('.av-survey a'); return a ? [a.getAttribute('href'), a.getAttribute('target'), a.getAttribute('rel')] : null; });
+      eq(link, [RESULTS, '_blank', 'noopener'], 'the page counted opens the results page in a new tab');
+      const panel = await p.evaluate(() => { const el = document.querySelector('.av-survey'); return el ? el.parentElement.textContent.replace(/\s+/g, ' ') : ''; });
+      has(panel, 'Listing survey', 'the source beside the figure');
+      has(panel, 'medium confidence', 'and its confidence');
+      const src = await p.evaluate(() => { const s = [...document.querySelectorAll('select')].find((x) => /_invEdit\(\d+,'rose','valSource'/.test(x.getAttribute('onchange') || ''));
+        return s ? [s.value, [...s.options].map((o) => o.value).indexOf('Listing survey') >= 0] : null; });
+      eq(src, ['Listing survey', true], 'Valuation Source reads Listing survey, an option a person may pick too');
+      eq(await overflow(), 0, 'no horizontal overflow at 1440 with the record open');
     });
 
-    await section('C. A cold desk refuses by name: Snapshot, + Add line item, CSV', async () => {
-      abortMediaFor = T;
-      await toDesk(A.p, T);
-      ok(await A.p.evaluate((j) => !_invCloudSeen[j], T), 'fixture: the trust estate\'s inventory could not be read');
-      // What the desk says of its own list meanwhile (SYN-08): never "0 of 0 reviewed", never "No items yet".
-      const wb = await txt(A.p, '#inv-workbar');
-      ok(wb.indexOf('sheet unreachable: this device’s copy') >= 0, '⚠ the work bar says this is the device\'s copy (' + wb.slice(0, 80) + ')');
-      ok(!/\b\d+ of \d+ reviewed/.test(wb), '⚠ and counts nothing as reviewed or not');
-      const cached = await A.p.evaluate((j) => (_photoRefs[j] || []).length, T);
-      const pane = await txt(A.p, '#panel-inventory');
-      if (!cached) {
-        ok(pane.indexOf('This device has not read this client’s items from the sheet yet') >= 0, '⚠ the rows say the copy has not read the sheet');
-        ok(pane.indexOf('No items yet') < 0, '⚠ never "No items yet"');
-      } else ok(true, 'fixture: this device holds a copy of the lines, so the rows show it under the bars\' amber');
-      const d0 = A.dialogs.length;
-      await more(A.p);
-      await press(A.p, '#inv-more button:has-text("Snapshot")', 'More ▾ › Snapshot, on a cold desk');
-      has(A.dialogs.slice(d0).join(' | '), 'Not done: this device has not read the inventory yet', '⚠⚠ Snapshot refuses by name');
-      eq((await snapsOf(A.p, T)).length, 0, '⚠⚠ and records nothing ("Filed with court 0 items $0" before)');
-      const d1 = A.dialogs.length;
-      await press(A.p, '#inv-workbar button:has-text("+ Add line item")', '+ Add line item');
-      has(A.dialogs.slice(d1).join(' | '), 'Not done: this device has not read the inventory yet', '⚠ + Add line item refuses before it numbers anything');
-      eq(await A.p.evaluate((j) => (_photoRefs[j] || []).filter((r) => r.manual).length, T), 0, 'and adds no line');
-      const d2 = A.dialogs.length;
-      await press(A.p, '#inv-workbar button:has-text("CSV")', 'CSV');
-      has(A.dialogs.slice(d2).join(' | '), 'Not done: this device has not read the inventory yet', 'CSV refuses too');
-      abortMediaFor = null;
+    // ── C ─────────────────────────────────────────────────────────────────────────────────────
+    await section('C. More ▾ → Court Inventory: the Basis column says what each figure rests on', async () => {
+      await p.evaluate(() => { _invOpen = {}; renderInventoryTab(); }); await p.waitForTimeout(400);
+      if (!(await vis('#inv-more button[onclick="printCourtInventory(' + J + ')"]'))) await press('#inv-more > summary', 'More ▾');
+      await press('#inv-more button[onclick="printCourtInventory(' + J + ')"]', 'Court Inventory');
+      ok(await viewerOpen(), 'the Court Inventory is on screen');
+      const rows = await p.evaluate(() => [...document.querySelectorAll('#doc-viewer-body tr')].map((tr) => tr.textContent.replace(/\s+/g, ' ').trim()));
+      const roseRow = rows.find((t) => /Franciscan Desert Rose/.test(t)) || '', figRow = rows.find((t) => /Lladro/.test(t)) || '';
+      has(roseRow, 'listing survey', '⚠⚠ the plates\' basis: listing survey');
+      lacks(roseRow, 'general estimate', '…never a general estimate');
+      has(figRow, 'general estimate', 'the figurine\'s: general estimate');
+      await press('#doc-viewer-modal button[onclick="closeDocViewer()"]', 'Close');
+      await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(600);
+      eq(await overflow(), 0, 'no horizontal overflow at 390');
     });
 
-    await section('D. A record too large for the sheet: refused by name, held, and safe to close', async () => {
-      // The trust estate has grown past a cell on this device (a long list of signed papers, as a long estate might).
-      await A.p.evaluate((j) => { const job = jobs.find((x) => x.id === j); job.signedRecords = Array.from({ length: 420 }, (_, i) => ({ id: 'sr' + i, kind: 'receipt', ref: 'x', note: 'y'.repeat(130) })); }, T);
-      const rowBefore = JSON.stringify(srv.rowOf(T));
-      await A.p.click('.nb[onclick*="\'jobs\'"]'); await A.p.waitForTimeout(600);
-      await press(A.p, '#panel-jobs tr[onclick="openClientDashboard(' + T + ')"]', 'the client\'s row, on the Clients tab');
-      await press(A.p, '#client-dashboard-view button[onclick="dashEditClient(' + T + ')"]', '✎ Edit Client');
-      await press(A.p, '#edit-client-modal button[onclick="saveClientEdit(' + T + ')"]', 'Save Changes');
-      await A.p.waitForTimeout(2500);
-      eq(JSON.stringify(srv.rowOf(T)), rowBefore, '⚠⚠ the sheet refused it and wrote nothing');
-      eq(srv.jobsRows(), 3, 'every client still there');
-      const chip = await A.p.evaluate(() => _pendingChipCopy());
-      has(chip.head, 'Not saved — Margaret Ellison (HVL-2610-A9701) is too large for the sheet (', '⚠ the chip names the client');
-      ok(/\([\d,]+ characters\)/.test(chip.head), 'and the size: ' + chip.head);
-      has(chip.note, 'Closing or reloading this tab is safe', '⚠ and says closing the tab is safe');
-      has(await txt(A.p, '#sync-pending-label'), 'is too large for the sheet', 'the chip on screen says so');
-      const sent = () => A.net.filter((n) => n.m === 'POST' && (n.action === 'saveAllJobs' || n.action === 'job')).length;
-      const n0 = sent();
-      await A.p.waitForTimeout(6500);
-      eq(sent(), n0, '⚠⚠ six seconds on it has not been sent again (the first retry fell due at 2 s)');
-      // Reloaded: the client comes back as the sheet holds it.
-      await A.p.reload(); await A.p.waitForTimeout(2500);
-      const back = await A.p.evaluate((j) => { const x = jobs.find((y) => y.id === j); return x ? (x.signedRecords || []).length : -1; }, T);
-      eq([back, (await held(A.p)).jobs], [0, 3], 'reloaded, the client is back as the sheet holds it, and every client is there');
-    });
-
-    await section('E. The Jobs tab emptied on the sheet: a device opening the app keeps its clients and says so', async () => {
-      const saved = srv.sheets.Jobs._rows.map((r) => r.slice());
-      srv.sheets.Jobs._rows.splice(1);
-      const ls = Object.assign({}, lsBefore, { ['hav_media_pending_' + LV]: JSON.stringify({ shotA: 'data:image/jpeg;base64,AAAA', shotB: 'data:image/jpeg;base64,BBBB' }) });
-      const C = await device('C', { ls });
-      await C.p.click('.nb[onclick*="\'jobs\'"]').catch(() => {}); await C.p.waitForTimeout(700);
-      const h = await held(C.p);
-      eq([h.jobs, h.cache], [3, 3], '⚠⚠ the device keeps its three clients (it emptied itself under "Loaded 0 jobs from Sheets ✓")');
-      has(await txt(C.p, '#sheet-refusal-note'), 'The sheet has no clients right now. Nothing on this device was changed. Tell Anthony.', '⚠ the Clients tab says so');
-      ok(h.badges.every((x) => !/Loaded 0 jobs/.test(x)), 'and nothing says it loaded none');
-      eq(await C.p.evaluate((k) => localStorage.getItem(k) !== null, 'hav_media_pending_' + LV), true, '⚠ the photographs it had not got into Drive are still on it');
-      eq(await txt(C.p, '#m-tot'), '3', 'the Clients tab still counts three');
-      eq(await overflow(C.p), 0, 'no horizontal overflow at 1440');
-      await C.p.setViewportSize({ width: 390, height: 844 }); await C.p.waitForTimeout(500);
-      eq(await overflow(C.p), 0, 'no horizontal overflow at 390, the notice on screen');
-      // Restored from version history; the device reloaded.
-      srv.sheets.Jobs._rows.splice(0, srv.sheets.Jobs._rows.length, ...saved);
-      await C.p.reload(); await C.p.waitForTimeout(2500);
-      await C.p.click('.nb[onclick*="\'jobs\'"]').catch(() => {}); await C.p.waitForTimeout(500);
-      eq(await txt(C.p, '#sheet-refusal-note'), '', 'once the rows are back, a reload clears the notice');
-      eq((await held(C.p)).jobs, 3, 'with every client');
-      eq(C.errs, [], 'zero page errors on the third device');
-      await C.ctx.close();
-    });
-
-    eq(A.errs, [], 'zero page errors on the device that pressed Snapshot');
-    eq(B.errs, [], 'zero page errors on the second device');
+    eq(errs, [], 'zero page errors');
     console.log('\n' + pass + ' passed, ' + fail + ' failed');
     await b.close();
     process.exit(fail ? 1 : 0);

@@ -15,7 +15,7 @@
 // This file is that rig turned into tests: the WHOLE of apps-script/main-sync.gs and saveInventory.gs, evaluated as they
 // are deployed, over the fake sheet; two or three devices built from the real sync code in havellin.html, their fetch
 // routed to the server's real doGet and doPost through a synchronous promise and a virtual clock, so the outbox, the
-// retry queue and the refreshes run as they do in the browser. Browser step 115 drives the same on the real page.
+// retry queue and the refreshes run as they do in the browser. Browser step 116 drives the same on the real page.
 // ─────────────────────────────────────────────────────────────────────────────
 
 const fs = require('fs');
@@ -23,7 +23,7 @@ const path = require('path');
 const vm = require('vm');
 const { sandbox, fn, domStub } = require('./harness');
 
-// The server, the fake sheet and the synchronous promise are the rig browser step 115 drives too (tests/sheet-rig.js).
+// The server, the fake sheet and the synchronous promise are the rig browser step 116 drives too (tests/sheet-rig.js).
 const { server, SP, CELL_MAX, CELL_ERR, GS } = require('./sheet-rig');
 const SYNC = 'https://sync.example.test/exec';
 const QUIET = { log() {}, warn() {}, error() {} };
@@ -418,7 +418,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   // ───────────────────────────────────────────────────────────────────────────
   guard('an older deployment\'s emptied sheet never empties a device (GAP3-02, -04)', () => {
-    // The answers a deployment older than 2026-10-27 gave after the wipe: no jobs, every client deleted, and a write
+    // The answers a deployment older than 2026-10-27b gave after the wipe: no jobs, every client deleted, and a write
     // answered ok with every client dropped, nothing recorded.
     const srv = server('A');
     const D = device('D', srv); seedDevice(D);
@@ -448,7 +448,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(retryLands(), 'All changes saved', '⚠ a retry landing under the refusal never says "All changes saved"');
     D.ctx._setSheetNotice('');
     has(retryLands(), 'All changes saved', 'and with no refusal standing it does');
-    // A 2026-10-27 deployment answering JOBS_TAB_EMPTY.
+    // A 2026-10-27b deployment answering JOBS_TAB_EMPTY.
     D.answer = () => JSON.stringify({ ok: false, success: false, error: 'JOBS_TAB_EMPTY: the Jobs tab is empty …' });
     D.ctx._setSheetNotice('');
     D.ctx.loadJobs(); D.run(50);
@@ -553,7 +553,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(A.ctx.snapshotRefusal(J), 'Not taken: this device has no Apps Script URL in Settings, and a snapshot’s lines are kept on the sheet. Nothing was recorded.', 'but a snapshot needs the sheet');
     A.ctx.SHEETS_SYNC_URL = SYNC;
     A.ctx._backendTypes = ['saveMedia'];
-    has(A.ctx.snapshotRefusal(J), 'needs the 2026-10-27 redeploy', '⚠ a deployment with nowhere to keep the lines refuses it');
+    has(A.ctx.snapshotRefusal(J), 'needs the 2026-10-27b redeploy', '⚠ a deployment with nowhere to keep the lines refuses it');
     A.ctx._backendTypes = ['saveSnapshot'];
     A.ctx._photoRefs[J] = [];
     eq(A.ctx.snapshotRefusal(J), 'Not taken: there is nothing in the inventory to snapshot yet.', 'and an empty inventory');
@@ -708,9 +708,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ───────────────────────────────────────────────────────────────────────────
   guard('the deployment and the app agree on what this needs', () => {
     const bv = (GS.match(/var BACKEND_VERSION = '([^']+)';/) || [])[1];
-    ok(bv >= '2026-10-27', 'main-sync.gs is 2026-10-27 or later (' + bv + ')');
+    ok(bv >= '2026-10-27b', 'main-sync.gs is 2026-10-27b or later (' + bv + ')');
     const B = sandbox({ vars: ['BACKEND_MIN_VERSION', 'BACKEND_FEATURE_COST', 'BACKEND_NEEDS_TYPES'] });
-    ok(B.BACKEND_MIN_VERSION >= '2026-10-27', '⚠ and the app relies on it: an older one can still empty the Jobs tab');
+    ok(B.BACKEND_MIN_VERSION >= '2026-10-27b', '⚠ and the app relies on it: an older one can still empty the Jobs tab');
     ok(B.BACKEND_NEEDS_TYPES.indexOf('saveSnapshot') >= 0, 'the snapshot store is on the banner\'s list');
     ok(B.BACKEND_FEATURE_COST.version.indexOf('one failed write can empty the Jobs tab') === 0, 'and the version line names what stays broken, first');
     // The rule, one definition with its readers counted.

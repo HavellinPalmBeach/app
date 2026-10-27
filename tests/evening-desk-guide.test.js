@@ -734,9 +734,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(t, 'Each photo is graded Excellent, Good, Fair or Poor. If it is wrong, change it in the ▾ record; yours is never written over. Blank means the photo could not show it.', 'condition, as the page says');
     eq(sandbox({ vars: ['AGENT_CONDITIONS'] }).AGENT_CONDITIONS, ['Excellent', 'Good', 'Fair', 'Poor'], '…the grades the agents give');
     has(code(fn('_invEdit')), "if (key === 'condition') ref.condBy = 'desk';", '…and a grade typed in the record is never written over');
-    has(t, 'Seven plates at $75 read $11 each, $77; under a dollar each keeps its cents. A value you type stays as typed. A value well under what dealers ask is not wrong: asking is not selling; a close-up of a maker’s mark moves it.', 'whole dollars each, as the page says');
-    const W = sandbox({ fns: ['agentValueWhole', 'roundCents'] });
-    eq([W.agentValueWhole(75, 7), W.agentValueWhole(45, 60)], [77, 45], '…$11 × 7 = $77; sixty at 75¢ stay $45');
+    // Restated 2026-10-27 (Anthony: "From $10 each").
+    has(t, 'Values are whole dollars from $10 each. Seven plates at $75 read $11 each, $77; under $10 each keeps its cents. A value you type stays as typed. A value well under what dealers ask is not wrong: asking is not selling; a close-up of a maker’s mark moves it.', 'whole dollars from $10 each, as the page says');
+    const W = sandbox({ fns: ['agentValueWhole', 'roundCents'], vars: ['AGENT_VALUE_WHOLE_FROM'] });
+    eq([W.agentValueWhole(75, 7), W.agentValueWhole(75, 60)], [77, 75], '…$11 × 7 = $77; sixty forks at $75 ($1.25 each) stay $75');
     has(t, 'Tick its rows and press Re-value on the selection bar. Values you or an appraiser typed are left alone.', 'Re-value on the selection bar, as the page says');
     has(code(fn('_renderInvBulk')), '>Re-value</button>', '…the selection bar carries it');
     has(code(fn('invBulkRevalue')), "r.valuedBy !== 'agent'", '…and leaves a figure a person or an appraiser recorded');

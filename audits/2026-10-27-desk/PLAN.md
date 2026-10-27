@@ -403,7 +403,7 @@ Publish that rate only as section (a) step 10 allows.
 ### Phase 1: lose nothing, keep it private, start measuring (about 4 build days)
 
 **P1. Nothing is lost: the Jobs sheet and every device's copy.** Fix now · L, two sessions · both .gs files redeployed.
-- ✓ **Built 2026-10-27** (both sessions in one build; backend `2026-10-27`; `BUILD_HISTORY.md`, 2026-10-27c). Owed: the redeploy of both files, then `probeClearThenOversizeWrite()` once in the editor. Until the redeploy, Snapshot refuses by name. Beyond the bullets below, the work bar and an empty list say what a cold copy is (the rest of SYN-08).
+- ✓ **Built 2026-10-27** (both sessions in one build; backend `2026-10-27b`; `BUILD_HISTORY.md`, 2026-10-27d). Owed: the redeploy of both files, then `probeClearThenOversizeWrite()` once in the editor. Until the redeploy, Snapshot refuses by name. Beyond the bullets below, the work bar and an empty list say what a cold copy is (the rest of SYN-08).
 - Goal: no press, failed write or empty sheet can delete a client anywhere, and a cold desk records nothing as fact.
 - Session 1, the server:
   - **Never clear a tab before writing it.** Write the new rows over what is there, then clear only the rows past them. The same goes for every store tab and the ledger (GAP3-01, GAP3-07).
