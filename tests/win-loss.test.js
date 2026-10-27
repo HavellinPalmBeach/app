@@ -365,7 +365,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const drive = (url, mode, data) => {
       let landed = 0;
       const ctx = sandbox({
-        fns: ['loadJobs'], vars: [],
+        fns: ['loadJobs', '_withDeviceKey', 'deviceKey'], vars: [],
         stubs: {
           document: { getElementById: () => ({ textContent: '' }) },
           SHEETS_SYNC_URL: url,
@@ -401,9 +401,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(none.landed, 0, '…with nothing to announce, because nothing arrived');
 
     // An error payload from a live backend is not new data, but it IS an answer.
+    // RESTATED 2026-10-27b (P2): an answer that carries no list resolves the flag as unreachable, never as read: a device the
+    // Apps Script turns away for its key keeps its cache and must not report it as the sheet's word.
     const err = drive('https://x/exec', 'resolve', { error: 'Unknown action' });
-    eq(err.state, 'ready', 'a backend error still resolves the flag');
+    eq(err.state, 'offline', 'a backend error still resolves the flag, as unreachable');
     eq(err.n, 0, '…without overwriting the jobs with nothing');
+    eq(err.landed, 1, '…and tells the screen');
   }
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -415,8 +418,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // A device with no Sheets URL configured never fetches. Leaving the flag at 'loading'
     // there would make the report say "Loading clients…" on a device that is never going
     // to hear anything — the local cache IS the truth for it.
-    eq((lj.match(/_jobsState = 'ready'/g) || []).length, 2,
+    eq((lj.match(/_jobsState = 'ready'/g) || []).length, 1,
        '⚠ …and so does having no sync URL at all, where the local cache is all there is');
+    has(lj, "_jobsState = _read ? 'ready' : 'offline'", 'an answer resolves it as read only when it carried the list (P2)');
     has(src, "var _jobsState = 'loading';", 'it starts as unread rather than as ready');
 
     const notice = noComments(fn('jobsUnreadNotice'));

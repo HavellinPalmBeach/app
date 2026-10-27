@@ -447,6 +447,7 @@ Publish that rate only as section (a) step 10 allows.
 - Not proposed: moving access codes off the item, which is Decided (Q72). Worth knowing: the sheet's version history keeps every code ever typed, wiped at close or not.
 - Later, fix if cheap: the same key on the two directory backends, which hold no client data.
 - Closes: RT-01, RT-24.
+- **Built 2026-10-27** (backend `2026-10-27b`; `tests/p2-device-key.test.js`, browser step 116; the statement is `legal/Havellin_Data_Handling_Statement_v1.0.md`, counsel bundle G3). Live only once Anthony redeploys and sets `HAVELLIN_DEVICE_KEY` (the manual's *2026-10-27b* note gives the order). The two directory backends are left as they were.
 - Checks: a test that every dispatched action refuses without the key, derived from the action list as the version test is; the app sends the key on every request; a browser step.
 - Code: doGet, doPost, shareFolder, unshareFolder, trashDriveFile, esignSendRequestEnvelope, BACKEND_ACTIONS, the Settings form.
 - Tell Anthony: redeploy and type the key on every device the same day, or that device stops syncing. If you would rather use Google sign-in for the backend, say so first; it is a bigger change, and close to the login Q59 ruled out.
@@ -1556,7 +1557,7 @@ Severity is the verifier's re-rating, or the reviewer's for RT rows. Pack is one
 |GAP3-07|defect|med|C|still|Every store tab is cleared before it is written, and an empty store tab reads as an empty store|1|_writeStoreBlob|
 |GAP3-08|docs|high|C||No recovery runbook; the obvious recovery loses a client or empties the tab again|1 (Appendix B now)|MANUAL.md|
 |GAP3-09|automation|med|C||One editor run on a throwaway sheet says whether a failed write leaves the tab empty|today (Appendix B), 1|probeClearThenOversizeWrite|
-|RT-01|security|fix-now|RT|still, wider|The jobs backend answers anyone holding its URL: every client read, any folder shared, any file trashed (code checked)|2|doGet|
+|RT-01|security|fix-now|RT|still, wider; built 2026-10-27 (P2), live on redeploy|The jobs backend answers anyone holding its URL: every client read, any folder shared, any file trashed (code checked)|2|doGet|
 |RT-02|legal|high|RT||No engagement term says what Havellin's values are, who may rely on them, and that AI helped; E&O cover for value opinions not yet asked|counsel; today (insurer)|—|
 |RT-03|papers|high|RT||No named preparer and no scope-of-work statement (inspection dates, what was not examined, assumptions, market, independence, glossary)|17, Ask 17|printCourtInventory|
 |RT-04|independence|high|RT||Havellin values, picks the channel and is paid by it; fees are named only on the ledger and Contents Record; the field note can tell Agent Two the destination (code checked)|Ask 18; 17, 21|referralFeeVendorsNote|
@@ -1579,7 +1580,7 @@ Severity is the verifier's re-rating, or the reviewer's for RT rows. Pack is one
 |RT-21|accuracy|med|RT||No identification evidence grade, so a guess and an identification print alike|22|—|
 |RT-22|papers|low|RT||No value-by-basis summary on the cover|17|printEstateInventoryReport|
 |RT-23|legal|med|RT [U]||A guardian or an agent acting for a living client is treated as the client|Ask 35, 32|invWrittenReleaseNeeded|
-|RT-24|security|med|RT||No data-handling statement a bank's vendor review can file|2|—|
+|RT-24|security|med|RT|drafted 2026-10-27 (P2), with counsel|No data-handling statement a bank's vendor review can file|2|—|
 
 **Not built, and not asked**
 - **AGT-17, LIV-06** (living *Unsure* on Keep, Move and Junk): decided (P23 decision 2; Agent Two values by itself). Low; Read mode's order puts these lines last.

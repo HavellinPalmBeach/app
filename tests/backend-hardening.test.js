@@ -75,6 +75,8 @@ function gsServer(opts = {}) {
   const ctx = {
     console, JSON,
     Logger: { log() {} },
+    // No device key set (P2): the check is off, as on a deployment before Anthony sets HAVELLIN_DEVICE_KEY.
+    PropertiesService: { getScriptProperties: () => ({ getProperty: () => null }) },
     LockService: { getScriptLock: () => ({ tryLock: () => opts.lockFree !== false, waitLock() {}, releaseLock() {} }) },
     SpreadsheetApp: { openById: () => ({ getSheetByName: (n) => sheets[n] || null,
       insertSheet(n) { sheets[n] = fakeSheet(n); return sheets[n]; } }) },
@@ -87,9 +89,9 @@ function gsServer(opts = {}) {
     'saveJobPlanStore', 'getJobPlanStore', '_mergePlanStore', '_mergePlanRecord', '_planStamp',
     'saveLogStore', 'getLogStore', '_mergeStoreByKey', '_stripRefusedJobKeys', '_jobRefusalCtx', '_sweepDeletedJobKeys',
     'getJobLedger', '_jobRefusal', '_presentJobIds', '_deletedJobIds', '_ledgerMarkSeen', 'getJobsFromSheet',
-    'doPost', 'doGet', 'jsonOut', '_okWithDrops'];
+    'doPost', 'doGet', 'jsonOut', '_okWithDrops', '_deviceKeyNorm', '_deviceKeyState', '_deviceKeyRefusal'];
   const code = [gsVar(GS, 'SHEET_ID'), gsVar(GS, '_BLOB_CHUNK'), gsVar(GS, 'JOB_LEDGER_STORE'), gsVar(GS, 'PLAN_KEYED_MAPS'),
-    gsVar(GS, 'BACKEND_VERSION'), ...names.map((n) => gsFn(GS, n)),
+    gsVar(GS, 'BACKEND_VERSION'), gsVar(GS, 'DEVICE_KEY_PROP'), gsVar(GS, 'DEVICE_KEY_PARAM'), gsVar(GS, 'DEVICE_KEY_REFUSED'), ...names.map((n) => gsFn(GS, n)),
     gsFn(GS_INV, 'saveMediaStore'), gsFn(GS_INV, 'getMediaStore'), gsFn(GS_INV, '_invResetDrops'), gsFn(GS_INV, '_invApprovalEntries'), gsFn(GS_INV, '_invApprovalSetAt'), gsFn(GS_INV, '_invMergeApprovals'), gsFn(GS_INV, '_mergeMediaItems')].join('\n\n');
   vm.runInContext(code, ctx, { filename: 'main-sync.gs (extracted)' });
   return ctx;
@@ -270,7 +272,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Drive the real check against three deployments.
     const run = (answer) => {
       const shown = [];
-      const C = sandbox({ fns: ['checkBackendVersion'], vars: ['BACKEND_NEEDS', 'BACKEND_NEEDS_TYPES', 'BACKEND_MIN_VERSION', '_backendVersion'],
+      const C = sandbox({ fns: ['checkBackendVersion', '_withDeviceKey', 'deviceKey'], vars: ['BACKEND_NEEDS', 'BACKEND_NEEDS_TYPES', 'BACKEND_MIN_VERSION', '_backendVersion'],
         stubs: { SHEETS_SYNC_URL: 'https://sheets', _showBackendStaleBanner: (v, m) => shown.push({ v, m }),
           fetch: () => ({ then(f) { const r = f({ json: () => answer }); return { then(g) { g(r); return { catch() {} }; } }; } }) } });
       C.checkBackendVersion();

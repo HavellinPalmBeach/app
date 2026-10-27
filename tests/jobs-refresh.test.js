@@ -70,7 +70,7 @@ const SYNC_FNS = ['refreshJobsFromCloud', '_mergeCloudJobs', '_syncWritesOutstan
   '_applyDroppedJobs', '_purgeLocalJobRecords', 'migrateRetiredNames', 'canonPersonName',
   'saveJobs', 'syncJobToSheets', 'syncToSheets', 'postSyncBadge', 'queuedPostSync',
   '_flushOutbox', '_writeKey', '_enqueueWrite', '_backendErrorKind', '_retrySoon',
-  '_scheduleRetry', 'flushPendingWrites', '_pendingCount'];
+  '_scheduleRetry', 'flushPendingWrites', '_pendingCount', '_withDeviceKey', 'deviceKey'];
 const SYNC_VARS = ['_outbox', '_outboxTimer', '_outboxSending', '_OUTBOX_WINDOW', '_syncWriteSeq',
   '_pendingWrites', '_retryTimer', '_retryStep', '_flushing', '_retryDelays', 'SYNC_STUCK_TRIES',
   'PERSON_NAME_ALIASES'];
@@ -471,7 +471,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     // refreshEstimateFromCloud — Build estimate, the client-estimate load, and the 12 s approval watch.
     const r = rig({
-      fns: ['refreshEstimateFromCloud'],
+      fns: ['refreshEstimateFromCloud', '_withDeviceKey', 'deviceKey'],
       local: [{ id: 1, name: 'Tripp Butler', updatedAt: 100 }], sheet: [],
       stubs: { estimateHasContent: () => false },
     });

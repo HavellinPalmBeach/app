@@ -582,7 +582,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The agreement's fields read as they always did (recipient 2 is its countersigner); the request reads `signers`.
     eq([st.signerName, st.coSigners.length], ['Thomas Ellison', 0], 'the agreement\'s fields unchanged');
     has(GS, "'esignSendRequest'", 'the action is listed');
-    has(GS, "if (data.action === 'esignSendRequest') { return jsonOut(esignSendRequestEnvelope(data)); }", 'and dispatched');
+    // RESTATED 2026-10-27b (P2): dispatched through the client-bound wrapper, which reads the client off the sheet and sends only to
+    // its recorded fiduciaries (tests/p2-device-key.test.js group C); esignSendRequestEnvelope stays the sender it calls.
+    has(GS, "if (data.action === 'esignSendRequest') { return jsonOut(esignSendRequestForJob(data)); }", 'and dispatched, bound to the client');
   });
 
   // ═══════════════════════════════════════════════════════════════════════

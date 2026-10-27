@@ -147,7 +147,7 @@ const DEVICE_FNS = ['saveJobs', 'syncJobToSheets', 'syncToSheets', '_jobTouch', 
   'docStateBare', '_saveArrivalCheck', 'applyStripePayments', '_stripeRecordPayment', '_stripeHandMatch', '_handAchAwaitingStripe', 'paymentCounts', 'paymentLive', 'isRefundRecord', '_paymentKey', 'jobPayments', '_localDateOf', '_ymdLocal', '_stampChangedKeys', '_crewSnap', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'isHalfHours', '_coordHrsRefusal',
   // P17: the real money formatter, since removeLogisticsLine now prints its quote through it; the two Stripe devices
   // below stubbed it as '$' + n and read nothing it printed, so their stubs went rather than shadow it.
-  'fmt'];
+  'fmt', '_withDeviceKey', 'deviceKey'];
 const DEVICE_VARS = ['SMF_PCT', 'PREP_FEE_RATE', 'LOGISTICS_CATEGORIES', '_srcLidSeq', 'VENDOR_CONTACT_SLOTS',
   'CONTRACTOR_TC_NAME', 'LOG_PLACEHOLDER_NAMES', 'PERSON_NAME_ALIASES', 'VENDOR_RATING_WINDOW'];
 

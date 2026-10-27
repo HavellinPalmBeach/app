@@ -364,7 +364,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const posted = [];
     const sp = (v) => ({ then(f) { try { return sp(f(v)); } catch (e) { return { then() { return this; }, catch(h) { h(e); return this; } }; } }, catch() { return this; } });
-    const S = sandbox({ fns: ['createDriveJobFolder'], vars: ['SIGNED_RECORDS_SUBFOLDER', 'INCIDENT_SUBFOLDER', '_driveFolderInFlight'],
+    const S = sandbox({ fns: ['createDriveJobFolder', '_withDeviceKey', 'deviceKey'], vars: ['SIGNED_RECORDS_SUBFOLDER', 'INCIDENT_SUBFOLDER', '_driveFolderInFlight'],
       stubs: { SHEETS_SYNC_URL: 'https://script.google.com/macros/s/P19/exec', DRIVE_FOLDER_ID: 'ROOT', saveJobs() {}, syncJobToSheets() {}, showSyncBadge() {},
                _driveFolderLanded() {}, _driveFolderFailed() {}, _backendErrorKind() { return ''; },
                fetch(url, init) { posted.push(JSON.parse(init.body)); return sp({ json: () => ({ ok: true, folderUrl: 'https://drive.google.com/drive/folders/NEW', subfolders: {} }) }); } } });

@@ -117,7 +117,7 @@ const AV_FNS = ['_avValueButtonHtml', 'agentValueMode', 'agentValueInternal', '_
   'invFiduciaryMode', 'isDecedentJob', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep', 'estateValueDate',
   '_avdDate', '_ymdLocal', 'resolveValBasis', '_agNameKey', '_agDetailRefs', 'invLineCloseUps', '_invFileId', 'invAppraisalThreshold',
   'gateDispute', '_gateYes', 'invNeedsAppraisal', 'fmt', '_invMoney', '_invNamed', '_invItemNo', '_andJoin',
-  'moneyToNumber', '_readAppsScriptJson', '_invJob', '_avNameIsAgents', '_invStampLineReviewed', '_invRenderWhenIdle', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', 'agentValueLooks', '_avPhotoContext', '_invPhotoSource', '_invRoomName', 'agentListedOff', 'agentValueAgain', 'invLineQty', 'invLineReviewed', 'invLineOpen'];
+  'moneyToNumber', '_readAppsScriptJson', '_invJob', '_avNameIsAgents', '_invStampLineReviewed', '_invRenderWhenIdle', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', 'agentValueLooks', '_avPhotoContext', '_invPhotoSource', '_invRoomName', 'agentListedOff', 'agentValueAgain', 'invLineQty', 'invLineReviewed', 'invLineOpen', '_withDeviceKey', 'deviceKey'];
 const AV_VARS = ['_avRun', '_avForceComps', '_avAfter', 'AGENT_VALUE_BATCH', 'AGENT_VALUE_GENERAL_CEILING', 'AGENT_VALUE_MAX_COMPS', 'AGENT_CONDITIONS',
   'AGENT_VALUE_MARK_RE', 'AGENT_VALUE_NO_MARK_RE', 'AGENT_VALUE_CONFS', 'AGENT_VALUE_SOURCES', 'AGENT_VALUE_OWN', 'AGENT_VALUE_SALE_DATE_RE',
   'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'DECEDENT_SERVICES', 'DOC_TIERS',
@@ -370,14 +370,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(JSON.stringify(g._avTool('comps')), 'One or two short sentences, under forty words.', 'and the note\'s field says so');
   }
 
-  group('S3c · the deployment: 2026-10-26b, the app relies on it, and the banner leads with the comparable gap');
+  group('S3c · the deployment: 2026-10-26b, the app relies on it, and the banner names the comparable gap by its vintage');
   {
     // RESTATED 2026-10-26c: the release request's DocuSign action rides the next deployment; the agents' floor is unchanged.
-    eq((GS.match(/var BACKEND_VERSION = '([^']+)';/) || [])[1], '2026-10-26c', 'main-sync.gs is 2026-10-26c, carrying 2026-10-26b');
+    // RESTATED 2026-10-27b (P2): the device key rides the next one, the app relies on it, and the banner names the open URL first;
+    // the comparable gap follows under its own vintage.
+    eq((GS.match(/var BACKEND_VERSION = '([^']+)';/) || [])[1], '2026-10-27b', 'main-sync.gs is 2026-10-27b, carrying 2026-10-26c and 2026-10-26b');
     const B = sandbox({ vars: ['BACKEND_MIN_VERSION', 'BACKEND_FEATURE_COST'] });
-    eq(B.BACKEND_MIN_VERSION, '2026-10-26b', 'and the app relies on it');
-    ok(/^a search page, or a sale whose price was not shown, can stand as a sold comparable, so a researched figure resting on one prints \u201cauction comps\u201d; a long note from Agent Two stops mid-sentence; and neither agent grades an item\u2019s condition; on a deployment older than 2026-10-26, /.test(B.BACKEND_FEATURE_COST.version),
-      'the banner names the newest gap first, by consequence, then 2026-10-26\'s by its vintage');
+    ok(B.BACKEND_MIN_VERSION >= '2026-10-26b', 'and the app relies on it (' + B.BACKEND_MIN_VERSION + ')');
+    ok(/; on a deployment older than 2026-10-26b, a search page, or a sale whose price was not shown, can stand as a sold comparable, so a researched figure resting on one prints \u201cauction comps\u201d; a long note from Agent Two stops mid-sentence; and neither agent grades an item\u2019s condition; on a deployment older than 2026-10-26, /.test(B.BACKEND_FEATURE_COST.version),
+      'the banner names the comparable gap by its vintage, then 2026-10-26\'s');
   }
 
   group('S4 · the figures are checked: cents, a range round its point, a negative or missing value refused');

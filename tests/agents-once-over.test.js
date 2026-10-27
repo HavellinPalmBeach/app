@@ -127,7 +127,7 @@ const AV_FNS = ['agentValueMode', 'agentValueInternal', '_avHasFigure', 'agentVa
   '_avdDate', '_ymdLocal', 'resolveValBasis', '_agNameKey', '_agDetailRefs', 'invLineCloseUps', '_invFileId', 'invAppraisalThreshold',
   'gateDispute', '_gateYes', 'invNeedsAppraisal', 'fmt', '_invMoney', '_invNamed', '_invItemNo', '_andJoin',
   'moneyToNumber', '_readAppsScriptJson', '_invJob', '_invRenderWhenIdle', '_invHasPhoto', 'agentValueLooks', '_avPhotoContext', '_invPhotoSource',
-  '_invRoomName', 'agentListedOff', '_invDerivedRefs', '_invPhotoSiblings', '_invCondIsAgents', '_invAgentCondition'];
+  '_invRoomName', 'agentListedOff', '_invDerivedRefs', '_invPhotoSiblings', '_invCondIsAgents', '_invAgentCondition', '_withDeviceKey', 'deviceKey'];
 const AV_VARS = ['_avRun', 'AGENT_CONDITIONS', '_avForceComps', '_avAfter', '_avAutoAgain', 'AGENT_VALUE_BATCH', 'AGENT_VALUE_GENERAL_CEILING', 'AGENT_VALUE_MAX_COMPS',
   'AGENT_VALUE_MARK_RE', 'AGENT_VALUE_NO_MARK_RE', 'AGENT_VALUE_READ_RE', 'AGENT_VALUE_HEDGE_RE', 'AGENT_VALUE_CONFS', 'AGENT_VALUE_SOURCES', 'AGENT_VALUE_OWN',
   'AGENT_VALUE_SALE_DATE_RE', 'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',

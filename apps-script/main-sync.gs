@@ -114,7 +114,14 @@
 // signer on the envelope (`signers`: recipientId, name, email, status, signedAt, declinedReason) and why an envelope was voided.
 // Until it is live the request goes by email only (the app offers no DocuSign send without the action), and an envelope's
 // signatures cannot be read back.
-var BACKEND_VERSION = '2026-10-26c';
+// ⚠ 2026-10-27b (P2, the desk audit's RT-01: "Only Havellin's devices reach the data"): every action and type but the version
+// probe asks for the device key first (HAVELLIN_DEVICE_KEY in Script Properties; the check is OFF while it is unset, and the
+// probe answers `deviceKey`: off, ok, missing or wrong); a share or revoke goes only to a folder inside that client's own,
+// a share only to an address recorded on that client; a trash only to a file inside the jobs folder, never a folder; the
+// release request through DocuSign only to the client's recorded fiduciaries, copied only to agreements@ and the estate
+// attorney, under a subject built here; each share, revoke, trash and request send is written to the AccessLog tab. No action
+// or type changes. Until it is live the URL alone opens every record, and the app's banner says so.
+var BACKEND_VERSION = '2026-10-27b';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive', 'esignSendRequest',
@@ -143,6 +150,106 @@ function _okWithDrops(r) {
   return out;
 }
 
+// ══ THE DEVICE KEY (P2, 2026-10-27b) ═══════════════════════════════════════════
+// ⚠⚠ UNTIL THIS, THE /exec URL WAS THE ONLY KEY. The deployment answers "Who has access: Anyone" (it must: the app is a
+// static page with no Google sign-in), so whoever held the URL could read every client, every inventory and every door
+// code, share any folder the Havellin account reaches with any address, trash any file and, since 2026-10-26c, send a
+// DocuSign envelope from the firm's account (the desk audit of 2026-10-27, RT-01; both of its red-team reviewers). A bank
+// trust department's vendor review ends there.
+// So every request but the version probe carries the device's key (`deviceKey` in the URL's query, GET and POST alike, so
+// it is checked before a POST body is even parsed), and it is compared with the key or keys in Script Properties,
+// HAVELLIN_DEVICE_KEY: one key, or several separated by commas or new lines (a key per device lets one lost iPad be locked
+// out alone). It is not a sign-in (Q59 stands): the device is told once, like its URLs.
+// ⚠ WHILE NO KEY IS SET THE CHECK IS OFF, AND THE VERSION PROBE SAYS SO (`deviceKey: 'off'`). That is what lets this file
+// be redeployed with nothing breaking: Anthony turns the check on by setting the property, and turns it off again by
+// clearing it. A key is compared in capitals with spaces and dashes taken out (_deviceKeyNorm), so a key typed on a phone
+// keyboard (auto-capitalised, grouped) still matches; suggestDeviceKey() makes one in that shape.
+// ⚠ THE KEY NEVER LIVES IN THIS FILE OR THE REPO (the repo is public); never log it, never echo it.
+var DEVICE_KEY_PROP  = 'HAVELLIN_DEVICE_KEY';
+var DEVICE_KEY_PARAM = 'deviceKey';
+var DEVICE_KEY_MIN   = 16;    // characters, after _deviceKeyNorm: suggestDeviceKey names a shorter key, and refuses nothing
+// The app reads these words (its _backendErrorKind matches "has no key" and "key on this device is wrong"; a test holds the
+// two together), and a person reads them in the chip.
+var DEVICE_KEY_REFUSED = {
+  missing: 'This device has no key: ask Anthony, then type it in Settings under the Apps Script URL. Nothing was read or written.',
+  wrong:   'The key on this device is wrong: ask Anthony for it and type it again in Settings. Nothing was read or written.'
+};
+function _deviceKeyNorm(k) { return String(k == null ? '' : k).toUpperCase().replace(/[\s\-]+/g, ''); }
+// 'off' (no key in Script Properties: everyone passes, as before this), 'ok', 'missing' or 'wrong'. A Script Properties
+// read that throws is not caught: the request fails (and the app retries) rather than passing with the check off.
+function _deviceKeyState(e) {
+  var raw = PropertiesService.getScriptProperties().getProperty(DEVICE_KEY_PROP) || '';
+  var keys = String(raw).split(/[,;\r\n]+/).map(_deviceKeyNorm).filter(function (k) { return !!k; });
+  if (!keys.length) return 'off';
+  var sent = _deviceKeyNorm(e && e.parameter && e.parameter[DEVICE_KEY_PARAM]);
+  if (!sent) return 'missing';
+  var same = function (a, b) {     // every character compared, whatever the first difference
+    if (a.length !== b.length) return false;
+    var d = 0;
+    for (var i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
+    return d === 0;
+  };
+  return keys.some(function (k) { return same(k, sent); }) ? 'ok' : 'wrong';
+}
+// null where the request may go on; else the refusal, which names the state and reads nothing and writes nothing.
+function _deviceKeyRefusal(e, what) {
+  var st = _deviceKeyState(e);
+  if (st === 'off' || st === 'ok') return null;
+  Logger.log('Refused ' + (what || 'a request') + ': device key ' + st);
+  return { ok: false, success: false, deviceKey: st, error: DEVICE_KEY_REFUSED[st] };
+}
+
+// Editor only (the Run menu passes no argument): says whether the check is on and how many keys are set, never printing
+// one; names a key shorter than DEVICE_KEY_MIN; and prints a fresh key in the shape a phone types easily (twenty letters
+// and digits from an alphabet with no 0, O, 1 or I, in groups of four: about 100 bits), to copy into Script Properties if
+// wanted. It SETS NOTHING: a new key locks out every device that has not been given it, so that is done by hand.
+function suggestDeviceKey() {
+  var raw = PropertiesService.getScriptProperties().getProperty(DEVICE_KEY_PROP) || '';
+  var keys = String(raw).split(/[,;\r\n]+/).map(_deviceKeyNorm).filter(function (k) { return !!k; });
+  Logger.log(keys.length
+    ? 'The device key check is ON: ' + keys.length + ' key' + (keys.length === 1 ? '' : 's') + ' in Script Properties (' + DEVICE_KEY_PROP + ').'
+    : 'The device key check is OFF: ' + DEVICE_KEY_PROP + ' is not set in Script Properties, so anyone with the /exec URL is answered.');
+  keys.forEach(function (k, i) {
+    if (k.length < DEVICE_KEY_MIN) Logger.log('⚠ Key ' + (i + 1) + ' is only ' + k.length + ' characters (spaces and dashes aside): use at least ' + DEVICE_KEY_MIN + '.');
+  });
+  var ALPHA = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  var bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, Utilities.getUuid() + Utilities.getUuid() + Date.now());
+  var key = '';
+  for (var i = 0; i < 20; i++) { key += ALPHA.charAt(((bytes[i] % 32) + 32) % 32); if (i % 4 === 3 && i < 19) key += '-'; }
+  Logger.log('A fresh key, if you want one (nothing has been set): ' + key);
+  Logger.log('To use it: Project Settings, Script Properties, ' + DEVICE_KEY_PROP + ' = the key; then type the same key on every device '
+    + '(Settings, Device key, under the Apps Script URL) the same day. Several keys may be set, separated by commas.');
+}
+
+// ══ THE ACCESS LOG (P2) ═════════════════════════════════════════════════════════
+// Every share, every revoke, every trash the app asks for, and every release request sent through DocuSign, with what came
+// of it (refusals included), one row each on the AccessLog tab: who the device says it is (`by`, the app's Settings, This
+// Device: attribution, never proof), which client, which folder or file, which address. Columns are found by their header,
+// so a column moved by hand keeps its values. A row that cannot be written is logged to the execution log instead and
+// never stops the act it records.
+var ACCESS_LOG_TAB = 'AccessLog';
+var ACCESS_LOG_HEADER = ['When', 'Action', 'Result', 'Job ID', 'HVL ID', 'Folder or file ID', 'Name', 'Email', 'Device user'];
+function _accessLog(rec) {
+  rec = rec || {};
+  var vals = { 'When': new Date().toISOString(), 'Action': rec.act || '', 'Result': rec.result || '', 'Job ID': rec.jobId != null ? String(rec.jobId) : '',
+               'HVL ID': rec.hvlId || '', 'Folder or file ID': rec.target || '', 'Name': rec.name || '', 'Email': rec.email || '', 'Device user': rec.by || '' };
+  try {
+    var ss = SpreadsheetApp.openById(SHEET_ID);
+    var sh = ss.getSheetByName(ACCESS_LOG_TAB);
+    if (!sh) { sh = ss.insertSheet(ACCESS_LOG_TAB); sh.appendRow(ACCESS_LOG_HEADER.slice()); }
+    var width = Math.max(1, sh.getLastColumn());
+    var hdr = sh.getRange(1, 1, 1, width).getValues()[0].map(function (h) { return String(h || '').trim(); });
+    var missing = ACCESS_LOG_HEADER.filter(function (h) { return hdr.indexOf(h) < 0; });
+    if (missing.length) {
+      sh.getRange(1, hdr.length + 1, 1, missing.length).setValues([missing]);
+      hdr = hdr.concat(missing);
+    }
+    sh.appendRow(hdr.map(function (h) { return Object.prototype.hasOwnProperty.call(vals, h) ? String(vals[h]).slice(0, 1000) : ''; }));
+  } catch (e) {
+    Logger.log('AccessLog row not written (' + e + '): ' + JSON.stringify(vals));
+  }
+}
+
 // ══ ROUTERS ════════════════════════════════════════════════════════════════════
 
 function doGet(e) {
@@ -150,10 +257,19 @@ function doGet(e) {
     var action = e.parameter.action;
 
     // Answered by every deployment that carries it; an OLD one answers 'Unknown action',
-    // which is itself the signal the app is looking for.
+    // which is itself the signal the app is looking for. The one request that needs no device key (P2): it reads nothing,
+    // and its `deviceKey` ('off', 'ok', 'missing', 'wrong') is how a device learns, at load, whether it is let in.
     if (action === 'version') {
+      var dk = 'unknown';
+      try { dk = _deviceKeyState(e); } catch (dkErr) { Logger.log('version: device key state unreadable: ' + dkErr); }
       return jsonOut({ ok: true, success: true, version: BACKEND_VERSION,
-                       actions: BACKEND_ACTIONS, types: BACKEND_TYPES });
+                       actions: BACKEND_ACTIONS, types: BACKEND_TYPES, deviceKey: dk });
+    }
+    // ⚠ EVERY OTHER ACTION ASKS FOR THE KEY FIRST (P2). A request with no action at all is left to the 'Unknown action' answer
+    // below: it reads nothing, and it is how a POST redirected into a bare GET is recognised (the app's 'route' diagnosis).
+    if (action) {
+      var refusedGet = _deviceKeyRefusal(e, 'GET ' + action);
+      if (refusedGet) return jsonOut(refusedGet);
     }
 
     if (action === 'loadJobs') {
@@ -189,6 +305,9 @@ function doGet(e) {
 
 function doPost(e) {
   try {
+    // ⚠ THE KEY FIRST (P2), before the body is even parsed: it travels in the URL's query (e.parameter), not the body.
+    var refusedPost = _deviceKeyRefusal(e, 'a POST');
+    if (refusedPost) return jsonOut(refusedPost);
     var data = JSON.parse(e.postData.contents);
 
     if (data.action === 'createFolder')  { return jsonOut(createJobFolder(data.hvlId, data.clientName, data.svc, data.subfolders, data.parentFolderId)); }
@@ -197,13 +316,16 @@ function doPost(e) {
     if (data.action === 'htmlToPdf')     { return jsonOut(htmlToPdfBase64(data.html)); }
     if (data.action === 'getSubfolders') { return handleGetSubfolders(data); }
     if (data.action === 'getThumbnails')  { return jsonOut(getDriveThumbnails(data.fileIds)); }
-    if (data.action === 'trashFile')      { return jsonOut(trashDriveFile(data.fileId)); }
-    if (data.action === 'shareFolder')   { return jsonOut(shareFolder(data.folderId, data.email)); }
-    if (data.action === 'unshareFolder') { return jsonOut(unshareFolder(data.folderId, data.email)); }
+    // The three that act on who can see or keep a file go through their scoped forms (P2): a file under the jobs folder, a
+    // folder under the client's own, an address recorded on that client. trashDriveFile, shareFolder and unshareFolder stay
+    // the unscoped primitives the editor-only sweeps use.
+    if (data.action === 'trashFile')      { return jsonOut(trashFileUnderRoot(data)); }
+    if (data.action === 'shareFolder')   { return jsonOut(shareFolderForJob(data)); }
+    if (data.action === 'unshareFolder') { return jsonOut(unshareFolderForJob(data)); }
     if (data.action === 'esignSend')     { return jsonOut(esignSendEnvelope(data)); }
     if (data.action === 'esignStatus')   { return jsonOut(esignEnvelopeStatus(data)); }
     if (data.action === 'esignArchive')  { return jsonOut(esignArchiveEnvelope(data)); }
-    if (data.action === 'esignSendRequest') { return jsonOut(esignSendRequestEnvelope(data)); }
+    if (data.action === 'esignSendRequest') { return jsonOut(esignSendRequestForJob(data)); }
     if (data.action === 'stripeLink')    { return jsonOut(stripeCreatePaymentLink(data)); }
     if (data.action === 'stripeStatus')  { return jsonOut(stripePaymentsForLink(data)); }
     if (data.action === 'agentIdentify') { return jsonOut(agentIdentifyShots(data)); }
@@ -1951,6 +2073,149 @@ function unshareFolder(folderId, email) {
   }
 }
 
+// ─── WHAT THE APP MAY SHARE, REVOKE AND TRASH (P2, 2026-10-27b) ─────────────────────
+// ⚠⚠ shareFolder ADDED ANY ADDRESS AS A VIEWER ON ANY FOLDER THE HAVELLIN ACCOUNT CAN REACH, AND trashDriveFile BINNED ANY
+// FILE BY ID (the desk audit, RT-01). The device key now keeps strangers out; these keep a Havellin device, or a bug in the
+// app, inside the job it is working on:
+//   · a share goes only to a folder inside that client's own Drive folder, and only to an address recorded on that client
+//     on the sheet (the client, the representative, a co-representative or the estate attorney: _jobRecordedEmails);
+//   · a revoke goes only to a folder inside that client's own folder, for any address (taking access away from somebody no
+//     longer recorded is exactly what a revoke is for);
+//   · a trash only to a file, never a folder, inside the jobs folder (ROOT_FOLDER_ID, the Jobs Folder ID in Settings).
+// Each is written to the AccessLog tab with its result, refusals included. The client is read off the sheet, never off
+// what the request says about it: a device's own copy can be ahead of the sheet, and the refusal says to let it save.
+var DRIVE_FOLDER_MIME = 'application/vnd.google-apps.folder';
+var DRIVE_UNDER_MAX_DEPTH = 8;     // job folder, subfolder, file: three levels; room for older layouts, never a loop
+
+function _jobOnSheet(jobId) {
+  if (jobId === undefined || jobId === null || String(jobId).trim() === '') return null;
+  var all = getJobsFromSheet();
+  for (var i = 0; i < all.length; i++) if (all[i] && String(all[i].id) === String(jobId)) return all[i];
+  return null;
+}
+// The client's own Drive folder, by the id in the URL the app records (job.driveFolder), or ''.
+function _jobFolderIdGs(job) {
+  var m = String((job && job.driveFolder) || '').match(/folders\/([A-Za-z0-9_-]+)/);
+  return m ? m[1] : '';
+}
+// The live entries of one of the job's record lists (the app's jobListEntries: an id, and not voided).
+function _jobListLiveGs(job, kind) {
+  var arr = (job && Array.isArray(job[kind])) ? job[kind] : [];
+  return arr.filter(function (x) { return x && x.id !== undefined && x.id !== null && x.id !== '' && !x.voidedAt; });
+}
+// Every address recorded on the client, lower-cased: the client, the representative, each live co-representative and the
+// estate attorney (on a trust, the trustee's attorney: the same field).
+function _jobRecordedEmails(job) {
+  var out = [];
+  var add = function (e) { var a = String(e || '').trim().toLowerCase(); if (a && out.indexOf(a) < 0) out.push(a); };
+  if (!job) return out;
+  add(job.email); add(job.executorEmail); add(job.probateAttyEmail);
+  _jobListLiveGs(job, 'coFiduciaries').forEach(function (c) { add(c.email); });
+  return out;
+}
+// The ids of an item's parents: DriveApp first, then the advanced Drive service with supportsAllDrives (the estate folders
+// are on a Shared Drive, where the two can disagree about what they see: _filesNamedInFolder records the same lesson).
+function _driveParentIds(id, isFolder) {
+  var out = [];
+  try {
+    var it = (isFolder ? DriveApp.getFolderById(id) : DriveApp.getFileById(id)).getParents();
+    while (it.hasNext()) out.push(String(it.next().getId()));
+  } catch (e) {}
+  if (out.length) return out;
+  try {
+    if (typeof Drive !== 'undefined' && Drive.Files && Drive.Files.get) {
+      var f = Drive.Files.get(id, { supportsAllDrives: true });
+      ((f && f.parents) || []).forEach(function (p) { var pid = (p && typeof p === 'object') ? p.id : p; if (pid) out.push(String(pid)); });
+    }
+  } catch (e2) {}
+  return out;
+}
+// Is the item (a folder where isFolder, else a file) the folder `ancestor` itself (a folder only), or anywhere inside it?
+function _driveIsUnder(id, isFolder, ancestor) {
+  id = String(id || ''); ancestor = String(ancestor || '');
+  if (!id || !ancestor) return false;
+  if (isFolder && id === ancestor) return true;
+  var frontier = [id], seen = {}, first = true;
+  seen[id] = 1;
+  for (var depth = 0; depth < DRIVE_UNDER_MAX_DEPTH && frontier.length; depth++) {
+    var next = [];
+    for (var i = 0; i < frontier.length; i++) {
+      var parents = _driveParentIds(frontier[i], first ? isFolder : true);
+      for (var j = 0; j < parents.length; j++) {
+        if (parents[j] === ancestor) return true;
+        if (!seen[parents[j]]) { seen[parents[j]] = 1; next.push(parents[j]); }
+      }
+    }
+    first = false;
+    frontier = next;
+  }
+  return false;
+}
+// Why a share (needEmail) or a revoke of this folder for this client may not go, or '' with the job it read.
+function _shareScope(data, needEmail) {
+  var folderId = String((data && data.folderId) || '').trim(), email = String((data && data.email) || '').trim();
+  if (!folderId || !email) return { why: 'Missing folderId or email' };
+  if (data.jobId === undefined || data.jobId === null || String(data.jobId).trim() === '')
+    return { why: 'The request names no client, so nothing was changed: reload the app (an older copy of it is open) and try again.' };
+  var job = _jobOnSheet(data.jobId);
+  if (!job) return { why: 'This client is not on the sheet, so nothing was changed.' };
+  var root = _jobFolderIdGs(job);
+  if (!root) return { why: 'This client has no Drive folder recorded on the sheet, so nothing was changed.', job: job };
+  if (needEmail && _jobRecordedEmails(job).indexOf(email.toLowerCase()) < 0)
+    return { why: email + ' is not an email recorded on this client, so nothing was shared. Add it on Edit Client (the estate attorney, '
+      + 'the representative or a co-representative) and let the change save, then share again.', job: job };
+  if (!_driveIsUnder(folderId, true, root)) return { why: 'That folder is not inside this client’s Drive folder, so nothing was changed.', job: job };
+  return { why: '', job: job };
+}
+function shareFolderForJob(data) {
+  data = data || {};
+  var sc = _shareScope(data, true);
+  var log = { act: 'share', jobId: data.jobId, hvlId: sc.job ? sc.job.hvlId : '', target: data.folderId, email: data.email, by: data.by };
+  if (sc.why) { log.result = 'refused: ' + sc.why; _accessLog(log); return { ok: false, success: false, error: sc.why }; }
+  var res = shareFolder(data.folderId, String(data.email).trim());
+  try { log.name = DriveApp.getFolderById(data.folderId).getName(); } catch (e) {}
+  log.result = res.ok ? 'shared' : 'failed: ' + res.error;
+  _accessLog(log);
+  return res;
+}
+function unshareFolderForJob(data) {
+  data = data || {};
+  var sc = _shareScope(data, false);
+  var log = { act: 'revoke', jobId: data.jobId, hvlId: sc.job ? sc.job.hvlId : '', target: data.folderId, email: data.email, by: data.by };
+  if (sc.why) { log.result = 'refused: ' + sc.why; _accessLog(log); return { ok: false, success: false, error: sc.why }; }
+  var res = unshareFolder(data.folderId, String(data.email).trim());
+  try { log.name = DriveApp.getFolderById(data.folderId).getName(); } catch (e) {}
+  log.result = res.ok ? 'revoked' : 'failed: ' + res.error;
+  _accessLog(log);
+  return res;
+}
+// The item's MIME type, by either road, or '' where neither can open it.
+function _driveMime(id) {
+  try { return String(DriveApp.getFileById(id).getMimeType() || ''); } catch (e) {}
+  try {
+    if (typeof Drive !== 'undefined' && Drive.Files && Drive.Files.get) {
+      var f = Drive.Files.get(id, { supportsAllDrives: true });
+      return String((f && f.mimeType) || '');
+    }
+  } catch (e2) {}
+  return '';
+}
+function trashFileUnderRoot(data) {
+  data = data || {};
+  var fileId = String(data.fileId || '').trim();
+  var log = { act: 'trash', jobId: data.jobId, target: fileId, by: data.by };
+  var why = '';
+  if (!fileId) why = 'No fileId given.';
+  else if (_driveMime(fileId) === DRIVE_FOLDER_MIME) why = 'That is a folder: only a file is ever trashed from the app, so nothing was trashed.';
+  else if (!_driveIsUnder(fileId, false, ROOT_FOLDER_ID)) why = 'That file is not inside the Havellin jobs folder, so it was not trashed.';
+  if (why) { log.result = 'refused: ' + why; _accessLog(log); return { ok: false, error: why }; }
+  try { log.name = DriveApp.getFileById(fileId).getName(); } catch (e) {}
+  var res = trashDriveFile(fileId);
+  log.result = res.ok ? 'trashed' : 'failed: ' + res.error;
+  _accessLog(log);
+  return res;
+}
+
 // ══ DOCUSIGN — JWT GRANT, ENVELOPE SEND, STATUS POLL ════════════════════════════
 // Anthony, 2026-09-17: *"I want to start wiring up DocuSign so we can actually send out an
 // agreement for signature."* The app-side signature RECORD shipped 2026-09-11 (Slice 6)
@@ -2437,6 +2702,88 @@ function esignSendRequestEnvelope(data) {
   } catch (error) {
     Logger.log('esignSendRequestEnvelope error: ' + error);
     return { ok: false, error: String(error) };
+  }
+}
+// ⚠⚠ THE RELEASE REQUEST GOES ONLY TO THE CLIENT'S RECORDED FIDUCIARIES (P2, 2026-10-27b; the desk audit, RT-01). The
+// request the app posts named the PDF, every signer's name and email, the copies and the subject, and nothing tied any of
+// it to a job: whoever could post could send an envelope from Havellin's DocuSign account to anybody. Now the client is
+// read off the sheet by `jobId`, and:
+//   · it must be an estate (_GS_DECEDENT_SERVICES, held equal to the app's DECEDENT_SERVICES by a test);
+//   · the signers must be exactly that client's recorded fiduciaries, in their order, by email (_jobFiduciariesGs, the
+//     app's jobFiduciaries: the representative, then each live co-representative who is not the representative), each with
+//     an email; the names on the envelope are the sheet's;
+//   · the copies may be only agreements@ and the estate attorney recorded on the client;
+//   · the subject is built here from the client's address, as the app builds it (approvalRequestSubject, held equal);
+//   · the document must be a PDF. Each signer's own markers still have to be in it, or DocuSign refuses the envelope.
+// A refusal sends nothing and names why; a co-representative added on another device and not yet on the sheet is told to
+// let the change save. Every send and refusal is written to the AccessLog tab.
+var _GS_DECEDENT_SERVICES = { cleanout: 1, probate: 1, contested_probate: 1 };
+var AGREEMENTS_EMAIL = 'agreements@havellinpalmbeach.com';
+// The app's samePerson for a client's name: trimmed, case aside (the app's aliases are Havellin's own retired names).
+function _gsSameName(a, b) {
+  var n = function (s) { return String(s == null ? '' : s).trim().toLowerCase(); };
+  return n(a) === n(b);
+}
+function _jobFiduciariesGs(job) {
+  var svc = job && (job.svc || job.serviceType);
+  if (!job || !_GS_DECEDENT_SERVICES[svc]) return [];
+  var out = [], rep = String(job.executor || '').trim();
+  if (rep) out.push({ name: rep, email: String(job.executorEmail || '').trim() });
+  _jobListLiveGs(job, 'coFiduciaries').forEach(function (c) {
+    var n = String(c.name || '').trim();
+    if (!n || (rep && _gsSameName(n, rep))) return;
+    out.push({ name: n, email: String(c.email || '').trim() });
+  });
+  return out;
+}
+function _approvalRequestSubjectGs(job) {
+  var street = String((job && job.addr) || '').split(',')[0].trim();
+  return 'Havellin Palm Beach — Release Approval Request for ' + (street || (job && job.name) || 'the property');
+}
+function esignSendRequestForJob(data) {
+  data = data || {};
+  var log = { act: 'esignSendRequest', jobId: data.jobId, by: data.by };
+  var refuse = function (why) { log.result = 'refused: ' + why; _accessLog(log); return { ok: false, error: why }; };
+  try {
+    if (data.jobId === undefined || data.jobId === null || String(data.jobId).trim() === '')
+      return refuse('The request names no client, so nothing was sent: reload the app (an older copy of it is open) and send again.');
+    var job = _jobOnSheet(data.jobId);
+    if (!job) return refuse('This client is not on the sheet, so nothing was sent.');
+    log.hvlId = job.hvlId || '';
+    if (!_GS_DECEDENT_SERVICES[job.svc || job.serviceType]) return refuse('DocuSign carries an estate’s release request only, so nothing was sent.');
+    var fids = _jobFiduciariesGs(job);
+    if (!fids.length) return refuse('No representative is recorded on this client on the sheet, so nothing was sent.');
+    var noEmail = fids.filter(function (f) { return !f.email; }).map(function (f) { return f.name; });
+    if (noEmail.length) return refuse('The envelope was not created: ' + noEmail.join(', ') + (noEmail.length > 1 ? ' have' : ' has') + ' no email recorded on the sheet.');
+    var asked = Array.isArray(data.signers) ? data.signers : [];
+    var lc = function (e) { return String(e || '').trim().toLowerCase(); };
+    var off = [];
+    asked.forEach(function (s, i) {
+      if (!fids[i] || lc(s && s.email) !== lc(fids[i].email)) off.push(String((s && (s.name || s.email)) || ('signer ' + (i + 1))));
+    });
+    fids.slice(asked.length).forEach(function (f) { off.push(f.name + ' (recorded, not on the request)'); });
+    if (off.length) return refuse('The envelope was not created: the request does not match the fiduciaries recorded on this client on the sheet ('
+      + off.join('; ') + '). If one was just added or changed on Edit Client, let the change save, then send again.');
+    var allowed = [lc(AGREEMENTS_EMAIL)];
+    if (lc(job.probateAttyEmail)) allowed.push(lc(job.probateAttyEmail));
+    var cc = (Array.isArray(data.cc) ? data.cc : []).map(function (e) { return String(e || '').trim(); }).filter(Boolean);
+    var badCc = cc.filter(function (e) { return allowed.indexOf(lc(e)) < 0; });
+    if (badCc.length) return refuse('The envelope was not created: ' + badCc.join(', ') + (badCc.length > 1 ? ' are' : ' is')
+      + ' not recorded on this client (a copy goes to agreements@ and the estate attorney only).');
+    if (String(data.pdfBase64 || '').indexOf('JVBERi') !== 0) return refuse('The envelope was not created: the document sent is not a PDF.');
+    var name = String(data.filename || '').replace(/[\\\/:*?"<>|\r\n]+/g, ' ').trim().slice(0, 120) || 'Release Approval Request';
+    if (!/\.pdf$/i.test(name)) name += '.pdf';
+    log.email = fids.map(function (f) { return f.email; }).concat(cc).join(', ');
+    var res = esignSendRequestEnvelope({
+      pdfBase64: data.pdfBase64, filename: name, subject: _approvalRequestSubjectGs(job), hvlId: job.hvlId || '', cc: cc,
+      signers: fids.map(function (f, i) { return { name: f.name, email: f.email, anchors: (asked[i] && asked[i].anchors) || [] }; })
+    });
+    log.result = res && res.ok ? 'sent: envelope ' + res.envelopeId : 'not sent: ' + ((res && (res.error || res.message)) || 'no answer');
+    _accessLog(log);
+    return res;
+  } catch (error) {
+    Logger.log('esignSendRequestForJob error: ' + error);
+    return refuse(String(error));
   }
 }
 // The initials box sits on the line its marker opens, so the tab goes down less than a signature's does (DS_TAB_Y_OFFSET

@@ -38,7 +38,7 @@ function syncOk(v) {
 function rig(remoteItems, localItems) {
   const saved = [];
   const ctx = sandbox({
-    fns: ['refreshPhotoRefs', '_stableJson', '_invApplyReset'],   // _invApplyReset: the reset stamp read first (2026-10-19); no stamp here, so it answers false
+    fns: ['refreshPhotoRefs', '_stableJson', '_invApplyReset', '_withDeviceKey', 'deviceKey'],   // _invApplyReset: the reset stamp read first (2026-10-19); no stamp here, so it answers false
     vars: [],
     stubs: {
       SHEETS_SYNC_URL: 'https://script.google.com/macros/s/AAA/exec',

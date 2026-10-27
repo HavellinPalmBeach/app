@@ -276,12 +276,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const asked = [];
     const s = sandbox({
-      fns: ['_invShareFolders', '_invShareEach', 'shareInventoryWithCounsel', 'unshareInventory'],
+      fns: ['_invShareFolders', '_invShareEach', 'shareInventoryWithCounsel', 'unshareInventory', '_withDeviceKey', 'deviceKey', 'jobRecordedEmails', 'jobListEntries'],
       vars: ['AS_FOUND_SUBFOLDER'],
       stubs: {
         // P22: the share is recorded on the job (recordPhotoShare, driven in p22-group-b.test.js); here only the folders.
         recordPhotoShare: () => null, _photoSharesRepaint: () => {},
-        jobs: [Object.assign({}, JOB, { driveFolder: 'https://drive.google.com/drive/folders/PARENT' })],
+        // The address typed is counsel's as recorded on the client: since P2 (2026-10-27b) nobody else is shared with.
+        jobs: [Object.assign({}, JOB, { driveFolder: 'https://drive.google.com/drive/folders/PARENT', probateAttyEmail: 'counsel@firm.com' })],
         SHEETS_SYNC_URL: 'https://script.example/exec',
         resolveSubfolderId: (job, name, cb) => cb(name === 'Estate Inventory' ? 'INV' : 'AF'),
         fetch: (url, opt) => { asked.push(JSON.parse(opt.body)); return syncOk({ json: () => ({ ok: true }) }); },
@@ -298,12 +299,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // statement about what counsel can now reach.
     const asked2 = [];
     const s2 = sandbox({
-      fns: ['_invShareFolders', '_invShareEach', 'shareInventoryWithCounsel'],
+      fns: ['_invShareFolders', '_invShareEach', 'shareInventoryWithCounsel', '_withDeviceKey', 'deviceKey', 'jobRecordedEmails', 'jobListEntries'],
       vars: ['AS_FOUND_SUBFOLDER'],
       stubs: {
         // P22: the share is recorded on the job (recordPhotoShare, driven in p22-group-b.test.js); here only the folders.
         recordPhotoShare: () => null, _photoSharesRepaint: () => {},
-        jobs: [Object.assign({}, JOB, { driveFolder: 'https://drive.google.com/drive/folders/PARENT' })],
+        // The address typed is counsel's as recorded on the client: since P2 (2026-10-27b) nobody else is shared with.
+        jobs: [Object.assign({}, JOB, { driveFolder: 'https://drive.google.com/drive/folders/PARENT', probateAttyEmail: 'counsel@firm.com' })],
         SHEETS_SYNC_URL: 'https://script.example/exec',
         resolveSubfolderId: (job, name, cb) => cb('INV'),
         fetch: (url, opt) => { asked2.push(JSON.parse(opt.body)); return syncOk({ json: () => ({ ok: true }) }); },

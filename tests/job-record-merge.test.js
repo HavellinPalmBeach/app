@@ -477,7 +477,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       };
       const ctx = sandbox({
         fns: ['refreshPlanAndLogFromCloud', 'planWatchTick', 'maybeStartPlanWatch',
-              'stopPlanWatch', '_planTabBusy', '_syncWritesOutstanding'],
+              'stopPlanWatch', '_planTabBusy', '_syncWritesOutstanding', '_withDeviceKey', 'deviceKey'],
         vars: ['_planWatch', 'PLAN_WATCH_MS', '_syncWriteSeq'],
         stubs: {
           document: doc,
