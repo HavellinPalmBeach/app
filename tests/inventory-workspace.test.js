@@ -91,7 +91,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // so the rule is the one before P19). Line 'e' carried a date with no signer, which was never an approval: it now
     // carries both, and 'g' (a date alone) is back on the list, which is the stricter reading of the same promise.
     const ctx = sandbox({
-      fns: ['_invAwaitingApproval', 'invWrittenReleaseNeeded', '_invJob', 'invApprovalComplete', 'invApprovalMissing', 'jobFiduciaries',
+      fns: ['_invAwaitingApproval', 'invWrittenReleaseNeeded', '_invJob', 'invApprovalComplete', 'invApprovalMoved', 'invApprovalMovedText', 'invApprovalMissing', 'jobFiduciaries',
             'jobListEntries', 'invFiduciaryMode', 'isDecedentJob'],
       vars: ['INV_RELEASE_DISPOSITIONS', 'DECEDENT_SERVICES'],
       stubs: { _jobInvRefs: () => ctx.__rows, jobs: [{ id: 1, svc: 'probate' }] },
@@ -128,7 +128,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // RESTATED 2026-10-03 (P19): Record approval opens a dialog (invRecordApproval) and its save writes the lines
     // (invSaveApproval), so the writer read here is the save; tests/p19-releases.test.js drives both.
     // RESTATED 2026-10-26c: the save's body is invApplyApproval, lifted so a request signed in DocuSign writes through it too.
-    has(src.slice(src.indexOf('function invSaveApproval('), src.indexOf('function invSaveApproval(') + 4000), 'invApplyApproval(jobId, refs, names, when)', 'the save writes through the one writer');
+    has(src.slice(src.indexOf('function invSaveApproval('), src.indexOf('function invSaveApproval(') + 4000), 'invApplyApproval(jobId, refs, names, when, _terms)', 'the save writes through the one writer (P5: with what the signed paper carried)');
     const rec = src.slice(src.indexOf('function invApplyApproval('));
     const recBody = rec.slice(0, rec.indexOf('\n}\n'));
     // RESTATED 2026-10-05 (P20, Q24): the save adds the signers to whoever each line records already, each keeping their

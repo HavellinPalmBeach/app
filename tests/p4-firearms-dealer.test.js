@@ -455,14 +455,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   G('M · the row repaints when a recipient names its dealer; Agent Two filing a firearm settles it; the camera withholds the chips', () => {
     // A licensed dealer typed into a gun's Who takes it: its row (and open record) redraw at once, by id.
-    const E = rig(ESTATE(), [GUN('g', 1, { disposition: 'Sell', authBy: 'Ruth Price', approvalDate: '2026-10-12' })]);
+    // RESTATED on merging P5 (2026-10-27, "an approval means what was signed"): the approval was signed for Sell with no dealer named
+    // (the request's firearms block reads "not covered for transport until both are recorded on a request you sign"), so the dealer
+    // typed after it asks first and holds the firearm for a fresh approval; recorded again for Sell to Jupiter, it is cleared.
+    const E = rig(ESTATE(), [GUN('g', 1, { disposition: 'Sell', authBy: 'Ruth Price', approvalDate: '2026-10-12' })], {}, ['invApplyApproval']);
     E.c._invOpen = { g: 1 };
     E.doc.__seed('inv-row-g', { outerHTML: '<div>old row</div>' });
     E.c._invEdit(7, 'g', 'channel', { value: 'Jupiter Gun Exchange', type: 'text' });
     const row = E.doc.__els['inv-row-g'].outerHTML;
     lacks(row, 'old row', '⚠ a dealer named in the box redraws the row');
-    has(text(row), 'Cleared to carry. Havellin’s named principal alone takes it to Jupiter Gun Exchange', 'and its record says it is cleared, to that dealer');
-    lacks(text(row), 'no licensed dealer', 'with no "no licensed dealer" left on it');
+    lacks(text(row), 'no licensed dealer', 'with no "no licensed dealer" left on it: Jupiter is read as the licensed dealer');
+    has(E.log.confirms.pop() || '', 'not cleared to carry until it is approved again', 'the dealer named after the signature asks first (P5)');
+    eq(E.c.invTransportBlocked(E.row('g'), E.job()), 'authority', '⚠⚠ and holds the firearm for a fresh approval naming the dealer (P5)');
+    E.c.invApplyApproval(7, [E.row('g')], ['Ruth Price'], '2026-10-13');
+    has(text(E.c._renderInvRow(E.job(), E.row('g'), {})), 'Cleared to carry. Havellin’s named principal alone takes it to Jupiter Gun Exchange', 'approved for Sell to Jupiter, its record says it is cleared, to that dealer');
     // Agent Two filing a researched line under Firearms: what a firearm may not have comes off, in agentValueApply.
     const A = rig(ESTATE(), [ROW('a', 2, { objectName: 'Flintlock pistol', namedBy: 'agent', category: 'Antiques', disposition: 'Donate',
       channel: 'Goodwill Palm Beach', channelFrom: 'plan', valSource: '', fmv: '' })]);
@@ -554,19 +560,30 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   });
 
   G('N3 · the dealer route is held to the same rule: a Vendor Directory firm under Firearms Dealer (FFL)', () => {
-    const E = rig(ESTATE(), [GUN('g', 1, { disposition: 'Distribute', channel: 'Margaret Price', authBy: 'Ruth Price', approvalDate: '2026-10-12' })], {}, ['invSetDealerRoute']);
+    const E = rig(ESTATE(), [GUN('g', 1, { disposition: 'Distribute', channel: 'Margaret Price', authBy: 'Ruth Price', approvalDate: '2026-10-12' })], {}, ['invSetDealerRoute', 'invApplyApproval']);
     const asked = [];
     E.c.window.prompt = (m, d) => { asked.push({ m: String(m), d }); return E.c.__route; };
     E.c.__route = 'Goodwill Palm Beach';
     const r1 = attempt(() => E.c.invSetDealerRoute(7, 'g', true));
     eq(r1.ok ? r1.val : r1.err, false, '⚠⚠ "Goodwill Palm Beach" typed as the route is refused');
     eq(E.row('g').viaDealer || '', '', 'and nothing is recorded');
+    eq(E.log.confirms.length, 0, '⚠ refused before the approval\'s question is asked (the merge of P4 and P5: a name that is no dealer asks nothing)');
     has(E.log.alerts.pop() || '', 'Goodwill Palm Beach is not a licensed dealer on the Vendor Directory: a firearm goes to a person only through a firm listed there under Firearms Dealer (FFL). Nothing was recorded.', 'named, with the category');
     has((asked[0] || {}).m, 'Licensed dealers on the Vendor Directory: Jupiter Gun Exchange; Palm Beach Arms.', 'the prompt lists the directory\'s dealers (Do Not Use left out)');
     E.c.__route = '  jupiter   gun exchange ';
     E.c.invSetDealerRoute(7, 'g', true);
     eq(E.row('g').viaDealer, 'Jupiter Gun Exchange', 'a directory dealer is recorded as the directory names it');
-    eq([E.c.invTransportDealer(E.row('g')), E.c.invTransportBlocked(E.row('g'), E.job())], ['Jupiter Gun Exchange', ''], 'and cleared to carry to it, papered');
+    // RESTATED on merging P5: the route is part of what the approval approved, so one recorded after the signature asks first and
+    // holds the firearm until it is approved again through that dealer; approved, it is cleared.
+    has(E.log.confirms.pop() || '', 'through Jupiter Gun Exchange', 'the route recorded after the signature asks first, naming the directory\'s dealer (P5)');
+    eq([E.c.invTransportDealer(E.row('g')), E.c.invTransportBlocked(E.row('g'), E.job())], ['Jupiter Gun Exchange', 'authority'], '⚠⚠ and holds it for a fresh approval (P5)');
+    E.c.invApplyApproval(7, [E.row('g')], ['Ruth Price'], '2026-10-13');
+    eq([E.c.invTransportDealer(E.row('g')), E.c.invTransportBlocked(E.row('g'), E.job())], ['Jupiter Gun Exchange', ''], 'and cleared to carry to it, papered once approved through it');
+    // Approved through Jupiter, Goodwill typed as the route: refused as no dealer before the approval's question is asked (the merge).
+    const nAsked = E.log.confirms.length;
+    E.c.__route = 'Goodwill Palm Beach';
+    eq(E.c.invSetDealerRoute(7, 'g', true), false, 'Goodwill over an approved route: refused');
+    eq([E.log.confirms.length, E.row('g').viaDealer], [nAsked, 'Jupiter Gun Exchange'], '⚠ the directory answers first: no approval question for a name that is no dealer, and the route as it was');
     // A route that names no directory dealer (a copy from elsewhere, a firm since recategorised) is never read as one.
     const B = rig(ESTATE(), [GUN('g', 1, { disposition: 'Distribute', channel: 'Margaret Price', viaDealer: 'Goodwill Palm Beach' })]);
     // The request first (a line still waiting on approval), then the same line papered for the gate.
@@ -700,6 +717,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(readers('invFirearmsDealerFirm'), ['invSetDealerRoute', 'invTransportDealer'],
       'the directory dealer: read through the dealer, and asked by the route\'s prompt before it records one (P4 review)');
     eq(readers('firearmsClientTakesAll'), ['firearmsBannerHtml', 'firearmsWorkspaceLine'], 'the banner\'s living rule: one answer, both builders');
-    eq(readers('invDealerDirState'), ['_invDealerDirStaleText', 'invDealerUnchecked', 'invSetDealerRoute'], 'an unread directory: one answer');
+    // The merge with P5 (2026-10-27): the approval's terms read the dealer through the same answer, so a cold device claims no change.
+    eq(readers('invDealerDirState'), ['_invDealerDirStaleText', '_invTermsDealer', 'invDealerUnchecked', 'invSetDealerRoute'], 'an unread directory: one answer');
   });
 };

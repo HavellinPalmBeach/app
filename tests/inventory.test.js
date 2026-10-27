@@ -20,7 +20,7 @@ const INV_FNS = ['invAppraised',  'invDocContractBlock', 'docTierProduces',
   '_invTrack', '_invIsProbateAsset', '_invIsExempt', '_invOnProbateSchedule', '_invExcludedTracks', '_invHasValue',
   'savePhotoRefs', '_warnPhotoStoreFull',
   // P19: written authority is every fiduciary's (invApprovalComplete).
-  'invApprovalComplete',
+  'invApprovalComplete', 'invApprovalMoved', 'invApprovalMovedText',
 ];
 const INV_VARS = [ 'INV_CONTRACT_DOCS', 'INV_ACCEPT_AMMO_RE', 'INV_OPEN_HOLDS',
   'INV_STICKY_FIELDS', 'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY',

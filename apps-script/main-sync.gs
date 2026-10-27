@@ -142,7 +142,16 @@
 // or type of its own; it carries 2026-10-27b's (the snapshot store and the Jobs tab that is never cleared before it is
 // written), and the key covers loadSnapshots and saveSnapshot as it covers every other. Until it is live the URL alone opens
 // every record, and the app's banner says so.
-var BACKEND_VERSION = '2026-10-27c';
+// ⚠ 2026-10-27d (the desk audit's P5, "An approval means what was signed"; Anthony's Ask 5): saveInventory.gs's sticky list and
+// approval merge carry what a recorded approval approved (`authFor`: where the line was going, who was taking it and its value
+// when it was signed), the approvals a newer one replaced (`authWas`) and the corrections made with a reason (`authFixes`), and
+// the merge keeps them with the approval they belong to (_invMergeApprovals' base), and never joins the signers of two copies
+// approved for different terms (its review: one approval is kept, the other set aside in `authWas`). No action or type changes.
+// Until it is live, another device's older copy of a line saved over a newer one can drop them from the sheet: a device that then
+// loads the line from the sheet reads its approval as covering wherever the line goes, until the device that recorded it saves
+// again; and the sheet's merge can add a signature given for one destination to an approval for another. It carries 2026-10-27c's
+// (the device key) and 2026-10-27b's (the snapshot store and the Jobs tab never cleared before it is written).
+var BACKEND_VERSION = '2026-10-27d';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive', 'esignSendRequest',

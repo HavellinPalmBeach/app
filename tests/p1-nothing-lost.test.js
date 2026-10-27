@@ -949,9 +949,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(B.BACKEND_MIN_VERSION >= '2026-10-27b', '⚠ and the app relies on it: an older one can still empty the Jobs tab');
     ok(B.BACKEND_NEEDS_TYPES.indexOf('saveSnapshot') >= 0, 'the snapshot store is on the banner\'s list');
     // RESTATED on the merge with P2 (2026-10-27): P2's open URL leads the line (its 2026-10-27c carries this build's 2026-10-27b);
-    // this build's gap follows at once, under its own vintage.
-    ok(B.BACKEND_FEATURE_COST.version.indexOf('; on a deployment older than 2026-10-27b, one failed write can empty the Jobs tab') > 0
-      && B.BACKEND_FEATURE_COST.version.indexOf('; on a deployment older than 2026-10-27b, ') === B.BACKEND_FEATURE_COST.version.indexOf('; on a deployment older than '),
+    // this build's gap follows at once, under its own vintage. RESTATED again on the merge with P5 (2026-10-27d, which carries both):
+    // P5's gap leads, the open URL follows under 2026-10-27c, and this build's gap at once after it.
+    const _v = B.BACKEND_FEATURE_COST.version, _vint = '; on a deployment older than ';
+    const _c = _v.indexOf(_vint + '2026-10-27c, '), _b = _v.indexOf(_vint + '2026-10-27b, one failed write can empty the Jobs tab');
+    ok(_c > 0 && _b > _c && _v.indexOf(_vint, _c + 1) === _b,
       'and the version line names what stays broken, first after the open URL, by its vintage');
     // The rule, one definition with its readers counted.
     const app = fs.readFileSync(path.join(__dirname, '..', 'havellin.html'), 'utf8').split('\n').filter((l) => !/^\s*\/\//.test(l)).join('\n');

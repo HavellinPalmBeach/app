@@ -65,6 +65,7 @@
   },
   {
    "id": "SYN-03",
+   "fixed": "2026-10-27 (P5: CLAUDE.md, An approval means what was signed; tests/approval-pinned.test.js, browser step 120)",
    "title": "A written approval stays complete after the line is sent somewhere else; the ledger then shows both fiduciaries authorising a donation they never approved",
    "kind": "accuracy",
    "severity": "fix-now",

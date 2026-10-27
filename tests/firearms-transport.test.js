@@ -23,7 +23,7 @@ const FNS = ['invIsFirearm', 'invFirearmAuthorized', 'invReleaseBlocked',
              // P16: the gate reads a line's dealer route (a firearm going to a named person).
              'invDealerRoute', 'invDealerRouteOffered', 'invTransportDealer', 'invChannelLeftover',
              // P19: written authority is every fiduciary's (invApprovalComplete); with no job it is the rule before.
-             'invApprovalComplete', 'invApprovalGap',
+             'invApprovalComplete', 'invApprovalMoved', 'invApprovalMovedText', 'invApprovalGap',
              // P4 (2026-10-27): a living client's own firearm (client), and the dealer as a Vendor Directory firm under
              // Firearms Dealer (FFL) that a person picked, on a sale.
              'invFirearmClientTakes', 'invFirearmsDealerFirms', 'invFirearmsDealerFirm', '_vendorNameKey', 'vendorCats', 'invDealerWhy', 'invDealerNamed', 'invDispGoesToDealer', 'invDealerUnchecked', 'invDealerDirState', 'invDealerUncheckedText', '_invDealerDirStaleText'];

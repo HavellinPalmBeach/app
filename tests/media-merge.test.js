@@ -397,8 +397,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             // throw anywhere in it would otherwise surface on a client's spreadsheet.
             '_asFoundRows', 'asFoundRecord', '_planRooms', '_slotRefs', '_roomFoundAttest', '_afTime',
             'estateProceedsHolder', 'inventoryNetLabel',
-            // P20: the workbook's Authorized By carries who signed readably.
-            'invApprovalSignedText', 'invApprovalSigners', 'invRecipientName'],
+            // P20: the workbook's Authorized By carries who signed readably; P5, only where the approval covers the line.
+            'invApprovalSignedText', 'invApprovalSigners', 'invRecipientName', 'invApprovalPaperText', 'invApprovalPrevWords', 'invApprovalMoved',
+            'invApprovalSetAside'],
       vars: ['INVENTORY_COLUMNS', 'INV_CATEGORIES', 'INV_TAXONOMY', 'INV_DISPOSITIONS',
              'INV_VAL_BASES', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', 'AS_FOUND_COLUMNS',
              'DECEDENT_SERVICES', 'MATTER_TYPES',

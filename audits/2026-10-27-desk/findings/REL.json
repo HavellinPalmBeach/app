@@ -26,6 +26,7 @@
  "findings": [
   {
    "id": "REL-01",
+   "fixed": "2026-10-27 (P5: CLAUDE.md, An approval means what was signed; tests/approval-pinned.test.js, browser step 120)",
    "title": "An approval stays recorded after the line's destination, recipient or value changes, and the papers then claim it",
    "kind": "accuracy",
    "severity": "fix-now",
@@ -43,6 +44,7 @@
   },
   {
    "id": "REL-02",
+   "fixed": "2026-10-27 (P5: CLAUDE.md, An approval means what was signed; tests/approval-pinned.test.js, browser step 120)",
    "title": "A line changed after the request was confirmed as sent is recorded as approved, with no check against the paper",
    "kind": "defect",
    "severity": "fix-now",
@@ -96,6 +98,7 @@
   },
   {
    "id": "REL-05",
+   "fixed": "2026-10-27 (P5: CLAUDE.md, An approval means what was signed; tests/approval-pinned.test.js, browser step 120)",
    "title": "A name typed into Authorized By counts as written approval: the sign-out opens with no signed paper, and the playbook says to do it",
    "kind": "accuracy",
    "severity": "high",
@@ -130,6 +133,7 @@
   },
   {
    "id": "REL-07",
+   "fixed": "2026-10-27 (P5: CLAUDE.md, An approval means what was signed; tests/approval-pinned.test.js, browser step 120)",
    "title": "The bulk bar's request and Record approval on an estate take Keep and already-approved lines, and a Keep approval later authorises a Junk run",
    "kind": "defect",
    "severity": "high",
@@ -454,6 +458,7 @@
   },
   {
    "id": "REL-26",
+   "fixed": "2026-10-27 (P5: CLAUDE.md, An approval means what was signed; tests/approval-pinned.test.js, browser step 120)",
    "title": "Record approval accepts any date, including a future date or one before the request was sent",
    "kind": "accuracy",
    "severity": "low",

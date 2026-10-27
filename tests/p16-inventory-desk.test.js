@@ -86,6 +86,11 @@ const GUN = (id, over) => LINE(id, Object.assign({
   authBy: 'Tripp Butler', approvalDate: '2026-09-20', disposition: 'Distribute', channel: 'Marie Delgado (daughter)',
 }, over || {}));
 
+// RESTATED 2026-10-27 (P5's review): a firearm's dealer is part of what its approval approved (invApprovalTermsOf), so a route
+// recorded after a signature that named none holds the firearm until a fresh request is signed (bundle C7's stricter reading, as the
+// request's own firearms block says). The route's handler is tested here on an approval signed for the route it records.
+const SIGNED_FFL = { disposition: 'Distribute', channel: 'Marie Delgado (daughter)', fmv: '', dealer: 'Palm Beach Arms (FFL)' };
+
 module.exports = function ({ group, ok, eq, has, lacks }) {
   // Each group runs guarded: a throw (a helper missing on an older build, a revert that breaks a
   // lift) fails that group's check and the rest of the file still runs.
@@ -143,7 +148,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         alert: (m) => alerts.push(String(m)), _warnPhotoStoreFull: () => {},
         window: { prompt: (m, d) => { prompts.push([m, d]); return answers.prompt; }, confirm: (m) => { confirms.push(m); return answers.confirm; } },
       });
-    const s = rig([GUN('g', { updatedAt: 100 })]);
+    const s = rig([GUN('g', { updatedAt: 100, authFor: SIGNED_FFL })]);
     const r = attempt(() => s.invSetDealerRoute(7, 'g', true));
     ok(r.ok && r.val === true, 'the route is recorded');
     const g = s._getPhotoRef(7, 'g');
@@ -172,6 +177,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     s.invSetDealerRoute(7, 'g', true);   // record again, then refuse to take it off
     s.invSetDealerRoute(7, 'g', false);
     eq(s._getPhotoRef(7, 'g').viaDealer, 'Palm Beach Arms (FFL)', 'a cancelled confirm leaves the route as it was');
+    // An approval signed before any dealer was named (P5's review): the route asks once, and the firearm is held.
+    const late = rig([GUN('h')]);
+    answers.confirm = true; confirms.length = 0;
+    ok(late.invSetDealerRoute(7, 'h', true), 'recorded');
+    has(confirms[0] || '', 'so it is not cleared to carry until it is approved again', '⚠ asked, since the signed approval named no dealer');
+    eq(late.invTransportBlocked(late._getPhotoRef(7, 'h')), 'authority', '⚠⚠ held until a fresh request names the dealer');
 
     // A blank answer records nothing.
     const b = rig([GUN('b')]);
@@ -219,7 +230,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       s._invOpen = {}; s._agDupSet = {};
       return s;
     };
-    const s = rowRig([GUN('g'), GUN('n', { flagNFA: true, stableId: 'n' }), GUN('c', { disposition: 'Consign', channel: 'Palm Beach Arms' })]);
+    const s = rowRig([GUN('g', { authFor: SIGNED_FFL }), GUN('n', { flagNFA: true, stableId: 'n' }), GUN('c', { disposition: 'Consign', channel: 'Palm Beach Arms' })]);
     const row = (id, open) => { s._invOpen = open ? { [id]: 1 } : {}; return s._renderInvRow(ESTATE, s._getPhotoRef(7, id)); };
     const r0 = attempt(() => row('g', true));
     ok(r0.ok, 'the row and its record render' + (r0.ok ? '' : ': ' + r0.err));

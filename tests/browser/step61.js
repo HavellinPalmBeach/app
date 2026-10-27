@@ -324,7 +324,14 @@ const TRUST = 6101, LIVING = 6103;
       await openBar('releases', TRUST);   // the card sits in the Releases bar (2026-10-22)
       ok(await vis('#inv-releases'), 'fixture: the card is on screen');
       ok(await overflow() <= 0, 'the desk with the card fits at 1440 (' + await overflow() + ')');
-      await pick('s4');
+      // RESTATED 2026-10-27 (P5, REL-07): the bulk bar's Record approval takes only lines that wait on written approval, and by
+      // here every leaving line is signed, so the dialog is opened on a hall mirror just decided for Kodner (unsigned), never the
+      // Bible the family keeps.
+      await p.evaluate((id) => { const b = (_photoRefs[id] || []).find((x) => x.stableId === 's2');
+        _photoRefs[id].push(Object.assign({}, b, { stableId: 's5', itemNo: 5, objectName: 'Hall mirror', fmv: '200', authBy: '', approvalDate: '', authFor: undefined, authAdds: undefined }));
+        savePhotoRefs(id); }, TRUST);
+      await toDesk(TRUST);
+      await pick('s5');
       await press('button[onclick="invRecordApproval(' + TRUST + ')"]', 'Record approval at 1440');
       await p.check('#ia-fid-0'); await p.waitForTimeout(200);
       ok(await vis('#ia-note'), 'the note is on screen');

@@ -436,7 +436,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
            fmv: '', disposition: 'Auction', channel: 'Christie’s' }),
     ];
     const s = sandbox({
-      fns: APPR_FNS.concat(['_invDocPartyHead', 'invOwnInitial', 'invInitialGroupKey', '_invDocName', 'printApprovalRequest', 'invReleaseRecipientNamed', 'invDispDocWord', 'invReleaseCautions', '_invCautionBadges',
+      fns: APPR_FNS.concat(['_invDocPartyHead', 'invOwnInitial', 'invInitialGroupKey', '_invDocName', 'printApprovalRequest', 'invApprovalMoved', 'invApprovalPrevWords', 'approvalRequestTerms', '_approvalHash', 'approvalLineDestKey', 'invApprovalTermsOf', '_approvalLineOpen', 'invReleaseRecipientNamed', 'invDispDocWord', 'invReleaseCautions', '_invCautionBadges',
                             '_invCautionNotices', '_invNamed', '_invItemNo', '_invAwaitingApproval', 'invWrittenReleaseNeeded',
                             '_jobInvRefs', '_invAssignItemNos', '_invTouch', '_invPrintThumb',
                             '_invFileId', '_invRoomName', '_invMoney', 'invIsFirearm',
@@ -484,7 +484,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
            fmv: '9000', disposition: 'Sell', channel: 'Kodner Galleries', apprId: 'ap1', valSource: 'Appraisal' }),
     ];
     const s = sandbox({
-      fns: APPR_FNS.concat(['_invDocPartyHead', 'invOwnInitial', 'invInitialGroupKey', '_invDocName', 'printApprovalRequest', 'invReleaseRecipientNamed', 'invDispDocWord', 'invReleaseCautions', '_invCautionBadges',
+      fns: APPR_FNS.concat(['_invDocPartyHead', 'invOwnInitial', 'invInitialGroupKey', '_invDocName', 'printApprovalRequest', 'invApprovalMoved', 'invApprovalPrevWords', 'approvalRequestTerms', '_approvalHash', 'approvalLineDestKey', 'invApprovalTermsOf', '_approvalLineOpen', 'invReleaseRecipientNamed', 'invDispDocWord', 'invReleaseCautions', '_invCautionBadges',
                             '_invCautionNotices', '_invNamed', '_invItemNo', '_invAwaitingApproval', 'invWrittenReleaseNeeded',
                             '_jobInvRefs', '_invAssignItemNos', '_invTouch', '_invPrintThumb',
                             '_invFileId', '_invRoomName', '_invMoney', 'invIsFirearm',

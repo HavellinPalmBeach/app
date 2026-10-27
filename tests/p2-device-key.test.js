@@ -685,11 +685,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   });
 
   G('F · the deployment, the banner, the documents and the statement', () => {
-    // RESTATED on the merge with P1 (2026-10-27): P2's deployment is 2026-10-27c, carrying P1's 2026-10-27b.
-    eq((GS.match(/var BACKEND_VERSION = '([^']+)'/) || [])[1], '2026-10-27c', 'main-sync.gs is 2026-10-27c');
+    // RESTATED on the merge with P1 (2026-10-27): P2's deployment is 2026-10-27c, carrying P1's 2026-10-27b. RESTATED again on the
+    // merge with P5: its 2026-10-27d carries this one, its own gap leads the line, and the open URL follows at once under 2026-10-27c.
+    ok(((GS.match(/var BACKEND_VERSION = '([^']+)'/) || [])[1] || '') >= '2026-10-27c', 'main-sync.gs is 2026-10-27c or later');
     const B = sandbox({ vars: ['BACKEND_MIN_VERSION', 'BACKEND_FEATURE_COST'] });
-    eq(B.BACKEND_MIN_VERSION, '2026-10-27c', 'the app relies on it: an older deployment draws the banner');
-    ok(B.BACKEND_FEATURE_COST.version.indexOf('anyone who holds the Apps Script URL can read every client') === 0, 'which names the open URL first, by consequence');
+    ok(B.BACKEND_MIN_VERSION >= '2026-10-27c', 'the app relies on it: an older deployment draws the banner');
+    const _v = B.BACKEND_FEATURE_COST.version, _open = '; on a deployment older than 2026-10-27c, anyone who holds the Apps Script URL can read every client';
+    ok(_v.indexOf(_open) > 0 && _v.indexOf(_open) === _v.indexOf('; on a deployment older than '), 'which names the open URL first after the newer gap, by consequence and by its vintage');
     const docs = ['manual.html', 'MANUAL.md', 'concierge-guide.html', 'CONCIERGE_GUIDE.md'].map((f) => [f, fs.readFileSync(path.join(ROOT, f), 'utf8')]);
     docs.forEach(([f, t]) => { has(t, 'This device has no key: ask Anthony', f + ' names the refusal as the app words it'); has(t, 'Device key', f + ' names the box'); });
     docs.slice(0, 2).forEach(([f, t]) => { has(t, 'HAVELLIN_DEVICE_KEY', f + ' names the Script Property'); has(t, 'AccessLog', f + ' names the log'); has(t, 'suggestDeviceKey', f + ' names the editor helper'); });

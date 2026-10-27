@@ -16,7 +16,8 @@
 //      "no licensed dealer". Another put on Sell. The Approval Request (the work bar's, on screen) reads "licensed dealer not
 //      named yet" for both; Jupiter Gun Exchange typed into one's Who takes it box (a directory dealer): the request names it.
 //   D. The rifle on Sell to Goodwill: its record reads Not cleared to carry, Goodwill being no licensed dealer, and its box
-//      suggests the directory's dealers; Jupiter typed: Cleared to carry, to Jupiter.
+//      suggests the directory's dealers; Jupiter typed: asked first and held for a fresh approval (P5, merged), then recorded
+//      through the bulk bar's Record approval: Cleared to carry, to Jupiter.
 //   E. The custody dialog on the Colt: it opens on Choose…; Add event with nothing chosen records nothing; Released to Uncle
 //      Bob asks first (the protocol, and what the gate says), Cancel records nothing, OK records it.
 //   F. The Releases bar: the daughter's row carries the clock and not the revolver; Print receipt prints the clock and not
@@ -253,10 +254,28 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
       lacks(rec, 'Cleared to carry. Havellin', 'and the record never clears it');
       has(await p.evaluate(() => (document.querySelector('#inv-row-g7 input.inv-recip') || {}).getAttribute('list')), 'inv-ffl-list-' + J, 'its box suggests the directory\'s dealers');
       has(await p.evaluate((j) => { const d = document.getElementById('inv-ffl-list-' + j); return d ? [...d.options].map((o) => o.value).join('|') : ''; }, J), 'Jupiter Gun Exchange', 'Jupiter among them');
+      // RESTATED on merging P5 (2026-10-27, an approval means what was signed): Ruth approved the rifle's sale to Goodwill, which named
+      // no licensed dealer, so the dealer typed now asks first and holds the rifle for a fresh approval; recorded through the bulk
+      // bar's Record approval (the signed copy naming Jupiter), it is cleared to carry.
+      let n = said.length;
       await typeWho('g7', 'Jupiter Gun Exchange');
+      has(said.slice(n).filter((d) => d.type === 'confirm').map((d) => d.m).join('\n'), 'not cleared to carry until it is approved again', '⚠ P5: the dealer named after the signature asks first');
       await openRec('g7');
       rec = await txt('#inv-row-g7');
-      has(rec, 'Cleared to carry. Havellin’s named principal alone takes it to Jupiter Gun Exchange', 'a licensed dealer named: cleared to carry');
+      lacks(rec, 'is not a licensed dealer on the Vendor Directory', 'Jupiter is read as the licensed dealer');
+      has(rec, 'Not cleared to carry: Written authority is not complete.', '⚠⚠ P5: held for a fresh approval naming the dealer');
+      has(rec, 'Sell · Goodwill Palm Beach, no licensed dealer named', 'saying what was approved, in the merged words');
+      await press('#inv-row-g7 input[onchange="_invTogglePick(\'g7\',this)"]', 'the rifle\'s pick box');
+      await press('#inv-bulk-' + J + ' button[onclick="invRecordApproval(' + J + ')"]', 'the bulk bar\'s Record approval');
+      await press('#ia-fid-0', 'Ruth\'s signature');
+      await press('#ia-save-btn', 'Record approval');
+      if (await p.evaluate(() => { const m = document.getElementById('inv-approval-modal'); return !!m && m.style.display !== 'none' && m.checkVisibility && m.checkVisibility(); })) {
+        await press('#inv-approval-modal button[onclick="closeInvApproval()"]', 'close the dialog');
+      }
+      if (await p.evaluate(() => !!(_invPick && _invPick.g7))) await press('#inv-row-g7 input[onchange="_invTogglePick(\'g7\',this)"]', 'the rifle\'s pick box, off');
+      await openRec('g7');
+      rec = await txt('#inv-row-g7');
+      has(rec, 'Cleared to carry. Havellin’s named principal alone takes it to Jupiter Gun Exchange', 'a licensed dealer named and approved through it: cleared to carry');
     });
 
     // ── E ───────────────────────────────────────────────────────────────────

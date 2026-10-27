@@ -2582,7 +2582,9 @@ function groupM({ group, ok, eq, has, lacks }) {
 
   group('M3 · the bulk bar on a phone: one line, "N selected", Actions and Clear; the same controls and handlers behind Actions');
   {
-    const two = [LINE('a', { itemNo: 1 }), LINE('b', { itemNo: 2 })];
+    // Both leaving and waiting on written approval (P5, 2026-10-27: the request's three presses are drawn only where a picked
+    // line waits on one, on an estate too).
+    const two = [LINE('a', { itemNo: 1, disposition: 'Sell', channel: 'Kodner Galleries' }), LINE('b', { itemNo: 2, disposition: 'Sell', channel: 'Kodner Galleries' })];
     const dom = liveDom(7);
     const C = lift(['_renderInvBulk', 'toggleInvBulk'], { jobs: [PROBATE()], estimateStore: { 7: { estimate: { rooms: [{ idx: 0, name: 'Hall' }] } } },
       _photoRefs: { 7: two }, document: dom });
@@ -3033,15 +3035,17 @@ function groupO({ group, ok, eq, has, lacks }) {
   group('O6 · an edit or a split that changes what the Releases card offers repaints the card, not only the bar\'s line');
   {
     const real = ['_renderInvReleasesCard'];
+    // RESTATED 2026-10-27 (P5): an approval is no longer typed away in its box; the edit is the painting retyped to another
+    // auction house, which the approval given for Kodner Galleries no longer covers (authFor).
     const approved = () => [LINE('a', { itemNo: 1, objectName: 'Harbor painting', disposition: 'Auction', channel: 'Kodner Galleries',
-      authBy: 'Ruth Adler', approvalDate: '2026-10-19' })];
+      authBy: 'Ruth Adler', approvalDate: '2026-10-19', authFor: { disposition: 'Auction', channel: 'Kodner Galleries', fmv: '' } })];
     const r = approved();
     const D = desk(PROBATE(), {}, { refs: r, real, roots: ['_invEdit'], stubs: { SHEETS_SYNC_URL: URL, _invCloudSeen: { 7: true }, _invAssignItemNos: () => r,
       savePhotoRefs() {}, _scheduleInventorySync() {}, showSyncBadge() {}, alert() {}, _invRefreshSummary() {} } });
     const h0 = D.render();
     ok(!D.log.renderErr, 'the desk draws with the real Releases card (' + (D.log.renderErr || 'ok') + ')');
     lacks(inner(h0, 'inv-releases') || '', 'sendApprovalRequest(7)', 'fixture: approved, so the card offers no send');
-    const e = attempt(() => D.C._invEdit(7, 'a', 'authBy', { value: '', type: 'text' }));
+    const e = attempt(() => D.C._invEdit(7, 'a', 'channel', { value: 'Christie’s', type: 'text' }));
     ok(e.ok, 'the edit runs (' + (e.err || 'ok') + ')');
     const pCard = inner(D.dom.html, 'inv-releases') || '', pLine = heads(D.dom.html)[0].line;
     has(pLine, '1 item needs written approval: send a request', 'fixture: the bar\'s line asks for a request');

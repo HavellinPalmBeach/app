@@ -26,6 +26,7 @@
  "findings": [
   {
    "id": "EST-01",
+   "fixed": "2026-10-27 (P5: CLAUDE.md, An approval means what was signed; tests/approval-pinned.test.js, browser step 120)",
    "title": "A written approval is not tied to what it approved: changing destination, recipient or value keeps the line approved and offered for sign-out",
    "kind": "defect",
    "severity": "fix-now",

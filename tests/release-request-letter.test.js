@@ -384,10 +384,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const r = change(f);
       eq(r.c.approvalRequestChanged(r.job(), r.st()), [], what + ': nothing flagged');
     });
-    // A device holding an older copy of the inventory: the line differs, but was not touched after the draft. Nothing claimed.
+    // RESTATED 2026-10-27 (P5): no clock. The changed lines are read off the request's own terms, so an edit made before the
+    // draft's clock that landed after it (another device's) is a change; a device that has not read the sheet claims nothing.
     const old = fresh();
     old.c._photoRefs[7].filter((x) => x.stableId === 'b')[0].channel = 'Goodwill';   // its updatedAt is still T0, before the draft
-    eq(old.c.approvalRequestChanged(old.job(), old.st()), [], '⚠⚠ an older copy on another device claims nothing');
+    eq(old.c.approvalRequestChanged(old.job(), old.st()), ['b'], '⚠⚠ a change stamped before the draft is still a change (never two devices\' clocks)');
+    old.c._invCloudSeen = {};
+    eq(old.c.approvalRequestChanged(old.job(), old.st()), [], '⚠⚠ a device that has not read the sheet claims nothing');
     // A device without the manifest claims nothing.
     const r = change((x) => { x.channel = 'Goodwill'; });
     const saved = r.c._photoRefs[7]; r.c._photoRefs[7] = undefined;
@@ -402,7 +405,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const bar = attempt(() => r.c.deskFoldState(7, r.job(), 'releases', r.c._jobInvRefs(7), '2026-10-17')).val || { bits: [] };
     has(bar.bits.map((b) => b.text).join(' | '), '1 item on the draft changed since it was made', 'the Releases bar says so');
     eq(r.c.invMarkRequestSent(7), true, '⚠ already sent from Gmail: the tap records it');
-    eq(r.c.approvalRequestChanged(r.job(), r.st()), [], 'and once sent, nothing is flagged');
+    // RESTATED 2026-10-27 (P5, REL-02): "I've sent it" made every change after it invisible; the line still waits, still changed.
+    eq(r.c.approvalRequestChanged(r.job(), r.st()), ['b'], '⚠⚠ and once sent, still flagged while it waits');
     // Once confirmed, what a discarded draft would have put back is gone from the record.
     const s2 = rig2(); s2.c.sendApprovalRequest(7); s2.c.invMarkRequestSent(7); s2.at(NOW + 3600e3); s2.c.sendApprovalRequest(7);
     ok(!!s2.st().sentReq, 'fixture: a draft over a sent request keeps the request that went');

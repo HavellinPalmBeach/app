@@ -743,6 +743,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     _approvalEsignOut: 'which clients\' DocuSign sends wait on an answer — a guard, not an approval',
     _approvalEnvAskedAt: 'when this page last asked DocuSign about a client\'s envelope — a floor, not an approval',
     APPROVAL_ENV_READ_MS: 'how fresh a read must be for the signatures to be written off it — a constant, not an approval',
+    INV_APPROVAL_RISE_PCT: 'Ask 5\'s rise past which a release approval no longer covers its line (P5) — a constant, not an approval',
+    INV_APPROVAL_WAS_MAX: 'how many replaced release approvals a line keeps (P5) — a constant, not an approval',
   };
 
   group('⚠⚠ THE NET: no client-document builder reads a page-level approval variable');
