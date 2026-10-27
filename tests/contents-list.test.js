@@ -21,7 +21,7 @@ const FNS = ['invLineReviewed', 'invLineOpen', '_invDocPartyHead', 'invCondition
   'printEstateInventoryReport', 'invAppraised', '_invHasValue', 'invAppraisalSourceText', 'invLineAppraiser', '_invLinkedAppraiser', 'invAppraisalInProgress', '_apprLabel', 'jobOnProbateTrack', '_avUnreviewedStamp', 'agentValueUnreviewed', '_invGroupItems', 'invIsFirearm', '_invDispLabel', '_invIsExempt',
   '_invIsProbateAsset', '_invTrack', '_invHasAppraisal', '_jobAppraisers', 'invAppraiserFor',
   'resolveValBasis', '_avHasFigure', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invReleaseCautions', '_invPhotoNoteOpen', 'agentValueSpecialistWorth', 'invLineAcceptedOnly', '_invAcceptedStampWords', 'invListReadRefusal', '_invManifestUnread', '_arDupEligible'
-, 'invAcceptCtx', 'agentDuplicateGroups', '_agDupEligible', 'agentNamedTwice', '_invAcceptCtxOf', 'agentNoticeLoud', 'invListRead', '_invListReadHtml', '_invReadKey'];
+, 'invAcceptCtx', 'agentDuplicateGroups', '_agDupEligible', 'agentNamedTwice', '_invAcceptCtxOf', 'invListRead', '_invListReadHtml', '_invReadKey'];
 const VARS = ['_agDupSetJob', 'INV_OPEN_HOLDS', 'INV_ACCEPT_AMMO_RE', 'MATTER_TYPES',  'INV_CONTRACT_DOCS',
   '_agRun', '_avRun', '_arRun', 'AGENT_NOTICE_KINDS', 
   'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DECEDENT_SERVICES', 'SVC_ORDER',
@@ -245,7 +245,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ───────────────────────────────────────────────────────────────────────────
   group('⚠ THE PROGRESS STAMP NAMES WHAT THIS DOCUMENT CARRIES');
   {
-    const p = sandbox({ vars: ['MAIV_OTHER', 'MAIV_BY_CATEGORY'], fns: ['_invProgressStamp', '_invReviewStats', 'invLineReviewed', 'invLineOpen', 'agentValueUnreviewed', '_avHasFigure', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invReleaseCautions', '_invPhotoNoteOpen', 'agentNoticeLoud', 'agentValueSpecialistWorth', 'invIsFirearm', 'invLineAcceptedOnly', '_invAcceptedStampWords', 'invListReadRefusal', '_invManifestUnread', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible'] });
+    const p = sandbox({ vars: ['MAIV_OTHER', 'MAIV_BY_CATEGORY'], fns: ['_invProgressStamp', '_invReviewStats', 'invLineReviewed', 'invLineOpen', 'agentValueUnreviewed', '_avHasFigure', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invReleaseCautions', '_invPhotoNoteOpen', 'agentValueSpecialistWorth', 'invIsFirearm', 'invLineAcceptedOnly', '_invAcceptedStampWords', 'invListReadRefusal', '_invManifestUnread', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible'] });
     const plain = p._invProgressStamp([{ reviewed: true }, {}]);
     const noVal = p._invProgressStamp([{ reviewed: true }, {}], { noValues: true });
     has(plain, 'Values and dispositions on unreviewed lines may still change',
@@ -486,16 +486,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     // A build that renders the document perfectly and never puts a button on any screen
     // contains every string a source check would look for. This drives the real workbar.
-    const BAR = FNS.concat(['_invAcceptCtxOf', 'agentNoticeLoud', 'invAcceptCtx', 'agentDuplicateGroups', '_agDupEligible', 'agentNamedTwice', 
+    const BAR = FNS.concat(['_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_agDupEligible', 'agentNamedTwice', 
       'agentShotGroups', 'agentNameableRefs', '_agState', '_agStateHtml', '_agNoticesHtml', 'agentNotices',
       '_renderInvWorkbar', '_arCheckButtonHtml', '_arState', 'agentRoomsToCheck', '_arCheckable', '_arStateHtml', '_avValueButtonHtml', 'agentValueableRefs', '_avHasFigure', '_invHasValue', '_avStateHtml', '_avState', '_avNoticesHtml', 'agentValueNotices', '_avNoticeKinds', '_avNoticeLabel', 'agentValueInternal', 'agentValueUnreviewed', 'agentValueStale', 'agentValueSpecialistWorth', 'invPrimaryDoc', '_invProgressBar', 'invWorkFlags', '_invNeedsValue',
       'printEstateInventoryReport', '_avUnreviewedStamp', 'printContentsRecord', '_invHasPhoto', 'photoShareLive', 'photoSharesOf', '_invDispLabel',
       'invReleaseBlocked', 'invIsFirearm', 'invTransportBlocked', 'invFirearmAuthorized',
-      'invAwaitingAppraisal', '_invHasAppraisal', '_jobAppraisers', '_invAwaitingApproval',
+      'invAwaitingAppraisal', '_invHasAppraisal', '_jobAppraisers', '_invAwaitingApproval', 'invWrittenReleaseNeeded',
       'invProbateRows', 'matterDef', 'matterTypeOf', 'maivFilingApplies', '_gate706',
       // P16: the gate reads the dealer route; the share names both photo folders by the filing rule.
-      'invDealerRoute', 'invDealerRouteOffered', 'invTransportDealer', 'invChannelLeftover', 'photoSubfolder', 'photoSharesLine', 'photoSharesOf'
-    ]);
+      'invDealerRoute', 'invDealerRouteOffered', 'invTransportDealer', 'invChannelLeftover', 'photoSubfolder', 'photoSharesLine', 'photoSharesOf', 'agentNoticesOn']);
     const BVARS = VARS.concat(['_agDupSetJob', 'INV_OPEN_HOLDS', 'INV_ACCEPT_AMMO_RE', 'INV_WORK_FLAGS', 'INV_DISPOSITIONS', 'INV_GROUP_ORDER',
       'INV_RELEASE_DISPOSITIONS', 'INV_RELEASE_CAUTIONS', 'MATTER_TYPES', 'INV_UNDECIDED',
       '_invFilter', '_invShowRoll', '_invOpen', '_invPick', 'INV_VAL_BASES', 'INVENTORY_COLUMNS',

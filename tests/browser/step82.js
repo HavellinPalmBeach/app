@@ -213,6 +213,9 @@ const UPLOADS = [], HTMLS = [];
       eq(await txt('#inc-hdr-' + ID), '', 'the header banner is gone');
       has(await txt(card), 'Print Incident Record', 'the card offers the record');
       await press(card + ' button[onclick="printIncidentRecord(' + ID + ')"]', 'Print Incident Record');
+      await press('#doc-viewer-print', 'Print / Save PDF, in the viewer');   // the paper opens on screen first (2026-10-26)
+      await p.waitForSelector('#doc-viewer-modal', { state: 'visible', timeout: 4000 }).catch(() => ok(false, 'the viewer comes back after the print dialog'));
+      await press('#doc-viewer-modal button[onclick="closeDocViewer()"]', 'Close the viewer');
       await p.waitForTimeout(800);
       const printed = await p.evaluate(() => window.__printed || (document.getElementById('print-target') || {}).innerHTML || '');
       has(printed, 'Incident Record', 'the record printed');

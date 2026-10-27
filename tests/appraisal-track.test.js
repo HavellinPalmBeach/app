@@ -38,7 +38,7 @@ const APPR_FNS = ['invAwaitingAppraisal', 'invAppraised', '_invHasValue', 'invNe
                   'invApprovalComplete', 'invApprovalMissing', 'invApprovalGap', 'jobFiduciaries', '_andJoin',
                   'invPropertyNoun', 'estateProceedsHolder', 'matterDef', 'matterTypeOf', 'invHavellinRecipient',
                   // P20: the request lists what left before every fiduciary approved apart, and prints who signed readably.
-                  'invRatificationOwed', 'invRecordedGone', 'invPickupRecord', 'custodyEvents', 'invReceiptRecord', 'invViaDealer', 'invRecipientName', 'signedRecordsOf', 'invStaffRefused'];
+                  'invRatificationOwed', 'invWrittenReleaseNeeded', 'invRecordedGone', 'invPickupRecord', 'custodyEvents', 'invReceiptRecord', 'invViaDealer', 'invRecipientName', 'signedRecordsOf', 'invStaffRefused'];
 const APPR_VARS = ['INV_PLAN_CHANNEL_KINDS', 'INV_DISP_DOC_WORDS', 'INV_TRANSPORT_REASONS', 'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD',
                    'INV_APPRAISAL_THRESHOLD_DISPUTED', 'DECEDENT_SERVICES', 'INVENTORY_COLUMNS', 'MATTER_TYPES'];
 
@@ -227,7 +227,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             '_fieldNoteAppend', 'fieldDispToInv', '_cleanName', '_photoUid', '_slotRefs'],
       vars: ['_photoUidSeq', 'FIELD_DISPOSITIONS', 'FIELD_DISP_DEFAULT', 'PHOTO_CAPTURE_LABELS',
              'AS_FOUND_SUBFOLDER', 'PHOTO_SUBFOLDER',
-             '_fieldCam', '_localShotThumbs', 'INV_DEFAULT_CATEGORY'],
+             '_fieldCam', '_localShotThumbs', 'INV_DEFAULT_CATEGORY', 'DETAIL_PHOTO_MAX_W', 'DETAIL_PHOTO_QUALITY'],
       stubs: {
         jobs: [Object.assign({}, JOB)], _photoRefs: { 1: [] }, estimateStore: {},
         _photoCaptureJob: (jid) => ({ id: jid, status: 'won', won: true }),
@@ -372,7 +372,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                    driveFileUrl: 'https://drive.google.com/file/d/FID/view', driveFileId: 'FID', status: 'uploaded',
                    objectName: 'Porcelain figures', category: 'General/Household', needsAppr: true, sourceCollId: 'c2' };
     const s = sandbox({
-      fns: ['invSplitItemN', 'collectionPieceOf', 'collectionOf', '_collDispToInv', '_collDispNeedsAppr',
+      fns: ['invSplitItemN', '_invSplitSource', 'collectionPieceOf', 'collectionOf', '_collDispToInv', '_collDispNeedsAppr',
             '_getPhotoRef', '_setPhotoRef', '_invPhotoSource', '_invFileId', '_photoUid'],
       vars: ['INV_SPLIT_MAX', 'INV_DEFAULT_CATEGORY', '_photoUidSeq'],
       stubs: {
@@ -426,15 +426,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('⚠⚠ the printed request NAMES them and still LISTS them — never a silent omission');
   {
+    // Each with a saleroom named: a line leaving with nobody named is held off the request (2026-10-26, "Hold them off").
     const rows = [
       mk({ stableId: 'a', itemNo: 1, objectName: 'Dining chairs', category: 'Furniture',
-           fmv: '900', disposition: 'Auction' }),   // under the threshold, which since 2026-10-14 reads every category
+           fmv: '900', disposition: 'Auction', channel: 'Kodner Galleries' }),   // under the threshold, which since 2026-10-14 reads every category
       mk({ stableId: 'b', itemNo: 2, objectName: 'Sargent portrait', category: 'Art & Décor',
-           fmv: '', disposition: 'Auction' }),
+           fmv: '', disposition: 'Auction', channel: 'Christie’s' }),
     ];
     const s = sandbox({
-      fns: APPR_FNS.concat(['_invDocPartyHead', 'invOwnInitial', 'invInitialGroupKey', '_invDocName', 'printApprovalRequest', 'invDispDocWord', 'invReleaseCautions', '_invCautionBadges',
-                            '_invCautionNotices', '_invNamed', '_invItemNo', '_invAwaitingApproval',
+      fns: APPR_FNS.concat(['_invDocPartyHead', 'invOwnInitial', 'invInitialGroupKey', '_invDocName', 'printApprovalRequest', 'invReleaseRecipientNamed', 'invDispDocWord', 'invReleaseCautions', '_invCautionBadges',
+                            '_invCautionNotices', '_invNamed', '_invItemNo', '_invAwaitingApproval', 'invWrittenReleaseNeeded',
                             '_jobInvRefs', '_invAssignItemNos', '_invTouch', '_invPrintThumb',
                             '_invFileId', '_invRoomName', '_invMoney', 'invIsFirearm',
                             '_invDocHead', 'resolveValBasis', 'estateValueDate', '_invPicked',
@@ -475,14 +476,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const rows = [
       mk({ stableId: 'a', itemNo: 1, objectName: 'Dining chairs', category: 'Furniture',
-           fmv: '900', disposition: 'Auction' }),   // under the threshold, which since 2026-10-14 reads every category
+           fmv: '900', disposition: 'Auction', channel: 'Kodner Galleries' }),   // under the threshold, which since 2026-10-14 reads every category
       // Appraised: the report's figure on the line, source Appraisal (P25, Q36; it was the link alone).
       mk({ stableId: 'b', itemNo: 2, objectName: 'Tabriz rug', category: 'Rugs & Carpets',
-           fmv: '9000', disposition: 'Sell', apprId: 'ap1', valSource: 'Appraisal' }),
+           fmv: '9000', disposition: 'Sell', channel: 'Kodner Galleries', apprId: 'ap1', valSource: 'Appraisal' }),
     ];
     const s = sandbox({
-      fns: APPR_FNS.concat(['_invDocPartyHead', 'invOwnInitial', 'invInitialGroupKey', '_invDocName', 'printApprovalRequest', 'invDispDocWord', 'invReleaseCautions', '_invCautionBadges',
-                            '_invCautionNotices', '_invNamed', '_invItemNo', '_invAwaitingApproval',
+      fns: APPR_FNS.concat(['_invDocPartyHead', 'invOwnInitial', 'invInitialGroupKey', '_invDocName', 'printApprovalRequest', 'invReleaseRecipientNamed', 'invDispDocWord', 'invReleaseCautions', '_invCautionBadges',
+                            '_invCautionNotices', '_invNamed', '_invItemNo', '_invAwaitingApproval', 'invWrittenReleaseNeeded',
                             '_jobInvRefs', '_invAssignItemNos', '_invTouch', '_invPrintThumb',
                             '_invFileId', '_invRoomName', '_invMoney', 'invIsFirearm',
                             '_invDocHead', 'resolveValBasis', 'estateValueDate', '_invPicked',

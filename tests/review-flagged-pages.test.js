@@ -216,10 +216,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       ['⚠⚠ a lot over the Form 706 article cap: not a tick', ESTATE(), [DRAWER({ qty: 12, fmv: 2400, valLow: 1800, valHigh: 2900 })]],
       ['the range alone where counsel values', ESTATE({ docTier: 'contents' }), [DRAWER({ fmv: '' })]],
       ['living work', LIVING(), [DRAWER()]],
-      ['the photograph note\'s control: its first line ticked, the note quiet', ESTATE(), [DRAWER({ stableId: 'd2', derivedFrom: 'p1', driveFileId: 'Fp1' }),
+      // A Look at this goes quiet once every line off its photograph is reviewed (main's 2026-10-26; its own line alone, before).
+      ['the photograph note\'s control: every line off the photograph ticked, the note quiet', ESTATE(), [TICKED({ stableId: 'd2', derivedFrom: 'p1', driveFileId: 'Fp1' }),
         TICKED({ stableId: 'p1', driveFileId: 'Fp1', agentNotices: [{ kind: 'other', text: 'a hallmark on one spoon' }] })]],
-      ['⚠ a removed photograph line\'s Look at this holds the lines split off it no longer', ESTATE(), [DRAWER({ stableId: 'd2', derivedFrom: 'p1', driveFileId: 'Fp1' }),
-        DRAWER({ stableId: 'p1', driveFileId: 'Fp1', deletedAt: 9, agentNotices: [{ kind: 'other', text: 'a hallmark on one spoon' }] })]],
       ['⚠ Agent Two\'s note under a figure the desk typed', ESTATE(), [DRAWER(Object.assign({ valNotices: [{ kind: 'appraiser', text: 'a signed piece' }] }, DESKFIG))]],
       ['⚠ a line the room check linked to one since removed', ESTATE(), [DRAWER({ dupWith: ['d2'], dupWhy: 'one vase', dupConf: 'high', dupChkAt: 5 }),
         DRAWER({ stableId: 'd2', ts: 2, objectName: 'Blue vase', valNameAt: 'Blue vase', deletedAt: 9, dupWith: ['d1'] })]],
@@ -229,6 +228,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ];
     STANDS.forEach(([what, job, refs]) => eq(hold(job, refs), '', 'the code: stands: ' + what));
     FLAGS.forEach(([what, , why, job, refs]) => eq(hold(job, refs), why, 'the code: keeps its tick: ' + what));
+    // ⚠ The merge with main's 2026-10-26 (agentNoticesOn): a removed photograph line's notes ride on the first line still listed, so
+    // they hold the photograph's lines as its live line's do; and the photograph's own line ticked alone no longer quiets them.
+    eq(hold(ESTATE(), [DRAWER({ stableId: 'd2', derivedFrom: 'p1', driveFileId: 'Fp1' }),
+      TICKED({ stableId: 'p1', driveFileId: 'Fp1', agentNotices: [{ kind: 'other', text: 'a hallmark on one spoon' }] })]), 'photonote',
+      'the code: keeps its tick: ⚠ the photograph\'s own line ticked alone, a line off it not yet looked at: the note still open');
+    eq(hold(ESTATE(), [DRAWER({ stableId: 'd2', derivedFrom: 'p1', driveFileId: 'Fp1' }),
+      DRAWER({ stableId: 'p1', driveFileId: 'Fp1', deletedAt: 9, agentNotices: [{ kind: 'other', text: 'a hallmark on one spoon' }] })]), 'photonote',
+      'the code: keeps its tick: ⚠⚠ a removed photograph line\'s Look at this rides on and holds the lines split off it');
     eq(stands(ESTATE(), [DRAWER()]), true, 'invLineAccepted is invLineHold answering nothing');
     // And what a line needs before anything stands: a name, a destination that is one, a figure somebody owns.
     [['no destination', { disposition: '' }, 'nodest'], ['Not yet decided', { disposition: 'Undecided' }, 'nodest'], ['Hold', { disposition: 'Hold' }, 'onhold'],
@@ -262,7 +269,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     MANUALS.forEach((f) => {
       const note = dec(noteOf(readPage(f), PAGES[0][1]));
       [['Hold', /Hold/], ['the photograph\'s first line', /first line off its photograph/], ['the room check', /room check/], ['Contested Probate', /Contested Probate/],
-       ['the range alone where counsel values', /range with no figure stands only where counsel values/], ['a removed photograph line', /unless that line was removed/],
+       ['the range alone where counsel values', /range with no figure stands only where counsel values/],
+       ['⚠ a removed photograph line\'s notes riding on and holding (the merge with main\'s 2026-10-26)', /that line removed, its notes ride on the first line still listed and hold the photograph's lines the same/],
        ['notes while they count', /Agent One's until it goes quiet, Agent Two's while the value is still Agent Two's/],
        ['a line named and decided on the desk on a disputed estate', /a line you named and decided yourself is reviewed by that act there too/],
        ['what Waive records', /Waive, which records who decided and why/]]
@@ -565,8 +573,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(spec, 'restated the same day after the second review, with Q109', '…restated for round three');
     ['`invMarkListRead(jobId)`', '`invListSeen(jobId)`', '`invListRead(job)`', '`invListReadRefusal(jobId)`', '`_avAcceptedPill(f, fc, pill)`',
      '`_invLineHolds(ref, fc, every, only)`', '`invLineHold(ref, fc)`', '`INV_HOLD_WORDS`', '`INV_OPEN_HOLDS`', '`invLineOpen(ref, fc)`', '`INV_READ_FIELDS`',
-     '`agentNoticeLoud`', '`agentName`', '`apprWaived`', '`probatePackageGaps`']
+     '`agentNoticesOn`', '`agentName`', '`apprWaived`', '`probatePackageGaps`']
       .forEach((w) => has(spec, w, '…naming ' + w));
+    // ⚠ The merge with main's 2026-10-26: a removed photograph line's notes, all of them, ride on and hold the photograph's lines
+    // (under the second review only a Firearm or NFA note did, agentNoticeLoud, which is gone).
+    lacks(spec, 'off a removed line only a Firearm or NFA note holds', '⚠ …no longer that only a Firearm or NFA note outlives its line');
+    lacks(spec, '`agentNoticeLoud`', '…nor the helper that said it');
+    has(spec, 'a removed photograph line\'s notes, all of them, ride on the first line still listed off it, `agentNoticesOn`', '⚠⚠ …every note rides on the first line still listed');
+    has(spec, 'any note on it not yet quiet holds every line off the photograph until each is reviewed', '⚠ …and holds the photograph\'s lines until each is reviewed');
+    has(spec, 'a filter on the row\'s hint, never a tick or a review of its own', '…and the Unsure chip is a filter, never a tick');
     has(spec, 'The read is a fingerprint, never a time', '⚠ …and what the read is');
     has(spec, '`_avReadWords` is gone', '…and what went');
     lacks(live(SRC), 'INV_REVIEW_FLOOR', 'and the code carries no $100 line for a page to describe');
@@ -639,7 +654,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq([fast, slow], [true, true], '⚠ a clock running fast or slow: still current');
     const CT = rig(ESTATE({ invRead: { at: AT, by: 'Anthony Graziano' } }), items());
     eq(current(CT), false, '…and a time with no fingerprint vouches for nothing');
-    eq(attempt(() => C0.INV_READ_FIELDS.join(',')).val, 'objectName,category,qty,fmv,valLow,valHigh,valSource,disposition,channel,condition,roomIdx', 'the fields it reads: what the papers print of a line');
+    eq(attempt(() => C0.INV_READ_FIELDS.join(',')).val, 'objectName,category,qty,fmv,valLow,valHigh,valSource,disposition,channel,condition,roomIdx,valNote,valDate,apprId,apprDoc,assetTrack,flagExempt,serial', 'the fields it reads: what the papers print of a line');
     // ⚠⚠ THE PRESS WAITS FOR THE SHEET.
     const URL = 'https://sync.example.test/exec';
     const CL = rig(ESTATE(), items(), { url: URL, seen: {} });
@@ -694,7 +709,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       has(note, "the device's user, as Settings records it, else the job's concierge", f + ': who');
       has(note, 'Not recorded: the list is still loading from the sheet. Press it once the list has been read from the sheet.', f + ': ⚠ the refusal, word for word');
       // ⚠ Every field the press reads is named, in the order the code reads them, and nothing it does not read.
-      has(note, "the name, category, count, value and range, the value's source, the destination, who takes it, the condition, the room, and whether the line was removed", f + ': ⚠⚠ what the papers print of a line, as INV_READ_FIELDS reads it');
+      has(note, "the name, category, count, value and range, the value's source, the destination, who takes it, the condition, the room, the basis sentence, the valuation date, the appraiser, the asset track, the §732.402 exempt mark, a firearm's serial, and whether the line was removed", f + ': ⚠⚠ what the papers print of a line, as INV_READ_FIELDS reads it');
+      has(note, 'the agents are still at work on this list', f + ': ⚠ the press waits while an agent is at work (the merge\'s review)');
+      has(note, 'Not recorded: the list changed while it was on screen. It has been redrawn: read what changed, then press again.', f + ': ⚠ …and over a redraw owed, word for word');
       has(note, "A tick, a room check, a sign-out, an approval, an item number or an agent's note changes nothing", f + ': ⚠ …and what it never reads');
       has(note, 'never a time', f + ': …a fingerprint, never a time');
     });
@@ -707,9 +724,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══ F · THE HINT ON ANY GUESS (Q108) ═══
   group('F · the hint shows wherever either agent was guessing, on a line that stands too, until a person looks (Q108), and a person\'s figure is a look');
   {
-    // The context is handed in as the row once did (round one): the hint must not read it, so a line that stands still shows it.
+    // The hint takes the job as the row hands it in, and reads no context: a line that stands still shows it. (Restated in the
+    // merge's review: it handed the context in where main's signature takes the job, and passed by not reading it.)
     const unsure = (job, refs) => { const C = rig(job, refs); const r = attempt(() => { const fc = C.invAcceptCtx(C.jobs[0], C._photoRefs[7]);
-      return [C.invLineAccepted(C._photoRefs[7][0], fc), C.invLineUnsure(C._photoRefs[7][0], fc)]; }); return r.ok ? r.val : r.err; };
+      return [C.invLineAccepted(C._photoRefs[7][0], fc), C.invLineUnsure(C._photoRefs[7][0], C.jobs[0])]; }); return r.ok ? r.val : r.err; };
     eq(unsure(ESTATE(), [DRAWER({ valConf: 'low' })]), [true, true], '⚠⚠ Agent Two guessing alone: the line stands and shows unsure');
     eq(unsure(ESTATE(), [DRAWER({ agentConf: 'low' })]), [true, false], '…Agent One\'s guess Agent Two has valued under that name: settled');
     eq(unsure(ESTATE(), [DRAWER({ agentConf: 'low', valNameAt: 'an earlier name' })]), [false, true], '…Agent One\'s guess not yet valued under its name: unsure');
@@ -722,8 +740,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(unsure(ESTATE(), [DRAWER({ agentConf: undefined, namedBy: 'desk', valNameAt: 'an earlier name' })])[1], false, '⚠ …settled by a name or a category corrected (the desk\'s)');
     eq(unsure(ESTATE(), [DRAWER({ agentConf: undefined, valConf: 'low', namedBy: 'desk', category: 'Kitchen' })])[1], true, '⚠⚠ …never Agent Two\'s: its low value keeps the hint after the name or the category is corrected');
     eq(unsure(ESTATE(), [DRAWER({ agentConf: undefined, namedBy: 'desk', objectName: 'Henckels kitchen shears', valNameAt: 'Henckels kitchen shears', valConf: 'high' })]), [true, false], '…until Agent Two values it again with confidence');
-    has(live(fn('invLineUnsure')), 'function invLineUnsure(ref) {', 'it takes no context: a person\'s look only');
-    has(live(fn('_renderInvRow')), 'if (invLineUnsure(ref))', 'the row asks it so');
+    // Since the merge with main's 2026-10-26 it takes the job (never a context: main's "never where counsel values"), and asks
+    // invLineReviewed with no context, so a person's look alone settles it.
+    has(live(fn('invLineUnsure')), 'function invLineUnsure(ref, job) {', 'it takes the job, never a context');
+    has(live(fn('invLineUnsure')), 'invLineReviewed(ref)) return false;', '⚠ …and asks a person\'s look only: invLineReviewed with no context');
+    has(live(fn('_renderInvRow')), 'if (invLineUnsure(ref, job))', 'the row asks it so, with its job');
     // A correction of the name or the category is the desk's: what the pages call settling Agent One's guess.
     has(live(fn('_invEdit')), "if (key === 'objectName' || key === 'category') {\n    ref.namedBy = 'desk';\n    delete ref.agentConf;", 'correcting the name or the category makes the row the desk\'s');
     MANUALS.forEach((f) => {
@@ -762,13 +783,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(groups([LAMP('d1', { category: 'Lighting', namedBy: 'desk' }), LAMP('d2')]), [['d1', 'd2']], '⚠ …through a category changed');
     eq(groups([LAMP('d1', { objectName: 'Pair of brass candlesticks', namedBy: 'desk', dupOK: true }), LAMP('d2', { dupOK: true })]), [], '…until Not duplicates');
     has(live(fn('_agWrite')), 'ref.agentName = ref.objectName', 'Agent One\'s own reading is kept as it names');
-    // A Firearm or Possible NFA note outlives the line it was raised on; a Look at this does not.
+    // Every note outlives the line it was raised on (the merge with main's 2026-10-26, agentNoticesOn; under the second review
+    // only a Firearm or a Possible NFA item did): it rides on the photograph's first line still listed and holds its lines.
     const shelf = (kind) => [DRAWER({ stableId: 'p1', driveFileId: 'Fp1', objectName: 'Closet shelf', deletedAt: 9, agentNotices: [{ kind, text: 'a rifle case on the shelf' }] }),
       DRAWER({ stableId: 'p2', driveFileId: 'Fp1', derivedFrom: 'p1', objectName: 'Hard rifle case' }), DRAWER({ stableId: 'p3', driveFileId: 'Fp1', derivedFrom: 'p1', objectName: 'Wool blankets' })];
     const notes = (refs) => { const N = rig(ESTATE(), refs); const r = attempt(() => N.agentNotices(7, refs.filter((x) => !x.deletedAt)).map((n) => [n.kind, n.ref && n.ref.stableId])); return r.ok ? r.val : r.err; };
     eq(notes(shelf('firearm')), [['firearm', 'p2']], '⚠⚠ a Firearm note on a removed line: above the rows, against the photograph\'s first line still listed');
     eq(notes(shelf('nfa')), [['nfa', 'p2']], '…a Possible NFA item too');
-    eq(notes(shelf('other')), [], '…a Look at this goes with its line');
+    eq(notes(shelf('other')), [['other', 'p2']], '⚠⚠ …a Look at this as well, since the merge with main\'s 2026-10-26 (it went with its line)');
+    eq(hold(ESTATE(), [shelf('other')[2], shelf('other')[0], shelf('other')[1]]), 'photonote', '⚠ …and it holds the photograph\'s lines still listed');
+    has(live(fn('_agRecordNoticesHtml')), 'said of this photograph, whose own line was removed', '…and the carrying line\'s record says where it came from (the manual quotes it)');
     eq([hold(ESTATE(), shelf('firearm').slice(1).concat(shelf('firearm')[0])), hold(ESTATE(), [shelf('firearm')[2], shelf('firearm')[0]])], ['photonote', 'photonote'],
       '⚠ …and it holds the photograph\'s lines still listed, by the note');
     // A waiver answers the appraisal, and the row follows at once.
@@ -782,14 +806,21 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       has(note, 'A line ticked while still Not yet decided or on Hold counts as checked', f + ': …and a ticked Undecided or Hold line');
       has(note, 'compared under the name Agent One gave, so a tick, a name corrected or a category changed on one half does not part them', f + ': ⚠ a pair through a rename');
       has(note, 'remove the line a Firearm or Possible NFA item note was raised on', f + ': ⚠ a firearm note outlives its line');
-      has(note, 'a removed line takes a Look at this or a Must find with it', f + ': …and what goes with it');
+      lacks(note, 'a removed line takes a Look at this or a Must find with it', f + ': ⚠ gone: a removed line takes no note with it (the merge with main\'s 2026-10-26)');
+      has(note, 'every note it carried stays above the rows against the first line still listed off the same photograph', f + ': ⚠⚠ …every note it carried stays');
+      has(note, "said of this photograph, whose own line was removed", f + ': …in that line\'s record, in the record\'s words');
+      has(note, 'a Look at this until every line off the photograph is reviewed, a Must find until every must-find is found', f + ': …and holds the lines until it goes quiet');
       has(note, 'A waived appraisal answers the appraisal\'s flag', f + ': ⚠ a waiver');
     });
     PLAYBOOKS.forEach((f) => {
       const note = dec(noteOf(readPage(f), READ_NOTES[f]));
       has(note, 'A box ticked in bronze is ticked but still open: an item with no name, or a possible duplicate, which a tick does not settle', f + ': ⚠ what a tick does not settle');
       has(note, 'An item ticked while still Not yet decided or on Hold counts as checked', f + ': …and a ticked Undecided or Hold item');
-      has(note, 'A firearm note stays above the rows even if you remove the item it was raised on', f + ': ⚠ a firearm note outlives its item');
+      // Every note outlives its item since the merge with main's 2026-10-26 (under the second review only a firearm note did).
+      has(note, 'A note Agent One raised stays above the rows even if you remove the item it was raised on', f + ': ⚠ a note outlives its item');
+      has(note, "it rides on the first item still listed off that photo, and still wants the tick on that photo's other items until it goes quiet, which a firearm note never does", f + ': ⚠⚠ …riding on the first item still listed, and holding the others');
+      lacks(note, 'A firearm note stays above the rows', f + ': ⚠ gone: only a firearm note outliving its item');
+      has(dec(readPage(f)), 'said of this photograph, whose own line was removed', f + ': …and the carrying item\'s record, in the record\'s words');
       has(note, "Waiving an appraisal settles its flag as the appraisal's figure does", f + ': ⚠ a waiver');
     });
   }

@@ -135,7 +135,10 @@ const APP = process.env.APP || 'file:///home/user/app/havellin.html';
     window.print=()=>{cap=document.getElementById('print-target').innerHTML;};
     const alerts=[]; const ra=window.alert; window.alert=m=>alerts.push(String(m));
     window[fn](id);
-    return new Promise(res=>setTimeout(()=>{window.print=rp;window.alert=ra;
+    // The paper opens on screen first (2026-10-26): print it from the viewer, as a person does, and close the viewer after.
+    const ov=document.getElementById('doc-viewer-modal');
+    if (ov && ov.style.display==='flex') printDocViewer();
+    return new Promise(res=>setTimeout(()=>{window.print=rp;window.alert=ra;closeDocViewer();
       res({html:cap||'',alerts:alerts});},900));
   }, {id:jobId, fn, patch});
 

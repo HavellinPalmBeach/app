@@ -18,9 +18,9 @@
 
 const { sandbox, source, fn } = require('./harness');
 
-const FNS = ['invLineReviewed', 'invLineOpen', '_invDocPartyHead', 'invOwnInitial', 'invInitialGroupKey', 'estateDirectionWords', '_invDocName', 'printApprovalRequest', 'invDispDocWord', 'printDispositionLedger', 'referralFeeVendorsNote', 'vendorPaysReferral', '_vendorByName', '_vendorNameKey', '_andJoin', '_invBulkApply', '_invStampBy', 'deviceUser', 'invFillPlanChannel', 'invPlanChannel', 'invNoteDispositionMove',
+const FNS = ['invLineReviewed', 'invLineOpen', '_invDocPartyHead', 'invOwnInitial', 'invInitialGroupKey', 'estateDirectionWords', '_invDocName', 'printApprovalRequest', 'invDispDocWord', 'printDispositionLedger', 'referralFeeVendorsNote', 'vendorPaysReferral', '_vendorByName', '_vendorNameKey', '_andJoin', '_invBulkApply', '_invStampBy', 'deviceUser', 'invFillPlanChannel', 'invPlanChannel', 'invNoteDispositionMove', 'invReleaseRecipientNamed',
              'invReleaseCautions', '_invCautionBadges', '_invCautionNotices', '_invNamed',
-             '_invItemNo', '_invAwaitingApproval', '_jobInvRefs', '_invAssignItemNos',
+             '_invItemNo', '_invAwaitingApproval', 'invWrittenReleaseNeeded', '_jobInvRefs', '_invAssignItemNos',
              '_invTouch', '_invPrintThumb', '_invFileId', '_invRoomName', '_invMoney',
              'invIsFirearm', '_invDocHead', 'resolveValBasis', 'estateValueDate',
              'esc', 'fmtDate2', '_invPicked', '_invMatchesFilter', '_invFilterHides', '_invJob', '_setPhotoRef',
@@ -43,7 +43,7 @@ const FNS = ['invLineReviewed', 'invLineOpen', '_invDocPartyHead', 'invOwnInitia
              '_invProgressStamp', '_invReviewStats', 'jobTakesProceedsStatements', 'proceedsReconciliation',
              '_jobDestLabel', '_agrApprover', 'signedRecordsOf',
              // P20: the request lists what left before every fiduciary approved apart, and prints who signed readably.
-             'invRatificationOwed', 'invRecordedGone', 'invPickupRecord', 'custodyEvents', 'invReceiptRecord', 'invViaDealer', 'invRecipientName', 'invApprovalSignedText', 'invApprovalSigners', 'invStaffRefused', 'agentValueUnreviewed', '_avHasFigure', '_invStampLineReviewed', '_avStampReviewed', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'agentValueSpecialistWorth', 'invLineAcceptedOnly', '_invAcceptedStampWords', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', 'invAcceptCtx', 'agentDuplicateGroups', '_agDupEligible', 'agentNamedTwice', 'invListRead'];
+             'invRatificationOwed', 'invRecordedGone', 'invPickupRecord', 'custodyEvents', 'invReceiptRecord', 'invViaDealer', 'invRecipientName', 'invApprovalSignedText', 'invApprovalSigners', 'invStaffRefused', 'agentValueUnreviewed', '_avHasFigure', '_invStampLineReviewed', '_avStampReviewed', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'agentValueSpecialistWorth', 'invLineAcceptedOnly', '_invAcceptedStampWords', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', 'invAcceptCtx', 'agentDuplicateGroups', '_agDupEligible', 'agentNamedTwice', 'invListRead', 'invWrittenReleaseNeeded'];
 const VARS = ['INV_LINE_INITIAL_MIN', 'INV_DISP_DOC_WORDS', 'INV_PLAN_CHANNEL_KINDS', 'INV_UNDECIDED', 'INV_RELEASE_CAUTIONS', 'INV_ACCEPT_AMMO_RE', 'INV_OPEN_HOLDS', 'INV_RELEASE_DISPOSITIONS', 'INV_CAT_GLYPH',
               'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
               'DECEDENT_SERVICES', 'INVENTORY_COLUMNS', 'MATTER_TYPES', 'INV_SALE_DISPOSITIONS', 'MAIV_OTHER', 'MAIV_BY_CATEGORY'];
@@ -67,6 +67,10 @@ const ROWS = () => [
   mk({ stableId: 'd', ts: 4, itemNo: 4, objectName: "Mother's locket", category: 'Jewelry & Watches',
        fmv: '1200', disposition: 'Donate', flagBequest: true, flagDisputed: true }),
 ];
+
+// The same estate with somebody named to take each line, for the request: a line leaving with nobody named is held off it
+// (2026-10-26, "Hold them off").
+const NAMED = (rows) => rows.map((r) => Object.assign({ channel: r.disposition === 'Donate' ? 'Habitat ReStore' : 'Kodner Galleries' }, r));
 
 function ctx(rows, extra) {
   const state = { printed: '', alerted: '', badge: '' };
@@ -147,7 +151,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ───────────────────────────────────────────────────────────────────────────
   group('⚠⚠ THE RELEASE APPROVAL REQUEST — the document that authorises property to leave');
   {
-    const s = ctx();
+    const s = ctx(NAMED(ROWS()));
     s.printApprovalRequest(1);
     const doc = s.__state.printed;
     const txt = readable(doc);
@@ -198,12 +202,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ───────────────────────────────────────────────────────────────────────────
   group('⚠ A CLEAN ESTATE PRINTS NO NOTICE AT ALL — a caution on every job is noise');
   {
-    const s = ctx([
+    const s = ctx(NAMED([
       mk({ stableId: 'a', ts: 1, objectName: 'Dining chairs', category: 'Furniture',
            fmv: '900', disposition: 'Auction' }),   // under the threshold, which since 2026-10-14 reads every category
       mk({ stableId: 'b', ts: 2, objectName: 'Side table', category: 'Furniture',
            fmv: '600', disposition: 'Donate' }),
-    ]);
+    ]));
     s.printApprovalRequest(1);
     const doc = s.__state.printed;
     ok(doc.length > 0, 'the request still renders');

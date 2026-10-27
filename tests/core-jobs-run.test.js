@@ -351,12 +351,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       STATE.concat(['_printDocument', 'alert']),
       Object.assign(BASE(), { jobs: [job], _photoRefs: { 7: items }, estimateStore: { 7: { approved: true, estimate: Object.assign({}, EST_HR, { rooms: [{ idx: 0, name: 'Living Room', st: 'in', vol: 3, cplx: 3 }] }) } },
         _printDocument: (h, t) => printed.push(h), alert: (m) => printed.push('ALERT ' + m) }, extra || {}));
-    // the request's group initial on a living job: a line with no value is named as such
+    // the request's group initial: a line with no value is named as such. ⚠ On an estate since 2026-10-26: a living client's
+    // donations are approved by their word and reach no request (Anthony: "Drop it, firearms aside"), and a firearm there is
+    // initialled with the firearms block, never a group.
     const liv = mk(LIVING(), [IT('a', { disposition: 'Donate', channel: 'Goodwill', fmv: '20' }), IT('b', { disposition: 'Donate', channel: 'Goodwill', fmv: '' })]);
-    liv.printApprovalRequest(7);
+    const est = mk(PROBATE(), [IT('a', { disposition: 'Donate', channel: 'Goodwill', fmv: '20' }), IT('b', { disposition: 'Donate', channel: 'Goodwill', fmv: '' })]);
+    est.printApprovalRequest(7);
     const rq = textOf(printed.pop() || '');
     has(rq, 'each under $500 or with no value recorded:', '⚠ a group with an unvalued line is never "each under $500"');
-    const liv2 = mk(LIVING(), [IT('a', { disposition: 'Donate', channel: 'Goodwill', fmv: '20' }), IT('b', { disposition: 'Donate', channel: 'Goodwill', fmv: '40' })]);
+    const liv2 = mk(PROBATE(), [IT('a', { disposition: 'Donate', channel: 'Goodwill', fmv: '20' }), IT('b', { disposition: 'Donate', channel: 'Goodwill', fmv: '40' })]);
     liv2.printApprovalRequest(7);
     has(textOf(printed.pop() || ''), 'each under $500:', 'every line valued: under $500, as before');
     // the client estimate: an appraiser with no fee typed

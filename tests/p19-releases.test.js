@@ -250,7 +250,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(typeof spec.after, 'function', '⚠ and the dialog\'s follow-up (close, repaint) survives the desk\'s repaint of the same paper');
     ok(S.__log.renders >= 1, 'fixture: the desk did repaint');
     // The living client: who signed, typed; blank refused.
-    const L2 = [LINE('l', 1, { disposition: 'Distribute', channel: 'Sarah Ellsworth (daughter)' })];
+    // A rifle since 2026-10-26: on a client's own home only a firearm, or an item going to someone who works with Havellin,
+    // is recorded as approved in writing (Anthony: "Drop it, firearms aside"); an everyday line is refused by name.
+    const L2 = [LINE('l', 1, { objectName: 'Browning rifle', category: 'Firearms', disposition: 'Distribute', channel: 'Sarah Ellsworth (daughter)' })];
     const V = desk(['invRecordApproval', 'invSaveApproval'], LIVING(), L2, { _invPick: { l: 1 }, _todayStr: () => '2026-10-03' });
     V.invRecordApproval(2);
     const vb = V.__doc.getElementById('ia-body').innerHTML;
@@ -269,16 +271,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   // ═══════════════════════════════════════════════════════════════════════════
   G('C3/C6 · the release approval request: every fiduciary signs; a partial approval is named; the wording follows the matter', () => {
-    const lines = [LINE('a', 1, { disposition: 'Auction', fmv: '4000' }),
-                   LINE('b', 2, { disposition: 'Sell', fmv: '900', authBy: 'Ruth Adler', approvalDate: '2026-10-01' }),
-                   LINE('c', 3, { disposition: 'Donate', fmv: '50', authBy: BOTH, approvalDate: '2026-10-01' })];
+    // Restated 2026-10-26 (Anthony: "Hold them off"): a line leaving with nobody named is not asked for, so each names who takes it.
+    const lines = [LINE('a', 1, { disposition: 'Auction', fmv: '4000', channel: 'Christie’s' }),
+                   LINE('b', 2, { disposition: 'Sell', fmv: '900', channel: 'Palm Beach Consignment', authBy: 'Ruth Adler', approvalDate: '2026-10-01' }),
+                   LINE('c', 3, { disposition: 'Donate', fmv: '50', channel: 'Habitat for Humanity', authBy: BOTH, approvalDate: '2026-10-01' })];
     const S = desk(['printApprovalRequest'], TRUST(), lines);
     S.printApprovalRequest(7);
     const h = (S.__log.printed[0] || {}).html || '';
     const t = text(h);
-    has(h, 'To <strong>Ruth Adler and Daniel Adler</strong>', '⚠ addressed to both co-trustees');
+    has(h, 'Dear <strong>Ruth Adler and Daniel Adler</strong>,', '⚠ addressed to both co-trustees');
     // RESTATED 2026-10-08 (the job-flow audit): two signers read "both", never "all 2".
-    has(t, 'Every co-trustee named below must sign: nothing on this list is approved until both of you have.', 'and says every one must sign');
+    // Restated 2026-10-26: a plain letter (Anthony approved its wording).
+    has(t, 'we ask for the written approval of each of you. Please initial where shown, then each of you sign and date at the foot and return it to us.', 'and asks every one of them to sign');
+    has(t, 'Nothing on this list will be moved, sold, donated or disposed of until it is back with us, signed by both of you.', '…and nothing moves until both have');
+    lacks(t, 'Verbal approval', 'the letter no longer says it (the rule stands in the gate: invApprovalComplete)');
     eq(count(h, 'Approved by: ____'), 2, '⚠⚠ one signature line per fiduciary');
     has(t, 'Ruth Adler, Trustee / authorized fiduciary', 'each named, with the role recorded');
     has(t, 'Daniel Adler, Co-trustee / authorized fiduciary', 'both of them');
@@ -292,15 +298,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(t, 'Personal Representative', 'no Personal Representative on a trust');
     lacks(t, 'estate record', 'nor an estate record');
     // No fiduciary recorded: the role by matter.
-    const roleOf = (job) => { const R = desk(['printApprovalRequest'], Object.assign(job, { executor: '', coFiduciaries: [] }), [LINE('q', 1, { disposition: 'Donate' })]);
+    const roleOf = (job) => { const R = desk(['printApprovalRequest'], Object.assign(job, { executor: '', coFiduciaries: [] }), [LINE('q', 1, { disposition: 'Donate', channel: 'Habitat for Humanity' })]);
       R.printApprovalRequest(job.id); return (R.__log.printed[0] || {}).html || ''; };
-    has(roleOf(TRUST()), 'To <strong>Successor Trustee</strong>', '⚠ a trust with nobody named: the Successor Trustee');
-    has(roleOf(PROBATE()), 'To <strong>Personal Representative</strong>', 'a probate matter: the Personal Representative, as before');
-    has(roleOf(Object.assign(TRUST(), { matterType: 'both' })), 'To <strong>Personal Representative or Successor Trustee</strong>', 'a pour-over: either');
-    has(roleOf(Object.assign(TRUST(), { matterType: 'neither' })), 'To <strong>Authorized Representative</strong>', 'neither a court nor a trust: the authorized representative');
-    has(roleOf(Object.assign(TRUST(), { matterType: '' })), 'To <strong>Personal Representative</strong>', 'unanswered: the wording before P19');
+    has(roleOf(TRUST()), 'Dear <strong>Successor Trustee</strong>,', '⚠ a trust with nobody named: the Successor Trustee');
+    has(roleOf(PROBATE()), 'Dear <strong>Personal Representative</strong>,', 'a probate matter: the Personal Representative, as before');
+    has(roleOf(Object.assign(TRUST(), { matterType: 'both' })), 'Dear <strong>Personal Representative or Successor Trustee</strong>,', 'a pour-over: either');
+    has(roleOf(Object.assign(TRUST(), { matterType: 'neither' })), 'Dear <strong>Authorized Representative</strong>,', 'neither a court nor a trust: the authorized representative');
+    has(roleOf(Object.assign(TRUST(), { matterType: '' })), 'Dear <strong>Personal Representative</strong>,', 'unanswered: the wording before P19');
     // The firearms note: title stays with the holder, and the purchase rule is the general one now.
-    const gun = LINE('g', 4, { category: 'Firearms', objectName: 'Remington 870', disposition: 'Consign' });
+    const gun = LINE('g', 4, { category: 'Firearms', objectName: 'Remington 870', disposition: 'Consign', channel: 'Palm Beach Arms (FFL)' });
     const F = desk(['printApprovalRequest'], TRUST(), [gun]);
     F.printApprovalRequest(7);
     const ft = text((F.__log.printed[0] || {}).html || '');
@@ -314,11 +320,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(pt, 'never purchase or receive estate property', 'and estate property');
     has(pt, 'filed with the estate record and retained for seven years', 'filed with the estate record, as before');
     eq(count((P.__log.printed[0] || {}).html, 'Approved by: ____'), 1, 'one representative: one line, as before');
-    // The living client's request is unchanged: one line, no fiduciary, no staff sentence.
-    const V = desk(['printApprovalRequest'], LIVING(), [LINE('v', 1, { disposition: 'Donate' })]);
+    // The living client's request is unchanged: one line, no fiduciary, no staff sentence. (A firearm since 2026-10-26: on a
+    // client's own home a donation needs no written approval, Anthony's "Drop it, firearms aside".)
+    const V = desk(['printApprovalRequest'], LIVING(), [LINE('v', 1, { objectName: 'Browning rifle', category: 'Firearms', disposition: 'Distribute', channel: 'Tom Ellis' })]);
     V.printApprovalRequest(2);
     const vh = (V.__log.printed[0] || {}).html || '';
-    has(vh, 'To <strong>Margaret Ellsworth</strong>', 'a living client is addressed by name');
+    has(vh, 'Dear <strong>Margaret Ellsworth</strong>,', 'a living client is addressed by name');
     eq(count(vh, 'Approved by: ____'), 1, 'one line');
     lacks(vh, 'authorized fiduciary', 'not a fiduciary');
     lacks(vh, 'never purchase or receive', 'and the estate rule is not printed on a living client\'s request');
@@ -448,10 +455,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         beneficiaries: [{ id: 'b1', name: 'Mary Smith', relationship: 'niece' }, { id: 'b2', name: 'John Smith' }],
         bequests: [{ id: 'q1', description: 'the Sargent portrait', beneficiaryId: 'b1', stableIds: ['a', 'b', 'c'] },
                    { id: 'q2', description: 'the gold watch', beneficiaryId: 'b2', stableIds: [] }] });
-      const lines = [LINE('a', 1, { objectName: 'Sargent portrait', disposition: 'Auction', flagBequest: true }),
+      const lines = [LINE('a', 1, { objectName: 'Sargent portrait', disposition: 'Auction', channel: 'Christie’s', flagBequest: true }),
                      LINE('b', 2, { objectName: 'Tea service', disposition: 'Distribute', channel: 'Mary Smith (niece)', flagBequest: true }),
                      LINE('c', 3, { objectName: 'Locket', disposition: 'Distribute', channel: 'John Smith', flagBequest: true }),
-                     LINE('e', 5, { objectName: 'Tabriz rug', disposition: 'Sell', flagBequest: true }),
+                     LINE('e', 5, { objectName: 'Tabriz rug', disposition: 'Sell', channel: 'Palm Beach Consignment', flagBequest: true }),
                      LINE('k', 6, { objectName: 'Desk', disposition: 'Keep' })];
       return { job, lines };
     };

@@ -147,7 +147,10 @@ const COMP = { title: 'Herend Rothschild Bird dinner plates, set of 8', venue: '
     eq(posts[0].items[0].fileId, 'fa', 'the researched line carries its photograph');
     eq(posts[0].items[0].details, [{ fileId: 'fa_det' }], "⚠ and its maker's-mark close-up");
     eq(posts[0].items[1].fileId, '', 'an ordinary lot travels as text');
-    eq(posts[0].context, { estate: true, basis: 'Fair Market Value', valuationDate: '2026-06-14' }, 'valued at the date of death');
+    // 2026-10-26: the context also carries the desk's category list, so a researched line's category can be corrected.
+    const cats = await p.evaluate(() => INV_CATEGORIES.slice());
+    // Restated 2026-10-26b: the grades ride the request too (Anthony: "Agents grade it").
+    eq(posts[0].context, { estate: true, basis: 'Fair Market Value', valuationDate: '2026-06-14', categories: cats, conditions: ['Excellent', 'Good', 'Fair', 'Poor'] }, 'valued at the date of death');
     eq(posts[1].items.map(i => [i.stableId, i.mode]), [['c', 'comps']], '⚠ the ordinary lot over $250 is researched, in the same run');
     const man = await p.evaluate((id) => _photoRefs[id].filter(r => r.label === 'inventory').map(r => ({ id: r.stableId, fmv: r.fmv, src: r.valSource,
       by: r.valuedBy, conf: r.valConf, rev: !!r.valReviewed, fail: r.valFailed || '', date: r.valDate, name: r.objectName })), J);
@@ -238,7 +241,17 @@ const COMP = { title: 'Herend Rothschild Bird dinner plates, set of 8', venue: '
     await p.click('#inv-workbar summary:has-text("More")');
     await p.click('#inv-workbar button:has-text("Court Inventory")');
     await p.waitForTimeout(700);
+    // Restated on merging main (2026-10-26, "The desk's More ▾ papers open on screen first"): the Court Inventory opens in the
+    // viewer and prints nothing until its own Print / Save PDF is pressed, which prints that page; the viewer comes back after
+    // the dialog and Close takes it away (it covered the nav, and the next intake's click timed out behind it).
+    ok(await p.evaluate(() => { const o = document.getElementById('doc-viewer-modal'); return !!o && o.style.display === 'flex'; }),
+      'the Court Inventory opens on screen first (main, 2026-10-26)');
+    eq(await p.evaluate(() => (window.__printed || '').length), 0, 'and nothing is printed until the viewer\'s Print is pressed (characters printed)');
+    await p.click('#doc-viewer-print');
+    await p.waitForTimeout(900);
     const court = await p.evaluate(() => window.__printed);
+    await p.click('#doc-viewer-modal button[onclick="closeDocViewer()"]');
+    await p.waitForTimeout(200);
     ok(/<th[^>]*>Basis<\/th>/.test(court), 'the Court Inventory has a Basis column');
     ok(/>auction comps<\/td>/.test(court), 'the plates read auction comps');
     ok(/>WorthPoint comps<\/td>/.test(court), 'the table reads WorthPoint comps');

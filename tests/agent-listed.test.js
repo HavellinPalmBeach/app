@@ -53,10 +53,10 @@ function backend() {
     JSON, Math, Number, String, Object, Array, Error, parseInt,
   };
   vm.createContext(ctx);
-  vm.runInContext(['AGENT_API', 'AGENT_API_VERSION', 'AGENT_MODEL', 'AGENT_EFFORT', 'AGENT_MAX_TOKENS', 'AGENT_PARALLEL',
+  vm.runInContext(['AGENT_API', 'AGENT_API_VERSION', 'AGENT_MODELS_API', 'AGENT_MODEL_FLOORS', 'AGENT_MODEL_LINES', 'AGENT_MODEL_LIST_SECS', 'AGENT_MODEL_DEMOTE_SECS', 'AGENT_MODEL_SLOW_LIMIT', 'AGENT_FALLBACK_BETA', 'AGENT_EFFORT', 'AGENT_MAX_TOKENS', 'AGENT_PARALLEL',
     'AGENT_MAX_SHOTS', 'AGENT_TIME_BUDGET', 'AGENT_MAX_IMG', 'AGENT_LISTED_MAX', 'AGENT_COUNT_IN_NAME_RE'].map(gsVar)
     .concat(['_agProp', '_agMissingProps', '_agImageBlock', '_agTool', '_agSystem', '_agUserContent', '_agListedText',
-      '_agRequestFor', '_agReadResult', 'agentIdentifyShots'].map(gsFn)).join('\n'), ctx);
+      '_agRequestFor', '_agReadResult', 'agentIdentifyShots', '_agModelVersion', '_agVerCmp', '_agNewestOf', '_agCache', '_agModelList', '_agDemoted', '_agDemote', '_agSlow', '_agModels', '_agSendAll', '_agHttpFailure'].map(gsFn)).join('\n'), ctx);
   ctx.sent = sent;
   return ctx;
 }
@@ -72,10 +72,10 @@ const S = () => Object.assign({ stableId: 's', itemNo: 81, derivedFrom: 'p', obj
 const BLANK = (id, n) => Object.assign({ stableId: id, itemNo: n, derivedFrom: 'p', objectName: '', category: 'General/Household', updatedAt: 700 }, PHOTO);
 function app(refs) {
   return sandbox({
-    fns: ['agentListedOff', 'agentNameableRefs', 'agentShotGroups', '_agDetailRefs', '_agShotPayload', '_agContext', '_agWrite',
-      'agentApplyResult', '_agState', 'invSplitItemN', '_getPhotoRef', '_setPhotoRef', '_jobInvRefs', '_invFileId', '_photoUid',
+    fns: ['agentListedOff', 'agentNameableRefs', 'agentShotGroups', '_agDetailRefs', '_agShotPayload', '_agContext', '_agWrite', '_invCondIsAgents', '_invAgentCondition',
+      'agentApplyResult', '_agState', 'invSplitItemN', '_invSplitSource', '_getPhotoRef', '_setPhotoRef', '_jobInvRefs', '_invFileId', '_photoUid',
       '_invPhotoSource', '_invRoomName'],
-    vars: ['_agRun', 'AGENT_MAX_DETAILS', 'AGENT_LISTED_MAX', 'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY', 'INV_SPLIT_MAX', '_photoUidSeq'],
+    vars: ['_agRun', 'AGENT_CONDITIONS', 'AGENT_MAX_DETAILS', 'AGENT_LISTED_MAX', 'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY', 'INV_SPLIT_MAX', '_photoUidSeq'],
     stubs: {
       jobs: [{ id: 7, hvlId: 'HVL-0009', svc: 'cleanout' }], _photoRefs: { 7: refs },
       estimateStore: { 7: { estimate: { rooms: [{ idx: 2, name: 'Kitchen', note: '' }] } } },

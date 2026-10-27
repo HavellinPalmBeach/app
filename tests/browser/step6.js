@@ -119,7 +119,8 @@ const APP = process.env.APP || 'file:///home/user/app/havellin.html';
     (_photoRefs[id]||[]).forEach(r => { r.assetTrack='Trust'; });
     let cap=null; const rp=window.print; window.print=()=>{cap=document.getElementById('print-target').innerHTML;};
     printCourtInventory(id);
-    return new Promise(res=>setTimeout(()=>{window.print=rp;res(cap||'');},900));
+    printDocViewer();   // the paper opens on screen first (2026-10-26)
+    return new Promise(res=>setTimeout(()=>{window.print=rp;closeDocViewer();res(cap||'');},900));
   }, jobId);
   const tt = String(trust).replace(/<[^>]+>/g,' ').replace(/&mdash;/g,'—').replace(/\s+/g,' ');
   ok(tt.length > 200, 'on a trust matter the court schedule still renders …');

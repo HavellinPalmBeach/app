@@ -82,12 +82,12 @@ function gsCtx({ props = { ANTHROPIC_API_KEY: 'sk-ant-test' }, reply = null, fil
   ctx.Date.now = () => t;
   vm.createContext(ctx);
   vm.runInContext([
-    gsVar('AGENT_API'), gsVar('AGENT_API_VERSION'), gsVar('AGENT_MODEL'), gsVar('AGENT_EFFORT'),
+    gsVar('AGENT_API'), gsVar('AGENT_API_VERSION'), gsVar('AGENT_MODELS_API'), gsVar('AGENT_MODEL_FLOORS'), gsVar('AGENT_MODEL_LINES'), gsVar('AGENT_MODEL_LIST_SECS'), gsVar('AGENT_MODEL_DEMOTE_SECS'), gsVar('AGENT_MODEL_SLOW_LIMIT'), gsVar('AGENT_FALLBACK_BETA'), gsVar('AGENT_EFFORT'),
     gsVar('AGENT_MAX_TOKENS'), gsVar('AGENT_PARALLEL'), gsVar('AGENT_MAX_SHOTS'),
     gsVar('AGENT_TIME_BUDGET'), gsVar('AGENT_MAX_IMG'),
     gsFn('_agProp'), gsFn('_agMissingProps'), gsFn('_agImageBlock'), gsFn('_agTool'),
     gsFn('_agSystem'), gsFn('_agUserContent'), gsFn('_agListedText'), gsVar('AGENT_LISTED_MAX'), gsFn('_agRequestFor'), gsFn('_agReadResult'),
-    gsFn('agentIdentifyShots'),
+    gsFn('agentIdentifyShots'), gsFn('_agModelVersion'), gsFn('_agVerCmp'), gsFn('_agNewestOf'), gsFn('_agCache'), gsFn('_agModelList'), gsFn('_agDemoted'), gsFn('_agDemote'), gsFn('_agSlow'), gsFn('_agModels'), gsFn('_agSendAll'), gsFn('_agHttpFailure'),
   ].join('\n'), ctx);
   ctx.sent = sent;
   return ctx;
@@ -121,8 +121,8 @@ function rig(refs, over) {
   const saved = [], synced = [];
   const ctx = sandbox({
     fns: ['agentNameableRefs', 'agentShotGroups', '_agDetailRefs', '_agShotPayload', 'agentListedOff', '_agContext',
-          '_agWrite', 'agentApplyResult', '_agState', 'agentNotices', 'agentNoticeLoud', 'agentNoticeQuiet', 'mustFindAllFound', 'invLineReviewed', 'invLineOpen', '_agStateHtml',
-          'invSplitItemN', 'invSplitItem', '_getPhotoRef', '_setPhotoRef', '_jobInvRefs',
+          '_agWrite', 'agentApplyResult', '_agState', 'agentNotices', 'agentNoticeQuiet', 'mustFindAllFound', 'invLineReviewed', 'invLineOpen', '_agStateHtml', '_invCondIsAgents', '_invAgentCondition',
+          'invSplitItemN', 'invSplitItem', '_getPhotoRef', '_setPhotoRef', '_jobInvRefs', '_invSplitSource',
           '_invFileId', '_photoUid', '_invPhotoSource', '_invRoomName', '_invDerivedRefs',
           // The duplicate flag. ⚠ LIFTED, NEVER STUBBED — a stub of the grouping rule is
           // exactly what would let the block above the rows and the chip on the row come to
@@ -132,8 +132,8 @@ function rig(refs, over) {
           // P16: the desk's one removal writer, which records who removed the line.
           '_invTombstoneLine', '_invStampBy', 'deviceUser', '_invJob',
           // P24: the room check's links join the same-name rule in one grouping.
-          '_arDupEligible', 'agentValueUnreviewed', '_avHasFigure', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invNeedsAppraisal', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat'],
-    vars: ['_agRun', '_avRun', 'AGENT_NOTICE_KINDS', 'AGENT_BATCH', 'AGENT_MAX_DETAILS', 'AGENT_LISTED_MAX', '_agDupSet', 'AGENT_ROOM_CONF_RANK', 'AGENT_ROOM_CONF_WORDS', 'AGENT_PASS_GAP_MS',
+          '_arDupEligible', 'agentValueUnreviewed', '_avHasFigure', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invNeedsAppraisal', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat', '_invPhotoSiblings', 'agentNoticesOn'],
+    vars: ['_agRun', '_avRun', 'AGENT_NOTICE_KINDS', 'AGENT_BATCH', 'AGENT_MAX_DETAILS', 'AGENT_LISTED_MAX', '_agDupSet', 'AGENT_ROOM_CONF_RANK', 'AGENT_ROOM_CONF_WORDS', 'AGENT_PASS_GAP_MS', 'AGENT_CONDITIONS',
            'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY', 'INV_SPLIT_MAX', '_photoUidSeq', 'MAIV_OTHER', 'MAIV_BY_CATEGORY'],
     stubs: Object.assign({
       jobs: [{ id: 7, hvlId: 'HVL-0007', svc: 'cleanout' }],
@@ -406,11 +406,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠ THE ROW SAYS WHERE THE AGENTS WERE GUESSING AND NOBODY HAS CHECKED IT');
   {
     const row = liveLines(fn('_renderInvRow', 'invOutForAppraisal'));
-    has(row, 'if (invLineUnsure(ref))', 'the hint is on an unchecked guess');
+    has(row, 'if (invLineUnsure(ref, job))', 'the hint is on an unchecked guess (with the job since 2026-10-26)');
     has(row, 'var(--bronze)', 'and it is bronze');
     // ⚠ NEVER RED. Red on this strip means "stop, do not touch" — a held firearm — and a
     // second red would cost the first one its meaning.
-    const at = row.indexOf('if (invLineUnsure(ref))');
+    const at = row.indexOf('if (invLineUnsure(ref, job))');
     ok(at > 0, 'anchored');
     const seg = row.slice(at, at + 600);
     lacks(seg, '#c0392b', 'a second red on this strip would cost the firearms badge its meaning');
@@ -458,7 +458,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     c.agentIdentifyShots({ context: CTXP, shots: [SHOT()] });
     const body = JSON.parse(c.sent[0][0].payload);
 
-    eq(body.model, 'claude-opus-5', 'it runs on Opus 5');
+    // 2026-10-26 (Anthony: always the most accurate model): the newest top-tier model, its floor where the model list cannot be read.
+    eq(body.model, 'claude-fable-5-1', 'it runs on the newest top-tier model (the floor, with no model list in the sandbox)');
     eq(body.thinking.type, 'adaptive', 'with adaptive thinking');
     eq(body.output_config.effort, 'medium', 'at medium effort — identification is perception, not reasoning');
     ok(body.max_tokens > 0, 'and a token ceiling');
@@ -598,7 +599,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     c.agentIdentifyShots({ context: CTXP, shots: shots });
     eq(c.sent.length, 1, 'eight photographs are one fetchAll, not eight fetches');
     eq(c.sent[0].length, 8, 'all eight in flight together');
-    has(liveLines(gsFn('agentIdentifyShots')), 'fetchAll', 'through fetchAll');
+    // 2026-10-26: through the one sender, which sends a slice that ran long to the fallback model.
+    has(liveLines(gsFn('agentIdentifyShots')), '_agSendAll(', 'through the one sender');
+    has(liveLines(gsFn('_agSendAll')), 'UrlFetchApp.fetchAll(reqs)', 'which is a fetchAll');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -792,7 +795,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // GREEN. A source check cannot tell a rendered control from a disabled one; this reads the
     // markup the function actually returns. CLAUDE.md records that shape more than any other.
     const rowRig = (dupSet, over) => sandbox({
-      fns: ['invLineReviewed', 'invLineOpen', '_renderInvRow', '_invRowPhotoHtml', '_invRowHasWho', 'invOutForAppraisal', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', 'invPickupRecord', 'signedRecordsOf', '_invRowDomId', '_invRecipientInput', 'invPlanChannel', '_renderInvPanel', 'invCloseUpRefusal', '_invCloseUpsHtml', '_invCloseUpTileHtml', '_avPanelHtml', '_avNoticeLabel', '_avNoticeKinds', '_invDetailRefs', 'invAppraisalSourceText', 'invLineAppraiser', '_invLinkedAppraiser', 'invAppraised', 'invAppraisalInProgress', '_invHasAppraisal', '_invHasValue', '_invPanelAppraisalHtml',
+      fns: ['invLineReviewed', 'invLineOpen', '_renderInvRow', '_invRowPhotoHtml', '_invRowHasWho', 'invOutForAppraisal', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', 'invPickupRecord', 'signedRecordsOf', '_invRowDomId', '_invRecipientInput', 'invPlanChannel', '_renderInvPanel', 'invCloseUpRefusal', '_invCloseUpsHtml', '_invCloseUpTileHtml', '_avPanelHtml', '_avNoticeLabel', '_avNoticeKinds', '_invDetailRefs', 'invAppraisalSourceText', 'invLineAppraiser', '_invLinkedAppraiser', 'invAppraised', 'invAppraisalInProgress', '_invHasAppraisal', '_invHasValue', '_invPanelAppraisalHtml', '_invPhotoOpenHtml',
             '_invPhotoSiblings', '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef',
             '_invNamed', '_invItemNo',
             // P16: the row names a firearm's dealer route and the panel carries the firearm block.
@@ -800,10 +803,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             // P19: the row names a bequest, an incomplete approval and a receipt owed; the recipient box offers the roster.
             'invBequestFor', 'jobListEntries', 'invApprovalGap', 'invReceiptOwed', '_invBenListAttr',
             // P20: the row says a ratification is owed apart from an incomplete approval, and flags a living client's line going to one of ours.
-            'invRatificationOwed', 'invFiduciaryMode', 'isDecedentJob', 'invReleaseCautions', 'invBequestElsewhere', '_invJob', 'invHavellinRecipient', 'invChannelLeftover', 'invChannelLeftoverText', '_avHasFigure', 'invLineUnsure', '_invEachInput', 'invUnitValue', 'invLineQty', '_agNameKey', '_invInputStyle', '_invCtrlMinW', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invNeedsAppraisal', 'invLineAcceptedOnly', '_invRevBoxHtml', 'invIsMAIV', 'invMAIVDefaultCat', '_invAcceptCtxOf', 'agentNoticeLoud', 'invAcceptCtx', 'agentDuplicateGroups', '_jobInvRefs', '_agDupEligible', 'agentNamedTwice', 'gateDispute', '_gateYes'],
+            'invRatificationOwed', 'invFiduciaryMode', 'isDecedentJob', 'invReleaseCautions', 'invBequestElsewhere', '_invJob', 'invHavellinRecipient', 'invChannelLeftover', 'invChannelLeftoverText', '_avHasFigure', 'invLineUnsure', '_invEachInput', 'invUnitValue', 'invLineQty', '_agNameKey', '_invInputStyle', '_invCtrlMinW', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invNeedsAppraisal', 'invLineAcceptedOnly', '_invRevBoxHtml', 'invIsMAIV', 'invMAIVDefaultCat', '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_jobInvRefs', '_agDupEligible', 'agentNamedTwice', 'gateDispute', '_gateYes', 'invWrittenReleaseNeeded', 'agentValueAgain', '_avState', 'agentValueInternal', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep'],
       vars: ['INV_PLAN_CHANNEL_KINDS', 'INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick', '_agDupSet',
              // P20 vars: the catalogues the row's new questions read.
-             'DECEDENT_SERVICES', 'INV_RELEASE_CAUTIONS', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', '_agDupSetJob', 'INV_HOLD_WORDS', 'INV_OPEN_HOLDS', 'INV_ACCEPT_AMMO_RE'],
+             'DECEDENT_SERVICES', 'INV_RELEASE_CAUTIONS', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', '_agDupSetJob', 'INV_HOLD_WORDS', 'INV_OPEN_HOLDS', 'INV_ACCEPT_AMMO_RE', '_avRun', '_avAfter', '_avForceComps', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
       stubs: {
         _invInput: () => '', _invThumbHTML: () => '<div></div>', _invRoomName: () => 'Entry & Living',
         invIsFirearm: () => false, invReleaseBlocked: () => false, invAwaitingAppraisal: () => false,
@@ -817,7 +820,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const html = flagged._renderInvRow({ id: 1 }, flagged._photoRefs[1][0]);
     has(html, 'possible duplicate', 'a contested row really RENDERS the chip');
     has(html, 'var(--bronze)', 'in bronze — red on this strip is a held firearm');
-    has(html, 'off different photographs', 'and the tooltip says what it is about');
+    // 2026-10-26: "off different photographs" was false on a photograph read twice; with no room-check sentence, the generic words.
+    has(html, 'May be the same thing as another line in this room.', 'and the tooltip says what it is about');
     // 2026-10-25b: a confident agent name carries no *agent* badge; a guess carries the row's one hint, *unsure*, which is a
     // different claim from the duplicate's and sits beside it.
     lacks(html, '>agent<', 'a confident agent name wears no badge of its own');

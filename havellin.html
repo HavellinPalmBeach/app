@@ -756,6 +756,8 @@ body.field-cam-open #sync-pending{display:none !important;}
 .fos-acts .btn-s{padding:6px 10px;font-size:10px;}
 /* File signed receipt is a <label> (the picker inside it); the global label rule's 12px top margin set it lower than its row. */
 .fos-acts label.btn-s{margin:0;}
+/* A file chooser drawn as a button sits on the row with the others: the form labels' margins push it down (2026-10-26b, + Close-up). */
+.inv-rec-acts label.btn-s{margin:0;line-height:normal;}
 .fos-void{font-size:11px;color:var(--gray);border-top:1px dashed var(--border);padding-top:6px;margin-top:6px;}
 .fos-note{font-size:11px;color:var(--gray);line-height:1.5;margin-top:8px;}
 /* ── Incidents (P26, 2026-10-16): the card shares the Found on site classes; these are its own. */
@@ -1474,7 +1476,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.25 · 12:53pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.26 · 6:50pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6455,7 +6457,15 @@ var BACKEND_NEEDS_TYPES = ['saveMedia', 'saveInventory', 'job', 'saveAllJobs', '
 // 2026-10-25b: a name a person typed or reviewed is marked (`nameChecked`) and given back and valued as named; a brand in a name is
 // priced as that brand; the line is valued at its Quantity; Agent One puts a brand the crew names into the name. An older deployment
 // may hand a name a person typed back as the generic thing and value that.
-var BACKEND_MIN_VERSION = '2026-10-25b';
+// 2026-10-26: the agents run on the newest top-tier model with the newest Opus behind it; Agent One's naming rules; Agent Two looks
+// at the photograph of a guessed name, corrects a research line's category, prints a figure with no sale behind it as a general
+// estimate, and answers passing failures as `retry`. An older deployment keeps Agent One on Opus 5, never moves to a newer model,
+// and stamps every line a slow request was carrying "not valued".
+// 2026-10-26b: a comparable is one item's own page with the price that page shows (the server's _avResultsPage and
+// AGENT_VALUE_NO_PRICE_RE); a long note ends at a whole sentence (_avClip); both agents grade condition off the photograph
+// (AGENT_CONDITIONS, sent). An older deployment keeps a search page, or a sale whose price was not shown, as a sold
+// comparable, so a researched figure resting on one prints "auction comps", cuts a long note mid-sentence, and grades nothing.
+var BACKEND_MIN_VERSION = '2026-10-26b';
 var _backendVersion = null;
 
 function checkBackendVersion() {
@@ -6513,7 +6523,7 @@ var BACKEND_FEATURE_COST = {
   deleteJob:     'a client deleted here comes back from the other device',
   // One line for any deployment older than BACKEND_MIN_VERSION, so it names the newest gap first and says
   // which vintage the older one belongs to (the banner's title prints the version that answered).
-  version:       'a name you type or review on the desk (a wooden mirror retyped as Restoration Hardware) can come back from Agent Two as the generic thing and be valued as that, and a brand the crew says at the camera is not put into the name; on a deployment older than 2026-10-25, Agent Two flags a name it disagrees with (\u201cName may be wrong\u201d) instead of correcting it, puts a note on nearly every item it values (no condition recorded, a rough count, a search that ran short), and Agent One files everyday dishes as collectibles; on a deployment older than 2026-10-24, a blank line added to a photograph already named (Another item in this photo) makes Agent One read the whole photograph again, so every object in it goes on the list a second time, and its names carry a count (\u201capprox. 7 in stack\u201d) that the Qty box contradicts once corrected; on a deployment older than 2026-10-19b, a client\u2019s inventory reset in the Apps Script editor (resetInventoryConfirm) is undone by the first device that saves a line from before it, unless every device reloads first; on a deployment older than 2026-10-16, an incident reported on one device, or a key or fob received there while another device records a handoff, can be dropped when the sheet merges the job (the Incidents and Keys & access cards\u2019 lists are not yet merged entry by entry); on a deployment older than 2026-10-06, two devices\u2019 release signers are not merged and the client\u2019s workbook rounds its money; on a deployment older than 2026-10-05, a co-executor or co-trustee is not put on the DocuSign envelope beside the client, so they sign a printed copy of the agreement and the page they signed has to be filed from the timeline; on a deployment older than 2026-10-03, a co-trustee, a beneficiary, a signed copy filed to Drive, a find on site or a proceeds statement added on one device can be dropped by another device saving an older copy of the job, and the client\u2019s inventory workbook heads a trust\u2019s net proceeds \u201cNet to Estate\u201d; on a deployment older than 2026-10-01, File signed copy adds a second copy of the signed agreement to the client\u2019s Agreement folder instead of replacing the one there; on a deployment older than 2026-09-30b, a payment voided or marked cleared on one device can come back as it was from another device that changed the same payment before reloading, and count again; a firearm\u2019s serial, recipient or dealer route, recorded on one device, can be dropped from the sheet by another device\u2019s older copy of the item, until the first device next saves the inventory; and on a deployment older than 2026-09-30, two people editing different parts of one job (a vendor quote here, the team there) can also undo each other\u2019s work, a damaged store tab is emptied by the next save instead of refused, and Agent One can stop mid-answer on a busy photograph',
+  version:       'a search page, or a sale whose price was not shown, can stand as a sold comparable, so a researched figure resting on one prints \u201cauction comps\u201d; a long note from Agent Two stops mid-sentence; and neither agent grades an item\u2019s condition; on a deployment older than 2026-10-26, the agents never move to a newer model by themselves (Agent One still runs on the older Opus 5), Agent Two never looks at the photograph of an item whose name is a guess or fixes a wrong category, a figure with no sale behind it prints as \u201cauction comps\u201d, and one slow request can mark a whole batch \u201cnot valued\u201d or lose a batch of names; on a deployment older than 2026-10-25b, a name you type or review on the desk (a wooden mirror retyped as Restoration Hardware) can come back from Agent Two as the generic thing and be valued as that, and a brand the crew says at the camera is not put into the name; on a deployment older than 2026-10-25, Agent Two flags a name it disagrees with (\u201cName may be wrong\u201d) instead of correcting it, puts a note on nearly every item it values (no condition recorded, a rough count, a search that ran short), and Agent One files everyday dishes as collectibles; on a deployment older than 2026-10-24, a blank line added to a photograph already named (Another item in this photo) makes Agent One read the whole photograph again, so every object in it goes on the list a second time, and its names carry a count (\u201capprox. 7 in stack\u201d) that the Qty box contradicts once corrected; on a deployment older than 2026-10-19b, a client\u2019s inventory reset in the Apps Script editor (resetInventoryConfirm) is undone by the first device that saves a line from before it, unless every device reloads first; on a deployment older than 2026-10-16, an incident reported on one device, or a key or fob received there while another device records a handoff, can be dropped when the sheet merges the job (the Incidents and Keys & access cards\u2019 lists are not yet merged entry by entry); on a deployment older than 2026-10-06, two devices\u2019 release signers are not merged and the client\u2019s workbook rounds its money; on a deployment older than 2026-10-05, a co-executor or co-trustee is not put on the DocuSign envelope beside the client, so they sign a printed copy of the agreement and the page they signed has to be filed from the timeline; on a deployment older than 2026-10-03, a co-trustee, a beneficiary, a signed copy filed to Drive, a find on site or a proceeds statement added on one device can be dropped by another device saving an older copy of the job, and the client\u2019s inventory workbook heads a trust\u2019s net proceeds \u201cNet to Estate\u201d; on a deployment older than 2026-10-01, File signed copy adds a second copy of the signed agreement to the client\u2019s Agreement folder instead of replacing the one there; on a deployment older than 2026-09-30b, a payment voided or marked cleared on one device can come back as it was from another device that changed the same payment before reloading, and count again; a firearm\u2019s serial, recipient or dealer route, recorded on one device, can be dropped from the sheet by another device\u2019s older copy of the item, until the first device next saves the inventory; and on a deployment older than 2026-09-30, two people editing different parts of one job (a vendor quote here, the team there) can also undo each other\u2019s work, a damaged store tab is emptied by the next save instead of refused, and Agent One can stop mid-answer on a busy photograph',
   preVersion:    'it predates the version check itself (2026-09-09), so client PDFs, photographs, DocuSign, Stripe and Agent One may all be missing as well'
 };
 
@@ -19823,7 +19833,8 @@ function staleDraftNote(job, key, fresh, named) {
     : (list[0].why === 'edit' ? 'was made before the estimate was edited'
       : list[0].why === 'reopen' ? 'was made before the job was re-opened'
       : list[0].why === 'inventory' ? 'was made before the inventory changed'
-      : list[0].why === 'approved' ? 'was made before every line on it was approved' : 'has the old price');
+      : list[0].why === 'approved' ? 'was made before every line on it was approved'
+      : list[0].why === 'discarded' ? 'was discarded on the desk' : 'has the old price');
   if (fresh) return (gmail ? 'Delete' : 'Discard') + ' the older ' + what + ' — ' + (one ? 'it ' : 'they ') + why;
   var act = gmail ? (one ? 'delete it, don’t send it' : 'delete them, don’t send them')
                   : (one ? 'if it was never sent, discard it' : 'if they were never sent, discard them');
@@ -21589,6 +21600,8 @@ function docRecordSent(spec, res) {
   // The probate package says what it carried and to whom (2026-10-01, P17), which is also what marks its draft as one
   // the inventory overtakes rather than a price (draftIsStale); the approval request likewise (`req`, 2026-10-17).
   if (res.pkg) st.pkg = res.pkg;
+  // The request that went is kept while a newer one is drafted, so discarding the draft puts it back (2026-10-26).
+  if (res.req && st.req && st.sentAt && !docDraftPending(st)) st.sentReq = st.req;
   if (res.req) st.req = res.req;
   st.draftedAt = new Date().toISOString();
   st.draftedBy = _actor(spec.job) || spec.job.tc || '';
@@ -21667,6 +21680,7 @@ function markDocSent(jobId, docKey) {
   var st = docState(job, docKey);
   st.sentAt = new Date().toISOString();
   st.sentBy = _actor(job) || job.tc || '';
+  delete st.sentReq;   // what a discarded draft would have put back is history once a send is confirmed (2026-10-26)
   saveJobs(); syncJobToSheets(job);
   dashNotice('ok', 'Recorded as sent.');
   _dashRedraw(jobId);
@@ -22383,6 +22397,14 @@ function closeDocViewer() {
 function printDocViewer() {
   if (!_docViewerSpec) return;
   var s = _docViewerSpec;
+  // A desk paper opened through _printDocument's `view` (2026-10-26): it has no docAction behind it, so the page it holds is
+  // printed, and the viewer is out of the way while the dialog is up and back once it closes (Cancel included).
+  if (s.paper) {
+    var ov = document.getElementById('doc-viewer-modal');
+    if (ov) ov.style.display = 'none';
+    _printDocument(s.html, s.title, { after: function () { if (ov && _docViewerSpec === s) ov.style.display = 'flex'; } });
+    return;
+  }
   closeDocViewer();
   docAction(s.job.id, s.kind, 'print', { stage: s.stage });
 }
@@ -27523,6 +27545,8 @@ function savePhotoRefs(jobId) {
                valLow:r.valLow, valHigh:r.valHigh, valComps:r.valComps, valLookup:r.valLookup, valConf:r.valConf,
                valNotices:r.valNotices, valuedBy:r.valuedBy, valAgentAt:r.valAgentAt, valNameAt:r.valNameAt, valNameFrom:r.valNameFrom,
                unitVal:r.unitVal,   // one article's value, typed on the row (Each × Qty = Total, 2026-10-25b)
+               catBy:r.catBy,       // a category a person set on the bulk bar, which Agent Two never moves (2026-10-26)
+               condBy:r.condBy,     // who graded the condition: an agent, or a person (2026-10-26b)
                valFailed:r.valFailed, valReviewed:r.valReviewed, valReviewedBy:r.valReviewedBy, valReviewedAt:r.valReviewedAt,
                // ⚠ THE ROOM CHECK'S FIELDS (P24): the lines a room's photographs say are this one thing, why, how sure, and
                // when the room was last read together.
@@ -28188,6 +28212,22 @@ function _invRefs(jobId, roomIdx) {
 // photo time; app-manage columns (valuation, disposition detail, proceeds) become
 // editable in the next build. Mirrors Havellin_Estate_Inventory_Master.xlsx.
 var INV_CONDITIONS  = ['Excellent','Good','Fair','Poor','Salvage'];
+// ⚠ THE GRADES THE AGENTS MAY GIVE (2026-10-26b; Anthony: "Agents grade it"): a photograph tells Excellent, Good, Fair and Poor
+// apart; Salvage is a person's call. Sent to both agents (the backend holds no copy), and held to INV_CONDITIONS by a test.
+var AGENT_CONDITIONS = ['Excellent','Good','Fair','Poor'];
+// Who has the condition, one rule (2026-10-26b), the name's twin (_avNameIsAgents): a blank, or an agent's grade nobody has reviewed,
+// is the agents' to fill; a grade a person set on the record or across a selection (`condBy` desk), or one ticked reviewed, stands.
+// Read by Agent One's writer and Agent Two's.
+function _invCondIsAgents(ref) {
+  if (!ref || ref.condBy === 'desk') return false;
+  return !String(ref.condition || '').trim() || (ref.condBy === 'agent' && !ref.reviewed);
+}
+// Writes an agent's grade where the rule allows; answers whether it did.
+function _invAgentCondition(ref, grade) {
+  if (AGENT_CONDITIONS.indexOf(grade) < 0 || !_invCondIsAgents(ref)) return false;
+  ref.condition = grade; ref.condBy = 'agent';
+  return true;
+}
 // ⚠ A CONDITION NOBODY SET READS "as photographed" (P25, Q50; Anthony, 2026-10-09): the estimate, the agreement and the
 // receipt promise property "in the condition described", and every schedule printed "—". The photograph is the description
 // where no condition is set; the desk's bulk bar sets one across a selection (Good, then the exceptions). One reader for
@@ -28697,6 +28737,18 @@ var INV_SPLIT_MAX = 200;
 // on the attorney's schedule with an empty photo box for the rest of the engagement. Retry the
 // shot first, then split it. The check runs ONCE for the batch, above the loop: the answer
 // cannot change between one row and the next.
+// The photograph a split goes off, or why it cannot: one answer for the split and for the press that asks before it (2026-10-26b).
+function _invSplitSource(jobId, stableId) {
+  var src = _getPhotoRef(jobId, stableId);
+  if (!src || src.deletedAt) return 'That photograph is not on this job.';
+  if (src.derivedFrom) src = _invPhotoSource(jobId, src) || src;   // split off the photograph, never off a line
+  if (src.label !== 'inventory') return 'Only an item photograph can be split into several lines.';
+  if (!_invFileId(src)) {
+    return 'This photograph has not reached Google Drive yet, so a line split off it would have '
+      + 'no image and never get one. Press Retry on the shot first, then split it.';
+  }
+  return src;
+}
 function invSplitItemN(jobId, stableId, count) {
   var n = (count === undefined || count === null || count === '') ? 1 : parseInt(count, 10);
   // An explicit 0 is a real answer from an identifying agent — "nothing else in this frame" —
@@ -28708,14 +28760,8 @@ function invSplitItemN(jobId, stableId, count) {
     return 'That is ' + n + ' lines off one photograph, past the limit of ' + INV_SPLIT_MAX
       + '. Nothing was added. Split it in smaller batches, or check what asked for this.';
   }
-  var src = _getPhotoRef(jobId, stableId);
-  if (!src || src.deletedAt) return 'That photograph is not on this job.';
-  if (src.derivedFrom) src = _invPhotoSource(jobId, src) || src;   // split off the photograph, never off a line
-  if (src.label !== 'inventory') return 'Only an item photograph can be split into several lines.';
-  if (!_invFileId(src)) {
-    return 'This photograph has not reached Google Drive yet, so a line split off it would have '
-      + 'no image and never get one. Press Retry on the shot first, then split it.';
-  }
+  var src = _invSplitSource(jobId, stableId);
+  if (typeof src === 'string') return src;
   var out = [];
   for (var i = 0; i < n; i++) {
     var ref = {
@@ -28766,10 +28812,22 @@ function invSplitItem(jobId, stableId) {
   var out = invSplitItemN(jobId, stableId, 1);
   return (typeof out === 'string') ? out : out[0];
 }
+// ⚠ THE PRESS SAYS WHAT IT DID, AND ASKS BEFORE A SECOND BLANK (2026-10-26b; Anthony: "I just hit that twice and all it did was create
+// number 94 unnamed item, number 95 unnamed item. Is that supposed to launch the camera"): it adds a blank line sharing this photograph
+// and nothing else, so the toast names the line and what to do with it. One blank line is all Agent One needs (Name shots lists
+// whatever else is in the photograph, adding lines as it goes), so a press while one is already waiting asks first; a person typing
+// three names by hand still can.
 function invSplitItemClick(jobId, stableId) {
+  var src = _invSplitSource(jobId, stableId);
+  if (typeof src === 'string') { alert(src); return; }   // refused first: nothing to ask about a split that cannot go
+  // A line Agent One read as nothing to list is not waiting for a name (Name shots never sends it again: agentNameableRefs).
+  var blank = _invPhotoSiblings(jobId, src).filter(function(r) { return !String(r.objectName || '').trim() && r.agentConf !== 'none'; });
+  if (blank.length && !confirm('#' + _invItemNo(blank[0]) + ' on this photograph has no name yet. Add another blank line anyway?\n\n'
+      + 'One is enough for Agent One: Name shots names everything else in the photograph and adds a line for each.')) return;
   var out = invSplitItem(jobId, stableId);
   if (typeof out === 'string') { alert(out); return; }
   if (!_invSplitRepaint(jobId, out)) renderInventoryTab();
+  showSyncBadge('#' + _invItemNo(out) + ' added for another thing in this photograph: type its name on its row, or press Name shots and Agent One names it', false);
 }
 
 // Put `html` on screen where item `at` of `ids` (DOM ids, in the order the full render draws them) belongs:
@@ -29718,6 +29776,7 @@ function _invEdit(jobId, stableId, key, el) {
     ref.namedBy = 'desk';
     delete ref.agentConf;   // the amber row is about an UNCHECKED guess; this one has been checked
   }
+  if (key === 'condition') ref.condBy = 'desk';   // a grade a person set, or cleared, is theirs (2026-10-26b, _invCondIsAgents)
   // ⚠ AN AGENT FIGURE ACCEPTED FOR THE OLD NAME IS NOT ACCEPTED FOR THE NEW ONE (2026-10-25b): the $25 wooden mirror retyped as
   // Restoration Hardware. The line's tick no longer covers it (invLineReviewed asks agentValueUnreviewed first), so the line
   // is not reviewed until it is valued again as what the person typed (agentValueAfterRename, below) and looked at.
@@ -29754,12 +29813,13 @@ function _invEdit(jobId, stableId, key, el) {
     var _rowEl = document.getElementById(_invRowDomId(stableId)), _rowJob = _invJob(jobId);
     if (_rowEl && _rowJob) _rowEl.outerHTML = _renderInvRow(_rowJob, ref);
   }
+  // ⚠ A NAME CHANGED IS VALUED AGAIN, BY ITSELF (2026-10-25b): the wooden mirror that is Restoration Hardware. Sent before the
+  // notices repaint (2026-10-26), so the note reads "Agent Two is valuing it again", never "open the line and Re-value it".
+  if (key === 'objectName') agentValueAfterRename(jobId, stableId);
   if (key === 'objectName' && ref.valuedBy === 'agent') {
     var _noteEl = document.getElementById('inv-value-notices'), _noteJob = _invJob(jobId);
     if (_noteEl && _noteJob) _noteEl.innerHTML = _avNoticesHtml(_noteJob, _jobInvRefs(jobId));
   }
-  // ⚠ A NAME CHANGED IS VALUED AGAIN, BY ITSELF (2026-10-25b): the wooden mirror that is Restoration Hardware.
-  if (key === 'objectName') agentValueAfterRename(jobId, stableId);
   // ⚠ STANDING AS IT IS OR FLAGGED (the review, 2026-10-26): a bequest or appraisal ticked, a name that makes it a duplicate,
   // a figure typed. The row's box, its group's count and the work bar follow, by id, so the box the person tabbed into keeps
   // its focus; the paint's duplicate index first, since a name can join or leave a group.
@@ -29789,9 +29849,17 @@ function _invEdit(jobId, stableId, key, el) {
   // ⚠ AND THE WORK BAR, ON A FIGURE (the Q93 review): its *Value N lines* counts the named lines with no figure, so a figure typed
   // (the appraisal's as it lands, or the desk's) left the button offering the line until the next full render. Repainted by id, as
   // _invSplitRepaint repaints it: it holds no field anybody types into, and More ▾ keeps its state (_renderInvWorkbar reads it).
-  if ((key === 'fmv' || _figMoved) && typeof _renderInvWorkbar === 'function') {
+  // On a client's own home a recipient or a category can make a line need written approval or stop needing it (2026-10-26:
+  // a Havellin person typed, Firearms set), and the work bar's Approval Request and a picked line's bulk bar follow, by id.
+  var _livingRelease = (key === 'channel' || key === 'category') && !invFiduciaryMode(_invJob(jobId));
+  if ((key === 'fmv' || _figMoved || _livingRelease) && typeof _renderInvWorkbar === 'function') {
     var _wbEl = document.getElementById('inv-workbar'), _wbJob = _invJob(jobId);
     if (_wbEl && _wbJob) _wbEl.outerHTML = _renderInvWorkbar(_wbJob, _jobInvRefs(jobId));
+  }
+  // (The bulk bar's half is untested on its own: browser step 112 drives the work bar's, on the same condition.)
+  if (_livingRelease && _invPick[stableId]) {
+    var _bbEl = document.getElementById('inv-bulk-' + jobId), _bbJob = _invJob(jobId);
+    if (_bbEl && _bbJob) _bbEl.outerHTML = _renderInvBulk(_bbJob);
   }
   // Every one of the counts is derived from a field editable on this row, so the strip is
   // repainted whatever changed rather than on a list of keys that would fall out of step with
@@ -30523,10 +30591,19 @@ function custodyEvents(ref) {
 // Clients & Estimator — INTERNAL" in a client's downloads folder. printAgreement was
 // exactly that. It is restored on the SAME nested timeout that clears the target, so a
 // caller cannot leak its filename onto whatever is printed next.
-function _printDocument(html, title) {
+// ⚠ `opt.view` OPENS THE PAGE IN THE DOCUMENT VIEWER FIRST (2026-10-26; Anthony, on the desk's More ▾ papers: "as soon as I
+// cancel or I launch a printer ... it just disappears"): the page is read on screen, and the viewer's Print / Save PDF comes
+// back here with `opt.after`, which reopens the viewer once the dialog has closed. The callers that print straight away are
+// unchanged; a test's stub of this function still receives the page and its title.
+function _printDocument(html, title, opt) {
   var pt = document.getElementById('print-target');
   if (!pt) return false;
   if (!html) { alert('There is nothing to print on this document yet.'); return false; }
+  if (opt && opt.view) {
+    var job = opt.job || null;
+    return _openViewer(opt.label || title || 'Document', job ? (job.name || 'Client') + (job.addr ? ' · ' + job.addr : '') : '', html,
+      { paper: true, html: html, title: title || '' });
+  }
   var _origTitle = document.title;
   if (title) document.title = title;
   pt.innerHTML = html;
@@ -30546,6 +30623,7 @@ function _printDocument(html, title) {
         delete p.dataset.wasActive;
       });
       document.title = _origTitle;
+      if (opt && typeof opt.after === 'function') opt.after();
     }, 500);
   }, 150);
   return true;
@@ -31195,8 +31273,28 @@ var INV_RELEASE_DISPOSITIONS = ['Auction','Consign','Distribute','Sell','Donate'
 function _invAwaitingApproval(jobId) {
   var job = _invJob(jobId);
   return _jobInvRefs(jobId).filter(function(r){
-    return INV_RELEASE_DISPOSITIONS.indexOf(r.disposition) >= 0 && !invApprovalComplete(r, job);
+    return invWrittenReleaseNeeded(r, job) && !invApprovalComplete(r, job);
   });
+}
+// ⚠⚠ WHICH LEAVING LINES NEED WRITTEN RELEASE APPROVAL (2026-10-26; Anthony, on a living client: "they are going to approve
+// things verbally to send … the estate requirement for signed/initialed release is the important one"; he took "Drop it,
+// firearms aside", and for the two living cautions "Split them"). On an estate, every line leaving the property. On a client's
+// own home, a firearm (the protocol's written authority) and a line going to someone who works with Havellin (our conflict,
+// put in writing before it leaves); everything else there is approved by the client's word, and the Contents Record signed
+// at the close is its record (a ⚑ line sold with no value is named there, `flaggedUnvalued`). The one rule: the awaiting
+// list and so the request, the card and the Releases bar, a selection's request, the sign-out's wait, ratification, a
+// collection's written-release line, and where the work bar and the bulk bar offer the request at all.
+var INV_LIVING_RELEASE_TXT = 'On a client\u2019s own home only a firearm, or an item going to someone who works with Havellin, needs written '
+  + 'approval: the client\u2019s word approves the rest, and the Contents Record they sign at the close is the record.';
+// The lines of a selection a request can carry: on a living job, only what needs written approval (an estate's selection is
+// taken as picked, as it always was).
+function invWrittenReleasePicked(jobId, job) {
+  var picked = _invPicked(jobId);
+  return invFiduciaryMode(job) ? picked : picked.filter(function (r) { return invWrittenReleaseNeeded(r, job); });
+}
+function invWrittenReleaseNeeded(ref, job) {
+  if (!ref || ref.deletedAt || INV_RELEASE_DISPOSITIONS.indexOf(ref.disposition) < 0) return false;
+  return !!(invFiduciaryMode(job) || invIsFirearm(ref) || invHavellinRecipient(ref, job));
 }
 
 // ═══ P19 · WHO APPROVES A RELEASE, WHO A LINE IS FOR, WHO RECEIVED IT, AND WHO MAY NEVER TAKE IT (2026-10-03) ═══
@@ -31600,7 +31698,7 @@ function signoutCovered(ref, job, kind) {
 // in writing), done (already on a filed paper of that kind for that taker). The appraiser's groups ride the line's link
 // (apprId): out until checked back in, then a return group.
 function signoutGroups(job, items) {
-  var fid = !!(job && invFiduciaryMode(job)), map = {}, order = [];
+  var map = {}, order = [];
   var put = function(kind, taker, r, state){
     var k = signoutKey(kind, taker);
     if (!map[k]) { map[k] = { key: k, kind: kind, taker: taker, lines: [], ready: [], waiting: [], done: [] }; order.push(k); }
@@ -31611,7 +31709,7 @@ function signoutGroups(job, items) {
     var kind = signoutLineKind(r, job);
     if (kind) {
       var taker = signoutTaker(r, kind);
-      if (taker) put(kind, taker, r, signoutCovered(r, job, kind) ? 'done' : (fid && !invApprovalComplete(r, job)) ? 'waiting' : 'ready');
+      if (taker) put(kind, taker, r, signoutCovered(r, job, kind) ? 'done' : (invWrittenReleaseNeeded(r, job) && !invApprovalComplete(r, job)) ? 'waiting' : 'ready');
     }
     if (!invIsFirearm(r) && r.apprId && !invAppraised(r) && !r.apprWaived) {
       var a = ((job && job.appraisers) || []).filter(function(x){ return String(x.id) === String(r.apprId); })[0];
@@ -31894,11 +31992,11 @@ function invRecordedGone(ref, job) {
 // all. The next Approval Request lists it APART, as already released, for the missing fiduciaries' signature, which
 // ratifies the release; Record approval (partial or complete) records that signature like any other, and once every
 // fiduciary has signed the line drops off. Read by the request, the desk row's badge (ratification owed, not approval
-// incomplete), the desk's approvals list and the Job Plan's release-authority line, which counts these apart. An estate
-// only: written authority from every fiduciary is the estate's rule, and a living owner has none to ratify.
+// incomplete), the desk's approvals list and the Job Plan's release-authority line, which counts these apart. Whatever
+// needs written approval on the job (invWrittenReleaseNeeded): every leaving line on an estate; on a client's own home,
+// since 2026-10-26, a firearm or a line going to someone who works with Havellin, ratified by the client's signature.
 function invRatificationOwed(ref, job) {
-  if (!ref || ref.deletedAt || !job || !invFiduciaryMode(job)) return false;
-  if (INV_RELEASE_DISPOSITIONS.indexOf(ref.disposition) < 0) return false;
+  if (!ref || !job || !invWrittenReleaseNeeded(ref, job)) return false;
   return invRecordedGone(ref, job) && !invApprovalComplete(ref, job);
 }
 // How a line left, in a sentence's words, for the request's ratification section (P20): the day of disposition, else the
@@ -32141,7 +32239,10 @@ var INV_RELEASE_CAUTIONS = [
     test: function(r){ return !!r.needsAppr && INV_SALE_DISPOSITIONS.indexOf(r.disposition) >= 0 && !_invHasValue(r) && !r.apprWaived; },
     note: function(r){ return 'flagged for appraisal in the house; proposed: ' + (r.disposition || '') + ', with no value recorded'; },
     panelHead: 'Flagged for appraisal, no value recorded.',
-    desk: 'The client may sell their own things unappraised, so it is not refused: the release approval request names it above the line the client initials.',
+    // ⚠ ON THE CONTENTS RECORD (2026-10-26; Anthony: "Split them"): a living sale needs no written approval, so this line
+    // reaches no request unless it also needs one; the record the client signs at the close carries its badge.
+    desk: 'The client may sell their own things unappraised, so it is not refused: the Contents Record the client signs at the close names it on the line '
+        + '(and the release approval request, where the line needs the client\u2019s written approval too).',
     head: 'Property flagged for appraisal and proposed for sale with no value recorded',
     body: 'These lines were flagged in the house as worth a specialist\u2019s look, and each is proposed for sale with no value '
         + 'recorded yet. Selling before an appraisal is your decision, and a dealer\u2019s offer is often the market test, but '
@@ -32262,10 +32363,13 @@ function printApprovalRequest(jobId, selectedOnly, opt) {
   var _asHtml = !!(opt && opt.asHtml);
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return _asHtml ? { why: 'This job could not be found.' } : undefined;
-  var items = selectedOnly ? _invPicked(jobId) : _invAwaitingApproval(jobId);
+  var items = selectedOnly ? invWrittenReleasePicked(jobId, job) : _invAwaitingApproval(jobId);
   if (!items.length) {
+    // A living job (2026-10-26) says why nothing needs signing there, a selection of everyday items included.
     var _none = selectedOnly
-      ? 'Select the items you want approval for first.'
+      ? (_invPicked(jobId).length && !invFiduciaryMode(job) ? 'None of the items selected needs written approval. ' + INV_LIVING_RELEASE_TXT
+          : 'Select the items you want approval for first.')
+      : !invFiduciaryMode(job) ? 'Nothing is waiting on written approval. ' + INV_LIVING_RELEASE_TXT
       : 'Nothing is waiting on approval. An item needs a disposition of '
         + INV_RELEASE_DISPOSITIONS.join(', ') + ' and no complete written approval yet.';
     if (_asHtml) return { why: _none };
@@ -32276,6 +32380,19 @@ function printApprovalRequest(jobId, selectedOnly, opt) {
   var wanted = {};
   items.forEach(function(r){ wanted[r.stableId] = 1; });
   items = _invAssignItemNos(jobId).filter(function(r){ return wanted[r.stableId]; });
+  // ⚠ NOBODY NAMED, NOT ASKED (2026-10-26, invReleaseRecipientNamed): a line leaving with no recipient stays off the paper.
+  var held = items.filter(function(r){
+    return INV_RELEASE_DISPOSITIONS.indexOf(r.disposition) >= 0 && !invReleaseRecipientNamed(r) && !invRatificationOwed(r, job);
+  });
+  items = items.filter(function(r){ return held.indexOf(r) < 0; });
+  if (!items.length) {
+    var _noOne = 'Nobody is named to take ' + (held.length === 1 ? 'the item' : 'any of the ' + held.length + ' items')
+      + (selectedOnly ? ' selected' : ' waiting for approval') + ' yet. Type who takes each on its row (a charity or a hauler confirmed '
+      + 'on the Job Plan fills itself in), then send the request.';
+    if (_asHtml) return { why: _noOne, held: held };
+    alert(_noOne);
+    return;
+  }
   var _fid = invFiduciaryMode(job);
   // ⚠⚠ EVERY FIDUCIARY SIGNS (P19, call 4): the request addresses every one of them, prints a signature line for each,
   // and says that all of them must sign where there is more than one.
@@ -32291,6 +32408,7 @@ function printApprovalRequest(jobId, selectedOnly, opt) {
   // LOAD. A living job enters no values by design, so the column is dropped there — unless
   // something actually carries one, in which case withholding it would hide real money.
   var showVal = _fid || valueOf(items) > 0;
+  var showInit = asked.some(function(r){ return !invIsFirearm(r) && invOwnInitial(r, job); });
   var rowOf = function(r) {
     var q = parseInt(r.qty, 10);
     var gone = ratify.indexOf(r) >= 0;
@@ -32321,13 +32439,16 @@ function printApprovalRequest(jobId, selectedOnly, opt) {
         + (gap ? '<div style="color:#8a5a1e;font-size:10px;">Signed so far by ' + esc(invApprovalSignedText(r, job))
             + '; still to sign: ' + esc(_andJoin(invApprovalMissing(r, job))) + '</div>'
           : gone ? '<div style="color:#8a5a1e;font-size:10px;">No written approval recorded; to sign: '
-            + esc(_andJoin(invApprovalMissing(r, job)) || 'the ' + invRepresentativeTitle(job)) + '</div>' : '')
+            + esc(_andJoin(invApprovalMissing(r, job)) || (_fid ? 'the ' + invRepresentativeTitle(job) : 'you')) + '</div>' : '')
         + '</td>'
       // A firearm asked for is initialled once, with every firearm on the list, under the firearms paragraph (P25, Q35); a
       // line under $500 with no caution and no bequest, once with its destination group (P25, Q46).
-      + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;width:70px;">'
-        + (invIsFirearm(r) && !gone ? '<span class="inv-fa-init" style="font-size:9px;color:#888;">initialled once, with the firearms below</span>'
-          : (!gone && !invOwnInitial(r, job)) ? '<span class="inv-grp-init" style="font-size:9px;color:#888;">initialled with its group</span>' : '&nbsp;') + '</td>'
+      // ⚠ ONLY WHERE AN ITEM NEEDS ITS OWN (2026-10-26; Anthony: "I don't think we need … the initial column and for every item
+      // say initialled with its group"; he took "Keep theirs"): the column is drawn only when a line asked for initials on its own
+      // ($500 or more, a specific bequest, a caution: invOwnInitial), and only that line has a box; a group's line is the group row.
+      + (showInit ? '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;width:70px;">'
+        + (!gone && !invIsFirearm(r) && invOwnInitial(r, job) ? '<span class="inv-own-init" style="display:inline-block;width:56px;border-bottom:1px solid #999;">&nbsp;</span>' : '&nbsp;')
+        + '</td>' : '')
       + '</tr>';
   };
   // ⚠ GROUPED BY DESTINATION (P25, Q46): the lines asked for run destination by destination, and under each group whose
@@ -32339,7 +32460,7 @@ function printApprovalRequest(jobId, selectedOnly, opt) {
     var list = _grp[k];
     var together = list.filter(function (r) { return !invIsFirearm(r) && !invOwnInitial(r, job); });
     return list.map(rowOf).join('') + (together.length
-      ? '<tr class="inv-grp-row"><td colspan="' + (showVal ? 7 : 6) + '" style="padding:5px 6px 9px;border-bottom:1px solid #ccc;font-size:11px;text-align:right;">'
+      ? '<tr class="inv-grp-row"><td colspan="' + (5 + (showVal ? 1 : 0) + (showInit ? 1 : 0)) + '" style="padding:5px 6px 9px;border-bottom:1px solid #ccc;font-size:11px;text-align:right;">'
         + 'Initial once for the ' + (together.length > 1 ? together.length + ' items' : 'item') + ' above ' + esc(invInitialGroupWords(list[0]))
         + ', each ' + (together.some(function (r) { return isNaN(parseFloat(r.fmv)); }) ? 'under ' + _invMoney(INV_LINE_INITIAL_MIN) + ' or with no value recorded' : 'under ' + _invMoney(INV_LINE_INITIAL_MIN)) + ': ______________</td></tr>' : '');
   }).join('');
@@ -32349,7 +32470,8 @@ function printApprovalRequest(jobId, selectedOnly, opt) {
       + '<th style="padding:2px 6px;">Photo</th><th style="padding:2px 6px;">Ref</th><th style="padding:2px 6px;">Item</th>'
       + '<th style="padding:2px 6px;text-align:right;">Qty</th>'
       + (showVal ? '<th style="padding:2px 6px;text-align:right;">Est. value</th>' : '')
-      + '<th style="padding:2px 6px;">' + (_fid ? (gone ? 'Disposition' : 'Proposed disposition') : 'Where it is going') + '</th><th style="padding:2px 6px;">Initial</th>'
+      + '<th style="padding:2px 6px;">' + (_fid ? (gone ? 'Disposition' : 'Proposed disposition') : 'Where it is going') + '</th>'
+      + (showInit ? '<th style="padding:2px 6px;">Initial</th>' : '')
       + '</tr></thead><tbody>';
   };
   var footOf = function(list, what) {
@@ -32367,10 +32489,11 @@ function printApprovalRequest(jobId, selectedOnly, opt) {
   var ratBlock = !ratify.length ? '' : '<div class="inv-ratify" style="margin-top:18px;">'
     + '<div style="font-size:12px;font-weight:700;color:#8a5a1e;border-bottom:1px solid #ddd;padding-bottom:3px;margin-bottom:4px;">Already released: for ratification</div>'
     + '<div style="font-size:11px;line-height:1.55;margin-bottom:8px;">' + (_r1 ? 'This item' : 'These items') + ' left the property before '
-      + esc(invEveryFiduciaryPhrase(job)) + ' had approved ' + (_r1 ? 'its' : 'their') + ' release in writing. '
+      + (_fid ? esc(invEveryFiduciaryPhrase(job)) + ' had approved ' + (_r1 ? 'its' : 'their') + ' release in writing. '
+          : 'your written approval of ' + (_r1 ? 'its' : 'their') + ' release was recorded. ')
       + (asked.length ? (_r1 ? 'It is' : 'They are') + ' listed apart from the ' + (asked.length === 1 ? 'item' : 'items') + ' above, for '
           : (_r1 ? 'It is' : 'They are') + ' listed here for ')
-      + 'the signature of ' + esc(ratMiss.length ? _andJoin(ratMiss) : 'the ' + invRepresentativeTitle(job))
+      + (_fid ? 'the signature of ' + esc(ratMiss.length ? _andJoin(ratMiss) : 'the ' + invRepresentativeTitle(job)) : 'your signature')
       + ', which ratifies ' + (_r1 ? 'the' : 'each') + ' release; nothing is undone.</div>'
     + theadOf(true) + ratify.map(rowOf).join('') + '</tbody></table>'
     + footOf(ratify, ' already released')
@@ -32403,23 +32526,23 @@ function printApprovalRequest(jobId, selectedOnly, opt) {
     // ⚠ The third argument is how this avoids _invDocHead's default tail, which states the
     // valuation basis and the date of death — neither of which a living job has. ⚠ It replaces only the basis: the head
     // adds "Prepared by Havellin Palm Beach, LLC · <date>" itself, which this printed a second time until P22.
-    + _invDocHead(job, 'Release Approval Request', _fid ? null : 'Everything leaving the property, for your sign-off')
-    + '<div style="font-size:11.5px;line-height:1.6;margin-bottom:12px;">'
-      + 'To <strong>' + esc(who) + '</strong>: '
-      // A request carrying only lines already gone says so (P20): none of them is "ready to be released".
-      + (asked.length ? (asked.length === 1 ? 'the item listed below is ready to be released from the property. '
-              : 'the items listed below are ready to be released from the property. ')
-          : (items.length === 1 ? 'the item listed below has already left the property and is listed for your signature. '
-              : 'the items listed below have already left the property and are listed for your signature. '))
-      + (_many
-          ? 'Please initial each line you approve, then each of you sign and date at the foot. <strong>Every '
-            + invCoFiduciaryNoun(job) + ' named below must sign: nothing on this list is approved until '
-            + (fids.length === 2 ? 'both of you have.' : 'all ' + fids.length + ' of you have.') + '</strong> '
-          : 'Please initial each line you approve, then sign and date at the foot. ')
-      // ⚠ "Verbal approval is not accepted" STAYS ON BOTH ARMS. It is on the published
-      // deliverables page, it is not decedent-specific, and it is the whole control.
-      + '<strong>' + (asked.length ? 'Nothing on this list will be moved, sold, donated or disposed of until this request is returned signed. ' : '')
-      + 'Verbal approval is not accepted.</strong></div>'
+    + _invDocHead(job, 'Release Approval Request', _fid ? null : !asked.length ? 'For your signature' : 'For your written approval before ' + (asked.length === 1 ? 'it leaves' : 'they leave'))
+    // ⚠ A LETTER (2026-10-26; Anthony: "it's a bit odd to say like verbal approval is never accepted … make it just sound like a
+    // little bit more normal. Like we're writing a letter asking them for their release and initialing"; he approved this wording).
+    // The rule stands where it is enforced: nothing leaves on a phone call (invApprovalComplete reads the signed paper alone).
+    // Drafted, not reviewed: counsel bundle.
+    + '<div class="inv-req-letter" style="font-size:11.5px;line-height:1.6;margin-bottom:12px;">'
+      + '<p style="margin:0 0 8px;">Dear <strong>' + esc(who) + '</strong>,</p>'
+      + '<p style="margin:0 0 8px;">' + (asked.length
+          ? 'The ' + (asked.length === 1 ? 'item listed below is' : 'items listed below are') + ' ready to leave the property. Before anything is '
+            + 'moved, we ask for ' + (_many ? 'the written approval of each of you' : 'your written approval') + '. Please initial where shown, then '
+            + (_many ? 'each of you sign' : 'sign') + ' and date at the foot and return it to us.'
+          : 'The ' + (items.length === 1 ? 'item listed below has' : 'items listed below have') + ' already left the property and '
+            + (items.length === 1 ? 'is' : 'are') + ' listed for your signature. Please ' + (_many ? 'each of you sign' : 'sign')
+            + ' and date at the foot and return it to us.') + '</p>'
+      + (asked.length ? '<p style="margin:0 0 8px;">Nothing on this list will be moved, sold, donated or disposed of until it is back with us, '
+          + 'signed by ' + (_many ? (fids.length === 2 ? 'both of you' : 'all ' + fids.length + ' of you') : 'you') + '.</p>' : '')
+      + '<p style="margin:0;">Thank you.</p></div>'
     // ⚠ ABOVE THE TABLE, NOT BELOW IT. The reader works down this list initialling lines, so a
     // caveat printed under the table has arrived after the signature it exists to come before.
     // The firearms note stays below because it is informational — it tells the representative
@@ -32451,7 +32574,7 @@ function printApprovalRequest(jobId, selectedOnly, opt) {
         return '<div class="inv-firearms-auth" style="font-size:10.5px;color:#3c3228;margin-top:10px;border:1px solid #A32D2D;border-radius:3px;padding:8px 10px;">'
           + '<div style="color:#A32D2D;font-weight:700;margin-bottom:3px;">Firearms: written authority</div>'
           + firearms + ' firearm' + (firearms > 1 ? 's are' : ' is') + ' on this list. Every one goes to a '
-          + '<strong>licensed dealer</strong>, named by you on counsel&rsquo;s advice. '
+          + '<strong>licensed dealer</strong>, named by you' + (_fid ? ' on counsel&rsquo;s advice' : '') + '. '
           + (carry ? 'Your initial below, with ' + (_many ? 'every signature' : 'your signature') + ' at the foot, is your written authority for '
               + 'Havellin&rsquo;s named principal to transport each non-NFA firearm listed here, by the serial and to the licensed dealer '
               + 'printed against it, directly to that dealer. ' : '')
@@ -32483,7 +32606,7 @@ function printApprovalRequest(jobId, selectedOnly, opt) {
           + ' and retained for seven years.' : 'your job record.') + '</div>'
     + '</div>';
   var _title = _invDocName(job, 'Release Approval Request');   // APPROVAL_REQ_TITLE, as a literal: sandboxes lift this printer alone
-  if (_asHtml) return { html: html, title: _title, items: items, asked: asked, ratify: ratify };
+  if (_asHtml) return { html: html, title: _title, items: items, asked: asked, ratify: ratify, held: held };
   _printDocument(html, _title);
 }
 
@@ -32544,7 +32667,52 @@ function approvalRequestBlocker(job) {
 // A line still waiting on written approval: live, leaving the property, not yet approved by every fiduciary
 // (invApprovalComplete, the one answer). The request's own list (_invAwaitingApproval) asks the same two questions.
 function _approvalLineOpen(r, job) {
-  return !!(r && !r.deletedAt && INV_RELEASE_DISPOSITIONS.indexOf(r.disposition) >= 0 && !invApprovalComplete(r, job));
+  return !!(r && invWrittenReleaseNeeded(r, job) && !invApprovalComplete(r, job));
+}
+// ⚠⚠ A RELEASE GOES TO SOMEBODY (2026-10-26; Anthony, off a request that went out with its Distribute and Donate groups reading
+// "no recipient named yet": "there are no recipients. There's no donation partner chosen"; he took "Hold them off"). A line
+// leaving with nobody in Channel / Recipient is not asked for: approval to release to nobody approves nothing. A line already
+// gone is asked to be ratified wherever it went. The card and the Releases bar name what waits for a recipient; a charity or a
+// hauler confirmed on the Job Plan fills itself in (invPlanChannel), and a person is typed on the row.
+function invReleaseRecipientNamed(r) { return !!String((r && r.channel) || '').trim(); }
+function _approvalLineRequestable(r, job) {
+  return _approvalLineOpen(r, job) && (invReleaseRecipientNamed(r) || invRatificationOwed(r, job));
+}
+// What a request carried, as one short fingerprint (2026-10-26, Anthony: "I can't, I guess, edit it and go back and change
+// everything"): each line's disposition, recipient (trimmed) and value, in the paper's order, a line gone reading as gone.
+// ⚠ ONE SHORT STRING, NEVER A COPY PER LINE: the record rides the job's one cell on the sheet, and a copy of every line on a
+// large estate's request outgrew it (found on review). `list` holds the rows, or null where a row is missing.
+function approvalRequestSig(list, ids) {
+  var txt = (list || []).map(function (r, i) {
+    var id = r ? r.stableId : (ids || [])[i];
+    return (!r || r.deletedAt) ? id + '|x' : [id, r.disposition || '', String(r.channel || '').trim(), r.fmv != null ? r.fmv : ''].join('|');
+  }).join('\n');
+  var h = 2166136261;
+  for (var i = 0; i < txt.length; i++) { h ^= txt.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; }
+  return h.toString(36);
+}
+// The lines on a WAITING draft that changed after it was made, by stableId: read only where the fingerprint no longer matches,
+// and only lines touched after the draft (updatedAt or deletedAt later than draftedAt), so a device holding an older copy of
+// the inventory claims nothing (found on review: it read every difference from its own copy as a change). Nothing on a device
+// without the manifest, as approvalRequestOvertaken. ⚠ A FLAG ON THE CARD, NEVER A REFUSAL: the draft may already have gone
+// from Gmail with the tap not yet pressed, and an Agent Two figure or a count can move a line's value at any time.
+function approvalRequestChanged(job, st) {
+  var req = st && st.req;
+  if (!job || !req || !req.sig || !Array.isArray(req.stableIds) || !docDraftPending(st)) return [];
+  var rows = (typeof _photoRefs !== 'undefined' && _photoRefs[job.id]) || null;
+  if (!rows) return [];
+  var by = {};
+  rows.forEach(function (r) { if (r) by[String(r.stableId)] = r; });
+  var ids = req.stableIds.map(String);
+  var now = ids.map(function (id) { return by[id] || null; });
+  if (approvalRequestSig(now, ids) === req.sig) return [];
+  var at = Date.parse(st.draftedAt);
+  return ids.filter(function (id, i) {
+    var r = now[i];
+    if (!r) return true;
+    var t = Number(r.deletedAt || r.updatedAt) || 0;
+    return isNaN(at) || t > at;
+  });
 }
 // ⚠ WHEN A REQUEST DRAFT IS OVERTAKEN: every line it carried has since been approved (or removed), so there is nothing
 // left for its signature. Read off the manifest, never written into the record (the two-device reason notePriceChange
@@ -32560,13 +32728,19 @@ function approvalRequestOvertaken(job, st) {
 // lines waiting that it never carried (a fresh request is owed for them); `carried`, how many it asked for.
 function approvalRequestState(job, refs) {
   var st = (job && job.docState && job.docState[APPROVAL_REQ_KEY]) || null;
-  var ids = (st && st.req && Array.isArray(st.req.stableIds)) ? st.req.stableIds.map(String) : null;
-  var open = [], fresh = [];
+  // A draft overtaken while it waited never went: the request in force is the one sent before it (`sentReq`), else none (2026-10-26,
+  // found on review: the card printed the draft's count under the earlier request's date).
+  var req = (st && st.req && docDraftPending(st) && draftIsStale(job, st)) ? (st.sentReq || null) : ((st && st.req) || null);
+  var ids = (req && Array.isArray(req.stableIds)) ? req.stableIds.map(String) : null;
+  // `unnamed`: waiting, never carried, and nobody named to take it, so not asked for until somebody is (2026-10-26).
+  var open = [], fresh = [], unnamed = [];
   (refs || []).forEach(function (r) {
     if (!_approvalLineOpen(r, job)) return;
-    if (ids && ids.indexOf(String(r.stableId)) >= 0) open.push(r); else fresh.push(r);
+    if (ids && ids.indexOf(String(r.stableId)) >= 0) open.push(r);
+    else if (_approvalLineRequestable(r, job)) fresh.push(r);
+    else unnamed.push(r);
   });
-  return { st: st, req: (st && st.req) || null, carried: ids ? ids.length : 0, open: open, fresh: fresh };
+  return { st: st, req: req, carried: ids ? ids.length : 0, open: open, fresh: fresh, unnamed: unnamed };
 }
 function approvalRequestSubject(job) {
   var street = String((job && job.addr) || '').split(',')[0].trim();
@@ -32604,7 +32778,9 @@ function _approvalEmailParas(ctx) {
   P.push((ctx.attached ? 'Attached is' : 'Below is a link to') + ' Havellin’s ' + APPROVAL_REQ_TITLE + ' for ' + _approvalWhat(job)
     + ', as of ' + ctx.asOf + ': ' + what + '.');
   var fids = fid ? jobFiduciaries(job) : [];
-  P.push('Please initial each line or group where marked, sign where shown, and return the signed copy to us; a scan or a photograph by reply is fine.'
+  // A request of lines already gone marks nothing for initials (found on review): it asks only for the signature.
+  P.push((ctx.asked ? 'Please initial where marked, sign where shown,' : 'Please sign where shown')
+    + ' and return the signed copy to us; a scan or a photograph by reply is fine.'
     + (ctx.asked ? ' Nothing on it will be moved, sold, donated or disposed of until it comes back signed.' : '')
     + (fids.length > 1 ? ' Every ' + invCoFiduciaryNoun(job) + ' named on it signs.' : ''));
   if (ctx.viaCounsel && ctx.noEmail.length) {
@@ -32674,10 +32850,13 @@ function sendApprovalRequest(jobId, selectedOnly) {
   var openBar = function () { if (typeof deskFoldOpen === 'function') deskFoldOpen(jobId, 'releases'); };
   var why = approvalRequestBlocker(job);
   if (why) { openBar(); _docNotice('warn', why, jobId); return false; }
-  var picked = selectedOnly ? _invPicked(jobId) : _invAwaitingApproval(jobId);
+  var picked = selectedOnly ? invWrittenReleasePicked(jobId, job) : _invAwaitingApproval(jobId);
   if (!picked.length) {
     openBar();
-    _docNotice('warn', selectedOnly ? 'Select the lines you want approval for first.'
+    _docNotice('warn', selectedOnly
+      ? (_invPicked(jobId).length && !invFiduciaryMode(job) ? 'None of the lines selected needs written approval. ' + INV_LIVING_RELEASE_TXT
+          : 'Select the lines you want approval for first.')
+      : !invFiduciaryMode(job) ? 'Nothing is waiting on written approval. ' + INV_LIVING_RELEASE_TXT
       : 'Nothing is waiting on approval: every line leaving the property has its written approval, or has no disposition yet.', jobId);
     return false;
   }
@@ -32734,7 +32913,8 @@ function sendApprovalRequest(jobId, selectedOnly) {
             var gmail = provider === 'gmail';
             docRecordSent({ job: job, key: APPROVAL_REQ_KEY }, { provider: provider, draftUrl: draftUrl || '', pdfOk: gmail && !!b64,
               req: { to: rcpt.to, cc: rcpt.cc, noEmail: rcpt.noEmail, viaCounsel: !!rcpt.viaCounsel,
-                     stableIds: paperIds, asked: asked, ratify: ratify, filedUrl: filedUrl } });
+                     stableIds: paperIds, asked: asked, ratify: ratify, filedUrl: filedUrl,
+                     sig: approvalRequestSig(r.asked.concat(r.ratify)) } });
             var bits = [lead + (gmail ? 'Draft created in ' + (_gmailUserEmail || 'your Havellin mailbox') : 'Email opened') + ' for ' + _andJoin(rcpt.to)
               + (rcpt.cc.length ? ', copied to ' + _andJoin(rcpt.cc) : '')
               + (gmail && b64 ? ', with the ' + APPROVAL_REQ_TITLE + ' attached (' + items.length + ' line' + (items.length === 1 ? '' : 's') + ')'
@@ -32744,6 +32924,8 @@ function sendApprovalRequest(jobId, selectedOnly) {
             else if (rcpt.noEmail.length) bits.push(_andJoin(rcpt.noEmail) + ' ' + (rcpt.noEmail.length > 1 ? 'have' : 'has') + ' no email on file: print the request for them to sign (Approval Request).');
             if (gmail && !b64) bits.push('The PDF could not be built (' + (perr || 'no answer from the server') + '), so the draft links the filed copy instead of attaching it.');
             if (!filedUrl) bits.push('Not filed to Drive: the request.');
+            if (r.held && r.held.length) bits.push((r.held.length === 1 ? '1 item waits' : r.held.length + ' items wait') + ' for somebody to be named to take '
+              + (r.held.length === 1 ? 'it' : 'them') + ' and ' + (r.held.length === 1 ? 'is' : 'are') + ' not on it.');
             _docNotice(gmail && b64 && filedUrl && !rcpt.noEmail.length ? 'ok' : 'warn', bits.join(' '), jobId);
             if (draftUrl) { try { window.open(draftUrl, '_blank'); } catch (e) {} }
             showSyncBadge(gmail ? 'Gmail draft created ✓' : 'Email opened ✓');
@@ -32780,18 +32962,41 @@ function invMarkRequestSent(jobId) {
   _invRefreshReleases(jobId);
   return true;
 }
+// Lets a waiting draft go: it joins the record's out-of-date drafts (named on the card until a send, so the Gmail draft is
+// deleted), and the request that went before it, if one did, is the record again (`sentReq`, docRecordSent). Asks first.
+function discardApprovalRequestDraft(jobId) {
+  var job = _invJob(jobId), st = job && job.docState && job.docState[APPROVAL_REQ_KEY];
+  if (!st || !docDraftPending(st)) return false;
+  var where = st.provider === 'gmail' ? 'in ' + (st.mailbox || 'your Gmail drafts') : 'in your mail app';
+  if (!confirm('Discard this draft of the ' + APPROVAL_REQ_TITLE + '?\n\nThe card forgets it and offers Send request again. The email itself stays '
+      + where + ': delete it there.')) return false;
+  st = docState(job, APPROVAL_REQ_KEY);   // the writer's accessor: it stamps the key, as every writer of the record does
+  st.staleDrafts = (Array.isArray(st.staleDrafts) ? st.staleDrafts : []).concat([{ draftedAt: st.draftedAt, provider: st.provider || '',
+    mailbox: st.mailbox || '', why: 'discarded' }]);
+  if (st.sentReq) st.req = st.sentReq; else delete st.req;
+  delete st.sentReq;
+  ['draftedAt', 'draftedBy', 'draftUrl', 'provider', 'pdfOk', 'mailbox'].forEach(function (k) { delete st[k]; });
+  _saveJobEdit(job);   // a person's edit: the job's clock moves (docState() above stamped docState:approvalRequest)
+  _invRefreshReleases(jobId);
+  showSyncBadge('Draft discarded: delete it ' + where, false);
+  return true;
+}
 // The Releases card's first section: what the last request asked and of whom, the draft waiting on its tap, what is
 // still unsigned, the lines a fresh request is owed for, and the send. DOM-free markup; every person-entered value
 // escaped. Nothing where no line waits and nothing was ever sent.
 function approvalRequestCardHtml(job, all) {
   var jid = job.id, K = APPROVAL_REQ_KEY, S = approvalRequestState(job, all), st = S.st;
   var waiting = S.open.length + S.fresh.length;
-  if (!st && !waiting) return '';
+  if (!st && !waiting && !S.unnamed.length) return '';
   var live = draftOutstanding(job, K);
   var btn = function (call, label, primary) { return '<button class="' + (primary ? 'btn-bronze' : 'btn-s') + '" onclick="' + call + '">' + label + '</button>'; };
   var n = function (k) { return k + ' line' + (k === 1 ? '' : 's'); };
   var who = (S.req && S.req.to && S.req.to.length) ? ' to ' + _andJoin(S.req.to) : '';
   var lines = [], btns = '';
+  // What waits for somebody to be named (2026-10-26, "Hold them off"): never asked for, so said here, in either state.
+  var unnamedLine = S.unnamed.length ? '<span style="color:#8a5a1e;font-weight:600;">&#9888; ' + esc((S.unnamed.length === 1 ? '1 line waits' : S.unnamed.length + ' lines wait')
+    + ' for somebody to be named to take ' + (S.unnamed.length === 1 ? 'it' : 'them') + ', so ' + (S.unnamed.length === 1 ? 'it is' : 'they are')
+    + ' not asked for: type who takes each on its row (a charity or a hauler confirmed on the Job Plan fills itself in).') + '</span>' : '';
   var paper = (S.req && S.req.noEmail && S.req.noEmail.length)
     ? esc(_andJoin(S.req.noEmail) + ' had no email: ' + (S.req.viaCounsel ? 'it went through the estate attorney.' : 'they sign the printed copy.')) : '';
   if (live) {
@@ -32811,8 +33016,16 @@ function approvalRequestCardHtml(job, all) {
     // (approvalRequestRecordRefusal); the way round is named, so a signed copy in hand is not left with nowhere to go.
     var earlier = approvalRequestEarlierCopyText(st);
     if (earlier) lines.push(esc(earlier));
+    if (unnamedLine) lines.push(unnamedLine);
+    // ⚠ A DRAFT CAN BE LET GO (2026-10-26; Anthony: "the only thing I can do is mark I've sent it or open the draft"): Discard draft
+    // puts back what the card said before it (discardApprovalRequestDraft). A line on it changed since is flagged here, never a
+    // refusal (approvalRequestChanged): the draft may already have gone from Gmail, so both ways on are named.
+    var changed = approvalRequestChanged(job, st);
+    if (changed.length) lines.push('<span style="color:#8a5a1e;font-weight:600;">&#9888; ' + esc((changed.length === 1 ? '1 line on this draft' : changed.length + ' lines on this draft')
+      + ' changed after it was made (where it goes, who takes it or its value). Not sent yet? Discard draft, then send a fresh request. Already sent? Tap I’ve sent it.') + '</span>');
     btns = btn('invMarkRequestSent(' + jid + ')', '&#10003; I&rsquo;ve sent it', true)
-      + (st.draftUrl ? btn('openDocDraft(' + jid + ",'" + K + "')", '&#8599; Open the draft') : '');
+      + (st.draftUrl ? btn('openDocDraft(' + jid + ",'" + K + "')", '&#8599; Open the draft') : '')
+      + btn('discardApprovalRequestDraft(' + jid + ')', 'Discard draft');
   } else {
     if (st && st.sentAt) {
       lines.push(esc('Sent ' + _draftDay(st.sentAt) + (st.sentBy ? ' by ' + st.sentBy : '') + who + ', ' + n(S.carried)
@@ -32821,6 +33034,7 @@ function approvalRequestCardHtml(job, all) {
     }
     var stale = st ? staleDraftNote(job, K, false) : '';
     if (stale) lines.push(esc(stale));
+    if (unnamedLine) lines.push(unnamedLine);
     if (S.fresh.length) lines.push('<span style="color:#8a5a1e;font-weight:600;">&#9888; ' + esc(n(S.fresh.length)
       + (st && st.sentAt ? ' now await approval and were not on it: send a fresh request.' : ' await written approval; nothing has been sent from the app.')) + '</span>');
     // ⚠ RECORD THE SIGNED REQUEST (2026-10-22; Anthony, Q88: "Build all of it now"). The card knows which lines the request
@@ -32857,7 +33071,7 @@ function approvalRequestDashHtml(job) {
   var refs = (typeof _photoRefs !== 'undefined' && _photoRefs[job.id]) ? _jobInvRefs(job.id) : null;
   var S = approvalRequestState(job, refs);
   var n = function (k) { return k + ' line' + (k === 1 ? '' : 's'); };
-  var who = (st.req.to && st.req.to.length) ? ' to ' + _andJoin(st.req.to) : '';
+  var who = (S.req && S.req.to && S.req.to.length) ? ' to ' + _andJoin(S.req.to) : '';
   var lines = [], btns = '';
   if (live) {
     lines.push(esc('Drafted ' + _draftDay(st.draftedAt) + (st.draftedBy ? ' by ' + st.draftedBy : '') + who + ', ' + n(S.carried) + ' · ' + jtDraftLine(job, K, true)));
@@ -32936,9 +33150,12 @@ function invRecordApproval(jobId, opt) {
   var picked = fromReq
     ? _jobInvRefs(jobId).filter(function(r){ return r && !r.deletedAt && want.indexOf(String(r.stableId)) >= 0; })
         .sort(function(a, b){ return want.indexOf(String(a.stableId)) - want.indexOf(String(b.stableId)); })
-    : _invPicked(jobId);
+    // The selection: on a client's own home only what needs the client's written approval (2026-10-26, found on review: a
+    // signature recorded on nine everyday lines the paper never carried, beside the firearm it did).
+    : invWrittenReleasePicked(jobId, _invJob(jobId));
   if (!picked.length) {
     alert(fromReq ? 'Every line on the request has been approved or removed since it was sent: there is nothing to record.'
+      : _invPicked(jobId).length ? 'None of the items selected needs written approval. ' + INV_LIVING_RELEASE_TXT
       : 'Select the items the signed approval covers.');
     return false;
   }
@@ -34025,7 +34242,7 @@ function printCourtInventory(jobId, opt) {
   // ⚠ THE PROBATE PACKAGE ASKS FOR THE PAGE ITSELF (`opt.asHtml`, 2026-10-01, P17), so what counsel receives is byte for
   // byte what the desk prints, and every refusal above comes back as the same sentence instead of an alert.
   if (opt && opt.asHtml) return { html: html, title: _invDocName(job, 'Court Inventory') };
-  _printDocument(html, _invDocName(job, 'Court Inventory'));
+  _printDocument(html, _invDocName(job, 'Court Inventory'), { view: true, job: job, label: 'Court Inventory' });   // on screen first (2026-10-26)
 }
 
 // ── 02b · The trustee's schedule — the Chapter 736 variant ─────────────────────
@@ -34170,7 +34387,7 @@ function printTrustSchedule(jobId, opt) {
     + '</div>';
   // The probate package asks for the page itself (`opt.asHtml`, P17) — see printCourtInventory.
   if (opt && opt.asHtml) return { html: html, title: _invDocName(job, 'Trust Schedule') };
-  _printDocument(html, _invDocName(job, 'Trust Schedule'));
+  _printDocument(html, _invDocName(job, 'Trust Schedule'), { view: true, job: job, label: 'Trust Schedule' });   // on screen first (2026-10-26)
 }
 
 // ═══════════ THE DISPOSITION LEDGER — THE CLOSE-OUT SUMMARY THE CLIENT SIGNS (P19, 2026-10-03) ═══════════
@@ -34302,7 +34519,9 @@ function printDispositionLedger(jobId, opt) {
       + '<td style="' + td + '">' + esc(invDispDocWord(r.disposition)) + '</td>'
       + '<td style="' + td + '">' + esc(_invRecipient(job, r) || '—') + '</td>'
       // Who authorized it, each signer with their own day (P20): the one readable form, never the raw field.
-      + '<td style="' + td + '">' + esc(invApprovalSignedText(r, job) || '—') + '</td>'
+      // On a client's own home an everyday line is approved by their word (2026-10-26), so it reads "the client", never "—".
+      + '<td style="' + td + '">' + esc(invApprovalSignedText(r, job) || (!invFiduciaryMode(job) && INV_RELEASE_DISPOSITIONS.indexOf(r.disposition) >= 0
+          && !invWrittenReleaseNeeded(r, job) ? 'the client' : '—')) + '</td>'
       + '<td style="' + td + 'white-space:nowrap;">' + (r.dispDate ? esc(fmtDate2(r.dispDate)) : '—') + '</td>'
       + '<td style="' + td + 'text-align:right;">' + _invMoney(r.gross) + '</td>'
       + '<td style="' + td + 'text-align:right;">' + _invMoney(r.fees) + '</td>'
@@ -35295,7 +35514,7 @@ function printAppraisalWorklist(jobId, opt) {
       // ⚠ WHO AUTHORISES IT, BY MATTER, AND EVERY ONE OF THEM (P19): "the personal representative" was false on a trust,
       // and a firearm one co-trustee authorised stays on this list until the others have (invApprovalComplete).
       + '<div style="font-size:11px;color:#3c3228;line-height:1.5;">Nothing is released until '
-      + (jobFiduciaries(job).length > 1 ? 'every ' + invCoFiduciaryNoun(job) + ' has' : 'the ' + invRepresentativeTitle(job) + ' has')
+      + (jobFiduciaries(job).length > 1 ? 'every ' + invCoFiduciaryNoun(job) + ' has' : !invFiduciaryMode(job) ? 'the client has' : 'the ' + invRepresentativeTitle(job) + ' has')
       + ' authorised the transfer to a <strong>named licensed dealer</strong> in writing. Record the signed authority with <strong>Record approval</strong> on Job Admin &amp; Inv (select the firearm, then Record approval), with the dealer in Channel / Recipient (on a firearm going to a named person, on its dealer route), and the item joins this worklist. Once the authority, the serial and the dealer are all on the record, a non-NFA firearm may be transported by the named principal; anything NFA is collected by the dealer.</div>'
       + '<div style="font-size:11px;color:#666;margin-top:6px;">'
       + withheld.map(function(r){ return '#' + esc(_invItemNo(r)) + ' ' + esc(r.objectName || '(unnamed)'); }).join(' &middot; ')
@@ -35315,7 +35534,7 @@ function printAppraisalWorklist(jobId, opt) {
   html += '</div>';
   // The probate package asks for the page itself (`opt.asHtml`, P17) — see printCourtInventory.
   if (opt && opt.asHtml) return { html: html, title: _invDocName(job, 'Appraisal Worklist') };
-  _printDocument(html, _invDocName(job, 'Appraisal Worklist'));
+  _printDocument(html, _invDocName(job, 'Appraisal Worklist'), { view: true, job: job, label: 'Appraisal Worklist' });   // on screen first (2026-10-26)
 }
 
 // ── 04 · The Contents Record — the living-client deliverable ──────────────────
@@ -35678,7 +35897,7 @@ function printAsFoundRecord(jobId) {
         + (rec.unattested.length > 1 ? 'them' : 'it') + ' may not all have been opened.' : '')
     + '</div>';
   html += '</div>';
-  _printDocument(html, _invDocName(job, 'As-Found Record'));
+  _printDocument(html, _invDocName(job, 'As-Found Record'), { view: true, job: job, label: 'As-Found Record' });   // on screen first (2026-10-26)
 }
 
 // ── Collections / Vehicles → Inventory bridge ─────────────────────────────────
@@ -35856,8 +36075,8 @@ function collectionsAwaitingPhoto(jobId) {
   });
 }
 
-// The collection's line with this shot's photograph on it, for `_captureShot` alone. Its number, its link, the quantity,
-// the value and the instructions the walkthrough recorded stay; the name is cleared so Agent One names it from the
+// The collection's line with this shot's photograph on it, for `_captureShot` alone. Its number, its link, the quantity
+// and the instructions the walkthrough recorded stay; the name is cleared so Agent One names it from the
 // picture like every Items shot (raising any firearm, NFA or must-find notice), with the walkthrough's words in the field
 // note for it to read. A chip tapped other than Undecided, and ⚑ Appraise, are the field's newer answers.
 function collectionLineWithPhoto(line, shot, opts) {
@@ -35869,6 +36088,12 @@ function collectionLineWithPhoto(line, shot, opts) {
   out.fieldNote = ('From the walkthrough: ' + String(line.objectName || 'a collection') + (q > 1 ? ' (' + q + ')' : '') + '. '
     + String(line.fieldNote || '')).trim();
   out.objectName = '';
+  // ⚠⚠ THE WALKTHROUGH'S ROUGH FIGURE GOES WITH THE PHOTOGRAPH (2026-10-26; Anthony: *"Yes, Agent Two values it"*, and: *"a flagged
+  // collection will almost certainly go to an appraiser or specialty buyer … Good to know the value going in"*): it was kept on the
+  // line, so Agent Two, which never writes over a figure, passed the collection by, and the schedules printed the estimator's guess
+  // with no source. Once photographed and named it is researched like any valuable line, and an appraiser's figure replaces Agent
+  // Two's when it lands. The estimate keeps the walkthrough figure; a figure the desk typed or an appraisal recorded stays.
+  if (!out.valuedBy && !out.valSource) out.fmv = '';
   var fd = fieldDispToInv((opts && opts.fieldDisp) || FIELD_DISP_DEFAULT);
   if (fd) out.disposition = fd;
   if (opts && opts.needsAppr) out.needsAppr = true;
@@ -35910,7 +36135,8 @@ function collectionUseLine(jobId, collLineId, lineId) {
   line.sourceCollId = coll.sourceCollId;
   if (!line.disposition && coll.disposition) line.disposition = coll.disposition;
   if (coll.needsAppr) line.needsAppr = true;
-  if (!_avHasFigure(line) && String(coll.fmv == null ? '' : coll.fmv).trim() !== '') line.fmv = coll.fmv;
+  // The walkthrough's rough figure is not carried onto the photographed line (2026-10-26, collectionLineWithPhoto): Agent Two values it.
+  if (!_avHasFigure(line) && String(coll.fmv == null ? '' : coll.fmv).trim() !== '' && (coll.valuedBy || coll.valSource)) line.fmv = coll.fmv;
   _setPhotoRef(jobId, _invTouch(line));
   _invTombstoneLine(jobId, coll);
   savePhotoRefs(jobId);
@@ -36925,6 +37151,9 @@ var INV_WORK_FLAGS = [
   // Second, beside it: the lines nobody has looked at yet (2026-10-25b, the one look: invLineReviewed, its value included), on
   // every job. It replaced P23's *Unreviewed values*, which counted the second tier, Agent Two's figures nobody had accepted.
   {key:'unreviewed', label:'Not reviewed', test:function(r, job){ return !invLineReviewed(r, _invAcceptCtxOf(job)); }},
+  // Third (2026-10-26): the lines the agents were guessing at, gathered (invLineUnsure, the row's one hint). The playbook and *The
+  // Evening Desk* say to work the unsure lines first, and nothing gathered them. A filter on the hint, not a review of its own.
+  {key:'unsure', label:'Unsure', test:function(r, job){ return invLineUnsure(r, job); }},
   {key:'undecided', label:'Not yet decided', test:function(r){ return !r.disposition; }},
   // fid: a living job enters no values, so this would count every row on the job forever.
   {key:'noval',     label:'No value yet',    fid:true, test:function(r){ return _invNeedsValue(r); }},
@@ -37086,13 +37315,13 @@ function _invAcceptCtxOf(job) {
   return _agDupSetJob === job.id ? { job: job, dup: _agDupSet, byId: _agDupById } : invAcceptCtx(job);
 }
 // A note from Agent One still open on the line's photograph (it sits on the photograph's first line), quiet as that line's
-// own note is. A removed first line takes its Look at this and Must find with it, never a Firearm or an NFA (agentNoticeLoud).
+// own note is (agentNoticeQuiet: a Look at this once every line off the photograph is reviewed). A removed first line's notes
+// stay open too: they ride on the first line still listed (agentNoticesOn, main's 2026-10-26), so the list above the rows and
+// the holds say the same.
 function _invPhotoNoteOpen(ref, job, fc) {
   if (!ref.derivedFrom) return false;
   var src = (fc && fc.byId && fc.byId[ref.derivedFrom]) || _getPhotoRef(job.id, ref.derivedFrom);
-  return !!src && (src.agentNotices || []).some(function(n) {
-    return src.deletedAt ? agentNoticeLoud(n.kind) : !agentNoticeQuiet(n.kind, src, job);
-  });
+  return !!src && (src.agentNotices || []).some(function(n) { return !agentNoticeQuiet(n.kind, src, job); });
 }
 // ⚠ WHY A LINE KEEPS ITS TICK (Q106): the one rule, read by invLineHold (the first reason, or '' where the line stands) and by
 // the row's box, whose tooltip names every reason (`every`). In that order: no context, or a disputed estate (Q102); a firearm,
@@ -37178,17 +37407,21 @@ function _invStampLineReviewed(ref, job) {
 // *agent · unsure* and Agent Two's *agent value* / *agent value · unsure*, which stood on every line the agents touched (and
 // Agent One's on a line Agent Two had renamed, speaking of the first name). Nothing to clear: the line's one tick takes it
 // with it. A missing confidence reads low, as the badges always read it.
-function invLineUnsure(ref) {
-  // ⚠ A PERSON'S LOOK ONLY (Anthony, 2026-10-26, Q108: *"Show it, no tick"*): no context, so a line standing as the agents left
-  // it still shows its guess as a cue for the night's read; a tick still takes it (Q101 keeps the tick for both guessing).
+// ⚠ NOT ON A FIGURE NO PAPER PRINTS (2026-10-26): where counsel values (agentValueInternal) Agent Two's range is for routing only,
+// and its confidence sent the person to second-guess a figure they will never put on paper. There the name is the deliverable, so a
+// guess at the name stays unsure until a confident figure settles it. With no job, as before.
+function invLineUnsure(ref, job) {
+  // ⚠ A PERSON'S LOOK ONLY (Anthony, 2026-10-26, Q108: *"Show it, no tick"*): invLineReviewed with no context, so a line standing as
+  // the agents left it still shows its guess as a cue for the night's read; a tick or a person's figure takes it.
   if (!ref || ref.deletedAt || invLineReviewed(ref)) return false;
   // A figure a person recorded, typed on the desk or from the appraisal's report, is their look at the line (Q105), so the
   // guess is settled (the second review: the hint asked for a tick over a box already ticked and disabled).
   if ((ref.valuedBy === 'desk' || ref.valuedBy === 'appraiser') && _invHasValue(ref)) return false;
   var agentFigure = ref.valuedBy === 'agent' && _avHasFigure(ref);
-  if (agentFigure && (ref.valConf || 'low') === 'low') return true;
+  var internal = !!job && agentValueInternal(job);
+  if (agentFigure && !internal && (ref.valConf || 'low') === 'low') return true;
   if (ref.namedBy !== 'agent') return false;
-  var settled = agentFigure && _agNameKey(ref.valNameAt) === _agNameKey(ref.objectName);
+  var settled = agentFigure && _agNameKey(ref.valNameAt) === _agNameKey(ref.objectName) && (ref.valConf || 'low') !== 'low';
   return !settled && (ref.agentConf || 'low') === 'low';
 }
 function _invReviewStats(items, fc, namesOnly) {
@@ -37213,7 +37446,10 @@ function _invAcceptedStampWords(st, noValues) {
 // made elsewhere before it but landing after it as read, and a room check that found nothing unread it). The press records
 // what the list says (`seen`, invListSeen: every line, removed ones too, in what the papers print of it); the read is current
 // while it still says that. A tick never unreads it. Pressed only on a copy that has read the sheet (invListReadRefusal).
-var INV_READ_FIELDS = ['objectName', 'category', 'qty', 'fmv', 'valLow', 'valHigh', 'valSource', 'disposition', 'channel', 'condition', 'roomIdx'];
+// The basis sentence, the valuation date, the appraiser, the asset track, the §732.402 mark and a firearm's serial print too (the
+// merge's review: a schedule's basis, an appraiser named or a serial typed after the press left the read current).
+var INV_READ_FIELDS = ['objectName', 'category', 'qty', 'fmv', 'valLow', 'valHigh', 'valSource', 'disposition', 'channel', 'condition', 'roomIdx',
+  'valNote', 'valDate', 'apprId', 'apprDoc', 'assetTrack', 'flagExempt', 'serial'];
 function invListSeen(jobId) {
   var rows = (_photoRefs[jobId] || []).filter(function(r) { return r && r.label === 'inventory' && !r.collId; })
     .sort(function(a, b) { var x = String(a.stableId), y = String(b.stableId); return x < y ? -1 : x > y ? 1 : 0; });
@@ -37242,13 +37478,25 @@ function invListReadRefusal(jobId) {
   // Unreachable first: a failed first read leaves the manifest unread as well, and the bars say unreachable (deskFoldState).
   if (typeof _invCloudFailed !== 'undefined' && _invCloudFailed[jobId]) return 'the sheet is unreachable: this is this device’s copy';
   if (_invManifestUnread(jobId)) return 'the list is still loading from the sheet';
+  // ⚠ AND NEVER WHILE AN AGENT IS AT WORK ON IT (the merge's review): Agent Two writes figures as each slice answers and the desk
+  // redraws only at the run's end, so a press mid-run vouched for figures nobody had seen. The agents' repaints redraw the line.
+  var at = function(m) { return !!(m && m[jobId] && m[jobId].running); };
+  if (at(typeof _agRun !== 'undefined' ? _agRun : null) || at(typeof _arRun !== 'undefined' ? _arRun : null)
+      || at(typeof _avRun !== 'undefined' ? _avRun : null)) return 'the agents are still at work on this list';
   return '';
 }
 function invMarkListRead(jobId) {
   var job = _invJob(jobId);
   if (!job) return;
   var why = invListReadRefusal(jobId);
-  if (why) { alert('Not recorded: ' + why + '. Press it once the list has been read from the sheet.'); return; }
+  if (why) { alert('Not recorded: ' + why + '. Press it once ' + (/agents/.test(why) ? 'they have finished' : 'the list has been read from the sheet') + '.'); return; }
+  // ⚠ A REDRAW STILL OWED IS A LIST NOT YET SEEN (the merge's review): a run that ended while a box had focus holds its redraw
+  // until the box is left (_invRenderWhenIdle), and on an iPad the tap that leaves it lands on the press first.
+  if (typeof _invRenderOwed !== 'undefined' && _invRenderOwed) {
+    renderInventoryTab();
+    alert('Not recorded: the list changed while it was on screen. It has been redrawn: read what changed, then press again.');
+    return;
+  }
   job.invRead = { at: Date.now(), by: _invStampBy(job), seen: invListSeen(jobId) };
   _saveJobEdit(job);
   var wb = document.getElementById('inv-workbar');
@@ -37355,6 +37603,26 @@ function _invBulkApply(jobId, key, value) {
   }
   var what = '';
   var _leftover = [];   // lines moved off To a person still naming the person (P22)
+  // ⚠ MARK REVIEWED SAYS WHAT IT SWEPT PAST (2026-10-26): a selection's tick quiets each line's *unsure*, its agents' notes and its
+  // same-name duplicate evidence, and the confirmation said only "N items marked reviewed" (an "Appraisal advised" on an $800 print
+  // going quiet with nothing else to flag it). Read before the stamp; every line is still stamped: a flag, never a refusal.
+  // Agent One's notes are read over the whole job, before and after (2026-10-26, on review): a Look at this goes quiet only once
+  // every line off its photograph is reviewed, so the lines picked are not the lines whose notes leave the list. Agent Two's go
+  // quiet per line, so they are read off the lines picked.
+  var _rv = null;
+  var _oneNotes = function() {
+    var m = {};
+    agentNotices(jobId, _jobInvRefs(jobId)).forEach(function(n) { if (n.kind === 'other') m[n.ref.stableId + '|' + n.text] = n.ref; });
+    return m;
+  };
+  if (key === 'reviewed') {
+    _rv = {
+      unsure: picked.filter(function(r) { return invLineUnsure(r, job); }),
+      oneBefore: _oneNotes(),
+      twoNoted: picked.filter(function(r) { return agentValueNotices(job, [r]).some(function(n) { return n.kind !== 'stale'; }); }),
+      landing: _avState(jobId).running
+    };
+  }
   picked.forEach(function(ref){
     var _prev = ref.disposition;
     // ⚠ THE ONE LOOK ACROSS A SELECTION (2026-10-25b): Mark reviewed covers each line's name, count and Agent Two's figure, as
@@ -37367,6 +37635,10 @@ function _invBulkApply(jobId, key, value) {
       ref.roomIdx = (value === '__none') ? null : parseInt(value, 10);
     } else {
       ref[key] = value;
+      // A category set across a selection is the person's (2026-10-26, on review): Agent Two never moves it back. It leaves the
+      // name Agent One's (the row's own edit takes the name too); `catBy` marks the category alone.
+      if (key === 'category') ref.catBy = 'desk';
+      if (key === 'condition') ref.condBy = 'desk';   // a grade set across a selection is the person's (2026-10-26b)
       // The one ownership rule (P23): Appraisal set across a selection takes each line from the agent, as in the row.
       if (key === 'valSource' && value === 'Appraisal') _avTakeValue(ref, 'appraisal', job);
     }
@@ -37379,8 +37651,22 @@ function _invBulkApply(jobId, key, value) {
   _scheduleInventorySync(jobId);
   var n = picked.length;
   var items = n + ' item' + (n > 1 ? 's' : '');
-  if (key === 'reviewed')          what = items + ' marked reviewed.';
-  else if (key === 'disposition')  what = value + ' set on ' + items + ' \u2014 they are now under the ' + value + ' section.';
+  if (key === 'reviewed') {
+    what = items + ' marked reviewed.';
+    var _list = function(rs) { return rs.slice(0, 8).map(_invNamed).join(', ') + (rs.length > 8 ? ' and ' + (rs.length - 8) + ' more' : ''); };
+    // ⚠ A TICK NO LONGER SETTLES A POSSIBLE DUPLICATE OR AN UNNAMED LINE (2026-10-26, the second reviews; INV_OPEN_HOLDS): the
+    // lines it cannot answer are named, with what does (the merge's review: it named the pairs the tick had swept off the list).
+    var _fc = invAcceptCtx(job, _jobInvRefs(jobId));
+    var _open = picked.filter(function(r) { return !!invLineOpen(r, _fc); });
+    var _oneAfter = _oneNotes(), _seen = {};
+    _rv.noted = Object.keys(_rv.oneBefore).filter(function(k) { return !_oneAfter[k]; }).map(function(k) { return _rv.oneBefore[k]; })
+      .concat(_rv.twoNoted).filter(function(r) { if (_seen[r.stableId]) return false; _seen[r.stableId] = 1; return true; });
+    if (_rv.unsure.length) what += ' \u26a0 ' + _rv.unsure.length + ' of them ' + (_rv.unsure.length > 1 ? 'were' : 'was') + ' marked unsure: ' + _list(_rv.unsure) + '.';
+    if (_rv.noted.length) what += ' ' + _rv.noted.length + ' carried an agent\u2019s note, now off the list (still in each record): ' + _list(_rv.noted) + '.';
+    if (_open.length) what += ' \u26a0 ' + _open.length + ' stay' + (_open.length > 1 ? '' : 's') + ' open: a tick does not settle an unnamed line or a possible duplicate (name it, or Remove or Not duplicates under Possible duplicates): ' + _list(_open) + '.';
+    if (_rv.landing) what += ' Agent Two is still valuing lines on this job: a figure that lands on one of these after this tick is not covered by it.';
+  }
+  if (key === 'disposition')       what = value + ' set on ' + items + ' \u2014 they are now under the ' + value + ' section.';
   // ⚠ THE EARLIER CATCH. This bar sets one disposition across forty rows at a time, so it is
   // where a specific bequest or a disputed item gets swept into Auction — and the confirmation
   // used to read only "Auction set on 40 items". The release approval request names them too,
@@ -37399,7 +37685,14 @@ function _invBulkApply(jobId, key, value) {
       return ' \u26a0 ' + hit.length + ' of them ' + (hit.length > 1 ? 'are' : 'is') + ' flagged '
         + c.badge.toLowerCase() + ' \u2014 ' + hit.map(function(r){ return _invNamed(r) + (c.note ? ' (' + c.note(r, jobId) + ')' : ''); }).join(', ') + '.';
     }).join('');
-    if (_swept) what += _swept + ' Check before the release request goes to the representative.';
+    // Where the client meets it on a living job (2026-10-26): the request for a line that needs written approval there (a
+    // firearm, someone who works with Havellin), else the Contents Record they sign at the close.
+    var _cau = _leaving.filter(function (r) { return invReleaseCautions(r, jobId).length; });
+    var _onReq = _cau.some(function (r) { return invWrittenReleaseNeeded(r, job); });
+    var _offReq = _cau.some(function (r) { return !invWrittenReleaseNeeded(r, job); });
+    if (_swept) what += _swept + (invFiduciaryMode(job) ? ' Check before the release request goes to the representative.'
+      : _onReq && _offReq ? ' Check before the release request goes to the client; the Contents Record the client signs at the close names the rest.'
+      : _onReq ? ' Check before the release request goes to the client.' : ' The Contents Record the client signs at the close names it.');
   }
   // THE CATEGORY IS THE ONE FIELD ON THIS BAR THAT ROUTES WORK, so the confirmation says where
   // the work went. Filing three things as Art and Decor puts them in front of an appraiser by
@@ -37503,15 +37796,33 @@ var AGENT_LISTED_MAX = 30;       // lines already named off one photograph, sent
 var _agRun = {};                 // jobId -> live run state, session-only
 
 function _agState(jobId) {
-  if (!_agRun[jobId]) _agRun[jobId] = { running:false, total:0, done:0, named:0, split:0, empty:0, failed:0, error:'' };
+  if (!_agRun[jobId]) _agRun[jobId] = { running:false, total:0, done:0, named:0, split:0, empty:0, failed:0, skipped:0, again:0, failures:{}, error:'' };
   return _agRun[jobId];
+}
+
+// ⚠ WHY A PHOTOGRAPH WAS NOT NAMED, IN A FEW WORDS (2026-10-26): the server answers each failure with its reason, and the work bar
+// only counted them, so nobody could tell whether pressing Name shots again would help (it does for an upload in flight or a
+// photograph that took too long; it does not for one the model declined). DOM-free; the catalogue the work bar groups by.
+function _agFailureKind(why) {
+  var w = String(why || '');
+  if (/not found|not an image|has not landed|too large to send/i.test(w)) return 'not in Drive yet';
+  if (/too long|timeout|timed out/i.test(w)) return 'took too long';
+  if (/declined/i.test(w)) return 'declined by the model: name it by hand';
+  if (/cut off/i.test(w)) return 'answer cut off';
+  if (/prose/i.test(w)) return 'answered without naming';
+  if (/429|529|overload|rate.?limit|busy|5\d\d/i.test(w)) return 'service busy';
+  return 'other';
 }
 
 // A row wants naming when it is an inventory line, still blank, and its photograph has
 // actually reached Drive. A shot still uploading would come back with nothing to look at.
+// ⚠ AND NOT A PHOTOGRAPH AGENT ONE ALREADY FOUND NOTHING IN (2026-10-26): an empty answer is stamped `agentConf: 'none'` (a frame of
+// socks, packaging, a bare surface), and it was sent again on every Name N shots, never letting *Unnamed shots* reach zero and
+// looking exactly like a photograph never read. The row says *nothing to list*; a blank line added to that photograph later carries
+// no stamp, so it is still sent (with the lines already listed off it).
 function agentNameableRefs(jobId) {
   return _jobInvRefs(jobId).filter(function(r) {
-    return !r.objectName && !r.deletedAt && _invFileId(r);
+    return !r.objectName && !r.deletedAt && _invFileId(r) && r.agentConf !== 'none';
   });
 }
 
@@ -37531,10 +37842,12 @@ function agentShotGroups(jobId) {
 // The close-ups of a maker's mark or a signature, which is the whole reason they were taken.
 // ⚠ THEY ARE NEVER SENT AS SHOTS OF THEIR OWN. `_jobInvRefs` excludes label:'detail' by design
 // and a detail frame must not mint a line; it rides with its parent as an extra image.
+// The first AGENT_MAX_DETAILS in the order taken (2026-10-26): *Photographing a House* promises "the app only reads the first four",
+// and the manifest's order is not the order taken.
 function _agDetailRefs(jobId, srcId) {
   return (_photoRefs[jobId] || []).filter(function(r) {
     return r.label === 'detail' && !r.deletedAt && r.groupId === srcId && _invFileId(r);
-  }).slice(0, AGENT_MAX_DETAILS);
+  }).sort(function(a, b) { return (a.ts || 0) - (b.ts || 0); }).slice(0, AGENT_MAX_DETAILS);
 }
 
 function _agShotPayload(jobId, group) {
@@ -37582,6 +37895,7 @@ function agentListedOff(jobId, srcId, rows) {
 function _agContext(job) {
   return {
     categories: INV_CATEGORIES,
+    conditions: AGENT_CONDITIONS,   // 2026-10-26b: Agent One grades condition off the photograph
     mustFind: mustFindItems(job).filter(function(m) { return !m.found; }).map(function(m) { return m.text; }),
     fiduciary: invFiduciaryMode(job),
     matterType: matterTypeOf(job) || ''
@@ -37610,6 +37924,7 @@ function _agWrite(jobId, stableId, obj, pass) {
   if (pass && pass.listed > 0) ref.agentListed = pass.listed; else delete ref.agentListed;
   ref.agentConf  = (['high','medium','low'].indexOf(obj.confidence) >= 0) ? obj.confidence : 'low';
   ref.agentBasis = String(obj.basis || '').slice(0, 200);
+  _invAgentCondition(ref, obj.condition);   // 2026-10-26b: off the photograph, never over a person's grade
   if (obj.crop && obj.crop.length === 4) ref.crop = obj.crop;
   // ⚠ `reviewed` IS DELIBERATELY UNTOUCHED AND STAYS FALSE. That is the whole gate: the desk
   // confirms, and every client document already carries "IN PROGRESS — N of M items reviewed".
@@ -37624,9 +37939,17 @@ function agentApplyResult(jobId, group, result) {
 
   // A notice lives on the row it came from, not in session state. A must-find sighting is far
   // too important to be lost on a reload.
+  // ⚠ ADDED TO, NEVER REPLACED (2026-10-26): a photograph named a second time (a blank line from Another item in this photo) raised
+  // only what the second reading saw, and replacing the notes took the first reading's Firearm or Must find off the line.
   if (notices.length) {
     var src = _getPhotoRef(jobId, group.srcId);
-    if (src) { src.agentNotices = notices; _setPhotoRef(jobId, _invTouch(src)); }
+    if (src) {
+      var had = src.agentNotices || [];
+      src.agentNotices = had.concat(notices.filter(function(n) {
+        return !had.some(function(o) { return o.kind === n.kind && _agNameKey(o.text) === _agNameKey(n.text); });
+      }));
+      _setPhotoRef(jobId, _invTouch(src));
+    }
   }
 
   if (!objects.length) {
@@ -37644,7 +37967,30 @@ function agentApplyResult(jobId, group, result) {
     return;
   }
 
-  var rows = group.rows.slice();
+  // ⚠⚠ ONLY THE ROWS STILL BLANK (2026-10-26): a run takes minutes and lands while people type, and a name typed into one of the
+  // rows it was asked about was overwritten, flipped to Agent One's (so Agent Two could rename it) and, if ticked, left reviewed
+  // over a name nobody saw. A row named or removed meanwhile is left alone.
+  // ⚠ AND ONCE A PERSON HAS BEEN AT THE PHOTOGRAPH, NOTHING IS WRITTEN BY POSITION (2026-10-26, on review): the answer's objects
+  // are in no particular order, so with one of two rows named by hand the first object (very likely the thing just typed) went
+  // onto the other row. The rows still blank stay blank and unstamped, and where none is left but the answer saw more than the
+  // person named, one blank row is added: Name shots then sends the photograph again with the lines already on it listed
+  // (agentListedOff) and asks only for what is not.
+  var rows = group.rows.filter(function(id) {
+    var r = _getPhotoRef(jobId, id);
+    return r && !r.deletedAt && !String(r.objectName || '').trim();
+  });
+  var touched = rows.length < group.rows.length;
+  if (touched) {
+    st.skipped = (st.skipped || 0) + (group.rows.length - rows.length);
+    var namedMeanwhile = group.rows.filter(function(id) { var r = _getPhotoRef(jobId, id); return r && !r.deletedAt && String(r.objectName || '').trim(); }).length;
+    var askAgain = rows.length > 0;
+    if (!askAgain && objects.length > namedMeanwhile) {
+      var blank = invSplitItemN(jobId, group.srcId, 1);
+      askAgain = typeof blank !== 'string';
+    }
+    if (askAgain) st.again = (st.again || 0) + 1;
+    return;
+  }
   var n = Math.min(objects.length, rows.length);
   // One naming of one photograph: its time, and how many lines the request carried as listed (`_agSendNext` records it
   // off the payload it sent, never recounted here, where a merge may have landed another device's lines meanwhile).
@@ -37682,7 +38028,7 @@ function agentNameShots(jobId) {
              + 'for anything photographed twice.')) return;
 
   st.running = true; st.total = groups.length; st.done = 0;
-  st.named = 0; st.split = 0; st.empty = 0; st.failed = 0; st.error = '';
+  st.named = 0; st.split = 0; st.empty = 0; st.failed = 0; st.skipped = 0; st.again = 0; st.failures = {}; st.error = '';
   _agRepaint(jobId);
   _agSendNext(jobId, job, groups, 0);
 }
@@ -37715,7 +38061,7 @@ function _agSendNext(jobId, job, groups, from) {
       Object.keys(d.results || {}).forEach(function(id) {
         if (byId[id]) agentApplyResult(jobId, byId[id], d.results[id]);
       });
-      st.failed += Object.keys(d.failed || {}).length;
+      Object.keys(d.failed || {}).forEach(function(id) { if (byId[id]) { st.failed++; st.failures[id] = String(d.failed[id] || ''); } });
       // ⚠ COUNT WHAT THE SERVER ANSWERED FOR, NOT WHAT WE SENT. It stops on its own time budget
       // and hands back `remaining`, so a slice can come back part-done and the rest re-sent.
       var handled = Object.keys(d.results || {}).length + Object.keys(d.failed || {}).length;
@@ -37740,12 +38086,18 @@ function _agFinish(jobId) {
   // ⚠ THE ROOM CHECK FOLLOWS A NAMING RUN BY ITSELF (P24): a line counted twice is found by reading a room's named
   // photographs together, which exists only once they are named. Not after a run that failed outright.
   // ⚠ AND AGENT TWO AFTER IT (2026-10-25b): straight away where there is no room to check, else at the room check's tail.
-  if (!st.error && !agentRoomCheckRun(jobId, { auto: true })) agentValueAuto(jobId);
+  // ⚠ A RUN THAT NAMED SOMETHING BEFORE IT FAILED STILL HANDS ON (2026-10-26): a dropped connection on the third call left the lines
+  // the first two named for somebody to press Check and Value. A run that named nothing (an old deployment's Unknown action) stays
+  // quiet. And a room check already out takes Agent Two at its own tail, so lines are never valued before their room is checked.
+  if (st.error && !st.named) return;
+  if (_arState(jobId).running) return;
+  if (!agentRoomCheckRun(jobId, { auto: true })) agentValueAuto(jobId);
 }
 
 function _agRepaint(jobId) {
   var el = document.getElementById('inv-agent-state');
   if (el) el.innerHTML = _agStateHtml(jobId);
+  if (typeof _invReadLineRepaint === 'function') _invReadLineRepaint(jobId);   // the press waits while a run is out
 }
 
 function _agStateHtml(jobId) {
@@ -37760,8 +38112,20 @@ function _agStateHtml(jobId) {
   var bits = [st.named + ' named'];
   if (st.split)  bits.push(st.split + ' extra line' + (st.split === 1 ? '' : 's') + ' from split frames');
   if (st.empty)  bits.push(st.empty + ' with nothing in frame');
-  if (st.failed) bits.push(st.failed + ' could not be read');
-  return '<span style="color:var(--gray);">' + esc(bits.join(' &middot; ').replace(/&middot;/g, '·')) + ' &middot; check them below</span>';
+  if (st.skipped) bits.push(st.skipped + ' left alone: named on the desk meanwhile'
+    + (st.again ? ' (press Name shots for what else ' + (st.again > 1 ? 'those photographs show' : 'that photograph shows') + ')' : ''));
+  if (st.failed) {
+    var kinds = {}, order = [];
+    Object.keys(st.failures || {}).forEach(function(id) {
+      var k = _agFailureKind(st.failures[id]);
+      if (!kinds[k]) { kinds[k] = 0; order.push(k); }
+      kinds[k]++;
+    });
+    var again = order.some(function(k) { return k.indexOf('declined') < 0; });
+    bits.push(st.failed + ' could not be read' + (order.length ? ' (' + order.map(function(k) { return kinds[k] + ' ' + k; }).join(', ') + ')' : '')
+      + (again ? ': press Name shots to try again' : ''));
+  }
+  return '<span style="color:var(--gray);">' + esc(bits.join(' · ')) + ' &middot; check them below</span>';
 }
 
 // Every notice the agent raised on this job that still wants a look, most important first. Persisted on the row, so a
@@ -37778,44 +38142,61 @@ var AGENT_NOTICE_KINDS = [
 // must-find is recorded found (mustFindAllFound: a notice carries no must-find key, so the job's list answers). A Firearm
 // and a Possible NFA item never go quiet: those are the two a person must not scroll past. Every notice stays readable in
 // its line's record, under From the field (_agRecordNoticesHtml), so nothing the agent said is lost.
+// ⚠ A LOOK AT THIS GOES QUIET WHEN EVERY LINE OFF ITS PHOTOGRAPH IS REVIEWED (2026-10-26, Q90 refined): Agent One stores a
+// photograph's notes on the photograph's own line, whichever object they are about, and ticking that line quieted a note about the
+// third thing in the frame before anybody had looked at it. With no job to find the photograph by, the line alone, as before.
 function agentNoticeQuiet(kind, ref, job) {
-  if (kind === 'other') return invLineReviewed(ref);
+  if (kind === 'other') {
+    var sib = (job && job.id != null) ? _invPhotoSiblings(job.id, ref) : [];
+    return sib.length ? sib.every(function(r) { return invLineReviewed(r); }) : invLineReviewed(ref);   // a person's look (every() hands an index)
+  }
   if (kind === 'mustfind') return mustFindAllFound(job);
   return false;
 }
-// ⚠ A FIREARM OR AN NFA NOTICE OUTLIVES ITS LINE (the second review: removing the closet shelf it was raised on let the rifle
-// case off the same photograph stand). It stays above the rows against that photograph's first line still listed.
-function agentNoticeLoud(kind) { return kind === 'firearm' || kind === 'nfa'; }
+// ⚠ A REMOVED PHOTOGRAPH LINE'S NOTES STAY ON THE LIST (2026-10-26): they ride on the first live line split off the same photograph.
+// Removing that line (Remove lines on a drawer named piece by piece) took a Firearm or a Possible NFA note off the list, and those two
+// never go quiet (Q90).
+// The notes a line carries: its own, and (2026-10-26) those of its photograph's own line once that line is removed, where this is
+// the first live line split off the photograph. One rule for the list above the rows and the line's record, so a note the list
+// shows is always in the record Show the item opens. Each entry: {n, carried}.
+function agentNoticesOn(jobId, ref) {
+  if (!ref) return [];
+  var out = (ref.agentNotices || []).map(function(n) { return { n: n, carried: false }; });
+  if (ref.deletedAt || !ref.derivedFrom) return out;
+  var pool = (typeof _photoRefs !== 'undefined' && _photoRefs && _photoRefs[jobId]) || [];
+  var src = pool.find(function(r) { return r && r.stableId === ref.derivedFrom; });
+  if (!src || !src.deletedAt || !(src.agentNotices || []).length) return out;
+  var first = _jobInvRefs(jobId).find(function(r) { return r.derivedFrom === ref.derivedFrom; });
+  if (!first || first.stableId !== ref.stableId) return out;
+  return out.concat(src.agentNotices.map(function(n) { return { n: n, carried: true }; }));
+}
 function agentNotices(jobId, all) {
-  var out = [], job = _invJob(jobId), rows = all || [], heir = {};
-  rows.forEach(function(r) { if (r.derivedFrom && !heir[r.derivedFrom]) heir[r.derivedFrom] = r; });
-  var gone = ((typeof _photoRefs !== 'undefined' && _photoRefs[jobId]) || []).filter(function(r) { return r && r.deletedAt && heir[r.stableId]; });
+  var out = [], job = _invJob(jobId);
+  var carriers = (all || []).map(function(r) { return { ref: r, notices: agentNoticesOn(jobId, r).map(function(x) { return x.n; }) }; });
   AGENT_NOTICE_KINDS.forEach(function(k) {
-    rows.forEach(function(r) {
-      (r.agentNotices || []).forEach(function(n) {
-        if (n.kind === k.kind && !agentNoticeQuiet(k.kind, r, job)) out.push({ kind:k.kind, label:k.label, cls:k.cls, text:n.text, ref:r });
-      });
-    });
-    if (agentNoticeLoud(k.kind)) gone.forEach(function(r) {
-      (r.agentNotices || []).forEach(function(n) {
-        if (n.kind === k.kind) out.push({ kind:k.kind, label:k.label, cls:k.cls, text:n.text, ref:heir[r.stableId] });
+    carriers.forEach(function(c) {
+      c.notices.forEach(function(n) {
+        if (n.kind === k.kind && !agentNoticeQuiet(k.kind, c.ref, job)) out.push({ kind:k.kind, label:k.label, cls:k.cls, text:n.text, ref:c.ref });
       });
     });
   });
   return out;
 }
 // What Agent One said about this one line, every notice, quiet or not, in the line's record: where a quiet one is still read.
+// A note carried from the photograph's removed line says so.
 function _agRecordNoticesHtml(job, ref) {
-  var mine = (ref && ref.agentNotices) || [];
+  var mine = (job && ref) ? agentNoticesOn(job.id, ref) : ((ref && ref.agentNotices) || []).map(function(n) { return { n: n, carried: false }; });
   if (!mine.length) return '';
   var rows = [];
   AGENT_NOTICE_KINDS.forEach(function(k) {
-    mine.forEach(function(n) {
+    mine.forEach(function(x) {
+      var n = x.n;
       if (n.kind !== k.kind) return;
       var quiet = agentNoticeQuiet(k.kind, ref, job);
       rows.push('<div class="' + k.cls + ' inv-agent-rec-n" style="font-size:11px;margin-bottom:4px;"><strong>' + esc(k.label) + '</strong> &mdash; ' + esc(n.text)
+        + (x.carried ? ' <span style="color:var(--gray);">&middot; said of this photograph, whose own line was removed</span>' : '')
         + (quiet ? ' <span style="color:var(--gray);">&middot; off the list above the rows: '
-            + (k.kind === 'mustfind' ? 'every must-find is recorded found' : 'the line is reviewed') + '</span>' : '') + '</div>');
+            + (k.kind === 'mustfind' ? 'every must-find is recorded found' : 'every line off its photograph is reviewed') + '</span>' : '') + '</div>');
     });
   });
   if (!rows.length) return '';
@@ -38274,6 +38655,7 @@ function _arFinish(jobId) {
 function _arRepaint(jobId) {
   var el = document.getElementById('inv-room-state');
   if (el) el.innerHTML = _arStateHtml(jobId);
+  if (typeof _invReadLineRepaint === 'function') _invReadLineRepaint(jobId);   // the press waits while a run is out
 }
 
 function _arStateHtml(jobId) {
@@ -38335,10 +38717,20 @@ var AGENT_VALUE_GENERAL_CEILING = 250;
 var AGENT_VALUE_MAX_COMPS = 6;           // the server keeps six; a WorthPoint sale pasted at the desk goes first
 // Agent One's basis naming a maker, a model, a signature or a mark sends a line to research (spec §3):
 // the mark is what makes a comparable a match.
-var AGENT_VALUE_MARK_RE = /\b(?:makers?|maker's|marks?|marked|hallmarks?|hallmarked|signatures?|signed|backstamps?|stamped|badges?|models?|labels?|labell?ed|monogram(?:med)?|serial)\b/i;
+var AGENT_VALUE_MARK_RE = /\b(?:makers?|maker's|marks?|marked|hallmarks?|hallmarked|signatures?|signed|backstamps?|stamps?|stamped|badges?|models?|labels?|labell?ed|monogram(?:med)?|serial)\b/i;
+// ⚠⚠ "READ:" IS A MARK ACTUALLY READ (2026-10-26): since the 2026-10-26 backend Agent One's basis begins "Read:" and quotes the mark,
+// label, nameplate or logo when the name rests on one it read, and says nothing of a mark when none was legible. The word list
+// below stays as the net for older answers and for wording that slips through; "Read: none" and the like are not a reading.
+var AGENT_VALUE_READ_RE = /^\s*read\s*:\s*(?!(?:no|none|nothing|illegible|unreadable|not)\b)\S/i;
 // ⚠ A MARK NOBODY COULD READ IS NOT A MARK (2026-10-25; the Ellison plates' "illegible painted script mark on underside"
 // sent everyday plates to research, five searches for nothing and a note on each). Struck from the basis before the test.
-var AGENT_VALUE_NO_MARK_RE = /\b(?:no|illegible|unreadable|unread|indistinct|undecipherable|blurred|without(?:\s+an?)?)\s+(?:[a-z-]+\s+){0,2}?(?:maker'?s?\s+)?(?:marks?|marked|hallmarks?|signatures?|backstamps?|stamps?|labels?|badges?|monograms?)\b|\b(?:marks?|signatures?|labels?|backstamps?|hallmarks?)\s+(?:is|are)\s+(?:not\s+legible|illegible|unreadable|indistinct)\b/gi;
+// 2026-10-26: widened to the phrasings that still sent plain things to research ("maker unknown", "not signed", "signature not
+// visible", "model unclear", "cannot read the mark", "mark too blurred to read"), each probed; every case 2026-10-25 pinned holds.
+var AGENT_VALUE_NO_MARK_RE = /\b(?:no|not|illegible|unreadable|unread|indistinct|undecipherable|blurred|unknown|unidentified|without(?:\s+an?)?)\s+(?:[a-z-]+\s+){0,2}?(?:maker'?s?\s+marks?|makers?|marks?|marked|hallmarks?|signatures?|signed|backstamps?|stamps?|labels?|badges?|models?|monograms?)\b|\b(?:maker'?s?\s+marks?|makers?|marks?|marked|hallmarks?|signatures?|signed|backstamps?|stamps?|labels?|badges?|models?|monograms?)\s+(?:(?:is|are)\s+)?(?:unknown|unclear|illegible|unreadable|indistinct|not\s+(?:legible|visible|readable|shown)|too\s+(?:blurred|blurry|small|faint))\b|\b(?:cannot|could\s+not|can't|couldn't)\s+read\s+(?:the\s+|any\s+)?(?:maker'?s?\s+marks?|makers?|marks?|marked|hallmarks?|signatures?|signed|backstamps?|stamps?|labels?|badges?|models?|monograms?)\b/gi;
+// ⚠ AN ORDINARY LOT WHOSE NAME IS A GUESS IS SENT WITH ITS PHOTOGRAPH (2026-10-26; Anthony, 2026-10-25: *"agent 1 guess and agent 2
+// confirm or update upon pricing"*): Agent One hedges in the words exactly when it infers ("likely Italian", "appears to be Bang &
+// Olufsen"), and an ordinary lot travelled as text, so the guess was priced as fact. Still an ordinary lot: no research, no close-ups.
+var AGENT_VALUE_HEDGE_RE = /\b(?:appears? to be|likely|possibly|probably|in the style of|attributed to)\b/i;
 var AGENT_VALUE_CONFS = ['high', 'medium', 'low'];
 var AGENT_VALUE_SOURCES = ['Auction comps', 'Online comps', 'General estimate'];
 var _avRun = {};          // jobId -> the run on screen (session only, like Agent One's)
@@ -38357,7 +38749,8 @@ function agentValueMode(ref) {
   if (_avForceComps[ref.stableId]) return 'comps';
   if (ref.needsAppr) return 'comps';
   if (invIsIntrinsic(ref.category)) return 'comps';
-  if (AGENT_VALUE_MARK_RE.test(String(ref.agentBasis || '').replace(AGENT_VALUE_NO_MARK_RE, ' '))) return 'comps';
+  var basis = String(ref.agentBasis || '');
+  if (AGENT_VALUE_READ_RE.test(basis) || AGENT_VALUE_MARK_RE.test(basis.replace(AGENT_VALUE_NO_MARK_RE, ' '))) return 'comps';
   // ⚠ THE AGENTS IN CONCERT (2026-10-25b; Anthony: *"I want the two agents working in concert to get the best possible
   // information first"*): where Agent One was guessing at what a thing is, Agent Two takes the photograph and its close-ups
   // and researches it, so the name it hands back (_avRename) is made from what it saw and found, never from Agent One's text.
@@ -38416,8 +38809,41 @@ function agentValueSpecialistWorth(ref, job) {
 // where elected, `estateValueDate`), else the day of the run on a living job.
 function _avValDate(job) { return invFiduciaryMode(job) ? (estateValueDate(job) || '') : _todayStr(); }
 
+// The category list rides the payload (2026-10-26; Agent One's rule: the backend holds no copy), so Agent Two can hand a research
+// line's category back under the name's rule (_avWrite).
 function _avContext(job) {
-  return { estate: invFiduciaryMode(job), basis: resolveValBasis(job), valuationDate: _avValDate(job) };
+  return { estate: invFiduciaryMode(job), basis: resolveValBasis(job), valuationDate: _avValDate(job), categories: INV_CATEGORIES,
+           conditions: AGENT_CONDITIONS };   // 2026-10-26b: Agent Two grades where it is sent the photograph
+}
+
+// One rule: an ordinary lot rides with its photograph where its name is still Agent One's and a guess in its own words.
+function agentValueLooks(ref) {
+  return !!ref && _avNameIsAgents(ref) && AGENT_VALUE_HEDGE_RE.test(String(ref.objectName || ''));
+}
+// ⚠ A LINE NOBODY HAS GRADED GOES WITH ITS PHOTOGRAPH TOO (2026-10-26b, "Agents grade it"): Agent One grades as it names, so this is a
+// line it could not grade, or one named before it graded anything (a client the old agents valued, re-valued from the bulk bar).
+// Still an ordinary lot; the server keeps a grade only off a photograph the request carried.
+function agentValueGradesCondition(ref) {
+  return !!ref && _invCondIsAgents(ref) && !String(ref.condition || '').trim() && _invHasPhoto(ref);
+}
+
+// ⚠ WHAT THE PHOTOGRAPH A LINE SHARES SAYS (2026-10-26): the room (Agent One had it, Agent Two did not); on a photograph several
+// lines share, the crew's note said over it (it sits on the photograph's own line, and a split line carried none, so a brand the
+// crew said reached Agent One and not Agent Two) and what else is listed off it; and with a photograph, the walkthrough's room note.
+// On a shared photograph the note travels once, marked as the photograph's, never as one line's own.
+function _avPhotoContext(jobId, ref, withPhoto) {
+  var src = _invPhotoSource(jobId, ref) || ref;
+  var also = agentListedOff(jobId, src.stableId, [ref.stableId]).map(function(l) { return l.name; });
+  var shared = src !== ref || also.length > 0;
+  var roomNote = '';
+  if (withPhoto && typeof estimateStore !== 'undefined' && estimateStore) {
+    var est = estimateStore[jobId];
+    var rooms = est && est.estimate && est.estimate.rooms ? est.estimate.rooms : [];
+    var room = rooms.find(function(x) { return x.idx === ref.roomIdx; });
+    roomNote = String((room && room.note) || '').slice(0, 400);
+  }
+  return { shared: shared, room: _invRoomName(jobId, ref.roomIdx) || '', roomNote: roomNote,
+           photoNote: shared ? String(src.fieldNote || '') : '', alsoListed: withPhoto ? also : [] };
 }
 
 // One line as the server is sent it. ⚠ NOTHING THE MODEL MUST NOT ACT ON: no disposition, no recipient,
@@ -38426,13 +38852,22 @@ function _avContext(job) {
 function _avItemPayload(jobId, ref) {
   var mode = agentValueMode(ref);
   var q = parseInt(ref.qty, 10);
+  var fileId = (mode === 'comps' || agentValueLooks(ref) || agentValueGradesCondition(ref)) ? (_invFileId(ref) || '') : '';
+  var pc = _avPhotoContext(jobId, ref, !!fileId);
   return {
     stableId: ref.stableId, mode: mode,
     name: String(ref.objectName || ''), category: ref.category || '', qty: q > 1 ? q : 1,
-    condition: ref.condition || '', fieldNote: ref.fieldNote || '', agentBasis: ref.agentBasis || '',
+    condition: ref.condition || '',
+    conditionChecked: !!String(ref.condition || '').trim() && !_invCondIsAgents(ref),   // a person's grade (2026-10-26b, on review)
+    fieldNote: (pc.shared && !ref.derivedFrom) ? '' : (ref.fieldNote || ''),
+    // ⚠ A NAME A PERSON TYPED TRAVELS WITHOUT AGENT ONE'S REASONS FOR ITS OWN (2026-10-26): the mirror retyped Restoration Hardware
+    // went with "wood frame, no visible maker's mark", evidence against the name it is told to price as given.
+    agentBasis: ref.namedBy === 'desk' ? '' : (ref.agentBasis || ''),
     // ⚠ A PERSON'S NAME IS MARKED (2026-10-25b): given back and valued as named (the wooden mirror typed as Restoration Hardware).
     nameChecked: !_avNameIsAgents(ref),
-    fileId: mode === 'comps' ? _invFileId(ref) : '',
+    categoryChecked: !_avNameIsAgents(ref) || ref.catBy === 'desk',
+    room: pc.room, roomNote: pc.roomNote, photoNote: pc.photoNote, alsoListed: pc.alsoListed,
+    fileId: fileId,
     details: mode === 'comps'
       ? invLineCloseUps(jobId, ref).map(function(d) { return { fileId: _invFileId(d) }; })
       : []
@@ -38458,6 +38893,18 @@ function _avComp(c) {
 var AGENT_VALUE_OWN = ['valLow', 'valHigh', 'valComps', 'valLookup', 'valConf', 'valNotices', 'valNameAt',
                        'valAgentAt', 'valFailed', 'valReviewed', 'valReviewedBy', 'valReviewedAt'];
 
+// ⚠⚠ AN AGENT'S FIGURE READS IN WHOLE DOLLARS EACH (2026-10-26b; Anthony, off seven cabbage-ware plates Agent Two valued at $75, so
+// $10.71 each: "Do we say $10 or do we say $12? Like, is it accurate down to the penny"; he took "Whole dollars each"): one article's
+// share of the agent's figure to the nearest dollar, and the line's figure that times its count ($11 × 7 = $77), so Each × Qty = Total
+// holds in whole dollars. Under a dollar each it stays in cents (sixty forks at 75¢ are $45, never $60). A value is a reading, not
+// money owed: the cents rule (roundCents, P17) is for what the client is billed, and a figure a person types stays as typed. Read by
+// the one writer for the figure and both ends of its range.
+function agentValueWhole(x, qty) {
+  var q = Math.max(1, parseInt(qty, 10) || 1), each = Number(x) / q;
+  if (x === '' || x == null || !isFinite(each) || each < 0) return NaN;
+  return roundCents((each >= 1 ? Math.round(each) : roundCents(each)) * q);
+}
+
 // ─── THE ONE WRITER ─────────────────────────────────────────────────────────────
 // ⚠⚠ IT NEVER WRITES OVER A FIGURE SOMEBODY ELSE RECORDED. A desk value is never overwritten (spec §5); a
 // Re-value (`opts.revalue`) may replace the agent's own. A test pins the keys it touches.
@@ -38473,6 +38920,9 @@ function _avWrite(jobId, stableId, res, job, opts) {
   if (isNaN(fmv)) return false;
   if (isNaN(lo) || lo > fmv) lo = fmv;
   if (isNaN(hi) || hi < fmv) hi = fmv;
+  // Whole dollars each, the range with it (agentValueWhole); rounding one article's share keeps low ≤ figure ≤ high.
+  var q = invLineQty(ref);
+  fmv = agentValueWhole(fmv, q); lo = agentValueWhole(lo, q); hi = agentValueWhole(hi, q);
   ref.valLow = lo;
   ref.valHigh = hi;
   ref.valComps = (res.comps || []).slice(0, AGENT_VALUE_MAX_COMPS).map(_avComp);
@@ -38482,7 +38932,15 @@ function _avWrite(jobId, stableId, res, job, opts) {
     .map(function(n) { return { kind: String(n.kind || 'other'), text: String(n.text).slice(0, 300) }; });
   ref.valuedBy = 'agent';
   ref.valAgentAt = Date.now();
+  // ⚠⚠ THE CATEGORY UNDER THE NAME'S RULE (2026-10-26; Anthony: *"Yes, same rule as the name"*): a research line's category, where
+  // the name is still Agent One's and nobody has reviewed it; asked before the rename, which would not change who owns the name.
+  // ⚠ NEVER OUT OF FIREARMS (2026-10-26, on review): Firearms is what switches every firearm gate on (invIsFirearm), and research
+  // could file an antique pistol as Antiques; into Firearms only adds the protocol. And never over a category a person set on the
+  // bulk bar (`catBy`), which leaves the name Agent One's.
+  if (_avNameIsAgents(ref) && ref.catBy !== 'desk' && ref.category !== 'Firearms'
+      && res.category && res.category !== ref.category && INV_CATEGORIES.indexOf(res.category) >= 0) ref.category = res.category;
   _avRename(ref, res.name);
+  _invAgentCondition(ref, res.condition);   // 2026-10-26b: only a grade off a photograph the request carried comes back
   ref.valNameAt = String(ref.objectName || '');
   delete ref.valFailed; delete ref.valReviewed; delete ref.valReviewedBy; delete ref.valReviewedAt;
   if (agentValueInternal(job)) {
@@ -38493,7 +38951,8 @@ function _avWrite(jobId, stableId, res, job, opts) {
     ref.fmv = fmv;
     delete ref.unitVal;   // the agent's figure is the whole line's: Each is read off it (Each × Qty = Total, 2026-10-25b)
     ref.valDate = _avValDate(job);
-    ref.valSource = AGENT_VALUE_SOURCES.indexOf(res.source) >= 0 ? res.source : 'Online comps';
+    // An unknown source is the depth's own word (2026-10-26): a general lot never prints a comps claim it did not make.
+    ref.valSource = AGENT_VALUE_SOURCES.indexOf(res.source) >= 0 ? res.source : (res.mode === 'comps' ? 'Online comps' : 'General estimate');
     ref.valNote = String(res.basis || '').slice(0, 300);
   }
   _setPhotoRef(jobId, _invTouch(ref));
@@ -38534,8 +38993,12 @@ function _avNoteFailure(jobId, stableId, why) {
 
 // 'valued' | 'research' (a general estimate over the ceiling, sent back to be researched in this run) |
 // 'skipped' (a figure was recorded on the line while the request was out, and it stands).
+// ⚠ ONE ARTICLE'S FIGURE AGAINST THE CEILING (2026-10-26; Anthony: *"One item's price"*): the whole line's figure counted the group,
+// so 24 everyday plates at $12 each, or a shelf of books, went to research, found no sale and came back unsure. A single item is
+// tested exactly as before.
 function agentValueApply(jobId, stableId, res, job, opts) {
-  if (res && res.mode === 'general' && roundCents(res.fmv) > AGENT_VALUE_GENERAL_CEILING && !_avForceComps[stableId]) {
+  var _ref = _getPhotoRef(jobId, stableId);
+  if (res && res.mode === 'general' && roundCents(res.fmv) / invLineQty(_ref) > AGENT_VALUE_GENERAL_CEILING && !_avForceComps[stableId]) {
     _avForceComps[stableId] = 1;
     return 'research';
   }
@@ -38614,7 +39077,7 @@ function agentValueRun(jobId) {
   if (!job) return;
   if (!SHEETS_SYNC_URL) { alert('This device has no Apps Script URL set, so it cannot reach the valuing service. Settings > Sync.'); return; }
   var st = _avState(jobId);
-  if (st.running) return;
+  if (st.running) { alert('Agent Two is already valuing lines on this job. Wait for it to finish, then try again.'); return; }
   var refs = agentValueableRefs(jobId);
   var unnamed = _jobInvRefs(jobId).filter(function(r) { return !String(r.objectName || '').trim(); }).length;
   if (!refs.length) {
@@ -38651,15 +39114,48 @@ function agentRevalue(jobId, stableId) {
   _avStart(jobId, job, [stableId], { revalue: true });
 }
 
+// ⚠⚠ RE-VALUE ACROSS A SELECTION (2026-10-26b; Anthony, of a client the old agents had valued: "Do I need to rerun the agent
+// somehow"; he took "Re-value on the bulk bar"). The record's Re-value, across the picked lines, by the same rule: never a figure a
+// person or an appraiser recorded, never an unnamed line, never while a run is out. Unlike the record's it sends each line at its
+// own depth (agentValueMode, no _avForceComps): forty everyday lots are not forty researches. A line with no figure yet is valued
+// as Value N lines would; a reviewed line's tick does not cover the new figure, and the confirm says how many.
+function invBulkRevalue(jobId) {
+  var job = _invJob(jobId), lines = _invPicked(jobId);
+  if (!job || !lines.length) return false;
+  if (!SHEETS_SYNC_URL) { alert('This device has no Apps Script URL set, so it cannot reach the valuing service. Settings > Sync.'); return false; }
+  if (_avState(jobId).running) { alert('Agent Two is already valuing lines on this job. Wait for it to finish, then try again.'); return false; }
+  var theirs = lines.filter(function(r) { return _avHasFigure(r) && r.valuedBy !== 'agent'; });
+  var unnamed = lines.filter(function(r) { return theirs.indexOf(r) < 0 && !String(r.objectName || '').trim(); });
+  var go = lines.filter(function(r) { return theirs.indexOf(r) < 0 && unnamed.indexOf(r) < 0; });
+  var skip = (theirs.length ? '\n\n' + theirs.length + ' carr' + (theirs.length > 1 ? 'y' : 'ies') + ' a value a person or an appraiser recorded and '
+      + (theirs.length > 1 ? 'are' : 'is') + ' left as ' + (theirs.length > 1 ? 'they are' : 'it is') + '.' : '')
+    + (unnamed.length ? '\n\n' + unnamed.length + ' ha' + (unnamed.length > 1 ? 've' : 's') + ' no name yet and ' + (unnamed.length > 1 ? 'are' : 'is')
+      + ' left for Agent One (Name shots).' : '');
+  if (!go.length) { alert('Nothing to value again in this selection.' + skip); return false; }
+  var reviewed = go.filter(function(r) { return invLineReviewed(r); }).length;   // a person's look, never the rule's standing
+  if (!confirm('Value ' + go.length + ' line' + (go.length > 1 ? 's' : '') + ' again with Agent Two?\n\n'
+      + 'Each figure Agent Two recorded is replaced when the new one comes back, and a name Agent One gave may come back corrected.'
+      + (reviewed ? ' ' + reviewed + ' of them ' + (reviewed > 1 ? 'were' : 'was') + ' marked reviewed: the new figure is not covered by that tick.' : '')
+      + skip)) return false;
+  _invPick = {};
+  _avStart(jobId, job, go.map(function(r) { return r.stableId; }), { revalue: true });
+  renderInventoryTab();
+  return go.length;
+}
+
 // ⚠⚠ THE AGENTS WORK IN A LINE, BY THEMSELVES (2026-10-25b; Anthony: *"I want the two agents working in concert to get the best
 // possible information first. And then … the transition concierge is going to go back and go through every item"*): Agent One
 // names, the room check reads the rooms, and Agent Two values every named line with no figure, confirming or correcting Agent
 // One's name as it does (_avRename), with nothing to press and nothing asked. Called at the tail of a naming run and of a room
 // check. Silent with nothing to value, no Apps Script URL, or a run already out (the work bar's *Value N lines* stays for
 // anything left).
+// ⚠ A RUN ALREADY OUT QUEUES IT, NEVER DROPS IT (2026-10-26): a one-line run started by a rename was out when the room check ended,
+// and the evening's automatic valuation was skipped with nothing said. It goes when that run finishes (_avFinish).
+var _avAutoAgain = {};   // jobId -> 1: an automatic run asked for while another was out (session only)
 function agentValueAuto(jobId) {
   var job = _invJob(jobId);
-  if (!job || !SHEETS_SYNC_URL || _avState(jobId).running) return false;
+  if (!job || !SHEETS_SYNC_URL) return false;
+  if (_avState(jobId).running) { _avAutoAgain[jobId] = 1; return false; }
   // ⚠ ONLY WHAT WAS PHOTOGRAPHED, AND NOT A LINE IT COULD NOT VALUE (2026-10-25b): every naming run and room check ends here,
   // so a line that came back *not valued* would be researched again each time, and a line typed with + Add line item ("Cash
   // on hand", a brokerage account) or a vehicle brought in by hand is nothing the run was started for. Value N lines and
@@ -38677,14 +39173,42 @@ function agentValueAuto(jobId) {
 // (agentValueStale), or a named line with no figure from anybody, is researched at once, as Re-value would send it, and the
 // name typed stands: it is the desk's now, sent as checked (`nameChecked`). Never a line whose figure a person or an appraiser
 // recorded. A run already out takes it at its tail (_avAfter).
-var _avAfter = {};   // jobId -> {stableId: 1}: lines renamed while a run was out (session only)
+var _avAfter = {};   // jobId -> {stableId: 'rename' | 'closeup'}: lines renamed or given a close-up while a run was out (session only)
+// ⚠⚠ A CLOSE-UP ADDED AT THE DESK SENDS ITS LINE TO AGENT TWO (2026-10-26): + Close-up exists for the blurred mark behind a *Look at
+// this*, and nothing read the new photograph: Agent One never re-reads a line it has named, and Agent Two read close-ups only on its
+// next valuation. The line is researched with it, as a rename is: over Agent Two's own figure or none, never a person's or an
+// appraiser's; never a line already reviewed (a close-up added for the record would reopen it; Re-value stays in the record for
+// that). The close-up itself writes nothing on the line.
+// ⚠ A RUN ALREADY OUT (2026-10-26, on review): a line still waiting in it goes with it, its payload built after the close-up landed;
+// any other line, the one in the request that is out included (its payload was built before), is queued behind the run
+// (`_avAfter`, marked 'closeup' so _avFinish asks the close-up's own rules again). A second close-up landing while the first one's
+// run is out is never dropped.
+function agentValueAfterCloseUp(jobId, stableId) {
+  var job = _invJob(jobId), ref = _getPhotoRef(jobId, stableId);
+  if (!job || !ref || ref.deletedAt || !SHEETS_SYNC_URL) return false;
+  if (ref.manual || !_invHasPhoto(ref) || !String(ref.objectName || '').trim()) return false;
+  if (_avHasFigure(ref) && ref.valuedBy !== 'agent') return false;
+  if (invLineReviewed(ref)) return false;
+  _avForceComps[stableId] = 1;
+  var st = _avState(jobId);
+  if (st.running) {
+    if ((st.ids || {})[stableId] && !(st.out || {})[stableId]) return true;
+    var q = (_avAfter[jobId] = _avAfter[jobId] || {});
+    if (!q[stableId]) q[stableId] = 'closeup';
+    return true;
+  }
+  _avStart(jobId, job, [stableId], { revalue: true });
+  return true;
+}
 function agentValueAfterRename(jobId, stableId) {
   var job = _invJob(jobId), ref = _getPhotoRef(jobId, stableId);
   if (!job || !ref || ref.deletedAt || !SHEETS_SYNC_URL) return false;
+  // A line typed with + Add line item, or with no photograph, is nothing to research on the web (agentValueAuto's rule, 2026-10-26).
+  if (ref.manual || !_invHasPhoto(ref)) return false;
   if (!String(ref.objectName || '').trim()) return false;
   if (_avHasFigure(ref) && !agentValueStale(ref)) return false;
   _avForceComps[stableId] = 1;
-  if (_avState(jobId).running) { (_avAfter[jobId] = _avAfter[jobId] || {})[stableId] = 1; return true; }
+  if (_avState(jobId).running) { (_avAfter[jobId] = _avAfter[jobId] || {})[stableId] = 'rename'; return true; }
   _avStart(jobId, job, [stableId], { revalue: true });
   return true;
 }
@@ -38692,7 +39216,8 @@ function agentValueAfterRename(jobId, stableId) {
 function _avStart(jobId, job, ids, opts) {
   var st = _avState(jobId);
   st.running = true; st.total = ids.length; st.done = 0; st.valued = 0; st.researched = 0;
-  st.failed = 0; st.skipped = 0; st.timedOut = false; st.error = '';
+  st.failed = 0; st.skipped = 0; st.timedOut = false; st.error = ''; st.retried = {}; st.later = 0;
+  st.ids = {}; st.out = {};
   _avRepaint(jobId);
   _avSendNext(jobId, job, ids.slice(), opts || {});
 }
@@ -38705,6 +39230,10 @@ function _avSendNext(jobId, job, queue, opts) {
   queue = queue.filter(function(id) { var r = _getPhotoRef(jobId, id); return r && !r.deletedAt; });
   if (!queue.length) { _avFinish(jobId); return; }
   var items = queue.slice(0, AGENT_VALUE_BATCH).map(function(id) { return _avItemPayload(jobId, _getPhotoRef(jobId, id)); });
+  // What the run still holds (`ids`) and what is in the request now out (`out`), for agentValueAgain and a close-up landing
+  // meanwhile (2026-10-26, on review: `_avForceComps`, never cleared, had answered for lines no run carried).
+  st.ids = {}; queue.forEach(function(id) { st.ids[id] = 1; });
+  st.out = {}; items.forEach(function(it) { st.out[it.stableId] = 1; });
   fetch(SHEETS_SYNC_URL, {
     method: 'POST', mode: 'cors', redirect: 'follow',
     headers: { 'Content-Type': 'text/plain' },
@@ -38732,6 +39261,17 @@ function _avSendNext(jobId, job, queue, opts) {
         else st.skipped++;
       });
       Object.keys(d.failed || {}).forEach(function(id) { if (!sent[id] || answered[id]) return; answered[id] = 1; st.failed++; _avNoteFailure(jobId, id, d.failed[id]); });
+      // ⚠⚠ A PASSING FAILURE IS NOT A VERDICT (2026-10-26; the 2026-10-26 backend's `retry`): a request past UrlFetchApp's limit, a
+      // busy service or a line the model skipped. Sent once more in this run; a second time it is left as it was, nothing stamped,
+      // so the next automatic run or Value N lines takes it (one slow request had stamped every line in flight "not valued", and
+      // the automatic run never asked again).
+      if (!st.retried) st.retried = {};
+      Object.keys(d.retry || {}).forEach(function(id) {
+        if (!sent[id] || answered[id]) return;
+        answered[id] = 1;
+        if (!st.retried[id]) { st.retried[id] = 1; again.push(id); }
+        else st.later = (st.later || 0) + 1;
+      });
       if (d.timedOut) st.timedOut = true;
       var n = Object.keys(answered).length;
       st.done += n - again.length;
@@ -38748,24 +39288,38 @@ function _avSendNext(jobId, job, queue, opts) {
 }
 
 function _avFinish(jobId) {
-  _avState(jobId).running = false;
+  var st = _avState(jobId);
+  st.running = false; st.ids = {}; st.out = {};
   savePhotoRefs(jobId);
   _scheduleInventorySync(jobId);
-  // A line renamed while this run was out goes now (agentValueAfterRename), still researched and still the desk's name.
-  var after = Object.keys(_avAfter[jobId] || {}).filter(function(id) { var r = _getPhotoRef(jobId, id); return r && !r.deletedAt; });
+  // A line renamed while this run was out goes now (agentValueAfterRename), still researched and still the desk's name; and a line
+  // given a close-up (agentValueAfterCloseUp). Each asked its own rule again now (2026-10-26, on review): a figure a person or an
+  // appraiser recorded meanwhile stands; a close-up's line reviewed meanwhile is not reopened; a renamed line the run that was out
+  // already valued under its new name is done.
+  var queued = _avAfter[jobId] || {};
+  var after = Object.keys(queued).filter(function(id) {
+    var r = _getPhotoRef(jobId, id);
+    if (!r || r.deletedAt) return false;
+    if (_avHasFigure(r) && r.valuedBy !== 'agent') return false;
+    if (queued[id] === 'closeup') return !invLineReviewed(r);
+    return !_avHasFigure(r) || agentValueStale(r);
+  });
   delete _avAfter[jobId];
   var job = after.length && _invJob(jobId);
   if (job) _avStart(jobId, job, after, { revalue: true });
+  else if (_avAutoAgain[jobId]) { delete _avAutoAgain[jobId]; agentValueAuto(jobId); }
   _invRenderWhenIdle();
 }
 // ⚠ A RUN'S ANSWER NEVER REDRAWS THE DESK OVER SOMEBODY TYPING (2026-10-25b). Since Agent Two follows the naming and the room
 // check by itself, and values a line again when its name is changed, its answer lands while a person is working another row,
 // and renderInventoryTab rewrites the tab with innerHTML (CLAUDE.md's trap: a redraw destroys the form under someone typing).
 // The redraw waits until the person leaves the box, and asks again then, so moving to the next box keeps waiting.
+var _invRenderOwed = false;
 function _invRenderWhenIdle() {
   var el = document.activeElement, panel = document.getElementById('panel-inventory');
   var tag = el ? String(el.tagName || '').toLowerCase() : '';
   if (!panel || !el || !panel.contains(el) || (tag !== 'input' && tag !== 'textarea' && tag !== 'select')) { renderInventoryTab(); return; }
+  _invRenderOwed = true;   // read by invMarkListRead; renderInventoryTab clears it
   if (el._invRenderHeld) return;
   el._invRenderHeld = true;
   el.addEventListener('focusout', function done() {
@@ -38778,6 +39332,7 @@ function _invRenderWhenIdle() {
 function _avRepaint(jobId) {
   var el = document.getElementById('inv-value-state');
   if (el) el.innerHTML = _avStateHtml(jobId);
+  if (typeof _invReadLineRepaint === 'function') _invReadLineRepaint(jobId);   // the press waits while a run is out
 }
 
 function _avStateHtml(jobId) {
@@ -38791,7 +39346,8 @@ function _avStateHtml(jobId) {
   var bits = [st.valued + ' valued'];
   if (st.failed) bits.push(st.failed + ' could not be valued (the reason is on the line)');
   if (st.skipped) bits.push(st.skipped + ' left alone: a value was recorded meanwhile');
-  if (st.timedOut) bits.push('some took too long and can be sent again');
+  if (st.later) bits.push(st.later + ' did not come back (slow or busy): they go with the next run, or press Value N lines');
+  else if (st.timedOut) bits.push('some took longer and were asked again');
   return '<span style="color:var(--gray);">Agent Two: ' + esc(bits.join(' · ')) + ' &middot; look them over below</span>';
 }
 
@@ -38857,14 +39413,26 @@ function _avNoticeLabel(kind) {
 // Everything Agent Two raised that a person has not yet looked at: its notices on unreviewed values, a
 // value made for an earlier name, and on a living job a range worth a specialist. ⚠ AN ACCEPTED VALUE
 // HAS HAD ITS LOOK, so its notices go quiet; a stale value never does, because the name moved after.
+// Is Agent Two already valuing this line again (out now, or queued behind the run that is out)? Session state.
+function agentValueAgain(job, r) {
+  if (!job || !r) return false;
+  var queued = (typeof _avAfter !== 'undefined' && _avAfter[job.id]) || {};
+  var st = _avState(job.id);
+  return !!queued[r.stableId] || (!!st.running && !!(st.ids || {})[r.stableId]);
+}
 function agentValueNotices(job, all) {
   var out = [];
   (all || []).forEach(function(r) {
     if (r.deletedAt || r.valuedBy !== 'agent') return;
-    if (agentValueStale(r)) out.push({ kind: 'stale', ref: r, text: 'valued as “' + r.valNameAt + '” and now named “' + (r.objectName || '') + '”: open the line and Re-value it' });
+    // While Agent Two is already valuing it again (a rename sends it by itself), the note says so (2026-10-26): pressing Re-value
+    // then was refused.
+    if (agentValueStale(r)) out.push({ kind: 'stale', ref: r, text: 'valued as “' + r.valNameAt + '” and now named “' + (r.objectName || '') + '”: '
+      + (agentValueAgain(job, r) ? 'Agent Two is valuing it again for the new name' : 'open the line and Re-value it') });
     if (!agentValueUnreviewed(r)) return;
     (r.valNotices || []).forEach(function(n) { out.push({ kind: n.kind, ref: r, text: n.text }); });
-    if (agentValueSpecialistWorth(r, job)) out.push({ kind: 'specialist', ref: r, text: 'its range reaches ' + fmt(r.valHigh) + ': worth a specialist or an auction house' });
+    // The app's own specialist note only where Agent Two's own notes do not already say it (2026-10-26: two entries under one line).
+    var _saidIt = (r.valNotices || []).some(function(n) { return n.kind === 'specialist' || n.kind === 'appraiser'; });
+    if (!_saidIt && agentValueSpecialistWorth(r, job)) out.push({ kind: 'specialist', ref: r, text: 'its range reaches ' + fmt(r.valHigh) + ': worth a specialist or an auction house' });
   });
   // In the order a person should read them; a kind the server sends that is not here reads as *Look at this*.
   var order = _avNoticeKinds();
@@ -38928,7 +39496,8 @@ function _avRowBadges(job, ref) {
     out.push('<span title="Counsel values the property on this engagement. Agent Two’s range is for routing the sale and for recommending appraisals; no document prints it." style="color:var(--gray-dk);">agent '
       + esc(fmt(ref.valLow)) + '&ndash;' + esc(fmt(ref.valHigh)) + ' &middot; internal</span>');
   }
-  if (agentValueSpecialistWorth(ref, job)) {
+  // Only until the line is reviewed, as its notice (2026-10-26): what is left on this strip asks for something to be done.
+  if (agentValueSpecialistWorth(ref, job) && !invLineReviewed(ref)) {
     out.push('<span title="' + esc('Agent Two’s range reaches ' + fmt(ref.valHigh) + ': worth a specialist or an auction house') + '" style="color:var(--bronze);font-weight:700;">worth a specialist</span>');
   }
   if (ref.valFailed && !_avHasFigure(ref)) {
@@ -38959,7 +39528,9 @@ function _avValueButtonHtml(job) {
 function _avPanelHtml(job, ref) {
   var jid = job.id, sid = ref.stableId;
   if (ref.valuedBy !== 'agent' && !ref.valFailed) return '';
-  var canAsk = !!String(ref.objectName || '').trim() && (!_avHasFigure(ref) || ref.valuedBy === 'agent');
+  // Withheld while Agent Two is already valuing it again (2026-10-26): the press was refused then.
+  var _again = agentValueAgain(job, ref);
+  var canAsk = !_again && !!String(ref.objectName || '').trim() && (!_avHasFigure(ref) || ref.valuedBy === 'agent');
   var internal = agentValueInternal(job);
   var head = '<div style="font-size:10px;font-weight:700;color:var(--bronze);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;">Agent Two</div>';
   var acts = '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">'
@@ -38980,7 +39551,8 @@ function _avPanelHtml(job, ref) {
       + (!internal && ref.valNote ? '<div style="font-size:10.5px;color:var(--gray-dk);margin-top:2px;">' + esc(ref.valNote) + '</div>' : '')
       + (ref.valNameFrom && _agNameKey(ref.valNameFrom) !== _agNameKey(ref.objectName)
           ? '<div class="av-renamed" style="font-size:10.5px;color:var(--gray);margin-top:2px;">Name updated from \u201c' + esc(ref.valNameFrom) + '\u201d</div>' : '')
-      + (agentValueStale(ref) ? '<div style="font-size:10.5px;color:var(--bronze);font-weight:700;margin-top:2px;">Made for an earlier name: “' + esc(ref.valNameAt) + '”. Re-value it.</div>' : '');
+      + (agentValueStale(ref) ? '<div style="font-size:10.5px;color:var(--bronze);font-weight:700;margin-top:2px;">Made for an earlier name: “' + esc(ref.valNameAt) + '”. '
+          + (_again ? 'Being valued again for the new name.' : 'Re-value it.') + '</div>' : '');
   }
   // What Agent Two noted on the line (2026-10-25), accepted or not: the list above the rows names twelve lines and sends
   // the rest here, and until this the notes were drawn nowhere else, so that sentence pointed at nothing.
@@ -39140,9 +39712,11 @@ function _renderInvWorkbar(job, all) {
       + btn('exportInventoryCSV(' + jid + ')', 'CSV', 'Every column, as a spreadsheet file to attach to an email')
       // ⚠ ONCE (P16): at the None tier the Approval Request IS the primary, and drawing it again here put
       // two buttons for one document side by side. No control renders twice.
-      + (_primary === 'approval' ? '' : btn('printApprovalRequest(' + jid + ')', 'Approval Request', fid
+      // On a client's own home (2026-10-26) only while a line there needs the client's written approval (a firearm, or an item
+      // going to someone who works with Havellin: invWrittenReleaseNeeded); their word approves the rest.
+      + (_primary === 'approval' || (!fid && !_invAwaitingApproval(jid).length) ? '' : btn('printApprovalRequest(' + jid + ')', 'Approval Request', fid
           ? 'Written, itemised release approval for the representative to sign. Nothing of value leaves the property without it.'
-          : 'Written, itemised list of everything leaving the property, for the client to sign off.'))
+          : 'Written approval of a firearm, or an item going to someone who works with Havellin, for the client to sign before it leaves.'))
       // ⚠ NO SEND REQUEST ON THIS BAR (2026-10-22). It stood here from 2026-10-17 as well as on the Releases card's Approval
       // request section, one control drawn twice under two rules: this one offered while blocked and refused in the band,
       // the card's withheld and the blocker said in red. The card carries the send for every line awaiting approval (its
@@ -39451,7 +40025,7 @@ function _renderInvRow(job, ref) {
   var _gap = invApprovalGap(ref, job);
   if (invRatificationOwed(ref, job)) {
     var _rm = invApprovalMissing(ref, job);
-    warn.push('<span title="' + esc('Left the property before ' + invEveryFiduciaryPhrase(job) + ' had approved it in writing'
+    warn.push('<span title="' + esc('Left the property before ' + (invFiduciaryMode(job) ? invEveryFiduciaryPhrase(job) : 'the client') + ' had approved it in writing'
       + (_rm.length ? ': ' + _andJoin(_rm) + (_rm.length > 1 ? ' have' : ' has') + ' not signed' : '')
       + '. The next release approval request lists it apart, for that signature, which ratifies the release; nothing is undone.')
       + '" style="color:var(--bronze);font-weight:700;">ratification owed</span>');
@@ -39489,10 +40063,20 @@ function _renderInvRow(job, ref) {
   // each other and sending up a bunch of flags that need to be cleared"*): *unsure*, bronze, gone with the line's one tick. It
   // replaced Agent One's *agent* and Agent Two's *agent value* badges, which stood on every line either agent touched. Its
   // tooltip says what each agent went on. Bronze, never red: red on this strip is a held firearm.
-  if (invLineUnsure(ref)) {
-    warn.push('<span class="inv-unsure" title="' + esc([ref.namedBy === 'agent' ? 'Named by Agent One' + (ref.agentBasis ? ': ' + ref.agentBasis : '') : '',
+  // ⚠ ITS TOOLTIP SPEAKS OF THE NAME THE LINE CARRIES (2026-10-26): on a line Agent Two renamed, Agent One's basis explains a name
+  // it no longer has.
+  if (invLineUnsure(ref, job)) {
+    warn.push('<span class="inv-unsure" title="' + esc([ref.namedBy === 'agent'
+          ? (ref.valNameFrom ? 'Agent One named it \u201c' + ref.valNameFrom + '\u201d; Agent Two renamed it as it valued it.'
+                             : 'Named by Agent One' + (ref.agentBasis ? ': ' + ref.agentBasis : ''))
+          : '',
         ref.valuedBy === 'agent' && _avHasFigure(ref) ? _avSummary(ref) : ''].filter(Boolean).join(' ') + ' Check it, then tick Reviewed.')
       + '" style="color:var(--bronze);">unsure</span>');
+  }
+  // ⚠ AGENT ONE READ THIS PHOTOGRAPH AND FOUND NOTHING (MORE) IN IT (2026-10-26): told apart from a photograph never read. Remove line
+  // takes the line off and keeps the photograph as the record (the room's bin would delete it from Drive).
+  if (!String(ref.objectName || '').trim() && ref.agentConf === 'none') {
+    warn.push('<span class="inv-empty-shot" title="Agent One read this photograph and found nothing (more) in it to put on the inventory: a surface, packaging, or things that are not inventory. Remove line takes the line off and keeps the photograph; type a name if something is there." style="color:var(--gray-dk);">nothing to list</span>');
   }
   // ⚠ AGENT TWO'S ROW BADGES (P23): made for an earlier name, internal, worth a specialist, or not valued and why.
   _avRowBadges(job, ref).forEach(function(b){ warn.push(b); });
@@ -39500,9 +40084,11 @@ function _renderInvRow(job, ref) {
   // it can show both photographs side by side; this is so a row met while scrolling reads as
   // contested rather than settled. Bronze, never red — red on this strip is a held firearm.
   if (_agDupSet[sid] > 1) {
+    // The generic words where the room check gave no sentence (2026-10-26): "off different photographs" was false on a photograph
+    // Agent One read twice, and on a line joined only through another line's room-check finding.
     warn.push('<span title="' + esc((_arDupEligible(ref) && ref.dupWhy
           ? 'The room check: ' + ref.dupWhy + '.'
-          : 'Agent One gave this name to ' + _agDupSet[sid] + ' lines in this room, off different photographs.')
+          : 'May be the same thing as another line in this room.')
       + ' Check Possible duplicates, above the rows.')
       + '" style="color:var(--bronze);">possible duplicate</span>');
   }
@@ -39599,7 +40185,19 @@ function _invRowHasWho(disposition) {
   return INV_RELEASE_DISPOSITIONS.indexOf(disposition) >= 0 || disposition === 'Move';
 }
 // The row's photograph, a link to the file in Drive where the line has one (a split line shares its photograph's), else
-// the photograph alone (a typed line, or a shot not yet uploaded). The record's Open photo in Drive opens the same file.
+// the photograph alone (a typed line, or a shot not yet uploaded). The record's photograph opens the same file (_invPhotoOpenHtml).
+// ⚠ EVERY PHOTOGRAPH IN A LINE'S RECORD OPENS ITS FILE IN DRIVE (2026-10-26b; Anthony: "there's no way to click on the detail shots
+// and look at them in Drive … maybe we just need a little link under each photo rather than a big chip"): the photograph itself and a
+// small "Open in Drive" under it, in a new tab, for the record's photograph and each close-up alike; the record's Open photo in Drive
+// button is gone. Nothing to open on a shot not yet in Drive (uploading, or not saved).
+function _invPhotoOpenHtml(jid, ref, px) {
+  var t = _invThumbHTML(jid, ref, px), url = String(ref.driveFileUrl || '');
+  if (!/^https?:\/\//i.test(url)) return '<div class="inv-photo-cell" style="flex:0 0 auto;">' + t + '</div>';
+  return '<div class="inv-photo-cell" style="flex:0 0 auto;">'
+    + '<a class="inv-photo-link" href="' + esc(url) + '" target="_blank" rel="noopener" title="Open the full photo in Drive">' + t + '</a>'
+    + '<a class="inv-drive-link" href="' + esc(url) + '" target="_blank" rel="noopener" style="display:block;font-size:10px;margin-top:2px;">Open in Drive &#8599;</a>'
+    + '</div>';
+}
 function _invRowPhotoHtml(jid, ref) {
   var t = _invThumbHTML(jid, ref, 72);
   if (!ref.driveFileUrl) return '<div class="inv-c-photo">' + t + '</div>';
@@ -39653,11 +40251,14 @@ function _renderInvPanel(job, ref) {
     // What Agent One noticed in this photograph, every notice: a Look at this off the list above the rows is read here (Q90).
     + _agRecordNoticesHtml(job, ref)
     + '</div>');
+  // ⚠ THE BUTTONS STAY BESIDE THE PHOTOGRAPH (2026-10-26b; Anthony: the line "moved all that from … being above with the picture to
+  // down below"): the column takes the room left beside the photograph (flex 1 1 260px, min-width 0), so the sentence naming the
+  // lines a photograph carries wraps inside it instead of widening it past the row and dropping it under the picture. On a phone
+  // there is no room beside a 240 px photograph and it goes under, as before.
   return '<div style="padding:10px 4px 12px 52px;background:#fcfaf5;border-top:1px dashed var(--border-md);">'
-    + '<div style="display:flex;gap:12px;align-items:flex-start;margin-bottom:10px;flex-wrap:wrap;">'
-      + _invThumbHTML(jid, ref, 240)
-      + '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">'
-        + (ref.driveFileUrl ? '<a class="btn-s" href="' + esc(ref.driveFileUrl) + '" target="_blank" style="text-decoration:none;">Open photo in Drive</a>' : '')
+    + '<div class="inv-rec-top" style="display:flex;gap:12px;align-items:flex-start;margin-bottom:10px;flex-wrap:wrap;">'
+      + _invPhotoOpenHtml(jid, ref, 240)
+      + '<div class="inv-rec-acts" style="flex:1 1 260px;min-width:0;display:flex;gap:6px;flex-wrap:wrap;align-items:center;">'
         + '<button class="btn-s" onclick="openCustodyModal(' + jid + ',\'' + ref.stableId + '\')">Chain of custody' + (nC ? ' (' + nC + ')' : '') + '</button>'
         // ONE PHOTOGRAPH, ANOTHER OBJECT (2026-09-20). Offered on any photographed line and on
         // none of the manual ones: a cash entry or an account has no picture to split. It is
@@ -39677,8 +40278,8 @@ function _renderInvPanel(job, ref) {
         // the photograph — the room's 🗑 is the only thing that deletes an image.
         + '<button class="btn-s" onclick="invRemoveLine(' + jid + ',\'' + ref.stableId + '\')" style="color:#c0392b;" '
           + 'title="Take this line off the inventory. No photograph is deleted, and Removed items, under Removed items &amp; snapshots on Job Admin &amp; Inv, gives the line back.">Remove line</button>'
-        + (sibs.length > 1 ? '<span style="font-size:10.5px;color:var(--gray);">This photograph carries '
-            + sibs.length + ' lines: ' + sibs.map(function(x){ return esc(_invNamed(x)); }).join(' &middot; ') + '</span>' : '')
+        + (sibs.length > 1 ? '<div class="inv-rec-sibs" style="flex:1 1 100%;min-width:0;font-size:10.5px;color:var(--gray);">This photograph carries '
+            + sibs.length + ' lines: ' + sibs.map(function(x){ return esc(_invNamed(x)); }).join(' &middot; ') + '</div>' : '')
       + '</div>'
     + '</div>'
     + _invFirearmPanelHtml(job, ref)
@@ -39902,9 +40503,14 @@ function _renderInvBulk(job) {
     + '<button onclick="_invBulkApply(' + jid + ',\'channel\',(document.getElementById(\'inv-bulk-recip\')||{}).value||\'\')" style="' + btnStyle + '">Set recipient</button>'
     // The one look across a selection (2026-10-25b): each line's name, count and Agent Two's figure together. Accept values is gone.
     + '<button onclick="_invBulkApply(' + jid + ',\'reviewed\',1)" style="' + btnStyle + '" title="Mark each selected line reviewed: its name, count and value together">Mark reviewed</button>'
-    + '<button onclick="printApprovalRequest(' + jid + ',true)" style="' + btnStyle + '">Approval request</button>'
-    + '<button onclick="sendApprovalRequest(' + jid + ',true)" style="' + btnStyle + '" title="Email the Release Approval Request for the selected lines as a PDF, through a Gmail draft">Send request</button>'
-    + '<button onclick="invRecordApproval(' + jid + ')" style="' + btnStyle + '" title="Record a signed approval against every selected item">Record approval</button>'
+    // Re-value (2026-10-26b): Agent Two again on the selection, its own figures only (invBulkRevalue).
+    + '<button onclick="invBulkRevalue(' + jid + ')" style="' + btnStyle + '" title="Value the selected lines again with Agent Two. A figure a person or an appraiser recorded is never touched.">Re-value</button>'
+    // The written release across a selection: on a client's own home (2026-10-26) only where a picked line needs it.
+    + (invFiduciaryMode(job) || invWrittenReleasePicked(jid, job).length
+      ? '<button onclick="printApprovalRequest(' + jid + ',true)" style="' + btnStyle + '">Approval request</button>'
+        + '<button onclick="sendApprovalRequest(' + jid + ',true)" style="' + btnStyle + '" title="Email the Release Approval Request for the selected lines as a PDF, through a Gmail draft">Send request</button>'
+        + '<button onclick="invRecordApproval(' + jid + ')" style="' + btnStyle + '" title="Record a signed approval against every selected item">Record approval</button>'
+      : '')
     // Remove lines (2026-10-19): the selection off the inventory at once, photographs kept, Removed items giving them back.
     + '<button onclick="invBulkRemove(' + jid + ')" style="' + btnStyle + 'color:var(--err-tx);" title="Take every selected line off the inventory. No photograph is deleted, and Removed items, under Removed items &amp; snapshots on Job Admin &amp; Inv, gives them back.">Remove lines</button>'
     + '</span>'
@@ -39929,6 +40535,7 @@ function renderInventoryTab() {
   var jobId = sel ? parseInt(sel.value) || 0 : 0;
   var cont = document.getElementById('inventory-content');
   if (!cont) return;
+  _invRenderOwed = false;   // the list is drawn as it stands (invMarkListRead)
   if (!jobId) { cont.innerHTML = '<div class="tab-empty">Select a client to view their inventory.</div>'; return; }
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) { cont.innerHTML = '<div class="tab-empty">Job not found.</div>'; return; }
@@ -40374,6 +40981,13 @@ function photoSubfolder(label) {
 // Small in-memory thumbnails keyed by stableId, so a shot draws in the room workspace the
 // instant it is taken — before Drive has issued the file id the persistent cache is keyed by.
 var _localShotThumbs = {};
+// ⚠⚠ A CLOSE-UP IS KEPT SHARP ENOUGH TO READ (2026-10-26; Anthony, told a sharper close-up holds fewer unsent photographs on an iPad
+// with no signal: *"Usually yes: make them sharper"*): every shot was cut to 900 px wide at JPEG 0.72, close-ups of hallmarks,
+// backstamps and model plates included, and the mark came back "illegible", the line then named and priced as the generic thing.
+// compressImage caps the WIDTH, so a portrait close-up reaches a long edge of 1,600 px and a landscape one 1,200. Every other shot
+// stays 900 (the room check was timed on those).
+var DETAIL_PHOTO_MAX_W = 1200;
+var DETAIL_PHOTO_QUALITY = 0.85;
 
 function _captureShot(jobId, roomIdx, label, rawDataUrl, opts) {
   opts = opts || {};
@@ -40389,7 +41003,7 @@ function _captureShot(jobId, roomIdx, label, rawDataUrl, opts) {
   var roomName = room ? room.name : ('Room' + roomIdx);
   var cleanRoom = _cleanName(roomName);
   var ts = Date.now();
-  compressImage(rawDataUrl, 900, 0.72, function(dataUrl) {
+  compressImage(rawDataUrl, label === 'detail' ? DETAIL_PHOTO_MAX_W : 900, label === 'detail' ? DETAIL_PHOTO_QUALITY : 0.72, function(dataUrl) {
     // Sequence and id are taken HERE, after the async compress, not at capture time. Read
     // before it, two shots fired into one slot back to back both computed seq 1 and the SAME
     // stableId, so the second ref overwrote the first: both files reached Drive, one of them
@@ -40510,7 +41124,10 @@ function invAddCloseUp(jobId, stableId, input) {
       // later, under whatever is being typed by then, and repaint the record's close-ups alone, by id.
       onRef: function() { renderInventoryTab(); },
       onThumb: function() { _invCloseUpsRepaint(jobId, stableId); },
-      onDone: function() { _invCloseUpsRepaint(jobId, stableId); }
+      onDone: function(d) {
+        _invCloseUpsRepaint(jobId, stableId);
+        if (d && d.status === 'uploaded' && _invFileId(d)) agentValueAfterCloseUp(jobId, stableId);
+      }
     });
   };
   reader.readAsDataURL(file);
@@ -40519,10 +41136,18 @@ function invAddCloseUp(jobId, stableId, input) {
 }
 // The close-ups that go to Agent Two with a line: the ones added to it from its record first, then its photograph's (the
 // Close-up shutter files under the photograph, so a line split off one reads those too). Capped as Agent One's are.
+// ⚠ THE NEWEST FIRST, FOR AGENT TWO (2026-10-26): a close-up added at the desk to a line that already had four from the field was
+// never sent, which defeated the case + Close-up was built for. A split line's own close-ups still come before its photograph's.
+// Agent One keeps reading the first four taken (_agDetailRefs), as the field guide promises.
 function invLineCloseUps(jobId, ref) {
   if (!ref) return [];
-  var own = ref.derivedFrom ? _agDetailRefs(jobId, ref.stableId) : [];
-  return own.concat(_agDetailRefs(jobId, ref.derivedFrom || ref.stableId)).slice(0, AGENT_MAX_DETAILS);
+  var all = function(srcId) {
+    return (_photoRefs[jobId] || []).filter(function(r) {
+      return r.label === 'detail' && !r.deletedAt && r.groupId === srcId && _invFileId(r);
+    }).sort(function(a, b) { return (b.ts || 0) - (a.ts || 0); });
+  };
+  var own = ref.derivedFrom ? all(ref.stableId) : [];
+  return own.concat(all(ref.derivedFrom || ref.stableId)).slice(0, AGENT_MAX_DETAILS);
 }
 // The close-ups in a line's record, under From the field, each with its state. Its own host, so the upload's answers
 // repaint it alone (_invCloseUpsRepaint); a tile still on its way, or not saved, says so, with Retry.
@@ -40539,7 +41164,7 @@ function _invCloseUpTileHtml(jobId, d) {
         + '<button class="btn-s" onclick="invRetryCloseUp(' + jobId + ',\'' + d.stableId + '\')" style="font-size:9px;padding:1px 5px;">Retry</button></div>'
     : d.status === 'uploading' ? '<div class="inv-cu-state" style="font-size:10px;color:var(--gray);margin-top:3px;">Uploading&hellip;</div>'
     : '';
-  return '<div data-cu-id="' + esc(d.stableId) + '">' + _invThumbHTML(jobId, d, 120) + state + '</div>';
+  return '<div data-cu-id="' + esc(d.stableId) + '">' + (state ? _invThumbHTML(jobId, d, 120) : _invPhotoOpenHtml(jobId, d, 120)) + state + '</div>';
 }
 function _invCloseUpsRepaint(jobId, stableId) {
   var el = document.getElementById('inv-cu-' + stableId), ref = _getPhotoRef(jobId, stableId);
@@ -40549,7 +41174,9 @@ function _invCloseUpsRepaint(jobId, stableId) {
   if (!host) return true;
   // The photograph just taken draws at once, off this device's copy, until Drive's thumbnail is in the cache.
   Array.prototype.forEach.call(host.querySelectorAll('[data-cu-id]'), function(t) {
-    var small = _localShotThumbs[t.getAttribute('data-cu-id')], tile = t.firstChild;
+    // The tile is the thumbnail, inside its Drive link once the file is there (_invPhotoOpenHtml). Belt and braces: Drive's own
+    // thumbnail paints the same element when it lands (_invPaintThumbs), so a revert stays green; this shows the shot meanwhile.
+    var small = _localShotThumbs[t.getAttribute('data-cu-id')], tile = t.querySelector('[data-thumb-id]') || t.querySelector('.inv-photo-cell > div') || t.firstChild;
     if (!small || !tile || !tile.style) return;
     tile.style.backgroundImage = 'url("' + small + '")';
     tile.style.backgroundSize = 'cover';
@@ -40562,7 +41189,11 @@ function _invCloseUpsRepaint(jobId, stableId) {
 function invRetryCloseUp(jobId, detailId) {
   var d = _getPhotoRef(jobId, detailId);
   if (!d || d.label !== 'detail') return false;
-  retryPhotoUpload(jobId, detailId, function() { _invCloseUpsRepaint(jobId, d.groupId); });
+  retryPhotoUpload(jobId, detailId, function() {
+    _invCloseUpsRepaint(jobId, d.groupId);
+    var now = _getPhotoRef(jobId, detailId);
+    if (now && now.status === 'uploaded' && _invFileId(now)) agentValueAfterCloseUp(jobId, d.groupId);
+  });
   _invCloseUpsRepaint(jobId, d.groupId);
   return true;
 }
@@ -47706,7 +48337,7 @@ function printIncidentRecord(jobId, opt) {
     return false;
   }
   if (opt.asHtml) return { html: html, title: _invDocName(job, title) };
-  return _printDocument(html, _invDocName(job, title));
+  return _printDocument(html, _invDocName(job, title), { view: true, job: job, label: title });   // on screen first (2026-10-26)
 }
 function fileIncidentRecord(jobId, opt) { return _fileCloseoutPaper(jobId, opt, CLOSEOUT_PAPERS.incidents); }
 
@@ -47910,8 +48541,7 @@ function deskFoldState(jobId, job, fold, all, today) {
     return st;
   };
   // A line is counted once in each paper's run, under the first bit that names it: the approval it waits on (ratification,
-  // a request owed, a request out), then the paper its leaving owes (a receipt, a sign-out). A line can owe one of each:
-  // on living work a line may be signed out before the client's approval comes back.
+  // a request owed, a request out), then the paper its leaving owes (a receipt, a sign-out). A line can owe one of each.
   var runs = {};
   var once = function (run, list) {
     var seen = runs[run] || (runs[run] = {});
@@ -47926,11 +48556,12 @@ function deskFoldState(jobId, job, fold, all, today) {
     var outs = signoutGroups(job, all);
     // Drawn where either card draws: on an estate always (the bequests card); on living work where the request, a signing
     // act or a sign-out row has something to say (_renderInvReleasesCard's sections; group D holds the two answers equal).
-    st.show = fid || !!S.st || !!(S.open.length + S.fresh.length) || !!batches.length || !!outs.length;
+    st.show = fid || !!S.st || !!(S.open.length + S.fresh.length + S.unnamed.length) || !!batches.length || !!outs.length;
     if (unread && !cached) return loading();
     st.openByDefault = S.fresh.length > 0 || draft || unfiled > 0;
-    var rat = once('approval', fid ? all.filter(function (r) { return invRatificationOwed(r, job); }) : []);
+    var rat = once('approval', all.filter(function (r) { return invRatificationOwed(r, job); }));   // on living work too (2026-10-26)
     var fresh = once('approval', S.fresh);
+    var unnamedN = once('approval', S.unnamed);   // never asked for until somebody is named (2026-10-26)
     var unsigned = (S.st && S.st.sentAt && !draft) ? once('approval', S.open) : 0;
     var owed = once('leaving', fid ? all.filter(function (r) { return invReceiptOwed(r, job); }) : []);
     var day = '', readyN = 0, notToday = false;
@@ -47945,8 +48576,11 @@ function deskFoldState(jobId, job, fold, all, today) {
     // While a draft waits, the card offers no send (approvalRequestCardHtml): the draft first, and a line it never carried
     // is owed the fresh request that follows it, so the line says so in the card's order, never "send a request".
     if (draft) bit('Request drafted: tap I’ve sent it', 'amber');
+    var changedN = draft ? approvalRequestChanged(job, S.st).length : 0;   // flagged on the card, never a refusal (2026-10-26)
+    if (changedN) bit(s(changedN, 'item', 'items') + ' on the draft changed since it was made', 'amber');
     if (fresh) bit(draft ? s(fresh, 'more item needs', 'more items need') + ' written approval: send a fresh request once the draft has gone'
       : s(fresh, 'item needs', 'items need') + ' written approval: send a request', 'amber');
+    if (unnamedN) bit(s(unnamedN, 'item waits', 'items wait') + ' for somebody to be named to take ' + (unnamedN === 1 ? 'it' : 'them'), 'amber');
     if (unfiled) bit(s(unfiled, 'signed approval', 'signed approvals') + ' not filed to Drive', 'amber');
     if (rat) bit(rat + ' for ratification', 'amber');
     if (owed) bit(s(owed, 'signed receipt', 'signed receipts') + ' owed', 'amber');
@@ -48855,17 +49489,20 @@ function collectionPartnerLines(jobId, job, c) {
   var live = _collLinesOf(jobId, c.id).filter(function (r) { return !r.deletedAt; });
   var shot = live.length > 0 && live.some(_invHasPhoto);
   var leaving = live.filter(function (r) { return INV_RELEASE_DISPOSITIONS.indexOf(r.disposition) >= 0; });
-  var approved = leaving.filter(function (r) { return invApprovalComplete(r, job); }).length;
+  // What needs it in writing (2026-10-26): every leaving line on an estate; on a client's own home, a firearm or a line to
+  // someone who works with Havellin. A living collection with none of those draws no written-release line at all.
+  var written = leaving.filter(function (r) { return invWrittenReleaseNeeded(r, job); });
+  var approved = written.filter(function (r) { return invApprovalComplete(r, job); }).length;
   var gone = leaving.filter(function (r) { return invRecordedGone(r, job); }).length;
   var n = function (k, t) { return k + ' of ' + t; };
   return [
     { key: 'coll_photo', ok: shot, label: 'Photographed on the inventory',
       detail: shot ? '' : 'not yet — tap it on the room’s brief, then photograph it with Items' },
-    { key: 'coll_approved', ok: leaving.length > 0 && approved === leaving.length, label: 'Release approved in writing',
-      detail: !leaving.length ? 'no line of it is set to leave yet' : n(approved, leaving.length) + ' — the release approval request, on Job Admin &amp; Inv' },
+    (invFiduciaryMode(job) || written.length) ? { key: 'coll_approved', ok: written.length > 0 && approved === written.length, label: 'Release approved in writing',
+      detail: !written.length ? 'no line of it is set to leave yet' : n(approved, written.length) + ' — the release approval request, on Job Admin &amp; Inv' } : null,
     { key: 'coll_released', ok: leaving.length > 0 && gone === leaving.length, label: 'Released, with its receipt on record',
       detail: !leaving.length ? 'nothing has left' : n(gone, leaving.length) + ' — a filed pickup list or receipt records it' }
-  ];
+  ].filter(Boolean);
 }
 function refreshVendorSourcing(jobId) {
   var job = jobs.find(function(j){ return j.id===jobId; });
@@ -52157,7 +52794,10 @@ function compressImage(dataUrl, maxW, quality, cb) {
     if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
     var c = document.createElement('canvas');
     c.width = w; c.height = h;
-    c.getContext('2d').drawImage(img, 0, 0, w, h);
+    var g = c.getContext('2d');
+    // The browser's default smoothing is 'low', which aliases fine engraving in a single-step downscale (2026-10-26).
+    try { g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; } catch (e) {}
+    g.drawImage(img, 0, 0, w, h);
     cb(c.toDataURL('image/jpeg', quality));
   };
   img.onerror = function() { cb(dataUrl); };

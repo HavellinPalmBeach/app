@@ -189,7 +189,7 @@ const textOf = (h) => String(h == null ? '' : h).replace(/<[^>]+>/g, ' ').replac
 // ⚠ SINCE THE BARS' LINES (2026-10-22): a line on the estate waits on written approval, so Releases opens by its own rule
 // (Anthony's Q89), and the job has a snapshot, so the history bar is drawn (shut: it never opens by itself).
 const ESTATE = () => ({ id: 7, name: 'Ashworth', svc: 'probate', won: true, invSnapshots: [{ ts: 1, label: 'Filed', count: 2 }] });
-const REFS = () => [{ stableId: 'a', label: 'inventory', objectName: 'Clock' }, { stableId: 'b', label: 'inventory', objectName: 'Desk', disposition: 'Donate' }];
+const REFS = () => [{ stableId: 'a', label: 'inventory', objectName: 'Clock' }, { stableId: 'b', label: 'inventory', objectName: 'Desk', disposition: 'Donate', channel: 'Goodwill' }];   // named: a line with nobody to take it is never asked for (2026-10-26)
 function desk(jobO, cards, opt) {
   opt = opt || {};
   const dom = liveDom(7);
@@ -616,7 +616,7 @@ function groupC({ group, ok, eq, has, lacks }) {
     eq(B.line('releases'), '2 items need written approval: send a request · no beneficiaries recorded', 'and says so, the Keep line not counted');
     eq(B.tones('releases')[0], 'amber', 'in amber');
     lacks(B.line('releases'), 'sign out', 'nothing is ready to sign out until the approval is on record');
-    const one = bars(PROBATE(), [LINE('a', { disposition: 'Junk' })]);
+    const one = bars(PROBATE(), [LINE('a', { disposition: 'Junk', channel: 'Haul-It' })]);
     eq(one.line('releases').split(' · ')[0], '1 item needs written approval: send a request', 'one line, in the singular');
   }
 
@@ -633,7 +633,7 @@ function groupC({ group, ok, eq, has, lacks }) {
     eq([B.releases.openByDefault, B.line('releases'), B.tones('releases')[0]], [false, '2 on the request still unsigned · no beneficiaries recorded', 'grey'],
       'sent: shut, grey, what is out for signature counted');
     // A line decided after the request went: owed a fresh one, so the bar opens again.
-    B = bars(sent, rows().concat([LINE('c', { disposition: 'Junk' })]));
+    B = bars(sent, rows().concat([LINE('c', { disposition: 'Junk', channel: 'Haul-It' })]));
     eq([B.releases.openByDefault, B.line('releases')], [true, '1 item needs written approval: send a request · 2 on the request still unsigned · no beneficiaries recorded'],
       '⚠ a line the request never carried opens it again');
   }
@@ -793,10 +793,16 @@ function groupC({ group, ok, eq, has, lacks }) {
   {
     let B = bars(LIVING(), [LINE('a'), LINE('b', { disposition: 'Keep' })]);
     eq(B.releases.show, false, 'a living job with nothing leaving: no Releases bar');
+    // ⚠ restated 2026-10-26 (Anthony, on a living client: "they are going to approve things verbally to send"; he took "Drop
+    // it, firearms aside"): an everyday line leaving is approved by the client's word, so the bar is drawn for its sign-out
+    // and nothing is owed; a firearm (or a line going to someone who works with Havellin) still waits on their signature.
     B = bars(LIVING(), [LINE('a', { disposition: 'Donate', channel: 'Goodwill' })]);
-    eq([B.releases.show, B.releases.openByDefault], [true, true], 'a line leaving: drawn, and the client\'s approval is owed (Q89)');
-    eq(B.line('releases'), '1 item needs written approval: send a request · 1 ready to sign out', '⚠ and on living work a line may be signed out meanwhile, so both are said');
+    eq([B.releases.show, B.releases.openByDefault], [true, false], '⚠⚠ a donation leaving: drawn for its sign-out, and no written approval owed');
+    eq(B.line('releases'), '1 ready to sign out', 'so the line says only that');
     lacks(B.line('releases'), 'beneficiar', 'no estate words on living work');
+    B = bars(LIVING(), [LINE('f', { objectName: 'Browning rifle', category: 'Firearms', disposition: 'Distribute', channel: 'Tom Ellis' })]);
+    eq([B.releases.show, B.releases.openByDefault], [true, true], '⚠⚠ a firearm leaving: drawn, and the client\'s written approval is owed (Q89)');
+    eq(B.line('releases'), '1 item needs written approval: send a request', 'said');
   }
 }
 
@@ -966,10 +972,12 @@ function groupE({ group, ok, eq, has, lacks }) {
     const D = desk(LIVING(), {}, { refs: rows, roots: ['_invEdit'], stubs: { savePhotoRefs() {}, _scheduleInventorySync() {}, showSyncBadge() {}, alert() {},
       _invRefreshSummary() {} } });
     D.render();
-    eq(line(heads(D.dom.html), 'releases'), '1 item needs written approval: send a request', 'fixture: the donation is owed a request');
+    // ⚠ restated 2026-10-26 (Anthony: "Hold them off"): with nobody named the line is not asked for, and the bar says what it waits on.
+    // ⚠ restated 2026-10-26 again: on a client's own home a donation needs no written approval, so with nobody named it waits on nothing.
+    eq(line(heads(D.dom.html), 'releases'), '✓ nothing waiting', 'fixture: the donation waits on nothing yet');
     const s = settle(D, () => D.C._invEdit(7, 'a', 'channel', { value: 'Goodwill', type: 'text' }));
     ok(s.r.ok, 'the edit runs (' + (s.r.err || 'ok') + ')');
-    eq(line(s.partial, 'releases'), '1 item needs written approval: send a request · 1 ready to sign out', '⚠ the charity named: ready to sign out, said at once');
+    eq(line(s.partial, 'releases'), '1 ready to sign out', '⚠ the charity named: ready to sign out, said at once');
     eq(s.partial, s.full, '⚠⚠ every bar reads what a full render draws');
     eq(D.log.renders, 0, 'the edit drew no full render: it repainted by id');
   }
@@ -1521,7 +1529,7 @@ function groupH({ group, ok, eq, has, lacks }) {
     // through the real tap: the draft sent, I've sent it, then the fresh request the next state's card offers.
     const rows = (more) => [LINE('a', { itemNo: 1, objectName: 'Harbor painting', disposition: 'Auction', channel: 'Kodner Galleries' }),
       LINE('b', { itemNo: 2, objectName: 'Table lamp', disposition: 'Donate', channel: 'Goodwill' }),
-      LINE('c', { itemNo: 3, objectName: 'Clock', disposition: 'Keep' })].concat(more ? [LINE('d', { itemNo: 4, objectName: 'Rug', disposition: 'Junk' })] : []);
+      LINE('c', { itemNo: 3, objectName: 'Clock', disposition: 'Keep' })].concat(more ? [LINE('d', { itemNo: 4, objectName: 'Rug', disposition: 'Junk', channel: 'Haul-It' })] : []);
     const real = ['_renderInvWorkbar', '_renderInvReleasesCard', '_renderInvBulk'];
     const drafted = () => ({ approvalRequest: { draftedAt: '2026-10-19T15:00:00.000Z', provider: 'gmail', draftUrl: 'https://mail.google.com/mail/u/0/#drafts/x',
       req: { to: ['ruth@adler.example'], cc: [], noEmail: [], viaCounsel: false, stableIds: ['a'], asked: 1, ratify: 0 } } });
@@ -1779,7 +1787,7 @@ function groupI({ group, ok, eq, has, lacks }) {
       LINE('f1', { itemNo: 5, namedBy: 'agent', reviewed: true, agentNotices: [N('firearm', 'a long gun in the closet'), N('nfa', 'a tube that may be a suppressor')] })];
     const notesOf = (C, job) => readOf(C._agNoticesHtml(7, C._photoRefs[7]));
     // `_mustFindKey` lifted by name: the fixtures key their found records with it, whatever the code under test reaches.
-    const C = lift(['_agNoticesHtml', '_agRecordNoticesHtml', 'agentNotices', '_mustFindKey'], { jobs: [], _photoRefs: { 7: rows() }, estimateStore: { 7: { estimate: { rooms: [] } } } });
+    const C = lift(['_agNoticesHtml', '_agRecordNoticesHtml', 'agentNotices', '_mustFindKey', 'agentNoticesOn'], { jobs: [], _photoRefs: { 7: rows() }, estimateStore: { 7: { estimate: { rooms: [] } } } });
     const missing = PROBATE({ mustFind: 'Grandmother’s ring' });
     C.jobs.push(missing);
     const t0 = notesOf(C, missing);
@@ -1809,7 +1817,7 @@ function groupI({ group, ok, eq, has, lacks }) {
     C._photoRefs[7] = rows();
     C.jobs[0] = PROBATE({ mustFind: 'Grandmother’s ring', mustFound: { [C._mustFindKey('Grandmother’s ring')]: { at: '2026-10-21', by: 'Ashley Jerome' } } });
     const rec = (id) => readOf(C._agRecordNoticesHtml(C.jobs[0], C._photoRefs[7].filter((r) => r.stableId === id)[0]));
-    eq(rec('o2'), 'Agent One noted Look at this — the drawer pulls do not match · off the list above the rows: the line is reviewed', '⚠⚠ the reviewed line\'s record keeps its note, and says why it is off the list');
+    eq(rec('o2'), 'Agent One noted Look at this — the drawer pulls do not match · off the list above the rows: every line off its photograph is reviewed', '⚠⚠ the reviewed line\'s record keeps its note, and says why it is off the list');
     eq(rec('m1'), 'Agent One noted Must find — a ring box on the dresser · off the list above the rows: every must-find is recorded found', 'the Must find\'s too');
     eq(rec('o1'), 'Agent One noted Look at this — a crack along the top rail', 'a note still listed above reads plainly in the record');
     eq(rec('f1'), 'Agent One noted Possible NFA item — a tube that may be a suppressor Firearm — a long gun in the closet', 'every notice on the line, in the order that matters');
@@ -1836,7 +1844,7 @@ function groupI({ group, ok, eq, has, lacks }) {
     eq(D.log.renders, n0, 'repainted by id: no full render under the person typing');
     const full = D.render();
     eq(partial, inner(full, 'inv-agent-notices'), '⚠ equal to what a full render writes');
-    has(readOf(inner(full, 'inv-row-o1')), 'the drawer pulls do not match · off the list above the rows: the line is reviewed', '⚠⚠ and present in its record, saying why');
+    has(readOf(inner(full, 'inv-row-o1')), 'the drawer pulls do not match · off the list above the rows: every line off its photograph is reviewed', '⚠⚠ and present in its record, saying why');
     // The last Found it quiets the Must find on the desk, by id; Undo brings it back.
     D.dom.html = D.dom.html + '<div id="sf-host-desk" data-job="7"></div>';
     has(readOf(inner(D.dom.html, 'inv-agent-notices')), 'a ring box on the dresser', 'fixture: the Must find is above the rows while the ring is missing');
@@ -1880,7 +1888,8 @@ function groupI({ group, ok, eq, has, lacks }) {
     eq(noComments(fn('_invMatchesFilter')).replace(/\s+/g, ' ').trim(), 'function _invMatchesFilter(r, job) { return _invFilterHides(r, job).length === 0; }',
       '⚠ a line shows when no part hides it: no second copy of any part');
     // RESTATED IN THE REVIEWS' THIRD ROUND (2026-10-26): the rule is _invLineHolds now (invLineHold is its first reason and
-    // asks nothing of its own), so the line's own note is asked there; a removed photograph line's note is agentNoticeLoud's.
+    // asks nothing of its own), so the line's own note is asked there; a removed photograph line's notes (since the merge of main's
+    // 2026-10-26, agentNoticesOn; round three's agentNoticeLoud is gone) are asked by _invPhotoNoteOpen, which reads that line.
     eq(callersOf('agentNoticeQuiet'), ['_agRecordNoticesHtml', '_invLineHolds', '_invPhotoNoteOpen', 'agentNotices'], 'whether a notice is quiet: the list above the rows, the record, and a line held for its own note or its photograph\'s open note (Q106; its own since the reviewers\' round, 2026-10-26)');
     eq(callersOf('mustFindAllFound'), ['agentNoticeQuiet', 'standingFlagsBlock'], 'every must-find found: the desk\'s brief and the Must find notices');
     has(noComments(fn('_invEarlierUndecided')), "INV_WORK_FLAGS.filter(function(x){ return x.key === 'undecided'; })[0]", 'the hint reads the Not yet decided chip\'s own test');

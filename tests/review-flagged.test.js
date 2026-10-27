@@ -35,7 +35,7 @@
 //       what stands; what a tick cannot answer; the ammunition words in both of the reviews' lists, in full.
 //   B · its readers: invLineReviewed, the Not reviewed chip, the group counts, the row's box in each state (stuck included),
 //       the unsure hint, _invEdit repainting by id (the other half of a pair too), the paint's duplicate index and lines by
-//       id, Agent One's own reading (agentName) holding a pair, the loud notices outliving their line, the waiver, and the
+//       id, Agent One's own reading (agentName) holding a pair, a removed photograph line's notes riding on its heir (main's\n//       agentNoticesOn, on the merge), the waiver, and the
 //       list read end to end: its fingerprint, its refusal, its press, its words, its work-bar line and sentence, the
 //       package's gap.
 //   C · the papers: the stamps' words exactly in every read state, Q109's pill in both colours, and the six printers
@@ -430,33 +430,50 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(SRC.slice(SRC.indexOf('var INV_ACCEPT_AMMO_RE') - 600, SRC.indexOf('var INV_ACCEPT_AMMO_RE')), 'review-flagged.test.js', 'the regex\'s comment names this file as where its lists live');
   }
 
-  group('⚠⚠ A6 · a note still open on the line\'s photograph holds the lines split off it, until it is quiet; a removed photograph line\'s firearm note still holds them');
+  group('⚠⚠ A6 · a note still open on the line\'s photograph holds the lines split off it, until it is quiet; a removed photograph line\'s notes still hold them');
   {
+    // ⚠ RESTATED ON THE MERGE OF MAIN (2026-10-26): main's agentNoticeQuiet quiets a Look at this only once EVERY line off its
+    // photograph is reviewed (a photograph's notes sit on its own line whichever object they are about), and main's agentNoticesOn
+    // carries ALL of a removed photograph line's notes to the first live line split off it, so round three's agentNoticeLoud
+    // ("only a Firearm or an NFA outlives its line") is gone. The rule (_invPhotoNoteOpen) reads the photograph's line, removed
+    // or not, so a note not yet quiet holds every line off the photograph, and the list above the rows (B12) shows it.
     eq(hold(ESTATE(), [PHOTO(), SPLIT()], 's1'), 'photonote', '⚠⚠ the ladle split off the photograph: held while the photograph\'s note is open');
     eq(hold(ESTATE(), [PHOTO(), SPLIT()], 'p1'), 'note', '…the photograph\'s own line: held by its own note');
-    eq(stands(ESTATE(), [PHOTO({ reviewed: true, valReviewed: true }), SPLIT()], 's1'), true, '⚠ the photograph\'s line ticked: the note goes quiet, the ladle stands');
-    // ⚠ The line's own note goes quiet with the tick too (agentNoticeQuiet), as the photograph's does for the ladle.
+    eq(hold(ESTATE(), [PHOTO({ reviewed: true, valReviewed: true }), SPLIT()], 's1'), 'photonote',
+      '⚠ the photograph\'s line ticked, the ladle not: the Look at this is still open (every line off the photograph, main\'s rule), the ladle held');
+    eq(stands(ESTATE(), [PHOTO({ reviewed: true, valReviewed: true }), SPLIT({ reviewed: true, valReviewed: true })], 's1'), true,
+      '⚠ …both ticked: the note goes quiet, and nothing else holds the ladle');
+    // ⚠ The line's own note goes quiet with the ticks too (agentNoticeQuiet), as the photograph's does for the ladle.
     const R = rig(ESTATE(), [PHOTO({ reviewed: true, reviewedBy: 'Ashley Jerome', valReviewed: true }), SPLIT()]);
     const fc = val(attempt(() => R.ctx.invAcceptCtx(R.job)));
-    eq(val(attempt(() => R.ctx.invLineHold(R.ref('p1'), fc))), '', '⚠⚠ …and the photograph\'s own line, ticked: its own note quiet, nothing holds it');
-    eq(val(attempt(() => R.ctx.invLineAcceptedOnly(R.ref('p1'), fc))), false, '…counted as checked by the person who ticked it, never as accepted');
-    eq(hold(ESTATE(), [PHOTO({ reviewed: true, valReviewed: true, agentNotices: [{ kind: 'firearm', text: 'a rifle behind the door' }] }), SPLIT()], 's1'), 'photonote',
-      'a firearm note never goes quiet, so the split line stays held');
+    eq(val(attempt(() => R.ctx.invLineHold(R.ref('p1'), fc))), 'note', '⚠ the photograph\'s own line ticked, the ladle not: its own note still open, held');
+    eq(val(attempt(() => R.ctx.invLineReviewed(R.ref('p1'), fc))), true, '…its tick still counts it as checked');
+    const R1 = rig(ESTATE(), [PHOTO({ reviewed: true, reviewedBy: 'Ashley Jerome', valReviewed: true }), SPLIT({ reviewed: true, reviewedBy: 'Ashley Jerome', valReviewed: true })]);
+    const fc1 = val(attempt(() => R1.ctx.invAcceptCtx(R1.job)));
+    eq(val(attempt(() => R1.ctx.invLineHold(R1.ref('p1'), fc1))), '', '⚠⚠ …every line off the photograph ticked: its own note quiet, nothing holds it');
+    eq(val(attempt(() => R1.ctx.invLineAcceptedOnly(R1.ref('p1'), fc1))), false, '…counted as checked by the person who ticked it, never as accepted');
+    eq(hold(ESTATE(), [PHOTO({ reviewed: true, valReviewed: true, agentNotices: [{ kind: 'firearm', text: 'a rifle behind the door' }] }), SPLIT({ reviewed: true, valReviewed: true })], 's1'), 'photonote',
+      'a firearm note never goes quiet, so the split line stays held, every line ticked');
     const MF = [PHOTO({ agentNotices: [{ kind: 'mustfind', text: 'could be the ring' }] }), SPLIT()];
     eq(hold(ESTATE({ mustFind: 'Grandmother\'s ring', mustFound: {} }), MF, 's1'), 'photonote', 'a must-find note holds it while a must-find is open');
     eq(stands(ESTATE({ mustFind: 'Grandmother\'s ring', mustFound: { "grandmother's ring": { at: '2026-10-20', by: 'Ashley Jerome' } } }), MF, 's1'), true,
       '…and goes quiet once every must-find is found (agentNoticeQuiet)');
     eq(stands(ESTATE(), [SPLIT()], 's1'), true, 'a split line whose photograph is not on this device: nothing open');
-    // ⚠⚠ Removed: a Look at this and a Must find go with their line (the reviews: a removed dresser's note held its socks
-    // and belts for good, and showed nowhere); a Firearm or a Possible NFA never does (the second review: removing the closet
-    // shelf it was raised on let the rifle case off the same photograph stand).
-    eq(stands(ESTATE(), [PHOTO({ deletedAt: 9 }), SPLIT()], 's1'), true, '⚠⚠ the photograph\'s line removed: its Look at this no longer holds the ladle');
-    eq(stands(ESTATE({ mustFind: 'Grandmother\'s ring', mustFound: {} }), [PHOTO({ deletedAt: 9, agentNotices: [{ kind: 'mustfind', text: 'could be the ring' }] }), SPLIT()], 's1'), true,
-      '…nor its Must find, a must-find still open');
-    eq(hold(ESTATE(), [PHOTO({ deletedAt: 9, agentNotices: [{ kind: 'firearm', text: 'a rifle case on the shelf' }] }), SPLIT()], 's1'), 'photonote',
-      '⚠⚠ …but its Firearm note still holds the line split off the photograph');
+    // ⚠⚠ Removed: the photograph's line takes none of its notes with it (main, 2026-10-26: they ride on the first live line split off
+    // the photograph, agentNoticesOn, and the list above the rows shows them, B12). Each holds the lines off the photograph until it
+    // is quiet: a Look at this once every line still listed off it is reviewed, a Must find once every must-find is found, a
+    // Firearm or a Possible NFA never.
+    eq(hold(ESTATE(), [PHOTO({ deletedAt: 9 }), SPLIT()], 's1'), 'photonote', '⚠⚠ the photograph\'s line removed: its Look at this still holds the ladle');
+    eq(stands(ESTATE(), [PHOTO({ deletedAt: 9 }), SPLIT({ reviewed: true, valReviewed: true })], 's1'), true,
+      '⚠ …until every line still listed off the photograph is ticked (the removed line is not asked)');
+    eq(hold(ESTATE({ mustFind: 'Grandmother\'s ring', mustFound: {} }), [PHOTO({ deletedAt: 9, agentNotices: [{ kind: 'mustfind', text: 'could be the ring' }] }), SPLIT()], 's1'), 'photonote',
+      '…and its Must find, a must-find still open');
+    eq(stands(ESTATE({ mustFind: 'Grandmother\'s ring', mustFound: { "grandmother's ring": { at: '2026-10-20', by: 'Ashley Jerome' } } }),
+      [PHOTO({ deletedAt: 9, agentNotices: [{ kind: 'mustfind', text: 'could be the ring' }] }), SPLIT()], 's1'), true, '…until every must-find is found');
+    eq(hold(ESTATE(), [PHOTO({ deletedAt: 9, agentNotices: [{ kind: 'firearm', text: 'a rifle case on the shelf' }] }), SPLIT({ reviewed: true, valReviewed: true })], 's1'), 'photonote',
+      '⚠⚠ …and its Firearm note holds the line split off the photograph, ticked or not');
     eq(hold(ESTATE(), [PHOTO({ deletedAt: 9, agentNotices: [{ kind: 'nfa', text: 'a short barrel' }] }), SPLIT()], 's1'), 'photonote', '⚠ …and its Possible NFA note');
-    eq(hold(ESTATE(), [PHOTO({ deletedAt: 9, agentNotices: [{ kind: 'other', text: 'a mark' }, { kind: 'firearm', text: 'a rifle' }] }), SPLIT()], 's1'), 'photonote',
+    eq(hold(ESTATE(), [PHOTO({ deletedAt: 9, agentNotices: [{ kind: 'other', text: 'a mark' }, { kind: 'firearm', text: 'a rifle' }] }), SPLIT({ reviewed: true, valReviewed: true })], 's1'), 'photonote',
       '…a loud note among quiet ones is enough');
   }
 
@@ -865,7 +882,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const body = live(fn('_renderInvRow'));
     has(body, 'var jid = job.id, _ac = _invAcceptCtxOf(job);', 'the row works out the facts once');
     eq(count(body, '_ac)'), 1, 'and hands them to the box alone (_invRevBoxHtml)');
-    eq(count(body, 'invLineUnsure(ref)'), 1, '⚠ the hint asks the line alone (Q108: a person\'s look, not the rule)');
+    // Restated on the merge of main (2026-10-26): main's invLineUnsure takes the job, for its tier alone (agentValueInternal: no
+    // guess on a range no paper prints), and still asks invLineReviewed with no facts; the desk's context goes to the box alone.
+    eq(count(body, 'invLineUnsure(ref, job)'), 1, '⚠ the hint asks the line and its job\'s tier, never the desk\'s context (Q108: a person\'s look, not the rule)');
+    eq(count(body, 'invLineUnsure('), 1, '…once');
   }
 
   group('⚠⚠ B5 · _invEdit: a flag ticked repaints the box, the group head and the work bar by id');
@@ -960,15 +980,18 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const f0 = fp(R);
     ok(/^3:[0-9a-f]{1,8}$/.test(String(f0)), '⚠⚠ "<count>:<hex>": three lines (the removed one counted), never a shot or a collection document (' + f0 + ')');
     eq(val(attempt(() => JSON.parse(JSON.stringify(R.ctx.INV_READ_FIELDS)))),
-      ['objectName', 'category', 'qty', 'fmv', 'valLow', 'valHigh', 'valSource', 'disposition', 'channel', 'condition', 'roomIdx'],
-      '⚠ INV_READ_FIELDS: what the papers print of a line');
+      ['objectName', 'category', 'qty', 'fmv', 'valLow', 'valHigh', 'valSource', 'disposition', 'channel', 'condition', 'roomIdx',
+        'valNote', 'valDate', 'apprId', 'apprDoc', 'assetTrack', 'flagExempt', 'serial'],
+      '⚠ INV_READ_FIELDS: what the papers print of a line (the merge\'s review added the basis, the date, the appraiser, the track, the §732.402 mark and the serial)');
     eq(fp(rig(ESTATE(), [])), '0:811c9dc5', 'no lines: a count of 0 and FNV-1a\'s offset basis');
     eq(fp(rig(ESTATE(), M().reverse())), f0, '⚠⚠ the same list on two copies built in different orders: the same fingerprint');
     eq(fp(rig(ESTATE(), M().filter((r) => r.label !== 'inventory' || r.stableId !== 'cp').filter((r) => r.label === 'inventory'))), f0, 'the shots and the collection document change nothing');
     eq(fp(rig(ESTATE(), M().concat([{ stableId: 'af2', label: 'before', roomIdx: 2, ts: 80 }]))), f0, '…nor does another as-found shot');
     // ⚠⚠ Every field the papers print moves it, one at a time.
     const CHANGE = { objectName: 'Silver flatware', category: 'Furniture', qty: 3, fmv: 41, valLow: 21, valHigh: 61, valSource: 'Dealer quote',
-      disposition: 'Sell', channel: 'Ruth Adler', condition: 'Fair', roomIdx: 2 };
+      disposition: 'Sell', channel: 'Ruth Adler', condition: 'Fair', roomIdx: 2,
+      valNote: 'Two sold lots of the same pattern.', valDate: '2026-06-14', apprId: 'ap1', apprDoc: 'Palm Beach Appraisals', assetTrack: 'Exempt',
+      flagExempt: true, serial: 'K12345' };
     Object.keys(CHANGE).forEach((k) => {
       const X = rig(ESTATE(), M());
       X.ref('b')[k] = CHANGE[k];
@@ -1122,6 +1145,41 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Read: the press is offered, and records.
     sheet(R, { failed: false });
     eq(val(attempt(() => R.ctx.invListReadRefusal(7))), '', 'the sheet read: nothing refuses');
+    // ⚠⚠ The merge's review: never while an agent is at work on the list (Agent Two writes figures as each slice answers, and the
+    // desk redraws only at the run's end), and never over a redraw still owed.
+    const AGENTS = 'the agents are still at work on this list';
+    ['_agRun', '_arRun', '_avRun'].forEach((m) => {
+      vm.runInContext(m + '[7] = { running: true };', R.ctx);
+      eq(val(attempt(() => R.ctx.invListReadRefusal(7))), AGENTS, '⚠⚠ ' + m + ' running: "' + AGENTS + '"');
+      eq(text(readLine(bar(R))), 'List not read yet · ' + AGENTS + ': the press waits for it', '…the work bar says so (' + m + ')');
+      attempt(() => R.ctx.invMarkListRead(7));
+      eq(R.alerts[R.alerts.length - 1], 'Not recorded: ' + AGENTS + '. Press it once they have finished.', '⚠ refused by name (' + m + ')');
+      eq(R.job.invRead, undefined, '…nothing recorded (' + m + ')');
+      vm.runInContext(m + '[7] = { running: false };', R.ctx);
+    });
+    eq(val(attempt(() => R.ctx.invListReadRefusal(7))), '', 'the runs over: nothing refuses');
+    let renders = 0;
+    R.ctx.renderInventoryTab = () => { renders++; };
+    R.ctx._invRenderOwed = true;
+    const owed = attempt(() => R.ctx.invMarkListRead(7));
+    ok(owed.ok, 'the press over a redraw owed runs (' + (owed.err || '') + ')');
+    eq(renders, 1, '⚠⚠ a redraw owed (a run that ended while a box had focus): the press draws the list first');
+    eq(R.alerts[R.alerts.length - 1], 'Not recorded: the list changed while it was on screen. It has been redrawn: read what changed, then press again.', '⚠⚠ …and refuses by name');
+    eq(R.job.invRead, undefined, '…nothing recorded');
+    R.ctx.renderInventoryTab = () => {};
+    R.ctx._invRenderOwed = false;
+    {
+      let rendered = 0;
+      const box = { tagName: 'INPUT', addEventListener() {}, removeEventListener() {} };
+      const W = sandbox({ fns: ['_invRenderWhenIdle'], vars: ['_invRenderOwed'],
+        stubs: { renderInventoryTab: () => { rendered++; }, setTimeout: () => 0, document: { activeElement: box, getElementById: () => ({ contains: () => true }) } } });
+      attempt(() => W._invRenderWhenIdle());
+      eq([rendered, W._invRenderOwed], [0, true], '⚠⚠ a run ending while a box has focus: the redraw held, and owed (invMarkListRead reads it)');
+      box.tagName = 'DIV';
+      attempt(() => W._invRenderWhenIdle());
+      eq(rendered, 1, '…drawn once the person has left the box');
+    }
+    has(live(fn('renderInventoryTab')), '_invRenderOwed = false;', 'the desk drawn: nothing owed');
     const on = readLine(bar(R));
     eq(text(on), 'List not read yet · ✓ I’ve read the list', '⚠ the press is back');
     attempt(() => R.ctx.invMarkListRead(7));
@@ -1263,18 +1321,26 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(sent([]), '', 'no lines: none');
   }
 
-  group('⚠⚠ B12 · the loud notices outlive their line: listed above the rows against the photograph\'s first line still listed');
+  group('⚠⚠ B12 · a removed photograph line\'s notes outlive it: listed above the rows against the photograph\'s first line still listed');
   {
+    // ⚠ RESTATED ON THE MERGE OF MAIN (2026-10-26): round three's agentNoticeLoud (only a Firearm or a Possible NFA outlived its
+    // line) is gone; main's agentNoticesOn carries every note of the removed line to its heir, the first live line split off the
+    // photograph, and each is listed there until it is quiet (a Look at this once every line still listed off the photograph is
+    // reviewed; a Firearm or an NFA never).
     const R = rig(ESTATE(), [PHOTO({ deletedAt: 9, agentNotices: [{ kind: 'firearm', text: 'a rifle case on the shelf' }, { kind: 'other', text: 'a hallmark' },
       { kind: 'nfa', text: 'a short barrel' }] }), SPLIT(), SPLIT({ stableId: 's2', objectName: 'Belt, leather', valNameAt: 'Belt, leather', ts: 5 })]);
     const ns = val(attempt(() => R.ctx.agentNotices(7, R.ctx._jobInvRefs(7))));
     ok(Array.isArray(ns), 'agentNotices runs (' + (typeof ns === 'string' ? ns : 'ok') + ')');
-    const by = (k) => (Array.isArray(ns) ? ns.filter((n) => n.kind === k) : []);
+    const by = (k, list) => { const l = list === undefined ? ns : list; return Array.isArray(l) ? l.filter((n) => n.kind === k) : []; };
     eq(by('firearm').map((n) => [n.text, n.ref && n.ref.stableId]), [['a rifle case on the shelf', 's1']], '⚠⚠ the removed line\'s Firearm note: listed, against its heir (the first line still listed off the photograph)');
     eq(by('nfa').map((n) => [n.text, n.ref && n.ref.stableId]), [['a short barrel', 's1']], '⚠ …and its Possible NFA note');
-    eq(by('other'), [], '⚠ its Look at this: not listed (it went with its line)');
-    eq(val(attempt(() => R.ctx.agentNoticeLoud('firearm'))) && val(attempt(() => R.ctx.agentNoticeLoud('nfa'))), true, 'agentNoticeLoud: firearm and nfa');
-    eq([val(attempt(() => R.ctx.agentNoticeLoud('other'))), val(attempt(() => R.ctx.agentNoticeLoud('mustfind')))], [false, false], '…never a Look at this or a Must find');
+    eq(by('other').map((n) => [n.text, n.ref && n.ref.stableId]), [['a hallmark', 's1']], '⚠ …and its Look at this, while a line off the photograph is unreviewed');
+    eq(['s1', 's2'].map((id) => val(attempt(() => R.ctx.invLineHold(R.ref(id), R.ctx.invAcceptCtx(R.job))))), ['photonote', 'photonote'],
+      '…and the rule holds every line off the photograph on them, so the list and the holds say the same');
+    attempt(() => { Object.assign(R.ref('s1'), { reviewed: true, valReviewed: true }); Object.assign(R.ref('s2'), { reviewed: true, valReviewed: true }); });
+    const after = val(attempt(() => R.ctx.agentNotices(7, R.ctx._jobInvRefs(7))));
+    eq(by('other', after), [], '⚠ every line still listed off the photograph ticked: the Look at this goes quiet');
+    eq([by('firearm', after).length, by('nfa', after).length], [1, 1], '…the Firearm and the NFA never');
     // No heir left on the list: nothing to list it against.
     const R2 = rig(ESTATE(), [PHOTO({ deletedAt: 9, agentNotices: [{ kind: 'firearm', text: 'a rifle' }] }), SPLIT({ deletedAt: 9 })]);
     eq(val(attempt(() => R2.ctx.agentNotices(7, R2.ctx._jobInvRefs(7)))), [], 'every line off the photograph removed: nothing listed');
@@ -1551,26 +1617,35 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(live(fn('invLineHold')).replace(/\s+/g, ' ').trim(), "function invLineHold(ref, fc) { return _invLineHolds(ref, fc)[0] || ''; }", 'invLineHold is the rule\'s first reason, nothing of its own');
     eq(callersOf('invLineHold'), ['invLineAccepted'], '⚠ invLineHold\'s reader: the yes/no');
     eq(calls('invLineHold'), 2, '…and nothing else');
-    eq(callersOf('invLineOpen'), ['invLineReviewed'], 'invLineOpen: the review alone');
+    eq(callersOf('invLineOpen'), ['_invBulkApply', 'invLineReviewed'], 'invLineOpen: the review, and Mark reviewed naming the lines a tick leaves open');
     has(live(fn('invLineOpen')), '_invLineHolds(ref, fc, false, INV_OPEN_HOLDS)', '…asking the rule for the open reasons alone');
     eq(callersOf('invLineAccepted'), ['_avUnreviewedStamp', '_invRevBoxHtml', 'invLineAcceptedOnly', 'invLineReviewed'],
       '⚠ invLineAccepted\'s readers: the review, the accepted count, the value stamp and the row\'s tooltip');
     eq(calls('invLineAccepted'), 5, '…and nothing else (the definition and four calls)');
     has(live(fn('invLineAccepted')), 'return !invLineHold(ref, fc);', 'invLineAccepted is the reason\'s negation, nothing of its own');
     eq(callersOf('invLineAcceptedOnly'), ['_avUnreviewedStamp', '_invRevBoxHtml', '_invReviewStats'], 'the accepted count\'s readers');
-    eq(callersOf('invAcceptCtx'), ['_invAcceptCtxOf', 'printContentsList', 'printContentsRecord', 'printCourtInventory', 'printDispositionLedger',
-      'printEstateInventoryReport', 'printTrustSchedule', 'probatePackageGaps'], '⚠ invAcceptCtx\'s: the desk\'s context, the six printers and the package\'s gaps');
-    eq(calls('invAcceptCtx'), 9, '…and nothing else (the definition and eight calls)');
+    eq(callersOf('invAcceptCtx'), ['_invAcceptCtxOf', '_invBulkApply', 'printContentsList', 'printContentsRecord', 'printCourtInventory', 'printDispositionLedger',
+      'printEstateInventoryReport', 'printTrustSchedule', 'probatePackageGaps'], '⚠ invAcceptCtx\'s: the desk\'s context, Mark reviewed, the six printers and the package\'s gaps');
+    eq(calls('invAcceptCtx'), 10, '…and nothing else (the definition and nine calls)');
     eq(callersOf('_invAcceptCtxOf'), ['_invEdit', '_invGroupItems', '_invReadLineRepaint', '_invRevBoxHtml', '_renderInvRow', '_renderInvWorkbar'], 'the desk\'s context: its readers');
     has(live(decl('INV_WORK_FLAGS')), 'return !invLineReviewed(r, _invAcceptCtxOf(job));', '…and the Not reviewed chip');
     ['printContentsList', 'printEstateInventoryReport', 'printCourtInventory', 'printTrustSchedule', 'printDispositionLedger', 'printContentsRecord']
       .forEach((p) => ok(/fc: (invAcceptCtx\(job\)|_ac\b)/.test(live(fn(p))), p + ' hands its stamps the facts'));
     eq(callersOf('_invPhotoNoteOpen'), ['_invLineHolds'], 'the photograph\'s note: the rule alone');
     has(live(fn('_invPhotoNoteOpen')), 'fc.byId[ref.derivedFrom]', '…reading the facts\' lines by id first');
-    eq(callersOf('agentNoticeLoud'), ['_invPhotoNoteOpen', 'agentNotices'], 'what outlives its line: one answer, read by the rule and the list above the rows');
+    // Restated on the merge of main (2026-10-26): agentNoticeLoud is gone. Main's agentNoticesOn carries every note of a removed
+    // photograph line to the first live line split off it, for the list above the rows and the line's record; the rule reads the
+    // photograph's line itself, removed or not (A6), so the two say the same.
+    lacks(L, 'agentNoticeLoud', 'agentNoticeLoud gone from live code: every note outlives its line');
+    eq(callersOf('agentNoticesOn'), ['_agRecordNoticesHtml', 'agentNotices'], 'what a removed photograph line\'s notes ride on: one answer, read by the list above the rows and the record');
+    lacks(live(fn('_invPhotoNoteOpen')), 'deletedAt', '…and the rule holds on the photograph\'s notes whether or not its line was removed');
     // ⚠ The hint is the line's alone (Q108): one reader, handed no facts.
-    eq(callersOf('invLineUnsure'), ['_renderInvRow'], 'invLineUnsure: the row alone');
-    eq(calls('invLineUnsure'), 2, '…called once');
+    // Restated on the merge of main (2026-10-26): the hint is read by the row, by main's Unsure chip on the work bar (INV_WORK_FLAGS)
+    // and by main's Mark reviewed, which names the unsure lines it swept; each hands it the job, never the desk's context.
+    eq(callersOf('invLineUnsure'), ['_invBulkApply', '_renderInvRow'], 'invLineUnsure: the row and the bulk bar\'s Mark reviewed');
+    has(live(decl('INV_WORK_FLAGS')), 'return invLineUnsure(r, job);', '…and the Unsure chip');
+    eq(calls('invLineUnsure'), 4, '…called three times');
+    eq((L.match(/\binvLineUnsure\((?:ref|r), job\)/g) || []).length, 4, '⚠ …the definition and each call with the job alone, never the facts');
     has(live(fn('invLineUnsure')), 'invLineReviewed(ref))', '⚠ …and it asks for a person\'s look, never the rule\'s');
     // Every reason has its words, and every word a reason (gone and nocontext draw no box).
     const H = live(fn('_invLineHolds'));
@@ -1603,7 +1678,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(callersOf('invMarkListRead'), ['_invListReadHtml'], 'the press: the work bar\'s button alone');
     eq(callersOf('_invListReadHtml'), ['_renderInvWorkbar'], 'the line: the work bar alone (_invEdit redraws the bar, never the line)');
     eq(callersOf('_invReadKey'), ['_invListReadHtml', '_invReadLineRepaint'], 'the key: drawn on the host, compared by the one repaint');
-    eq(callersOf('_invReadLineRepaint'), ['_invEdit', '_invRefreshFromCloud'], '⚠ the repaint: after an edit, and after a sheet read that changed nothing (the build\'s browser step)');
+    eq(callersOf('_invReadLineRepaint'), ['_agRepaint', '_arRepaint', '_avRepaint', '_invEdit', '_invRefreshFromCloud'],
+      '⚠ the repaint: after an edit, after a sheet read that changed nothing (the build\'s browser step), and as each agent\'s run moves (the merge\'s review)');
     eq(callersOf('_avAcceptedPill'), ['_avUnreviewedStamp'], 'the standing values\' pill: the value stamp alone');
     eq(callersOf('_invReviewRepaint'), ['_invEdit', 'waiveAppraisal'], 'the box\'s repaint by id: the edit and the waiver');
     // The time-stamped read is gone, in every form it took; so is the floor.

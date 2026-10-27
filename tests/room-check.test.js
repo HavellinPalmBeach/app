@@ -39,11 +39,11 @@ function gsVar(name) {
   if (!m) throw new Error('var not in .gs: ' + name);
   return m[2];
 }
-const AR_VARS = ['AGENT_API', 'AGENT_API_VERSION', 'AGENT_ROOM_MODEL', 'AGENT_ROOM_EFFORT', 'AGENT_ROOM_MAX_TOKENS',
+const AR_VARS = ['AGENT_API', 'AGENT_API_VERSION', 'AGENT_MODELS_API', 'AGENT_MODEL_FLOORS', 'AGENT_MODEL_LINES', 'AGENT_MODEL_LIST_SECS', 'AGENT_MODEL_DEMOTE_SECS', 'AGENT_MODEL_SLOW_LIMIT', 'AGENT_FALLBACK_BETA', 'AGENT_ROOM_EFFORT', 'AGENT_ROOM_MAX_TOKENS',
   'AGENT_ROOM_WINDOW', 'AGENT_ROOM_OVERLAP', 'AGENT_ROOM_MAX_SHOTS', 'AGENT_ROOM_MAX_ROOMS', 'AGENT_ROOM_PARALLEL',
   'AGENT_ROOM_TIME_BUDGET', 'AGENT_ROOM_CONF_RANK', 'AGENT_ROOM_WHY_MAX', 'AGENT_MAX_IMG'];
 const AR_FNS = ['_agProp', '_agMissingProps', '_agImageBlock', '_arWindows', '_arTool', '_arSystem', '_arWindowContent',
-  '_arRequestFor', '_arReadResult', '_arWhy', '_arDoubles', '_arMergeDoubles', 'agentCheckRooms'];
+  '_arRequestFor', '_arReadResult', '_arWhy', '_arDoubles', '_arMergeDoubles', 'agentCheckRooms', '_agModelVersion', '_agVerCmp', '_agNewestOf', '_agCache', '_agModelList', '_agDemoted', '_agDemote', '_agSlow', '_agModels', '_agSendAll', '_agHttpFailure'];
 
 // `reply(body, i, sent)` answers each request; `files` the images by Drive id; `throwFetch` makes fetchAll throw.
 function gs(opts) {
@@ -188,7 +188,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       SHOT('F2', [L('c', 'Cobalt art glass vase, likely Murano')]) ] }] });
     eq(out.ok, true, 'it answers');
     const body = JSON.parse(c.sent[0][0].payload);
-    eq([body.model, body.thinking.type, body.output_config.effort, body.max_tokens], ['claude-opus-5-5', 'adaptive', 'low', 16000],
+    eq([body.model, body.thinking.type, body.output_config.effort, body.max_tokens], ['claude-fable-5-1', 'adaptive', 'low', 16000],
        'Opus 5.5, adaptive thinking at low effort, the non-streaming ceiling');
     eq([body.tools.length, body.tools[0].name, body.tools[0].strict, body.tool_choice.type], [1, 'record_doubles', true, 'auto'],
        'one strict tool, chosen by instruction rather than forced');
@@ -252,7 +252,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(c.sent[0].length, 4, 'four runs for the room of thirty, sent together; none for the room of one');
     eq(out.results['4'].doubles, [{ ids: ['l18', 'l20'], why: 'the same lamp', confidence: 'medium' }], 'found in both runs, reported once');
     eq(out.results['5'], { doubles: [], photos: 1 }, 'a room of one photograph is answered without a call');
-    eq(out.model, 'claude-opus-5-5', 'and the answer names the model');
+    eq(out.model, 'claude-fable-5-1', 'and the answer names the model (the top-tier floor with no model list)');
 
     const miss = gs({ props: {} }).agentCheckRooms({ rooms: [{ key: '4', shots: shots(2) }] });
     eq([miss.ok, /ANTHROPIC_API_KEY/.test(miss.error)], [false, true], 'no key is refused, naming the Script Property');
@@ -460,13 +460,22 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        'between Name N shots and Value N lines: a line counted twice is a line valued twice');
     // The naming run's tail.
     const calls = [];
-    const s = sandbox({ fns: ['_agFinish', '_agState', '_invRenderWhenIdle'], vars: ['_agRun'],
-      stubs: { savePhotoRefs() {}, _scheduleInventorySync() {}, renderInventoryTab() {}, agentRoomCheckRun: (j, o) => calls.push([j, o]) } });
+    const s = sandbox({ fns: ['_agFinish', '_agState', '_invRenderWhenIdle', '_arState'], vars: ['_agRun', '_arRun'],
+      stubs: { savePhotoRefs() {}, _scheduleInventorySync() {}, renderInventoryTab() {}, agentRoomCheckRun: (j, o) => calls.push([j, o]),
+               agentValueAuto() {} } });
     s._agFinish(7);
     eq(calls, [[7, { auto: true }]], 'a naming run that finished hands on to the room check by itself');
     s._agState(8).error = 'Unknown action';
     s._agFinish(8);
     eq(calls.length, 1, 'one that failed outright does not');
+    // 2026-10-26: a run that named lines before it failed still hands them on, and a room check already out takes them at its tail.
+    s._agState(9).error = 'the naming service could not be reached';
+    s._agState(9).named = 12;
+    s._agFinish(9);
+    eq(calls.length, 2, 'a run that named twelve lines before it failed still hands them on');
+    s._arState(10).running = true;
+    s._agFinish(10);
+    eq(calls.length, 2, 'and with a room check already out, that check takes them at its own tail');
   }
 
   // ═══ THE COLLECTIONS ═════════════════════════════════════════════════════════════════════════
@@ -521,7 +530,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fns: ['_captureShot', 'photoSubfolder', 'fieldDispToInv', '_cleanName', '_photoUid', '_slotRefs', '_setPhotoRef', '_getPhotoRef',
             'collectionLineUnshot', '_invHasPhoto', 'collectionLineWithPhoto', '_invFileId'],
       vars: ['PHOTO_CAPTURE_LABELS', 'AS_FOUND_SUBFOLDER', 'PHOTO_SUBFOLDER', '_localShotThumbs', '_photoUidSeq', 'INV_DEFAULT_CATEGORY',
-             'FIELD_DISPOSITIONS', 'FIELD_DISP_DEFAULT'],
+             'FIELD_DISPOSITIONS', 'FIELD_DISP_DEFAULT', 'DETAIL_PHOTO_MAX_W', 'DETAIL_PHOTO_QUALITY'],
       stubs: {
         jobs: [{ id: 7, hvlId: 'HVL-0007' }], _photoRefs: { 7: [placeholder] },
         estimateStore: { 7: { estimate: { rooms: [{ idx: 4, name: 'Study' }] } } },
@@ -540,6 +549,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        'its number, count, instruction, disposition and link stay; the room, the photograph and a fresh name to come');
     has(L1.filename, 'Study_INV_', 'filed as an Items shot of the room it was taken in');
     eq(L1.fieldNote, 'From the walkthrough: Coin collection (200).', 'with the walkthrough\'s words for the agent');
+    // 2026-10-26 (Anthony: "Yes, Agent Two values it"): the walkthrough's rough figure does not ride onto the photographed line, so
+    // Agent Two, which never writes over a figure, values it; the estimate keeps the figure.
+    eq(L1.fmv, '', '⚠⚠ the walkthrough\'s rough figure goes with the photograph, for Agent Two to value');
     eq(uploads.map((u) => u.stableId), ['7_col1'], 'and the upload is for that line');
     ctx._captureShot(7, 4, 'inventory', 'data:image/jpeg;base64,BBB', { into: '7_col1', fieldDisp: 'sell' });
     eq(ctx._photoRefs[7].length, 2, 'armed again once it has a photograph, the next shot is an ordinary Items line, never lost');
@@ -586,8 +598,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(A.ctx.collectionUseLine(7, '7_col1', ''), false, 'nothing picked: refused');
     eq(A.ctx.collectionUseLine(7, '7_col1', 'p1'), true, 'the desk hands it over');
     const P = A.ctx._getPhotoRef(7, 'p1'), C = A.ctx._getPhotoRef(7, '7_col1');
-    eq([String(P.sourceCollId), P.disposition, P.needsAppr, P.fmv, P.objectName], ['1', 'Auction', true, 5000, 'Morgan dollars in albums'],
+    eq([String(P.sourceCollId), P.disposition, P.needsAppr, P.objectName], ['1', 'Auction', true, 'Morgan dollars in albums'],
        'the shot line takes the link and the walkthrough\'s instructions where it had none, and keeps its own name');
+    ok(P.fmv == null || P.fmv === '', '⚠⚠ but not the walkthrough\'s rough figure (2026-10-26): Agent Two values it');
     eq([!!C.deletedAt, C.deletedBy], [true, 'Ashley Jerome'], 'the collection\'s own line comes off, stamped');
     eq(A.ctx._jobInvRefs(7).filter((r) => r.sourceCollId != null).length, 1, '⚠⚠ the collection is counted once');
     const B = app([ph(), shot()], { confirm: false, est: EST([COLL({ id: 1 })]) });

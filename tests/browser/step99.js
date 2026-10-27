@@ -202,7 +202,9 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
         L('l01', { itemNo: 1, roomIdx: 0, objectName: 'Leather recliner', disposition: 'Move', reviewed: 1, namedBy: 'desk' }),
         L('l02', { itemNo: 2, roomIdx: 0, objectName: 'Coffee table', disposition: 'Donate', channel: 'Goodwill Palm Beach', reviewed: 1, namedBy: 'desk' }),
         L('l03', { itemNo: 3, roomIdx: 0, objectName: 'Oil landscape painting', category: 'Art & Décor', disposition: 'Sell', channel: 'Kodner Galleries', needsAppr: true, namedBy: 'desk', reviewed: 1 }),
-        L('l07', { itemNo: 7, roomIdx: 2, objectName: 'Golf clubs', category: 'Collectibles', disposition: 'Distribute', channel: 'Susan Hale', namedBy: 'agent', reviewed: 0 }),
+        // A shotgun since 2026-10-26 (it was golf clubs): on a client's own home only a firearm, or an item going to someone who
+        // works with Havellin, needs written approval (Anthony: "Drop it, firearms aside"), so it is what keeps a request owed here.
+        L('l07', { itemNo: 7, roomIdx: 2, objectName: 'Remington shotgun', category: 'Firearms', disposition: 'Distribute', channel: 'Susan Hale', namedBy: 'agent', reviewed: 0 }),
         L('l12', { itemNo: 12, roomIdx: 2, objectName: 'Lawn mower', category: 'Electronics & Appliances', disposition: '', namedBy: 'agent', reviewed: 0, ts: T_TODAY, updatedAt: T_TODAY }),
         L('l14', { itemNo: 14, roomIdx: 1, objectName: '', category: '', ts: T_TODAY + 1000, updatedAt: T_TODAY + 1000 }),
         L('b11', { label: 'before', roomIdx: 0, objectName: '', category: '' })];
@@ -418,6 +420,8 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
         estimateStore[id] = { approved: true, submitted: true, estimate: { jobId: id, svc: 'downsizing', havellinTotal: 9000, rooms: [{ idx: 0, name: 'Den', st: 'in', vol: 3, cplx: 3 }], vendors: [] } };
         _photoRefs[id] = ['n1', 'n2'].map((s, i) => ({ stableId: s, label: 'inventory', roomIdx: 0, seq: i + 1, itemNo: i + 1, status: 'uploaded', category: 'Furniture',
           objectName: i ? 'Bookcase' : 'Armchair', disposition: '', ts: T, updatedAt: T, filename: 'x' + s + '.jpg', driveFileId: 'f' + s }));
+        // The first line on the new client is a rifle since 2026-10-26: an armchair leaving a client's own home goes on their word.
+        if (id === NEW) Object.assign(_photoRefs[id][0], { objectName: 'Browning rifle', category: 'Firearms' });
         savePhotoRefs(id);
       });
       saveJobs(); localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore));
@@ -435,9 +439,14 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
     eq(await p.evaluate((id) => { const w = document.getElementById('desk-fold-releases-' + id); return w && getComputedStyle(w).display; }, NEW), 'none',
       'nothing leaving yet: the Releases bar is not drawn');
     await press('#panel-inventory button[onclick="setInvWhen(\'all\')"]', 'All');
-    await p.selectOption('#inv-row-n1 select[onchange*="\'disposition\'"]', 'Donate'); await p.waitForTimeout(700);
-    ok(await isOpen('releases', NEW), '⚠⚠ the armchair set to Donate: the Releases bar is drawn, open by itself (Q89)');
-    eq(await stat('releases', NEW), '1 item needs written approval: send a request', 'saying the request is owed');
+    await p.selectOption('#inv-row-n1 select[onchange*="\'disposition\'"]', 'Distribute'); await p.waitForTimeout(700);
+    // ⚠ restated 2026-10-26 (Anthony: "Hold them off"): with nobody named the rifle is not asked for; the bar is drawn and
+    // says what it waits on, and opens once a taker is typed on the row and the request is owed. (A rifle since the same day:
+    // on a client's own home only a firearm, or an item going to someone who works with Havellin, is asked for in writing.)
+    eq(await stat('releases', NEW), '1 item waits for somebody to be named to take it', 'the rifle set to To a person: the bar says it waits for a taker');
+    await p.fill('#inv-row-n1 .inv-recip', 'Tom Pratt'); await p.press('#inv-row-n1 .inv-recip', 'Tab'); await p.waitForTimeout(700);
+    ok(await isOpen('releases', NEW), '⚠⚠ the son typed: the Releases bar is drawn, open by itself (Q89)');
+    eq(await stat('releases', NEW), '1 item needs written approval: send a request', 'saying the request is owed (a firearm is never on a sign-out sheet)');
 
     console.log('\n## Part 2 · Closing opens at the close, and when Close job is refused');
     await p.selectOption('#inv-job', String(DONE)); await p.waitForTimeout(1200);
@@ -635,12 +644,17 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
       j.docState.approvalRequest = { draftedAt: new Date(Date.now() - 3600000).toISOString(), draftedBy: 'Ashley Jerome', provider: 'gmail',
         draftUrl: 'https://mail.google.com/mail/u/0/#drafts/x', req: { to: ['rhale@example.com'], cc: [], noEmail: [], viaCounsel: false,
           stableIds: ['l02', 'l03'], asked: 2, ratify: 0 } };
+      // The draft carried a rifle since 2026-10-26 (the coffee table to Goodwill goes on the client's word now, and a draft of
+      // nothing that needs signing would be overtaken): the rifle is l02, its son named.
+      Object.assign(_photoRefs[id].find((r) => r.stableId === 'l02'), { objectName: 'Browning rifle', category: 'Firearms', disposition: 'Distribute', channel: 'Robert Hale Jr',
+        updatedAt: Date.now() });
+      savePhotoRefs(id);
       saveJobs();
     }, LIV);
     await toDesk(LIV);
     const L0 = await stat('releases', LIV);
     ok(String(L0).indexOf('Request drafted: tap I’ve sent it · 1 more item needs written approval: send a fresh request once the draft has gone') === 0,
-      '⚠⚠ the bar\'s line: the draft first, then the golf clubs it never carried and when their request goes  [' + L0 + ']');
+      '⚠⚠ the bar\'s line: the draft first, then the shotgun it never carried and when its request goes  [' + L0 + ']');
     ok(String(L0).indexOf('written approval: send a request') < 0, '⚠ never "send a request" while the desk offers no send');
     if (!(await isOpen('releases', LIV))) await press('#desk-hd-releases-' + LIV, 'the Releases header, to open it');
     const relText = () => p.evaluate(() => (document.getElementById('inv-releases') || {}).textContent || '');
@@ -724,13 +738,13 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
     console.log('\n## Part 5 · a reviewed line\'s note is read in its record; a line ticked Reviewed takes its note off the list');
     await press('#inv-row-e18 button[onclick="_invToggleOpen(\'e18\')"]', 'the stand mixer\'s ▾');
     const rec18 = await p.evaluate(() => { const el = document.querySelector('#inv-row-e18 .inv-agent-rec'); return el && el.checkVisibility() ? [...el.children].map((c) => c.textContent.replace(/\s+/g, ' ').trim()).join(' | ') : null; });
-    eq(rec18, 'Agent One noted | Look at this — the power cord is frayed near the plug · off the list above the rows: the line is reviewed',
+    eq(rec18, 'Agent One noted | Look at this — the power cord is frayed near the plug · off the list above the rows: every line off its photograph is reviewed',
       '⚠⚠ the reviewed line\'s note is in its record, on screen, saying why it is off the list');
     await press('#inv-row-e20 input[onchange*="_invSetReviewed"]', 'Reviewed, on the nightstand');
     const R5 = await desk5();
     ok(R5.notes.indexOf('a water ring on the top') < 0, '⚠⚠ ticked Reviewed: the nightstand\'s Look at this leaves the list above the rows');
     const rec20 = await p.evaluate(() => { const el = document.querySelector('#inv-row-e20 .inv-agent-rec'); return el && el.checkVisibility() ? [...el.children].map((c) => c.textContent.replace(/\s+/g, ' ').trim()).join(' | ') : null; });
-    has(rec20, 'a water ring on the top, worth a look before it is priced · off the list above the rows: the line is reviewed', '⚠⚠ and is read in its record');
+    has(rec20, 'a water ring on the top, worth a look before it is priced · off the list above the rows: every line off its photograph is reviewed', '⚠⚠ and is read in its record');
     has(R5.notes, 'a gold pocket watch in the top drawer', 'the Must find stands: a must-find is still missing, reviewed line or not');
 
     console.log('\n## Part 5 · both must-finds found: the brief shrinks to one green line, and the Must find goes quiet by id');
@@ -1553,8 +1567,10 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
       eq(await stat('releases', R1), 'loading…', 'fixture: before the read, "loading…"');
       release(); hold = null;
       ok(await until(async () => (await stat('releases', R1)) !== 'loading…', 8000), '⚠⚠ the read lands: the bars leave "loading…" (they stayed on it when only a kept field moved)');
-      eq(await stat('releases', R1), '1 item needs written approval: send a request · 1 ready to sign out', 'the line read');
-      ok(await isOpen('releases', R1), '…and Releases opened by its rule (a request is owed)');
+      // ⚠ restated 2026-10-26 (Anthony: "Drop it, firearms aside"): the coffee table to Goodwill leaves a client's own home on
+      // their word, so the line is its sign-out alone and no request is owed to open the bar.
+      eq(await stat('releases', R1), '1 ready to sign out', 'the line read');
+      ok(!(await isOpen('releases', R1)), '…and Releases stays shut by its rule (no request owed on a client\'s own home)');
       eq(await p.evaluate((id) => (_photoRefs[id][0] || {}).receiptDoc, R1), 'GW-2210', 'fixture: the merge kept the sheet\'s receipt reference');
 
       // ── A read that fails, then the desk's own retry ──

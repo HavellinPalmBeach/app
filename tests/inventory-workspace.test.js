@@ -91,7 +91,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // so the rule is the one before P19). Line 'e' carried a date with no signer, which was never an approval: it now
     // carries both, and 'g' (a date alone) is back on the list, which is the stricter reading of the same promise.
     const ctx = sandbox({
-      fns: ['_invAwaitingApproval', '_invJob', 'invApprovalComplete', 'invApprovalMissing', 'jobFiduciaries',
+      fns: ['_invAwaitingApproval', 'invWrittenReleaseNeeded', '_invJob', 'invApprovalComplete', 'invApprovalMissing', 'jobFiduciaries',
             'jobListEntries', 'invFiduciaryMode', 'isDecedentJob'],
       vars: ['INV_RELEASE_DISPOSITIONS', 'DECEDENT_SERVICES'],
       stubs: { _jobInvRefs: () => ctx.__rows, jobs: [{ id: 1, svc: 'probate' }] },
@@ -116,9 +116,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const src = APP();
     const at = src.indexOf('function printApprovalRequest(');
     const body = src.slice(at, src.indexOf('\n// The other half', at));
-    has(body, 'Verbal approval is not accepted',
+    // ⚠ restated 2026-10-26 (Anthony: "it's a bit odd to say like verbal approval is never accepted"; the letter he approved):
+    // the promise is the letter's, nothing moved until it comes back signed.
+    has(body, 'Nothing on this list will be moved, sold, donated or disposed of until it is back with us',
         'the published promise is on the document, not just on the website');
-    has(body, 'until this request is returned signed', 'and it says what is being withheld');
+    has(body, 'written approval', 'and it says what is being asked for');
     has(body, 'Initial', 'the representative initials line by line, as promised');
     has(body, 'invIsFirearm', 'a firearm on the list carries its own custody note');
 

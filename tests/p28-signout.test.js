@@ -310,7 +310,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'who asks whether a line is out: the row, the close, the Values bar\'s line (2026-10-22), the worklist, the groups');
     lacks(noComments(fn('invRecordedGone')), 'appraisal', '⚠⚠ gone never reads the appraiser\'s papers');
     has(noComments(fn('signoutLineKind')), 'invIsFirearm(ref)) return \'\'', 'firearms are refused at the one gate');
-    has(noComments(fn('signoutGroups')), "(fid && !invApprovalComplete(r, job)) ? 'waiting' : 'ready'", '⚠⚠ an estate\'s leaving line waits on the one approval predicate');
+    // ⚠ restated 2026-10-26: what waits is what needs written approval on the job (every leaving line on an estate; a firearm or a
+    // line to someone who works with Havellin on a client's own home), on the one approval predicate.
+    has(noComments(fn('signoutGroups')), "(invWrittenReleaseNeeded(r, job) && !invApprovalComplete(r, job)) ? 'waiting' : 'ready'", '⚠⚠ an estate\'s leaving line waits on the one approval predicate');
     // The documents.
     const root = path.join(__dirname, '..');
     ['MANUAL.md', 'manual.html', 'CONCIERGE_GUIDE.md', 'concierge-guide.html'].forEach((f) => {

@@ -51,13 +51,13 @@ function callersOf(name) {
 }
 
 // The row, lifted as photo-split.test.js lifts it, with the two helpers it reads since 2026-10-24.
-const ROW_FNS = ['invLineReviewed', 'invLineOpen', '_renderInvRow', '_invRowPhotoHtml', '_invRowHasWho', 'invOutForAppraisal', 'collectionLineUnshot',
+const ROW_FNS = ['invLineReviewed', 'invLineOpen', '_renderInvRow', '_invRowPhotoHtml', '_invRowHasWho', 'invOutForAppraisal', 'collectionLineUnshot', '_invPhotoOpenHtml',
   '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', 'invPickupRecord', 'signedRecordsOf', '_invRowDomId', '_invRecipientInput', 'invPlanChannel', '_invDetailRefs',
   '_invPhotoSiblings', '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef', '_invItemNo', 'invDealerRouteOffered', 'invDealerRoute',
-  'invDealerRouteText', 'invBequestFor', 'jobListEntries', 'invApprovalGap', 'invReceiptOwed', '_invBenListAttr', 'invRatificationOwed',
+  'invDealerRouteText', 'invBequestFor', 'jobListEntries', 'invApprovalGap', 'invReceiptOwed', '_invBenListAttr', 'invRatificationOwed', 'invWrittenReleaseNeeded',
   'invFiduciaryMode', 'isDecedentJob', 'invReleaseCautions', 'invBequestElsewhere', '_invJob', 'invHavellinRecipient', 'invChannelLeftover', 'invChannelLeftoverText',
   '_invPanelCautionHtml', '_invPanelLeftoverHtml', '_jobDestLabel', 'invAppraisalSourceText', 'invLineAppraiser', '_invLinkedAppraiser',
-  'invAppraised', 'invAppraisalInProgress', '_invHasAppraisal', '_invHasValue', '_avHasFigure', 'invLineUnsure', '_invEachInput', 'invUnitValue', 'invLineQty', '_agNameKey', '_invInputStyle', '_invCtrlMinW', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invNeedsAppraisal', 'invLineAcceptedOnly', '_invRevBoxHtml', 'invIsMAIV', 'invMAIVDefaultCat', '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_jobInvRefs', '_agDupEligible', 'agentNamedTwice', 'gateDispute', '_gateYes'];
+  'invAppraised', 'invAppraisalInProgress', '_invHasAppraisal', '_invHasValue', '_avHasFigure', 'invLineUnsure', '_invEachInput', 'invUnitValue', 'invLineQty', '_agNameKey', '_invInputStyle', '_invCtrlMinW', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invNeedsAppraisal', 'invLineAcceptedOnly', '_invRevBoxHtml', 'invIsMAIV', 'invMAIVDefaultCat', '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_jobInvRefs', '_agDupEligible', 'agentNamedTwice', 'gateDispute', '_gateYes', 'agentValueInternal'];
 const ROW_VARS = ['INV_PLAN_CHANNEL_KINDS', 'INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick', '_agDupSet',
   'DECEDENT_SERVICES', 'INV_RELEASE_CAUTIONS', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', '_agDupSetJob', 'INV_HOLD_WORDS', 'INV_OPEN_HOLDS', 'INV_ACCEPT_AMMO_RE'];
 const LINE = (o) => Object.assign({ stableId: 'k80', label: 'inventory', roomIdx: 1, ts: 1, itemNo: 80, category: 'General/Household',
@@ -193,8 +193,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fieldNote: 'all going to Habitat for Humanity', needsAppr: true, fmv: '40', condition: 'Good', authBy: 'Robert Hale', approvalDate: '2026-10-20',
       dispDate: '2026-10-21', itemNo: 80 }, o || {});
     const rig = (refs) => sandbox({
-      fns: ['invSplitItemN', 'invSplitItem', '_invPhotoSource', '_getPhotoRef', '_setPhotoRef', '_invFileId', '_photoUid', 'agentApplyResult', '_agWrite', '_agState', '_jobInvRefs'],
-      vars: ['_photoUidSeq', 'INV_DEFAULT_CATEGORY', 'INV_SPLIT_MAX', 'INV_CATEGORIES', 'INV_TAXONOMY', '_agRun'],
+      fns: ['invSplitItemN', '_invSplitSource', 'invSplitItem', '_invPhotoSource', '_getPhotoRef', '_setPhotoRef', '_invFileId', '_photoUid', 'agentApplyResult', '_agWrite', '_invCondIsAgents', '_invAgentCondition', '_agState', '_jobInvRefs'],
+      vars: ['_photoUidSeq', 'INV_DEFAULT_CATEGORY', 'INV_SPLIT_MAX', 'INV_CATEGORIES', 'INV_TAXONOMY', '_agRun', 'AGENT_CONDITIONS'],
       stubs: { jobs: [{ id: 7 }], _photoRefs: { 7: refs }, savePhotoRefs() {}, _invTouch(r) { r.updatedAt = 1; return r; }, _scheduleInventorySync() {} },
     });
     const S = rig([PHOTO()]);

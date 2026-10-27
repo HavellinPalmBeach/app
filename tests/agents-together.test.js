@@ -47,14 +47,14 @@ function gsVar(name) {
 function gsCtx() {
   const ctx = { JSON, Math, Number, String, Object, Array, Error, parseInt, parseFloat, isFinite };
   vm.createContext(ctx);
-  vm.runInContext(['AGENT_VALUE_SOURCES', 'AGENT_VALUE_NOTICE_KINDS', 'AGENT_VALUE_CONF_DOWN', 'AGENT_VALUE_MAX_COMPS', 'BACKEND_VERSION'].map(gsVar)
-    .concat(['_avCents', '_avTool', '_avSystem', '_avLineText', '_avLineResult', '_avUrlKey'].map(gsFn)).join('\n'), ctx);
+  vm.runInContext(['AGENT_VALUE_SOURCES', 'AGENT_VALUE_NOTICE_KINDS', 'AGENT_VALUE_CONF_DOWN', 'AGENT_VALUE_MAX_COMPS', 'AGENT_VALUE_RESULTS_SEGMENTS', 'AGENT_VALUE_RESULTS_PARAMS', 'AGENT_VALUE_NO_PRICE_RE', 'AGENT_VALUE_TEXT_MAX', 'AGENT_VALUE_ABBREV_RE', 'BACKEND_VERSION'].map(gsVar)
+    .concat(['_avCents', '_avTool', '_avSystem', '_avLineText', '_avLineResult', '_avUrlKey', '_avResultsPage', '_avClip'].map(gsFn)).join('\n'), ctx);
   return ctx;
 }
 
 // ─── THE REAL APP SIDE ───────────────────────────────────────────────────────
 const AV_FNS = ['invHavellinRecipient', 'invAwaitingAppraisal', 'invBequestElsewhere', 'invReleaseCautions', '_invPhotoNoteOpen', 'invLineOpen', '_gate706', 'maivFilingApplies', 'invLotSplitState', 'agentValueMode', 'agentValueInternal', '_avHasFigure', 'agentValueableRefs', 'agentValueUnreviewed',
-  'agentValueStale', 'agentValueSpecialistWorth', '_avValDate', '_avContext', '_avItemPayload', '_avComp', '_avWrite', '_avRename', '_avNameIsAgents',
+  'agentValueStale', 'agentValueSpecialistWorth', '_avValDate', '_avContext', '_avItemPayload', '_avComp', '_avWrite', '_avRename', '_avNameIsAgents', 'agentValueGradesCondition', '_invCondIsAgents', '_invAgentCondition', 'agentValueWhole',
   '_avNoteFailure', 'agentValueApply', '_avTakeValue', '_avStampReviewed', '_invStampBy', 'deviceUser', '_avStart',
   '_avSendNext', '_avFinish', '_avRepaint', '_avStateHtml', '_avState', 'agentValueAuto', 'agentValueAfterRename', 'agentValueUseSale',
   'agentValueNotices', '_avNoticesHtml', '_avNoticeKinds', '_avNoticeLabel', '_deskShowBtnHtml', '_avSummary', '_avRowBadges', '_avPanelHtml',
@@ -66,11 +66,11 @@ const AV_FNS = ['invHavellinRecipient', 'invAwaitingAppraisal', 'invBequestElsew
   'invFiduciaryMode', 'isDecedentJob', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep', 'estateValueDate',
   '_avdDate', '_ymdLocal', 'resolveValBasis', '_agNameKey', '_agDetailRefs', 'invLineCloseUps', '_invFileId', 'invAppraisalThreshold',
   'gateDispute', '_gateYes', 'invNeedsAppraisal', 'fmt', '_invMoney', '_invNamed', '_invItemNo', '_andJoin',
-  'moneyToNumber', '_readAppsScriptJson', '_invJob', '_invRenderWhenIdle', '_invHasPhoto', 'invIsFirearm', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat'];
-const AV_VARS = ['INV_LOT_ARTICLE_CAP', 'INV_RELEASE_CAUTIONS', 'INV_ACCEPT_AMMO_RE', '_agDupSetJob', 'INV_OPEN_HOLDS', '_avRun', '_avForceComps', '_avAfter', 'AGENT_VALUE_BATCH', 'AGENT_VALUE_GENERAL_CEILING', 'AGENT_VALUE_MAX_COMPS',
+  'moneyToNumber', '_readAppsScriptJson', '_invJob', '_invRenderWhenIdle', '_invHasPhoto', 'invIsFirearm', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat', 'agentValueLooks', '_avPhotoContext', '_invPhotoSource', '_invRoomName', 'agentListedOff', 'agentValueAgain'];
+const AV_VARS = ['INV_LOT_ARTICLE_CAP', 'INV_RELEASE_CAUTIONS', 'INV_ACCEPT_AMMO_RE', '_agDupSetJob', 'INV_OPEN_HOLDS', '_avRun', '_avForceComps', '_avAfter', 'AGENT_VALUE_BATCH', 'AGENT_VALUE_GENERAL_CEILING', 'AGENT_VALUE_MAX_COMPS', 'AGENT_CONDITIONS',
   'AGENT_VALUE_MARK_RE', 'AGENT_VALUE_NO_MARK_RE', 'AGENT_VALUE_CONFS', 'AGENT_VALUE_SOURCES', 'AGENT_VALUE_OWN', 'AGENT_VALUE_SALE_DATE_RE',
   'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'DECEDENT_SERVICES', 'DOC_TIERS',
-  'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'AGENT_MAX_DETAILS', 'INV_VAL_SOURCES', '_agDupSet', 'AGENT_ROOM_CONF_RANK', 'AGENT_PASS_GAP_MS', 'MAIV_OTHER', 'MAIV_BY_CATEGORY'];
+  'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'AGENT_MAX_DETAILS', 'INV_VAL_SOURCES', '_agDupSet', 'AGENT_ROOM_CONF_RANK', 'AGENT_PASS_GAP_MS', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', 'AGENT_VALUE_READ_RE', 'AGENT_VALUE_HEDGE_RE', 'AGENT_LISTED_MAX', '_avAutoAgain', 'INV_CATEGORIES'];
 
 function sp(v) {
   if (v && v.__sync) return v;
@@ -157,12 +157,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(gsFn('_agUserContent'), 'The crew said:', 'and the crew\'s note reaches Agent One with the photograph');
   }
 
-  group('B4 · the deployment: 2026-10-25b, the app relies on it, and the banner names its gap first');
+  group('B4 · the deployment: at least 2026-10-25b, the app relies on it, and the banner names its gap by vintage');
   {
-    eq(gsCtx().BACKEND_VERSION, '2026-10-25b', 'main-sync.gs is 2026-10-25b');
+    // Restated to the rule (2026-10-26, as agent-named-twice H was): at least this build, its gap named by its vintage.
+    ok(gsCtx().BACKEND_VERSION >= '2026-10-25b', 'main-sync.gs is 2026-10-25b or later');
     const app = sandbox({ vars: ['BACKEND_MIN_VERSION', 'BACKEND_FEATURE_COST'] });
-    eq(app.BACKEND_MIN_VERSION, '2026-10-25b', 'and the app relies on it');
-    ok(/^a name you type or review on the desk/.test(app.BACKEND_FEATURE_COST.version), 'the banner names the newest gap first, by consequence');
+    ok(app.BACKEND_MIN_VERSION >= '2026-10-25b', 'and the app relies on it');
+    has(app.BACKEND_FEATURE_COST.version, 'on a deployment older than 2026-10-25b, a name you type or review on the desk', 'the banner names this build\'s gap by its vintage');
     has(app.BACKEND_FEATURE_COST.version, 'on a deployment older than 2026-10-25, Agent Two flags a name it disagrees with', 'and 2026-10-25\'s after it, by its vintage');
   }
 
@@ -200,7 +201,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const chain = (roomStarts, error) => {
       const seen = [];
       const R = rig(ESTATE(), lines, { confirm: false, fns: ['_agFinish', '_arFinish', 'agentValueAuto', '_invRenderWhenIdle', '_invHasPhoto'], stubs: {
-        _agState: () => ({ running: true, error: error || '' }), _arState: () => ({ running: true }),
+        _agState: () => ({ running: true, error: error || '' }), _arState: () => ({ running: false }),
         agentRoomCheckRun: (j, o) => { seen.push(o && o.auto); return roomStarts; } } });
       return { R, seen };
     };
@@ -297,7 +298,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(u({ valConf: 'low', reviewed: true, valReviewed: true }), false, '⚠ gone with the line\'s one tick');
     eq(R.ctx._avRowBadges(ESTATE(), SURE({ valConf: 'low' })), [], 'no agent value badge');
     const row = liveLines(fn('_renderInvRow'));
-    has(row, 'if (invLineUnsure(ref)) {', 'the row draws the one hint');
+    has(row, 'if (invLineUnsure(ref, job)) {', 'the row draws the one hint (with the job, 2026-10-26: never on a figure where counsel values)');
     lacks(row, "'agent &middot; unsure' : 'agent'", 'and no Agent One badge on every named line');
   }
 

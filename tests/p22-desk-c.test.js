@@ -209,11 +209,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   // ═══════════════════════════════════════════════════════════════════════════
   G('5 · a living client\'s release request says who prepared it once', () => {
-    const S = desk(['printApprovalRequest'], LIVING(), [LINE('a', 1, { disposition: 'Donate', channel: 'Goodwill' })]);
+    // ⚠ A firearm since 2026-10-26: on a client's own home a donation needs no written approval (Anthony: "Drop it, firearms
+    // aside"), and the head says what the paper is for.
+    const S = desk(['printApprovalRequest'], LIVING(), [LINE('a', 1, { objectName: 'Browning rifle', category: 'Firearms', disposition: 'Distribute', channel: 'Tom Ellis' })]);
     S.printApprovalRequest(2);
     const h = (S.__log.printed[0] || {}).html || '';
     eq(count(h, 'Prepared by Havellin Palm Beach, LLC'), 1, '⚠⚠ once, not twice');
-    has(flat(h), 'Everything leaving the property, for your sign-off · Prepared by Havellin Palm Beach, LLC', 'the living head');
+    has(flat(h), 'For your written approval before it leaves · Prepared by Havellin Palm Beach, LLC', 'the living head');
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -333,7 +335,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const S = desk(['printApprovalRequest'], PROBATE(), [LINE('a', 1, { disposition: 'Sell', channel: 'Kodner' })]);
     S.printApprovalRequest(8);
     const t = flat((S.__log.printed[0] || {}).html);
-    has(t, 'the item listed below is ready to be released from the property.', '⚠ one line: singular');
+    // ⚠ restated 2026-10-26: the request is a letter (Anthony approved its words).
+    has(t, 'The item listed below is ready to leave the property.', '⚠ one line: singular');
     const R = desk(['printApprovalRequest'], PROBATE(), [LINE('a', 1, { disposition: 'Sell', channel: 'Kodner' }),
       LINE('b', 2, { disposition: 'Sell', dispDate: '2026-10-02' })]);
     R.printApprovalRequest(8);

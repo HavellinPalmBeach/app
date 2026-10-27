@@ -406,38 +406,47 @@ footer p{max-width:66ch;}
         <span class="btn">Check N rooms</span> runs it again.</li>
       <li><strong>Agent One&rsquo;s notes</strong>, under <em>Agent One raised 3 things to look at</em>. <em>Must find</em>,
         <em>Firearm</em> and <em>Possible NFA item</em> in red, and they stay (a Must find goes quiet once every must-find is
-        found; a Firearm note outlives the item it was raised on); <em>Look at this</em> in amber, gone once you review the item. Quiet notes stay in the item&rsquo;s record.
+        found); <em>Look at this</em> in amber, gone once every item in its photo is reviewed. A removed item&rsquo;s notes move
+        to the next item from its photo. Quiet notes stay in the item&rsquo;s record.
         <span class="btn">Show the item</span> jumps to it and opens it.</li>
       <li><strong>Possible duplicates.</strong> Compare the photos, then <span class="btn">Remove</span> the extra, or
-        <span class="btn">Not duplicates</span> if they really are two things. Ticking Reviewed, or renaming one, does not settle it.</li>
+        <span class="btn">Not duplicates</span> if they really are two things. Renaming one does not settle it.</li>
       <li><strong>The values follow by themselves</strong>, Agent Two correcting Agent One&rsquo;s guesses;
         <span class="btn">Value N lines</span> does the rest.</li>
+      <li><strong>Condition is graded for you.</strong> Each photo is graded Excellent, Good, Fair or Poor. If it is wrong,
+        change it in the &#9662; record; yours is never written over. Blank means the photo could not show it.</li>
+      <li><strong>Values are whole dollars each.</strong> Seven plates at $75 read $11 each, $77; under a dollar each keeps
+        its cents. A value you type stays as typed. A value well under what dealers ask is not wrong: asking is not
+        selling; a close-up of a maker&rsquo;s mark moves it.</li>
+      <li><strong>A client valued before 26 October.</strong> Tick its rows and press <span class="btn">Re-value</span> on
+        the selection bar. Values you or an appraiser typed are left alone.</li>
       <li><strong><em>Not yet decided</em>, room by room.</strong> Correct the name and count, choose where it goes, type who
         takes it if it leaves, check the value against what you saw. Nothing flagged? No tick, whatever its value: the box is
-        ticked in grey. Flagged? One <strong>Reviewed</strong> tick covers it: a note, a firearm or
+        ticked in grey. Flagged? One <strong>Reviewed</strong> tick covers it: a note on it or its photo, a firearm or
         ammunition, an appraisal not yet in or waived, a bequest, a dispute, both agents unsure. Hover the box for every
         reason. A tick never settles an item with no name or a possible duplicate (the box turns bronze): name it, or Remove
         or Not duplicates. On a disputed estate every item either agent named or valued takes it. Bronze
-        <em>unsure</em> marks any guess, even on a grey tick, until your tick or a value you type: read those hardest. A maker
-        added to the name reprices it.</li>
-      <li><strong>A drawer photographed piece by piece.</strong> Tick the rows (or <span class="btn">Select all</span> on the
-        group) and a selection bar appears at the foot. <span class="btn">Remove lines</span> takes them off the list and keeps
+        <em>unsure</em> marks a guess, even on a grey tick, until your tick or a value you type. Press
+        <span class="btn">Unsure</span> first (it gathers them, ticking nothing) and read them hardest. A maker added to the
+        name reprices it.</li>
+      <li><strong>A drawer photographed piece by piece.</strong> Tick the rows (or <span class="btn">Select all</span>)
+        and the selection bar appears at the foot. <span class="btn">Remove lines</span> takes them off the list and keeps
         the photos; <span class="btn">Set disposition&hellip;</span> gives them all one destination, such as Donate.</li>
       <li><strong>The Needs you counts</strong> cover every day. While Today is on, the filter row names what earlier days left
         undecided (<em>1 from earlier days still undecided: press All</em>): press <span class="btn">All</span> and finish
         them.</li>
       <li><strong>Last, read the whole list</strong> against what you saw and press
         <span class="btn">&#10003; I&rsquo;ve read the list</span> on the Inventory Review bar: it records who and when,
-        for the list as it stood. Change a name, category, count, value, destination, recipient, condition or room after, or remove an
-        item, on any device, and it says <em>changed since</em>: press it again. A tick changes nothing. While the list is
-        loading or the sheet is unreachable, the press waits.</li>
+        for the list as it stood. Change anything printed about an item after, or remove one, on any device, and it says
+        <em>changed since</em>: press it again. A tick changes nothing. While the list is loading, the sheet is unreachable or
+        Agent One or Agent Two is at work, the press waits.</li>
     </ol>
 
     <h3>The row</h3>
     <div class="tbl-scroll"><table class="tbl">
       <thead><tr><th>Box</th><th>What goes in it</th></tr></thead>
       <tbody>
-        <tr><td>Photo</td><td>Opens it in Drive.</td></tr>
+        <tr><td>Photo</td><td>Opens it in Drive. So do the record&rsquo;s photos.</td></tr>
         <tr><td>Each, Total</td><td>Fair market value of one, and of all; on an estate, as of the date of death.</td></tr>
         <tr><td>Where it goes</td><td>The camera&rsquo;s words, three renamed (<em>New home</em> is
           <strong>Move</strong>, <em>To a person</em> is <strong>Distribute</strong>, <em>Remove</em> is
@@ -445,15 +454,16 @@ footer p{max-width:66ch;}
           <strong>Hold</strong>, kept back for now. Items split off one photo start with its destination.</td></tr>
         <tr><td>Who takes it</td><td>With one vendor of that kind confirmed on the Job Plan, it fills itself in.</td></tr>
         <tr><td>&#9662;</td><td>The rest: category, condition, serial number, appraiser, chain of custody,
-          <span class="btn">&#10133; Another item in this photo</span>, <span class="btn">&#10133; Close-up</span>,
-          <span class="btn">Remove line</span>.</td></tr>
+          <span class="btn">&#10133; Another item in this photo</span> (a blank row for something else in the same photo;
+          it never opens the camera), <span class="btn">&#10133; Close-up</span>, <span class="btn">Remove line</span>.</td></tr>
       </tbody>
     </table></div>
     <p style="margin-top:14px;">Papers print marked <strong>IN PROGRESS</strong> until every flagged item is checked; they are
       never held back. Where an Agent Two value stands unticked, they also wait for the list to be read, then print
       <em>REVIEWED &mdash; read by Anthony Graziano, October 26, 2026; 42 items checked; 158 accepted as valued</em>. The
       Court Inventory and the Trust Schedule stay FINAL; their count of Agent Two&rsquo;s values is bronze until the list is
-      read. <span class="btn">+ Add line item</span> adds anything with no photo. A car or boat from the walkthrough
+      read. Those under More &#9662; open on screen first: <span class="btn">Print / Save PDF</span> from there.
+      <span class="btn">+ Add line item</span> adds anything with no photo. A car or boat from the walkthrough
       waits under the Inventory Review bar (<em>From the Estimate Walkthrough</em>) until you press
       <span class="btn">Add &rarr;</span>.</p>
   </section>
@@ -477,7 +487,10 @@ footer p{max-width:66ch;}
       <li><strong>Approval request.</strong> <span class="btn">Send request</span> makes a Gmail draft with the request as a
         PDF: to every representative with an email, the estate attorney copied, or to the client on living work. Send it from
         Gmail, then press <span class="btn">I&rsquo;ve sent it</span>. From then on
-        <span class="btn">Record the signed request</span> waits here for the signed copy.</li>
+        <span class="btn">Record the signed request</span> waits here for the signed copy. It reads as a letter, one initial
+        per group under $500. Items with nobody in <em>Who takes it</em> wait off it, and the card counts them. Changed an
+        item before sending? The card says so: press <span class="btn">Discard draft</span>, delete it in Gmail and
+        send again.</li>
       <li><strong>Leaving the property &middot; sign out on the iPad.</strong> One row for each selling vendor, charity or
         appraiser taking things away, and on an estate each person, with the item numbers. <span class="btn">Sign out N to &hellip;</span> opens the sheet;
         they sign with a finger and <span class="btn">Sign and file</span> puts it in Drive. Back from an appraiser:
@@ -539,7 +552,8 @@ footer p{max-width:66ch;}
       <div class="side">
         <h4>Living work</h4>
         <ul class="plain">
-          <li>The client approves what leaves, on the same request. No receipts from a person, no bequests.</li>
+          <li>The client&rsquo;s word approves what leaves. Only a firearm, or an item going to someone who works with
+            Havellin, goes on a request for them to sign. No receipts from a person, no bequests.</li>
         </ul>
       </div>
       <div class="side">
@@ -600,6 +614,7 @@ footer p{max-width:66ch;}
         client&rsquo;s own home it is flagged for the client to initial.</li>
       <li><strong>No item or paper is deleted.</strong> <span class="btn">Remove line</span> keeps the photo; a paper filed in
         error is voided with a reason.</li>
+      <li><strong>The app flags more than it refuses.</strong> Amber means read it, not stop.</li>
     </ul>
   </section>
 
@@ -623,6 +638,8 @@ footer p{max-width:66ch;}
         <tr><td>A bar says <em>sheet unreachable: this device&rsquo;s copy</em></td><td>The sheet did not answer: the bar shows
           what this device holds and opens nothing by itself, and the tab asks again every 15 seconds.</td></tr>
         <tr><td>No thumbnails</td><td>Nothing is lost. Reload, or tap the box for Drive.</td></tr>
+        <tr><td>No Send request</td><td>Nothing waits, a draft waits for <span class="btn">I&rsquo;ve sent it</span>, or the
+          card says in red what is missing.</td></tr>
       </tbody>
     </table></div>
   </section>

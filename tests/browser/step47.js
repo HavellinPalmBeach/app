@@ -149,11 +149,14 @@ const T0 = Date.parse('2026-09-24T15:00:00Z');   // a past day, so each desk ope
         L('s1', { itemNo: 3, objectName: 'Oak sideboard', disposition: 'Keep' }),
         L('bc', { itemNo: 4, objectName: 'Bar console', disposition: 'Keep', driveFileId: 'f-bar' }),
         L('bk', { itemNo: 5, objectName: 'Banksy print', disposition: 'Keep', derivedFrom: 'bc', driveFileId: 'f-bar' }),
-        L('lp', { itemNo: 6, objectName: 'Brass lamp', disposition: 'Donate' }),
+        // Named takers: an item with nobody named to take it is held off the approval request (2026-10-26, "Hold them off").
+        L('lp', { itemNo: 6, objectName: 'Brass lamp', disposition: 'Donate', channel: 'Goodwill Palm Beach' }),
       ];
       _photoRefs[4703] = [
-        L('pt', { itemNo: 1, objectName: 'Oil painting', category: 'Art & Décor', disposition: 'Auction', needsAppr: true }),
-        L('lm', { itemNo: 2, objectName: 'Floor lamp', disposition: 'Donate' }),
+        // A firearm since 2026-10-26: on a client's own home only a firearm, or an item going to someone who works with Havellin,
+        // reaches the request at all (Anthony: "Drop it, firearms aside"); the lamp to Goodwill goes on the client's word.
+        L('pt', { itemNo: 1, objectName: 'Purdey shotgun', category: 'Firearms', disposition: 'Auction', channel: 'Christie’s', needsAppr: true }),
+        L('lm', { itemNo: 2, objectName: 'Floor lamp', disposition: 'Donate', channel: 'Goodwill Palm Beach' }),
       ];
       _photoRefs[4704] = [L('x1', { itemNo: 1, objectName: 'Dining table', disposition: 'Sell' })];
       _photoRefs[4702] = [];
@@ -206,6 +209,9 @@ const T0 = Date.parse('2026-09-24T15:00:00Z');   // a past day, so each desk ope
       has(await txt('#inv-row-n1'), 'NFA item — never transported by Havellin', 'the NFA item is not, authority or no authority');
       await press('#inv-workbar details > summary', 'More');
       await press('#inv-workbar button[onclick="printAppraisalWorklist(4701)"]', 'Appraisal Worklist');
+      await press('#doc-viewer-print', 'Print / Save PDF, in the viewer');   // the paper opens on screen first (2026-10-26)
+      await p.waitForSelector('#doc-viewer-modal', { state: 'visible', timeout: 4000 }).catch(() => ok(false, 'the viewer comes back after the print dialog'));
+      await press('#doc-viewer-modal button[onclick="closeDocViewer()"]', 'Close the viewer');
       await p.waitForTimeout(400);
       const wl = await T((await lastPrint()).html);
       has(wl, '1 cleared to carry.', 'the worklist clears one firearm to carry');
@@ -327,7 +333,8 @@ const T0 = Date.parse('2026-09-24T15:00:00Z');   // a past day, so each desk ope
       await press('#inv-workbar button[onclick="printApprovalRequest(4703)"]', 'Approval Request (living)');
       await p.waitForTimeout(400);
       const req = await T((await lastPrint()).html);
-      has(req, 'Oil painting', 'fixture: the painting is on the request');
+      has(req, 'Purdey shotgun', 'fixture: the shotgun is on the request');
+      lacks(req, 'Floor lamp', '⚠⚠ the lamp to Goodwill is not: the client\'s word approves it (2026-10-26)');
       lacks(req, 'reported under oath', '⚠⚠ no "reported under oath" on a living client\'s request');
       lacks(req, 'has not been valued yet', 'and no valuation notice at all');
     });

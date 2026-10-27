@@ -42,14 +42,14 @@ function gsVar(name) {
   if (!m) throw new Error('var not in .gs: ' + name);
   return m[2];
 }
-const GS_VARS = ['AGENT_API', 'AGENT_API_VERSION', 'AGENT_MAX_IMG', 'AGENT_VALUE_MODEL', 'AGENT_VALUE_EFFORT',
+const GS_VARS = ['AGENT_API', 'AGENT_API_VERSION', 'AGENT_MAX_IMG', 'AGENT_MODELS_API', 'AGENT_MODEL_FLOORS', 'AGENT_MODEL_LINES', 'AGENT_MODEL_LIST_SECS', 'AGENT_MODEL_DEMOTE_SECS', 'AGENT_MODEL_SLOW_LIMIT', 'AGENT_FALLBACK_BETA', 'AGENT_VALUE_EFFORT',
   'AGENT_VALUE_MAX_TOKENS', 'AGENT_VALUE_PARALLEL', 'AGENT_VALUE_MAX_LINES', 'AGENT_VALUE_GENERAL_BATCH',
   'AGENT_VALUE_SEARCHES', 'AGENT_VALUE_FETCHES', 'AGENT_VALUE_CONTINUES', 'AGENT_VALUE_MAX_COMPS',
-  'AGENT_VALUE_TIME_BUDGET', 'AGENT_VALUE_FALLBACK_BETA', 'AGENT_VALUE_SOURCES', 'AGENT_VALUE_NOTICE_KINDS',
-  'AGENT_VALUE_CONF_DOWN'];
+  'AGENT_VALUE_TIME_BUDGET', 'AGENT_VALUE_SOURCES', 'AGENT_VALUE_NOTICE_KINDS',
+  'AGENT_VALUE_CONF_DOWN', 'AGENT_VALUE_RESULTS_SEGMENTS', 'AGENT_VALUE_RESULTS_PARAMS', 'AGENT_VALUE_NO_PRICE_RE', 'AGENT_VALUE_TEXT_MAX', 'AGENT_VALUE_ABBREV_RE'];
 const GS_FNS = ['_agProp', '_agMissingProps', '_agImageBlock', '_avCents', '_avTool', '_avTools', '_avSystem',
-  '_avLineText', '_avUserContent', '_avBody', '_avHttp', '_avEcho', '_avReadResult', '_avSeenUrls', '_avUrlKey',
-  '_avLineResult', 'agentValueLines'];
+  '_avLineText', '_avUserContent', '_avBody', '_avHttp', '_avEcho', '_avReadResult', '_avSeenUrls', '_avUrlKey', '_avResultsPage', '_avClip',
+  '_avLineResult', 'agentValueLines', '_agModelVersion', '_agVerCmp', '_agNewestOf', '_agCache', '_agModelList', '_agDemoted', '_agDemote', '_agSlow', '_agModels', '_agSendAll', '_agHttpFailure'];
 
 // `reply(body, i, call)` answers each request of each fetchAll; `throwOn(call)` makes a fetchAll throw, as
 // UrlFetchApp does when one request outruns its own limit. `tick` is the clock's step per reading.
@@ -107,7 +107,7 @@ const CTXP = { estate: true, basis: 'Fair Market Value', valuationDate: '2026-06
 
 // ─── THE REAL APP SIDE ───────────────────────────────────────────────────────
 const AV_FNS = ['_avValueButtonHtml', 'agentValueMode', 'agentValueInternal', '_avHasFigure', 'agentValueableRefs', 'agentValueUnreviewed',
-  'agentValueStale', 'agentValueSpecialistWorth', '_avValDate', '_avContext', '_avItemPayload', '_avComp', '_avWrite',
+  'agentValueStale', 'agentValueSpecialistWorth', '_avValDate', '_avContext', '_avItemPayload', 'agentValueGradesCondition', '_avComp', '_avWrite', '_invCondIsAgents', '_invAgentCondition', 'agentValueWhole',
   '_avNoteFailure', 'agentValueApply', '_avTakeValue', '_avStampReviewed', '_invStampBy', 'deviceUser', 'agentValueRun', 'agentRevalue', '_avStart',
   '_avSendNext', '_avFinish', '_avRepaint', '_avStateHtml', '_avState', 'agentValueUseSale',
   'agentValueNotices', '_avNoticeKinds', '_avNoticeLabel', '_avRename', '_avNoticesHtml', '_deskShowBtnHtml', '_avSummary', '_avRowBadges', '_avPanelHtml',
@@ -117,11 +117,11 @@ const AV_FNS = ['_avValueButtonHtml', 'agentValueMode', 'agentValueInternal', '_
   'invFiduciaryMode', 'isDecedentJob', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep', 'estateValueDate',
   '_avdDate', '_ymdLocal', 'resolveValBasis', '_agNameKey', '_agDetailRefs', 'invLineCloseUps', '_invFileId', 'invAppraisalThreshold',
   'gateDispute', '_gateYes', 'invNeedsAppraisal', 'fmt', '_invMoney', '_invNamed', '_invItemNo', '_andJoin',
-  'moneyToNumber', '_readAppsScriptJson', '_invJob', '_avNameIsAgents', '_invStampLineReviewed', '_invRenderWhenIdle', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible'];
-const AV_VARS = ['_avRun', '_avForceComps', '_avAfter', 'AGENT_VALUE_BATCH', 'AGENT_VALUE_GENERAL_CEILING', 'AGENT_VALUE_MAX_COMPS',
+  'moneyToNumber', '_readAppsScriptJson', '_invJob', '_avNameIsAgents', '_invStampLineReviewed', '_invRenderWhenIdle', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', 'agentValueLooks', '_avPhotoContext', '_invPhotoSource', '_invRoomName', 'agentListedOff', 'agentValueAgain', 'invLineQty', 'invLineReviewed', 'invLineOpen'];
+const AV_VARS = ['_avRun', '_avForceComps', '_avAfter', 'AGENT_VALUE_BATCH', 'AGENT_VALUE_GENERAL_CEILING', 'AGENT_VALUE_MAX_COMPS', 'AGENT_CONDITIONS',
   'AGENT_VALUE_MARK_RE', 'AGENT_VALUE_NO_MARK_RE', 'AGENT_VALUE_CONFS', 'AGENT_VALUE_SOURCES', 'AGENT_VALUE_OWN', 'AGENT_VALUE_SALE_DATE_RE',
   'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'DECEDENT_SERVICES', 'DOC_TIERS',
-  'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'AGENT_MAX_DETAILS', 'INV_VAL_SOURCES', 'MAIV_OTHER', 'MAIV_BY_CATEGORY'];
+  'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'AGENT_MAX_DETAILS', 'INV_VAL_SOURCES', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', 'AGENT_VALUE_READ_RE', 'AGENT_VALUE_HEDGE_RE', 'AGENT_LISTED_MAX', '_avAutoAgain', 'INV_CATEGORIES'];
 
 // A synchronous, already-settled promise (the runner is synchronous), unwrapping a returned thenable like a real one.
 function sp(v) {
@@ -183,7 +183,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(out.ok, 'it answers');
     const req = g.sent[0][0];
     const body = JSON.parse(req.payload);
-    eq(body.model, 'claude-opus-5-5', 'the model the spec names, its own constant');
+    // 2026-10-26 (Anthony: always the most accurate model): the newest top-tier model, its floor where the model list cannot be read.
+    eq(body.model, 'claude-fable-5-1', 'the newest top-tier model (the floor, with no model list in the sandbox)');
     eq(body.output_config, { effort: 'medium' }, 'effort set explicitly, medium to start');
     eq(body.thinking, { type: 'adaptive' }, 'adaptive thinking');
     eq(body.max_tokens, 16000, 'the non-streaming ceiling');
@@ -260,6 +261,124 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(liveLines(gsFn('_avSeenUrls')), 'server_tool_use', 'never the model\'s own tool calls');
   }
 
+  // 2026-10-26b, the first live testAgentValue: an eBay search page cited as a $50 listing, and a LiveAuctioneers
+  // price-results page cited as a SOLD pair of Restoration Hardware mirrors at $380 with "price not shown" in its own title.
+  group('⚠⚠ S3b · A COMPARABLE IS ONE ITEM\'S OWN PAGE, WITH THE PRICE THAT PAGE SHOWS: a results page or a sale with no price shown is left out');
+  {
+    const reply = (before, comps, conf) => () => ({ code: 200, body: ANSWER([VAL({ comps, confidence: conf || 'high' })], [], before) });
+    const MIRRORS = 'https://www.liveauctioneers.com/price-result/pair-of-restoration-hardware-wood-framed-mirrors/';
+    const EBAY_SEARCH = 'https://www.ebay.com/sch/i.html?_nkw=herend+rothschild+bird';
+    // The live mirror: its only "sold" comparable is a results page whose price it never saw.
+    let g = gsCtx({ reply: reply([SEARCH([MIRRORS])], [COMP({ url: MIRRORS, price: 380,
+      title: 'Pair Of Restoration Hardware Wood Framed Mirrors (sold lot, price not shown; similar wood-framed mirrors $50 to $380)' })]) });
+    let out = g.agentValueLines({ context: CTXP, items: [LINE()] });
+    let r = out.results && out.results.s1;
+    eq(r && r.comps, [], '⚠ the price-results page is not a comparable, though a tool returned it');
+    eq(r && r.unfit, 1, 'and it is counted as left out');
+    eq(r && r.dropped, 0, 'never as invented: the page was returned');
+    eq(r && [r.source, r.confidence], ['General estimate', 'low'], '⚠⚠ so the research line prints a general estimate, never "auction comps" (the Court Inventory reads the source)');
+    // The live plates: a real sold lot beside an eBay search page cited as an asking listing.
+    g = gsCtx({ reply: reply([SEARCH([SOLD_URL, EBAY_SEARCH])], [COMP(), COMP({ url: EBAY_SEARCH, price: 50, kind: 'asking',
+      title: 'Herend Hungary Porcelain Rothschild Bird 10¼" Dinner Plate 1524 Motif 10, single plate', venue: 'eBay' })]) });
+    r = (g.agentValueLines({ context: CTXP, items: [LINE()] }).results || {}).s1;
+    eq(r && r.comps.map((c) => c.url), [SOLD_URL], 'the sold lot\'s own page stays; the search page goes');
+    eq(r && [r.unfit, r.dropped, r.confidence, r.source], [1, 0, 'high', 'Auction comps'], 'no level of confidence is lost for it: a tool returned the page');
+    // A price of nothing is no price, and words that say the price was not shown are believed over the figure beside them.
+    g = gsCtx({ reply: reply([SEARCH([SOLD_URL])], [COMP({ price: 0 })]) });
+    r = (g.agentValueLines({ context: CTXP, items: [LINE()] }).results || {}).s1;
+    eq(r && [r.comps.length, r.unfit, r.source], [0, 1, 'General estimate'], 'a price of $0 is not a sale price');
+    [['Herend Rothschild Bird plates, price not disclosed', 'LiveAuctioneers'], ['Herend plates (hammer price undisclosed)', 'Bonhams'],
+     ['Herend Rothschild Bird plates', 'Dealer, price on request'], ['Herend plates, prices weren’t shown', 'Invaluable'],
+     ['Herend plates, no hammer price', 'Heritage']].forEach(([title, venue]) => {
+      const h = gsCtx({ reply: reply([SEARCH([SOLD_URL])], [COMP({ title, venue })]) });
+      const x = (h.agentValueLines({ context: CTXP, items: [LINE()] }).results || {}).s1;
+      eq(x && [x.comps.length, x.unfit], [0, 1], 'its own words say no price was shown: "' + title + ' · ' + venue + '"');
+    });
+    [['Herend Rothschild Bird dinner plates, set of 8', 'LiveAuctioneers'], ['Herend plates, price realised $700', 'Bonhams'],
+     ['Herend plates, priced to sell', 'Chairish']].forEach(([title, venue]) => {
+      const h = gsCtx({ reply: reply([SEARCH([SOLD_URL])], [COMP({ title, venue })]) });
+      const x = (h.agentValueLines({ context: CTXP, items: [LINE()] }).results || {}).s1;
+      eq(x && [x.comps.length, x.unfit], [1, 0], 'an ordinary title keeps its comparable: "' + title + '"');
+    });
+
+    // The link shapes, off real venues.
+    const RESULTS = [EBAY_SEARCH, 'https://www.ebay.com/sch/i.html?_nkw=herend&LH_Sold=1&LH_Complete=1', 'https://www.ebay.com/b/Herend-Porcelain/262364/bn_1',
+      'https://www.ebay.co.uk/shop/herend-rothschild-bird?_nkw=herend', MIRRORS, 'https://www.liveauctioneers.com/search/?keyword=herend+rothschild',
+      'https://www.invaluable.com/search?query=herend%20rothschild', 'https://www.worthpoint.com/inventory/search?query=herend+rothschild+bird',
+      'https://www.ha.com/c/search-results.zx?N=790+231&Ntt=herend', 'https://www.google.com/search?q=herend+rothschild+bird+sold',
+      'https://www.amazon.com/s?k=herend+rothschild+bird', 'https://www.etsy.com/search?q=herend', 'https://www.1stdibs.com/search/?q=herend',
+      'https://www.bonhams.com/auction/22925/results/', 'https://www.chairish.com/collection/herend?q=herend'];
+    const ITEMS = ['https://www.ebay.com/itm/356699118849', 'https://www.ebay.com/itm/356699118849?_skw=herend+rothschild&hash=item5305',
+      SOLD_URL, FETCH_URL, 'https://www.bonhams.com/auction/22925/lot/1036/a-herend-porcelain-dinner-service-in-the-rothschild-bird-pattern/',
+      'https://www.worthpoint.com/worthopedia/herend-rothschild-bird-dinner-plate-1524-1234567890', 'https://www.christies.com/en/lot/lot-6412345',
+      'https://www.sothebys.com/en/buy/auction/2023/design-online/a-pair-of-herend-plates', 'https://www.chairish.com/product/123456/herend-plates',
+      'https://www.1stdibs.com/furniture/dining-entertaining/dinner-plates/herend-plates/id-f_12345/', 'https://www.etsy.com/listing/123/herend-plate',
+      'https://www.ha.com/itm/decorative-arts-continental/herend-plates/a/123-45678.s', 'https://www.replacements.com/herend-rothschild-bird-china/c/12345',
+      'https://www.liveauctioneers.com/item/123456_herend?utm_source=google&q=', 'https://www.example.com/research/herend-rothschild', 'not a link'];
+    RESULTS.forEach((u) => eq(g._avResultsPage(u), true, 'a results page: ' + u));
+    ITEMS.forEach((u) => eq(g._avResultsPage(u), false, 'one item\'s own page: ' + u));
+
+    // The first net: the model is told, in the prompt and on the field it fills.
+    const sys = String(g._avSystem(CTXP));
+    has(sys, 'Never cite a search or results page', 'the prompt rules out a results page');
+    has(sys, 'a sale whose page shows no price is not a comparable', 'and a sale with no price shown');
+    const compsField = JSON.stringify(g._avTool('comps'));
+    has(compsField, 'never a search or results page', 'the comps field says so too');
+    has(compsField, 'Never one filled in from a range, an estimate or another lot', 'and its price field');
+
+    // The editor probe names what it left out, so the next live run shows it.
+    const logs = [];
+    const pg = gsCtx({ reply: reply([SEARCH([SOLD_URL, MIRRORS])], [COMP(), COMP({ url: MIRRORS, price: 380 })]) });
+    pg.Logger = { log: (m) => logs.push(String(m)) };
+    vm.runInContext(gsVar('AGENT_COUNT_IN_NAME_RE') + '\n' + gsFn('testAgentValue'), pg);
+    let perr = ''; try { pg.testAgentValue(); } catch (e) { perr = String(e && e.message || e); }
+    eq(perr, '', 'the probe runs');
+    ok(logs.some((l) => /1 comparable\(s\) left out: a search or results page, or no price of its own/.test(l)), 'testAgentValue prints the comparables it left out');
+  }
+
+  // 2026-10-26b (Anthony, off a cabbage-ware line: "it seems to be cut off at the end. It says check whether this is, and then it just ends").
+  group('⚠ S3d · a note or a basis that runs long ends at a whole sentence, or at a word with an ellipsis, never mid-phrase');
+  {
+    const NOTE = 'The third photo shows a faint impressed or moulded mark near the centre of the underside. Check it under raking light: '
+      + 'a Bordallo Pinheiro or other Portuguese maker\'s mark would raise the value somewhat. Also, the top dish has gold-coloured flecks '
+      + 'that the others may not have. Check whether this is a glaze variation or a later replacement piece before relying on the set.';
+    const BASIS = 'My research tools ran out before I found any sold comparables, so this is a low-confidence estimate based on asking prices for '
+      + 'related Portuguese cabbage-ware plates which run about thirty five to sixty dollars a piece and asking prices are usually well above '
+      + 'what things sell for while unmarked crescent side plates are a smaller and less sought after form than dinner plates are';
+    const g = gsCtx({ reply: () => ({ code: 200, body: ANSWER([VAL({ basis: BASIS, notices: [{ kind: 'other', text: NOTE }] })], [], [SEARCH([SOLD_URL])]) }) });
+    const r = (g.agentValueLines({ context: CTXP, items: [LINE()] }).results || {}).s1 || {};
+    const note = ((r.notices || [])[0] || {}).text || '';
+    ok(note.length <= 300, 'the note fits (' + note.length + ')');
+    ok(/may not have\.$/.test(note), '⚠ the note ends at its last whole sentence: "' + note.slice(-40) + '"');
+    lacks(note, 'Check whether this is', 'never on the half-sentence the old cut left');
+    const basis = String(r.basis || '');
+    ok(basis.length <= 300 && /…$/.test(basis), 'a basis with no full stop to end on ends at a word, with an ellipsis: "' + basis.slice(-30) + '"');
+    ok(!/\s…$|,…$/.test(basis) && /[a-z]…$/.test(basis), 'on a whole word, never after a space or a comma');
+    eq(g._avClip('  A short   note.  '), 'A short note.', 'short text is only tidied');
+    // On review: a point is a full stop only before a space and a capital, in the whole text, and never closing an abbreviation.
+    const pad = (n) => 'word '.repeat(n);
+    const dec = g._avClip(pad(56) + 'Each sold near $12.50 at auction last spring.');   // the point falls at the cut
+    ok(dec.length <= 300 && dec.length > 250 && !/\$12\.$/.test(dec) && !/\$12$/.test(dec), '⚠ a decimal at the cut is never read as a full stop: "' + dec.slice(-20) + '"');
+    const abbr = g._avClip(pad(40) + 'One sale fits. Made by Gorham Mfg. Co. of Providence, c. 1895, with the lion anchor G hallmark read in close-up and a gilt wash.');
+    ok(abbr.length < 300 && /fits\.$/.test(abbr), '⚠ an abbreviation is never a sentence end; the last real one is: "' + abbr.slice(-24) + '"');
+    const init = g._avClip(pad(42) + 'Signed J. Smith on the back, a regional painter whose oils sell at small auctions for modest sums.');
+    ok(init.length <= 300 && !/J\.$/.test(init), 'an initial is not a sentence end either: "' + init.slice(-20) + '"');
+    const low = g._avClip(pad(45) + 'One sale fits. A lot of 40 pcs. in all sold together for a modest sum at a regional house.');
+    ok(low.length < 300 && /fits\.$/.test(low), '⚠ a point before a lowercase word is no full stop, abbreviation list or not: "' + low.slice(-20) + '"');
+    eq(g._avClip('x'.repeat(300)).length, 300, 'text that fits is never cut');
+    has(String(g._avSystem(CTXP)), 'in one or two short sentences, under forty words', 'the prompt asks for a short note');
+    has(JSON.stringify(g._avTool('comps')), 'One or two short sentences, under forty words.', 'and the note\'s field says so');
+  }
+
+  group('S3c · the deployment: 2026-10-26b, the app relies on it, and the banner leads with the comparable gap');
+  {
+    eq((GS.match(/var BACKEND_VERSION = '([^']+)';/) || [])[1], '2026-10-26b', 'main-sync.gs is 2026-10-26b');
+    const B = sandbox({ vars: ['BACKEND_MIN_VERSION', 'BACKEND_FEATURE_COST'] });
+    eq(B.BACKEND_MIN_VERSION, '2026-10-26b', 'and the app relies on it');
+    ok(/^a search page, or a sale whose price was not shown, can stand as a sold comparable, so a researched figure resting on one prints \u201cauction comps\u201d; a long note from Agent Two stops mid-sentence; and neither agent grades an item\u2019s condition; on a deployment older than 2026-10-26, /.test(B.BACKEND_FEATURE_COST.version),
+      'the banner names the newest gap first, by consequence, then 2026-10-26\'s by its vintage');
+  }
+
   group('S4 · the figures are checked: cents, a range round its point, a negative or missing value refused');
   {
     const one = (v) => gsCtx({ reply: () => ({ code: 200, body: ANSWER([VAL(Object.assign({ comps: [] }, v))], [], []) }) })
@@ -313,7 +432,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const out = run(ANSWER([VAL({ line: 'L1', comps: [] })], [{ line: 'L2', reason: 'no resale market for this' }]), two);
     ok(!!out.results.a, 'the line valued is valued');
     eq(out.failed.b, 'no resale market for this', 'a line the model could not value carries its reason');
-    eq(out.failed.c, 'the model did not answer for this line', 'a line it skipped is named as skipped');
+    // 2026-10-26: a line the model skipped is a passing failure, handed back to ask again (`retry`), never a verdict on the line.
+    eq(out.retry.c, 'the model did not answer for this line', 'a line it skipped is named as skipped, to be asked again');
+    eq(out.failed.c, undefined, '…and is not stamped as not valued');
     const stray = run(ANSWER([VAL({ line: 'L9', comps: [] })]), [LINE({ mode: 'general', fileId: '' })]);
     eq(Object.keys(stray.results), [], 'an answer for a line nobody asked about is dropped');
     eq(run({ code: 500 }, [LINE({ fileId: 'GONE', details: [] })]).failed.s1, 'File not found: GONE', 'a photograph not yet in Drive fails that line alone');
@@ -328,21 +449,31 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(Object.keys(out.results).sort(), ['s1', 's2'], 'both lines valued');
     eq(g.sent.length, 2, 'one refused call, one resend');
     ok(g.sent[1].every((r) => !('fallbacks' in JSON.parse(r.payload)) && !r.headers['anthropic-beta']), 'the resend carries neither the field nor its header');
+    // 2026-10-26: any other 400 may be a model that does not take the request: it is tried once on the fallback model, then failed by name.
     const other = gsCtx({ reply: () => ({ code: 400, body: { error: { message: 'messages: something else is wrong' } } }) });
-    eq(other.agentValueLines({ context: CTXP, items: [LINE()] }).failed.s1, 'messages: something else is wrong', 'any other 400 is a failure, named, and never retried');
-    eq(other.sent.length, 1, 'once');
+    eq(other.agentValueLines({ context: CTXP, items: [LINE()] }).failed.s1, 'messages: something else is wrong', 'any other 400 is a failure, named');
+    eq(other.sent.length, 2, 'after one try on the fallback model');
+    eq(JSON.parse(other.sent[1][0].payload).model, 'claude-opus-5-5', '…the newest Opus');
   }
 
   group('S8 · a fetch that outruns its limit fails its slice, named, and the run goes on; the budget hands back the rest');
   {
     const items = [];
     for (let i = 1; i <= 9; i++) items.push(LINE({ stableId: 'c' + i }));
+    // 2026-10-26: the slice that threw goes again at once on the fallback model; where that throws too, its lines come back to be
+    // asked again (`retry`), never stamped as not valued.
     const g = gsCtx({ throwOn: (call) => call === 0, reply: () => ({ code: 200, body: ANSWER([VAL({ comps: [COMP()] })], [], [SEARCH([SOLD_URL])]) }) });
     const out = g.agentValueLines({ context: CTXP, items });
     eq(out.timedOut, true, 'it says some took too long');
-    eq(Object.keys(out.failed).length, 8, 'the eight in the slice that threw are failed');
-    has(out.failed.c1, 'took too long', 'named as such');
-    ok(!!out.results.c9, 'and the next slice was still valued');
+    eq(Object.keys(out.failed).length, 0, 'the eight in the slice that threw are not failed');
+    eq(Object.keys(out.results).length, 9, '…they were valued on the fallback model, and the next slice too');
+    eq(out.results.c1.model, 'claude-opus-5-5', 'the fallback answered them');
+    const g2 = gsCtx({ throwOn: (call) => call <= 1, reply: () => ({ code: 200, body: ANSWER([VAL({ comps: [COMP()] })], [], [SEARCH([SOLD_URL])]) }) });
+    const out2 = g2.agentValueLines({ context: CTXP, items });
+    eq(Object.keys(out2.retry).length, 8, 'the fallback threw too: the eight come back to be asked again');
+    has(out2.retry.c1, 'took too long', 'named as such');
+    eq(Object.keys(out2.failed).length, 0, 'and none is stamped not valued');
+    ok(!!out2.results.c9, 'and the next slice was still valued');
     // The budget: the clock passes it after the first slice, so the second is handed back.
     const slow = gsCtx({ tick: 70000, reply: () => ({ code: 200, body: ANSWER([VAL({ comps: [COMP()] })], [], [SEARCH([SOLD_URL])]) }) });
     const o2 = slow.agentValueLines({ context: CTXP, items });
@@ -420,8 +551,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(r.valReviewed, undefined, '⚠ unreviewed: the desk accepts it');
     eq([r.objectName, r.category, r.qty], ['Herend Rothschild Bird dinner plates, set of 8', 'Antiques', 8], 'the name, category and quantity are untouched');
     const body = liveLines(fn('_avWrite'));
-    ['objectName =', 'category =', 'qty =', 'disposition', 'channel', 'flagNFA', 'flagBequest', 'flagDisputed', 'flagExempt',
+    ['objectName =', 'qty =', 'disposition', 'channel', 'flagNFA', 'flagBequest', 'flagDisputed', 'flagExempt',
      'assetTrack', 'needsAppr', 'authBy', 'approvalDate', 'receiptDoc', 'gross', 'fees', 'itemNo', 'apprId'].forEach((k) => lacks(body, k, 'the writer never touches ' + k));
+    // ⚠ 2026-10-26 (Anthony: "Yes, same rule as the name"): the category, once, under the name's rule and from the app's own list.
+    eq((body.match(/ref\.category = /g) || []).length, 1, 'the category is written in one place');
+    has(body, "if (_avNameIsAgents(ref) && ref.catBy !== 'desk' && ref.category !== 'Firearms'",
+        '…only over Agent One\'s unreviewed name, never a category a person set, never out of Firearms');
+    has(body, "&& res.category && res.category !== ref.category && INV_CATEGORIES.indexOf(res.category) >= 0) ref.category = res.category;",
+        '…and only a category on the list');
     ok(!/\bref\.reviewed\b/.test(body), 'nor the line\'s own review tick');
 
     // A sale date is kept only in the shape the tool asks for, whatever reached the app.
@@ -464,13 +601,19 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('A5 · the ceiling: an ordinary lot that comes back above it is researched instead, in the same run');
   {
-    const { ctx } = rig(ESTATE(), [ROW({ category: 'Furniture' })]);
+    // One article (2026-10-26: the ceiling reads one article's figure, the line's over its Quantity).
+    const { ctx } = rig(ESTATE(), [ROW({ category: 'Furniture', qty: '1' })]);
     eq(ctx.agentValueApply(7, 's1', RES({ mode: 'general', fmv: 400, source: 'General estimate', comps: [] }), ESTATE(), {}), 'research', 'over $250: sent to research');
     eq(ctx._getPhotoRef(7, 's1').fmv, undefined, 'its first figure is never written');
     eq(ctx.agentValueMode(ctx._getPhotoRef(7, 's1')), 'comps', 'the line is now researched');
     eq(ctx.agentValueApply(7, 's1', RES({ mode: 'comps', fmv: 400 }), ESTATE(), {}), 'valued', 'and the researched figure is written');
-    const { ctx: c2 } = rig(ESTATE(), [ROW({ category: 'Furniture' })]);
+    const { ctx: c2 } = rig(ESTATE(), [ROW({ category: 'Furniture', qty: '1' })]);
     eq(c2.agentValueApply(7, 's1', RES({ mode: 'general', fmv: 250, source: 'General estimate', comps: [] }), ESTATE(), {}), 'valued', 'at the ceiling it is an ordinary lot');
+    // ⚠⚠ A GROUP IS TESTED BY ONE ARTICLE (Anthony, 2026-10-26: "One item's price"): 24 plates at $600 is $25 a plate, an ordinary lot.
+    const { ctx: c3 } = rig(ESTATE(), [ROW({ category: 'General/Household', qty: '24' })]);
+    eq(c3.agentValueApply(7, 's1', RES({ mode: 'general', fmv: 600, source: 'General estimate', comps: [] }), ESTATE(), {}), 'valued', '⚠ 24 at $600 together: $25 each, valued as the ordinary lot it is');
+    const { ctx: c4 } = rig(ESTATE(), [ROW({ category: 'General/Household', qty: '2' })]);
+    eq(c4.agentValueApply(7, 's1', RES({ mode: 'general', fmv: 600, source: 'General estimate', comps: [] }), ESTATE(), {}), 'research', '…while 2 at $600 together, $300 each, is researched');
   }
 
   group('⚠⚠ A6 · WHO OWNS A FIGURE: the desk by typing, the appraisal outright (spec §2.3)');
@@ -545,13 +688,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(JSON.stringify(Object.keys(p)), 'disposition', 'and nothing the model must not act on');
     const p2 = ctx._avItemPayload(7, ROW({ stableId: 'x', category: 'Furniture' }));
     eq([p2.mode, p2.fileId, p2.details], ['general', '', []], 'an ordinary lot travels as text');
-    eq(ctx._avContext(ESTATE()), { estate: true, basis: 'Fair Market Value', valuationDate: '2026-06-14' }, 'the job\'s context');
+    const _c = ctx._avContext(ESTATE());
+    eq([_c.estate, _c.basis, _c.valuationDate], [true, 'Fair Market Value', '2026-06-14'], 'the job\'s context');
+    eq(_c.categories, ctx.INV_CATEGORIES, 'with the category list (2026-10-26: a research line\'s category comes back under the name\'s rule)');
     eq(ctx._avContext(LIVING()).valuationDate, '2026-10-06', 'a living job values today');
   }
 
   group('A10 · the run: by id, re-asked for what was not answered, the ceiling re-sent, named when nothing comes back');
   {
-    const refs = [ROW({ stableId: 'a' }), ROW({ stableId: 'b', category: 'Furniture' }), ROW({ stableId: 'c', category: 'Furniture' })];
+    // 'b' is one article (2026-10-26: the ceiling reads one article's figure, so a group of cheap things is never sent on for its total).
+    const refs = [ROW({ stableId: 'a' }), ROW({ stableId: 'b', category: 'Furniture', qty: '1' }), ROW({ stableId: 'c', category: 'Furniture' })];
     const R = rig(ESTATE(), refs, { answer: (body, n) => {
       if (n === 0) return { ok: true, results: { a: RES(), b: RES({ mode: 'general', fmv: 600, source: 'General estimate', comps: [] }) }, failed: {}, remaining: 1 };
       if (n === 1) return { ok: true, results: { c: RES({ mode: 'general', fmv: 40, low: 30, high: 60, source: 'General estimate', comps: [] }), b: RES({ fmv: 650 }) }, failed: {} };
@@ -593,7 +739,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(R.posts.length, 0, 'and nothing is sent');
     R.ctx.agentRevalue(7, 's1');
     eq(R.posts[0].items[0].mode, 'comps', 'the line goes to research');
-    eq(R.ctx._getPhotoRef(7, 's1').fmv, 450, 'and the agent\'s own figure is replaced');
+    // Restated 2026-10-26b: whole dollars each (agentValueWhole), so $450 for the row's eight is $56 each, $448.
+    eq(R.ctx._getPhotoRef(7, 's1').fmv, 448, 'and the agent\'s own figure is replaced');
     eq(R.ctx._getPhotoRef(7, 's1').valReviewed, undefined, 'unreviewed again');
   }
 
@@ -715,16 +862,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     // The row and its record, rendered by the real functions (Agent One's row rig, with Agent Two's figure on the line).
     const rowRig = (row, job) => sandbox({
-      fns: ['invLineReviewed', 'invLineOpen', '_renderInvRow', '_invRowPhotoHtml', '_invRowHasWho', 'invOutForAppraisal', 'invPlanChannel', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', 'invAppraisalSourceText', 'invLineAppraiser', '_invLinkedAppraiser', 'invAppraised', 'invAppraisalInProgress', '_invHasAppraisal',
+      fns: ['invLineReviewed', 'invLineOpen', '_renderInvRow', '_invRowPhotoHtml', '_invRowHasWho', 'invOutForAppraisal', 'invPlanChannel', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', 'invAppraisalSourceText', 'invLineAppraiser', '_invLinkedAppraiser', 'invAppraised', 'invAppraisalInProgress', '_invHasAppraisal', '_invPhotoOpenHtml', 'agentValueAgain', '_avState',
             '_avHasFigure', '_invHasValue', '_avSummary', 'fmt', 'roundCents', 'agentValueInternal', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep',
             'invAppraisalThreshold', 'gateDispute', '_gateYes', '_agNameKey', '_invRowDomId', '_invRecipientInput', '_renderInvPanel', 'invCloseUpRefusal', '_invCloseUpsHtml', '_invCloseUpTileHtml', '_agRecordNoticesHtml', '_avPanelHtml', '_invMoney', '_invDetailRefs', '_invPanelAppraisalHtml',
             '_invPhotoSiblings', '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef', '_invNamed', '_invItemNo',
             'invDealerRouteOffered', 'invDealerRoute', 'invDealerRouteText', '_invFirearmPanelHtml',
             'invBequestFor', 'jobListEntries', 'invApprovalGap', 'invReceiptOwed', '_invBenListAttr',
-            'invRatificationOwed', 'invFiduciaryMode', 'isDecedentJob', 'invReleaseCautions', 'invBequestElsewhere', '_invJob', 'invHavellinRecipient',
+            'invRatificationOwed', 'invFiduciaryMode', 'isDecedentJob', 'invReleaseCautions', 'invBequestElsewhere', '_invJob', 'invHavellinRecipient', 'invWrittenReleaseNeeded',
             // P22 (merged): the row reads a pickup record and a name left on a line moved off To a person.
-            'invPickupRecord', 'signedRecordsOf', 'invChannelLeftover', 'invChannelLeftoverText', '_invPanelLeftoverHtml', 'invLineUnsure', '_invEachInput', 'invUnitValue', 'invLineQty', '_invInputStyle', '_invCtrlMinW', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invNeedsAppraisal', 'invIsIntrinsic', 'invCatMeta', 'invLineAcceptedOnly', '_invRevBoxHtml', 'invIsMAIV', 'invMAIVDefaultCat', '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_jobInvRefs', '_agDupEligible', 'agentNamedTwice'],
-      vars: ['INV_PLAN_CHANNEL_KINDS', 'INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick', '_agDupSet', 'DECEDENT_SERVICES', 'INV_RELEASE_CAUTIONS',
+            'invPickupRecord', 'signedRecordsOf', 'invChannelLeftover', 'invChannelLeftoverText', '_invPanelLeftoverHtml', 'invLineUnsure', '_invEachInput', 'invUnitValue', 'invLineQty', '_invInputStyle', '_invCtrlMinW', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invNeedsAppraisal', 'invIsIntrinsic', 'invCatMeta', 'invLineAcceptedOnly', '_invRevBoxHtml', 'invIsMAIV', 'invMAIVDefaultCat', '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_jobInvRefs', '_agDupEligible', 'agentNamedTwice', 'agentNoticesOn'],
+      vars: ['INV_PLAN_CHANNEL_KINDS', 'INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick', '_agDupSet', 'DECEDENT_SERVICES', 'INV_RELEASE_CAUTIONS', '_avRun', '_avAfter', '_avForceComps',
              'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'INV_APPRAISAL_THRESHOLD', 'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', '_agDupSetJob', 'INV_HOLD_WORDS', 'INV_OPEN_HOLDS', 'INV_ACCEPT_AMMO_RE'],
       stubs: {
         jobs: [job], _invInput: () => '<input>', _invThumbHTML: () => '<div></div>', _invRoomName: () => 'Dining Room',
@@ -749,6 +896,22 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     html = R._renderInvRow(ESTATE(), R._photoRefs[7][0]);
     lacks(html, 'agent value', 'a desk figure carries no agent badge');
     lacks(html, 'agentValueAccept', 'and no Accept');
+    // 2026-10-26 (on review, the sweep): the unsure hint's tooltip speaks of the name the line carries; a line Agent Two renamed
+    // says so rather than giving Agent One's basis for a name it no longer has.
+    R = rowRig(ROW({ stableId: 's1', objectName: 'Hand-painted tin-glazed plates, likely Spanish', namedBy: 'agent', agentConf: 'low', agentBasis: 'glaze and pattern',
+      valuedBy: 'agent', fmv: 200, valLow: 160, valHigh: 240, valConf: 'low', valNameAt: 'Hand-painted tin-glazed plates, likely Spanish', valNameFrom: 'Hand-painted plates, likely Italian' }), ESTATE());
+    html = R._renderInvRow(ESTATE(), R._photoRefs[7][0]);
+    has(html, 'Agent One named it \u201cHand-painted plates, likely Italian\u201d; Agent Two renamed it as it valued it.', '⚠ a renamed line\'s unsure tooltip says who named it what');
+    lacks(html, 'Named by Agent One: glaze and pattern', '…never Agent One\'s basis for the old name');
+    // …and while Agent Two is already valuing a stale line again, its record says so and withholds Re-value (the press was refused).
+    R = rowRig(ROW({ stableId: 's1', objectName: 'Restoration Hardware mirror', namedBy: 'desk', valuedBy: 'agent', fmv: 25, valLow: 20, valHigh: 30, valConf: 'high', valNameAt: 'Wooden wall mirror' }), ESTATE());
+    R._invOpen.s1 = 1; R._avAfter[7] = { s1: 'rename' };
+    html = R._renderInvRow(ESTATE(), R._photoRefs[7][0]);
+    has(html, 'Being valued again for the new name.', '⚠ the record: being valued again');
+    lacks(html, 'agentRevalue(', '…and no Re-value while it is');
+    R._avAfter[7] = {};
+    html = R._renderInvRow(ESTATE(), R._photoRefs[7][0]);
+    has(html, 'agentRevalue(', 'nothing out: Re-value is offered');
     R = rowRig(ROW({ stableId: 's1', valuedBy: 'agent', valLow: 480, valHigh: 800 }), ESTATE({ docTier: 'contents' }));
     has(R._renderInvRow(ESTATE({ docTier: 'contents' }), R._photoRefs[7][0]), 'agent $480&ndash;$800 &middot; internal', 'an internal range on the row');
 
@@ -756,15 +919,24 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const picks = [ROW({ stableId: 'a', fmv: 640, valuedBy: 'agent', valHigh: 800 }), ROW({ stableId: 'd', fmv: 900, valuedBy: 'desk', updatedAt: 9 })];
     const B = sandbox({
       fns: ['_invBulkApply', 'invNeedsAppraisal', 'invIsIntrinsic', 'invCatMeta', 'agentValueUnreviewed', '_avHasFigure', '_invHasValue', '_avStampReviewed', '_invStampBy', 'deviceUser', '_avTakeValue', '_invKeyOnJob', '_invColOnJob',
-            '_getPhotoRef', '_setPhotoRef', '_invJob', 'invFiduciaryMode', 'isDecedentJob', '_invStampLineReviewed'],
-      vars: ['INVENTORY_COLUMNS', 'DECEDENT_SERVICES', 'AGENT_VALUE_OWN'],
+            '_getPhotoRef', '_setPhotoRef', '_invJob', 'invFiduciaryMode', 'isDecedentJob', '_invStampLineReviewed',
+            // 2026-10-26: Mark reviewed names what it swept past (the unsure lines, an agent's note, a duplicate pair)
+            'invLineUnsure', 'invLineReviewed', '_agNameKey', 'agentValueInternal', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep',
+            'agentNotices', 'agentNoticeQuiet', 'agentValueNotices', '_avNoticeKinds', '_avNoticeLabel', 'agentValueStale', 'agentValueSpecialistWorth',
+            'agentValueAgain', '_avState', '_invNamed', '_invItemNo', 'invAppraisalThreshold', 'gateDispute', '_gateYes', 'fmt', 'roundCents', 'agentNoticesOn',
+            'invLineAccepted', 'invLineHold', '_invLineHolds', 'invLineOpen', 'invAcceptCtx'],
+      vars: ['INVENTORY_COLUMNS', 'DECEDENT_SERVICES', 'AGENT_VALUE_OWN', 'AGENT_NOTICE_KINDS', '_avRun', '_avAfter', '_avForceComps', 'DOC_TIERS',
+             'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'INV_OPEN_HOLDS'],
       stubs: { jobs: [ESTATE()], _photoRefs: { 7: picks }, _invPicked: (j) => picks, _invTouch(r) { r.updatedAt = (r.updatedAt || 0) + 1; return r; },
-               savePhotoRefs() {}, _scheduleInventorySync() {}, showSyncBadge() {}, renderInventoryTab() {}, _invMatchesFilter: () => true, _invBulkLast: null },
+               savePhotoRefs() {}, _scheduleInventorySync() {}, showSyncBadge() {}, renderInventoryTab() {}, _invMatchesFilter: () => true, _invBulkLast: null,
+               _jobInvRefs: () => picks, agentDuplicateGroups: () => [], _invPhotoSiblings: () => [], mustFindAllFound: () => false },
     });
     B._invBulkApply(7, 'reviewed', true);
     eq([picks[0].reviewed, picks[0].valReviewed], [true, true], 'the agent-valued line reviewed, its figure accepted with it');
     eq([picks[1].reviewed, picks[1].valReviewed], [true, undefined], 'the desk-valued line reviewed, nothing of the agent\'s stamped');
-    eq(B._invBulkLast.msg, '2 items marked reviewed.', 'the bar says what it did');
+    // 2026-10-26: the agent's figure carried no confidence, so it read unsure, and the bar says the sweep passed it.
+    has(B._invBulkLast.msg, '2 items marked reviewed.', 'the bar says what it did');
+    has(B._invBulkLast.msg, '1 of them was marked unsure: ', '…and names the unsure line it swept past');
     B._invBulkApply(7, 'valSource', 'Appraisal');
     eq([picks[0].valuedBy, picks[0].valHigh], ['appraiser', undefined], 'Appraisal set across a selection takes the agent\'s line outright');
   }

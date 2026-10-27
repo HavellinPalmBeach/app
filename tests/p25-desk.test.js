@@ -92,7 +92,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ['Paperback books', 'Lamp', 'Oil painting', 'Old mattress', 'Desk', 'Pearl necklace'].forEach((n) => has(t, n, n + ' is listed'));
     has(t, 'Initial once for the 2 items above going to Goodwill (Donate), each under $500', '⚠⚠ the two plain Goodwill lines share one initial');
     has(t, 'Initial once for the item above going to Haul-It (Disposed of), each under $500', 'the mattress, its own destination, one initial');
-    eq(count(html, 'initialled with its group'), 3, 'three lines are initialled with their group');
+    // ⚠ restated 2026-10-26 (Anthony: "I don't think we need … for every item say initialled with its group"; "Keep theirs"): a group's
+    // lines carry no words of their own, and a box only on a line that needs its own initial.
+    eq(count(html, 'initialled with its group'), 0, 'no line says it is initialled with its group');
+    eq(count(html, 'class="inv-own-init"'), 3, '⚠⚠ an initial box on the painting, the disputed desk and the necklace alone');
+    has(html, '>Initial</th>', 'and the column is drawn, three items needing their own');
     eq(count(html, 'class="inv-grp-row"'), 2, 'and two group initial lines');
     const S = lift(['invOwnInitial'], STATE, Object.assign(BASE(), { jobs: [PROBATE()], _photoRefs: { 7: lines } }));
     const own = (i) => attempt(() => S.invOwnInitial(lines[i], PROBATE())).val;

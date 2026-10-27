@@ -66,10 +66,11 @@ A test holds the write path to the fields in §5 and fails on any key above.
 | **`comps`** | An intrinsic category (`invIsIntrinsic`: art, antiques, jewelry, silver, rugs, collectibles, firearms, wine, instruments); any line Agent One named with a maker, model, signature or mark (its `agentBasis` cites one); any line ticked *Appraise*; any line a person sends to it | Web search for sold results: auction prices realized, LiveAuctioneers and Invaluable results pages, auction house archives, dealer sales. Three or more sold comps where they exist | `Auction comps` or `Online comps` (whichever the comps are) |
 | **`general`** | Everything else: the drawer of stainless flatware, the cabinet of Crate & Barrel plates, books, linens, kitchenware | One quick search for the going resale rate of that kind of lot, at its quantity and condition | `General estimate` (new) |
 
-- A general estimate is a figure for the schedule, not research. *"Stainless flatware, service for 12,
-  everyday brand, $40 to $60"* is the whole job.
-- **A general estimate that comes back above `AGENT_GENERAL_CEILING`** (a starting figure, $250) is
-  re-run as `comps` in the same pass: the lot is worth more than "ordinary".
+- A general estimate is a figure for the schedule, not research. *"Stainless flatware, everyday brand"*, Quantity 60,
+  $40 to $60 for the lot, is the whole job (the name never carries the count: Agent One's rule since 2026-10-24).
+- **A general estimate whose figure for one article (the figure over the line's Quantity, since 2026-10-26; the whole
+  line's until then) comes back above `AGENT_GENERAL_CEILING`** (a starting figure, $250) is re-run as `comps` in the same
+  pass: the lot is worth more than "ordinary". Anthony: *"One item's price"*.
 - `general` lines are batched (about ten to a request); `comps` lines go one to a request, with the
   photo and its detail shots (the maker's mark is what makes a comp a match).
 
@@ -177,7 +178,7 @@ add the action to `BACKEND_ACTIONS` and the app's `BACKEND_NEEDS`, with its cost
 
 | | |
 |---|---|
-| Model | `claude-opus-5-5` (`AGENT_VALUE_MODEL`, its own constant; measure before changing) |
+| Model | Chosen by itself since 2026-10-26 (`_agModels('value')`, Agent One's rule: AGENT_ONE_SPEC §3): the newest top-tier model on Anthropic's model list first, today `claude-fable-5-1`, the newest Opus as the fallback, today `claude-opus-5-5`; `AGENT_MODEL_PIN` in Script Properties pins one. It was `claude-opus-5-5` (`AGENT_VALUE_MODEL`) until then |
 | Effort | `medium` to start; sweep on one real estate |
 | Tools | `web_search_20260209` (`max_uses` about 5 for `comps`, 1 for `general`), `web_fetch_20260209`; the answer through a `strict: true` tool, never parsed prose |
 | Limits | Apps Script's six minutes: `UrlFetchApp.fetchAll` about eight requests at a time, stop on a budget and hand back `remaining`, as `agentIdentifyShots` does; handle `pause_turn` by continuing the request |
@@ -203,17 +204,21 @@ add the action to `BACKEND_ACTIONS` and the app's `BACKEND_NEEDS`, with its cost
     "7_r3_inventory_...": {
       "fmv": 640, "low": 480, "high": 800, "confidence": "medium",
       "source": "Auction comps",
-      "basis": "Median of 4 sold sets of 8, 2025–2026, adjusted for one chipped rim",
+      "basis": "Four sold comparables, 2025 to 2026; the median, less for one chipped rim",
       "comps": [ { "title": "Herend Rothschild Bird dinner plates, set of 8", "venue": "LiveAuctioneers",
                    "saleDate": "2026-03-11", "price": 700, "url": "https://...", "kind": "sold" } ],
       "lookup": "Herend Rothschild Bird dinner plate",
       "notices": [] } },
   "remaining": 42,
-  "failed": { "7_r9_inventory_...": "no sold comparables found" } }
+  "failed": { "7_r9_inventory_...": "cannot tell what it is from the photograph" },
+  "retry":  { "7_r12_inventory_...": "the valuation took too long to come back" } }
 ```
 
 `failed` is per line and never fatal; the app re-asks for what is left. A line it could not value
-stays unvalued with the reason on the row, never a guess.
+stays unvalued with the reason on the row, never a guess. Since 2026-10-26 (§13): `failed` is a verdict, and a best
+estimate on thin evidence is a figure at confidence low, so a line is unvalued only when the model cannot tell what it is,
+or it is papers; a passing failure (a request past UrlFetchApp's limit, a busy service, a line the model skipped) comes back
+under `retry`, is asked again once in the run and is then left unstamped. The basis never carries the line's count.
 
 ---
 
@@ -250,7 +255,9 @@ Opus 5.5 at $4 / $20 per million tokens, web search about $10 per 1,000.
 | `general`, batched ten to a request | ≈ **$0.02–0.05** | ≈ $8–20 |
 | **Per estate** | | **≈ $30–55**, against a $20k–$100k ticket |
 
-Measure on the first real estate before tuning. Cost does not drive the model choice.
+Measure on the first real estate before tuning. Cost does not drive the model choice. Since 2026-10-26 the first choice
+is the top tier (§7), about two and a half times Opus; Anthony accepted it (*"at most 1 to 5 a month"*, on $10,000 to
+$40,000 jobs).
 
 ---
 
@@ -310,7 +317,8 @@ and browser step 69.
   `valFailed` (a line it could not value keeps the reason, §7: *"with the reason on the row"*). `valReviewedBy` and
   `valReviewedAt` record the acceptance. All on the `savePhotoRefs` whitelist; none sticky. No workbook or CSV column was
   added, so `saveInventory.gs` is unchanged.
-- **The ceiling (§3) is read off the point value** (`fmv` above $250), and the re-run is the app's: the general answer is
+- **The ceiling (§3) is read off the point value** (`fmv` above $250; one article's, `fmv` over `invLineQty`, since
+  2026-10-26, below), and the re-run is the app's: the general answer is
   never written, the line is forced to research for the session, and it goes in the next call of the same run. The server
   values what it is asked, as asked.
 - **Searches (§7).** Research: five searches and two page reads per line. Ordinary lots: eight to a request with up to
@@ -319,12 +327,17 @@ and browser step 69.
 - **The URL guard (§4b)** reads links out of every tool *result* block (search results, fetched pages, and what the dynamic
   filter's code printed), never the model's own blocks (a fetch request carries a URL the model chose). A drop costs a level
   of confidence; research with no sold comparable left is `low`. An ordinary lot is not held to the sold rule.
+  Since `2026-10-26b` a comparable is also one item's own page with the price that page shows (the first live
+  `testAgentValue()` cited an eBay search page and a LiveAuctioneers price-results page whose price it had not seen):
+  `_avResultsPage` and `AGENT_VALUE_NO_PRICE_RE` leave the rest out (`unfit`, no confidence lost, since a tool returned
+  the page), so it never earns comps; the prompt's EVIDENCE rule and the `comps` field are the first net.
 - **Refusal fallback.** `fallbacks: 'default'` with its beta header, per Anthropic's guidance for this model; a 400 that names
   the field is sent once more without it. `pause_turn` is continued twice at most; a request still paused is failed as
   unfinished.
 - **Timeouts.** UrlFetchApp's own per-request limit (60 seconds is the commonly reported figure; the Google docs could not be
   read from the build environment) throws for the whole `fetchAll`, so a slice that throws fails its lines as *took too long*,
-  nothing is written, and the run goes on. A slice is started only within 120 seconds of the call's start. Measure with
+  nothing is written, and the run goes on (since 2026-10-26 the slice goes again on the fallback model, then comes back as
+  `retry`: below). A slice is started only within 120 seconds of the call's start. Measure with
   `testAgentValue()`, which prints the elapsed time.
 - **The desk.** *Value N lines* on the work bar, after *Name N shots*; *Unreviewed values* chip; *Accept value* under the
   figure; *Accept values* on the bulk bar (only lines with an unreviewed agent figure are touched; all three gone since
@@ -385,6 +398,86 @@ and browser step 69.
     list). The figure Agent Two writes stays the line's whole value at its Quantity (`fmv`), Each is read off it, and a
     count corrected at the desk carries Each across (`_invQtyCarriesValue`, the agent's range scaled with it; an appraised
     line never moved). The prompt says the desk reads one article's value as the line's over its Quantity.
+- **The once-over (2026-10-26):** Anthony: *"do a once over on the two agents … as accurate as possible on the first pass …
+  TC oversight minimized."* Apps Script `2026-10-26`, a redeploy owed (it carries `2026-10-25b`). Where the build departs from
+  the spec above:
+  - **The model chooses itself** (§7): `_agModels('value')`, the newest top-tier model on Anthropic's model list first (today
+    `claude-fable-5-1`), the newest Opus behind it (today `claude-opus-5-5`); `AGENT_VALUE_MODEL` and
+    `AGENT_VALUE_FALLBACK_BETA` are gone (`AGENT_FALLBACK_BETA` serves all three agent calls). A slice that throws, a busy
+    service (429, 529, 5xx), an answer cut off at its ceiling and a request the first model rejects go again on the fallback
+    (a paused turn is never replayed to another model); running long twice in a day (`_agSlow`), or a rejection the fallback
+    answered (`_agDemote`), keeps the task on the fallback for the day. `AGENT_MODEL_PIN` pins one model. `testAgentValue()`
+    prints the model beside each line and lists the lines to ask again; its probes carry no count in a name.
+  - **A guessed name is looked at** (Anthony, 2026-10-25: *"agent 1 guess and agent 2 confirm or update upon pricing"*):
+    `agentValueLooks(ref)` (the name still Agent One's, `_avNameIsAgents`, and hedged in its own words,
+    `AGENT_VALUE_HEDGE_RE`: *appears to be*, *likely*, *possibly*, *probably*, *in the style of*, *attributed to*) sends an
+    ordinary lot's photograph with it; `_avUserContent` labels it with the line and keeps the lot ordinary (no close-ups, no
+    research). A photograph that cannot be read costs that lot its picture, never the batch its answer.
+  - **What the photograph a line shares says** (`_avPhotoContext`): `room`; on a photograph several lines share, `photoNote`
+    (the crew's note said over it, sent once as the photograph's, marked as possibly about another thing; the line's own
+    `fieldNote` is then sent only on a split line) and, with a photograph, `alsoListed` (what else is listed off it) and
+    `roomNote` (the walkthrough's note for the room). A name a person typed goes without `agentBasis` (the Restoration
+    Hardware mirror went with *no visible maker's mark*). Research labels the main photograph and each close-up.
+  - **The category, under the name's rule** (Anthony: *"Yes, same rule as the name"*): the categories ride the payload
+    (`_avContext`'s `categories`, `INV_CATEGORIES`; the backend holds no copy, Agent One's rule), `record_values` then
+    requires `category`, the server keeps it on a research line only (`_avLineResult`), and `_avWrite` writes it, before the
+    rename, where `_avNameIsAgents` holds and the category is on the list. §2.1's "never the category" is overruled for that
+    case only; the quantity stays the line's. On review (2026-10-26): never out of Firearms, the category that switches the
+    firearm gates on (the server drops a change on a line filed Firearms, `_avWrite` refuses one; into Firearms only adds the
+    protocol), and never over a category a person set across a selection (`catBy`, sent as `categoryChecked`).
+  - **No sold comparable, no comps:** a research answer with no sold comparable kept is written `General estimate`
+    (`_avLineResult`; it printed *auction comps* on the Court Inventory and the Estate Inventory Report); an unknown source on
+    an ordinary lot is `General estimate`, never `Online comps` (`_avWrite`).
+  - **A best estimate, marked unsure** (Anthony: *"Best estimate, marked unsure"*): `unvalued` is only for a line the model
+    cannot identify, or papers and records; thin evidence is a figure at confidence `low`, which the row marks unsure. On an
+    ordinary lot confidence measures how well the going rate for that kind of lot is known, not citations.
+  - **The basis is printed** (`valNote`, on the Estate Inventory Report and the workbook): one plain sentence of evidence,
+    about twenty words, never the line's count or its name, so it stays true when a person corrects Qty. An estate's figure
+    is a problem understated as well as overstated.
+  - **Brands and electronics:** retail and designer furniture and decor (Restoration Hardware, Pottery Barn, Crate & Barrel,
+    Arhaus, Ethan Allen) at what it fetches second-hand, never the brand's retail page; modern electronics by model and age.
+    Research searches where a thing sells (auction results and dealer sales for art, antiques, silver, jewellery and rugs;
+    resale and consignment for branded furniture, decor and electronics). Ordinary lots of one kind in a batch share one
+    search.
+  - **The ceiling reads one article** (§3; Anthony: *"One item's price"*): `agentValueApply` tests `fmv / invLineQty`
+    against `AGENT_VALUE_GENERAL_CEILING`, so 24 everyday plates at $12 each are no longer researched.
+  - **`retry`, a passing failure:** the server answers a request past UrlFetchApp's limit (once the fallback has had it), a
+    busy service and a line the model skipped under `retry`, never `failed`. `_avSendNext` sends each once more in the run
+    (`st.retried`) and then leaves it with nothing written and nothing stamped (`st.later`: *N did not come back (slow or
+    busy): they go with the next run, or press Value N lines*). `failed` stays the verdict (the model's own unvalued, a
+    refusal, a cut-off on the fallback, prose) and is stamped `valFailed` as before.
+  - **The run waits its turn:** `agentValueAuto` queues itself behind a run already out (`_avAutoAgain`, taken by
+    `_avFinish`) instead of being skipped; *Value N lines* pressed then says a run is out. A naming run that named something
+    before it failed still hands on, and a room check already out takes Agent Two at its own tail (`_agFinish`).
+  - **A rename and a close-up:** `agentValueAgain(job, ref)` (queued in `_avAfter`, or forced while a run is out): the stale
+    note reads *Agent Two is valuing it again for the new name* and `_avPanelHtml` withholds Re-value. `agentValueAfterCloseUp`
+    (from `invAddCloseUp` and `invRetryCloseUp`, once the close-up is in Drive) researches the line over the agent's own figure
+    or none, never a reviewed, typed or unphotographed line; `invLineCloseUps` sends the newest close-ups first (a split
+    line's own before its photograph's), so one added at the desk to a line with four from the field is read.
+    `agentValueAfterRename` skips a typed or unphotographed line.
+  - **Notices and the hint:** `agentValueNotices` adds the app's *worth a specialist* only where Agent Two's own notes do not
+    already say it, and the row's badge goes once the line is reviewed. `invLineUnsure(ref, job)` reads no agent figure where
+    counsel values (`agentValueInternal`), and a guessed name is settled only by a figure made under it at medium or high
+    confidence; the work bar's *Unsure* chip gathers them, third after *Unnamed shots* and *Not reviewed*: a filter on the
+    row's hint, never a tick or a review of its own. *Mark reviewed* names the unsure and noted lines it swept, and says when
+    Agent Two is still valuing lines on the job. Since 2026-10-27 (the merge's review) it names the lines a tick leaves open,
+    unnamed or in a possible duplicate, in place of the duplicate pairs it swept past: since the flagged-lines rule (below) a
+    tick never takes a line out of *Possible duplicates*.
+  - **Walkthrough collections:** `collectionLineWithPhoto` clears the walkthrough's `fmv` once the line is photographed
+    (unless a person or an appraisal owns it), and `collectionUseLine` carries it only when owned, so Agent Two values the
+    collection and an appraiser's figure replaces Agent Two's when it lands (Anthony: *"a flagged collection will almost
+    certainly go to an appraiser or specialty buyer … Good to know the value going in"*).
+- **Anthony at the desk (2026-10-26b, Apps Script `2026-10-26b`):** off a client the earlier agents had valued.
+  **Whole dollars each** (*"Do we say $10 or do we say $12?"*; he took *"Whole dollars each"*): `_avWrite` writes the figure
+  and both ends of its range through `agentValueWhole(x, qty)`, one article's share to the nearest dollar times the count
+  ($75 for seven plates is $11 each, $77), under a dollar each in cents; a typed figure stays as typed. (Between $1 and $10
+  each the rounding can move a group a long way, sixty forks at $1.25 becoming $60: put to him, not yet answered.)
+  **Condition** (*"Agents grade it"*): `record_values` carries `condition` where the app sends its grades; the server keeps it
+  only for a line whose photograph the request carried (`unit.saw`), and `_avItemPayload` sends a line nobody has graded with
+  its photograph (`agentValueGradesCondition`), still an ordinary lot. **Re-value across a selection** (`invBulkRevalue`, *"Re-value
+  on the bulk bar"*): the record's rule, each line at its own depth. **A comparable is one item's own page with its price**
+  (above, §4b). **A note ends on a whole sentence** (`_avClip`): one had stopped at *Check whether this is*; a note is asked
+  for in under forty words.
 - **Only flagged lines take a tick (2026-10-26, Q106; it replaced the $100 line of 2026-10-25, Q99, and carries Q100
   to Q105):** Anthony: *"we will be obviously going back to the office and looking over the entire inventory list
   ourselves to make sure everything looks right … this is our job at night. The agent identifies everything and then
@@ -412,8 +505,11 @@ and browser step 69.
   `waiveAppraisal` repaints the row's box, its group and the work bar through `_invReviewRepaint`); `flagBequest`,
   `flagDisputed`; its own `agentNotices` while not quiet (`agentNoticeQuiet`), its `valNotices` while the figure is
   Agent Two's, or an Agent One note still open on its photograph's line (`_invPhotoNoteOpen`, which reads that line
-  from `fc.byId`; off a removed line only a Firearm or NFA note holds, `agentNoticeLoud`, and `agentNotices` lists it
-  above the rows against the photograph's first line still listed); an open duplicate group (`fc.dup`; a tick never
+  from `fc.byId`, else from the manifest, removed or not: any note on it not yet quiet holds every line off the
+  photograph until each is reviewed, a *Look at this* going quiet once every line still listed off the photograph is
+  reviewed, a *Must find* once every must-find is found, a *Firearm* or *Possible NFA item* never; a removed photograph
+  line's notes, all of them, ride on the first line still listed off it, `agentNoticesOn`, so the list above the rows and
+  that line's record show what holds the lines); an open duplicate group (`fc.dup`; a tick never
   answers one, since `_agDupEligible` no longer leaves out reviewed lines, and since the second review a rename or a
   category change does not either: `_agWrite` keeps Agent One's own reading as `agentName`, on `savePhotoRefs`' list
   and `collectionLineWithPhoto`'s drop list, and `agentDuplicateGroups` keys on `agentName`, else `valNameFrom`, else
@@ -452,7 +548,9 @@ and browser step 69.
   `invMarkListRead` refuses with `Not recorded: <why>. Press it once the list has been read from the sheet.` and
   records nothing. `_invListReadHtml(job, st)` always draws the host `#inv-read-<jobId>` carrying `data-rk`
   (`_invReadKey(job, st)`), empty unless `st.accepted > 0` (a list every line of which a person checked asks no read),
-  and `_invEdit` redraws `#inv-workbar` whole when the key moved. Where any line stands as the agents left it
+  and `_invReadLineRepaint` redraws `#inv-workbar` whole when the key moved: after an edit (`_invEdit`), and after a
+  sheet read that changed nothing (`_invRefreshFromCloud`, where the line still said *the list is still loading from the
+  sheet*). Where any line stands as the agents left it
   (`accepted > 0`), `_invProgressStamp` prints *REVIEWED* only on a current read, naming it (`invListReadWords`: *read
   by Anthony Graziano, October 26, 2026*, or *read October 26, 2026* where no name was recorded; it read *read by the
   desk*); with every line checked or standing and no current read it prints *IN PROGRESS — 42 items checked; 158
@@ -471,8 +569,9 @@ and browser step 69.
   withheld.* (the second clause only while the read is owed), or, every flagged item checked, *… until the list is
   read since its last change — they are never withheld.* `probatePackageGaps` names *the list not yet read* (*… since
   it last changed*) where named live lines stand with no current read. Q108 (*"Show it, no tick"*):
-  `invLineUnsure(ref)` takes no context (`invLineReviewed(ref)` without one), so the bronze *unsure* shows wherever
-  either agent was guessing, on a line that stands too, until a person's look; since the second review a person's
+  `invLineUnsure(ref, job)` asks `invLineReviewed(ref)` with no context (the job says only whether counsel values,
+  above), so the bronze *unsure*, and the line's place under the *Unsure* chip, show wherever either agent was guessing,
+  on a line that stands too, until a person's look; since the second review a person's
   figure on the line (`valuedBy` desk or appraiser with `_invHasValue`) is that look (Q105); the tick is still wanted
   only where both guessed. **The reasons:** `_invLineHolds(ref, fc, every, only)` is the one rule and
   `invLineHold(ref, fc)` its first reason (or `''`), in this order: `gone`, `nocontext`, `dispute`, `firearm`,

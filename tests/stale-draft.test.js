@@ -700,6 +700,10 @@ function run({ group, ok, eq, has, lacks }) {
       // The signed copy emailed after an iPad signing (2026-10-19): its draft is recorded on the signature (sig.copy), a record
       // of a draft made, never a draft to send or confirm; the rail reads its provider and address, not the stamp.
       _agrIpadEmailCopy: 'the signed copy\'s record on the signature',
+      // Discard draft (2026-10-26): a waiting request draft let go, kept among the record's out-of-date drafts with its stamp.
+      discardApprovalRequestDraft: 'the request draft let go, kept as discarded',
+      // A line on a waiting request draft changed after it (2026-10-26): its touch is compared with the draft's stamp, to flag it.
+      approvalRequestChanged: 'what changed on a waiting request draft since it was made',
     };
     const names = [...new Set([...src.matchAll(/(^|\n)function\s+([A-Za-z_$][\w$]*)\s*\(/g)].map((m) => m[2]))];
     const readers = names.filter((n) => { let b; try { b = fn(n); } catch (e) { return false; } return /draftedAt/.test(live(b)); });

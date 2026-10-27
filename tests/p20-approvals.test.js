@@ -227,7 +227,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(text(U.__doc.getElementById('ia-note').innerHTML).trim(), 'Daniel Adler has not signed #6 Line 6 yet: that line stays on the next request until they do.',
        'only the line still open is named');
     // The living client: who signed, typed, as before.
-    const V = [LINE('l', 1, { disposition: 'Distribute', channel: 'Sarah Ellsworth (daughter)' })];
+    // A rifle since 2026-10-26: on a client's own home only a firearm, or an item going to someone who works with Havellin,
+    // is recorded as approved in writing (Anthony: "Drop it, firearms aside"); an everyday line is refused by name.
+    const V = [LINE('l', 1, { objectName: 'Browning rifle', category: 'Firearms', disposition: 'Distribute', channel: 'Sarah Ellsworth (daughter)' })];
     const W = desk(['invRecordApproval', 'invSaveApproval'], LIVING(), V, { _invPick: { l: 1 }, _todayStr: () => '2026-10-03' });
     W.invRecordApproval(2);
     has(W.__doc.getElementById('ia-body').innerHTML, 'id="ia-signer" value="Margaret Ellsworth"', 'a living client: who signed, prefilled with the client');
@@ -348,7 +350,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const mk = () => [
       LINE('r1', 1, { objectName: 'Tea service', disposition: 'Distribute', channel: 'Mary Smith', dispDate: '2026-10-02', authBy: 'Ruth Adler', approvalDate: '2026-09-30' }),
       LINE('r2', 2, { objectName: 'Desk', disposition: 'Sell', channel: 'Kodner Galleries', custodyLog: [{ cid: 'x', action: 'Released', party: 'Kodner Galleries', date: '2026-10-03' }] }),
-      LINE('r3', 3, { objectName: 'Sargent portrait', disposition: 'Auction', authBy: 'Ruth Adler', approvalDate: '2026-10-01' }),
+      LINE('r3', 3, { objectName: 'Sargent portrait', disposition: 'Auction', channel: 'Christie’s', authBy: 'Ruth Adler', approvalDate: '2026-10-01' }),
       LINE('r4', 4, { objectName: 'Sofa', disposition: 'Donate', dispDate: '2026-10-02', authBy: BOTH, approvalDate: '2026-10-01' }),
       LINE('r5', 5, { objectName: 'Clock', disposition: 'Distribute', channel: 'John Smith' }),
       LINE('r6', 6, { objectName: 'Bible', disposition: 'Keep', dispDate: '2026-10-02' })];
@@ -425,10 +427,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const O = desk(['printApprovalRequest'], TRUST(), [LINE('o', 1, { objectName: 'Clock', disposition: 'Sell', dispDate: '2026-10-02', authBy: 'Ruth Adler', approvalDate: '2026-09-30' })]);
     O.printApprovalRequest(7);
     const ot = flat((O.__log.printed[0] || {}).html);
-    has(ot, 'To Ruth Adler and Daniel Adler: the item listed below has already left the property and is listed for your signature.', 'the intro says so (one line: singular, P22)');
+    // ⚠ restated 2026-10-26: the request is a letter (Anthony approved its words).
+    has(ot, 'Dear Ruth Adler and Daniel Adler,', 'the letter is addressed to both');
+    has(ot, 'The item listed below has already left the property and is listed for your signature.', 'the intro says so (one line: singular, P22)');
     lacks(ot, 'ready to be released', 'never "ready to be released"');
     lacks(ot, 'Nothing on this list will be moved', 'nor that nothing will be moved');
-    has(ot, 'Verbal approval is not accepted.', 'verbal approval is still not accepted');
+    // ⚠ restated 2026-10-26 (Anthony: "it's a bit odd to say like verbal approval is never accepted"): the rule is enforced, not printed.
+    lacks(ot, 'Verbal approval', 'the letter does not lecture about verbal approval');
     has(ot, 'It is listed here for the signature of Daniel Adler, which ratifies the release; nothing is undone.', 'and the section names who signs');
     // One representative on a probate estate: the role's words.
     const PR = desk(['printApprovalRequest'], PROBATE(), [LINE('p', 1, { objectName: 'Clock', disposition: 'Sell', dispDate: '2026-10-02' })]);
@@ -472,8 +477,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     S._invBulkApply(2, 'channel', 'carla  ortiz (crew)');
     eq([lines[1].channel, lines[3].channel], ['carla  ortiz (crew)', 'carla  ortiz (crew)'], 'the bulk recipient is written on a living client\'s lines');
     eq(S.__log.alerts, [], 'nothing refused');
-    has(S.__log.badges.map((b) => b.m).join(' | '), '2 items updated. ⚠ 1 of them is flagged conflict of interest — #2 Lamp (Carla Ortiz works with Havellin; proposed: Distribute). Check before the release request goes to the representative.',
-        '⚠⚠ the bulk bar\'s confirmation names the line and the person (and not the line kept)');
+    has(S.__log.badges.map((b) => b.m).join(' | '), '2 items updated. ⚠ 1 of them is flagged conflict of interest — #2 Lamp (Carla Ortiz works with Havellin; proposed: Distribute). Check before the release request goes to the client.',
+        '⚠⚠ the bulk bar\'s confirmation names the line and the person (and not the line kept); a living client\'s request goes to the client (2026-10-26)');
     lacks(S.__log.badges.map((b) => b.m).join(' | '), 'flagged disputed', '⚠ a recipient sweep asks only the lines leaving: the disputed line kept is not named');
     // A disposition swept onto a line already naming one of ours names it too.
     S._invPick = { v3: 1 };
@@ -522,11 +527,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // P25 (Q43): the Collection Partners' *Released, with its receipt on record* line reads it of the collection's lines.
     // ⚠ restated 2026-10-22: the desk's Closing bar asks it too (a donated or sold line gone with its paper owed), for its shut line.
     eq(callers('invRecordedGone'), ['collectionPartnerLines', 'deskFoldState', 'invRatificationOwed', 'invReleasedToPerson'], '⚠ recorded as gone: one definition, four readers');
-    eq(callers('invRatificationOwed'), ['_renderInvReleasesCard', '_renderInvRow', 'deskFoldState', 'planDerivedLines', 'printApprovalRequest'],
-       '⚠⚠ left before every fiduciary approved: the request, the desk row, the desk\'s approvals list, the Releases bar\'s line (2026-10-22), the Job Plan');
+    eq(callers('invRatificationOwed'), ['_approvalLineRequestable', '_renderInvReleasesCard', '_renderInvRow', 'deskFoldState', 'planDerivedLines', 'printApprovalRequest'],
+       '⚠⚠ left before every fiduciary approved: the request, the desk row, the desk\'s approvals list, the Releases bar\'s line (2026-10-22), the Job Plan, and what the request may carry (2026-10-26: a line held for want of a taker is never one already gone)');
     // P25 (Q44): and the one writer that names a line's recipient from the confirmed vendor of its kind asks it before writing.
     eq(callers('invStaffRefused'), ['_invBulkApply', '_invEdit', 'invFillPlanChannel'], 'the estate\'s refusal: every handler that writes a channel or a disposition');
-    eq(callers('invHavellinRecipient'), ['_renderInvRow', 'invStaffRefused'], 'the one definition: the estate\'s refusal and the row\'s name (the caution reads it too)');
+    // invWrittenReleaseNeeded since 2026-10-26: on a client's own home such a line still needs the client's written approval.
+    eq(callers('invHavellinRecipient'), ['_renderInvRow', 'invStaffRefused', 'invWrittenReleaseNeeded'], 'the one definition: the estate\'s refusal, the row\'s name and the living written-release rule (the caution reads it too)');
     has(noComments(decl('INV_RELEASE_CAUTIONS')), 'invHavellinRecipient(r, _invJob(jobId))', 'the living caution reads the same definition');
     ['_invEdit', '_invBulkApply'].forEach((n) => lacks(noComments(fn(n)), 'invHavellinRecipient(', n + ' never asks the definition bare (the estate refusal is invStaffRefused)'));
     // Every surface that prints who signed reads the one readable form.

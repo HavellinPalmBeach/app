@@ -1,4 +1,4 @@
-// Step 113 (renumbered from 108 on merging main, whose step 108 landed first) — only flagged lines keep a tick, and the list is read (2026-10-26; Q99 to Q109).
+// Step 114 (renumbered from 108, then 113, on merging main, whose steps 108 and 113 landed first) — only flagged lines keep a tick, and the list is read (2026-10-26; Q99 to Q109).
 //
 // Anthony: *"we will be obviously going back to the office and looking over the entire inventory list ourselves to make
 // sure everything looks right. So the idea that … we need to be like ticking boxes is ridiculous to approve everything,
@@ -58,7 +58,7 @@
 //      check that found nothing, on a clock running three days fast, leaves it green and the report REVIEWED. At 1440 and
 //      390 px no horizontal overflow; zero page errors.
 //
-//   NODE_PATH=/path/to/node_modules node tests/browser/step113.js [/abs/path/to/havellin.html]
+//   NODE_PATH=/path/to/node_modules node tests/browser/step114.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
 const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/havellin.html'));
 const SYNC = 'https://sync.example.test/exec';
@@ -268,7 +268,18 @@ const DAY = (at) => new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_Yo
       // More ▾ keeps its open state across a redraw (_renderInvWorkbar reads it), so it is opened only if it is shut.
       if (menu && !(await p.evaluate(() => !!(document.getElementById('inv-more') || {}).open))) { await p.click('#inv-more > summary'); await p.waitForTimeout(400); }
       await press(sel, what);
-      await p.waitForTimeout(1500);
+      await p.waitForTimeout(menu ? 700 : 1500);
+      // Restated on merging main (2026-10-26, "The desk's More ▾ papers open on screen first"): a paper under More ▾ opens in
+      // the viewer and prints nothing until the viewer's own Print / Save PDF is pressed, which prints that page; the viewer
+      // comes back after the dialog and is closed by its Close (left open, it covered the work bar and every press after it).
+      // The work bar's own papers (the Estate Inventory PDF) still print at once.
+      if (menu) {
+        ok(await p.evaluate(() => { const o = document.getElementById('doc-viewer-modal'); return !!o && o.style.display === 'flex'; }),
+          what + ': opens on screen first (main, 2026-10-26)');
+        eq(await p.evaluate(() => (window.__printed || '').length), 0, what + ': nothing printed until the viewer\'s Print is pressed (characters printed)');
+        await press('#doc-viewer-print', 'the viewer\'s Print / Save PDF (' + what + ')');
+        await p.waitForTimeout(1500);
+      }
       const got = await p.evaluate(() => {
         const d = document.createElement('div'); d.innerHTML = window.__printed || '';
         const pl = [...d.querySelectorAll('div')].filter((x) => /background:\s*#/i.test(x.getAttribute('style') || '') && /font-weight:\s*700/.test(x.getAttribute('style') || ''))
@@ -278,6 +289,7 @@ const DAY = (at) => new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_Yo
       await p.evaluate(() => { const pt = document.getElementById('print-target'); if (pt) { pt.style.display = 'none'; pt.innerHTML = ''; }
         document.querySelectorAll('.panel').forEach((x) => { if (x.dataset.wasActive === '1') x.classList.add('active'); }); });
       await p.waitForTimeout(400);
+      if (menu) { await press('#doc-viewer-modal button[onclick="closeDocViewer()"]', 'the viewer\'s Close (' + what + ')'); await p.waitForTimeout(200); }
       pills = got.pills;
       return got.text;
     };

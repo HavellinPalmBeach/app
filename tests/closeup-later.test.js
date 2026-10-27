@@ -51,7 +51,7 @@ function rig(over, opt) {
           '_captureShot', 'photoSubfolder', 'fieldDispToInv', '_cleanName', '_photoUid', '_slotRefs', '_invTouch',
           '_invDetailRefs', '_jobInvRefs', 'collectionLineUnshot'],
     vars: ['_photoUidSeq', 'FIELD_DISPOSITIONS', 'FIELD_DISP_DEFAULT', 'PHOTO_CAPTURE_LABELS', 'AS_FOUND_SUBFOLDER',
-           'PHOTO_SUBFOLDER', '_localShotThumbs', 'INV_DEFAULT_CATEGORY'],
+           'PHOTO_SUBFOLDER', '_localShotThumbs', 'INV_DEFAULT_CATEGORY', 'DETAIL_PHOTO_MAX_W', 'DETAIL_PHOTO_QUALITY'],
     stubs: Object.assign({
       jobs: [Object.assign({}, JOB)], _photoRefs: { 1: PLATES() },
       estimateStore: { 1: { estimate: EST, approved: true } },
@@ -144,9 +144,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('E · the record: + Close-up beside + Another item in this photo, wired to the handler; never on a typed line');
   {
     const ctx = sandbox({
-      fns: ['_renderInvPanel', 'invCloseUpRefusal', '_invHasPhoto', '_invCloseUpsHtml', '_invCloseUpTileHtml', '_invDetailRefs',
+      fns: ['_renderInvPanel', 'invCloseUpRefusal', '_invHasPhoto', '_invCloseUpsHtml', '_invCloseUpTileHtml', '_invPhotoOpenHtml', '_invDetailRefs',
             '_invPhotoSiblings', '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef', '_agRecordNoticesHtml', 'agentNoticeQuiet', 'invLineReviewed',
-            '_invPanelAppraisalHtml', '_invHasAppraisal', 'invAppraisalInProgress', 'invAppraised', '_invLinkedAppraiser', 'invLineAppraiser', 'invAppraisalSourceText', 'agentValueUnreviewed', '_avHasFigure', 'invLineAccepted', 'invLineHold', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible'],
+            '_invPanelAppraisalHtml', '_invHasAppraisal', 'invAppraisalInProgress', 'invAppraised', '_invLinkedAppraiser', 'invLineAppraiser', 'invAppraisalSourceText', 'agentValueUnreviewed', '_avHasFigure', 'invLineAccepted', 'invLineHold', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', 'agentNoticesOn'],
       vars: ['AGENT_NOTICE_KINDS', 'MAIV_OTHER', 'MAIV_BY_CATEGORY'],
       stubs: {
         _photoRefs: { 1: PLATES().concat([
@@ -196,7 +196,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(many.invLineCloseUps(1, many._getPhotoRef(1, 's')).length, many.AGENT_MAX_DETAILS, 'capped as Agent One\'s are');
     has(liveLines(fn('_avItemPayload')), 'invLineCloseUps(jobId, ref)', 'and it is what Agent Two\'s payload sends');
     // Driven: the payload Agent Two is sent for the salad plates, researched, carries their own close-up first.
-    const pay = sandbox({ fns: ['_avItemPayload', 'invLineCloseUps', '_agDetailRefs', '_invFileId', '_getPhotoRef', '_avNameIsAgents'], vars: ['AGENT_MAX_DETAILS'],
+    const pay = sandbox({ fns: ['_avItemPayload', '_invCondIsAgents', 'agentValueGradesCondition', 'invLineCloseUps', '_agDetailRefs', '_invFileId', '_getPhotoRef', '_avNameIsAgents',
+      '_avPhotoContext', 'agentValueLooks', '_invPhotoSource', '_invRoomName', 'agentListedOff', '_invHasPhoto'], vars: ['AGENT_MAX_DETAILS', 'AGENT_VALUE_HEDGE_RE', 'AGENT_LISTED_MAX'],
       stubs: { agentValueMode: () => 'comps', _photoRefs: ctx._photoRefs } });
     const sent = pay._avItemPayload(1, pay._getPhotoRef(1, 's'));
     eq(sent && sent.details, [{ fileId: 'FID_DS' }, { fileId: 'FID_DP' }], '⚠ Agent Two is sent the salad plates\' own close-up, then the photograph\'s');
@@ -257,13 +258,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const photo = text(read('photography-guide.html'));
     has(photo, 'One missed can still be added on the computer: open the item on Job Admin & Inv and press + Close-up', 'Photographing a House says a missed close-up can be added at the computer');
     lacks(photo, 'cannot be added later', '⚠ and no longer says it cannot');
-    has(text(read('evening-desk-guide.html')), '➕ Another item in this photo, ➕ Close-up, Remove line.', 'The Evening Desk lists it among the record\'s buttons');
+    has(text(read('evening-desk-guide.html')), '➕ Another item in this photo (a blank row for something else in the same photo; it never opens the camera), ➕ Close-up, Remove line.', 'The Evening Desk lists it among the record\'s buttons');
     has(text(read('manual.html')), 'A close-up after the fact (2026-10-24).', 'the manual has the note');
     has(read('MANUAL.md'), '**A close-up after the fact (2026-10-24).**', 'and its markdown copy');
     has(text(read('concierge-guide.html')), 'A close-up missed in the house (new 2026-10-24): in that ▾, press ➕ Close-up', 'the playbook says how');
     has(read('CONCIERGE_GUIDE.md'), '**A close-up missed in the house** (new 2026-10-24): in that ▾, press **➕ Close-up**', 'and its markdown copy');
     // What the pages claim, held to the code: the Look at this is quieted by the review, never by a close-up.
-    has(liveLines(fn('agentNoticeQuiet')), "if (kind === 'other') return invLineReviewed(ref);", 'a Look at this goes quiet on review, which the pages say');
+    // 2026-10-26: on the review of every line off its photograph (the note may be about any of them), still never on a close-up.
+    has(liveLines(fn('agentNoticeQuiet')), "return sib.length ? sib.every(function(r) { return invLineReviewed(r); }) : invLineReviewed(ref);", 'a Look at this goes quiet on review, which the pages say'); 
     lacks(liveLines(fn('invAddCloseUp')), 'reviewed', 'and adding a close-up reviews nothing');
     ok(source().indexOf('function invAddCloseUp(') > 0, 'the handler is in the app');
   }

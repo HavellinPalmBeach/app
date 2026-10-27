@@ -101,9 +101,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(html, 'Pocket card &middot; keep it by the laptop', 'ends with a pocket card');
     eq(count(html, '<section class="card">'), 1, 'one card');
     ok(count(html, '<h2>') >= 10, 'at least ten sections (' + count(html, '<h2>') + ')');
-    // Under 2,500 words of text, masthead and footer included (Anthony's rule for these pages: short).
+    // Under 2,750 words of text, masthead and footer included (Anthony's rule for these pages: short). 2,500 until 2026-10-26b,
+    // when he asked for the day's changes (condition graded, whole dollars, Re-value, Another item) to be on the page; 2,650
+    // until the release request's letter, its hold for a taker and Discard draft, the same day (he asked for the session's
+    // changes to the process to be on it).
     const words = t.split(/\s+/).length;
-    ok(words < 2500, 'short: ' + words + ' words');
+    ok(words < 2750, 'short: ' + words + ' words');
     ['photography-guide.html', 'incident-guide.html', 'sorting-guide.html', 'packing-guide.html', 'move-day-guide.html', 'first-night-guide.html',
      'firearms-protocol.html', 'concierge-guide.html'].forEach((f) => has(html, '<a href="' + f + '">', 'names ' + f));
     has(t, 'Linked from the top of the Job Admin & Inv tab.', 'and says where the app links it');
@@ -417,14 +420,25 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq([Q.agentNoticeQuiet('other', { rev: false }, {}), Q.agentNoticeQuiet('other', { rev: true }, {})], [false, true], 'Look at this: gone once the item is reviewed');
     eq([Q.agentNoticeQuiet('mustfind', { rev: true }, { allFound: false }), Q.agentNoticeQuiet('mustfind', {}, { allFound: true })], [false, true], 'a Must find: stays until every must-find is found');
     eq([Q.agentNoticeQuiet('firearm', { rev: true }, { allFound: true }), Q.agentNoticeQuiet('nfa', { rev: true }, { allFound: true })], [false, false], 'Firearm and Possible NFA item: always stay');
-    has(t, 'Must find, Firearm and Possible NFA item in red, and they stay (a Must find goes quiet once every must-find is found; a Firearm note outlives the item it was raised on); Look at this in amber, gone once you review the item. Quiet notes stay in the item’s record.', 'as the page says');
-    has(code(fn('agentNoticeLoud')), "return kind === 'firearm' || kind === 'nfa';", '"a Firearm note outlives the item it was raised on": a Firearm or NFA note is the one a removal keeps (driven below)');
+    // 2026-10-26: Agent One keeps a photograph's notes on the photograph's own line, whichever thing they are about, so a Look at
+    // this goes quiet once every line off that photograph is reviewed (the real sibling walk, on a photograph split three ways).
+    const sibRefs = [{ stableId: 'p', rev: true }, { stableId: 'p2', derivedFrom: 'p', rev: true, ts: 2 }, { stableId: 'p3', derivedFrom: 'p', rev: false, ts: 3 }];
+    const QS = sandbox({ fns: ['agentNoticeQuiet', '_invPhotoSiblings', '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef'],
+      stubs: { _photoRefs: { 7: sibRefs }, invLineReviewed: (r) => !!(r && r.rev), mustFindAllFound: () => false } });
+    const quietOn = (refs) => { QS._photoRefs[7] = refs; return QS.agentNoticeQuiet('other', refs[0], { id: 7 }); };
+    eq(quietOn(sibRefs), false, '⚠ a Look at this on a reviewed photograph line stays while another item off its photo is unreviewed');
+    eq(quietOn(sibRefs.map((r) => Object.assign({}, r, { rev: true }))), true, '…and goes once every item off its photo is reviewed');
+    has(t, 'Must find, Firearm and Possible NFA item in red, and they stay (a Must find goes quiet once every must-find is found); Look at this in amber, gone once every item in its photo is reviewed. A removed item’s notes move to the next item from its photo. Quiet notes stay in the item’s record.', 'as the page says (a removed item’s notes riding, driven with the review below)');
+    // Since main's 2026-10-26 every note a removed photograph line carried rides on the first line still listed off it
+    // (agentNoticesOn), so the page no longer says only a Firearm note outlives its item (the round-three agentNoticeLoud is gone).
+    lacks(t, 'a Firearm note outlives the item it was raised on', '⚠ never that only a Firearm note outlives its item: every note rides');
+    has(code(fn('agentApplyResult')), 'var src = _getPhotoRef(jobId, group.srcId);', 'Agent One writes a photograph’s notes on the photograph’s own line (the item a removal takes them from)');
     has(code(fn('_agRecordNoticesHtml')), 'off the list above the rows', 'a quiet note is still read in the item’s record');
     has(SRC, '>Show the item</button>', 'Show the item');
     has(t, 'Show the item jumps to it and opens it.', 'as the page says');
     const dup = code(fn('_agDupHtml'));
     ['Possible duplicates', "'Remove</button>", '>Not duplicates</button>'].forEach((w) => has(dup, w, 'the duplicates block: ' + w));
-    has(t, 'Possible duplicates. Compare the photos, then Remove the extra, or Not duplicates if they really are two things. Ticking Reviewed, or renaming one, does not settle it.', 'as the page says (the tick and the rename, driven below)');
+    has(t, 'Possible duplicates. Compare the photos, then Remove the extra, or Not duplicates if they really are two things. Renaming one does not settle it.', 'as the page says (the rename, and the tick the paragraph below names, driven below)');
     // 2026-10-25b (Anthony: "one review. not a multi tiered review"): the values follow the naming and the room check by
     // themselves, Agent Two correcting Agent One's unreviewed names, and Value N lines is for what is left. The row's Accept
     // value is gone (the page said "Each figure stays unreviewed until you press Accept value").
@@ -456,7 +470,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const line = ITEM(o), all = [line].concat(others || []);
       RV.jobs.length = 0; RV.jobs.push(job); RV._photoRefs[job.id] = all;
       const r = attempt(() => { const fc = RV.invAcceptCtx(job, all);
-        return { stands: RV.invLineAccepted(line, fc), reviewed: RV.invLineReviewed(line, fc), unsure: RV.invLineUnsure(line, fc),
+        return { stands: RV.invLineAccepted(line, fc), reviewed: RV.invLineReviewed(line, fc), unsure: RV.invLineUnsure(line, job),
           box: RV._invRevBoxHtml(job.id, line, fc) }; });
       return r.ok ? r.val : { err: r.err };
     };
@@ -500,20 +514,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(why(look(EST(), { agentConf: 'low', valConf: 'low' })), 'Needs a look: both agents were guessing. Tick it once checked.', '…both guessing');
     eq(why(look(EST(), { agentConf: 'low', valConf: 'low', agentNotices: [{ kind: 'other', text: 'a mark under the base' }] })), 'Needs a look: both agents were guessing; Agent One’s note on it. Tick it once checked.', '⚠⚠ …every reason, not the first alone');
     eq(why(look(EST(), {}, [TWIN])), 'Still open: a possible duplicate: Remove one or press Not duplicates, under Possible duplicates. A tick does not settle it.', '…a possible duplicate, which a tick does not settle');
-    // "Ticking Reviewed does not settle it": both halves ticked, the pair is still a group and still held; Not duplicates settles it.
+    // "A tick never settles … a possible duplicate": both halves ticked, the pair is still a group and still held; Not duplicates settles it.
     const ticked = { reviewed: true, reviewedBy: 'Ashley Jerome', valReviewed: true };
     const pairHeld = (o) => { const a = ITEM(Object.assign({}, ticked, o)), b = ITEM(Object.assign({ stableId: 'k2', driveFileId: 'Fk2', ts: 2 }, ticked, o));
       RV.jobs.length = 0; RV.jobs.push(EST()); RV._photoRefs[7] = [a, b];
       const r = attempt(() => { const fc = RV.invAcceptCtx(RV.jobs[0], [a, b]); return [!!fc.dup.k1, RV.invLineHold(a, fc)]; }); return r.ok ? r.val : r.err; };
-    eq(pairHeld({}), [true, 'duplicate'], '⚠⚠ "Ticking Reviewed does not settle it": both halves ticked, the pair stays a possible duplicate');
+    eq(pairHeld({}), [true, 'duplicate'], '⚠⚠ "A tick never settles … a possible duplicate": both halves ticked, the pair stays a possible duplicate');
     eq(pairHeld({ dupOK: true }), [false, ''], '…Not duplicates does');
     {
-      // "…or renaming one": a pair Agent One named alike stays a pair through a name corrected on the desk (agentName).
+      // "Renaming one does not settle it": a pair Agent One named alike stays a pair through a name corrected on the desk (agentName).
       const A = ITEM({ agentName: 'Kitchen utensils, drawer', objectName: 'Henckels kitchen knives', valNameAt: 'Henckels kitchen knives', namedBy: 'desk' });
       const B = ITEM({ stableId: 'k2', driveFileId: 'Fk2', ts: 2, agentName: 'Kitchen utensils, drawer' });
       RV.jobs.length = 0; RV.jobs.push(EST()); RV._photoRefs[7] = [A, B];
       const r = attempt(() => { const fc = RV.invAcceptCtx(RV.jobs[0], [A, B]); return [!!fc.dup.k1, RV.invLineHold(A, fc)]; });
-      eq(r.ok ? r.val : r.err, [true, 'duplicate'], '⚠⚠ "or renaming one, does not settle it": the renamed half is still a possible duplicate');
+      eq(r.ok ? r.val : r.err, [true, 'duplicate'], '⚠⚠ "Renaming one does not settle it": the renamed half is still a possible duplicate');
       // "(the box turns bronze)": both halves ticked, each box ticked in bronze, and neither counts as checked.
       const T1 = ITEM(Object.assign({}, ticked)), T2 = ITEM(Object.assign({ stableId: 'k2', driveFileId: 'Fk2', ts: 2 }, ticked));
       RV._photoRefs[7] = [T1, T2];
@@ -529,7 +543,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const DIS = EST({ gateDispute: 'yes' });
     eq([look(DIS).reviewed, look(DIS, { namedBy: 'desk' }).reviewed, look(DIS, { namedBy: 'desk', valuedBy: 'desk', valLow: undefined, valHigh: undefined, valConf: undefined }).reviewed],
       [false, false, true], '⚠ "every item either agent named or valued": Agent One\'s name, Agent Two\'s value, and the desk\'s own line reviewed by its act');
-    // "Bronze unsure marks any guess, even on a grey tick" (Q108, Anthony: "Show it, no tick"): on a line that stands, either
+    // "Bronze unsure marks a guess, even on a grey tick" (Q108, Anthony: "Show it, no tick"; never Agent Two's range where counsel
+    // values, main's 2026-10-26, held below): on a line that stands, either
     // agent's guess still shows; the tick takes it.
     const g2 = look(EST(), { valConf: 'low' }), g1 = look(EST(), { agentConf: 'low', valuedBy: 'desk', valLow: undefined, valHigh: undefined, valConf: undefined });
     eq([g2.stands, g2.unsure], [true, true], '⚠⚠ "even on a grey tick": Agent Two guessing alone, the line stands and reads unsure');
@@ -543,15 +558,38 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(code(fn('_invStampLineReviewed')), '_avStampReviewed(ref, job)', 'the tick accepts Agent Two’s figure with the line');
     has(code(fn('_renderInvRow')), '_invRevBoxHtml(jid, ref, _ac)', 'the row draws its Reviewed box…');
     has(code(fn('_invRevBoxHtml')), '>Reviewed</label>', '…the row’s Reviewed box');
-    has(code(fn('_renderInvRow')), 'if (invLineUnsure(ref))', 'unsure on the row where the agents were guessing');
+    has(code(fn('_renderInvRow')), 'if (invLineUnsure(ref, job))', 'unsure on the row where the agents were guessing');
     has(code(fn('_renderInvRow')), '>unsure</span>', '…in those words');
     has(code(fn('_invEdit')), "if (key === 'objectName') agentValueAfterRename(jobId, stableId);", 'a name changed is valued again by itself');
-    has(t, 'Correct the name and count, choose where it goes, type who takes it if it leaves, check the value against what you saw. Nothing flagged? No tick, whatever its value: the box is ticked in grey. Flagged? One Reviewed tick covers it: a note, a firearm or ammunition, an appraisal not yet in or waived, a bequest, a dispute, both agents unsure. Hover the box for every reason. A tick never settles an item with no name or a possible duplicate (the box turns bronze): name it, or Remove or Not duplicates. On a disputed estate every item either agent named or valued takes it. Bronze unsure marks any guess, even on a grey tick, until your tick or a value you type: read those hardest. A maker added to the name reprices it.', 'as the page says');
+    // "press Unsure first" (main, 2026-10-26): the Needs you strip carries an Unsure count, third, whose test is the row's own hint
+    // (invLineUnsure, the real rule, handed the job). It gathers the guessed items and ticks nothing: a filter, never a review.
+    const U = lift(['invLineUnsure'], {});
+    const WF = sandbox({ vars: ['INV_WORK_FLAGS'], stubs: { invLineUnsure: (r, j) => U.invLineUnsure(r, j) } }).INV_WORK_FLAGS || [];
+    const unsureFlag = WF.filter((f) => f.key === 'unsure')[0];
+    eq(WF.slice(0, 3).map((f) => f.key), ['unnamed', 'unreviewed', 'unsure'], 'Needs you: Unnamed shots, Not reviewed, then Unsure');
+    eq(unsureFlag && unsureFlag.label, 'Unsure', 'the count reads Unsure');
+    const guess = { stableId: 'g', namedBy: 'agent', objectName: 'Vase, likely Murano', agentConf: 'low', disposition: '' };
+    const lowFig = { stableId: 'f', namedBy: 'desk', objectName: 'Mirror', disposition: '', valuedBy: 'agent', valLow: 20, valHigh: 60, valConf: 'low' };
+    ok(!!unsureFlag && unsureFlag.test(guess, LIVING()) === true, 'it counts Agent One’s guess at a name');
+    ok(!!unsureFlag && unsureFlag.test(Object.assign({}, guess, { reviewed: 1 }), LIVING()) === false, '…until the line is reviewed');
+    ok(!!unsureFlag && unsureFlag.test(Object.assign({ fmv: 40 }, lowFig), LIVING()) === true, 'it counts Agent Two’s low-confidence figure');
+    ok(!!unsureFlag && unsureFlag.test(lowFig, ESTATE({ docTier: 'contents' })) === false, '…never where counsel values: the job reaches the rule');
+    // "even on a grey tick" (Q108): an item standing as the agents left it, Agent Two guessing, is gathered too; a tick takes it.
+    const standing = ITEM({ valConf: 'low' });
+    eq([look(EST(), { valConf: 'low' }).stands, !!unsureFlag && unsureFlag.test(standing, EST()), !!unsureFlag && unsureFlag.test(Object.assign({}, standing, ticked), EST())],
+      [true, true, false], '⚠⚠ Unsure gathers an item standing on a grey tick where Agent Two guessed, and lets it go once ticked');
+    // "ticking nothing": pressing it sets the filter (every day) and writes nothing on an item.
+    const FL = sandbox({ fns: ['setInvFlag'], stubs: { _invFilter: { flag: '', when: 'today' }, renderInventoryTab: () => {} } });
+    const before = JSON.stringify(standing);
+    attempt(() => FL.setInvFlag('unsure'));
+    eq([FL._invFilter.flag, FL._invFilter.when], ['unsure', 'all'], 'pressing Unsure shows the guessed items, every day');
+    eq(attempt(() => { unsureFlag.test(standing, EST()); return JSON.stringify(standing) === before; }).val, true, '…and its test writes nothing on the item: a filter, never a tick');
+    has(t, 'Correct the name and count, choose where it goes, type who takes it if it leaves, check the value against what you saw. Nothing flagged? No tick, whatever its value: the box is ticked in grey. Flagged? One Reviewed tick covers it: a note on it or its photo, a firearm or ammunition, an appraisal not yet in or waived, a bequest, a dispute, both agents unsure. Hover the box for every reason. A tick never settles an item with no name or a possible duplicate (the box turns bronze): name it, or Remove or Not duplicates. On a disputed estate every item either agent named or valued takes it. Bronze unsure marks a guess, even on a grey tick, until your tick or a value you type. Press Unsure first (it gathers them, ticking nothing) and read them hardest. A maker added to the name reprices it.', 'as the page says');
     lacks(t, 'One Reviewed tick covers it all: a note, a possible duplicate', '⚠ never that a tick covers a possible duplicate (the second review)');
     has(t, 'Not yet decided, room by room: name, where it goes, who takes it, value; tick what is flagged.', 'and the pocket card');
     lacks(t, 'On a disputed estate every item takes it.', '⚠ never every item: a line named and decided on the desk is reviewed by that act');
     lacks(t, '$100 needs no tick', '⚠ the $100 line is gone from the page');
-    lacks(t, 'counts as reviewed until Agent Two values it', '…and so is the name typed that waited for a tick once valued');
+    lacks(t, 'counts as reviewed until Agent Two values it', '…and so is the name typed that waited for a tick once valued (main’s sentence, which the flagged-only rule makes untrue)');
     // "Papers print marked IN PROGRESS until every item is decided, valued and, where flagged, ticked", on the real stamp.
     const stamp = (items, job) => { RV.jobs.length = 0; RV.jobs.push(job); RV._photoRefs[job.id] = items;
       const r = attempt(() => RV._invProgressStamp(items, { fc: RV.invAcceptCtx(job, items) })); return r.ok ? decode(r.val.replace(/<[^>]+>/g, ' ')) : 'threw: ' + r.err; };
@@ -625,16 +663,31 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     RV._invCloudSeen[7] = true; RV._invCloudFailed[7] = true;
     eq(attempt(() => RV.invListReadRefusal(7)).val, 'the sheet is unreachable: this is this device’s copy', '…or while the sheet is unreachable');
     RV.SHEETS_SYNC_URL = ''; delete RV._invCloudFailed[7];
-    has(t, 'Last, read the whole list against what you saw and press ✓ I’ve read the list on the Inventory Review bar: it records who and when, for the list as it stood. Change a name, category, count, value, destination, recipient, condition or room after, or remove an item, on any device, and it says changed since: press it again. A tick changes nothing. While the list is loading or the sheet is unreachable, the press waits.', 'as the page says');
-    eq(sandbox({ vars: ['INV_READ_FIELDS'] }).INV_READ_FIELDS.join(','), 'objectName,category,qty,fmv,valLow,valHigh,valSource,disposition,channel,condition,roomIdx',
-      '…the page\'s list is what the press reads: name, category, count, value (its range and source), destination, recipient, condition, room');
-    // "a Firearm note outlives the item it was raised on" (Agent One's notes, above), driven.
+    has(t, 'Last, read the whole list against what you saw and press ✓ I’ve read the list on the Inventory Review bar: it records who and when, for the list as it stood. Change anything printed about an item after, or remove one, on any device, and it says changed since: press it again. A tick changes nothing. While the list is loading, the sheet is unreachable or Agent One or Agent Two is at work, the press waits.', 'as the page says');
+    eq(sandbox({ vars: ['INV_READ_FIELDS'] }).INV_READ_FIELDS.join(','), 'objectName,category,qty,fmv,valLow,valHigh,valSource,disposition,channel,condition,roomIdx,valNote,valDate,apprId,apprDoc,assetTrack,flagExempt,serial',
+      '…"anything printed about an item": what the press reads is what the papers print of a line (the merge\'s review added the basis, the date, the appraiser, the track, the exempt mark and the serial)');
+    RV._agRun = { 7: { running: true } };
+    eq(attempt(() => RV.invListReadRefusal(7)).val, 'the agents are still at work on this list', '…and while Agent One or Agent Two is at work, as the page says');
+    RV._agRun = {};
+    // "A removed item's notes move to the next item from its photo" and "a note on it or its photo" (Agent One's notes, above),
+    // driven: main's rule (agentNoticesOn, 2026-10-26) carries every note a removed photograph line held, a Look at this as much
+    // as a Firearm, to the first item still listed off the photograph; each holds the items off it (photonote) while it is open.
     {
-      const shelf = [ITEM({ stableId: 'p1', driveFileId: 'Fp1', objectName: 'Closet shelf', valNameAt: 'Closet shelf', deletedAt: 9, agentNotices: [{ kind: 'firearm', text: 'a rifle case' }] }),
-        ITEM({ stableId: 'p2', driveFileId: 'Fp1', derivedFrom: 'p1', objectName: 'Hard rifle case', valNameAt: 'Hard rifle case' })];
-      RV.jobs.length = 0; RV.jobs.push(EST()); RV._photoRefs[7] = shelf;
-      const r = attempt(() => [RV.agentNotices(7, [shelf[1]]).map((n) => [n.kind, n.ref && n.ref.stableId]), RV.invLineHold(shelf[1], RV.invAcceptCtx(RV.jobs[0], shelf))]);
-      eq(r.ok ? r.val : r.err, [[['firearm', 'p2']], 'photonote'], '⚠⚠ the shelf removed, its Firearm note stays above the rows and holds the rifle case');
+      const shelf = (o2, o3) => [ITEM({ stableId: 'p1', driveFileId: 'Fp1', objectName: 'Closet shelf', valNameAt: 'Closet shelf', deletedAt: 9,
+          agentNotices: [{ kind: 'firearm', text: 'a rifle case' }, { kind: 'other', text: 'a mark on the box' }] }),
+        ITEM(Object.assign({ stableId: 'p2', driveFileId: 'Fp1', derivedFrom: 'p1', ts: 2, objectName: 'Hard rifle case', valNameAt: 'Hard rifle case' }, o2 || {})),
+        ITEM(Object.assign({ stableId: 'p3', driveFileId: 'Fp1', derivedFrom: 'p1', ts: 3, objectName: 'Wooden box', valNameAt: 'Wooden box' }, o3 || {}))];
+      const read = (S) => { RV.jobs.length = 0; RV.jobs.push(EST()); RV._photoRefs[7] = S;
+        const r = attempt(() => { const fc = RV.invAcceptCtx(RV.jobs[0], S);
+          return [RV.agentNotices(7, [S[1], S[2]]).map((n) => [n.kind, n.ref && n.ref.stableId]), RV.invLineHold(S[1], fc), RV.invLineHold(S[2], fc)]; });
+        return r.ok ? r.val : r.err; };
+      eq(read(shelf()), [[['firearm', 'p2'], ['other', 'p2']], 'photonote', 'photonote'],
+        '⚠⚠ the shelf removed, its Firearm note and its Look at this both ride on the next item from the photo, and hold every item off it');
+      eq(read(shelf(ticked, ticked)), [[['firearm', 'p2']], 'photonote', 'photonote'],
+        '⚠ every item off the photo reviewed: the Look at this goes quiet, the Firearm stays on the list');
+      { const S = shelf(ticked, ticked); read(S);
+        eq(attempt(() => [S[1], S[2]].map((r) => RV.invLineReviewed(r, RV.invAcceptCtx(RV.jobs[0], S)))).val, [true, true],
+          '…and a ticked item off it is reviewed (the tick settles the note on its photo)'); }
       RV._photoRefs[7] = [];
     }
     has(t, 'Read the whole list, then I’ve read the list.', 'and the pocket card');
@@ -672,7 +725,23 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(Object.keys(sandbox({ vars: ['INV_PLAN_CHANNEL_KINDS'] }).INV_PLAN_CHANNEL_KINDS), ['Donate', 'Junk', 'Auction', 'Sell'], 'the kinds that fill themselves in from the one confirmed vendor');
     has(t, 'With one vendor of that kind confirmed on the Job Plan, it fills itself in.', 'as the page says');
     // 2026-10-24: + Close-up, a close-up missed in the house, is a label over the record's chooser (closeup-later.test.js).
-    ['&#10133; Another item in this photo</button>', '&#10133; Close-up</label>', 'Remove line</button>', '>Open photo in Drive</a>'].forEach((w) => has(code(fn('_renderInvPanel')), w, 'the record carries ' + decode(w.replace(/<[^>]+>/g, ''))));
+    ['&#10133; Another item in this photo</button>', '&#10133; Close-up</label>', 'Remove line</button>', '_invPhotoOpenHtml(jid, ref, 240)'].forEach((w) => has(code(fn('_renderInvPanel')), w, 'the record carries ' + decode(w.replace(/<[^>]+>/g, ''))));
+    // 2026-10-26b (Anthony: "maybe we just need a little link under each photo"): the record's photograph and each close-up open in Drive.
+    has(code(fn('_invPhotoOpenHtml')), '>Open in Drive &#8599;</a>', 'each photograph in a record carries a small Open in Drive link');
+    has(code(fn('_invCloseUpTileHtml')), '_invPhotoOpenHtml(jobId, d, 120)', 'a close-up\'s tile too');
+    has(t, 'Opens it in Drive. So do the record’s photos.', 'as the page says');
+    // 2026-10-26b, on the page at Anthony's ask ("update the evening desk with any relevant changes"): each held to its code.
+    has(t, 'Each photo is graded Excellent, Good, Fair or Poor. If it is wrong, change it in the ▾ record; yours is never written over. Blank means the photo could not show it.', 'condition, as the page says');
+    eq(sandbox({ vars: ['AGENT_CONDITIONS'] }).AGENT_CONDITIONS, ['Excellent', 'Good', 'Fair', 'Poor'], '…the grades the agents give');
+    has(code(fn('_invEdit')), "if (key === 'condition') ref.condBy = 'desk';", '…and a grade typed in the record is never written over');
+    has(t, 'Seven plates at $75 read $11 each, $77; under a dollar each keeps its cents. A value you type stays as typed. A value well under what dealers ask is not wrong: asking is not selling; a close-up of a maker’s mark moves it.', 'whole dollars each, as the page says');
+    const W = sandbox({ fns: ['agentValueWhole', 'roundCents'] });
+    eq([W.agentValueWhole(75, 7), W.agentValueWhole(45, 60)], [77, 45], '…$11 × 7 = $77; sixty at 75¢ stay $45');
+    has(t, 'Tick its rows and press Re-value on the selection bar. Values you or an appraiser typed are left alone.', 'Re-value on the selection bar, as the page says');
+    has(code(fn('_renderInvBulk')), '>Re-value</button>', '…the selection bar carries it');
+    has(code(fn('invBulkRevalue')), "r.valuedBy !== 'agent'", '…and leaves a figure a person or an appraiser recorded');
+    has(t, 'Another item in this photo (a blank row for something else in the same photo; it never opens the camera)', 'Another item, as the page says');
+    has(code(fn('invSplitItemClick')), 'added for another thing in this photograph', '…the toast says what it added');
     has(code(fn('_renderInvWorkbar')), "'every flagged item is checked'", 'papers print marked IN PROGRESS until every flagged item is checked (the work bar, 2026-10-26)');
     has(code(fn('_renderInvWorkbar')), '&mdash; they are never withheld.', '…never withheld');
     has(t, 'Papers print marked IN PROGRESS until every flagged item is checked; they are never held back.', 'as the page says (the stamp itself is driven above)');
@@ -710,6 +779,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const liv = attempt(() => P.approvalRequestRecipients(LIVING()));
     eq(liv.ok ? liv.val.to : null, ['meg@ellis.example'], 'to the client on living work');
     has(t, 'Send request makes a Gmail draft with the request as a PDF: to every representative with an email, the estate attorney copied, or to the client on living work.', 'as the page says');
+    // What a living request carries (2026-10-26; Anthony: "Drop it, firearms aside"), on the real rule.
+    const W = lift(['invWrittenReleaseNeeded'], {});
+    const need = (o) => attempt(() => W.invWrittenReleaseNeeded(Object.assign({ stableId: 'x', label: 'inventory' }, o), LIVING({ tc: 'Ashley Jerome' }))).val;
+    eq([need({ disposition: 'Donate', channel: 'Goodwill' }), need({ disposition: 'Distribute', channel: 'Tom', category: 'Firearms' }),
+      need({ disposition: 'Sell', channel: 'Ashley Jerome' })], [false, true, true], 'living: the client’s word for a donation; a firearm and an item to the concierge on a request');
+    has(t, 'The client’s word approves what leaves. Only a firearm, or an item going to someone who works with Havellin, goes on a request for them to sign.', 'as the page says');
     // Record the signed request: offered once the request has gone; opens on that request's items still unsigned, each ticked.
     has(card, "var recBtn = !approvalRequestRecordRefusal(job, S) ?", 'offered by its one rule');
     has(code(fn('approvalRequestRecordRefusal')), "'The request has not gone yet: send the draft and tap I’ve sent it first.'", '…once the request has gone');
@@ -725,6 +800,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // A partial approval is recorded and the rest stay on the next request.
     has(dlg, 'the lines stay on the next request until all', 'one representative’s signature is kept, the items stay on the next request');
     has(t, 'Only one of two representatives signed? Record it anyway. Those items stay on the next request until everyone has signed.', 'as the page says');
+    // More ▾'s papers on screen first (2026-10-26): the viewer, its Print / Save PDF.
+    has(code(fn('printAsFoundRecord')), '{ view: true, job: job, label: ', 'a More ▾ paper opens in the viewer');
+    has(SRC, 'onclick="printDocViewer()">&#128424; Print / Save PDF</button>', 'its Print / Save PDF');
+    has(t, 'Those under More ▾ open on screen first: Print / Save PDF from there.', 'as the page says');
+    // The letter, the hold for a taker and Discard draft (2026-10-26): each sentence on the code that makes it true.
+    eq(sandbox({ vars: ['INV_LINE_INITIAL_MIN'] }).INV_LINE_INITIAL_MIN, 500, 'one initial per group under $500');
+    has(code(fn('printApprovalRequest')), '!invReleaseRecipientNamed(r) && !invRatificationOwed(r, job)', 'an item with nobody to take it is held off the request');
+    has(card, "' for somebody to be named to take '", 'and the card counts them');
+    has(card, "'Discard draft'", 'Discard draft');
+    has(card, 'changed after it was made (where it goes, who takes it or its value). Not sent yet? Discard draft, then send a fresh request.', 'a draft whose item changed: the card says so');
+    has(t, 'It reads as a letter, one initial per group under $500. Items with nobody in Who takes it wait off it, and the card counts them. Changed an item before sending? The card says so: press Discard draft, delete it in Gmail and send again.', 'as the page says');
     // The sign-out rows.
     const row = code(fn('_leavingRowHtml'));
     has(row, "'Sign out ' + g.ready.length + ' to ' + g.taker", 'Sign out N to …');
@@ -852,7 +938,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(head, '<span class="inv-c-each">Each</span><span class="inv-c-val">Total</span>', 'the row’s Each and Total, headed');
     has(t, 'Each, Total Fair market value of one, and of all; on an estate, as of the date of death.', 'as the page says');
     has(code(fn('_invEdit')), "if (key === 'fmv' || key === 'unitVal') _avTakeValue(ref, 'typed', _invJob(jobId));", 'a figure typed in either is the desk’s, or the appraisal’s on a linked item');
-    const S = sandbox({ fns: ['invSplitItemN', '_invPhotoSource', '_getPhotoRef', '_setPhotoRef', '_invFileId', '_photoUid'],
+    const S = sandbox({ fns: ['invSplitItemN', '_invSplitSource', '_invPhotoSource', '_getPhotoRef', '_setPhotoRef', '_invFileId', '_photoUid'],
       vars: ['_photoUidSeq', 'INV_DEFAULT_CATEGORY', 'INV_SPLIT_MAX'],
       stubs: { _photoRefs: { 7: [{ stableId: 'p', label: 'inventory', roomIdx: 1, ts: 1, driveFileId: 'F', driveFileUrl: 'u', disposition: 'Donate', channel: 'Habitat for Humanity' }] },
         savePhotoRefs() {}, _invTouch(r) { return r; }, _scheduleInventorySync() {} } });

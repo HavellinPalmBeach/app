@@ -327,6 +327,8 @@ function run({ group, ok, eq, has, lacks }) {
       const counts = { full: 0 };
       const ctx = sandbox({ fns: CL.fns, vars: CL.vars, stubs: {
         document: dom, alert: (m) => { counts.alert = String(m); }, setTimeout: () => 0,
+        // 2026-10-26b: a second blank line on one photograph asks first (invSplitItemClick); these splits mean it.
+        confirm: (m) => { counts.confirm = (counts.confirm || 0) + 1; counts.asked = String(m); return true; },
         jobs: [Object.assign({ id: 7, name: 'Butler', hvlId: 'HVL-0007', svc: 'cleanout' }, jobO || {})],
         _photoRefs: { 7: refs }, estimateStore: {},
         jobInfoHeaderHtml: () => '<div id="hdr">Butler</div>', jobProgressBlockHtml: () => '<div>band</div>', renderCloseoutCard: () => '',
@@ -370,7 +372,10 @@ function run({ group, ok, eq, has, lacks }) {
       has(s.partial, 'id="inv-row-' + n.stableId + '"', 'the new line is on screen');
       ok(s.same, '⚠⚠ and the tab is byte for byte what a full render draws (' + s.partial.length + ' / ' + s.full.length + ')');
       has(textOf(s.partial), '1 of 2 in this photo', 'the rows sharing the frame say so');
+      eq(r.counts.confirm || 0, 0, 'the first blank line on a photograph asks nothing');
       const again = split(r, 's5');
+      eq(r.counts.confirm, 1, '⚠ a second, while the first still has no name, asks first (2026-10-26b)');
+      has(r.counts.asked || '', 'has no name yet. Add another blank line anyway?', 'naming the blank line already waiting');
       eq(again.fulls, 0, 'a second split: still no full render');
       ok(again.same, 'and still identical to a full render');
       has(textOf(again.partial), '1 of 3 in this photo', 'every line in the frame now reads 1 of 3');
@@ -425,6 +430,7 @@ function run({ group, ok, eq, has, lacks }) {
       const refused = rig([SHOT('u1', { status: 'uploading', driveFileId: '', driveFileUrl: '' })]);
       const su = split(refused, 'u1');
       ok(su.fulls === 0 && /Retry/.test(refused.counts.alert || ''), 'a refused split repaints nothing and says why');
+      eq(refused.counts.confirm || 0, 0, '⚠ and asks nothing first: the refusal comes before the blank-line question (2026-10-26b)');
     }
   }
 

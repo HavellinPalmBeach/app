@@ -52,7 +52,7 @@ const ITEM = (id, over) => Object.assign({
   driveFileId: 'f' + id, driveFileUrl: 'https://drive.google.com/file/d/f' + id + '/view',
 }, over || {});
 
-const PRINT_FNS = ['_invDocPartyHead', 'invLineReviewed', 'invLineOpen', 'invInitialGroupWords', 'invOwnInitial', 'invInitialGroupKey', 'invDocContractBlock',
+const PRINT_FNS = ['_invDocPartyHead', 'invLineReviewed', 'invLineOpen', 'invInitialGroupWords', 'invOwnInitial', 'invInitialGroupKey', 'invDocContractBlock', 'invReleaseRecipientNamed',
   'printContentsRecord', 'contentsRecordSignoff', 'dispositionRecord', 'printApprovalRequest', 'invDispDocWord', 'printCourtInventory', 'jobOnProbateTrack', '_avUnreviewedStamp',
   'agentShotGroups', 'agentNameableRefs', '_agState', '_agStateHtml', '_agNoticesHtml', 'agentNotices',
   'printDispositionLedger', 'referralFeeVendorsNote', 'vendorPaysReferral', '_vendorByName', '_vendorNameKey', '_andJoin', '_renderInvWorkbar', '_arCheckButtonHtml', '_arState', 'agentRoomsToCheck', '_arCheckable', '_arStateHtml', '_avValueButtonHtml', 'agentValueableRefs', '_avHasFigure', '_invHasValue', '_avStateHtml', '_avState', '_avNoticesHtml', 'agentValueNotices', '_avNoticeKinds', '_avNoticeLabel', 'agentValueInternal', 'agentValueUnreviewed', 'agentValueStale', 'agentValueSpecialistWorth', 'invPrimaryDoc', '_invReviewStats', '_invProgressStamp',
@@ -61,7 +61,7 @@ const PRINT_FNS = ['_invDocPartyHead', 'invLineReviewed', 'invLineOpen', 'invIni
   '_invAssignItemNos', '_invItemNo', '_invNamed', '_invRoomName', '_invDispLabel',
   '_invCautionBadges', 'invReleaseCautions', '_invTouch', 'savePhotoRefs', '_warnPhotoStoreFull',
   '_invProgressBar', 'invIsFirearm', 'invTransportBlocked', 'invFirearmAuthorized',
-  '_invCautionNotices', '_invPicked', '_invAwaitingApproval',
+  '_invCautionNotices', '_invPicked', '_invAwaitingApproval', 'invWrittenReleaseNeeded',
   '_renderInventorySummary', '_maivWorklistBlock', '_invDateTime', 'maivStatement_', '_avdDate',
   // 2026-10-22: the summary states the basis and the value date as text; their controls head the desk's Values bar.
   'invStatesEstateValues', '_invValueAsOfHtml', '_renderValueSettings',
@@ -83,11 +83,11 @@ const PRINT_FNS = ['_invDocPartyHead', 'invLineReviewed', 'invLineOpen', 'invIni
   'signedCopyControlHtml', '_localDateOf', 'signedRecordLinksHtml', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsReconciliation',
   'signedRecordsOf', '_reconFlagText', '_ledgerNames', 'donationGroups', '_ymdLocal', 'invDonationReceipted',
   // P20: a living client's line going to one of ours is flagged, and who signed prints readably.
-  'invHavellinRecipient', 'invRecipientName', 'havellinPeople', 'samePerson', 'canonPersonName', 'invRatificationOwed', 'invRecordedGone', 'invPickupRecord', 'custodyEvents', 'invReceiptRecord', 'invViaDealer', 'photoSharesLine', 'photoSharesOf',
+  'invHavellinRecipient', 'invRecipientName', 'havellinPeople', 'samePerson', 'canonPersonName', 'invRatificationOwed', 'invWrittenReleaseNeeded', 'invRecordedGone', 'invPickupRecord', 'custodyEvents', 'invReceiptRecord', 'invViaDealer', 'photoSharesLine', 'photoSharesOf',
   // The job-flow audit (2026-10-08): the Contents Record says every line was photographed, and shared, only where it was.
   '_invHasPhoto', 'photoShareLive',
   // 2026-10-22: the signed schedules, beside the ledger in the close-out papers.
-  '_renderSignedSchedulesCard', 'signedScheduleRows', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invLineAcceptedOnly', '_invAcceptedStampWords', 'invListReadRefusal', '_invManifestUnread', '_arDupEligible', '_invAcceptCtxOf', 'agentNoticeLoud', 'invAcceptCtx', 'agentDuplicateGroups', '_agDupEligible', 'agentNamedTwice', '_invListReadHtml', '_invReadKey', 'invListRead'];
+  '_renderSignedSchedulesCard', 'signedScheduleRows', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invLineAcceptedOnly', '_invAcceptedStampWords', 'invListReadRefusal', '_invManifestUnread', '_arDupEligible', '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_agDupEligible', 'agentNamedTwice', '_invListReadHtml', '_invReadKey', 'invListRead', 'agentNoticesOn'];
 const PRINT_VARS = ['INV_LINE_INITIAL_MIN', 'INV_DISP_DOC_WORDS', 'CONTENTS_SIGNED_REF',  'INV_CONTRACT_DOCS',
   '_agRun', '_avRun', '_arRun', 'AGENT_NOTICE_KINDS', 
   'INV_DISPOSITIONS', 'INV_GROUP_ORDER', 'INV_RELEASE_DISPOSITIONS', 'INV_RELEASE_CAUTIONS',
@@ -100,7 +100,9 @@ const PRINT_VARS = ['INV_LINE_INITIAL_MIN', 'INV_DISP_DOC_WORDS', 'CONTENTS_SIGN
   'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DOC_SCOPES', 'AS_FOUND_SUBFOLDER', 'PHOTO_SUBFOLDER',
   'LEDGER_DOC_KEY', 'LEDGER_SIGNED_REF', 'SIGNED_RECORD_KINDS', 'INV_SALE_DISPOSITIONS', '_signedCopyKeys', '_signedCopySpecs', 'INV_NET_LABELS',
   // P20 vars: the names the living client's staff caution reads.
-  'PERSON_NAME_ALIASES', '_agDupSetJob', 'INV_OPEN_HOLDS', 'INV_ACCEPT_AMMO_RE'];
+  'PERSON_NAME_ALIASES', '_agDupSetJob', 'INV_OPEN_HOLDS', 'INV_ACCEPT_AMMO_RE',
+  // 2026-10-26: what a living client's request refuses with (only a firearm, or someone who works with Havellin, needs it).
+  'INV_LIVING_RELEASE_TXT'];
 
 function rig(job, refs) {
   const printed = [];
@@ -504,14 +506,26 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Representative:", "Basis: Fair Market Value as of date of death (—)", an Est. value column
     // of em dashes footed "estimated value $0", "authorized fiduciary", and a footer filing it
     // "with the estate record and retained for seven years". The button was never gated.
+    // ⚠ restated 2026-10-26 (Anthony, on a living client: "they are going to approve things verbally to send"; he took "Drop
+    // it, firearms aside"): a living request carries only what needs the client's written approval there, a firearm or a line
+    // going to someone who works with Havellin (invWrittenReleaseNeeded). The rowing machine to Goodwill is approved by their
+    // word and is not on it; the shotgun to the daughter is.
     const { ctx, last } = rig(LIVING, [
-      ITEM('a', { objectName: 'Tea service', disposition: 'Distribute', channel: 'Sarah Ellsworth (daughter)' }),
-      ITEM('c', { objectName: 'Rowing machine', disposition: 'Donate' }),
+      ITEM('a', { objectName: 'Remington shotgun', category: 'Firearms', disposition: 'Distribute', channel: 'Sarah Ellsworth (daughter)' }),
+      ITEM('c', { objectName: 'Rowing machine', disposition: 'Donate', channel: 'Goodwill' }),
     ]);
     ctx.printApprovalRequest(2);
     const h = last().html;
+    lacks(h, 'Rowing machine', '⚠⚠ an everyday line approved by the client’s word is not on it (2026-10-26)');
+    has(h, 'Remington shotgun', 'the firearm is');
+    // Nothing but everyday lines: refused by name, with the rule (an alert off the desk; the page returns why).
+    const plain = rig(LIVING, [ITEM('c', { objectName: 'Rowing machine', disposition: 'Donate', channel: 'Goodwill' })]);
+    const pw = plain.ctx.printApprovalRequest(2, false, { asHtml: true }) || {};
+    has(pw.why || '', 'Nothing is waiting on written approval. On a client’s own home only a firearm, or an item going to someone who works with Havellin, needs written approval',
+      '⚠⚠ a living job with only everyday lines leaving: nothing to sign, and why');
+    eq(plain.printed.length, 0, 'and nothing printed');
 
-    has(h, 'To <strong>Margaret Ellsworth</strong>', 'it addresses the owner, who is standing there');
+    has(h, 'Dear <strong>Margaret Ellsworth</strong>,', 'it addresses the owner, who is standing there');
     lacks(h, 'Personal Representative', '⚠ not a representative they do not have');
     lacks(h, 'authorized fiduciary', '⚠ and they are not signing as a fiduciary');
     lacks(h, 'date of death', '⚠ no date-of-death basis line');
@@ -522,29 +536,32 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // ⚠⚠ THE CONTROL ITSELF SURVIVES ON BOTH ARMS. This sentence is on the published
     // deliverables page and is not decedent-specific — it is the whole point of the document,
     // and it is exactly the "keep us on track and honest" Anthony asked the record to provide.
-    has(h, 'Verbal approval is not accepted', '⚠⚠ and verbal approval is still not accepted');
+    // ⚠ restated 2026-10-26 (Anthony: a letter asking for the release, not a rule about verbal approval; he approved the words):
+    // the control survives as the letter's promise, on both arms.
+    has(h, 'Nothing on this list will be moved, sold, donated or disposed of until it is back with us, signed by you.', '⚠⚠ and nothing moves until it comes back signed');
+    lacks(h, 'Verbal approval', 'and no lecture about verbal approval');
     has(h, 'Sarah Ellsworth (daughter)', 'the recipient prints on the line');
 
     // The converse, byte for byte: the estate document is untouched.
-    const e = rig(ESTATE, [ITEM('p', { objectName: 'Sargent portrait', disposition: 'Auction', fmv: '48000' })]);
+    const e = rig(ESTATE, [ITEM('p', { objectName: 'Sargent portrait', disposition: 'Auction', fmv: '48000', channel: 'Christie’s' })]);
     e.ctx.printApprovalRequest(7);
     const eh = e.last().html;
     ['authorized fiduciary', 'date of death', 'Est. value',
-     'estimated value', 'estate record', 'Verbal approval is not accepted', 'Proposed disposition']
+     'estimated value', 'estate record', 'Nothing on this list will be moved', 'Proposed disposition']
       .forEach((t) => has(eh, t, 'the estate request still says "' + t + '"'));
     // ⚠ MY OWN ASSERTION WAS WRONG AND THE CODE WAS RIGHT: this fixture HAS an executor, so the
     // document addresses him by name. 'Personal Representative' is only the fallback, and the
     // fallback is what has to survive — an estate with nobody recorded must not fall through to
     // the client's own name, because on a decedent job that name belongs to someone who is dead.
-    has(eh, 'To <strong>Tripp Butler</strong>', 'and addresses the representative by name');
-    const noExec = rig(Object.assign({}, ESTATE, { executor: '' }), [ITEM('q', { disposition: 'Donate' })]);
+    has(eh, 'Dear <strong>Tripp Butler</strong>,', 'and addresses the representative by name');
+    const noExec = rig(Object.assign({}, ESTATE, { executor: '' }), [ITEM('q', { disposition: 'Donate', channel: 'Goodwill' })]);
     noExec.ctx.printApprovalRequest(7);
-    has(noExec.last().html, 'To <strong>Personal Representative</strong>',
+    has(noExec.last().html, 'Dear <strong>Personal Representative</strong>,',
         '⚠⚠ an estate with no representative recorded falls back to the ROLE, never to job.name');
 
     // ⚠ AND A LIVING JOB THAT DOES CARRY A FIGURE KEEPS THE COLUMN — withholding it there would
     // hide real money, which is the opposite failure.
-    const v = rig(LIVING, [ITEM('m', { objectName: 'Chandelier', disposition: 'Auction', fmv: '4200' })]);
+    const v = rig(LIVING, [ITEM('m', { objectName: 'Purdey shotgun', category: 'Firearms', disposition: 'Auction', fmv: '4200', channel: 'Christie’s' })]);
     v.ctx.printApprovalRequest(2);
     has(v.last().html, 'Est. value', 'a living job with a value recorded still shows the column');
   }
