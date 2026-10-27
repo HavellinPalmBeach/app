@@ -651,7 +651,11 @@ function saveMediaStore(payload) {
       var ctx = _jobRefusalCtx();
       if (_jobRefusal(key, null, ctx.present, ctx.ledger)) {
         Logger.log('saveMedia refused deleted job ' + key);
-        return { ok: true, success: true, jobId: key, count: 0, dropped: [key] };
+        // `recorded` when a person recorded the deletion (main-sync.gs _okWithDrops, 2026-10-27, P1).
+        var refusedOut = { ok: true, success: true, jobId: key, count: 0, dropped: [key] };
+        var rec = _recordedDeletes([key], ctx.ledger);
+        if (rec.length) refusedOut.recorded = rec;
+        return refusedOut;
       }
       var store = getMediaStore();
       var entry = store[key] || {};

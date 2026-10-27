@@ -64,14 +64,16 @@ const S = {
   console, Logger: { log() {} }, Date, JSON, Math, Number, String, Object, Array,
   LockService: { getScriptLock: () => ({ waitLock() {}, tryLock() { return true; }, releaseLock() {} }) },
   _jobRefusal: () => null, _presentJobIds: () => ({}), getJobLedger: () => ({ seen: {}, since: 0 }), _ledgerMarkSeen: () => {},
+  // Since 2026-10-27 (P1) the two job writers ask whether the tab is unread and name the deletions recorded: the ledger's.
+  _jobsTabUnread: () => '', _recordedDeletes: () => [],
 };
 const SHEETS = { Jobs: fakeSheet('Jobs', ['ID', 'HVL ID', 'Name', 'Email', 'Phone', 'Address', 'City', 'Zip', 'Service', 'Status', 'Created', 'Data JSON']) };
 S.SpreadsheetApp = { openById: () => ({ getSheetByName: (n) => SHEETS[n] || null, insertSheet(n) { SHEETS[n] = fakeSheet(n); return SHEETS[n]; } }) };
 vm.createContext(S);
 const STICKY = /(^|\n)function _paymentSticky\(/.test(GS);
 vm.runInContext([gsVar('SHEET_ID'), gsVar('JOB_KEYED_LISTS'), gsVar('JOB_KEYED_MAPS'), gsVar('JOB_LIST_KEY'),
-  STICKY ? gsVar('JOB_PAYMENT_STICKY') : '', gsVar('BACKEND_VERSION'), gsVar('BACKEND_ACTIONS'), gsVar('BACKEND_TYPES'),
-  ...['getJobsFromSheet', 'saveAllJobsToSheet', 'saveJobToSheet', '_jobStamp', '_jobListKey', '_mergeJobKeyed', '_mergeJobRecord', '_lockOrBusy']
+  STICKY ? gsVar('JOB_PAYMENT_STICKY') : '', gsVar('BACKEND_VERSION'), gsVar('BACKEND_ACTIONS'), gsVar('BACKEND_TYPES'), gsVar('SHEET_CELL_MAX'),
+  ...['getJobsFromSheet', 'saveAllJobsToSheet', 'saveJobToSheet', '_jobStamp', '_jobListKey', '_mergeJobKeyed', '_mergeJobRecord', '_lockOrBusy', '_jobRowOf', '_jobRowTooLarge', '_commas']
     .concat(STICKY ? ['_paymentSticky'] : []).map(gsFn)].join('\n\n'), S, { filename: 'main-sync.gs (extracted)' });
 const sheetJob = (id) => S.getJobsFromSheet().find((j) => j.id === id) || null;
 const STORES = { estimates: {}, jobPlans: {}, logs: {}, changeOrders: [] };

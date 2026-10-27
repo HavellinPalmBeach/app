@@ -71,13 +71,15 @@ const S = {
   LockService: { getScriptLock: () => ({ waitLock() {}, tryLock() { return true; }, releaseLock() {} }) },
   // The deleted-job ledger has its own suite; it is not what this step is about.
   _jobRefusal: () => null, _presentJobIds: () => ({}), getJobLedger: () => ({ seen: {}, since: 0 }), _ledgerMarkSeen: () => {},
+  // Since 2026-10-27 (P1) the two job writers ask whether the tab is unread and name the deletions recorded: the ledger's.
+  _jobsTabUnread: () => '', _recordedDeletes: () => [],
 };
 const SHEETS = { Jobs: fakeSheet('Jobs', ['ID', 'HVL ID', 'Name', 'Email', 'Phone', 'Address', 'City', 'Zip', 'Service', 'Status', 'Created', 'Data JSON']) };
 S.SpreadsheetApp = { openById: () => ({ getSheetByName: (n) => SHEETS[n] || null, insertSheet(n) { SHEETS[n] = fakeSheet(n); return SHEETS[n]; } }) };
 vm.createContext(S);
 vm.runInContext([gsVar('SHEET_ID'), gsVar('JOB_KEYED_LISTS'), gsVar('JOB_KEYED_MAPS'), gsVar('JOB_LIST_KEY'), gsVar('JOB_PAYMENT_STICKY'),
-  gsVar('BACKEND_VERSION'), gsVar('BACKEND_ACTIONS'), gsVar('BACKEND_TYPES'),
-  ...['getJobsFromSheet', 'saveAllJobsToSheet', 'saveJobToSheet', '_jobStamp', '_jobListKey', '_mergeJobKeyed', '_mergeJobRecord', '_paymentSticky', '_lockOrBusy'].map(gsFn)
+  gsVar('BACKEND_VERSION'), gsVar('BACKEND_ACTIONS'), gsVar('BACKEND_TYPES'), gsVar('SHEET_CELL_MAX'),
+  ...['getJobsFromSheet', 'saveAllJobsToSheet', 'saveJobToSheet', '_jobStamp', '_jobListKey', '_mergeJobKeyed', '_mergeJobRecord', '_paymentSticky', '_lockOrBusy', '_jobRowOf', '_jobRowTooLarge', '_commas'].map(gsFn)
 ].join('\n\n'), S, { filename: 'main-sync.gs (extracted)' });
 const sheetJob = (id) => S.getJobsFromSheet().find((j) => j.id === id) || null;
 // The other stores are whole blobs the app reads back; nothing here is about how they merge.

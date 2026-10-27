@@ -125,7 +125,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const scheduled = [];
     const ctx = sandbox({
-      fns: ['_backendErrorKind', '_writeKey', '_pendingCount', '_enqueueWrite', '_pendingChipCopy'],
+      fns: ['_backendErrorKind', '_writeKey', '_pendingCount', '_enqueueWrite', '_pendingChipCopy', '_writeKindHolds', '_tooLargeWords'],
       vars: ['_pendingWrites', 'SYNC_STUCK_TRIES'],
       stubs: {
         showSyncBadge() {},

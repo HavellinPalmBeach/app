@@ -35,7 +35,8 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
 const SYNC = 'https://script.google.com/macros/s/STEP58/exec';
 const ID = 5801, HVL = 'HVL-2610-5801';
 const T0 = Date.parse('2026-09-28T15:00:00Z');
-const STORE = { jobs: [], estimates: {}, media: {} };
+// `snaps`: the sheet's snapshot store, which holds a snapshot's lines since 2026-10-27 (P1); the client's record holds the heading.
+const STORE = { jobs: [], estimates: {}, media: {}, snaps: {} };
 const UPLOADS = [], FILES = [];
 
 const L = (id, o) => Object.assign({ stableId: id, label: 'inventory', collId: null, roomIdx: 1, seq: 1, status: 'uploaded', qty: 1,
@@ -84,6 +85,7 @@ const LINES = [
           const id = url.searchParams.get('jobId');
           return json({ ok: true, media: id ? { [id]: { items: STORE.media[id] || [] } } : {} });
         }
+        case 'loadSnapshots': return json({ ok: true, snapshots: STORE.snaps[url.searchParams.get('jobId')] || {} });
         case 'version': return json({ ok: false, error: 'Unknown action' });
         default: return json({ ok: false, error: 'not in this test: ' + action });
       }
@@ -156,6 +158,13 @@ const LINES = [
 
     // ── Seed ────────────────────────────────────────────────────────────────
     STORE.media[ID] = JSON.parse(JSON.stringify(LINES));
+    // The two snapshots' lines as the sheet's snapshot store holds them (2026-10-27, P1), each line as a snapshot taken
+    // then records it: its count, room, condition and basis with the rest.
+    const SL = (o) => Object.assign({ category: 'Furniture', fmv: '', disposition: '', track: 'Probate', qty: 1, room: 'Study', condition: 'Good', basis: '', valDate: '' }, o);
+    STORE.snaps[ID] = {
+      [T0 - 86400000]: { ts: T0 - 86400000, items: [SL({ itemNo: 1, object: 'Portrait', category: 'Art' }), SL({ itemNo: 2, object: 'Silver tea set', category: 'Silver' }),
+        SL({ itemNo: 4, object: 'Sofa', fmv: '300', condition: 'Fair' }), SL({ itemNo: 5, object: 'Lamps (pair)', qty: 2 }), SL({ itemNo: 9, object: 'Card table' })] },
+      [T0]: { ts: T0, items: [] } };
     await p.evaluate(([ID, HVL, T0, LINES]) => {
       jobs = jobs.filter((j) => j.id !== ID);
       jobs.unshift({ id: ID, hvlId: HVL, name: 'Walter Ellsworth', fname: 'Walter', lname: 'Ellsworth', svc: 'cleanout', status: 'active',
@@ -170,13 +179,8 @@ const LINES = [
         payments: [{ uid: 'dep58', stage: 'deposit', amount: 12000, receivedOn: '2026-09-15', method: 'wire', clearedOn: '2026-09-15' },
                    { uid: 'mid58', stage: 'midpoint', amount: 6000, receivedOn: '2026-09-29', method: 'wire', clearedOn: '2026-09-29' }],
         invSnapshots: [
-          { ts: T0 - 86400000, label: 'As of walkthrough', count: 5, totalFMV: 300, items: [
-            { itemNo: 1, object: 'Portrait', category: 'Art', fmv: '', disposition: '', track: 'Probate' },
-            { itemNo: 2, object: 'Silver tea set', category: 'Silver', fmv: '', disposition: '', track: 'Probate' },
-            { itemNo: 4, object: 'Sofa', category: 'Furniture', fmv: '300', disposition: '', track: 'Probate' },
-            { itemNo: 5, object: 'Lamps (pair)', category: 'Furniture', fmv: '', disposition: '', track: 'Probate' },
-            { itemNo: 9, object: 'Card table', category: 'Furniture', fmv: '', disposition: '', track: 'Probate' }] },
-          { ts: T0, label: 'Taken twice by mistake', count: 0, totalFMV: 0, items: [] }],
+          { ts: T0 - 86400000, label: 'As of walkthrough', count: 5, totalFMV: 300 },
+          { ts: T0, label: 'Taken twice by mistake', count: 0, totalFMV: 0 }],
         docState: { 'invoice:deposit': { draftedAt: '2026-09-15T10:00:00Z', sentAt: '2026-09-15T10:00:00Z' },
                     'invoice:midpoint': { draftedAt: '2026-09-26T10:00:00Z', sentAt: '2026-09-26T10:00:00Z' } },
         at: {}, updatedAt: Date.now() });
@@ -238,7 +242,7 @@ const LINES = [
       const cmp = await T((await lastPrint()).html);
       has(cmp, 'Inventory Snapshot — What Changed', 'the what-changed page prints');
       has(cmp, 'Items 5 → 6', 'with the totals before and after');
-      has(cmp, 'Added 2 · Removed 1 · Renamed 1 · Value changed 1 · Disposition changed 4 · Track changed 0 · Unchanged 0', 'what was added, removed, renamed and changed, by item number');
+      has(cmp, 'Added 2 · Removed 1 · Renamed 1 · Value changed 1 · Disposition changed 4 · Track changed 0 · Count changed 0 · Moved room 0 · Basis changed 0 · Unchanged 0', 'what was added, removed, renamed and changed, by item number (count, room and basis since 2026-10-27)');
       has(cmp, 'Renamed (1)Item # Was Now 1 Portrait Sargent portrait', 'the rename, old → new');
       has(cmp, 'Value changed (1)Item # Item Was Now 5 Lamps (pair) no value $80', 'a value, old → new');
       has(cmp, 'Removed (1)', 'the line no longer on the inventory');

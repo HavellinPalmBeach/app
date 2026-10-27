@@ -97,6 +97,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       jobPlanStore: {}, changeOrders: [], _invOpen: {}, _agDupSet: {}, _invThumbFailed: {},
       _invRefreshSummary() {}, _invRefreshGuardrail() {}, _invRefreshFlagStrip() {}, _invRefreshRecords() {},
       SHEETS_SYNC_URL: 'https://script.google.com/macros/s/P20WB/exec',
+      // The desk has read the client's inventory from the sheet (2026-10-27, P1: a cold desk refuses its papers by name).
+      _invCloudSeen: { [job.id]: true },
     }, extra || {});
     const S = lift(roots, stubs);
     S.window.confirm = () => true;

@@ -250,6 +250,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════
   G('B · the one printer answers the send: printApprovalRequest with asHtml returns the page, its lines and its refusals', () => {
     const r = rig();
+    // A desk prints off a copy that has read the sheet (2026-10-27, P1: a cold desk refuses by name, invColdRefusal).
+    const cold = r.c.printApprovalRequest(7, false, { asHtml: true });
+    has(cold.why, 'this device has not read the inventory yet', 'a device that has not read the inventory: refused by name, {why}');
+    r.c._invCloudSeen[7] = true;
     const page = r.c.printApprovalRequest(7, false, { asHtml: true });
     ok(!!(page && page.html), 'the page comes back');
     eq((page.items || []).map((x) => x.stableId), ['a', 'b'], 'with the two lines awaiting approval (never the Keep line, never the approved one)');
@@ -845,6 +849,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   G('G · the dialog lists the lines in the order the paper prints them: grouped by destination, as the signed copy reads', () => {
     const rows = INVENTORY().concat([ROW('f', { itemNo: 5, objectName: 'Pair of Chinese vases', fmv: 900, disposition: 'Auction', channel: 'Christie’s' })]);
     const R = recRig({ rows });
+    R.c._invCloudSeen[7] = true;   // the desk has read the sheet (2026-10-27, P1)
     const page = R.c.printApprovalRequest(7, false, { asHtml: true });
     const at = (n) => page.html.indexOf(n);
     ok(at('Sargent portrait') > 0 && at('Sargent portrait') < at('Pair of Chinese vases') && at('Pair of Chinese vases') < at('Dining chairs (8)'),

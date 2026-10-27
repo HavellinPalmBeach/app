@@ -87,7 +87,7 @@ function gsServer(opts = {}) {
     'saveJobPlanStore', 'getJobPlanStore', '_mergePlanStore', '_mergePlanRecord', '_planStamp',
     'saveLogStore', 'getLogStore', '_mergeStoreByKey', '_stripRefusedJobKeys', '_jobRefusalCtx', '_sweepDeletedJobKeys',
     'getJobLedger', '_jobRefusal', '_presentJobIds', '_deletedJobIds', '_ledgerMarkSeen', 'getJobsFromSheet',
-    'doPost', 'doGet', 'jsonOut', '_okWithDrops'];
+    'doPost', 'doGet', 'jsonOut', '_okWithDrops', '_jobsTabUnread', '_recordedDeletes', '_jobDeletionRecorded'];
   const code = [gsVar(GS, 'SHEET_ID'), gsVar(GS, '_BLOB_CHUNK'), gsVar(GS, 'JOB_LEDGER_STORE'), gsVar(GS, 'PLAN_KEYED_MAPS'),
     gsVar(GS, 'BACKEND_VERSION'), ...names.map((n) => gsFn(GS, n)),
     gsFn(GS_INV, 'saveMediaStore'), gsFn(GS_INV, 'getMediaStore'), gsFn(GS_INV, '_invResetDrops'), gsFn(GS_INV, '_invApprovalEntries'), gsFn(GS_INV, '_invApprovalSetAt'), gsFn(GS_INV, '_invMergeApprovals'), gsFn(GS_INV, '_mergeMediaItems')].join('\n\n');

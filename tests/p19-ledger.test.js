@@ -601,11 +601,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   function snapRig(job, rows) {
     const log = { badges: [], renders: 0, saves: 0, syncs: 0 };
     let reply = '';
+    // Since 2026-10-27 (P1) a snapshot's lines go to the sheet's snapshot store: this device has read the inventory, the
+    // deployment keeps the lines, and the write and the dated filing are caught here (the real refusal runs).
+    log.posts = [];
     const c = lift(['takeInventorySnapshot', 'voidInventorySnapshot', '_renderInventorySnapshots', 'printInventorySnapshot', 'printSnapshotComparison', 'snapshotDiff'],
       ['saveJobs', 'syncJobToSheets', 'showSyncBadge', 'renderInventoryTab', 'savePhotoRefs'], { Date: Clock,
         saveJobs() { log.saves++; }, syncJobToSheets() { log.syncs++; }, showSyncBadge(m, e) { log.badges.push({ m: String(m), err: !!e }); },
         renderInventoryTab() { log.renders++; }, savePhotoRefs() {}, document: domStub({}),
-        jobs: [job], _photoRefs: { 7: rows }, estimateStore: {}, jobPlanStore: {} });
+        jobs: [job], _photoRefs: { 7: rows }, estimateStore: {}, jobPlanStore: {},
+        SHEETS_SYNC_URL: SYNC, _invCloudSeen: { 7: true }, _backendTypes: ['saveSnapshot'], postSyncBadge(b) { log.posts.push(b); }, _snapFilePage() {} });
     c.jobs = [job]; c._photoRefs = { 7: rows };
     c.window.prompt = () => reply;
     return { c, log, job, reply: (v) => { reply = v; } };
@@ -618,7 +622,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     r.reply('Filed with court');
     r.c.takeInventorySnapshot(7);
     const snap = (r.job.invSnapshots || [])[0] || {};
-    eq([snap.label, snap.count, snap.items && snap.items[0] && snap.items[0].itemNo], ['Filed with court', 8, 1], 'a snapshot is taken, by item number');
+    const lines = r.c._snapLinesOf(7, snap.ts) || [];
+    eq([snap.label, snap.count, lines[0] && lines[0].itemNo], ['Filed with court', 8, 1], 'a snapshot is taken, by item number');
+    ok(!('items' in snap), '⚠ its lines are not on the client\'s record (2026-10-27, P1)');
+    eq(r.log.posts.map((b) => [b.type, b.payload.ts, b.payload.items.length]), [['saveSnapshot', snap.ts, 8]], '⚠ they go to the sheet\'s snapshot store');
     const listed = r.c._renderInventorySnapshots(r.job);
     lacks(listed, 'removeInventorySnapshot', '⚠⚠ there is no Remove');
     has(listed, 'voidInventorySnapshot(7,' + snap.ts + ')', 'Void instead');
@@ -691,18 +698,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(d.totals, { before: { count: 5, value: 46070, valued: true }, after: { count: 4, value: 49200.26, valued: true } }, 'totals before and after, to the cent');
     eq(r.c.snapshotDiff([{ itemNo: 1, fmv: '0.1' }, { itemNo: 2, fmv: '0.2' }], []).totals.before.value, 0.3, '⚠ $0.10 and $0.20 total $0.30, not 0.30000000000000004 (roundCents on the sum)');
     // Printed against the inventory now, and against the previous snapshot (a voided one is skipped).
+    // The headings on the record; the lines where the sheet's snapshot store hands them to this device (2026-10-27, P1).
     const job = ESTATE({ invSnapshots: [
-      { ts: 1000, label: 'Walkthrough', count: 5, totalFMV: 46070, items: before },
-      { ts: 2000, label: 'Mistake', count: 1, totalFMV: 0, items: [], voidedAt: 2500, voidReason: 'wrong job' },
-      { ts: 3000, label: 'Filed with court', count: 4, totalFMV: 49200.26, items: after },
+      { ts: 1000, label: 'Walkthrough', count: 5, totalFMV: 46070 },
+      { ts: 2000, label: 'Mistake', count: 1, totalFMV: 0, voidedAt: 2500, voidReason: 'wrong job' },
+      { ts: 3000, label: 'Filed with court', count: 4, totalFMV: 49200.26 },
     ] });
     const s = snapRig(job, LINES());
+    s.c._snapLines[7] = { 1000: before, 2000: [], 3000: after };
     const prev = s.c.printSnapshotComparison(7, 3000, 'prev', { asHtml: true });
     const pt = text(prev.html);
     has(pt, 'Inventory Snapshot — What Changed', 'the comparison page');
     has(pt, '(Walkthrough) compared with the snapshot of', '⚠ "previous" is the last live snapshot, skipping the voided one');
     has(pt, 'Items 5 → 4 Total recorded value $46,070 → $49,200.26', 'totals before and after');
-    has(pt, 'Added 1 · Removed 1 · Renamed 1 · Value changed 1 · Disposition changed 1 · Track changed 1 · Unchanged 1', 'every kind of change counted');
+    has(pt, 'Added 1 · Removed 1 · Renamed 1 · Value changed 1 · Disposition changed 1 · Track changed 1 · Count changed 0 · Moved room 0 · Basis changed 0 · Unchanged 1', 'every kind of change counted (the count, the room and the basis since 2026-10-27)');
     has(pt, 'Value changed (1) Item # Item Was Now 1 Sargent portrait $45,000 $48,000', 'value: old → new');
     has(pt, 'Renamed (1) Item # Was Now 2 Tea set Silver tea set', 'renamed');
     has(pt, '1 line carries no item number (taken before item numbers existed), so it is not compared.', 'the unnumbered line is named, not guessed');

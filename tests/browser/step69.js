@@ -104,12 +104,17 @@ const COMP = { title: 'Herend Rothschild Bird dinner plates, set of 8', venue: '
       window.__avPosts = [];
       const real = window.__realFetch || (window.__realFetch = window.fetch);
       window.fetch = (url, opts) => {
+        // The sheet's copy of a manifest: nothing newer than this device's own. Since 2026-10-27 (P1) a desk that has not
+        // read it refuses its papers by name, and the read went to a server that is not there.
+        if (/[?&]action=loadMedia\b/.test(String(url))) return Promise.resolve(new Response(JSON.stringify({ ok: true, media: {} }), { headers: { 'Content-Type': 'application/json' } }));
         let body = null; try { body = JSON.parse((opts && opts.body) || 'null'); } catch (e) {}
         if (!body || body.action !== 'agentValue') return real(url, opts);
         window.__avPosts.push(body);
         const a = answers[Math.min(window.__avPosts.length - 1, answers.length - 1)];
         return Promise.resolve({ ok: true, text: () => Promise.resolve(JSON.stringify(a)) });
       };
+      // With a sheet now in Settings, this device reads each client's inventory from it before the desk acts as fact on it.
+      Object.keys(_photoRefs).forEach((id) => refreshPhotoRefs(id));
     }, answers);
 
     const J = await addEstate('Butler', 'values');

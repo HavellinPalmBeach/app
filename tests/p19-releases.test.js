@@ -96,6 +96,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       _signedCopyRepaint() {}, _invPick: {}, _invFilter: { when: 'all', room: '', q: '', flag: '' }, _invBulkLast: null,
       jobPlanStore: {}, changeOrders: [], _invOpen: {}, _agDupSet: {}, _invThumbFailed: {},
       SHEETS_SYNC_URL: 'https://script.google.com/macros/s/P19W3/exec',
+      // The desk has read the client's inventory from the sheet (2026-10-27, P1: a cold desk refuses its papers by name).
+      _invCloudSeen: { [job.id]: true },
     }, extra || {});
     const S = lift(roots, stubs);
     S.window.confirm = () => true;

@@ -70,10 +70,12 @@ const SYNC_FNS = ['refreshJobsFromCloud', '_mergeCloudJobs', '_syncWritesOutstan
   '_applyDroppedJobs', '_purgeLocalJobRecords', 'migrateRetiredNames', 'canonPersonName',
   'saveJobs', 'syncJobToSheets', 'syncToSheets', 'postSyncBadge', 'queuedPostSync',
   '_flushOutbox', '_writeKey', '_enqueueWrite', '_backendErrorKind', '_retrySoon',
-  '_scheduleRetry', 'flushPendingWrites', '_pendingCount'];
+  '_scheduleRetry', 'flushPendingWrites', '_pendingCount',
+  // 2026-10-27 (P1): the sheet's verdicts asked first, a held write, and the kinds that hold.
+  'loadJobsVerdict', 'sheetVerdictRefusal', '_syncWritesHeld', '_setSheetNotice', 'sheetNoticeHtml', '_unsentPhotoCount', 'unsentPhotosKeptText', '_writeKindHolds'];
 const SYNC_VARS = ['_outbox', '_outboxTimer', '_outboxSending', '_OUTBOX_WINDOW', '_syncWriteSeq',
   '_pendingWrites', '_retryTimer', '_retryStep', '_flushing', '_retryDelays', 'SYNC_STUCK_TRIES',
-  'PERSON_NAME_ALIASES'];
+  'PERSON_NAME_ALIASES', 'SHEET_NO_CLIENTS_TXT', '_sheetNotice'];
 
 const INTAKE_FNS = ['saveIntake', 'intakeAsksHouseContents', 'houseFlagsOf', 'resolveExecutorAuth',
   'docTierScope', 'docTierScopeMirror', 'docTierDef', 'clientMissingFields', 'courtRecordRequired', 'isDecedentJob', 'readReferralInputs', 'referralSourceKind', 'lookupReferralById', 'referralIdOf', 'readHouseFlagInputs', 'houseFlagAsked', 'trustRecordShown', 'propertySaleAsked', 'saveCoFiduciaryRows', 'matterDef', 'courtRecordShown', 'matterTypeOf', 'jobOnProbateTrack', 'invFiduciaryMode'];
@@ -396,7 +398,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     a.answer();
     eq(a.ids(), [1], 'the deleted client leaves this device');
     ok(!a.c.estimateStore[4] && !!a.c.estimateStore[1], 'and takes its estimate with it, not anybody else\'s');
-    ok(a.badges.some((m) => m.indexOf('1 client deleted elsewhere') >= 0), 'and it says so — a client vanishing with no word reads as data loss');
+    // In the words of what the device knows since 2026-10-27 (P1): the sheet refused it.
+    ok(a.badges.some((m) => m.indexOf('1 client refused by the sheet, which no longer holds it') >= 0), 'and it says so — a client vanishing with no word reads as data loss');
     eq(a.landedCount(), 1, 'every surface built from the list is redrawn');
 
     // Discarded: a write went out while the read was in flight. The list is not taken — but the
@@ -414,7 +417,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     b.answer();
     eq(b.ids(), [1], '⚠ the deleted client leaves even though the list was not taken');
     ok(!b.c.estimateStore[4], 'with its records');
-    ok(b.badges.some((m) => m.indexOf('deleted elsewhere') >= 0), 'and says so');
+    ok(b.badges.some((m) => m.indexOf('refused by the sheet') >= 0), 'and says so');
     eq(b.c.jobs[0].notes, 'mine', 'while the local record is left exactly as it was');
     ok(!!b.c.jobs[0].driveFolderError, 'including the change still on its way');
   }
@@ -532,6 +535,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // every case the outstanding check does, and reverting that half alone is green by construction.
     // It stays because it is the rule refreshPlanAndLogFromCloud states; the one extra thing it sees
     // is a failed DIRECTORY write, which costs one skipped refresh and never any data.
-    has(body, '_syncWritesOutstanding()', 'the stand-down reads the one shared definition of outstanding');
+    // `[]` since 2026-10-27 (P1, GAP3-06): a write the queue HOLDS (too large, stale, a crash) no longer blinds the jobs
+    // refresh; its merge keeps every newer local record and the clients only a held write carries.
+    has(body, '_syncWritesOutstanding([])', 'the stand-down reads the one shared definition of outstanding');
   }
 };

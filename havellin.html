@@ -1476,7 +1476,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.27 · 1:09am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.27 · 7:45am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2590,6 +2590,8 @@ body.no-smf .smf-col{display:none;}
     </div>
     <!-- Who uses this device, while Settings has not been told (deviceUserNoteHtml): a flag, never a block. -->
     <div id="device-user-note"></div>
+    <!-- The sheet refused this device's clients, or has none (sheetNoticeHtml, 2026-10-27, P1): nothing here was changed. -->
+    <div id="sheet-refusal-note"></div>
     <!-- ⚠ margin-bottom is the grid's own 10px gap, not 1.25rem: the Win / Loss row sits directly
          under this one and the eight tiles read as one block of figures about the pipeline. -->
     <div class="grid4" style="margin-bottom:10px;">
@@ -6422,7 +6424,7 @@ var BACKEND_NEEDS = ['htmlToPdf', 'getThumbnails', 'createFolder', 'uploadFile',
   'uploadHtml', 'getSubfolders', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive', 'esignSendRequest',
   'stripeLink', 'stripeStatus'];                          // actions this build calls
 var BACKEND_NEEDS_TYPES = ['saveMedia', 'saveInventory', 'job', 'saveAllJobs', 'saveAllEstimates', 'saveAllJobPlans',
-  'saveAllChangeOrders', 'saveAllLogs', 'saveAllContractors', 'deleteContractor', 'deleteJob'];   // and post types
+  'saveAllChangeOrders', 'saveAllLogs', 'saveAllContractors', 'deleteContractor', 'deleteJob', 'saveSnapshot'];   // and post types
 // ⚠ AND WHAT NO ACTION NAME CAN REVEAL: server behaviour this build relies on. P11's per-key merge
 // of the sourcing, crew, ratings, review and checklist maps, the refusal to write over an unreadable
 // store tab, and the busy answer to a lock timeout change no action or type, so a deployment older
@@ -6465,12 +6467,23 @@ var BACKEND_NEEDS_TYPES = ['saveMedia', 'saveInventory', 'job', 'saveAllJobs', '
 // AGENT_VALUE_NO_PRICE_RE); a long note ends at a whole sentence (_avClip); both agents grade condition off the photograph
 // (AGENT_CONDITIONS, sent). An older deployment keeps a search page, or a sale whose price was not shown, as a sold
 // comparable, so a researched figure resting on one prints "auction comps", cuts a long note mid-sentence, and grades nothing.
-var BACKEND_MIN_VERSION = '2026-10-26b';
+// 2026-10-27 (P1 of the desk audit, "Nothing is lost"): no tab is cleared before it is written; a client's record too large for
+// a cell is refused by name before the sheet is touched (TOO_LARGE); an empty Jobs tab the ledger cannot explain is unread
+// (JOBS_TAB_EMPTY), never every client deleted; only a deletion somebody recorded is swept from the stores; and the snapshot's
+// lines have a store of their own (saveSnapshot, named above). An older deployment can still empty the Jobs tab on one failed
+// write, tell every device that every client was deleted, and sweep every other client's records off the sheet when the next
+// client is added, so this build relies on it and the banner names it first.
+var BACKEND_MIN_VERSION = '2026-10-27';
 var _backendVersion = null;
 // The actions the deployment says it has (2026-10-26c), once the version probe answers; null until then. A route the app
 // offers only on a deployment that has it reads this (backendHas): the release request's DocuSign send.
 var _backendActions = null;
 function backendHas(action) { return !!(_backendActions && _backendActions.indexOf(action) >= 0); }
+// And the post types it says it takes (2026-10-27, P1): Snapshot is offered only to a deployment that keeps a snapshot's
+// lines (saveSnapshot); an older one would refuse the lines while the client's record kept the heading, and nothing would
+// say the snapshot had no lines behind it. Null until the probe answers.
+var _backendTypes = null;
+function backendHasType(type) { return !!(_backendTypes && _backendTypes.indexOf(type) >= 0); }
 
 function checkBackendVersion() {
   if (!SHEETS_SYNC_URL) return;
@@ -6484,6 +6497,7 @@ function checkBackendVersion() {
       // A deployment too old to answer the probe cannot say what it lacks, so it is named as such
       // rather than charged with every feature on the list (most of which it does have).
       _backendActions = known ? (known.actions || []).slice() : [];
+      _backendTypes = known ? (known.types || []).slice() : [];
       if (!known) { _showBackendStaleBanner(_backendVersion, ['preVersion', 'version']); return; }
       var have = (known.actions || []).concat(known.types || []);
       var missing = BACKEND_NEEDS.concat(BACKEND_NEEDS_TYPES).filter(function(a){
@@ -6527,9 +6541,10 @@ var BACKEND_FEATURE_COST = {
   saveAllContractors: 'the contractor list never reaches the sheet',
   deleteContractor: 'a contractor removed here comes back from the other device',
   deleteJob:     'a client deleted here comes back from the other device',
+  saveSnapshot:  'no inventory Snapshot can be taken (the deployment has nowhere to keep its lines)',
   // One line for any deployment older than BACKEND_MIN_VERSION, so it names the newest gap first and says
   // which vintage the older one belongs to (the banner's title prints the version that answered).
-  version:       'a search page, or a sale whose price was not shown, can stand as a sold comparable, so a researched figure resting on one prints \u201cauction comps\u201d; a long note from Agent Two stops mid-sentence; and neither agent grades an item\u2019s condition; on a deployment older than 2026-10-26, the agents never move to a newer model by themselves (Agent One still runs on the older Opus 5), Agent Two never looks at the photograph of an item whose name is a guess or fixes a wrong category, a figure with no sale behind it prints as \u201cauction comps\u201d, and one slow request can mark a whole batch \u201cnot valued\u201d or lose a batch of names; on a deployment older than 2026-10-25b, a name you type or review on the desk (a wooden mirror retyped as Restoration Hardware) can come back from Agent Two as the generic thing and be valued as that, and a brand the crew says at the camera is not put into the name; on a deployment older than 2026-10-25, Agent Two flags a name it disagrees with (\u201cName may be wrong\u201d) instead of correcting it, puts a note on nearly every item it values (no condition recorded, a rough count, a search that ran short), and Agent One files everyday dishes as collectibles; on a deployment older than 2026-10-24, a blank line added to a photograph already named (Another item in this photo) makes Agent One read the whole photograph again, so every object in it goes on the list a second time, and its names carry a count (\u201capprox. 7 in stack\u201d) that the Qty box contradicts once corrected; on a deployment older than 2026-10-19b, a client\u2019s inventory reset in the Apps Script editor (resetInventoryConfirm) is undone by the first device that saves a line from before it, unless every device reloads first; on a deployment older than 2026-10-16, an incident reported on one device, or a key or fob received there while another device records a handoff, can be dropped when the sheet merges the job (the Incidents and Keys & access cards\u2019 lists are not yet merged entry by entry); on a deployment older than 2026-10-06, two devices\u2019 release signers are not merged and the client\u2019s workbook rounds its money; on a deployment older than 2026-10-05, a co-executor or co-trustee is not put on the DocuSign envelope beside the client, so they sign a printed copy of the agreement and the page they signed has to be filed from the timeline; on a deployment older than 2026-10-03, a co-trustee, a beneficiary, a signed copy filed to Drive, a find on site or a proceeds statement added on one device can be dropped by another device saving an older copy of the job, and the client\u2019s inventory workbook heads a trust\u2019s net proceeds \u201cNet to Estate\u201d; on a deployment older than 2026-10-01, File signed copy adds a second copy of the signed agreement to the client\u2019s Agreement folder instead of replacing the one there; on a deployment older than 2026-09-30b, a payment voided or marked cleared on one device can come back as it was from another device that changed the same payment before reloading, and count again; a firearm\u2019s serial, recipient or dealer route, recorded on one device, can be dropped from the sheet by another device\u2019s older copy of the item, until the first device next saves the inventory; and on a deployment older than 2026-09-30, two people editing different parts of one job (a vendor quote here, the team there) can also undo each other\u2019s work, a damaged store tab is emptied by the next save instead of refused, and Agent One can stop mid-answer on a busy photograph',
+  version:       'one failed write can empty the Jobs tab, an empty Jobs tab tells every device that every client was deleted and each one empties itself, and the first client added after that sweeps every other client\u2019s estimate, plan, hours and inventory off the sheet; on a deployment older than 2026-10-26b, a search page, or a sale whose price was not shown, can stand as a sold comparable, so a researched figure resting on one prints \u201cauction comps\u201d; a long note from Agent Two stops mid-sentence; and neither agent grades an item\u2019s condition; on a deployment older than 2026-10-26, the agents never move to a newer model by themselves (Agent One still runs on the older Opus 5), Agent Two never looks at the photograph of an item whose name is a guess or fixes a wrong category, a figure with no sale behind it prints as \u201cauction comps\u201d, and one slow request can mark a whole batch \u201cnot valued\u201d or lose a batch of names; on a deployment older than 2026-10-25b, a name you type or review on the desk (a wooden mirror retyped as Restoration Hardware) can come back from Agent Two as the generic thing and be valued as that, and a brand the crew says at the camera is not put into the name; on a deployment older than 2026-10-25, Agent Two flags a name it disagrees with (\u201cName may be wrong\u201d) instead of correcting it, puts a note on nearly every item it values (no condition recorded, a rough count, a search that ran short), and Agent One files everyday dishes as collectibles; on a deployment older than 2026-10-24, a blank line added to a photograph already named (Another item in this photo) makes Agent One read the whole photograph again, so every object in it goes on the list a second time, and its names carry a count (\u201capprox. 7 in stack\u201d) that the Qty box contradicts once corrected; on a deployment older than 2026-10-19b, a client\u2019s inventory reset in the Apps Script editor (resetInventoryConfirm) is undone by the first device that saves a line from before it, unless every device reloads first; on a deployment older than 2026-10-16, an incident reported on one device, or a key or fob received there while another device records a handoff, can be dropped when the sheet merges the job (the Incidents and Keys & access cards\u2019 lists are not yet merged entry by entry); on a deployment older than 2026-10-06, two devices\u2019 release signers are not merged and the client\u2019s workbook rounds its money; on a deployment older than 2026-10-05, a co-executor or co-trustee is not put on the DocuSign envelope beside the client, so they sign a printed copy of the agreement and the page they signed has to be filed from the timeline; on a deployment older than 2026-10-03, a co-trustee, a beneficiary, a signed copy filed to Drive, a find on site or a proceeds statement added on one device can be dropped by another device saving an older copy of the job, and the client\u2019s inventory workbook heads a trust\u2019s net proceeds \u201cNet to Estate\u201d; on a deployment older than 2026-10-01, File signed copy adds a second copy of the signed agreement to the client\u2019s Agreement folder instead of replacing the one there; on a deployment older than 2026-09-30b, a payment voided or marked cleared on one device can come back as it was from another device that changed the same payment before reloading, and count again; a firearm\u2019s serial, recipient or dealer route, recorded on one device, can be dropped from the sheet by another device\u2019s older copy of the item, until the first device next saves the inventory; and on a deployment older than 2026-09-30, two people editing different parts of one job (a vendor quote here, the team there) can also undo each other\u2019s work, a damaged store tab is emptied by the next save instead of refused, and Agent One can stop mid-answer on a busy photograph',
   preVersion:    'it predates the version check itself (2026-09-09), so client PDFs, photographs, DocuSign, Stripe and Agent One may all be missing as well'
 };
 
@@ -25227,21 +25242,84 @@ function checkDeletePin() {
 // plan, hours log, change orders, photo manifest and its caches — in memory AND in
 // localStorage. Shared by the deliberate delete below and by the two paths that learn of a
 // deletion from the sheet. Touches nothing that would push to the sheet.
-function _purgeLocalJobRecords(ids) {
+// ⚠⚠ EXCEPT PHOTOGRAPHS NOT YET IN DRIVE, WHICH ONLY A PERSON'S DELETE TAKES (2026-10-27, P1, GAP3-04). Their bytes under
+// hav_media_pending_<id> are the only copy in existence and Retry is the only thing that can still file them, and the sheet's
+// verdict took them: an iPad that photographed a room on a weak signal lost the shots the first time it opened after the
+// Jobs tab was emptied. A verdict from the sheet (loadJobs' deletedJobs, a write's `dropped`) now keeps them, and the client's
+// manifest that names them, and returns how many it kept so the notice can say so; only hardDeleteJob, behind its PIN,
+// passes `photos` and takes them.
+function _purgeLocalJobRecords(ids, opt) {
   var list = Array.isArray(ids) ? ids : [ids];
-  if (!list.length) return;
+  var kept = 0;
+  if (!list.length) return kept;
+  var takePhotos = !!(opt && opt.photos);
   list.forEach(function(id){
     if (id == null) return;
     try { if (typeof estimateStore === 'object' && estimateStore) delete estimateStore[id]; } catch(e) {}
     try { if (typeof jobLogs === 'object' && jobLogs) delete jobLogs[id]; } catch(e) {}
     try { if (typeof jobPlanStore === 'object' && jobPlanStore) delete jobPlanStore[id]; } catch(e) {}
     try { if (Array.isArray(changeOrders)) changeOrders = changeOrders.filter(function(co){ return !co || String(co.jobId) !== String(id); }); } catch(e) {}
-    try { localStorage.removeItem('hav_media_' + id); localStorage.removeItem('hav_media_pending_' + id); localStorage.removeItem('hav_media_thumb_' + id); } catch(e) {}
+    var unsent = takePhotos ? 0 : _unsentPhotoCount(id);
+    try {
+      localStorage.removeItem('hav_media_thumb_' + id);
+      if (!unsent) { localStorage.removeItem('hav_media_' + id); localStorage.removeItem('hav_media_pending_' + id); }
+    } catch(e) {}
+    kept += unsent;
   });
   try { if (typeof estimateStore === 'object' && estimateStore) localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore)); } catch(e) {}
   try { if (typeof jobLogs === 'object' && jobLogs) localStorage.setItem('havellin_logs_v3', JSON.stringify(jobLogs)); } catch(e) {}
   try { if (typeof jobPlanStore === 'object' && jobPlanStore) localStorage.setItem('havellin_jobplan_v1', JSON.stringify(jobPlanStore)); } catch(e) {}
   try { if (Array.isArray(changeOrders)) localStorage.setItem('havellin_co_v1', JSON.stringify(changeOrders)); } catch(e) {}
+  return kept;
+}
+// How many photographs this device holds for a client that have not reached Drive (the bytes kept for Retry). DOM-free.
+function _unsentPhotoCount(id) {
+  try {
+    var raw = localStorage.getItem('hav_media_pending_' + id);
+    var o = raw ? JSON.parse(raw) : null;
+    return o && typeof o === 'object' ? Object.keys(o).length : 0;
+  } catch (e) { return 0; }
+}
+// The words for photographs a verdict left on this device (2026-10-27, P1). '' for none.
+function unsentPhotosKeptText(n) {
+  if (!n) return '';
+  return n + ' photograph' + (n === 1 ? '' : 's') + ' for a client the sheet no longer holds ' + (n === 1 ? 'is' : 'are')
+    + ' still on this device, not yet in Drive: kept until somebody deletes that client here.';
+}
+
+// ⚠⚠ MAY A VERDICT FROM THE SHEET TAKE THESE CLIENTS OFF THIS DEVICE? (2026-10-27, P1 of the desk audit, GAP3-02.) One
+// Snapshot of a full house emptied the Jobs tab on a deployment older than 2026-10-27, which then answered every save ok
+// with every client `dropped`, and loadJobs with no jobs and every client deleted: the iPad that pressed Snapshot was at 0
+// clients 2.25 s later under "All changes saved", every other device emptied itself at first contact, and no device kept a
+// copy the sheet could be rebuilt from. So the one rule, DOM-free: '' to apply the verdict, else why not. A verdict that
+// leaves this device holding at least one client applies as it always did. One that would take EVERY client this device
+// holds applies only where the sheet says a person recorded each of those deletions (`recorded`, from a 2026-10-27
+// deployment: the editor's reset, a client deleted here, the orphan prune); otherwise nothing on this device is changed and
+// the notice says so. A device holding no client has nothing to protect.
+var SHEET_NO_CLIENTS_TXT = 'The sheet has no clients right now. Nothing on this device was changed. Tell Anthony.';
+function sheetVerdictRefusal(ids, recorded, held) {
+  var heldIds = (held || []).filter(function(j){ return j && j.id != null; }).map(function(j){ return String(j.id); });
+  if (!heldIds.length) return '';
+  var set = {}, rec = {};
+  (ids || []).forEach(function(id){ if (id != null) set[String(id)] = true; });
+  (recorded || []).forEach(function(id){ if (id != null) rec[String(id)] = true; });
+  if (!heldIds.every(function(k){ return set[k]; })) return '';
+  if (heldIds.every(function(k){ return rec[k]; })) return '';
+  return 'The sheet refused every client on this device (' + heldIds.length + '), and nobody recorded deleting them. '
+    + 'Nothing on this device was changed. Tell Anthony.';
+}
+// The notice the sheet's refusal leaves on the Clients tab until a load lands with clients (sheetNoticeHtml): it stays on
+// screen, where a four-second toast was the only word the device that pressed Snapshot gave.
+var _sheetNotice = '';
+function sheetNoticeHtml() {
+  if (!_sheetNotice) return '';
+  return '<div style="color:var(--err-tx);font-size:11.5px;font-weight:600;margin:-6px 0 12px;">&#9888; ' + esc(_sheetNotice) + '</div>';
+}
+function _setSheetNotice(msg) {
+  _sheetNotice = msg || '';
+  var el = document.getElementById('sheet-refusal-note');
+  if (el) el.innerHTML = sheetNoticeHtml();
+  if (msg) showSyncBadge(msg, true);
 }
 
 // The sheet REFUSED these job ids on a save (see JOB LEDGER in main-sync.gs): it has seen
@@ -25252,15 +25330,21 @@ function _purgeLocalJobRecords(ids) {
 // no; this is the device agreeing. Drop them here WITHOUT calling saveJobs() — that would
 // post the list straight back, and the point is that this device stops asserting them.
 // Returns the number of jobs removed from the list.
-function _applyDroppedJobs(ids) {
+// ⚠⚠ NEVER A VERDICT THAT WOULD TAKE EVERY CLIENT UNRECORDED (2026-10-27, P1): sheetVerdictRefusal is asked first, with the
+// ids the sheet says a person recorded deleting (`recorded`); refused, nothing here changes and the notice stays on the
+// Clients tab. And the words are what this device knows: the sheet REFUSED them. "Deleted elsewhere" was a claim it could not
+// make, and it is what the iPad said as the Jobs tab emptied under it. Photographs not yet in Drive stay (_purgeLocalJobRecords).
+function _applyDroppedJobs(ids, recorded) {
   if (!Array.isArray(ids) || !ids.length) return 0;
+  var refused = sheetVerdictRefusal(ids, recorded, jobs);
+  if (refused) { _setSheetNotice(refused); return 0; }
   var set = {};
   ids.forEach(function(id){ if (id != null) set[String(id)] = true; });
   var before = jobs.length;
   jobs = jobs.filter(function(j){ return !(j && set[String(j.id)]); });
   var removed = before - jobs.length;
   try { localStorage.setItem('havellin_jobs_v3', JSON.stringify(jobs)); } catch(e) {}
-  _purgeLocalJobRecords(ids);
+  var kept = _purgeLocalJobRecords(ids);
   if (removed) {
     var ct = document.getElementById('jct'); if (ct) ct.textContent = jobs.length + ' job' + (jobs.length!==1?'s':'');
     if (typeof rebuildDropdowns === 'function') { try { rebuildDropdowns(); } catch(e) {} }
@@ -25268,16 +25352,18 @@ function _applyDroppedJobs(ids) {
     // something redraws them — which for a lost prospect is the row saying we lost them.
     _jobsLanded();
     // Say so. A client vanishing from the list with no explanation reads as data loss;
-    // this is the opposite — the list is catching up with a deletion made elsewhere.
-    showSyncBadge(removed + ' client' + (removed > 1 ? 's' : '') + ' deleted elsewhere — removed from this device too', true);
-  }
+    // this is the opposite — the list is catching up with the sheet.
+    showSyncBadge(removed + ' client' + (removed > 1 ? 's' : '') + ' refused by the sheet, which no longer holds '
+      + (removed > 1 ? 'them' : 'it') + ': removed from this device' + (kept ? '. ' + unsentPhotosKeptText(kept) : ''), true);
+  } else if (kept) showSyncBadge(unsentPhotosKeptText(kept), true);
   return removed;
 }
 
 function hardDeleteJob(id) {
   jobs = jobs.filter(function(j){ return j.id!==id; });
-  // Clean up all related per-job data so it doesn't orphan or get re-pushed to Sheets
-  _purgeLocalJobRecords([id]);
+  // Clean up all related per-job data so it doesn't orphan or get re-pushed to Sheets. The one path that takes the
+  // photographs not yet in Drive with it (2026-10-27, P1): a person asked, behind the PIN.
+  _purgeLocalJobRecords([id], { photos: true });
   saveJobs();
   // Sheets is the source of truth and overwrites local on load, so the row must
   // also be removed there or it will reappear on next sync. Requires a matching
@@ -25964,7 +26050,11 @@ function saveJobs() {
   // and the sheet REFUSES a job it has seen before and no longer holds (its job ledger), so
   // a device still carrying a deleted client cannot merge it back. When that happens the
   // response names the refused ids and _applyDroppedJobs removes them here too.
-  postSyncBadge({ type: 'saveAllJobs', payload: jobs }, 'Synced \u2713', 'Sync failed \u2014 saved locally');
+  // ⚠⚠ THE LIST AS IT IS WHEN IT IS SENT, NOT AS IT WAS WHEN QUEUED (2026-10-27, P1, GAP3-05). The payload was this array,
+  // and `jobs` is REPLACED (a refusal applied, a refresh merged), never only mutated: a retry queued before the replacement
+  // went on sending the old array, a client the sheet had refused included, for as long as it was retried. A getter reads
+  // `jobs` at every send (JSON.stringify calls it, and so does every retry of the same body).
+  postSyncBadge({ type: 'saveAllJobs', get payload() { return jobs; } }, 'Synced \u2713', 'Sync failed \u2014 saved locally');
 }
 
 function loadJobs() {
@@ -25981,16 +26071,28 @@ function loadJobs() {
     fetch(SHEETS_SYNC_URL + '?action=loadJobs')
       .then(function(r){ return r.json(); })
       .then(function(data){
-        if (data.jobs && Array.isArray(data.jobs) && !data.error) {
-          // Sheets is the source of truth \u2014 always overwrite local (handles deletions)
-          jobs = migrateRetiredNames(data.jobs);
+        // ⚠⚠ THE SHEET'S ANSWER NEVER EMPTIES A CACHE HOLDING CLIENTS UNLESS A PERSON RECORDED THE DELETIONS (2026-10-27, P1,
+        // GAP3-02). "Always overwrite local" took an emptied Jobs tab's `jobs: []` over every device's copy under "Loaded 0 jobs
+        // from Sheets ✓", and with it the last copies the sheet could have been rebuilt from. One rule decides
+        // (loadJobsVerdict); a refusal changes nothing on this device, says so on the Clients tab, and leaves the list
+        // reading as unreachable rather than as the sheet's.
+        var verdict = loadJobsVerdict(data, jobs);
+        if (verdict.apply) {
+          // Sheets is the source of truth \u2014 overwrite local (handles deletions)
+          jobs = verdict.jobs;
           try { localStorage.setItem('havellin_jobs_v3', JSON.stringify(jobs)); } catch(e) {}
           // ...and drop the estimates, plans and logs this device still holds for jobs the
           // sheet has deleted, or the next store save pushes them up as headless records.
-          if (Array.isArray(data.deletedJobs)) _purgeLocalJobRecords(data.deletedJobs);
+          var _kept = Array.isArray(data.deletedJobs) ? _purgeLocalJobRecords(data.deletedJobs) : 0;
           document.getElementById('jct').textContent = jobs.length + ' job' + (jobs.length!==1?'s':'');
           rebuildDropdowns();
-          showSyncBadge('Loaded ' + jobs.length + ' job' + (jobs.length!==1?'s':'') + ' from Sheets \u2713');
+          _setSheetNotice('');
+          showSyncBadge('Loaded ' + jobs.length + ' job' + (jobs.length!==1?'s':'') + ' from Sheets \u2713' + (_kept ? '. ' + unsentPhotosKeptText(_kept) : ''), !!_kept);
+        } else if (verdict.why) {
+          _setSheetNotice(verdict.why);
+          _jobsState = 'offline';
+          _jobsLanded();
+          return;
         }
         // ⚠ THE JOBS ARRIVE AFTER THE SCREEN IS DRAWN. This used to call renderJobs()
         // and nothing else, so every OTHER surface built from this array kept whatever it
@@ -26008,6 +26110,24 @@ function loadJobs() {
   } else {
     _jobsState = 'ready';   // no sync URL configured; the local cache is all there is
   }
+}
+
+// What loadJobs does with the sheet's answer (2026-10-27, P1), DOM-free: {apply, jobs} to take the sheet's list, {why} to
+// leave this device as it is and say so, or neither (an answer that carries no list, which changes nothing, as before).
+//   · JOBS_TAB_EMPTY (a 2026-10-27 deployment whose Jobs tab is empty and unexplained): the sheet has no clients right now.
+//   · an empty list over a cache holding clients: taken only where the sheet says a person recorded deleting every one of
+//     them (the editor's reset); an older deployment says nothing of the kind, so its emptied tab changes nothing here.
+//   · a `deletedJobs` covering every client this device holds: the same rule, sheetVerdictRefusal.
+function loadJobsVerdict(data, held) {
+  var have = held || [];
+  if (data && data.error && /JOBS_TAB_EMPTY/.test(String(data.error))) return { apply: false, why: SHEET_NO_CLIENTS_TXT };
+  if (!(data && Array.isArray(data.jobs) && !data.error)) return { apply: false, why: '' };
+  var cloud = migrateRetiredNames(data.jobs);
+  var ids = have.filter(function (j) { return j && j.id != null; }).map(function (j) { return j.id; });
+  if (!cloud.length && ids.length && sheetVerdictRefusal(ids, data.recorded, have)) return { apply: false, why: SHEET_NO_CLIENTS_TXT };
+  var refused = sheetVerdictRefusal(data.deletedJobs, data.recorded, have);
+  if (refused) return { apply: false, why: refused };
+  return { apply: true, jobs: cloud };
 }
 
 // The jobs arrived AFTER the screen was drawn. Redraw whatever is open that is built
@@ -26117,18 +26237,28 @@ function clearEstimateScratch(jobId) {
 // sheet's: a job it does not hold is dropped, as ever. Keeping those is how deleted clients came
 // back on 2026-09-08, and the one case that looked like it needed it — a client just created on
 // this device — is the case standing down covers.
+// ⚠⚠ AND THE SAME RULE AS loadJobs FOR AN EMPTIED SHEET (2026-10-27, P1): loadJobsVerdict. A refused answer changes nothing
+// here and leaves the notice; the sheet's deletions still go through _applyDroppedJobs, which refuses a verdict covering
+// every client unrecorded. A held write (GAP3-06) no longer stops the read: _mergeCloudJobs keeps every local record newer
+// than the sheet's, and while a write is held it keeps this device's clients the sheet has never seen too (a client added
+// here whose save is held is not on the sheet yet, and membership-by-the-sheet would drop it).
 function refreshJobsFromCloud(cb) {
   if (!SHEETS_SYNC_URL) { if (cb) cb(); return; }
-  if (_syncWritesOutstanding()) { if (cb) cb(); return; }
+  if (_syncWritesOutstanding([])) { if (cb) cb(); return; }
   var seq = _syncWriteSeq;
   fetch(SHEETS_SYNC_URL + '?action=loadJobs')
     .then(function(r){ return r.json(); })
     .then(function(data){
+      var verdict = loadJobsVerdict(data, jobs);
+      if (verdict.why && !(data && Array.isArray(data.jobs))) { _setSheetNotice(verdict.why); return; }
       if (!(data && Array.isArray(data.jobs) && !data.error)) return;
-      _applyDroppedJobs(data.deletedJobs);
-      if (_syncWritesOutstanding() || _syncWriteSeq !== seq) return;
-      jobs = _mergeCloudJobs(jobs, migrateRetiredNames(data.jobs));
+      _applyDroppedJobs(data.deletedJobs, data.recorded);
+      if (_syncWritesOutstanding([]) || _syncWriteSeq !== seq) return;
+      verdict = loadJobsVerdict(data, jobs);
+      if (!verdict.apply) { if (verdict.why) _setSheetNotice(verdict.why); return; }
+      jobs = _mergeCloudJobs(jobs, verdict.jobs, _syncWritesHeld() ? (data.deletedJobs || []) : null);
       try { localStorage.setItem('havellin_jobs_v3', JSON.stringify(jobs)); } catch(e) {}
+      if (_sheetNotice && verdict.jobs.length) _setSheetNotice('');
     })
     .catch(function(){})
     .then(function(){ if (cb) cb(); });
@@ -26140,13 +26270,23 @@ function refreshJobsFromCloud(cb) {
 // is our write, merged with whatever the other device added key by key. A local copy strictly
 // newer than that is one whose write the sheet has not seen, and replacing it is H4 by another
 // route. DOM-free, so the tests read the real rule.
-function _mergeCloudJobs(local, cloud) {
-  var mine = {};
+// `keepUnseen` (2026-10-27, P1): the ids the sheet has deleted, handed in only while a write is held; then a local client
+// the sheet does not hold and has not deleted is kept after the sheet's list, since the held write is what would have put it
+// there. Without it (null) membership stays the sheet's, as it always was.
+function _mergeCloudJobs(local, cloud, keepUnseen) {
+  var mine = {}, inCloud = {};
   (local || []).forEach(function(j){ if (j && j.id != null) mine[String(j.id)] = j; });
-  return (cloud || []).map(function(c){
+  var out = (cloud || []).map(function(c){
+    if (c && c.id != null) inCloud[String(c.id)] = true;
     var l = (c && c.id != null) ? mine[String(c.id)] : null;
     return (l && Number(l.updatedAt || 0) > Number(c.updatedAt || 0)) ? l : c;
   });
+  if (Array.isArray(keepUnseen)) {
+    var gone = {};
+    keepUnseen.forEach(function(id){ if (id != null) gone[String(id)] = true; });
+    (local || []).forEach(function(j){ if (j && j.id != null && !inCloud[String(j.id)] && !gone[String(j.id)]) out.push(j); });
+  }
+  return out;
 }
 
 // Cloud-authoritative open. Refresh the jobs list AND fetch this job's saved
@@ -29904,6 +30044,9 @@ function _invRefreshSummary(jobId) {
 }
 
 function addInventoryManualItem(jobId) {
+  // Its number would be minted off a copy that has not read the sheet (2026-10-27, P1, SYN-08).
+  var _cold = typeof invColdRefusal === 'function' ? invColdRefusal(jobId) : '';
+  if (_cold) { alert(_cold); return; }
   var name = (window.prompt('Line item description (e.g. Cash on hand, 2019 Lexus RX, brokerage account …):') || '').trim();
   if (!name) return;
   var ts = Date.now();
@@ -30300,12 +30443,68 @@ function _apprEstimateFlags(jobId) {
 // itemNo travels with the snapshot so two snapshots can be diffed by IDENTITY. Without it the only key was the object
 // name, which is exactly what an amended-inventory trail cannot rely on — names get corrected, and a corrected name
 // reads as a deletion plus an addition rather than as the same item.
+// ⚠ WHAT A SNAPSHOT KEEPS OF A LINE (2026-10-27, P1 of the desk audit, VAL-31, INV-14): a snapshot labelled "Filed with court"
+// kept the number, the name, the category, the figure, the destination and the track, so a count corrected, a line moved to
+// another room or an agent's figure replaced by an appraisal's at the same amount never showed on the comparison counsel
+// would rely on. It keeps the count, the room, the condition, the basis (invValBasisWord: the source in the schedules' words,
+// an appraisal by its appraiser) and the valuation date too. Those make each line longer, which is why the lines no longer
+// ride the client's record (takeInventorySnapshot).
 function _snapItemOf(r, job) {
-  return { itemNo: r.itemNo || '', object: r.objectName || '', category: r.category || '', fmv: r.fmv || '', disposition: r.disposition || '', track: _invTrack(r, job) };
+  return { itemNo: r.itemNo || '', object: r.objectName || '', category: r.category || '', fmv: r.fmv || '', disposition: r.disposition || '', track: _invTrack(r, job),
+    qty: invLineQty(r), room: _invRoomName(job && job.id, r.roomIdx), condition: String(r.condition || '').trim(),
+    basis: invValBasisWord(r, job && job.id), valDate: r.valDate || '' };
+}
+// ⚠⚠ A SNAPSHOT'S LINES NEVER RIDE THE CLIENT'S RECORD (2026-10-27, P1 of the desk audit, VAL-01, INV-02, GAP3-01). They were
+// pushed onto job.invSnapshots, about 132 characters a line, and a client is ONE cell of JSON on the sheet, which holds 50,000:
+// one Snapshot of about 295 named lines, a second of 150, or two devices' of 180 each merged on the sheet, passed it, and the
+// sheet's writer, clearing the tab before a write that then threw, emptied the Jobs tab for every client (driven on the real
+// code and the real page). The record keeps the heading (when, the label, the count, the total, the value date, a void) and
+// the lines go to their own store on the sheet (saveSnapshot, SnapshotStore), read back to print or compare
+// (_withSnapLines). This device keeps the lines of the snapshots it took or read, in memory only (_snapLines); localStorage is
+// the manifest's and must never be crowded out.
+// Refused by name, nothing recorded (snapshotRefusal): a device that has not read the inventory from the sheet (it recorded
+// "Filed with court: 0 items, $0" while the sheet held 9 lines, SYN-08), a deployment with nowhere to keep the lines, no
+// Apps Script URL (the lines would live in this tab alone), or nothing in the inventory.
+// And the snapshot's own page is filed to Drive under a dated name as it is taken (_snapFilePage), the paper of the list as it
+// stood, so the snapshot stands on its own outside the sheet.
+var SNAP_LINES_UNREAD_TXT = 'This snapshot’s lines are kept on the sheet, and this device could not read them. Check the connection, then try again.';
+var _snapLines = {};   // { jobId: { "<ts>": [lines] } } — this session's copy; never saved
+function _snapLinesOf(jobId, ts) { var m = _snapLines[jobId]; return (m && m[String(ts)]) || null; }
+function _snapLinesPut(jobId, ts, items) { (_snapLines[jobId] || (_snapLines[jobId] = {}))[String(ts)] = items; }
+// Read one client's snapshot lines from the sheet into this session's copy; cb(ok).
+function loadSnapshotLines(jobId, cb) {
+  if (!SHEETS_SYNC_URL) { if (cb) cb(false); return; }
+  fetch(SHEETS_SYNC_URL + '?action=loadSnapshots&jobId=' + encodeURIComponent(jobId))
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if (!(d && d.ok && d.snapshots && typeof d.snapshots === 'object')) { if (cb) cb(false); return; }
+      Object.keys(d.snapshots).forEach(function(t){
+        var e = d.snapshots[t];
+        if (e && Array.isArray(e.items) && !_snapLinesOf(jobId, t)) _snapLinesPut(jobId, t, e.items);
+      });
+      if (cb) cb(true);
+    })
+    .catch(function(){ if (cb) cb(false); });
+}
+// The lines of the snapshots `tss` names, from this session's copy or read from the sheet first: then(), or why not.
+function _withSnapLines(jobId, tss, then, refuse) {
+  var have = function(){ return tss.every(function(t){ return !!_snapLinesOf(jobId, t); }); };
+  if (have()) { then(); return; }
+  loadSnapshotLines(jobId, function(){ if (have()) then(); else refuse(SNAP_LINES_UNREAD_TXT); });
+}
+function snapshotRefusal(jobId) {
+  var cold = invColdRefusal(jobId);
+  if (cold) return cold;
+  if (!SHEETS_SYNC_URL) return 'Not taken: this device has no Apps Script URL in Settings, and a snapshot’s lines are kept on the sheet. Nothing was recorded.';
+  if (!backendHasType('saveSnapshot')) return 'Not taken: the Apps Script has not said it keeps a snapshot’s lines (it needs the 2026-10-27 redeploy, or it has not answered this device yet). Nothing was recorded.';
+  if (!_jobInvRefs(jobId).length) return 'Not taken: there is nothing in the inventory to snapshot yet.';
+  return '';
 }
 function takeInventorySnapshot(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
+  var refused = snapshotRefusal(jobId);
+  if (refused) { alert(refused); return; }
   var items = _invAssignItemNos(jobId);
   // ⚠ CANCEL TAKES NOTHING (P19). It took the snapshot anyway, unlabelled — harmless while one click removed it, and a
   // permanent entry on the trail now that a snapshot can only be voided.
@@ -30315,14 +30514,45 @@ function takeInventorySnapshot(jobId) {
   var totalFMV = 0;
   var snapItems = items.map(function(r){ var n = parseFloat(r.fmv); if (!isNaN(n)) totalFMV += n; return _snapItemOf(r, job); });
   if (!job.invSnapshots) job.invSnapshots = [];
-  job.invSnapshots.push({ ts: Date.now(), label: label, valueDate: estateValueDate(job), count: items.length, totalFMV: roundCents(totalFMV), items: snapItems });
-  _jobTouch(job, 'invSnapshots', job.invSnapshots[job.invSnapshots.length - 1].ts);
+  var ts = Date.now();
+  job.invSnapshots.push({ ts: ts, label: label, valueDate: estateValueDate(job), count: items.length, totalFMV: roundCents(totalFMV) });
+  _snapLinesPut(jobId, ts, snapItems);
+  _jobTouch(job, 'invSnapshots', ts);
   saveJobs();
   if (typeof syncJobToSheets === 'function') syncJobToSheets(job);
+  postSyncBadge({ type: 'saveSnapshot', payload: { jobId: jobId, ts: ts, items: snapItems } }, 'Snapshot saved ✓', 'Snapshot lines not saved yet');
+  _snapFilePage(jobId, ts);
   // The snapshot list sits in the Removed items & snapshots bar, which never opens by itself (2026-10-22): the snapshot
   // just taken opens it, so the new row is drawn where the person can see it landed.
   deskFoldOpen(jobId, 'history');
   renderInventoryTab();
+}
+// The snapshot's own page, filed to Estate Inventory under a dated name (2026-10-27, P1): a re-file of another snapshot never
+// replaces it. Recorded on the heading (filedAt, filedUrl) once Drive answers, as part of the person's press; a failure is
+// said and nothing is recorded (the snapshot still prints from its row).
+function _snapFilePage(jobId, ts) {
+  var job = _invJob(jobId);
+  var snap = job && (job.invSnapshots || []).find(function(s){ return s && String(s.ts) === String(ts); });
+  if (!snap || !job.driveFolder || !SHEETS_SYNC_URL) return false;
+  var page = printInventorySnapshot(jobId, ts, { asHtml: true });
+  if (!page || !page.html) return false;
+  var stamp = new Date(Number(ts)).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }).replace(/,/g, '');
+  var name = _invDocDriveName(job, 'Inventory Snapshot - ' + stamp + (snap.label ? ' - ' + String(snap.label).replace(/[\\/:*?"<>|]/g, '-') : ''));
+  resolveSubfolderId(job, PHOTO_SUBFOLDER, function (folderId) {
+    var target = folderId || _jobRootFolderId(job);
+    if (!target) { showSyncBadge('Snapshot taken; its page was not filed to Drive: this client has no Drive folder.', true); return; }
+    uploadHtmlToDrive(target, name, _exportDoc(page.title, page.html, ''), function (ok, fileUrl) {
+      if (!ok) { showSyncBadge('Snapshot taken; its page was not filed to Drive. It still prints from its row under Removed items & snapshots.', true); return; }
+      var j2 = _invJob(jobId) || job;
+      var s2 = (j2.invSnapshots || []).find(function(s){ return s && String(s.ts) === String(ts); });
+      if (!s2) return;
+      s2.filedAt = new Date().toISOString();
+      s2.filedUrl = fileUrl || '';
+      _saveJobEdit(j2, 'invSnapshots', s2.ts);
+      showSyncBadge('Snapshot page filed to Drive ✓');
+    });
+  });
+  return true;
 }
 // A void needs a reason, and keeps the snapshot. Stamped on its own key (`invSnapshots:<ts>`, the key the sheet merges
 // this list on, JOB_LIST_KEY), so the void reaches every device and a stale copy without it cannot bring it back.
@@ -30352,13 +30582,18 @@ function _snapVal(v) { var n = parseFloat(v); return isNaN(n) ? null : roundCent
 // ⚠ WHAT CHANGED, BY ITEM NUMBER. DOM-free: the printed comparison reads it and the tests drive it. A line in neither
 // side's numbering (a snapshot taken before item numbers existed) cannot be matched by identity and is counted apart,
 // never guessed at by name: a corrected name is exactly what this is for finding.
+// ⚠ AND THE COUNT, THE ROOM AND THE BASIS (2026-10-27, P1, INV-14): a count corrected after delivery read "Unchanged 400". A
+// line's basis is its source in the schedules' words or its valuation date, so an agent's figure replaced by an appraisal at
+// the same amount reads as changed.
 function snapshotDiff(before, after) {
   var key = function(it){ var n = parseInt(it && it.itemNo, 10); return n > 0 ? String(n) : ''; };
   var A = {}, B = {}, unkeyed = 0;
   (before || []).forEach(function(it){ var k = key(it); if (k) A[k] = it; else unkeyed++; });
   (after || []).forEach(function(it){ var k = key(it); if (k) B[k] = it; else unkeyed++; });
   var byNo = function(a, b){ return Number(a.no) - Number(b.no); };
-  var out = { added: [], removed: [], renamed: [], value: [], disposition: [], track: [], unchanged: 0, unkeyed: unkeyed };
+  var out = { added: [], removed: [], renamed: [], value: [], disposition: [], track: [], count: [], room: [], basis: [], unchanged: 0, unkeyed: unkeyed };
+  var qtyOf = function(it){ var q = parseInt(it && it.qty, 10); return q > 1 ? q : 1; };
+  var basisOf = function(it){ return [String((it && it.basis) || ''), String((it && it.valDate) || '')].join(' · ').replace(/^ · | · $/g, ''); };
   Object.keys(A).forEach(function(k){
     var a = A[k], b = B[k];
     if (!b) { out.removed.push({ no: k, it: a }); return; }
@@ -30368,10 +30603,13 @@ function snapshotDiff(before, after) {
     if (va !== vb) { out.value.push({ no: k, it: b, from: va, to: vb }); moved = true; }
     if (String(a.disposition || '') !== String(b.disposition || '')) { out.disposition.push({ no: k, it: b, from: a.disposition || '', to: b.disposition || '' }); moved = true; }
     if (String(a.track || '') !== String(b.track || '')) { out.track.push({ no: k, it: b, from: a.track || '', to: b.track || '' }); moved = true; }
+    if (qtyOf(a) !== qtyOf(b)) { out.count.push({ no: k, it: b, from: qtyOf(a), to: qtyOf(b) }); moved = true; }
+    if (String(a.room || '') !== String(b.room || '')) { out.room.push({ no: k, it: b, from: a.room || '', to: b.room || '' }); moved = true; }
+    if (basisOf(a) !== basisOf(b)) { out.basis.push({ no: k, it: b, from: basisOf(a), to: basisOf(b) }); moved = true; }
     if (!moved) out.unchanged++;
   });
   Object.keys(B).forEach(function(k){ if (!A[k]) out.added.push({ no: k, it: B[k] }); });
-  ['added', 'removed', 'renamed', 'value', 'disposition', 'track'].forEach(function(s){ out[s].sort(byNo); });
+  ['added', 'removed', 'renamed', 'value', 'disposition', 'track', 'count', 'room', 'basis'].forEach(function(s){ out[s].sort(byNo); });
   var tot = function(list){
     var v = 0, any = false;
     (list || []).forEach(function(it){ var n = _snapVal(it.fmv); if (n !== null) { v = roundCents(v + n); any = true; } });
@@ -30396,6 +30634,8 @@ function _renderInventorySnapshots(job) {
     return '<div class="snap-row" style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:4px 0;border-bottom:0.5px solid var(--border);font-size:11px;' + (v ? 'color:var(--gray);' : '') + '">'
       + '<span style="min-width:0;">' + (v ? '<strong style="color:#A32D2D;">VOIDED</strong> &middot; ' : '')
         + esc(_invDateTime(s.ts)) + (s.label ? ' <strong>· ' + esc(s.label) + '</strong>' : '') + ' <span style="color:var(--gray);">· ' + esc(String(s.count)) + ' items · ' + (_money(s.totalFMV) || '$0') + '</span>'
+        // Its page as it stood, filed to Drive under a dated name when it was taken (2026-10-27, P1).
+        + (s.filedUrl ? ' <a href="' + esc(s.filedUrl) + '" target="_blank" rel="noopener" style="font-size:10.5px;">Filed copy ↗</a>' : '')
         + (v ? '<span style="display:block;font-size:10.5px;color:#7a2020;">Voided ' + esc(fmtDate2(_ymdLocal(new Date(s.voidedAt)))) + (s.voidedBy ? ' by ' + esc(s.voidedBy) : '') + ': ' + esc(s.voidReason || '') + '</span>' : '')
       + '</span>'
       + '<span style="display:flex;gap:6px;flex-wrap:wrap;"><button class="btn-s" onclick="printInventorySnapshot(' + job.id + ',' + s.ts + ')">Print</button>'
@@ -30409,34 +30649,58 @@ function _renderInventorySnapshots(job) {
     + '<div style="font-size:10.5px;color:var(--gray);margin-bottom:4px;">A snapshot is never deleted: one taken in error is voided, with the reason, and still prints. Compare sets it against the inventory now, or against the snapshot before it, by item number.</div>'
     + rows + '</div>';
 }
-function printInventorySnapshot(jobId, ts) {
+// The snapshot's page: every line as it stood, with its count, room, condition and basis (2026-10-27, P1). Its lines come from
+// the sheet's snapshot store (_withSnapLines): a press reads them first where this device does not hold them; `opt.asHtml`
+// returns {html, title} at once, or {why} where the lines are not on this device.
+function printInventorySnapshot(jobId, ts, opt) {
+  var asHtml = !!(opt && opt.asHtml);
   var job = jobs.find(function(j){ return j.id === jobId; });
   var pt = document.getElementById('print-target');
-  if (!job || !pt) return;
+  if (!job || (!asHtml && !pt)) return asHtml ? { why: 'This client could not be found on this device.' } : undefined;
   var snap = (job.invSnapshots || []).find(function(s){ return String(s.ts) === String(ts); });
-  if (!snap) return;
+  if (!snap) return asHtml ? { why: 'That snapshot could not be found.' } : undefined;
+  var items = _snapLinesOf(jobId, snap.ts);
+  if (!items) {
+    if (asHtml || (opt && opt.loaded)) { if (!asHtml) alert(SNAP_LINES_UNREAD_TXT); return asHtml ? { why: SNAP_LINES_UNREAD_TXT } : undefined; }
+    _withSnapLines(jobId, [snap.ts], function(){ printInventorySnapshot(jobId, ts, { loaded: true }); }, function(why){ alert(why); });
+    return undefined;
+  }
   // Same rule as the worklist: a snapshot row taken before item numbers existed carries
   // none, and printing its position there asserts a number that was never issued. _invItemNo
   // prints an em dash instead, which is the honest answer.
-  var rows = snap.items.map(function(it){
-    return '<tr><td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(_invItemNo(it)) + '</td>'
-      + '<td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(it.object || '—') + '</td>'
-      + '<td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(it.category || '—') + '</td>'
-      + '<td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(it.track || '—') + '</td>'
-      + '<td style="padding:2px 6px;border-bottom:1px solid #eee;text-align:right;">' + _invMoney(it.fmv) + '</td></tr>';
+  var td = 'padding:2px 6px;border-bottom:1px solid #eee;vertical-align:top;';
+  var rows = items.map(function(it){
+    return '<tr><td style="' + td + '">' + esc(_invItemNo(it)) + '</td>'
+      + '<td style="' + td + '">' + esc(it.object || '—') + '</td>'
+      + '<td style="' + td + 'text-align:right;">' + esc(String(it.qty || 1)) + '</td>'
+      + '<td style="' + td + '">' + esc(it.room || '—') + '</td>'
+      + '<td style="' + td + '">' + esc(it.condition || 'as photographed') + '</td>'
+      + '<td style="' + td + '">' + esc(it.category || '—') + '</td>'
+      + '<td style="' + td + '">' + esc(it.track || '—') + '</td>'
+      + '<td style="' + td + '">' + esc([it.basis || '', it.valDate ? fmtDate2(it.valDate) : ''].filter(Boolean).join(' · ') || '—') + '</td>'
+      + '<td style="' + td + 'text-align:right;">' + _invMoney(it.fmv) + '</td></tr>';
   }).join('');
+  var th = function(t, right){ return '<th style="padding:2px 6px;' + (right ? 'text-align:right;' : '') + '">' + t + '</th>'; };
   // ⚠ "Inventory Snapshot", not "Estate Inventory — Snapshot" (P19): a trust's snapshot is not an estate's.
-  pt.innerHTML = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
+  var html = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
     + '<h2 style="font-family:\'Cormorant Garamond\',serif;margin-bottom:2px;">Inventory Snapshot</h2>'
     + '<div style="font-size:12px;margin-bottom:2px;"><strong>' + _invDocPartyHead(job) + '</strong>' + (job.hvlId ? ' &middot; ' + esc(job.hvlId) : '') + '</div>'
     + '<div style="font-size:11px;color:#666;margin-bottom:12px;">Captured ' + esc(_invDateTime(snap.ts)) + (snap.label ? ' &middot; ' + esc(snap.label) : '') + ' &middot; ' + esc(String(snap.count)) + ' items &middot; total ' + (_invMoney(snap.totalFMV)) + '</div>'
     + _snapVoidedBlock(snap)
-    + '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="color:#888;text-align:left;"><th style="padding:2px 6px;">Item #</th><th style="padding:2px 6px;">Object</th><th style="padding:2px 6px;">Category</th><th style="padding:2px 6px;">Track</th><th style="padding:2px 6px;text-align:right;">FMV</th></tr></thead><tbody>' + rows + '</tbody></table>'
+    + '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="color:#888;text-align:left;">'
+      + th('Item #') + th('Object') + th('Qty', true) + th('Room') + th('Condition') + th('Category') + th('Track') + th('Basis') + th('FMV', true)
+    + '</tr></thead><tbody>' + rows + '</tbody></table>'
     + '</div>';
-  _printDocument(pt.innerHTML, _invDocName(job, 'Inventory Snapshot'));
+  var title = _invDocName(job, 'Inventory Snapshot');
+  if (asHtml) return { html: html, title: title };
+  pt.innerHTML = html;
+  _printDocument(pt.innerHTML, title);
 }
 // The "what changed" page: a snapshot against the inventory now (`against` 'now'), or the snapshot before it against
 // this one ('prev'). `opt.asHtml` returns {html, title}, or {why} where there is nothing to compare.
+// ⚠ THE SNAPSHOT'S LINES ARE READ FROM THE SHEET FIRST where this device does not hold them (2026-10-27, P1): a press reads them
+// and then prints; `opt.asHtml` answers at once, {why} where they are not on this device. Comparing with NOW reads this
+// device's copy of the inventory, so it waits until that copy has been read from the sheet (invColdRefusal).
 function printSnapshotComparison(jobId, ts, against, opt) {
   var job = _invJob(jobId);
   var snap = job && (job.invSnapshots || []).find(function(s){ return s && String(s.ts) === String(ts); });
@@ -30444,10 +30708,17 @@ function printSnapshotComparison(jobId, ts, against, opt) {
   if (!snap) return refuse('That snapshot could not be found.');
   var prev = against === 'prev' ? _snapPrevLive(job, snap.ts) : null;
   if (against === 'prev' && !prev) return refuse('There is no earlier snapshot to compare this one with.');
+  if (!prev) { var _cold = invColdRefusal(jobId); if (_cold) return refuse(_cold); }
+  var _lines = _snapLinesOf(jobId, snap.ts), _prevLines = prev ? _snapLinesOf(jobId, prev.ts) : null;
+  if (!_lines || (prev && !_prevLines)) {
+    if ((opt && opt.asHtml) || (opt && opt.loaded)) return refuse(SNAP_LINES_UNREAD_TXT);
+    _withSnapLines(jobId, prev ? [snap.ts, prev.ts] : [snap.ts], function(){ printSnapshotComparison(jobId, ts, against, { loaded: true }); }, function(why){ alert(why); });
+    return null;
+  }
   var name = function(s){ return 'the snapshot of ' + _invDateTime(s.ts) + (s.label ? ' (' + s.label + ')' : ''); };
   var nowDay = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-  var before = prev ? prev.items : snap.items;
-  var after = prev ? snap.items : _invAssignItemNos(jobId).map(function(r){ return _snapItemOf(r, job); });
+  var before = prev ? _prevLines : _lines;
+  var after = prev ? _lines : _invAssignItemNos(jobId).map(function(r){ return _snapItemOf(r, job); });
   var fromName = prev ? name(prev) : name(snap);
   var toName = prev ? name(snap) : 'the inventory as it stands on ' + nowDay;
   var d = snapshotDiff(before, after);
@@ -30482,6 +30753,7 @@ function printSnapshotComparison(jobId, ts, against, opt) {
     + '</tbody></table>'
     + '<div style="font-size:11px;color:#555;margin-bottom:6px;">Added ' + d.added.length + ' &middot; Removed ' + d.removed.length + ' &middot; Renamed ' + d.renamed.length
       + ' &middot; Value changed ' + d.value.length + ' &middot; Disposition changed ' + d.disposition.length + ' &middot; Track changed ' + d.track.length
+      + ' &middot; Count changed ' + d.count.length + ' &middot; Moved room ' + d.room.length + ' &middot; Basis changed ' + d.basis.length
       + ' &middot; Unchanged ' + d.unchanged + '</div>'
     + (d.unkeyed ? '<div style="font-size:10.5px;color:#8a6d3b;font-style:italic;margin-bottom:6px;">' + d.unkeyed + ' line' + (d.unkeyed === 1 ? ' carries' : 's carry')
         + ' no item number (taken before item numbers existed), so ' + (d.unkeyed === 1 ? 'it is' : 'they are') + ' not compared.</div>' : '')
@@ -30491,6 +30763,9 @@ function printSnapshotComparison(jobId, ts, against, opt) {
     + sec('Value changed', d.value, th(['Item #', 'Item', 'Was', 'Now']) + '<tbody>' + wasNow(d.value, money, true) + '</tbody>')
     + sec('Disposition changed', d.disposition, th(['Item #', 'Item', 'Was', 'Now']) + '<tbody>' + wasNow(d.disposition, txt, true) + '</tbody>')
     + sec('Track changed', d.track, th(['Item #', 'Item', 'Was', 'Now']) + '<tbody>' + wasNow(d.track, txt, true) + '</tbody>')
+    + sec('Count changed', d.count, th(['Item #', 'Item', 'Was', 'Now']) + '<tbody>' + wasNow(d.count, function(v){ return esc(String(v)); }, true) + '</tbody>')
+    + sec('Moved room', d.room, th(['Item #', 'Item', 'Was', 'Now']) + '<tbody>' + wasNow(d.room, txt, true) + '</tbody>')
+    + sec('Basis changed', d.basis, th(['Item #', 'Item', 'Was', 'Now']) + '<tbody>' + wasNow(d.basis, txt, true) + '</tbody>')
     + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">Lines are matched by item number, which is never reissued. A removed line is one on the earlier side that is not on the later one.</div>'
     + '</div>';
   var title = _invDocName(job, 'Inventory Snapshot Comparison');
@@ -30945,6 +31220,8 @@ function _clFlags(r, job, jobId) {
 }
 
 function printContentsList(jobId, opt) {
+  var _cold = typeof invColdRefusal === 'function' ? invColdRefusal(jobId) : '';   // 2026-10-27, P1: a cold desk refuses
+  if (_cold) { if (opt && opt.asHtml) return { why: _cold }; alert(_cold); return; }
   var rec = contentsList(jobId);
   var job = rec.job;
   if (!job || !document.getElementById('print-target')) return;
@@ -31077,6 +31354,8 @@ function printContentsList(jobId, opt) {
 function printEstateInventoryReport(jobId, opt) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
+  var _cold = typeof invColdRefusal === 'function' ? invColdRefusal(jobId) : '';   // 2026-10-27, P1: a cold desk refuses
+  if (_cold) { if (opt && opt.asHtml) return { why: _cold }; alert(_cold); return; }
   // ⚠ THE SAME PREDICATE THE STRIP READS, so the document cannot be reached around the
   // withheld button. `docAction`'s rule: a gate beside the action cannot be bypassed by
   // reaching the action another way.
@@ -31251,6 +31530,8 @@ function buildInventoryCSV(jobId) {
 function exportInventoryCSV(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
+  var _cold = typeof invColdRefusal === 'function' ? invColdRefusal(jobId) : '';   // 2026-10-27, P1: a cold desk refuses
+  if (_cold) { alert(_cold); return; }
   if (!_jobInvRefs(jobId).length) { alert('There is nothing in the inventory to export yet.'); return; }
   var csv = buildInventoryCSV(jobId);
   var name = (job.hvlId || 'Havellin') + '_Inventory_' + _todayStr() + '.csv';
@@ -32376,6 +32657,8 @@ function printApprovalRequest(jobId, selectedOnly, opt) {
   var _asHtml = !!(opt && opt.asHtml);
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return _asHtml ? { why: 'This job could not be found.' } : undefined;
+  var _cold = typeof invColdRefusal === 'function' ? invColdRefusal(jobId) : '';   // 2026-10-27, P1: a cold desk refuses
+  if (_cold) { if (_asHtml) return { why: _cold }; alert(_cold); return; }
   var items = selectedOnly ? invWrittenReleasePicked(jobId, job) : _invAwaitingApproval(jobId);
   if (!items.length) {
     // A living job (2026-10-26) says why nothing needs signing there, a selection of everyday items included.
@@ -33963,6 +34246,8 @@ function invReceiptHtml(job, name, lines, sig) {
 function printBeneficiaryReceipt(jobId, name) {
   var job = _invJob(jobId);
   if (!job) return false;
+  var _cold = typeof invColdRefusal === 'function' ? invColdRefusal(jobId) : '';   // 2026-10-27, P1: a cold desk refuses
+  if (_cold) { alert(_cold); return false; }
   if (!invFiduciaryMode(job)) { alert('A receipt is kept for property released from an estate. The living-client agreement has no receipt requirement.'); return false; }
   var g = invReceiptGroups(job, _invAssignItemNos(jobId)).filter(function(x){ return !x.dealer && samePerson(x.name, invRecipientName(name)); })[0];
   var lines = g ? (g.owed.length ? g.owed : g.released) : [];
@@ -34583,7 +34868,7 @@ function scheduleSignLines(signers, act, capacity) {
 
 function printCourtInventory(jobId, opt) {
   var job = jobs.find(function(j){ return j.id === jobId; });
-  var _blocked = invDocContractBlock(job, 'court');
+  var _blocked = invDocContractBlock(job, 'court') || (typeof invColdRefusal === 'function' ? invColdRefusal(jobId) : '');   // and a cold desk (2026-10-27, P1)
   if (_blocked) { if (opt && opt.asHtml) return { why: _blocked }; alert(_blocked); return; }
   var pt = document.getElementById('print-target');
   if (!job || !pt) return;
@@ -34774,7 +35059,7 @@ function printTrustSchedule(jobId, opt) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   // Same gate, same predicate, same sentence as the other two valued schedules: this one states
   // a carrying value on every line, so it is ours only where the agreement says we state values.
-  var _blocked = invDocContractBlock(job, 'trustee');
+  var _blocked = invDocContractBlock(job, 'trustee') || (typeof invColdRefusal === 'function' ? invColdRefusal(jobId) : '');   // and a cold desk (2026-10-27, P1)
   if (_blocked) { if (opt && opt.asHtml) return { why: _blocked }; alert(_blocked); return; }
   var pt = document.getElementById('print-target');
   if (!job || !pt) return;
@@ -34999,6 +35284,8 @@ function _ledgerReceiptCell(job, r) {
 function printDispositionLedger(jobId, opt) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return (opt && opt.asHtml) ? { why: 'this client could not be found on this device' } : undefined;
+  var _cold = typeof invColdRefusal === 'function' ? invColdRefusal(jobId) : '';   // 2026-10-27, P1: a cold desk refuses
+  if (_cold) { if (opt && opt.asHtml) return { why: _cold }; alert(_cold); return; }
   var L = dispositionLedger(jobId);
   // An empty inventory has nothing to record, and a sign-off under nothing would approve nothing: refused, as the Estate
   // Inventory Report refuses, so the package leaves it out by name.
@@ -35310,6 +35597,8 @@ function printDonationRecord(jobId, stableId, opt) {
   var job = _invJob(jobId);
   var refuse = function (why) { if (opt && opt.asHtml) return { why: why }; alert(why); return null; };
   if (!job) return refuse('This client could not be found on this device.');
+  var _cold = typeof invColdRefusal === 'function' ? invColdRefusal(jobId) : '';   // 2026-10-27, P1: a cold desk refuses
+  if (_cold) return refuse(_cold);
   var g = donationGroups(job, _invAssignItemNos(jobId)).filter(function (x) {
     return x.charity && x.lines.some(function (r) { return String(r.stableId) === String(stableId); });
   })[0];
@@ -35911,6 +36200,8 @@ function printAppraisalWorklist(jobId, opt) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   var pt = document.getElementById('print-target');
   if (!job || !pt) return;
+  var _cold = typeof invColdRefusal === 'function' ? invColdRefusal(jobId) : '';   // 2026-10-27, P1: a cold desk refuses
+  if (_cold) { if (opt && opt.asHtml) return { why: _cold }; alert(_cold); return; }
   // ⚠ THE NUMBER ON THIS PAGE IS THE ONE THE APPRAISER REPORTS BACK AGAINST, so it has
   // to be the permanent item number the Court Inventory and the receipts cite — not the
   // row's position, which was what it printed until 2026-09-11. Grouping by appraiser
@@ -36117,6 +36408,8 @@ function printContentsRecord(jobId, opt) {
   var job = rec.job;
   var asHtml = !!(opt && opt.asHtml);
   if (!job || !job.id) return asHtml ? { why: 'this client could not be found on this device' } : undefined;
+  var _cold = typeof invColdRefusal === 'function' ? invColdRefusal(jobId) : '';   // 2026-10-27, P1: a cold desk refuses
+  if (_cold) { if (asHtml) return { why: _cold }; alert(_cold); return; }
   if (!asHtml && !document.getElementById('print-target')) return;
   var fid = invFiduciaryMode(job);
 
@@ -36305,6 +36598,8 @@ function _afDate(ms) {
 function printAsFoundRecord(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
+  var _cold = typeof invColdRefusal === 'function' ? invColdRefusal(jobId) : '';   // 2026-10-27, P1: a cold desk refuses
+  if (_cold) { alert(_cold); return; }
   var rec = asFoundRecord(jobId);
   if (!rec.rooms.length) { alert('This job has no rooms priced on its estimate, so there is nothing to index.'); return; }
   if (!rec.total) { alert('No as-found photographs have been taken on this job yet.'); return; }
@@ -37462,6 +37757,8 @@ function _invRefreshFromCloud() {
       if (typeof _deskFoldHeadsRepaint === 'function') _deskFoldHeadsRepaint(jobId);
       // And the read's line, which waited on this read too (the build's browser step: it kept "still loading" after it).
       if (typeof _invReadLineRepaint === 'function') _invReadLineRepaint(jobId);
+      // And what the work bar and an empty list said of a copy that had not read the sheet (2026-10-27, P1, SYN-08).
+      if (typeof _invColdRepaint === 'function') _invColdRepaint(jobId);
     }
     if (typeof approvalEnvelopeRefresh === 'function') approvalEnvelopeRefresh({ jobId: jobId }, function (n) { if (n) _invRenderWhenIdle(); });
     if (typeof _invCloudRetryArm === 'function' && _invManifestUnread(jobId) && _invCloudFailed[jobId]) _invCloudRetryArm(jobId);
@@ -40149,6 +40446,9 @@ function invPrimaryDoc(job) {
 
 function _renderInvWorkbar(job, all) {
   var st = _invReviewStats(all, _invAcceptCtxOf(job));
+  // What a copy that has not read the sheet is, said where the count goes (2026-10-27, P1), and remembered as drawn (_invColdShown).
+  var _coldW = invColdWords(job.id);
+  if (typeof _invColdShown !== 'undefined') (_invColdShown[job.id] = _invColdShown[job.id] || {}).bar = _coldW;
   // The read is owed while a line stands as the agents left it and the list is not read since it last changed (Q107).
   var _rdNow = invListRead(job), _readOwed = st.accepted > 0 && !(_rdNow && _rdNow.current);
   var _moreEl = document.getElementById('inv-more');
@@ -40171,7 +40471,8 @@ function _renderInvWorkbar(job, all) {
         // The HVL id alone (2026-10-22): the client's name and the address are the client line's, at the top of the tab.
         + (job.hvlId ? '<div style="font-size:11px;color:var(--gray);">' + esc(job.hvlId) + '</div>' : '')
       + '</div>'
-      + _invProgressBar(st, 150)
+      // A copy that has not read the sheet counts nothing as reviewed or not (2026-10-27, P1, SYN-08).
+      + (_coldW ? '<span class="inv-cold" style="font-size:11px;color:var(--warn-tx);white-space:nowrap;">' + esc(_coldW) + '</span>' : _invProgressBar(st, 150))
     + '</div>'
     + '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">'
       // ⚠ AGENT ONE IS FIRST IN THE ROW BECAUSE IT COMES FIRST IN THE WORK. Every document
@@ -41066,7 +41367,14 @@ function renderInventoryTab() {
   var items = all.filter(function(r){ return _invMatchesFilter(r, job); });
 
   var body;
-  if (!all.length) {
+  var _coldList = !all.length && !!invColdWords(jobId);
+  if (typeof _invColdShown !== 'undefined') (_invColdShown[jobId] = _invColdShown[jobId] || {}).list = _coldList;
+  if (_coldList) {
+    // Never "No items yet" off a copy that has not read the sheet (2026-10-27, P1, SYN-08): the house may hold hundreds.
+    body = '<div class="card"><div class="inv-cold" style="padding:16px 2px;color:var(--warn-tx);font-size:12px;">'
+      + 'This device has not read this client’s items from the sheet yet (' + esc(invColdWords(jobId)) + '). '
+      + 'They appear here once it has; it asks again by itself.</div></div>';
+  } else if (!all.length) {
     body = '<div class="card"><div style="padding:16px 2px;color:var(--gray);font-size:12px;">'
       + 'No items yet. Open a room on the <strong>Job Plan</strong> and shoot it \u2014 every item shot lands here for naming \u2014 '
       + 'or use <strong>+ Add line item</strong> for an asset with no photo.</div></div>';
@@ -42823,7 +43131,9 @@ function _writeKey(body, target) {
   var id = '';
   if (p && typeof p === 'object' && !Array.isArray(p)) {
     if (p.id != null) id = p.id;
-    else if (p.jobId != null) id = p.jobId;
+    // A snapshot's lines are keyed by the snapshot too (2026-10-27, P1): two snapshots of one client queued together are two
+    // writes, never one superseding the other.
+    else if (p.jobId != null) id = p.jobId + (p.ts != null ? ':' + p.ts : '');
     // Directory writes address a SHEET ROW, not an id. Without this every queued
     // updateVendor would collapse onto the bare key 'updateVendor', so editing two
     // vendors while offline would silently discard the first one's write.
@@ -42865,6 +43175,24 @@ function _pendingChipCopy() {
   var anyStale = keys.some(function(k){ return _pendingWrites[k].kind === 'stale'; });
   var anyCrash = keys.some(function(k){ return _pendingWrites[k].kind === 'crash'; });
   var changes = n + ' change' + (n > 1 ? 's' : '');
+  // ⚠⚠ A RECORD TOO LARGE FOR THE SHEET (2026-10-27, P1, GAP3-05): named first, because nothing else on the chip is true of
+  // it. It said "do not close or reload the tab" after six tries, and that tab was the one that emptied the restored Jobs
+  // tab again on its next retry. Closing it is the safe thing: the client comes back from the sheet on reload.
+  var big = keys.filter(function(k){ return _pendingWrites[k].kind === 'toolarge'; });
+  if (big.length) {
+    var tw = _tooLargeWords(_pendingWrites[big[0]]);
+    return {
+      head: '\u26a0 Not saved \u2014 ' + tw.who + ' is too large for the sheet' + (tw.size ? ' (' + tw.size + ' characters)' : ''),
+      note: 'A sheet cell holds 50,000 characters, so the sheet refused this client\u2019s record and wrote nothing. It would fail the same way every time, so it is not sent again by itself. Closing or reloading this tab is safe: the client comes back from the sheet as it stood before this change, and the change that made it too large is not kept. Tell Anthony.'
+    };
+  }
+  // The sheet's Jobs tab is empty and unread (JOBS_TAB_EMPTY): nothing here was changed, and the writes go again by themselves.
+  if (keys.some(function(k){ return _pendingWrites[k].kind === 'empty'; })) {
+    return {
+      head: '\u26a0 ' + changes + ' not saved \u2014 the sheet has no clients right now',
+      note: 'The sheet\u2019s Jobs tab is empty, so it refuses every client write until its rows are restored. Nothing on this device was changed, and these changes go again by themselves once the rows are back. Tell Anthony: the manual\u2019s runbook says how to restore them.'
+    };
+  }
   if (anyStale) {
     // The server said it does not know the action. That is proof, so name the fix.
     return {
@@ -42908,6 +43236,19 @@ function _pendingChipCopy() {
     head: '\u26a0 ' + n + ' unsaved change' + (n > 1 ? 's' : '') + ' \u2014 retrying\u2026',
     note: 'Not synced yet \u2014 retrying on its own. Press Try again to send now.'
   };
+}
+// The client and the size a too-large refusal is about (2026-10-27, P1), DOM-free: the server's own words where it named
+// them (TOO_LARGE, a 2026-10-27 deployment), else measured off what the write carried, the largest client record in it (an
+// older deployment's Sheets error names nobody).
+function _tooLargeWords(w) {
+  var m = /TOO_LARGE:\s*(.+?) is ([\d,]+) characters/.exec(String((w && w.lastError) || ''));
+  if (m) return { who: m[1], size: m[2] };
+  var p = w && w.body && w.body.payload;
+  var list = Array.isArray(p) ? p : (p && typeof p === 'object' && p.id != null ? [p] : []);
+  var best = null, n = 0;
+  list.forEach(function(j){ var k = 0; try { k = JSON.stringify(j).length; } catch (e) {} if (k > n) { n = k; best = j; } });
+  if (!best) return { who: 'a client', size: '' };
+  return { who: (best.name || 'a client') + (best.hvlId ? ' (' + best.hvlId + ')' : ''), size: String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',') };
 }
 function updatePendingIndicator() {
   var el = document.getElementById('sync-pending');
@@ -42995,7 +43336,9 @@ function flushPendingWrites() {
   function done() {
     _flushing = false;
     updatePendingIndicator();
-    if (_pendingCount() === 0) { _retryStep = 0; showSyncBadge('All changes saved ✓'); return; }
+    // ⚠ Never "All changes saved" while the sheet's refusal stands (2026-10-27, P1): the iPad whose clients the emptied
+    // sheet refused said exactly that, under an empty list.
+    if (_pendingCount() === 0) { _retryStep = 0; if (!(typeof _sheetNotice !== 'undefined' && _sheetNotice)) showSyncBadge('All changes saved ✓'); return; }
     // Nothing left but blocked writes — held, not hammered. They stay queued and go out
     // on the next deliberate retry (the chip's Try again), reconnect, or tab refocus.
     var live = Object.keys(_pendingWrites).some(function(key){ return !_pendingWrites[key].blocked; });
@@ -43013,7 +43356,7 @@ function flushPendingWrites() {
       .then(function(res){
         if (res && res.ok) {
           delete _pendingWrites[k];
-          if (res.dropped && res.dropped.length) _applyDroppedJobs(res.dropped);
+          if (res.dropped && res.dropped.length) _applyDroppedJobs(res.dropped, res.recorded);
           if (typeof w.onLanded === 'function') { try { w.onLanded(res); } catch(e) {} }
           return;
         }
@@ -43024,7 +43367,7 @@ function flushPendingWrites() {
         w.tries = (w.tries || 0) + 1;
         w.lastError = (res && res.error) || w.lastError || '';
         w.kind = _backendErrorKind(res && res.error, true, w.body);
-        w.blocked = w.kind !== '';
+        w.blocked = _writeKindHolds(w.kind);
       })
       .catch(function(e){
         w.tries = (w.tries || 0) + 1;
@@ -43091,7 +43434,7 @@ function _flushOutbox() {
           if (w.okMsg) showSyncBadge(w.okMsg);
           // The sheet took the write but refused some job ids: it has seen them before and
           // no longer holds them, so they were deleted while this device still had them.
-          if (res.dropped && res.dropped.length) _applyDroppedJobs(res.dropped);
+          if (res.dropped && res.dropped.length) _applyDroppedJobs(res.dropped, res.recorded);
         }
         // A well-formed { ok:false, error } is the SERVER talking — that text may
         // diagnose the deployment.
@@ -43151,8 +43494,16 @@ function queuedPostSync(body, okMsg, failMsg) {
 //   'crash' — the server threw (ReferenceError / TypeError). A half-applied paste looks
 //             like this, but so does a live bug on a perfectly current deployment, so
 //             this must NOT assert a redeploy. Print what the server said instead.
+//   'toolarge' — (2026-10-27, P1) the sheet refused a client's record as too large for one cell: TOO_LARGE, the
+//             server's own refusal since 2026-10-27, or the cell-cap words an older deployment's Sheets throws. It
+//             fails the same way every time for that record, so it is HELD and never sent again by itself, and the
+//             chip names the client and the size (_tooLargeWords). Before this it was retried forever, and on an older
+//             deployment every retry cleared the Jobs tab again, the restored one included (GAP3-05).
+//   'empty' — (2026-10-27, P1) JOBS_TAB_EMPTY: the sheet's Jobs tab is empty and the ledger cannot explain it, so the
+//             sheet refuses every job write until its rows are restored. Retried with the backoff (it lands once the rows
+//             are back), and the chip says the sheet has no clients and nothing here was changed.
 //   ''      — retryable: a network drop, the Apps Script login/HTML interstitial, a
-//             lock timeout, a cell-size failure. Keep retrying those.
+//             lock timeout. Keep retrying those.
 //
 // `fromServer` is the half this got wrong. Only text the server sent back inside
 // { ok:false, error } can diagnose the server. A message out of our own catch block is
@@ -43163,6 +43514,8 @@ function queuedPostSync(body, okMsg, failMsg) {
 function _backendErrorKind(errText, fromServer, body) {
   if (!fromServer) return '';
   var s = String(errText || '');
+  if (/TOO_LARGE|maximum of 50000 characters in a single cell/i.test(s)) return 'toolarge';
+  if (/JOBS_TAB_EMPTY/.test(s)) return 'empty';
   if (/unknown type/i.test(s)) return 'stale';
   // ⚠ This used to fall into 'stale' with the line above, so the app told people to
   // redeploy a script that had just executed — the same misdiagnosis as 2026-09-01, one
@@ -43176,9 +43529,15 @@ function _backendErrorKind(errText, fromServer, body) {
   return '';
 }
 
+// Which kinds of failure are HELD (sent again only on a deliberate Try again, a reconnect or a refocus) rather than retried
+// with the backoff: every kind that fails the same way each time. 'empty' is not one of them: the sheet takes the write
+// once its Jobs rows are restored, and the backoff is how it lands then. One answer, read by both queue paths and by
+// _syncWritesOutstanding through the `blocked` flag it sets.
+function _writeKindHolds(kind) { return kind !== '' && kind !== 'empty'; }
+
 function _enqueueWrite(target, body, okMsg, failMsg, errText, onLanded, fromServer) {
   var kind = _backendErrorKind(errText, fromServer, body);
-  var stale = kind !== '';
+  var stale = _writeKindHolds(kind);
   var key = _writeKey(body, target);
   // ⚠ A newer snapshot supersedes an older queued one — but the FAILURE COUNT carries
   // over, because the key is the logical target and "saveAllJobs has now failed six
@@ -45632,12 +45991,30 @@ var PLAN_WATCH_MS = 20000;
 // stop trusting the tab. A tick with anything outstanding simply waits for the next one.
 // ⚠ TWO READERS: this and refreshJobsFromCloud (2026-09-29), which did not ask and emptied the
 // client list under a client whose own save had not landed yet. Both read the MAIN sheet.
-function _syncWritesOutstanding() {
+// ⚠⚠ A HELD WRITE NEED NOT BLIND THE DEVICE (2026-10-27, P1, GAP3-06). A write the queue holds (a record too large for the
+// sheet, a stale deployment, a crash: `blocked`) may wait for hours, and while it did this answered yes, so the device that
+// took the oversized Snapshot saw nobody else's changes (statuses, rooms, hours) until it was reloaded, and the reload threw
+// its snapshot away. `replaces` names the store types the caller's read replaces wholesale: a held write of one of those
+// still counts (replacing the store would put its edit off the screen, and a later save of the store without it would
+// supersede it in the queue), and every other held write does not. No argument counts every held write, as before.
+// refreshJobsFromCloud passes none of its own: its merge keeps every local record newer than the sheet's, and a client the
+// sheet has never seen (_mergeCloudJobs' third argument).
+function _syncWritesOutstanding(replaces) {
   if (typeof _outboxSending !== 'undefined' && _outboxSending) return true;
   if (typeof _flushing !== 'undefined' && _flushing) return true;
-  try { if (typeof _pendingWrites === 'object' && Object.keys(_pendingWrites).length) return true; } catch (e) {}
+  try {
+    if (typeof _pendingWrites === 'object' && Object.keys(_pendingWrites).some(function (k) {
+      var w = _pendingWrites[k];
+      return !w || !w.blocked || !replaces || replaces.indexOf(w.body && w.body.type) >= 0;
+    })) return true;
+  } catch (e) {}
   try { if (typeof _outbox === 'object' && Object.keys(_outbox).length) return true; } catch (e) {}
   return false;
+}
+// Does the queue hold a write it will not send again by itself? (The jobs refresh keeps this device's unsent clients then.)
+function _syncWritesHeld() {
+  try { return typeof _pendingWrites === 'object' && Object.keys(_pendingWrites).some(function (k) { return _pendingWrites[k] && _pendingWrites[k].blocked; }); }
+  catch (e) { return false; }
 }
 
 // ⚠ A REDRAW REWRITES #job-plan-content WITH innerHTML, so it destroys a half-typed note.
@@ -45658,7 +46035,9 @@ function _planTabBusy() {
 // the job on screen, so another client's plan landing never redraws this one.
 function refreshPlanAndLogFromCloud(jobId, cb) {
   if (!SHEETS_SYNC_URL || !jobId) { if (cb) cb(false); return; }
-  if (_syncWritesOutstanding()) { if (cb) cb(false); return; }
+  // A held write of another store does not stop this read (2026-10-27, P1); a held plan or hours write still does.
+  var _replaces = ['saveAllJobPlans', 'saveAllLogs'];
+  if (_syncWritesOutstanding(_replaces)) { if (cb) cb(false); return; }
   // ⚠⚠ ASKED AGAIN WHEN THE ANSWER LANDS (fixed 2026-09-30, P11), the rule refreshJobsFromCloud
   // follows. The check above runs before the request goes out; a room locked or an hour logged WHILE
   // it was out queues a write, and the answer (read before that write reached the sheet) then replaced
@@ -45667,7 +46046,7 @@ function refreshPlanAndLogFromCloud(jobId, cb) {
   // had lost. An answer is applied only if no write is outstanding and none was queued since it left.
   var seq = _syncWriteSeq;
   var skipped = false;
-  var superseded = function() { return (skipped = skipped || _syncWritesOutstanding() || _syncWriteSeq !== seq); };
+  var superseded = function() { return (skipped = skipped || _syncWritesOutstanding(_replaces) || _syncWriteSeq !== seq); };
   var sig = function() {
     return JSON.stringify((typeof jobPlanStore === 'object' && jobPlanStore[jobId]) || null)
          + '|' + JSON.stringify((typeof jobLogs === 'object' && jobLogs[jobId]) || null);
@@ -49002,6 +49381,33 @@ function deskFoldTitle(fold, body) {
 // answer for everything on the desk that would open by itself off the manifest (the bars' lines below, the appraisers' form).
 function _invManifestUnread(jobId) {
   return !!(typeof SHEETS_SYNC_URL !== 'undefined' && SHEETS_SYNC_URL) && !(typeof _invCloudSeen !== 'undefined' && _invCloudSeen[jobId]);
+}
+// ⚠⚠ A COLD DESK RECORDS NOTHING AS FACT (2026-10-27, P1 of the desk audit, SYN-08). With the sheet unreachable, Snapshot
+// recorded "Filed with court: 0 items, $0" on the job while the sheet held 9 lines, + Add line item minted #1 (renumbered
+// #32 once the read landed), and the papers said "nothing in the inventory to report". Until this device has read the client's
+// inventory from the sheet (_invManifestUnread), Snapshot, the desk's papers, CSV and + Add line item refuse by name and record
+// nothing. '' to go on. One answer, asked at each of them; a caller building a page for a send reads the sheet first, as the
+// package and the release request always have. No Apps Script URL: this device's copy is all there is, and nothing refuses.
+var INV_COLD_TXT = 'Not done: this device has not read the inventory yet, so it cannot tell what is on it. Check the connection, '
+  + 'open the client on Job Admin & Inv until its bars stop saying loading, then try again.';
+function invColdRefusal(jobId) { return _invManifestUnread(jobId) ? INV_COLD_TXT : ''; }
+// And what the desk says of its own list meanwhile (SYN-08: the work bar read "0 of 0 reviewed" and the rows "No items yet"
+// while the bars said loading). '' once read; the same two states the bars name (deskFoldState).
+// The read landed or failed and moved nothing on the list: the work bar is repainted by id where its words changed (it holds
+// no box anybody types into, and More ▾ keeps its state), and a list still saying it has not read the sheet is redrawn once
+// nobody is typing. A read that moved anything redraws the tab anyway (_invRefreshFromCloud).
+// What the desk last drew of that, per client: the work bar's words and whether the list said it (view state, never saved).
+var _invColdShown = {};
+function _invColdRepaint(jobId) {
+  var shown = typeof _invColdShown !== 'undefined' ? _invColdShown[jobId] : null;
+  if (!shown || (shown.bar || '') === invColdWords(jobId)) return;
+  if (shown.list) { _invRenderWhenIdle(); return; }
+  var job = _invJob(jobId), wb = document.getElementById('inv-workbar');
+  if (job && wb) wb.outerHTML = _renderInvWorkbar(job, _jobInvRefs(jobId));
+}
+function invColdWords(jobId) {
+  if (!_invManifestUnread(jobId)) return '';
+  return (typeof _invCloudFailed !== 'undefined' && _invCloudFailed[jobId]) ? 'sheet unreachable: this device’s copy' : 'reading the sheet…';
 }
 // ⚠⚠ THE ONE READER OF WHAT EACH BAR SAYS SHUT, AND OF WHEN IT OPENS BY ITSELF (2026-10-22). DOM-free, text only, built
 // from the cards' own functions and never from a second copy of one of their rules (desk-layout group D counts the

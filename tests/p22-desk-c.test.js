@@ -97,6 +97,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       jobPlanStore: {}, changeOrders: [], _invOpen: {}, _agDupSet: {}, _invThumbFailed: {},
       _invRefreshSummary() {}, _invRefreshGuardrail() {}, _invRefreshFlagStrip() {}, _invRefreshRecords() {},
       SHEETS_SYNC_URL: 'https://script.google.com/macros/s/P22C/exec',
+      // The desk has read the client's inventory from the sheet (2026-10-27, P1: a cold desk refuses its papers by name).
+      _invCloudSeen: { [job.id]: true },
       _trashShotFiles(ids) { log.trashed.push(...ids); }, _fieldCam: { open: false }, _updatePhotoStatusEl() {},
       _invSaveThumbCache() {}, _savePendingPhotoData() {}, _photoRetryData: {}, _localShotThumbs: {}, _invThumbCache() { return {}; },
       _invRemovedAll: false,

@@ -373,10 +373,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('S3c · the deployment: 2026-10-26b, the app relies on it, and the banner leads with the comparable gap');
   {
     // RESTATED 2026-10-26c: the release request's DocuSign action rides the next deployment; the agents' floor is unchanged.
-    eq((GS.match(/var BACKEND_VERSION = '([^']+)';/) || [])[1], '2026-10-26c', 'main-sync.gs is 2026-10-26c, carrying 2026-10-26b');
+    // RESTATED 2026-10-27 (P1 of the desk audit): the sheet's own safety rides the next deployment and leads the banner; the
+    // agents' gap follows it, by its vintage.
+    ok((GS.match(/var BACKEND_VERSION = '([^']+)';/) || [])[1] >= '2026-10-26c', 'main-sync.gs is 2026-10-26c or later, carrying 2026-10-26b');
     const B = sandbox({ vars: ['BACKEND_MIN_VERSION', 'BACKEND_FEATURE_COST'] });
-    eq(B.BACKEND_MIN_VERSION, '2026-10-26b', 'and the app relies on it');
-    ok(/^a search page, or a sale whose price was not shown, can stand as a sold comparable, so a researched figure resting on one prints \u201cauction comps\u201d; a long note from Agent Two stops mid-sentence; and neither agent grades an item\u2019s condition; on a deployment older than 2026-10-26, /.test(B.BACKEND_FEATURE_COST.version),
+    ok(B.BACKEND_MIN_VERSION >= '2026-10-26b', 'and the app relies on it');
+    ok(/; on a deployment older than 2026-10-26b, a search page, or a sale whose price was not shown, can stand as a sold comparable, so a researched figure resting on one prints \u201cauction comps\u201d; a long note from Agent Two stops mid-sentence; and neither agent grades an item\u2019s condition; on a deployment older than 2026-10-26, /.test(B.BACKEND_FEATURE_COST.version),
       'the banner names the newest gap first, by consequence, then 2026-10-26\'s by its vintage');
   }
 

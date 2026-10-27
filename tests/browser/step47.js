@@ -166,6 +166,11 @@ const T0 = Date.parse('2026-09-24T15:00:00Z');   // a past day, so each desk ope
       localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore));
     }, T0).catch((e) => { ok(false, 'seed: ' + e.message.split('\n')[0]); });
     await seed();
+    // The sheet holds what this device saved. Since 2026-10-27 (P1) a desk that has not read the client's inventory from the
+    // sheet refuses its papers by name, and this route answered every manifest read "not in this test".
+    Object.assign(net.media, await p.evaluate(() => {
+      const o = {}; [4701, 4703, 4704, 4702].forEach((id) => { o[id] = JSON.parse(JSON.stringify(_photoRefs[id] || [])); }); return o;
+    }));
 
     // ── A. the dealer route ────────────────────────────────────────────────
     await section('A. a firearm going to a person records its dealer route, and is carried only once authorised', async () => {
@@ -285,7 +290,9 @@ const T0 = Date.parse('2026-09-24T15:00:00Z');   // a past day, so each desk ope
       await press('#field-cam .fc-done', 'Done');
       const shots = await p.evaluate(() => (_photoRefs[4702] || []).map((r) => ({ id: r.stableId, label: r.label, status: r.status })));
       const det = shots.find((s) => s.label === 'detail');
-      const item = shots.find((s) => s.label === 'inventory');
+      // The shot, not the walkthrough collection's own line: that is made once the desk has read the sheet (P24), which since
+      // 2026-10-27 this route lets it do (the sheet holds the manifest, above).
+      const item = shots.find((s) => s.label === 'inventory' && s.status !== 'manual');
       ok(det && det.status === 'failed' && item && item.status === 'failed', 'fixture: both shots failed to upload (' + JSON.stringify(shots) + ')');
       has(await txt('#plan-rooms-4702'), 'not saved', 'fixture: the room card reads "⚠ not saved"');
       const strip = await txt('#room-ws .ws-strip');

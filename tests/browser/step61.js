@@ -52,6 +52,9 @@ const TRUST = 6101, LIVING = 6103;
         }
         return json({ ok: true });
       }
+      // The sheet's copy of a manifest. Since 2026-10-27 (P1) a desk that has not read it refuses its papers by name; the sheet
+      // holds nothing newer than this device's own copy, so its lines stand.
+      if (/[?&]action=loadMedia\b/.test(req.url())) return json({ ok: true, media: {} });
       return json({ ok: false, error: 'not in this test' });
     });
     const p = await ctx.newPage();
@@ -269,6 +272,12 @@ const TRUST = 6101, LIVING = 6103;
       await p.press(box, 'Tab'); await p.waitForTimeout(500);
       eq((await line(LIVING, 'v1')).channel, 'Anthony Graziano Jr', '⚠⚠ saved, not refused');
       eq(dialogs.filter((d) => /never buy/.test(d)), [], 'no refusal');
+      // ⚠ RESTATED 2026-10-27 (P1 of the desk audit): the row's chip is drawn by the row's render, which a recipient typed does
+      // not redo. It came at once here only because this desk had never read the sheet, so the save's workbook hold read the
+      // sheet and redrew the tab. A desk that has read the sheet draws it the next time the tab is drawn (CLAUDE.md, Open
+      // work), so the step leaves the tab and comes back.
+      await p.click('.nb[onclick*="\'jobs\'"]'); await p.waitForTimeout(300);
+      await toDesk(LIVING);
       has(await rowText('v1'), '⚠ Anthony Graziano Jr works with Havellin', '⚠⚠ the row carries the caution');
       const h = await requestOf(LIVING), t = await T(h);
       has(t, 'Property going to someone who works with Havellin', '⚠⚠ the printed request carries it');

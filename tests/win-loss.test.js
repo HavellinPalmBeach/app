@@ -339,8 +339,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       + 'until something redraws it');
 
     const lj = noComments(fn('loadJobs'));
-    eq((lj.match(/_jobsLanded\(\)/g) || []).length, 2,
-       '⚠ BOTH arms of the fetch land it — a failed fetch that resolved nothing would leave '
+    // Three since 2026-10-27 (P1): the sheet's list, a refusal of an emptied sheet's answer, and a failed fetch.
+    eq((lj.match(/_jobsLanded\(\)/g) || []).length, 3,
+       '⚠ EVERY arm of the fetch lands it — a failed fetch that resolved nothing would leave '
        + 'the report saying "Loading clients…" forever');
     lacks(lj, '\n          renderJobs();',
       'loadJobs no longer calls renderJobs directly; that is what _jobsLanded is for');
@@ -365,7 +366,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const drive = (url, mode, data) => {
       let landed = 0;
       const ctx = sandbox({
-        fns: ['loadJobs'], vars: [],
+        fns: ['loadJobs', 'loadJobsVerdict', 'sheetVerdictRefusal', '_setSheetNotice', 'sheetNoticeHtml'], vars: ['SHEET_NO_CLIENTS_TXT', '_sheetNotice'],
         stubs: {
           document: { getElementById: () => ({ textContent: '' }) },
           SHEETS_SYNC_URL: url,

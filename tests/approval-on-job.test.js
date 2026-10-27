@@ -672,7 +672,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // the ledger prints no approval band either. Still exact, so a seventh fails here.
     // RESTATED 2026-10-17: an eighth, the Release Approval Request filed as it is sent (sendApprovalRequest); the request
     // prints no approval band either. Still exact, so a ninth fails here.
-    eq((SRC.match(/_exportDoc\(/g) || []).length, 9, '_exportDoc: the definition, the two client-document paths, the two P17 filings, the P19 ledger, the key custody record (2026-10-16), the sign-out sheet\'s PDF (P28, 2026-10-18) and the approval request\'s send (2026-10-17)');
+    // RESTATED 2026-10-27 (P1): a ninth, the inventory snapshot's own page filed under a dated name as it is taken
+    // (_snapFilePage); it prints no approval band either. Still exact, so an eleventh fails here.
+    eq((SRC.match(/_exportDoc\(/g) || []).length, 10, '_exportDoc: the definition, the two client-document paths, the two P17 filings, the P19 ledger, the key custody record (2026-10-16), the sign-out sheet\'s PDF (P28, 2026-10-18), the approval request\'s send (2026-10-17) and the snapshot\'s dated page (2026-10-27)');
     // RESTATED (P25, Q51): the ledger's filing became the one close-out paper path (_fileCloseoutPaper), which files the
     // Contents Record too; still one _exportDoc call, so the count holds, and neither paper prints an approval band.
     for (const f of ['fileChangeOrder', '_pkgFileAll', '_fileCloseoutPaper', 'sendApprovalRequest']) has(H.fn(f), '_exportDoc(', f + ' is one of the four');
