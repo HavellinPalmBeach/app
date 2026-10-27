@@ -74,7 +74,7 @@ const SYNC_FNS = ['refreshJobsFromCloud', '_mergeCloudJobs', '_syncWritesOutstan
   // 2026-10-27 (P1): the sheet's verdicts asked first, a held write, and the kinds that hold.
   'loadJobsVerdict', 'sheetVerdictRefusal', '_syncWritesHeld', '_setSheetNotice', 'sheetNoticeHtml', '_unsentPhotoCount', 'unsentPhotosKeptText', '_writeKindHolds',
   // P1's review: only a recorded deletion is taken; a client too large never rides the batch.
-  'sheetDropsTaken', 'sheetKeptText', '_sheetKeptOnce', 'jobRecordTooLarge', 'jobsForSheetBatch', '_holdTooLargeJobs'];
+  'sheetDropsTaken', 'sheetKeptText', '_sheetKeptOnce', 'jobRecordTooLarge', 'jobsForSheetBatch', '_holdTooLargeJobs', '_withDeviceKey', 'deviceKey'];
 const SYNC_VARS = ['_outbox', '_outboxTimer', '_outboxSending', '_OUTBOX_WINDOW', '_syncWriteSeq',
   '_pendingWrites', '_retryTimer', '_retryStep', '_flushing', '_retryDelays', 'SYNC_STUCK_TRIES',
   'PERSON_NAME_ALIASES', 'SHEET_NO_CLIENTS_TXT', '_sheetNotice', '_sheetKeptSaid', 'SHEET_CELL_MAX_APP'];
@@ -490,7 +490,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     // refreshEstimateFromCloud — Build estimate, the client-estimate load, and the 12 s approval watch.
     const r = rig({
-      fns: ['refreshEstimateFromCloud'],
+      fns: ['refreshEstimateFromCloud', '_withDeviceKey', 'deviceKey'],
       local: [{ id: 1, name: 'Tripp Butler', updatedAt: 100 }], sheet: [],
       stubs: { estimateHasContent: () => false },
     });

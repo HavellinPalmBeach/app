@@ -999,7 +999,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const B = sandbox({ vars: ['BACKEND_NEEDS', 'BACKEND_NEEDS_TYPES', 'BACKEND_FEATURE_COST', 'BACKEND_MIN_VERSION'] });
     ok(B.BACKEND_MIN_VERSION >= '2026-09-30b', '⚠ the app relies on the new merge, so it asks for at least it (' + B.BACKEND_MIN_VERSION + ')');
     const shown = [];
-    const C = sandbox({ fns: ['checkBackendVersion'], vars: ['BACKEND_NEEDS', 'BACKEND_NEEDS_TYPES', 'BACKEND_MIN_VERSION', '_backendVersion'],
+    const C = sandbox({ fns: ['checkBackendVersion', '_withDeviceKey', 'deviceKey'], vars: ['BACKEND_NEEDS', 'BACKEND_NEEDS_TYPES', 'BACKEND_MIN_VERSION', '_backendVersion'],
       stubs: { SHEETS_SYNC_URL: 'https://sheets', _showBackendStaleBanner: (v, m) => shown.push({ v, m }),
         fetch: () => ({ then(f) { const r = f({ json: () => ({ ok: true, version: '2026-09-30', actions: B.BACKEND_NEEDS, types: B.BACKEND_NEEDS_TYPES }) });
           return { then(g) { g(r); return { catch() {} }; } }; } }) } });

@@ -102,7 +102,7 @@ const APP_FNS = ['agentRoomsToCheck', '_arCheckable', '_arRoomPayload', 'agentRo
   '_collPanelHtml', '_collLineStatusHtml', '_roomCollectionsHtml', '_pushInvLine', '_collDispToInv', '_collDispNeedsAppr',
   '_guessCategory', '_numOrBlank', '_invNamed', '_invTombstoneLine', '_avHasFigure', '_invHasValue', 'fieldDispToInv',
   '_importableFromEstimate', '_importedSourceSet', '_apprEstimateFlags', '_renderInventoryImportPanel', '_vehicleLineName',
-  '_renderCollPhotoCapture', '_invRenderWhenIdle'];
+  '_renderCollPhotoCapture', '_invRenderWhenIdle', '_withDeviceKey', 'deviceKey'];
 const APP_VARS = ['_arRun', 'AGENT_ROOM_BATCH_SHOTS', 'AGENT_ROOM_CONF_RANK', 'AGENT_ROOM_CONF_WORDS', 'AGENT_PASS_GAP_MS', 'COLL_LINE_WEAK_STAMP',
   'INV_DEFAULT_CATEGORY', 'FIELD_DISPOSITIONS', 'FIELD_DISP_DEFAULT', 'INV_TAXONOMY', 'INV_CATEGORIES', 'COLL_DOC_KINDS'];
 

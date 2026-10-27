@@ -145,7 +145,7 @@ const NEW_DETAIL = () => ({ stableId: 'nd1', label: 'detail', groupId: 'n1', roo
 // The app's refresh, lifted with everything the reset touches on the device: the merge, the thumbnail cache and the retry bytes.
 const APP_FNS = ['refreshPhotoRefs', 'loadMediaStore', '_stableJson', '_invApplyReset', 'invResetDrops', '_invDropShotCaches', '_invThumbCache', '_invThumbKey',
   '_invSaveThumbCache', '_invFileId', '_savePendingPhotoData', '_pendingPhotoKey', 'mergeMediaItems', 'invMergeApprovals', '_invApprovalEntries',
-  '_invApprovalSetAt', 'mergeCustodyLogs', '_custodyEventId', 'invStickyValue', '_invHasVal'];
+  '_invApprovalSetAt', 'mergeCustodyLogs', '_custodyEventId', 'invStickyValue', '_invHasVal', '_withDeviceKey', 'deviceKey'];
 const APP_VARS = ['_invThumbs', 'INV_THUMB_CACHE_MAX', 'INV_STICKY_FIELDS', '_localShotThumbs', '_photoRetryData'];
 function appRig(entry, local) {
   const saved = [];

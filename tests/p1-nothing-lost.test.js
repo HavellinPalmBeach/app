@@ -38,7 +38,7 @@ const DEVICE_FNS = ['saveJobs', 'loadJobs', 'loadJobsVerdict', 'refreshJobsFromC
   '_snapLinesOf', '_snapPendingOf', '_snapLanded', 'loadSnapshotLines', '_withSnapLines', 'printInventorySnapshot', 'printSnapshotComparison', 'snapshotDiff', 'backendHasType',
   'invLineQty', '_invRoomName', '_invAssignItemNos', '_jobInvRefs', '_invTrack', 'estateValueDate', 'roundCents', '_snapPrevLive', '_snapVal',
   '_snapVoidedBlock', '_invItemNo', '_invMoney', '_invDateTime', '_invDocName', 'invValBasisWord', '_invHasValue', 'invAppraised',
-  'invLineAppraiser', '_invLinkedAppraiser', '_jobAppraisers', '_apprLabel', '_invJob', 'fmt', '_stableJson'];
+  'invLineAppraiser', '_invLinkedAppraiser', '_jobAppraisers', '_apprLabel', '_invJob', 'fmt', '_stableJson', '_withDeviceKey', 'deviceKey'];
 const DEVICE_VARS = ['PERSON_NAME_ALIASES', 'SYNC_TARGETS', '_pendingWrites', '_retryTimer', '_retryStep', '_flushing', '_retryDelays', 'SYNC_STUCK_TRIES',
   '_outbox', '_outboxTimer', '_outboxSending', '_OUTBOX_WINDOW', '_syncWriteSeq', 'SHEET_NO_CLIENTS_TXT', '_sheetNotice', '_sheetKeptSaid', 'SHEET_CELL_MAX_APP', 'SNAP_LINES_UNREAD_TXT',
   '_snapLines', '_snapPending', 'INV_COLD_TXT', '_backendTypes'];
@@ -948,7 +948,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const B = sandbox({ vars: ['BACKEND_MIN_VERSION', 'BACKEND_FEATURE_COST', 'BACKEND_NEEDS_TYPES'] });
     ok(B.BACKEND_MIN_VERSION >= '2026-10-27b', '⚠ and the app relies on it: an older one can still empty the Jobs tab');
     ok(B.BACKEND_NEEDS_TYPES.indexOf('saveSnapshot') >= 0, 'the snapshot store is on the banner\'s list');
-    ok(B.BACKEND_FEATURE_COST.version.indexOf('one failed write can empty the Jobs tab') === 0, 'and the version line names what stays broken, first');
+    // RESTATED on the merge with P2 (2026-10-27): P2's open URL leads the line (its 2026-10-27c carries this build's 2026-10-27b);
+    // this build's gap follows at once, under its own vintage.
+    ok(B.BACKEND_FEATURE_COST.version.indexOf('; on a deployment older than 2026-10-27b, one failed write can empty the Jobs tab') > 0
+      && B.BACKEND_FEATURE_COST.version.indexOf('; on a deployment older than 2026-10-27b, ') === B.BACKEND_FEATURE_COST.version.indexOf('; on a deployment older than '),
+      'and the version line names what stays broken, first after the open URL, by its vintage');
     // The rule, one definition with its readers counted.
     const app = fs.readFileSync(path.join(__dirname, '..', 'havellin.html'), 'utf8').split('\n').filter((l) => !/^\s*\/\//.test(l)).join('\n');
     eq((app.match(/sheetVerdictRefusal\(/g) || []).length, 4, 'sheetVerdictRefusal: its definition and three readers (the dropped answer, and loadJobsVerdict twice)');

@@ -1476,7 +1476,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.27 · 3:25pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.27 · 4:58pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3302,6 +3302,11 @@ body.no-smf .smf-col{display:none;}
     <label>Google Sheets Sync — Apps Script URL</label>
     <input type="text" id="set-sheets-url">
     <div style="font-size:11px;color:var(--gray);margin-top:2px;margin-bottom:8px;">Syncs all job data across devices (iMac ↔ iPad). Also creates Drive folders per job.</div>
+
+    <label for="set-device-key">Device key — for the Apps Script above</label>
+    <input type="password" id="set-device-key" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <div id="set-device-key-status" style="font-size:11px;color:var(--gray);margin-top:2px;"></div>
+    <div style="font-size:11px;color:var(--gray);margin-top:2px;margin-bottom:8px;">Typed once on each phone and laptop, like the URL. Anthony has it: the Apps Script lets in only the devices that carry its key. Kept when this device is cleared, and never shown on screen or sent anywhere but that Apps Script.</div>
 
     <label>Google Drive — Jobs Folder ID</label>
     <input type="text" id="set-drive-id">
@@ -6476,7 +6481,11 @@ var BACKEND_NEEDS_TYPES = ['saveMedia', 'saveInventory', 'job', 'saveAllJobs', '
 // lines have a store of their own (saveSnapshot, named above). An older deployment can still empty the Jobs tab on one failed
 // write, tell every device that every client was deleted, and sweep every other client's records off the sheet when the next
 // client is added, so this build relies on it and the banner names it first.
-var BACKEND_MIN_VERSION = '2026-10-27b';
+// 2026-10-27c (P2): the device key, carrying 2026-10-27b. Every action and type but the version probe asks for the key set in Script Properties, a share or
+// revoke goes only to a folder inside that client's own, a share only to an address recorded on that client, a trash only to a file
+// inside the jobs folder, and the release request through DocuSign only to the client's recorded fiduciaries. An older deployment
+// answers anyone who holds its URL, and no action name can show that.
+var BACKEND_MIN_VERSION = '2026-10-27c';
 var _backendVersion = null;
 // The actions the deployment says it has (2026-10-26c), once the version probe answers; null until then. A route the app
 // offers only on a deployment that has it reads this (backendHas): the release request's DocuSign send.
@@ -6490,7 +6499,7 @@ function backendHasType(type) { return !!(_backendTypes && _backendTypes.indexOf
 
 function checkBackendVersion() {
   if (!SHEETS_SYNC_URL) return;
-  fetch(SHEETS_SYNC_URL + '?action=version')
+  fetch(_withDeviceKey(SHEETS_SYNC_URL + '?action=version'))
     .then(function(r){ return r.json(); })
     .then(function(d){
       // An old deployment has no `version` action and says so. Treat that as the stalest
@@ -6501,6 +6510,9 @@ function checkBackendVersion() {
       // rather than charged with every feature on the list (most of which it does have).
       _backendActions = known ? (known.actions || []).slice() : [];
       _backendTypes = known ? (known.types || []).slice() : [];
+      // Whether this device's key is let in (P2): the probe answers it without a key, so a device turned away learns it at
+      // load, before any write is refused. A deployment older than 2026-10-27c says nothing ('old': it checks no key).
+      if (typeof _noteDeviceKeyAnswer === 'function') _noteDeviceKeyAnswer((known && known.deviceKey) || 'old');
       if (!known) { _showBackendStaleBanner(_backendVersion, ['preVersion', 'version']); return; }
       var have = (known.actions || []).concat(known.types || []);
       var missing = BACKEND_NEEDS.concat(BACKEND_NEEDS_TYPES).filter(function(a){
@@ -6547,7 +6559,7 @@ var BACKEND_FEATURE_COST = {
   saveSnapshot:  'no inventory Snapshot can be taken (the deployment has nowhere to keep its lines)',
   // One line for any deployment older than BACKEND_MIN_VERSION, so it names the newest gap first and says
   // which vintage the older one belongs to (the banner's title prints the version that answered).
-  version:       'one failed write can empty the Jobs tab, an empty Jobs tab tells every device that every client was deleted and each one empties itself, and the first client added after that sweeps every other client\u2019s estimate, plan, hours and inventory off the sheet; on a deployment older than 2026-10-27, an item Agent Two researched and found no sale for stays marked unsure, and its paper reads general estimate, however many close listings it counted; on a deployment older than 2026-10-26b, a search page, or a sale whose price was not shown, can stand as a sold comparable, so a researched figure resting on one prints \u201cauction comps\u201d; a long note from Agent Two stops mid-sentence; and neither agent grades an item\u2019s condition; on a deployment older than 2026-10-26, the agents never move to a newer model by themselves (Agent One still runs on the older Opus 5), Agent Two never looks at the photograph of an item whose name is a guess or fixes a wrong category, a figure with no sale behind it prints as \u201cauction comps\u201d, and one slow request can mark a whole batch \u201cnot valued\u201d or lose a batch of names; on a deployment older than 2026-10-25b, a name you type or review on the desk (a wooden mirror retyped as Restoration Hardware) can come back from Agent Two as the generic thing and be valued as that, and a brand the crew says at the camera is not put into the name; on a deployment older than 2026-10-25, Agent Two flags a name it disagrees with (\u201cName may be wrong\u201d) instead of correcting it, puts a note on nearly every item it values (no condition recorded, a rough count, a search that ran short), and Agent One files everyday dishes as collectibles; on a deployment older than 2026-10-24, a blank line added to a photograph already named (Another item in this photo) makes Agent One read the whole photograph again, so every object in it goes on the list a second time, and its names carry a count (\u201capprox. 7 in stack\u201d) that the Qty box contradicts once corrected; on a deployment older than 2026-10-19b, a client\u2019s inventory reset in the Apps Script editor (resetInventoryConfirm) is undone by the first device that saves a line from before it, unless every device reloads first; on a deployment older than 2026-10-16, an incident reported on one device, or a key or fob received there while another device records a handoff, can be dropped when the sheet merges the job (the Incidents and Keys & access cards\u2019 lists are not yet merged entry by entry); on a deployment older than 2026-10-06, two devices\u2019 release signers are not merged and the client\u2019s workbook rounds its money; on a deployment older than 2026-10-05, a co-executor or co-trustee is not put on the DocuSign envelope beside the client, so they sign a printed copy of the agreement and the page they signed has to be filed from the timeline; on a deployment older than 2026-10-03, a co-trustee, a beneficiary, a signed copy filed to Drive, a find on site or a proceeds statement added on one device can be dropped by another device saving an older copy of the job, and the client\u2019s inventory workbook heads a trust\u2019s net proceeds \u201cNet to Estate\u201d; on a deployment older than 2026-10-01, File signed copy adds a second copy of the signed agreement to the client\u2019s Agreement folder instead of replacing the one there; on a deployment older than 2026-09-30b, a payment voided or marked cleared on one device can come back as it was from another device that changed the same payment before reloading, and count again; a firearm\u2019s serial, recipient or dealer route, recorded on one device, can be dropped from the sheet by another device\u2019s older copy of the item, until the first device next saves the inventory; and on a deployment older than 2026-09-30, two people editing different parts of one job (a vendor quote here, the team there) can also undo each other\u2019s work, a damaged store tab is emptied by the next save instead of refused, and Agent One can stop mid-answer on a busy photograph',
+  version:       'anyone who holds the Apps Script URL can read every client and inventory, share a client\u2019s folders with any address, trash any file and send a release request through DocuSign to anybody, with no device key asked for; on a deployment older than 2026-10-27b, one failed write can empty the Jobs tab, an empty Jobs tab tells every device that every client was deleted and each one empties itself, and the first client added after that sweeps every other client\u2019s estimate, plan, hours and inventory off the sheet; on a deployment older than 2026-10-27, an item Agent Two researched and found no sale for stays marked unsure, and its paper reads general estimate, however many close listings it counted; on a deployment older than 2026-10-26b, a search page, or a sale whose price was not shown, can stand as a sold comparable, so a researched figure resting on one prints \u201cauction comps\u201d; a long note from Agent Two stops mid-sentence; and neither agent grades an item\u2019s condition; on a deployment older than 2026-10-26, the agents never move to a newer model by themselves (Agent One still runs on the older Opus 5), Agent Two never looks at the photograph of an item whose name is a guess or fixes a wrong category, a figure with no sale behind it prints as \u201cauction comps\u201d, and one slow request can mark a whole batch \u201cnot valued\u201d or lose a batch of names; on a deployment older than 2026-10-25b, a name you type or review on the desk (a wooden mirror retyped as Restoration Hardware) can come back from Agent Two as the generic thing and be valued as that, and a brand the crew says at the camera is not put into the name; on a deployment older than 2026-10-25, Agent Two flags a name it disagrees with (\u201cName may be wrong\u201d) instead of correcting it, puts a note on nearly every item it values (no condition recorded, a rough count, a search that ran short), and Agent One files everyday dishes as collectibles; on a deployment older than 2026-10-24, a blank line added to a photograph already named (Another item in this photo) makes Agent One read the whole photograph again, so every object in it goes on the list a second time, and its names carry a count (\u201capprox. 7 in stack\u201d) that the Qty box contradicts once corrected; on a deployment older than 2026-10-19b, a client\u2019s inventory reset in the Apps Script editor (resetInventoryConfirm) is undone by the first device that saves a line from before it, unless every device reloads first; on a deployment older than 2026-10-16, an incident reported on one device, or a key or fob received there while another device records a handoff, can be dropped when the sheet merges the job (the Incidents and Keys & access cards\u2019 lists are not yet merged entry by entry); on a deployment older than 2026-10-06, two devices\u2019 release signers are not merged and the client\u2019s workbook rounds its money; on a deployment older than 2026-10-05, a co-executor or co-trustee is not put on the DocuSign envelope beside the client, so they sign a printed copy of the agreement and the page they signed has to be filed from the timeline; on a deployment older than 2026-10-03, a co-trustee, a beneficiary, a signed copy filed to Drive, a find on site or a proceeds statement added on one device can be dropped by another device saving an older copy of the job, and the client\u2019s inventory workbook heads a trust\u2019s net proceeds \u201cNet to Estate\u201d; on a deployment older than 2026-10-01, File signed copy adds a second copy of the signed agreement to the client\u2019s Agreement folder instead of replacing the one there; on a deployment older than 2026-09-30b, a payment voided or marked cleared on one device can come back as it was from another device that changed the same payment before reloading, and count again; a firearm\u2019s serial, recipient or dealer route, recorded on one device, can be dropped from the sheet by another device\u2019s older copy of the item, until the first device next saves the inventory; and on a deployment older than 2026-09-30, two people editing different parts of one job (a vendor quote here, the team there) can also undo each other\u2019s work, a damaged store tab is emptied by the next save instead of refused, and Agent One can stop mid-answer on a busy photograph',
   preVersion:    'it predates the version check itself (2026-09-09), so client PDFs, photographs, DocuSign, Stripe and Agent One may all be missing as well'
 };
 
@@ -15553,7 +15565,7 @@ function loadChangeOrders() {
   // Guarded on data.changeOrders so the app is safe before the Apps Script handler
   // exists — an unsupported action just leaves the local copy untouched.
   if (SHEETS_SYNC_URL) {
-    fetch(SHEETS_SYNC_URL + '?action=loadChangeOrders')
+    fetch(_withDeviceKey(SHEETS_SYNC_URL + '?action=loadChangeOrders'))
       .then(function(r){ return r.json(); })
       .then(function(data){
         if (data && Array.isArray(data.changeOrders) && !data.error) {
@@ -16006,6 +16018,176 @@ function deviceUserNoteHtml() {
 function _paintDeviceUserNote() {
   var el = document.getElementById('device-user-note');
   if (el) el.innerHTML = deviceUserNoteHtml();
+}
+
+// ⚠⚠ THE DEVICE KEY (P2, 2026-10-27c; the desk audit's RT-01: "Only Havellin's devices reach the data"). The jobs Apps
+// Script answered anybody who held its /exec URL: every client, every inventory and door code, a share of any folder with
+// any address, a trash of any file, a DocuSign envelope from the firm's account. Since backend 2026-10-27c it asks every
+// request but the version probe for the key Anthony sets in its Script Properties (HAVELLIN_DEVICE_KEY), and this device
+// sends the key it was given, typed once in Settings beside the Apps Script URL like the URL itself. It is not a sign-in
+// (Q59 stands: the device is told once who uses it and what its key is). While no key is set in Script Properties the
+// server checks nothing, so a device with no key works exactly as before until Anthony turns the check on.
+// One reader of the stored key ('hav_device_key', kept through Clear this device: LOCAL_KEEP_KEYS).
+function deviceKey() {
+  try { return String(localStorage.getItem('hav_device_key') || '').trim(); } catch (e) { return ''; }
+}
+// ⚠ THE ONE ROAD TO THE JOBS BACKEND: every fetch to SHEETS_SYNC_URL goes through this, GET and POST alike (a test finds every
+// fetch to it in the live source and counts them). The key rides the URL's query as `deviceKey` (the server's DEVICE_KEY_PARAM),
+// so the server refuses before it parses a POST body. A URL that is not the jobs backend (Gmail, the two directory backends)
+// comes back as it went, so the key never leaves for anywhere else. ⚠ NEVER PRINTED, NEVER LOGGED, never in a notice or a
+// document: it lives in this device's storage and on the wire to the Apps Script, nowhere else.
+function _withDeviceKey(url) {
+  var u = String(url == null ? '' : url);
+  var base = (typeof SHEETS_SYNC_URL !== 'undefined' && SHEETS_SYNC_URL) ? String(SHEETS_SYNC_URL) : '';
+  if (!u || !base || u.indexOf(base) !== 0) return u;
+  var k = deviceKey();
+  if (!k) return u;
+  return u + (u.indexOf('?') >= 0 ? '&' : '?') + 'deviceKey=' + encodeURIComponent(k);
+}
+// What the jobs backend last said about this device's key, this page only: '' (not asked yet), 'old' (a deployment older
+// than 2026-10-27c, which checks no key), 'unknown' (it could not read its own setting), or its own answer: 'off' (no key set:
+// the check is off), 'ok', 'missing', 'wrong'. Set by the version probe (checkBackendVersion) and by any write the server
+// refuses for the key (_backendErrorKind's 'key').
+var _deviceKeyAnswer = '';
+// After a key typed in Settings: whether this page's reads had been refused for the key, so an accepted key offers the reload
+// from the sheet (below).
+var _deviceKeyRecheck = null;
+// ⚠⚠ OWED, NEVER ARMED (P2's review, 2026-10-27). Set when an accepted key follows refused reads: what this page holds may be
+// behind the sheet, so the banner offers Reload from the sheet and THE PERSON PRESSES IT (deviceKeyReloadNow). The page never
+// reloads itself. The first build reloaded "once the queue drained", and only the retry queue's drain asked: with a write in the
+// outbox when the key was accepted, the reload stayed armed and fired at the next unrelated retry that landed, hours later, under
+// whoever was typing, and no queue sees a debounced inventory save, a DocuSign send waiting on its answer or a half-typed note.
+var _deviceKeyReloadOwed = false;
+// The server's words for a refusal, read once: 'missing', 'wrong' or ''. They are DEVICE_KEY_REFUSED in main-sync.gs (a test
+// runs these patterns over them), and _backendErrorKind matches the same two phrases.
+function deviceKeyRefusedAs(errText) {
+  var s = String(errText || '');
+  if (/device has no key/i.test(s)) return 'missing';
+  if (/key on this device is wrong/i.test(s)) return 'wrong';
+  return '';
+}
+// The banner's words, DOM-free: the red one while this device is being turned away; once a key typed here is accepted after
+// refused reads (reloadOwed), the green one offering the reload; '' otherwise.
+function deviceKeyBannerHtml(answer, reloadOwed) {
+  if (answer !== 'missing' && answer !== 'wrong') {
+    if (!reloadOwed || (answer !== 'ok' && answer !== 'off')) return '';
+    return '<div style="font-weight:700;margin-bottom:4px;">Key accepted ✓</div>'
+      + '<div>Nothing came to this device from the sheet while it had no key, so what is on screen may be behind it. Anything held here '
+      + 'goes to the sheet first: once the chip at the foot has cleared, press <strong>Reload from the sheet</strong>.</div>'
+      + '<div style="margin-top:6px;"><button type="button" class="btn-s" onclick="deviceKeyReloadNow()">Reload from the sheet</button>'
+      + '<div id="device-key-reload-why" style="margin-top:4px;"></div></div>';
+  }
+  return '<div style="font-weight:700;margin-bottom:4px;">' + (answer === 'missing'
+      ? 'This device has no key: ask Anthony'
+      : 'The key on this device is wrong: ask Anthony') + '</div>'
+    + '<div>The Apps Script lets in only the devices that carry its key. Type it in <strong>Settings</strong> (<em>Device key</em>, under the '
+    + 'Apps Script URL) and press <strong>Save Settings</strong>. Until then nothing changed here reaches the sheet and nothing new comes from it: '
+    + 'changes wait in this tab (the red chip at the foot), so do not close it while they do.</div>'
+    + '<div style="margin-top:6px;"><button type="button" class="btn-s" onclick="openSettings()">Open Settings</button></div>';
+}
+function _paintDeviceKeyBanner() {
+  if (typeof document === 'undefined' || !document.getElementById) return;
+  var el = document.getElementById('device-key-banner');
+  var html = deviceKeyBannerHtml(_deviceKeyAnswer, _deviceKeyReloadOwed);
+  if (!html) { if (el && el.parentNode) el.parentNode.removeChild(el); return; }
+  if (!el) {
+    var host = document.querySelector('.wrap') || document.body;
+    if (!host) return;
+    el = document.createElement('div');
+    el.id = 'device-key-banner';
+    host.insertBefore(el, host.firstChild);
+  }
+  var tone = (_deviceKeyAnswer === 'missing' || _deviceKeyAnswer === 'wrong') ? 'err' : 'ok';
+  el.style.cssText = 'margin:10px 0;padding:12px 14px;border:1px solid var(--' + tone + '-tx);border-left-width:4px;'
+    + 'border-radius:4px;background:var(--' + tone + '-bg);color:var(--' + tone + '-tx);font-size:12px;line-height:1.6;';
+  el.innerHTML = html;
+}
+// The line under the key in Settings: what the Apps Script said about it, never the key.
+function deviceKeyStatusText(answer, hasKey) {
+  switch (answer) {
+    case 'ok':      return '✓ Accepted by the Apps Script.';
+    case 'off':     return hasKey ? 'The Apps Script does not ask for a key yet (none is set in its Script Properties): this one is sent and not checked.'
+                                  : 'The Apps Script does not ask for a key yet (none is set in its Script Properties).';
+    case 'missing': return '⚠ This device has no key: ask Anthony.';
+    case 'wrong':   return '⚠ The key on this device is wrong: ask Anthony.';
+    case 'old':     return 'The Apps Script deployment is older than this build and checks no key.';
+    case 'unknown': return 'The Apps Script could not read its own key setting: try again in a moment.';
+    default:        return hasKey ? 'Not checked yet: saved on this device.' : 'No key on this device.';
+  }
+}
+function _paintDeviceKeyStatus() {
+  if (typeof document === 'undefined' || !document.getElementById) return;
+  var el = document.getElementById('set-device-key-status');
+  if (!el) return;
+  var held = !!deviceKey();   // whether there is one, never what it is
+  el.textContent = deviceKeyStatusText(_deviceKeyAnswer, held);
+  el.style.color = (_deviceKeyAnswer === 'missing' || _deviceKeyAnswer === 'wrong') ? 'var(--err-tx)'
+                 : _deviceKeyAnswer === 'ok' ? 'var(--ok-tx)' : 'var(--gray)';
+}
+// Every answer about the key lands here: the banner and the Settings line follow it, and a key just typed that the Apps
+// Script now accepts, on a page whose reads were refused, owes the reload the banner then offers (never fires it).
+function _noteDeviceKeyAnswer(answer) {
+  _deviceKeyAnswer = String(answer || '');
+  var re = _deviceKeyRecheck;
+  var accepted = !!re && (_deviceKeyAnswer === 'ok' || _deviceKeyAnswer === 'off');
+  if (accepted) { _deviceKeyRecheck = null; if (re.wasRefused) _deviceKeyReloadOwed = true; }
+  _paintDeviceKeyBanner();
+  _paintDeviceKeyStatus();
+  if (accepted && re.wasRefused) showSyncBadge('Key accepted ✓ — press Reload from the sheet at the top once the chip clears');
+}
+// What a reload now would throw away, DOM-free: '' when nothing, else the words. The person's press asks it (the handler
+// behind the banner's button); a reload is refused by name while any holds, never fired over it.
+function deviceKeyReloadBusy() {
+  var any = function (m, k) {
+    try { return Object.keys(m || {}).some(function (id) { var v = m[id]; return k ? !!(v && v[k]) : !!v; }); } catch (e) { return false; }
+  };
+  // ⚠ A record too large for the sheet never holds the reload (the merge of P1 and P2): it is never sent again (P1's review), its
+  // chip says reloading is safe, and beforeunload lets it go; counted here it would refuse the press for good. Anything else
+  // queued, sending or held still does.
+  var onlyTooLarge = false;
+  try {
+    var pk = (typeof _pendingWrites === 'object' && _pendingWrites) ? Object.keys(_pendingWrites) : [];
+    onlyTooLarge = pk.length > 0 && pk.every(function (k) { return _pendingWrites[k] && _pendingWrites[k].kind === 'toolarge'; })
+      && !(typeof _outboxSending !== 'undefined' && _outboxSending) && !(typeof _flushing !== 'undefined' && _flushing)
+      && !(typeof _outbox === 'object' && _outbox && Object.keys(_outbox).length);
+  } catch (e) {}
+  if (!onlyTooLarge && typeof _syncWritesOutstanding === 'function' && _syncWritesOutstanding()) return 'changes made here have not reached the sheet yet (the chip at the foot says why)';
+  if (typeof _invSyncTimer !== 'undefined' && any(_invSyncTimer)) return 'an inventory change is about to be sent';
+  if (typeof _approvalEsignOut !== 'undefined' && any(_approvalEsignOut)) return 'a release request sent to DocuSign is waiting on its answer';
+  if ((typeof _agRun !== 'undefined' && any(_agRun, 'running')) || (typeof _arRun !== 'undefined' && any(_arRun, 'running'))
+      || (typeof _avRun !== 'undefined' && any(_avRun, 'running'))) return 'the agents are at work';
+  return '';
+}
+// The banner's Reload from the sheet: the reload the accepted key owed, only when nothing would be lost by it.
+function deviceKeyReloadNow() {
+  var why = deviceKeyReloadBusy();
+  if (why) {
+    var msg = 'Not reloaded: ' + why + '. Press it again once that is done.';
+    var el = (typeof document !== 'undefined' && document.getElementById) ? document.getElementById('device-key-reload-why') : null;
+    if (el) el.textContent = msg; else showSyncBadge(msg);
+    return false;
+  }
+  _deviceKeyReloadOwed = false;
+  try { location.reload(); } catch (e) {}
+  return true;
+}
+// A refusal the server sent, wherever it was read (a held write, the client list's own read): if it is about the key, the
+// banner and Settings say so. Anything else is left to its reader.
+function _noteDeviceKeyRefusal(errText) {
+  var a = deviceKeyRefusedAs(errText);
+  if (a) _noteDeviceKeyAnswer(a);
+  return a;
+}
+// Saved in Settings (saveSettings), only when it changed: what this page said before decides the reload above; anything held
+// for the key goes out now with the new one; and the Apps Script is asked again.
+function _deviceKeyChanged() {
+  var was = _deviceKeyAnswer;
+  _deviceKeyRecheck = { wasRefused: was === 'missing' || was === 'wrong' };
+  _deviceKeyAnswer = '';
+  _paintDeviceKeyBanner();
+  _paintDeviceKeyStatus();
+  if (typeof _pendingCount === 'function' && _pendingCount()) retryPendingWrites();
+  checkBackendVersion();
 }
 // ⚠⚠ THIS JOB'S APPROVER OR NOBODY — NEVER A PAGE GLOBAL. `agrApprovedBy` (deleted 2026-09-30) was
 // whichever job `loadAgreement` or `ensureAgreementApproved` touched LAST, so falling back to it
@@ -18035,7 +18217,7 @@ function _pkgShareFolders(job, emails, cb) {
           if (w.addressee) { w.f.shared = ok; w.f.error = ok ? '' : (err || 'unknown error'); }
           else if (!ok) w.f.notShared.push({ email: w.email, error: err || 'unknown error' });
           next();
-        });
+        }, job.id);
       })();
     });
   });
@@ -26156,7 +26338,7 @@ function loadJobs() {
   document.getElementById('jct').textContent = jobs.length + ' job' + (jobs.length!==1?'s':'');
   // Then try to pull latest from Sheets (async — updates if newer data found)
   if (SHEETS_SYNC_URL) {
-    fetch(SHEETS_SYNC_URL + '?action=loadJobs')
+    fetch(_withDeviceKey(SHEETS_SYNC_URL + '?action=loadJobs'))
       .then(function(r){ return r.json(); })
       .then(function(data){
         // ⚠⚠ THE SHEET'S ANSWER NEVER EMPTIES A CACHE HOLDING CLIENTS UNLESS A PERSON RECORDED THE DELETIONS (2026-10-27, P1,
@@ -26187,7 +26369,11 @@ function loadJobs() {
         // ⚠ THE JOBS ARRIVE AFTER THE SCREEN IS DRAWN. This used to call renderJobs()
         // and nothing else, so every OTHER surface built from this array kept whatever it
         // had painted against an empty list — for good, until you navigated away and back.
-        _jobsState = 'ready';
+        // ⚠ AN ANSWER THAT CARRIED NO LIST IS NOT A READ (P2): a device the Apps Script turns away for its key, or a refusal
+        // of any kind, keeps its cache and reads as unreachable, never as the sheet's word.
+        var _read = !!(data && Array.isArray(data.jobs) && !data.error);
+        if (!_read && data && typeof _noteDeviceKeyRefusal === 'function') _noteDeviceKeyRefusal(data.error);
+        _jobsState = _read ? 'ready' : 'offline';
         _jobsLanded();
       })
       .catch(function(){
@@ -26348,12 +26534,17 @@ function refreshJobsFromCloud(cb) {
   if (!SHEETS_SYNC_URL) { if (cb) cb(); return; }
   if (_syncWritesOutstanding([])) { if (cb) cb(); return; }
   var seq = _syncWriteSeq;
-  fetch(SHEETS_SYNC_URL + '?action=loadJobs')
+  fetch(_withDeviceKey(SHEETS_SYNC_URL + '?action=loadJobs'))
     .then(function(r){ return r.json(); })
     .then(function(data){
       var verdict = loadJobsVerdict(data, jobs, !!_sheetNotice);
       if (verdict.why && !(data && Array.isArray(data.jobs))) { _setSheetNotice(verdict.why); return; }
-      if (!(data && Array.isArray(data.jobs) && !data.error)) return;
+      if (!(data && Array.isArray(data.jobs) && !data.error)) {
+        // Turned away for the key while the page was open (Anthony set it after this device loaded): say so (P2). A key refusal
+        // is its own kind, never the sheet's notice: loadJobsVerdict reads only JOBS_TAB_EMPTY as that.
+        if (data && typeof _noteDeviceKeyRefusal === 'function') _noteDeviceKeyRefusal(data.error);
+        return;
+      }
       _applyDroppedJobs(data.deletedJobs, data.recorded);
       if (_syncWritesOutstanding([]) || _syncWriteSeq !== seq) return;
       verdict = loadJobsVerdict(data, jobs, !!_sheetNotice);
@@ -26400,7 +26591,7 @@ function _mergeCloudJobs(local, cloud, keepUnseen) {
 function refreshEstimateFromCloud(jobId, onReady) {
   if (!SHEETS_SYNC_URL) { onReady('offline'); return; }
   refreshJobsFromCloud(function(){
-  fetch(SHEETS_SYNC_URL + '?action=loadEstimates')
+  fetch(_withDeviceKey(SHEETS_SYNC_URL + '?action=loadEstimates'))
     .then(function(r){ return r.json(); })
     .then(function(data){
       if (!data || typeof data.estimates !== 'object' || data.estimates === null) { onReady('offline'); return; }
@@ -26489,7 +26680,7 @@ function loadEstimateState() {
   // records survive only for jobs the sheet doesn't know about yet (e.g. saved
   // while offline). This load primes the cache; opening a job re-fetches fresh.
   if (SHEETS_SYNC_URL) {
-    fetch(SHEETS_SYNC_URL + '?action=loadEstimates')
+    fetch(_withDeviceKey(SHEETS_SYNC_URL + '?action=loadEstimates'))
       .then(function(r){ return r.json(); })
       .then(function(data){
         if (data.estimates && typeof data.estimates === 'object') {
@@ -26501,7 +26692,8 @@ function loadEstimateState() {
           rebuildDropdowns();
           showSyncBadge('Estimates synced from cloud ✓');
         }
-        _estStoreState = 'ready';
+        // An answer that carried no estimates is not a read (P2: a device turned away for its key keeps its cache, unread).
+        _estStoreState = (data && data.estimates && typeof data.estimates === 'object' && !data.error) ? 'ready' : 'offline';
         _estStoreLanded();
       })
       .catch(function(){
@@ -27556,7 +27748,7 @@ var _invReadAt = {};
 var _invCloudFailed = {};
 function refreshPhotoRefs(jobId, cb) {
   if (!SHEETS_SYNC_URL) { if (cb) cb(false); return; }
-  fetch(SHEETS_SYNC_URL + '?action=loadMedia&jobId=' + encodeURIComponent(jobId))
+  fetch(_withDeviceKey(SHEETS_SYNC_URL + '?action=loadMedia&jobId=' + encodeURIComponent(jobId)))
     .then(function(r){ return r.json(); })
     .then(function(d){
       // Record that this device has SEEN the server's copy of this job, which is a
@@ -28035,14 +28227,14 @@ function discardShot(jobId, stableId) {
   // ⚠ `inDrive` IS DELIBERATELY [ref] + dets AND NOT THE DERIVED LINES. Every line split out of
   // this photograph carries the SAME driveFileId, so including them would ask Drive to bin one
   // file three times — two of those refusals landing loudly on screen over a delete that worked.
-  _trashShotFiles(inDrive.map(function(r){ return _invFileId(r); }));
+  _trashShotFiles(inDrive.map(function(r){ return _invFileId(r); }), jobId);
   return true;
 }
 
 // Trash each file, one at a time, and say so once at the end. Sequential rather than parallel
 // for the reason this app already pays for elsewhere: one request at a time against Apps
 // Script never waits on a lock we are holding ourselves.
-function _trashShotFiles(ids) {
+function _trashShotFiles(ids, jobId) {
   ids = (ids || []).filter(Boolean);
   if (!ids.length) return;
   var failed = 0, done = 0;
@@ -28056,7 +28248,7 @@ function _trashShotFiles(ids) {
       else showSyncBadge(done > 1 ? (done + ' photos deleted from Drive \u2713') : 'Photo deleted from Drive \u2713');
       return;
     }
-    driveTrashFile(ids[i], function(ok) { if (ok) done++; else failed++; next(i + 1); });
+    driveTrashFile(ids[i], function(ok) { if (ok) done++; else failed++; next(i + 1); }, jobId);
   }
   next(0);
 }
@@ -28845,7 +29037,7 @@ function _invEnsureThumbs(jobId) {
   // Marked tried BEFORE the request, not after: a batch that fails must not be re-fired
   // by the next render, which would hammer the endpoint for as long as the tab is open.
   ids.forEach(function(id){ _invThumbTried[id] = 1; });
-  fetch(SHEETS_SYNC_URL, {
+  fetch(_withDeviceKey(SHEETS_SYNC_URL), {
     method: 'POST', mode: 'cors', redirect: 'follow',
     headers: { 'Content-Type': 'text/plain' },
     body: JSON.stringify({ action: 'getThumbnails', fileIds: ids })
@@ -30580,10 +30772,16 @@ function _snapLinesPut(jobId, ts, items) { (_snapLines[jobId] || (_snapLines[job
 // Read one client's snapshot lines from the sheet into this session's copy; cb(ok).
 function loadSnapshotLines(jobId, cb) {
   if (!SHEETS_SYNC_URL) { if (cb) cb(false); return; }
-  fetch(SHEETS_SYNC_URL + '?action=loadSnapshots&jobId=' + encodeURIComponent(jobId))
+  // Through the device key like every other read of the jobs backend (the merge of P1 and P2: P1's read was written before
+  // the key existed), and a refusal for the key said as one (the banner), never only as "could not read them".
+  fetch(_withDeviceKey(SHEETS_SYNC_URL + '?action=loadSnapshots&jobId=' + encodeURIComponent(jobId)))
     .then(function(r){ return r.json(); })
     .then(function(d){
-      if (!(d && d.ok && d.snapshots && typeof d.snapshots === 'object')) { if (cb) cb(false); return; }
+      if (!(d && d.ok && d.snapshots && typeof d.snapshots === 'object')) {
+        if (d && d.error && typeof _noteDeviceKeyRefusal === 'function') _noteDeviceKeyRefusal(d.error);
+        if (cb) cb(false);
+        return;
+      }
       Object.keys(d.snapshots).forEach(function(t){
         var e = d.snapshots[t];
         if (e && Array.isArray(e.items) && !_snapLinesOf(jobId, t)) _snapLinesPut(jobId, t, e.items);
@@ -33525,8 +33723,11 @@ function approvalRequestSendEsign(job, r, b64, perr, filedUrl, paperIds, rcpt, s
   }
   step('Sending through DocuSign…');
   _approvalEsignOut[jobId] = true;   // until DocuSign answers, however late: no second send meanwhile (found on review)
+  // `jobId` binds the envelope to this client (P2, backend 2026-10-27c): the Apps Script reads the client off the sheet and sends only
+  // to its recorded fiduciaries, in this order, copying only agreements@ and the estate attorney, under the subject it builds the
+  // same way (approvalRequestSubject). A fiduciary added here and not yet on the sheet is refused there by name.
   _appsScriptPost(SHEETS_SYNC_URL, { action: 'esignSendRequest', pdfBase64: b64, filename: r.title + '.pdf', subject: approvalRequestSubject(job),
-      hvlId: job.hvlId || '', signers: signers, cc: rcpt.cc }, function (ok, d) {
+      hvlId: job.hvlId || '', jobId: job.id, by: (typeof deviceUser === 'function') ? deviceUser() : '', signers: signers, cc: rcpt.cc }, function (ok, d) {
     delete _approvalEsignOut[jobId];
     var late = isOver();
     if (!(ok && d && d.ok && d.envelopeId)) {
@@ -37724,12 +37925,16 @@ function _invShareFolders(job, cb) {
 }
 // Sequential, never Promise.all: every one of these takes the global Apps Script lock, and
 // this file records in full what parallel sending cost on 2026-09-11.
-function _invShareEach(ids, action, email, done) {
+// ⚠ `jobId` NAMES THE CLIENT (P2, backend 2026-10-27c): the Apps Script shares only a folder inside that client's own folder, and
+// only with an address recorded on that client, so a request that names none is refused. `by` is the device's user, for the
+// server's AccessLog (attribution, as everywhere: never proof).
+function _invShareEach(ids, action, email, done, jobId) {
   var okCount = 0, err = '';
+  var by = (typeof deviceUser === 'function') ? deviceUser() : '';
   (function next(i) {
     if (i >= ids.length) { done(okCount, err); return; }
-    fetch(SHEETS_SYNC_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: action, folderId: ids[i], email: email }) })
+    fetch(_withDeviceKey(SHEETS_SYNC_URL), { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action: action, folderId: ids[i], email: email, jobId: jobId, by: by }) })
       .then(function(r){ return r.json(); })
       .then(function(d){ if (d && d.ok) okCount++; else err = err || ((d && d.error) || 'unknown error'); next(i + 1); })
       .catch(function(){ err = err || 'the Apps Script could not be reached'; next(i + 1); });
@@ -37795,6 +38000,18 @@ function _photoSharesRepaint(jobId) {
   var job = jobs.find(function (j) { return j.id === jobId; });
   if (el && job) el.innerHTML = esc(photoSharesLine(job));
 }
+// ⚠ WHO MAY BE GIVEN THE PHOTOGRAPHS (P2, backend 2026-10-27c): only an address recorded on the client: the client, the
+// representative, each co-representative (live, not voided) and the estate attorney (on a trust, the trustee's attorney: the
+// same field). Lower-cased, each once. The server's _jobRecordedEmails asks the same of the sheet's copy (a test holds the two
+// equal), so the press asks before it posts and the Apps Script asks again where the share is made.
+function jobRecordedEmails(job) {
+  var out = [];
+  var add = function (e) { var a = String(e || '').trim().toLowerCase(); if (a && out.indexOf(a) < 0) out.push(a); };
+  if (!job) return out;
+  add(job.email); add(job.executorEmail); add(job.probateAttyEmail);
+  jobListEntries(job, 'coFiduciaries').forEach(function (c) { add(c.email); });
+  return out;
+}
 function shareInventoryWithCounsel(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
@@ -37803,6 +38020,11 @@ function shareInventoryWithCounsel(jobId) {
   var email = window.prompt('Share the estate\u2019s photographs (read-only) with counsel:', job.probateAttyEmail || job.executorEmail || '');
   if (!email) return;
   email = email.trim();
+  if (jobRecordedEmails(job).indexOf(email.toLowerCase()) < 0) {
+    alert(email + ' is not an email recorded on this client, so nothing was shared. The photographs go only to an address on the '
+      + 'record: add it on Edit Client (the estate attorney, the representative or a co-representative), let it save, then share again.');
+    return;
+  }
   _invShareFolders(job, function(ids) {
     if (!ids.length) { alert('No photograph folder was found yet \u2014 capture an item or run a sync first so the folder exists in Drive.'); return; }
     _invShareEach(ids, 'shareFolder', email, function(okCount, err) {
@@ -37813,7 +38035,7 @@ function shareInventoryWithCounsel(jobId) {
       alert('Shared ' + (okCount > 1 ? (okCount + ' photograph folders') : 'the photograph folder')
         + ' (read-only) with ' + email + '.'
         + (okCount < ids.length ? '\n\nOne folder could not be shared: ' + err : ''));
-    });
+    }, jobId);
   });
 }
 function unshareInventory(jobId) {
@@ -37840,7 +38062,7 @@ function unshareInventory(jobId) {
       alert(okCount ? ('Removed access for ' + email + ' on ' + okCount + ' folder' + (okCount > 1 ? 's' : '') + '.'
                        + (okCount < ids.length ? '\n\nOne folder could not be updated: ' + err : ''))
                     : ('Failed: ' + (err || 'unknown error')));
-    });
+    }, jobId);
   });
 }
 
@@ -38992,7 +39214,7 @@ function _agSendNext(jobId, job, groups, from) {
   });
   if (!shots.length) { _agSendNext(jobId, job, groups, from + slice.length); return; }
 
-  fetch(SHEETS_SYNC_URL, {
+  fetch(_withDeviceKey(SHEETS_SYNC_URL), {
     method: 'POST', mode: 'cors', redirect: 'follow',
     headers: { 'Content-Type': 'text/plain' },
     body: JSON.stringify({ action: 'agentIdentify', jobId: jobId, context: _agContext(job), shots: shots })
@@ -39514,7 +39736,7 @@ function _arSendNext(jobId, job, queue) {
   }
   var byKey = {};
   batch.forEach(function(room) { byKey[String(room.roomIdx)] = room; });
-  fetch(SHEETS_SYNC_URL, {
+  fetch(_withDeviceKey(SHEETS_SYNC_URL), {
     method: 'POST', mode: 'cors', redirect: 'follow',
     headers: { 'Content-Type': 'text/plain' },
     body: JSON.stringify({ action: 'agentRoomCheck', jobId: jobId, context: { fiduciary: invFiduciaryMode(job) },
@@ -40198,7 +40420,7 @@ function _avSendNext(jobId, job, queue, opts) {
   // meanwhile (2026-10-26, on review: `_avForceComps`, never cleared, had answered for lines no run carried).
   st.ids = {}; queue.forEach(function(id) { st.ids[id] = 1; });
   st.out = {}; items.forEach(function(it) { st.out[it.stableId] = 1; });
-  fetch(SHEETS_SYNC_URL, {
+  fetch(_withDeviceKey(SHEETS_SYNC_URL), {
     method: 'POST', mode: 'cors', redirect: 'follow',
     headers: { 'Content-Type': 'text/plain' },
     body: JSON.stringify({ action: 'agentValue', jobId: jobId, context: _avContext(job), items: items })
@@ -41809,7 +42031,7 @@ function buildMediaPayload(jobId) {
 // items on the next write rather than losing them, because the merge is a union.
 function loadMediaStore(cb) {
   if (!SHEETS_SYNC_URL) { if (cb) cb(false); return; }
-  fetch(SHEETS_SYNC_URL + '?action=loadMedia')
+  fetch(_withDeviceKey(SHEETS_SYNC_URL + '?action=loadMedia'))
     .then(function(r){ return r.json(); })
     .then(function(d){
       if (!d || !d.ok || !d.media) { if (cb) cb(false); return; }
@@ -43228,7 +43450,7 @@ function _targetUrl(target) {
 function postSyncTo(target, body) {
   var url = _targetUrl(target);
   if (!url) return Promise.reject(new Error('no URL configured for the ' + target + ' backend'));
-  return fetch(url, {
+  return fetch(_withDeviceKey(url), {
     method: 'POST', mode: 'cors', redirect: 'follow',
     body: JSON.stringify(body),
     headers: { 'Content-Type': 'text/plain' }
@@ -43346,7 +43568,20 @@ function _pendingChipCopy() {
   var anyStale = keys.some(function(k){ return _pendingWrites[k].kind === 'stale'; });
   var anyCrash = keys.some(function(k){ return _pendingWrites[k].kind === 'crash'; });
   var changes = n + ' change' + (n > 1 ? 's' : '');
-  // ⚠⚠ A RECORD TOO LARGE FOR THE SHEET (2026-10-27, P1, GAP3-05): named first, because nothing else on the chip is true of
+  // ⚠ THE DEVICE KEY FIRST (P2): nothing else about these writes can be known until the Apps Script lets this device in. And
+  // before a record too large for the sheet (the merge of P1 and P2): that one says reloading is safe, which a write held for
+  // the key is not (it lives in this tab only), so the key's "do not close or reload it" is the one the chip shows while both are held.
+  var keyed = keys.filter(function(k){ return _pendingWrites[k].kind === 'key'; });
+  if (keyed.length) {
+    var wrongKey = keyed.some(function(k){ return /key on this device is wrong/i.test(_pendingWrites[k].lastError || ''); });
+    return {
+      head: '\u26a0 ' + changes + ' not saved \u2014 ' + (wrongKey ? 'the key on this device is wrong: ask Anthony' : 'this device has no key: ask Anthony'),
+      note: 'The Apps Script lets in only the devices that carry its key, and ' + (wrongKey ? 'the one typed on this device is not it' : 'this device has none')
+        + '. Ask Anthony for it, type it in Settings (Device key, under the Apps Script URL) and press Save Settings: these changes go out then. '
+        + 'Until then they are held in this tab only, so do not close or reload it.'
+    };
+  }
+  // ⚠⚠ A RECORD TOO LARGE FOR THE SHEET (2026-10-27, P1, GAP3-05): named first after the key, because nothing else on the chip is true of
   // it. It said "do not close or reload the tab" after six tries, and that tab was the one that emptied the restored Jobs
   // tab again on its next retry. Closing it is the safe thing: the client comes back from the sheet on reload.
   var big = keys.filter(function(k){ return _pendingWrites[k].kind === 'toolarge'; });
@@ -43551,6 +43786,7 @@ function flushPendingWrites() {
         w.lastError = (res && res.error) || w.lastError || '';
         w.kind = _backendErrorKind(res && res.error, true, w.body);
         w.blocked = _writeKindHolds(w.kind);
+        if (w.kind === 'key' && typeof _noteDeviceKeyRefusal === 'function') _noteDeviceKeyRefusal(w.lastError);
       })
       .catch(function(e){
         w.tries = (w.tries || 0) + 1;
@@ -43704,6 +43940,12 @@ function queuedPostSync(body, okMsg, failMsg, onLanded) {
 function _backendErrorKind(errText, fromServer, body) {
   if (!fromServer) return '';
   var s = String(errText || '');
+  //   'key'   — (P2, 2026-10-27c) the Apps Script turned this device away: it carries no key, or the wrong one (the server's
+  //             DEVICE_KEY_REFUSED words, which deviceKeyRefusedAs reads the same way). Asked first, because a refused request
+  //             reached nothing behind the check (belt-and-braces beside P1's 'toolarge' and 'empty' below, since the server's
+  //             words for the three never overlap; a test holds them three kinds). Held, never retried by itself: the same request is refused the same way
+  //             until somebody types the key in Settings, and saving it sends what is held (_deviceKeyChanged).
+  if (/device has no key|key on this device is wrong/i.test(s)) return 'key';
   if (/TOO_LARGE|maximum of 50000 characters in a single cell/i.test(s)) return 'toolarge';
   if (/JOBS_TAB_EMPTY/.test(s)) return 'empty';
   if (/unknown type/i.test(s)) return 'stale';
@@ -43728,6 +43970,7 @@ function _writeKindHolds(kind) { return kind !== '' && kind !== 'empty'; }
 function _enqueueWrite(target, body, okMsg, failMsg, errText, onLanded, fromServer) {
   var kind = _backendErrorKind(errText, fromServer, body);
   var stale = _writeKindHolds(kind);
+  if (kind === 'key' && typeof _noteDeviceKeyRefusal === 'function') _noteDeviceKeyRefusal(errText);
   var key = _writeKey(body, target);
   // ⚠ A newer snapshot supersedes an older queued one — but the FAILURE COUNT carries
   // over, because the key is the logical target and "saveAllJobs has now failed six
@@ -46079,7 +46322,7 @@ function loadLogData() {
   // safe before the Apps Script handler exists — an unsupported action leaves local
   // data untouched.
   if (SHEETS_SYNC_URL) {
-    fetch(SHEETS_SYNC_URL + '?action=loadLogs')
+    fetch(_withDeviceKey(SHEETS_SYNC_URL + '?action=loadLogs'))
       .then(function(r){ return r.json(); })
       .then(function(data){
         if (data && data.logs && typeof data.logs === 'object' && !data.error) {
@@ -46155,7 +46398,7 @@ function loadJobPlanData() {
   // Guarded on data.jobPlans so the app is safe before the Apps Script handler is
   // added — an unsupported action just leaves local data untouched.
   if (SHEETS_SYNC_URL) {
-    fetch(SHEETS_SYNC_URL + '?action=loadJobPlans')
+    fetch(_withDeviceKey(SHEETS_SYNC_URL + '?action=loadJobPlans'))
       .then(function(r){ return r.json(); })
       .then(function(data){
         if (data && data.jobPlans && typeof data.jobPlans === 'object' && !data.error) {
@@ -46253,7 +46496,7 @@ function refreshPlanAndLogFromCloud(jobId, cb) {
     if (skipped) { if (cb) cb(false); return; }
     if (cb) cb(sig() !== before);
   };
-  fetch(SHEETS_SYNC_URL + '?action=loadJobPlans')
+  fetch(_withDeviceKey(SHEETS_SYNC_URL + '?action=loadJobPlans'))
     .then(function(r){ return r.json(); })
     .then(function(data){
       if (data && data.jobPlans && typeof data.jobPlans === 'object' && !data.error) {
@@ -46264,7 +46507,7 @@ function refreshPlanAndLogFromCloud(jobId, cb) {
     })
     .catch(function(){ fail = true; })
     .then(finish);
-  fetch(SHEETS_SYNC_URL + '?action=loadLogs')
+  fetch(_withDeviceKey(SHEETS_SYNC_URL + '?action=loadLogs'))
     .then(function(r){ return r.json(); })
     .then(function(data){
       if (data && data.logs && typeof data.logs === 'object' && !data.error) {
@@ -52225,7 +52468,7 @@ function _isTransientPostError(e) {
 
 function _appsScriptPost(url, bodyObj, cb, allowRetry) {
   function attempt(triesLeft) {
-    fetch(url, { method:'POST', mode:'cors', redirect:'follow',
+    fetch(_withDeviceKey(url), { method:'POST', mode:'cors', redirect:'follow',
                  headers:{'Content-Type':'text/plain'}, body: JSON.stringify(bodyObj) })
       .then(_readAppsScriptJson)
       .then(function(d){ cb(!!(d && d.ok), d || {}); })
@@ -53949,7 +54192,7 @@ function fetchSubfolderIds(job, cb) {
   var parts = job.driveFolder.split('/folders/');
   var parentId = parts.length > 1 ? parts[1].split('?')[0] : (/^[\w-]{20,}$/.test(job.driveFolder) ? job.driveFolder : null);
   if (!parentId) { cb(false); return; }
-  fetch(SHEETS_SYNC_URL, {
+  fetch(_withDeviceKey(SHEETS_SYNC_URL), {
     method: 'POST',
     headers: {'Content-Type':'text/plain;charset=utf-8'},
     body: JSON.stringify({action:'getSubfolders', folderId: parentId})
@@ -54006,7 +54249,7 @@ function resolveSubfolderId(job, name, cb) {
 
 function uploadToDrive(folderId, filename, dataUrl, onDone) {
   if (!SHEETS_SYNC_URL || !folderId) { if (onDone) onDone(false); return; }
-  fetch(SHEETS_SYNC_URL, {
+  fetch(_withDeviceKey(SHEETS_SYNC_URL), {
     method: 'POST',
     headers: {'Content-Type':'text/plain;charset=utf-8'},
     body: JSON.stringify({action:'uploadFile', folderId:folderId, filename:filename, dataUrl:dataUrl})
@@ -54024,12 +54267,14 @@ function uploadToDrive(folderId, filename, dataUrl, onDone) {
 // ⚠ NEVER RETRIED. A failed POST does not reveal whether it landed, and this is a delete:
 // the caller has already removed the row locally, so a silent second attempt buys nothing and
 // a loud "it is still in Drive" is the honest answer. Same rule `addVendor` follows.
-function driveTrashFile(fileId, onDone) {
+// The Apps Script trashes only a file inside the jobs folder, never a folder (P2, backend 2026-10-27c), and writes each trash to
+// its AccessLog with the client and the device's user, which this sends for that (attribution only).
+function driveTrashFile(fileId, onDone, jobId) {
   if (!SHEETS_SYNC_URL || !fileId) { if (onDone) onDone(false, 'no backend configured'); return; }
-  fetch(SHEETS_SYNC_URL, {
+  fetch(_withDeviceKey(SHEETS_SYNC_URL), {
     method: 'POST',
     headers: {'Content-Type':'text/plain;charset=utf-8'},
-    body: JSON.stringify({ action:'trashFile', fileId: fileId })
+    body: JSON.stringify({ action:'trashFile', fileId: fileId, jobId: jobId, by: (typeof deviceUser === 'function') ? deviceUser() : '' })
   })
   .then(function(r){ return r.json(); })
   .then(function(d){ if (onDone) onDone(!!(d && d.ok), d && d.error); })
@@ -54038,7 +54283,7 @@ function driveTrashFile(fileId, onDone) {
 
 function uploadHtmlToDrive(folderId, filename, html, onDone) {
   if (!SHEETS_SYNC_URL || !folderId) { if (onDone) onDone(false); return; }
-  fetch(SHEETS_SYNC_URL, {
+  fetch(_withDeviceKey(SHEETS_SYNC_URL), {
     method: 'POST',
     headers: {'Content-Type':'text/plain;charset=utf-8'},
     body: JSON.stringify({action:'uploadHtml', folderId:folderId, filename:filename, html:html})
@@ -54489,7 +54734,7 @@ function createDriveJobFolder(job) {
   // still in flight.
   _driveFolderInFlight[job.id] = true;
   var _settled = function () { delete _driveFolderInFlight[job.id]; };
-  fetch(SHEETS_SYNC_URL, {
+  fetch(_withDeviceKey(SHEETS_SYNC_URL), {
     method: 'POST',
     headers: {'Content-Type':'text/plain;charset=utf-8'},
     body: JSON.stringify({
@@ -54537,7 +54782,7 @@ function createDriveJobFolder(job) {
       + '&hvlId='      + encodeURIComponent(job.hvlId || '')
       + '&clientName=' + encodeURIComponent(job.name  || '')
       + '&svc='        + encodeURIComponent(job.svc   || '');
-    fetch(SHEETS_SYNC_URL + params)
+    fetch(_withDeviceKey(SHEETS_SYNC_URL + params))
       .then(function(r){ return r.json(); })
       .then(function(data){
         _settled();
@@ -54635,6 +54880,9 @@ var REQUIRE_WALKTHROUGH_NOTES = false;
 function openSettings() {
   document.getElementById('settings-modal').style.display = 'flex';
   document.getElementById('set-sheets-url').value    = SHEETS_SYNC_URL;
+  // The key this device holds, masked (a password box): saving the form keeps it, clearing the box removes it (P2).
+  var dkEl = document.getElementById('set-device-key'); if (dkEl) dkEl.value = deviceKey();
+  _paintDeviceKeyStatus();
   document.getElementById('set-drive-id').value      = DRIVE_FOLDER_ID;
   var vUrlEl = document.getElementById('set-vendor-url'); if (vUrlEl) vUrlEl.value = VENDOR_SYNC_URL;
   var gcEl = document.getElementById('set-gmail-client-id'); if (gcEl) gcEl.value = GMAIL_CLIENT_ID;
@@ -54684,8 +54932,9 @@ var COST_RATE_FIELDS = [
 // kept, so a new store cannot be added and quietly missed here.
 var LOCAL_JOB_DATA_KEYS = /^(havellin_(jobs|est|jobplan|co|logs)_v\d+$|havellin_est_scratch$|hav_media_)/;
 // Kept on purpose: the endpoints and rates you would otherwise re-type on a phone, the
-// contractor roster (your crew, not practice data), the two directory caches, and who uses the device.
-var LOCAL_KEEP_KEYS = /^(hav_sheets_url|havellin_sheets_url|hav_drive_id|hav_vendor_url|hav_referral_url|hav_vendor_dir|hav_referral_dir|hav_gmail_client_id|hav_device_user|hav_tc_alpha|hav_require_notes|havellin_contractors_v\d+|havellin_defaults_v\d+|havellin_field_mode)$/;
+// contractor roster (your crew, not practice data), the two directory caches, who uses the device, and the device's key
+// for the jobs Apps Script (P2: clearing it would turn the device away from the sheet it is about to reload from).
+var LOCAL_KEEP_KEYS = /^(hav_sheets_url|havellin_sheets_url|hav_device_key|hav_drive_id|hav_vendor_url|hav_referral_url|hav_vendor_dir|hav_referral_dir|hav_gmail_client_id|hav_device_user|hav_tc_alpha|hav_require_notes|havellin_contractors_v\d+|havellin_defaults_v\d+|havellin_field_mode)$/;
 function clearLocalJobData() {
   var keys = [];
   try {
@@ -54728,6 +54977,10 @@ function saveSettings() {
   // every stamp as it is made, so nothing here holds it. A control not on the form keeps the record.
   var duEl2 = document.getElementById('set-device-user');
   var _deviceUser = duEl2 ? String(duEl2.value || '').trim() : null;
+  // The device key (P2): as typed, trimmed. A form without the box keeps the stored key.
+  var dkEl2 = document.getElementById('set-device-key');
+  var _deviceKeyTyped = dkEl2 ? String(dkEl2.value || '').trim() : null;
+  var _deviceKeyMoved = _deviceKeyTyped !== null && _deviceKeyTyped !== deviceKey();
   // Concierge production rate. Clamped to 0–100%: past 100 the concierge would be
   // outproducing a full-time specialist while also running the job.
   var alphaEl = document.getElementById('set-tc-alpha');
@@ -54751,6 +55004,7 @@ function saveSettings() {
     localStorage.setItem('hav_referral_url',  REFERRAL_SYNC_URL);
     localStorage.setItem('hav_require_notes', REQUIRE_WALKTHROUGH_NOTES ? '1' : '0');
     if (_deviceUser !== null) localStorage.setItem('hav_device_user', _deviceUser);
+    if (_deviceKeyTyped !== null) localStorage.setItem('hav_device_key', _deviceKeyTyped);
     localStorage.setItem('hav_tc_alpha',      String(TC_ONSITE_ALPHA));
     COST_RATE_FIELDS.forEach(function(f){ localStorage.setItem(f.ls, String(COST_RATES[f.key])); });
   } catch(e) {}
@@ -54761,6 +55015,8 @@ function saveSettings() {
   _paintDeviceUserNote();
   document.getElementById('settings-modal').style.display = 'none';
   showSyncBadge('Settings saved \u2713');
+  // A key typed or changed: what is held for the key goes out with it, and the Apps Script is asked again (P2).
+  if (_deviceKeyMoved) _deviceKeyChanged();
   loadVendorDirectory();   // pull the directory right away when the URL is set/changed
   loadReferralDirectory();
 }
@@ -57553,7 +57809,7 @@ function loadContractors() {
   } catch(e) {}
   if (!SHEETS_SYNC_URL) return;
 
-  fetch(SHEETS_SYNC_URL + '?action=loadContractors')
+  fetch(_withDeviceKey(SHEETS_SYNC_URL + '?action=loadContractors'))
     .then(function(r){ return r.json(); })
     .then(function(data){
       if (!data || data.error || !data.contractors) return;  // keep local on any error

@@ -102,7 +102,11 @@ function server(variant, src) {
       openById: () => ({ getName: () => 'fake', getSheetByName: (n) => sheets[n] || null, insertSheet(n) { sheets[n] = fakeSheet(n, null, srv); return sheets[n]; } }),
       flush() {},
     },
-    DriveApp: {}, PropertiesService: {}, CacheService: {}, UrlFetchApp: {}, Utilities: {}, Session: {},
+    // Script Properties hold nothing unless a test sets one (srv.props): the device key's check is off (P2, merged 2026-10-27), as
+    // on the deployment until Anthony sets HAVELLIN_DEVICE_KEY. An object with no getScriptProperties made every request fail.
+    PropertiesService: { getScriptProperties: () => ({ getProperty: (k) => (Object.prototype.hasOwnProperty.call(srv.props, k) ? srv.props[k] : null),
+      setProperty: (k, v) => { srv.props[k] = String(v); }, deleteProperty: (k) => { delete srv.props[k]; } }) },
+    DriveApp: {}, CacheService: {}, UrlFetchApp: {}, Utilities: {}, Session: {}, props: {},
     sheets, log, clears: [], cellThrows: 0, variant: variant || 'A', checkpoint: null, failNext: null, failClear: null,
     onThrow() {
       if (srv.variant !== 'B' || !srv.checkpoint) return;

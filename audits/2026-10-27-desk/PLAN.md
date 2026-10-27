@@ -403,7 +403,7 @@ Publish that rate only as section (a) step 10 allows.
 ### Phase 1: lose nothing, keep it private, start measuring (about 4 build days)
 
 **P1. Nothing is lost: the Jobs sheet and every device's copy.** Fix now · L, two sessions · both .gs files redeployed.
-- ✓ **Built 2026-10-27** (both sessions in one build; backend `2026-10-27b`; `BUILD_HISTORY.md`, 2026-10-27e). Owed: the redeploy of both files, then `probeClearThenOversizeWrite()` once in the editor. Until the redeploy, Snapshot refuses by name. Beyond the bullets below, the work bar and an empty list say what a cold copy is (the rest of SYN-08). **Reviewed the same day** (`BUILD_HISTORY.md`, 2026-10-27f): on the deployment live until the redeploy a device still lost its clients one save at a time after the tab emptied, so only a deletion the sheet records now takes a client off a device and Save Client refuses while the sheet's refusal stands; a client too large for a cell is held alone and every other client saves; a snapshot is recorded once its lines land; the manual's runbook restores the five stores on an older deployment, as Appendix B does.
+- ✓ **Built 2026-10-27** (both sessions in one build; backend `2026-10-27b`, carried by P2's `2026-10-27c`; `BUILD_HISTORY.md`, 2026-10-27e). Owed: the redeploy of both files, then `probeClearThenOversizeWrite()` once in the editor. Until the redeploy, Snapshot refuses by name. Beyond the bullets below, the work bar and an empty list say what a cold copy is (the rest of SYN-08). **Reviewed the same day** (`BUILD_HISTORY.md`, 2026-10-27f): on the deployment live until the redeploy a device still lost its clients one save at a time after the tab emptied, so only a deletion the sheet records now takes a client off a device and Save Client refuses while the sheet's refusal stands; a client too large for a cell is held alone and every other client saves; a snapshot is recorded once its lines land; the manual's runbook restores the five stores on an older deployment, as Appendix B does.
 - Goal: no press, failed write or empty sheet can delete a client anywhere, and a cold desk records nothing as fact.
 - Session 1, the server:
   - **Never clear a tab before writing it.** Write the new rows over what is there, then clear only the rows past them. The same goes for every store tab and the ledger (GAP3-01, GAP3-07).
@@ -448,11 +448,13 @@ Publish that rate only as section (a) step 10 allows.
 - Not proposed: moving access codes off the item, which is Decided (Q72). Worth knowing: the sheet's version history keeps every code ever typed, wiped at close or not.
 - Later, fix if cheap: the same key on the two directory backends, which hold no client data.
 - Closes: RT-01, RT-24.
+- ✓ **Built 2026-10-27** (backend `2026-10-27c`, carrying P1's `2026-10-27b`; `tests/p2-device-key.test.js`, browser step 118; `BUILD_HISTORY.md`, 2026-10-27g; the statement is `legal/Havellin_Data_Handling_Statement_v1.0.md`, counsel bundle G3). Live only once Anthony redeploys and sets `HAVELLIN_DEVICE_KEY` (the manual's *2026-10-27c* note gives the order, P1's redeploy folded into its step 1). The two directory backends are left as they were.
 - Checks: a test that every dispatched action refuses without the key, derived from the action list as the version test is; the app sends the key on every request; a browser step.
 - Code: doGet, doPost, shareFolder, unshareFolder, trashDriveFile, esignSendRequestEnvelope, BACKEND_ACTIONS, the Settings form.
 - Tell Anthony: redeploy and type the key on every device the same day, or that device stops syncing. If you would rather use Google sign-in for the backend, say so first; it is a bigger change, and close to the login Q59 ruled out.
 
 **P3. Measure the agents: the harness and the baseline.** Fix if cheap (nothing a person sees changes) · M.
+- ✗ **Dropped 27 October** (Ask 3: *"let's not score the agents at this point. this is supposed to be helping us. we are not paying a appraiser to identify the whole mock set of values. stop with this line of upgrading."* Ask 2's pin is moot with it).
 - Goal: a score for each agent before any prompt changes.
 - Builds:
   - The harness and test sets as in 3(a), steps 1 to 7. It lifts the real agent code at any commit, with small stand-ins for UrlFetchApp, DriveApp and CacheService, and runs the app's own request builders.
@@ -947,6 +949,7 @@ Publish that rate only as section (a) step 10 allows.
 One at a time, in the order the build needs them. The recommended answer comes first.
 
 **Ask 1. Which packs do you want built now, under the freeze?**
+- ✓ **Answered 27 October:** Phases 1 and 2 now, under the triage bar, with P17 the one exception; Phase 3 waits, and you are asked before any of it.
 - Phases 1 and 2 now under the triage bar, with P17 as the one exception; Phase 3 as an exception; the rest after the scripted runs pass (Recommended)
 - Everything now, as with the desk (Q88)
 - Phases 1 and 2 only, until the scripted runs pass
@@ -954,6 +957,7 @@ One at a time, in the order the build needs them. The recommended answer comes f
 Why: the papers have to be true before more goes out for signature. The DocuSign route is already built (26 October), and P5 is what makes its approvals hold once recorded.
 
 **Ask 2. Pin the agents' model while we measure them?** (P3; revisits 2026-10-26's automatic upgrade)
+- ✓ **Moot, 27 October:** nothing that scores the agents is built (Ask 3), so nothing is pinned; the agents keep moving to the newest model (the 2026-10-26 rule).
 - Pin it now to the model that answered the 26 October probes; a newer model takes over only once it scores at least as well (Recommended)
 - Keep upgrading at once, as now, and score afterwards
 - Pin it until you say otherwise
@@ -961,6 +965,7 @@ Why: the papers have to be true before more goes out for signature. The DocuSign
 Why: scores taken on different models cannot be compared, and a worse model would go live unseen.
 
 **Ask 3. Who settles the truth the agents are scored against?** (P3)
+- ✓ **Answered 27 October, none of the three:** *"let's not score the agents at this point. this is supposed to be helping us. we are not paying a appraiser to identify the whole mock set of values. stop with this line of upgrading."* P3 is dropped.
 - Split it: you and Ashley settle what each item is from its evidence (the mark, a reference page) and its count; values are scored only against real sales and independent appraisals (Recommended)
 - Pay an appraiser for the whole Ellison set, identity and value
 - You and Ashley settle identity and value, as first proposed
@@ -1557,7 +1562,7 @@ Severity is the verifier's re-rating, or the reviewer's for RT rows. Pack is one
 |GAP3-07|defect|med|C|still|Every store tab is cleared before it is written, and an empty store tab reads as an empty store|1 · built 27 Oct|_writeStoreBlob|
 |GAP3-08|docs|high|C||No recovery runbook; the obvious recovery loses a client or empties the tab again|1 · built 27 Oct|MANUAL.md|
 |GAP3-09|automation|med|C||One editor run on a throwaway sheet says whether a failed write leaves the tab empty|1 · built 27 Oct|probeClearThenOversizeWrite|
-|RT-01|security|fix-now|RT|still, wider|The jobs backend answers anyone holding its URL: every client read, any folder shared, any file trashed (code checked)|2|doGet|
+|RT-01|security|fix-now|RT|still, wider|The jobs backend answers anyone holding its URL: every client read, any folder shared, any file trashed (code checked)|2 · built 27 Oct|doGet|
 |RT-02|legal|high|RT||No engagement term says what Havellin's values are, who may rely on them, and that AI helped; E&O cover for value opinions not yet asked|counsel; today (insurer)|—|
 |RT-03|papers|high|RT||No named preparer and no scope-of-work statement (inspection dates, what was not examined, assumptions, market, independence, glossary)|17, Ask 17|printCourtInventory|
 |RT-04|independence|high|RT||Havellin values, picks the channel and is paid by it; fees are named only on the ledger and Contents Record; the field note can tell Agent Two the destination (code checked)|Ask 18; 17, 21|referralFeeVendorsNote|
@@ -1580,7 +1585,7 @@ Severity is the verifier's re-rating, or the reviewer's for RT rows. Pack is one
 |RT-21|accuracy|med|RT||No identification evidence grade, so a guess and an identification print alike|22|—|
 |RT-22|papers|low|RT||No value-by-basis summary on the cover|17|printEstateInventoryReport|
 |RT-23|legal|med|RT [U]||A guardian or an agent acting for a living client is treated as the client|Ask 35, 32|invWrittenReleaseNeeded|
-|RT-24|security|med|RT||No data-handling statement a bank's vendor review can file|2|—|
+|RT-24|security|med|RT|drafted 2026-10-27 (P2), with counsel|No data-handling statement a bank's vendor review can file|2|—|
 
 **Not built, and not asked**
 - **AGT-17, LIV-06** (living *Unsure* on Keep, Move and Junk): decided (P23 decision 2; Agent Two values by itself). Low; Read mode's order puts these lines last.

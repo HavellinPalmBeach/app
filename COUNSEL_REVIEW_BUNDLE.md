@@ -1534,3 +1534,34 @@ should the terms require the endorsement (CG 20 10 / CG 20 37 or the carrier's f
 wording, and is that realistic for a one-truck hauler? (3) *The full value of the load* for cargo: enforceable as written, or
 state a per-shipment figure? (4) The USPAP line for appraisers, read with §5 of the estate form and §7.1's *not an
 appraisal*: enough to keep the valuation with the appraiser?
+
+### G3. The data-handling statement for a trust department's vendor review ⚠ NEW 2026-10-27 · PRIORITY 2
+
+**What it says** (`legal/Havellin_Data_Handling_Statement_v1.0.md`, one page, drafted for Anthony and counsel; the desk audit of
+2026-10-27, RT-24, both red-team reviewers): what Havellin holds for an engagement; where it lives (the record in a Google Sheet
+read and written only through an Apps Script that runs as the Havellin account; photographs and documents in the client's own
+folder on a Shared Drive; a working copy on Havellin's devices, which can be cleared); who can open it (the principals with
+Workspace access, the application on a device carrying the device key since backend 2026-10-27c, and counsel or fiduciaries
+named as read-only viewers of the photograph folders, only at an address recorded on the file, each share and revoke logged,
+and each photograph a person bins from a room; a document re-filed under its own name replaces its older copy, which goes to
+Drive's bin unlogged, as do the editor's own sweeps); who else receives part of it and why (Anthropic's API for naming and
+valuing items: no field of the client record is sent, but the crew's notes, the walkthrough's room notes, the item descriptions
+and the must-find list go as written and may name a person; DocuSign; Stripe, where the client's bank details never reach Havellin; Gmail drafts); how long it is kept
+(seven years under §7.1; Drive's bin thirty days; the Sheet's version history keeps an access code wiped at close); and what
+happens on a lost device or an exposed key. **Every bracketed item is unconfirmed**: the Workspace edition and Google's
+encryption statement for it, who holds account access, the date the key was switched on and that every device is
+passcode-locked, **Anthropic's commercial terms on retention of API inputs and outputs and on their use for training (not
+stated: to be confirmed against the document Havellin's account is under)**, the notice owed after a breach, and the named
+person responsible. It makes no claim of insurance, which is still being placed.
+
+**The question.** (1) Is a statement like this a representation Havellin can be held to by a bank that relies on it in its
+third-party risk file, and should it carry a reliance disclaimer beyond its last line? (2) The notice obligations after a
+breach of client data, including Fla. Stat. §501.171 (not read from the statute here), and whether a fiduciary's or a trust
+officer's information is covered. (3) Whether the version history keeping a wiped access code should be purged at close, and
+whether the agreements' confidentiality clauses (the estate form's §7, the standard form's) promise anything this statement
+contradicts. (4) Whether the AI disclosure belongs in the engagement terms as well (the attorney reviewer's second point: no
+engagement term says that software produced a value). (5) Corrected on review the same day (two claims the code did not bear
+out): the first draft said every file removed from Drive is logged (only a photograph binned from a room is; re-filings and the
+editor's sweeps are not), and that no client name is sent to Anthropic (no field of the record is; free-text notes and the
+must-find list go as written). Whether the corrected wording is enough for a vendor review, or the notes should be screened
+before they are sent.
