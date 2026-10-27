@@ -835,7 +835,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(card.split('approvalRequestRecordRefusal(job, S)').length - 1, 1, 'the card asks it once, for its button');
     eq(press.split('approvalRequestRecordRefusal(job, S)').length - 1, 1, 'the press asks it once');
     lacks(press, 'sentAt ||', 'the press keeps no test of its own');
-    const Q = lift(['approvalRequestRecordRefusal'], [], { _photoRefs: {} });
+    // RESTATED 2026-10-27 (P5, found on review): the device has read the inventory from the sheet (`_invCloudSeen`); before that the
+    // press waits, as the package does (approval-pinned.test.js group M).
+    const Q = lift(['approvalRequestRecordRefusal'], [], { _photoRefs: {}, _invCloudSeen: { 7: true } });
     const st1 = { sentAt: '2026-10-17T15:00:00.000Z', draftedAt: '2026-10-17T14:00:00.000Z', req: { stableIds: ['a'] } };
     eq(Q.approvalRequestRecordRefusal({ id: 7, docState: { approvalRequest: st1 } }, { st: st1, open: [{ stableId: 'a' }] }), '', 'sent, a line open: offered');
     eq(Q.approvalRequestRecordRefusal({ id: 7, docState: { approvalRequest: st1 } }, { st: st1, open: [] }),

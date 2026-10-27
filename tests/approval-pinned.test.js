@@ -529,6 +529,257 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       '⚠⚠ this device\'s own copy keeps what the approval approved, the one it replaced and the correction');
   });
 
+  // ═══ M · THE REVIEW (2026-10-27): six findings, each driven as the reviewer drove it ═══════════════════════════════════════
+  G('M1 · ⚠⚠ two devices\' approvals of different terms are never one approval: the app\'s merge and the server\'s', () => {
+    const R = rig();
+    const J = R.job();
+    const grab = (name) => { const m = GS_INV.match(new RegExp('function ' + name + '\\([^)]*\\) \\{[\\s\\S]*?\\n\\}')); return m ? m[0] : ''; };
+    const gsVar = (name) => (GS_INV.match(new RegExp('var ' + name + ' = \\[[\\s\\S]*?\\];')) || [''])[0];
+    const g = {};
+    vm.createContext(g);
+    vm.runInContext([gsVar('INV_STICKY_FIELDS'), grab('_invHasVal'), grab('_invStickyValue'), grab('_custodyEventId'), grab('_mergeCustodyLogs'),
+      grab('_invApprovalEntries'), grab('_invApprovalSetAt'), grab('_invMergeApprovals'), grab('_mergeMediaItems')].join('\n\n'), g);
+    const bare = () => { const x = PAINTING(); delete x.authBy; delete x.approvalDate; delete x.authFor; x.updatedAt = 100; return x; };
+    // Device A: Nora's approval for Auction · Kodner Galleries at $2,400, through the one writer.
+    R.c._photoRefs[7] = [bare()];
+    R.c.invApplyApproval(7, [R.c._photoRefs[7][0]], ['Nora Ashworth'], '2026-10-12');
+    const A = JSON.parse(JSON.stringify(R.c._photoRefs[7][0]));
+    // Device B, a copy that never saw Nora's: re-routed to the cousin (nothing to ask there), then Thomas's approval.
+    R.c._photoRefs[7] = [Object.assign(bare(), { disposition: 'Distribute', channel: 'Cousin Pete Ashworth' })];
+    R.at(NOW + 60000);
+    R.c.invApplyApproval(7, [R.c._photoRefs[7][0]], ['Thomas Ashworth'], '2026-10-14');
+    const B = JSON.parse(JSON.stringify(R.c._photoRefs[7][0]));
+    eq([A.authFor.channel, B.authFor.channel], ['Kodner Galleries', 'Cousin Pete Ashworth'], 'fixture: each signed for its own terms');
+    const both = (x, y) => { const a = JSON.stringify(R.c.mergeMediaItems(x, y)), b = JSON.stringify(g._mergeMediaItems(x, y)); eq(a, b, 'the server merges as the app does'); return JSON.parse(a)[0]; };
+    [['B newer', [A], [B], 'Thomas Ashworth', 'Cousin Pete Ashworth', 'Nora Ashworth'],
+     ['A newer', [Object.assign({}, A, { updatedAt: B.updatedAt + 1 })], [B], 'Nora Ashworth', 'Kodner Galleries', 'Thomas Ashworth']].forEach(([label, x, y, kept, to, aside]) => {
+      const m = both(x, y);
+      eq([m.authBy, m.authFor && m.authFor.channel], [kept, to], '⚠⚠ ' + label + ': one approval, the one for where the line goes as merged, its names alone');
+      ok(!R.c.invApprovalComplete(m, J), '⚠⚠ ' + label + ': never complete (Nora signed for Kodner, Thomas for the cousin)');
+      eq((m.authWas || []).map((w) => [w.authBy, !!w.merged]), [[aside, true]], label + ': the other kept in authWas, marked as set aside by the merge');
+      R.c._photoRefs[7] = [m];
+      eq(R.c.signoutGroups(J, R.c._jobInvRefs(7)).filter((q) => q.ready.some((r) => r.stableId === 'e1')).length, 0, label + ': offered for sign-out to nobody');
+      lacks(text((R.c.printDispositionLedger(7, { asHtml: true }) || {}).html), 'Thomas Ashworth (Oct 14, 2026); Nora Ashworth', label + ': the ledger never prints both against one destination');
+      has(text(R.c._invCell(7, m, { key: 'authBy', header: 'Authorized By', kind: 'manage', edit: 'text', group: 'disp' }, J, 0)),
+        'Approval set aside: ' + aside, label + ': the record shows the one set aside');
+      const again = both([m], [x[0] === A ? B : A]);
+      eq([again.authBy, (again.authWas || []).length], [kept, 1], label + ': merged again with the copy it set aside, the same answer (nothing doubled)');
+    });
+    // The same terms on both copies: the signers are still one approval (P22).
+    R.c._photoRefs[7] = [bare()];
+    R.c.invApplyApproval(7, [R.c._photoRefs[7][0]], ['Thomas Ashworth'], '2026-10-14');
+    const C = JSON.parse(JSON.stringify(R.c._photoRefs[7][0]));
+    const u = both([A], [C]);
+    eq([u.authBy, R.c.invApprovalComplete(u, J)], ['Thomas Ashworth (2026-10-14); Nora Ashworth (2026-10-12)', true], 'the same terms: unioned (the newer copy\'s first), complete, as P22 built it');
+    const D = Object.assign(JSON.parse(JSON.stringify(C)), { authFor: Object.assign({}, KODNER, { fmv: 2400.01 }) });
+    eq(both([A], [D]).authWas.length, 1, '⚠ a value a cent apart is other terms: not unioned');
+    // The approval kept keeps its own stamps and every correction of either copy.
+    const Ax = Object.assign(JSON.parse(JSON.stringify(A)), { authBySetAt: 5, authFixes: [{ at: 5, why: 'Nora dated it the 12th' }] });
+    const Bx = Object.assign(JSON.parse(JSON.stringify(B)), { authFixes: [{ at: 7, why: 'Thomas spelled in full' }] });
+    const k = both([Ax], [Bx]);
+    eq([k.authBy, k.authBySetAt, (k.authFixes || []).map((f) => f.why).sort()], ['Thomas Ashworth', undefined, ['Nora dated it the 12th', 'Thomas spelled in full']],
+      'the one kept carries its own hand-edit stamp (none), and the corrections made on both copies stay on record');
+    // Neither approval is the line's: the newer by its own stamps, never by the one it set aside.
+    const A2 = Object.assign(JSON.parse(JSON.stringify(A)), { authAdds: { 'nora ashworth': 100 } });
+    const B2 = Object.assign(JSON.parse(JSON.stringify(B)), { authAdds: { 'thomas ashworth': 300 }, updatedAt: 1 });
+    const R2 = both([A2], [B2]);
+    eq([R2.authBy, JSON.stringify(R2.authAdds)], ['Nora Ashworth', JSON.stringify({ 'nora ashworth': 100 })], 'fixture: Nora\'s kept (the line\'s), her own stamps only');
+    const E = Object.assign(bare(), { disposition: 'Junk', channel: 'Palm Beach Haulers', updatedAt: B.updatedAt + 5, authBy: 'Margaret Ashworth', approvalDate: '2026-10-13',
+      authFor: { disposition: 'Donate', channel: 'Goodwill Palm Beach', fmv: 2400 }, authAdds: { 'margaret ashworth': 200 } });
+    eq(both([R2], [E]).authBy, 'Margaret Ashworth', '⚠ the newer by its own stamp (200 against Nora\'s 100), never the 300 of the approval it set aside');
+  });
+
+  G('M2 · ⚠⚠ Record the signed request waits for the sheet, and never pins a line the paper did not carry as it reads', () => {
+    const R = rig();
+    R.c.sendApprovalRequest(7); R.c.invMarkRequestSent(7);
+    const st = R.st();
+    R.c._invCloudSeen = {};                         // this device's read of the sheet has not landed (or failed)
+    R.edit('e4', 'channel', 'Habitat ReStore');     // the chairs retyped: no approval on them yet, nothing to ask
+    eq(R.c.invRecordRequestApproval(7), false, '⚠⚠ refused before the inventory is read from the sheet');
+    has(R.log.notices.map((n) => n.m).join(' | '), 'Waiting for the inventory from the sheet: record the signed copy once it has loaded.', 'saying why, as the package does');
+    lacks(R.c._renderInvReleasesCard(R.job(), R.c._jobInvRefs(7)), 'invRecordRequestApproval(7)', 'and the card offers no press');
+    eq(R.c.approvalRequestMovedIds(R.job(), st.req, R.c._photoRefs[7]), [], 'the card\'s flag still claims nothing on a cold device');
+    eq(R.c.approvalRequestMovedIds(R.job(), st.req, R.c._photoRefs[7], true), ['e4'], '⚠ what a signature is recorded against is compared all the same');
+    eq(Object.keys(R.c.approvalRequestPaperTerms(R.job(), st.req, R.c._photoRefs[7], [])), ['e2'], '⚠⚠ the retyped chairs are never pinned to the paper\'s terms');
+    // Opened anyway (a card drawn before), the chairs start unticked.
+    ok(R.c.invRecordApproval(7, { stableIds: ['e2', 'e4'], sentAt: st.sentAt, req: st.req }), 'the dialog, opened by hand');
+    const body = R.asDrawn();
+    has(body, 'id="ia-line-0" checked', 'the dresser ticked');
+    lacks(body, 'id="ia-line-1" checked', '⚠⚠ the chairs unticked on a cold device too');
+    R.el('ia-fid-0').checked = true; R.el('ia-fid-1').checked = true;
+    ok(R.c.invSaveApproval(), 'recorded');
+    eq([R.row('e4').authBy, R.c.invApprovalComplete(R.row('e2'), R.job())], [undefined, true], '⚠⚠ the Goodwill signature never approves Habitat ReStore');
+    // The read landing repaints the card by id, so the press appears without anything else redrawing the tab (found in browser
+    // step 99: a card drawn before the read kept it withheld).
+    const calls = [];
+    const F = lift(['_invRefreshFromCloud'], [], {
+      document: { getElementById: (id) => (id === 'inv-job' ? { value: '7' } : null) }, clearTimeout() {},
+      refreshPhotoRefs: (id, cb) => cb(false), collectionLinesEnsure: () => 0, approvalEnvelopeApply: () => 0,
+      renderInventoryTab: () => calls.push('render'), _deskFoldHeadsRepaint: () => calls.push('heads'),
+      _invRefreshReleases: (id) => calls.push('releases:' + id), _invReadLineRepaint() {}, approvalEnvelopeRefresh() {},
+      _invCloudRetryArm() {}, _invManifestUnread: () => false, _invRenderWhenIdle() {}, _invCloudFailed: {}, _invCloudRetry: { timer: null } });
+    attempt(() => F._invRefreshFromCloud());
+    eq(calls, ['heads', 'releases:7'], '⚠ a read that changed nothing repaints the Releases card by id, never the tab');
+    // A line that changes while the dialog is open, ticked as unchanged: not recorded, and named.
+    const W = rig();
+    W.c.sendApprovalRequest(7); W.c.invMarkRequestSent(7);
+    ok(W.c.invRecordRequestApproval(7), 'opened with both unchanged');
+    W.asDrawn();
+    W.land('e4', (x) => { x.channel = 'Habitat ReStore'; });
+    W.el('ia-fid-0').checked = true; W.el('ia-fid-1').checked = true;
+    ok(W.c.invSaveApproval(), 'the rest recorded');
+    eq([W.row('e4').authBy, !!W.row('e2').authBy], [undefined, true], '⚠⚠ the chairs, changed since the dialog opened, are not');
+    has(text(W.el('ia-body').innerHTML), 'Not recorded: #4 Dining chairs, changed since this dialog opened', 'and named');
+  });
+
+  G('M3 · ⚠⚠ the bulk bar\'s Record approval lists where each line goes, and starts a line changed since the request went unticked', () => {
+    const LS = (o) => R0.c.approvalRequestLastSent(o);
+    const R0 = rig();
+    eq([LS({ req: { a: 1 }, sentAt: '2026-10-18T15:00:00Z', draftedAt: '2026-10-18T14:00:00Z' }), LS({ req: { d: 1 }, draftedAt: '2026-10-19T15:00:00Z', sentAt: '2026-10-18T15:00:00Z', sentReq: { a: 1 } }),
+      LS({ req: { d: 1 }, draftedAt: '2026-10-19T15:00:00Z' }), LS(null)], [{ a: 1 }, { a: 1 }, null, null], 'the last request that went: the sent one, never a draft waiting');
+    const R = rig();
+    R.c.sendApprovalRequest(7); R.c.invMarkRequestSent(7);
+    R.edit('e4', 'channel', 'Habitat ReStore');
+    R.c._invPick = { e2: 1, e4: 1 };
+    ok(R.c.invRecordApproval(7), 'Record approval on the selection');
+    const body = R.asDrawn();
+    has(text(body), '#2 Walnut dresser · Sell · Palm Beach Estate Buyers', 'each line with where it goes and who takes it');
+    has(text(body), '#4 Dining chairs · Donate · Habitat ReStore ⚠ changed after the request went: tick it only if the signed copy shows it as it reads now', '⚠⚠ the chairs flagged');
+    eq((body.match(/id="ia-line-\d+"/g) || []).length, 1, 'a box on the changed line alone: the selection is the rest');
+    lacks(body, '" checked', '⚠⚠ and it starts unticked');
+    R.el('ia-fid-0').checked = true; R.el('ia-fid-1').checked = true;
+    ok(R.c.invSaveApproval(), 'recorded');
+    eq([!!R.row('e2').authBy, R.row('e4').authBy], [true, undefined], '⚠⚠ the dresser recorded; the chairs not');
+    R.c._invPick = { e4: 1 };
+    ok(R.c.invRecordApproval(7), 'the chairs alone');
+    R.asDrawn();
+    R.el('ia-fid-0').checked = true; R.el('ia-fid-1').checked = true;
+    eq(R.c.invSaveApproval(), false, 'unticked: nothing to record');
+    has(R.el('ia-fb').innerHTML, 'Tick a line changed since the request went only if the signed copy shows it as it reads now.', 'by name');
+    R.el('ia-line-0').checked = true;
+    ok(R.c.invSaveApproval(), 'ticked: recorded');
+    eq([R.row('e4').authFor.channel, R.c.invApprovalComplete(R.row('e4'), R.job())], ['Habitat ReStore', true], 'as attested, as it reads now');
+  });
+
+  G('M4 · ⚠⚠ an approved line kept, held or left undecided asks nothing and flags nothing: its approval is history', () => {
+    const R = rig();
+    const J = R.job();
+    R.edit('e1', 'disposition', 'Keep');
+    eq(R.log.asks.length, 0, '⚠⚠ nothing leaves: no question');
+    const e1 = R.row('e1');
+    eq([R.c.invApprovalMoved(e1, J), R.c.invApprovalSetAside(e1, J), R.c.invApprovalComplete(e1, J)], ['dest', true, false], 'it does not cover a kept line; it is set aside');
+    eq([R.c.invApprovalPrevWords(e1, J), R.c.invApprovalMovedText(e1, J), R.c.invApprovalGap(e1, J), R.c.invApprovalPaperText(e1, J)], ['', '', '', ''],
+      '⚠⚠ no "previously approved", no gap, nothing a paper prints');
+    const row = text(R.c._renderInvRow(J, e1));
+    lacks(row, 'previously approved', 'the row carries no warning');
+    lacks(row, 'approval incomplete', 'nor a gap');
+    const led = text((R.c.printDispositionLedger(7, { asHtml: true }) || {}).html);
+    lacks(led, 'Not approved as it now reads', '⚠⚠ the ledger prints nothing of it against a kept item');
+    has(led, '1 Harbor scene oil painting Keep Kodner Galleries —', 'its Authorized by reads —');
+    eq(R.c._invExportValue(e1, { key: 'authBy' }, J), '', 'the workbook and the CSV, nothing');
+    const card = R.card();
+    has(card, '#1 is not leaving the property now: this approval is kept as the record of what was signed.', 'the card says so, apart');
+    lacks(card, '#1 changed since', 'never that it goes on the next request');
+    eq(R.c._invAwaitingApproval(7).map((r) => r.stableId), ['e2', 'e4'], 'and it is on no request');
+    has(text(R.c._invCell(7, e1, { key: 'authBy', header: 'Authorized By', kind: 'manage', edit: 'text', group: 'disp' }, J, 0)),
+      'Signed: Thomas Ashworth; Nora Ashworth (Oct 12, 2026) for Auction · Kodner Galleries at $2,400. Not leaving the property now, so nothing is owed; it covers the line again if it goes back there.',
+      'the record shows what was signed, as history');
+    R.edit('e1', 'disposition', 'Auction');
+    eq([R.log.asks.length, R.c.invApprovalComplete(R.row('e1'), J)], [0, true], 'back to Auction · Kodner: covered again, nothing asked');
+    // Across a selection: Hold asks nothing; an approval with nothing recorded of what it approved is pinned all the same.
+    const H = rig({ rows: [Object.assign(PAINTING(), { authFor: undefined })], stubs: { _invPick: { e1: 1 } } });
+    H.c._invBulkApply(7, 'disposition', 'Hold');
+    eq([H.log.asks.length, H.row('e1').disposition, JSON.stringify(H.row('e1').authFor)], [0, 'Hold', JSON.stringify(KODNER)], '⚠ Hold: no question, the pin recorded');
+    eq(H.c.invApprovalPrevWords(H.row('e1'), H.job()), '', 'and no warning');
+    // Leaving again, elsewhere: the warning is back, since it now goes on the next request.
+    const Y = rig();
+    Y.edit('e1', 'disposition', 'Keep');
+    Y.edit('e1', 'disposition', 'Donate');
+    eq([Y.log.asks.length, Y.c.invApprovalPrevWords(Y.row('e1'), Y.job())], [0, 'previously approved for Auction · Kodner Galleries'], 'leaving for somewhere else: flagged as before');
+  });
+
+  G('M5 · ⚠ on a client\'s own home Record approval opens with the signer blank: typed from the signed copy (REL-05)', () => {
+    const job = ESTATE({ name: 'Robert Hale', svc: 'downsizing_move', matterType: '', executor: '', executorEmail: '', coFiduciaries: [], probateCase: '', deathDate: '', email: 'robert@hale.example' });
+    const gun = ROW('g1', { itemNo: 1, objectName: 'Shotgun', category: 'Firearms', disposition: 'Sell', channel: 'Palm Beach Arms', serial: 'X1', fmv: 300 });
+    const R = rig({ job, rows: [gun], stubs: { _invPick: { g1: 1 } } });
+    ok(R.c.invRecordApproval(7), 'opens on the firearm');
+    eq((R.el('ia-body').innerHTML.match(/id="ia-signer" value="([^"]*)"/) || [])[1], '', '⚠⚠ the signer box blank, never the client\'s name');
+    R.el('ia-signer').value = ''; R.el('ia-date').value = '2026-10-20';
+    eq(R.c.invSaveApproval(), false, 'nothing typed: nothing recorded');
+    ok(!R.c.invApprovalComplete(R.row('g1'), R.job()), 'no written authority for the firearm');
+    R.el('ia-signer').value = 'Robert Hale';
+    ok(R.c.invSaveApproval(), 'typed from the signed copy: recorded');
+  });
+
+  G('M6 · ⚠⚠ a firearm\'s dealer is part of what its approval approved: changed, it asks, and the firearm is held', () => {
+    const asks = [];
+    let answer = false, dealer = 'Jupiter Guns & Pawn';
+    const gun = ROW('g1', { itemNo: 30, objectName: 'Remington 870 shotgun', category: 'Firearms', disposition: 'Distribute', channel: 'Cousin Pete Ashworth',
+      serial: 'RS123', viaDealer: 'Palm Beach Arms', viaDealerBy: 'Anthony Graziano', viaDealerAt: 1, fmv: 400 });
+    const R = rig({ rows: INVENTORY().concat([gun]), roots: ['invSetDealerRoute', 'approvalRequestTerms'],
+      stubs: { window: { open() {}, location: { href: '' }, confirm: (m) => { asks.push(String(m)); return answer; }, prompt: () => dealer } } });
+    const J = R.job();
+    R.c.invApplyApproval(7, [R.row('g1')], ['Thomas Ashworth', 'Nora Ashworth'], '2026-10-15');
+    eq(JSON.stringify(R.row('g1').authFor), JSON.stringify({ disposition: 'Distribute', channel: 'Cousin Pete Ashworth', fmv: 400, dealer: 'Palm Beach Arms' }),
+      '⚠⚠ the approval carries the dealer the paper named');
+    eq(R.c.invTransportBlocked(R.row('g1'), J), '', 'fixture: cleared to carry to Palm Beach Arms');
+    const terms = R.c.approvalRequestTerms([R.row('g1')]);
+    const req = { stableIds: ['g1'], terms: terms };
+    eq(R.c.approvalRequestMovedIds(J, req, R.c._photoRefs[7]), [], 'fixture: a request carrying the shotgun reads it as it went');
+    eq((R.c.approvalRequestPaperTerms(J, req, R.c._photoRefs[7], [])).g1, { disposition: 'Distribute', channel: 'Cousin Pete Ashworth', fmv: 400, dealer: 'Palm Beach Arms' },
+      '⚠ a signature off the request is pinned with the dealer it printed');
+    eq(R.c.invSetDealerRoute(7, 'g1', true), false, 'another dealer, Cancel: nothing changed');
+    eq(asks.length, 1, 'asked once');
+    has(asks[0], 'for Distribute · Cousin Pete Ashworth, through Palm Beach Arms: this change goes on the next request.', 'naming what was approved');
+    has(asks[0], 'Going to Distribute · Cousin Pete Ashworth, through Jupiter Guns & Pawn, the signed approval no longer covers it, so it is not cleared to carry until it is approved again.', 'and where the change leaves it');
+    eq(R.row('g1').viaDealer, 'Palm Beach Arms', 'the route as it was');
+    answer = true;
+    ok(R.c.invSetDealerRoute(7, 'g1', true), 'OK: recorded');
+    eq([R.row('g1').viaDealer, R.c.invTransportBlocked(R.row('g1'), J), R.c.invApprovalComplete(R.row('g1'), J)], ['Jupiter Guns & Pawn', 'authority', false],
+      '⚠⚠ held: nobody signed for Jupiter Guns & Pawn');
+    has(R.c.invTransportReason(R.row('g1'), J), 'for Distribute · Cousin Pete Ashworth, through Palm Beach Arms', 'the reason names the dealer approved');
+    ok(R.c.approvalRequestTerms([R.row('g1')]) !== terms, 'a request carries the dealer too: a change after it went is a change');
+    eq(R.c.approvalRequestMovedIds(J, req, R.c._photoRefs[7]), ['g1'], '⚠⚠ and the request that carried Palm Beach Arms reads it as changed');
+    // An approval with nothing recorded of what it approved: the change asks, and pins it to the dealer it read just before.
+    const P = rig({ rows: [Object.assign(JSON.parse(JSON.stringify(gun)), { authBy: BOTH, approvalDate: '2026-10-15' })], roots: ['invSetDealerRoute'],
+      stubs: { window: { open() {}, location: { href: '' }, confirm: (m) => { asks.push(String(m)); return true; }, prompt: () => 'Jupiter Guns & Pawn' } } });
+    asks.length = 0;
+    ok(P.c.invSetDealerRoute(7, 'g1', true), 'a pinless approval: the dealer changed');
+    eq([asks.length, JSON.stringify(P.row('g1').authFor)], [1, JSON.stringify({ disposition: 'Distribute', channel: 'Cousin Pete Ashworth', fmv: 400, dealer: 'Palm Beach Arms' })],
+      '⚠ asked, and pinned to the dealer it was approved through');
+    ok(!P.c.invApprovalComplete(P.row('g1'), P.job()), 'so the change is seen');
+    // The dealer recorded only after the signature: not on the signed paper, so held (bundle C7, the stricter reading).
+    const late = Object.assign(JSON.parse(JSON.stringify(gun)), { stableId: 'g2', itemNo: 31, viaDealer: '', authBy: BOTH, approvalDate: '2026-10-15',
+      authFor: { disposition: 'Distribute', channel: 'Cousin Pete Ashworth', fmv: 400, dealer: '' } });
+    ok(R.c.invApprovalComplete(Object.assign({}, late, { viaDealer: '' }), J), 'fixture: approved with no dealer named');
+    eq(R.c.invApprovalMoved(Object.assign({}, late, { viaDealer: 'Palm Beach Arms' }), J), 'dest', '⚠ a dealer named after the signature is not on the signed paper');
+    // A sale names its dealer in Channel / Recipient already: no dealer of its own in the terms.
+    ok(!('dealer' in R.c.invApprovalTermsOf(Object.assign({}, gun, { disposition: 'Sell', channel: 'Palm Beach Arms' }))), 'a sale\'s terms carry no separate dealer');
+    // Taken off: the question says the approval names the dealer.
+    R.c.invApplyApproval(7, [R.row('g1')], ['Thomas Ashworth', 'Nora Ashworth'], '2026-10-16');
+    ok(R.c.invApprovalComplete(R.row('g1'), J), 'fixture: approved again, for Jupiter');
+    asks.length = 0; answer = false;
+    R.c.invSetDealerRoute(7, 'g1', false);
+    has(asks[0] || '', 'Its written approval names Jupiter Guns & Pawn: recorded again through another dealer, it goes on the next request.', 'taking the route off says so');
+  });
+
+  G('M7 · one definition each: the set-aside rule and the last request that went', () => {
+    const callers = (name) => [...ALL_FNS].filter((n) => n !== name && (() => { try { return new RegExp('\\b' + name + '\\(').test(noComments(fn(n))); } catch (e) { return false; } })()).sort();
+    ['invApprovalSetAside', 'approvalRequestLastSent'].forEach((n) => eq((SRC.match(new RegExp('\\nfunction ' + n + '\\(', 'g')) || []).length, 1, n + ' is defined once'));
+    eq(callers('invApprovalSetAside'), ['_invApprovalReadHtml', '_invBulkApply', '_invEdit', '_renderInvReleasesCard', 'invApprovalGap', 'invApprovalMovedText', 'invApprovalPaperText', 'invApprovalPrevWords'],
+      '⚠ every word about a moved approval, the papers, the card and both questions ask it');
+    eq(callers('approvalRequestLastSent'), ['invRecordApproval'], 'the bulk bar\'s Record approval reads the last request that went');
+    // The merge's rule is the same text in the app and on the server.
+    const body = (src, name) => { const m = src.match(new RegExp('function ' + name + '\\([^)]*\\) \\{[\\s\\S]*?\\n\\}')); return m ? m[0] : ''; };
+    const conflict = (t) => (t.match(/  var _tk = function[\s\S]*?return cx;\n  \}/) || [''])[0];
+    const app = conflict(body(SRC, 'invMergeApprovals')), srv = conflict(body(GS_INV, '_invMergeApprovals'));
+    ok(app.length > 1500, 'fixture: the app\'s rule read (' + app.length + ')');
+    eq(srv, app, '⚠⚠ the server carries the app\'s rule byte for byte');
+    // The stale banner names what an older deployment's merge still does.
+    has(sandbox({ vars: ['BACKEND_FEATURE_COST'] }).BACKEND_FEATURE_COST.version, 'two devices\u2019 signatures given for different destinations can be counted as one approval',
+      'the banner names the merge an older deployment still runs');
+  });
+
   G('L · one definition each, read where it is needed; the deployment that carries it', () => {
     const callers = (name) => [...ALL_FNS].filter((n) => n !== name && (() => { try { return new RegExp('\\b' + name + '\\(').test(noComments(fn(n))); } catch (e) { return false; } })()).sort();
     ['invApprovalMoved', 'invApprovalValueMoved', 'invApprovalTermsOf', 'approvalLineDestKey', '_invTermsMoved', 'invApprovalPaperText', 'approvalRequestMovedIds',
@@ -540,8 +791,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(callers('approvalRequestMovedIds'), ['approvalEnvelopeChanged', 'approvalRequestChanged', 'approvalRequestPaperTerms', 'approvalRequestState', 'invRecordApproval'],
       'the request\'s changed lines: the draft and the sent request, the card\'s state, the envelope, and Record the signed request');
     const mv = callers('invApprovalMoved');
-    ['invApprovalComplete', 'invApprovalMissing', 'invApprovalWithSigners', 'invApplyApproval', 'invApprovalPrevWords', 'invApprovalMovedText', 'printApprovalRequest',
-     '_renderInvReleasesCard', '_invBulkApply', '_invEdit'].forEach((n) => ok(mv.indexOf(n) >= 0, 'invApprovalMoved is read by ' + n));
+    ['invApprovalComplete', 'invApprovalMissing', 'invApprovalWithSigners', 'invApplyApproval', 'invApprovalPrevWords', 'invApprovalMovedText',
+     '_renderInvReleasesCard', '_invBulkApply', '_invEdit', 'invSetDealerRoute', 'invApprovalSetAside'].forEach((n) => ok(mv.indexOf(n) >= 0, 'invApprovalMoved is read by ' + n));
+    // RESTATED (P5 review): the request's row reads the words, which say nothing on a line not leaving.
+    ok(callers('invApprovalPrevWords').indexOf('printApprovalRequest') >= 0, 'the request\'s row reads invApprovalPrevWords');
     eq(callers('approvalRequestSig').length >= 1 && !/destOnly|destSig/.test(noComments(SRC).replace(/\/\/.*$/gm, '')), true, '⚠ the DocuSign build\'s destSig is gone: the terms carry where each line went');
     lacks(noComments(fn('approvalRequestChanged')), 'draftedAt', '⚠⚠ no clock in the changed lines');
     lacks(noComments(fn('approvalEnvelopeChanged')), 'updatedAt', 'nor in the envelope\'s');

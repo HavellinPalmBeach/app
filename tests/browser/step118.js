@@ -8,6 +8,12 @@
 // asks nothing; past it, asks. C: the record: Authorized By read, never typed; Correct… with a reason. D: Send request and I've sent
 // it, then the chairs retyped to another charity on the row: the card and the Releases bar say so; Record the signed request starts
 // it unticked. E: the bulk bar over the mixer and the approved painting offers no Record approval; with the dresser, it does.
+// The review's six findings (2026-10-27), through the real controls: G: the bulk bar's Record approval over the retyped chairs lists
+// where they go now, flags them and starts them unticked. H: the painting moved to Keep asks nothing and carries no warning; its
+// record shows the approval as history; back to Auction, covered again. I: a firearm approved for one dealer: Change dealer asks,
+// Cancel keeps it, OK holds it at authority. J: a client's own home: Record approval opens with the signer blank. K: the sheet
+// unreachable after a reload: Record the signed request is not offered, and is once the read lands (the merge, the sixth, is a
+// test's: approval-pinned M1).
 // F: overflow at 1440 and 390, zero errors.
 //
 //   NODE_PATH=/path/to/node_modules node tests/browser/step118.js [/abs/path/to/havellin.html]
@@ -28,8 +34,9 @@ const EST = 11801;
   try {
     b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
     const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 }, timezoneId: 'America/New_York' });
-    let sheet = {};
+    let sheet = {}, sheetDown = false;
     await ctx.route(SYNC + '**', async (r) => {
+      if (sheetDown) return r.abort();   // the sheet unreachable (section K): every request to the configured URL fails
       const req = r.request();
       const json = (o) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(o) });
       if (req.method() === 'POST') {
@@ -46,8 +53,12 @@ const EST = 11801;
     p.setDefaultTimeout(10000);
     const errs = []; p.on('pageerror', (e) => errs.push(String(e)));
     // What the page asked, and how this step answers it (true: OK, false: Cancel).
-    const dialogs = []; let answer = true;
-    p.on('dialog', async (d) => { dialogs.push(d.type() + ': ' + d.message()); if (answer) await d.accept(); else await d.dismiss(); });
+    const dialogs = []; let answer = true, promptAnswer = '';
+    p.on('dialog', async (d) => {
+      dialogs.push(d.type() + ': ' + d.message());
+      if (d.type() === 'prompt') { await d.accept(promptAnswer); return; }
+      if (answer) await d.accept(); else await d.dismiss();
+    });
     await p.goto(APP); await p.waitForTimeout(1600);
     await p.evaluate((u) => {
       SHEETS_SYNC_URL = u;
@@ -214,6 +225,108 @@ const EST = 11801;
       await p.waitForTimeout(500);
       has(await p.evaluate((id) => { const el = document.getElementById('inv-bulk-' + id); return el ? el.innerHTML : ''; }, EST), 'invRecordApproval(', 'with the dresser, it is offered');
       await p.evaluate(() => { _invPick = {}; renderInventoryTab(); });
+    });
+
+    // ── G ───────────────────────────────────────────────────────────────────
+    const bulkBtn = '#inv-bulk-' + EST + ' button[onclick="invRecordApproval(' + EST + ')"]';
+    const pickBox = (id) => '#inv-row-' + id + ' input[onchange="_invTogglePick(\'' + id + '\',this)"]';
+    await section('G. the bulk bar\'s Record approval over the chairs retyped since the request went: where they go now, flagged, unticked', async () => {
+      await press(pickBox('c'), 'the chairs\' pick box');
+      await press(bulkBtn, 'the bulk bar\'s Record approval');
+      const sel = await txt('#ia-sel-lines');
+      has(sel, 'Dining chairs · Donate · Habitat ReStore', '⚠ each line with where it goes and who takes it');
+      has(sel, 'changed after the request went: tick it only if the signed copy shows it as it reads now', '⚠⚠ the chairs flagged');
+      eq(await p.evaluate(() => Array.from(document.querySelectorAll('#ia-sel-lines input[type=checkbox]')).map((x) => x.checked)), [false], '⚠⚠ their box starts unticked');
+      await press('#ia-fid-0', 'Thomas\'s signature'); await press('#ia-fid-1', 'Nora\'s signature');
+      await press('#ia-save-btn', 'Record approval');
+      has(await txt('#ia-fb'), 'Not recorded: no line is ticked.', 'unticked: nothing recorded');
+      eq((await line('c')).authBy, undefined, '⚠⚠ the Goodwill paper never approves Habitat ReStore');
+      await press('#inv-approval-modal button[onclick="closeInvApproval()"]', 'Cancel');
+      await press(pickBox('c'), 'the chairs\' pick box, off');
+    });
+
+    // ── H ───────────────────────────────────────────────────────────────────
+    await section('H. the painting kept: nothing asked, no warning; its record shows the approval as history; back to Auction, covered', async () => {
+      dialogs.length = 0; answer = false;
+      await p.selectOption(dispSel('a'), 'Keep'); await p.waitForTimeout(900);
+      eq(dialogs.length, 0, '⚠⚠ kept: nothing asked');
+      eq((await line('a')).disposition, 'Keep', 'written');
+      lacks(await txt('#inv-row-a'), 'previously approved', '⚠⚠ the row carries no warning');
+      if (!(await vis('#inv-row-a ~ * .inv-auth-aside')) && !(await vis('.inv-auth-aside'))) await press('#inv-row-a .inv-c-open', '▾ the painting\'s record');
+      has(await txt('.inv-auth-aside'), 'Not leaving the property now, so nothing is owed; it covers the line again if it goes back there.', 'the record shows it as history');
+      await openBar('releases', EST);
+      has(await txt('#inv-releases'), '#1 is not leaving the property now: this approval is kept as the record of what was signed.', 'the card says so, apart');
+      await p.selectOption(dispSel('a'), 'Auction'); await p.waitForTimeout(900);
+      eq(dialogs.length, 0, 'back to Auction: nothing asked');
+      ok(await complete('a'), 'and the approval covers it again');
+    });
+
+    // ── I ───────────────────────────────────────────────────────────────────
+    await section('I. a firearm approved through one dealer: Change dealer asks; Cancel keeps it; OK holds it at authority', async () => {
+      await p.evaluate(([EST, T0]) => {
+        _photoRefs[EST].push({ stableId: 'g', label: 'inventory', roomIdx: 0, seq: 9, status: 'uploaded', itemNo: 30, objectName: 'Remington 870 shotgun', category: 'Firearms',
+          disposition: 'Distribute', channel: 'Cousin Pete Ashworth', serial: 'RS123', viaDealer: 'Palm Beach Arms', viaDealerBy: 'Anthony Graziano', viaDealerAt: T0, fmv: 400,
+          ts: T0, updatedAt: T0, filename: 'HVL_' + EST + '_INV_g.jpg', driveFileId: 'f-g', namedBy: 'desk', reviewed: true,
+          authBy: 'Thomas Ashworth; Nora Ashworth', approvalDate: '2026-10-12', authFor: { disposition: 'Distribute', channel: 'Cousin Pete Ashworth', fmv: 400, dealer: 'Palm Beach Arms' } });
+        savePhotoRefs(EST); renderInventoryTab();
+      }, [EST, T0]);
+      await p.waitForTimeout(600);
+      const blocked = () => p.evaluate((id) => invTransportBlocked((_photoRefs[id] || []).find((x) => x.stableId === 'g'), jobs.find((x) => x.id === id)), EST);
+      eq(await blocked(), '', 'fixture: cleared to carry to Palm Beach Arms');
+      if (!(await vis('button[onclick="invSetDealerRoute(' + EST + ',\'g\',true)"]'))) await press('#inv-row-g .inv-c-open', '▾ the shotgun\'s record');
+      dialogs.length = 0; answer = false; promptAnswer = 'Jupiter Guns & Pawn';
+      await press('button[onclick="invSetDealerRoute(' + EST + ',\'g\',true)"]', 'Change dealer');
+      eq(dialogs.length, 2, 'the dealer asked for, then the question');
+      has(dialogs[1] || '', 'for Distribute · Cousin Pete Ashworth, through Palm Beach Arms: this change goes on the next request.', '⚠⚠ naming the dealer approved');
+      has(dialogs[1] || '', 'so it is not cleared to carry until it is approved again', 'in a firearm\'s words');
+      eq((await line('g')).viaDealer, 'Palm Beach Arms', '⚠ Cancel: the route as it was');
+      dialogs.length = 0; answer = true;
+      await press('button[onclick="invSetDealerRoute(' + EST + ',\'g\',true)"]', 'Change dealer');
+      eq((await line('g')).viaDealer, 'Jupiter Guns & Pawn', 'OK: recorded');
+      eq(await blocked(), 'authority', '⚠⚠ held: nobody signed for Jupiter Guns & Pawn');
+      has(await txt('#inv-row-g'), 'previously approved for Distribute · Cousin Pete Ashworth, through Palm Beach Arms', 'the row says so');
+    });
+
+    // ── J ───────────────────────────────────────────────────────────────────
+    const LIV = 11802;
+    await section('J. a client\'s own home: Record approval over a firearm opens with the signer blank (REL-05)', async () => {
+      await p.evaluate(([LIV, T0]) => {
+        jobs.unshift({ id: LIV, hvlId: 'HVL-2610-L118', name: 'Robert Hale', svc: 'downsizing_move', addr: '9 Ocean Blvd', city: 'Palm Beach', zip: '33480', email: 'robert@hale.example',
+          docTier: 'contents', status: 'active', won: true, wonAt: '2026-09-25', approved: true, tc: 'Ashley Jerome', created: '2026-09-20', start: '2026-10-06', activatedOn: '2026-10-05',
+          agrApproved: true, agrSent: true, agrSigned: true, driveFolder: 'https://drive.google.com/drive/folders/ROOTL118', docState: {},
+          payments: [{ uid: 'l1', stage: 'deposit', amount: 5000, receivedOn: '2026-10-01', method: 'wire', clearedOn: '2026-10-01' }] });
+        _photoRefs[LIV] = [{ stableId: 'h', label: 'inventory', roomIdx: 0, seq: 1, status: 'uploaded', itemNo: 1, objectName: 'Shotgun', category: 'Firearms', disposition: 'Sell',
+          channel: 'Palm Beach Arms', serial: 'X1', fmv: 300, ts: T0, updatedAt: T0, filename: 'HVL_' + LIV + '_INV_h.jpg', driveFileId: 'f-h', namedBy: 'desk', reviewed: true }];
+        savePhotoRefs(LIV); saveJobs();
+      }, [LIV, T0]);
+      await toDesk(LIV);
+      await press('#inv-row-h input[onchange="_invTogglePick(\'h\',this)"]', 'the shotgun\'s pick box');
+      await press('#inv-bulk-' + LIV + ' button[onclick="invRecordApproval(' + LIV + ')"]', 'the bulk bar\'s Record approval');
+      ok(await vis('#ia-signer'), 'the signer box on screen');
+      eq(await val('#ia-signer'), '', '⚠⚠ blank: typed from the signed copy, never the client\'s name');
+      await press('#ia-save-btn', 'Record approval, nothing typed');
+      has(await txt('#ia-fb'), 'Enter who signed the approval, as signed.', 'refused');
+      await press('#inv-approval-modal button[onclick="closeInvApproval()"]', 'Cancel');
+      await p.evaluate(() => { _invPick = {}; });
+    });
+
+    // ── K ───────────────────────────────────────────────────────────────────
+    await section('K. the sheet unreachable after a reload: Record the signed request is not offered until the inventory is read', async () => {
+      await p.evaluate((u) => { localStorage.setItem('hav_sheets_url', u); }, SYNC);
+      sheetDown = true;
+      await p.reload(); await p.waitForTimeout(2200);
+      await toDesk(EST);
+      await openBar('releases', EST);
+      const st = await p.evaluate((id) => { const j = jobs.find((x) => x.id === id); return JSON.parse(JSON.stringify(((j || {}).docState || {}).approvalRequest || null)); }, EST);
+      ok(!!(st && st.sentAt), 'fixture: the request went before the reload');
+      ok(await p.evaluate((id) => !_invCloudSeen[id], EST), 'fixture: this device has not read the inventory from the sheet');
+      ok((await p.locator('#inv-releases').count()) === 1, 'the Releases card is drawn from this device\'s copy');
+      lacks(await p.evaluate(() => { const el = document.getElementById('inv-releases'); return el ? el.innerHTML : ''; }), 'invRecordRequestApproval(', '⚠⚠ no Record the signed request until the inventory is read');
+      // The sheet back: the desk asks again by itself (every 15 s while it shows the client), and the read repaints the card.
+      sheetDown = false;
+      await p.waitForTimeout(17000);
+      ok(await p.evaluate((id) => !!_invCloudSeen[id], EST), 'the sheet read once it is reachable again');
+      ok(await vis('#inv-releases button[onclick="invRecordRequestApproval(' + EST + ')"]'), '⚠ and Record the signed request is offered, with nothing else redrawing the tab');
     });
 
     // ── F ───────────────────────────────────────────────────────────────────

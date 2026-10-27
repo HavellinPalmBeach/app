@@ -801,7 +801,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const dlg = code(fn('invRecordApproval'));
     // RESTATED 2026-10-27 (P5, REL-02): each ticked except a line changed since the request went (approvalRequestMovedIds).
     has(dlg, 'id="ia-line-\' + i + \'"\' + (ch ? \'\' : \' checked\')', 'each ticked, except one changed since');
-    has(dlg, 'approvalRequestMovedIds(job, opt.req', '…read off what the request carried');
+    // RESTATED 2026-10-27 (P5, found on review): the request opened from, else the last one that went (the bulk bar's selection).
+    has(dlg, 'var _lastReq = fromReq ? (opt.req || null) : approvalRequestLastSent(', '…read off what the request carried');
+    has(dlg, 'approvalRequestMovedIds(job, _lastReq, ', '…line by line');
     eq(sandbox({ vars: ['INV_REQ_UNTICK_TXT'] }).INV_REQ_UNTICK_TXT, 'Untick any line the signed copy struck out.', 'the dialog says to untick what the signed copy struck out');
     has(dlg, 'Date of the signed approval', 'the date on the paper');
     has(dlg, '>Record approval</button>', 'Record approval');
@@ -814,7 +816,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       attempt(() => A5.invApprovalValueMoved(2000, 2400, { id: 7 })).val]), [true, true, true, true, false], 'past $500, the appraisal threshold, or a quarter more');
     has(code(fn('_invEdit')), 'window.confirm(invApprovalChangeAsk(', 'a person\'s change asks first');
     has(code(fn('invApprovalComplete')), 'invApprovalMoved(ref, job)', 'and the approval stops counting, so the item goes on the next request');
-    has(t, 'Moving an approved item, or raising its value past $500, the threshold or a quarter, asks first: it goes on the next request.', 'as the page says');
+    // RESTATED (P5's review): a kept item asks nothing (invApprovalSetAside), so the page says sending it elsewhere asks.
+    has(t, 'Sending an approved item elsewhere, or raising its value past $500, the threshold or a quarter, asks first: it goes on the next request. Keeping it asks nothing.', 'as the page says');
+    has(code(fn('_invEdit')), '!invApprovalSetAside(ref, _apJob) && !window.confirm(', 'a kept item asks nothing');
     // A partial approval is recorded and the rest stay on the next request.
     has(dlg, 'the lines stay on the next request until all', 'one representative’s signature is kept, the items stay on the next request');
     has(t, 'Only one of two representatives signed? Record it anyway. Those items stay on the next request until everyone has signed.', 'as the page says');

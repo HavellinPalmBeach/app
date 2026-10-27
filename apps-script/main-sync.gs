@@ -123,9 +123,11 @@
 // ⚠ 2026-10-27d (the desk audit's P5, "An approval means what was signed"; Anthony's Ask 5): saveInventory.gs's sticky list and
 // approval merge carry what a recorded approval approved (`authFor`: where the line was going, who was taking it and its value
 // when it was signed), the approvals a newer one replaced (`authWas`) and the corrections made with a reason (`authFixes`), and
-// the merge keeps them with the approval they belong to (_invMergeApprovals' base). No action or type changes. Until it is live,
-// another device's older copy of a line saved over a newer one can drop them from the sheet: a device that then loads the line
-// from the sheet reads its approval as covering wherever the line goes, until the device that recorded it saves again.
+// the merge keeps them with the approval they belong to (_invMergeApprovals' base), and never joins the signers of two copies
+// approved for different terms (its review: one approval is kept, the other set aside in `authWas`). No action or type changes.
+// Until it is live, another device's older copy of a line saved over a newer one can drop them from the sheet: a device that then
+// loads the line from the sheet reads its approval as covering wherever the line goes, until the device that recorded it saves
+// again; and the sheet's merge can add a signature given for one destination to an approval for another.
 var BACKEND_VERSION = '2026-10-27d';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',

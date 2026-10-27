@@ -237,7 +237,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const V = [LINE('l', 1, { objectName: 'Browning rifle', category: 'Firearms', disposition: 'Distribute', channel: 'Sarah Ellsworth (daughter)' })];
     const W = desk(['invRecordApproval', 'invSaveApproval'], LIVING(), V, { _invPick: { l: 1 }, _todayStr: () => '2026-10-03' });
     W.invRecordApproval(2);
-    has(W.__doc.getElementById('ia-body').innerHTML, 'id="ia-signer" value="Margaret Ellsworth"', 'a living client: who signed, prefilled with the client');
+    // RESTATED 2026-10-27 (P5's review, REL-05): the box opens blank; prefilled, one press recorded written authority for a firearm.
+    has(W.__doc.getElementById('ia-body').innerHTML, 'id="ia-signer" value=""', 'a living client: who signed, typed from the signed copy (the box opens blank)');
     lacks(W.__doc.getElementById('ia-body').innerHTML, 'ia-note', 'and no fiduciary note');
     W.__doc.__seed('ia-signer', 'Margaret Ellsworth'); W.__doc.__seed('ia-date', '2026-10-03');
     ok(W.invSaveApproval(), 'recorded');

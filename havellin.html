@@ -1476,7 +1476,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.27 · 1:11pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.27 · 3:55pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6469,8 +6469,10 @@ var BACKEND_NEEDS_TYPES = ['saveMedia', 'saveInventory', 'job', 'saveAllJobs', '
 // confidence with its source *Listing survey* (the server's _avSurvey, AGENT_VALUE_SURVEY_MIN). An older deployment sends no survey,
 // so such a line stays low, marked unsure, and prints "general estimate".
 // 2026-10-27d (P5): saveInventory.gs keeps what a recorded approval approved (authFor), the approvals it replaced (authWas) and
-// its corrections (authFixes) through a stale device's save, with the approval they belong to. An older deployment can drop
-// them on the sheet, and a device loading the line from there reads the approval as covering it wherever it goes.
+// its corrections (authFixes) through a stale device's save, with the approval they belong to, and never joins the signers of two
+// copies approved for different terms (its review). An older deployment can drop them on the sheet, and a device loading the line
+// from there reads the approval as covering it wherever it goes; its merge can also add a signature given for one destination to
+// an approval for another.
 var BACKEND_MIN_VERSION = '2026-10-27d';
 var _backendVersion = null;
 // The actions the deployment says it has (2026-10-26c), once the version probe answers; null until then. A route the app
@@ -6535,7 +6537,7 @@ var BACKEND_FEATURE_COST = {
   deleteJob:     'a client deleted here comes back from the other device',
   // One line for any deployment older than BACKEND_MIN_VERSION, so it names the newest gap first and says
   // which vintage the older one belongs to (the banner's title prints the version that answered).
-  version:       'a release approval recorded on one device can lose, on the sheet, the record of where the item was going, who was taking it and its value when it was signed, so another device reads the approval as covering the item wherever it goes now; on a deployment older than 2026-10-27, an item Agent Two researched and found no sale for stays marked unsure, and its paper reads general estimate, however many close listings it counted; on a deployment older than 2026-10-26b, a search page, or a sale whose price was not shown, can stand as a sold comparable, so a researched figure resting on one prints \u201cauction comps\u201d; a long note from Agent Two stops mid-sentence; and neither agent grades an item\u2019s condition; on a deployment older than 2026-10-26, the agents never move to a newer model by themselves (Agent One still runs on the older Opus 5), Agent Two never looks at the photograph of an item whose name is a guess or fixes a wrong category, a figure with no sale behind it prints as \u201cauction comps\u201d, and one slow request can mark a whole batch \u201cnot valued\u201d or lose a batch of names; on a deployment older than 2026-10-25b, a name you type or review on the desk (a wooden mirror retyped as Restoration Hardware) can come back from Agent Two as the generic thing and be valued as that, and a brand the crew says at the camera is not put into the name; on a deployment older than 2026-10-25, Agent Two flags a name it disagrees with (\u201cName may be wrong\u201d) instead of correcting it, puts a note on nearly every item it values (no condition recorded, a rough count, a search that ran short), and Agent One files everyday dishes as collectibles; on a deployment older than 2026-10-24, a blank line added to a photograph already named (Another item in this photo) makes Agent One read the whole photograph again, so every object in it goes on the list a second time, and its names carry a count (\u201capprox. 7 in stack\u201d) that the Qty box contradicts once corrected; on a deployment older than 2026-10-19b, a client\u2019s inventory reset in the Apps Script editor (resetInventoryConfirm) is undone by the first device that saves a line from before it, unless every device reloads first; on a deployment older than 2026-10-16, an incident reported on one device, or a key or fob received there while another device records a handoff, can be dropped when the sheet merges the job (the Incidents and Keys & access cards\u2019 lists are not yet merged entry by entry); on a deployment older than 2026-10-06, two devices\u2019 release signers are not merged and the client\u2019s workbook rounds its money; on a deployment older than 2026-10-05, a co-executor or co-trustee is not put on the DocuSign envelope beside the client, so they sign a printed copy of the agreement and the page they signed has to be filed from the timeline; on a deployment older than 2026-10-03, a co-trustee, a beneficiary, a signed copy filed to Drive, a find on site or a proceeds statement added on one device can be dropped by another device saving an older copy of the job, and the client\u2019s inventory workbook heads a trust\u2019s net proceeds \u201cNet to Estate\u201d; on a deployment older than 2026-10-01, File signed copy adds a second copy of the signed agreement to the client\u2019s Agreement folder instead of replacing the one there; on a deployment older than 2026-09-30b, a payment voided or marked cleared on one device can come back as it was from another device that changed the same payment before reloading, and count again; a firearm\u2019s serial, recipient or dealer route, recorded on one device, can be dropped from the sheet by another device\u2019s older copy of the item, until the first device next saves the inventory; and on a deployment older than 2026-09-30, two people editing different parts of one job (a vendor quote here, the team there) can also undo each other\u2019s work, a damaged store tab is emptied by the next save instead of refused, and Agent One can stop mid-answer on a busy photograph',
+  version:       'a release approval recorded on one device can lose, on the sheet, the record of where the item was going, who was taking it and its value when it was signed, so another device reads the approval as covering the item wherever it goes now, and two devices\u2019 signatures given for different destinations can be counted as one approval; on a deployment older than 2026-10-27, an item Agent Two researched and found no sale for stays marked unsure, and its paper reads general estimate, however many close listings it counted; on a deployment older than 2026-10-26b, a search page, or a sale whose price was not shown, can stand as a sold comparable, so a researched figure resting on one prints \u201cauction comps\u201d; a long note from Agent Two stops mid-sentence; and neither agent grades an item\u2019s condition; on a deployment older than 2026-10-26, the agents never move to a newer model by themselves (Agent One still runs on the older Opus 5), Agent Two never looks at the photograph of an item whose name is a guess or fixes a wrong category, a figure with no sale behind it prints as \u201cauction comps\u201d, and one slow request can mark a whole batch \u201cnot valued\u201d or lose a batch of names; on a deployment older than 2026-10-25b, a name you type or review on the desk (a wooden mirror retyped as Restoration Hardware) can come back from Agent Two as the generic thing and be valued as that, and a brand the crew says at the camera is not put into the name; on a deployment older than 2026-10-25, Agent Two flags a name it disagrees with (\u201cName may be wrong\u201d) instead of correcting it, puts a note on nearly every item it values (no condition recorded, a rough count, a search that ran short), and Agent One files everyday dishes as collectibles; on a deployment older than 2026-10-24, a blank line added to a photograph already named (Another item in this photo) makes Agent One read the whole photograph again, so every object in it goes on the list a second time, and its names carry a count (\u201capprox. 7 in stack\u201d) that the Qty box contradicts once corrected; on a deployment older than 2026-10-19b, a client\u2019s inventory reset in the Apps Script editor (resetInventoryConfirm) is undone by the first device that saves a line from before it, unless every device reloads first; on a deployment older than 2026-10-16, an incident reported on one device, or a key or fob received there while another device records a handoff, can be dropped when the sheet merges the job (the Incidents and Keys & access cards\u2019 lists are not yet merged entry by entry); on a deployment older than 2026-10-06, two devices\u2019 release signers are not merged and the client\u2019s workbook rounds its money; on a deployment older than 2026-10-05, a co-executor or co-trustee is not put on the DocuSign envelope beside the client, so they sign a printed copy of the agreement and the page they signed has to be filed from the timeline; on a deployment older than 2026-10-03, a co-trustee, a beneficiary, a signed copy filed to Drive, a find on site or a proceeds statement added on one device can be dropped by another device saving an older copy of the job, and the client\u2019s inventory workbook heads a trust\u2019s net proceeds \u201cNet to Estate\u201d; on a deployment older than 2026-10-01, File signed copy adds a second copy of the signed agreement to the client\u2019s Agreement folder instead of replacing the one there; on a deployment older than 2026-09-30b, a payment voided or marked cleared on one device can come back as it was from another device that changed the same payment before reloading, and count again; a firearm\u2019s serial, recipient or dealer route, recorded on one device, can be dropped from the sheet by another device\u2019s older copy of the item, until the first device next saves the inventory; and on a deployment older than 2026-09-30, two people editing different parts of one job (a vendor quote here, the team there) can also undo each other\u2019s work, a damaged store tab is emptied by the next save instead of refused, and Agent One can stop mid-answer on a busy photograph',
   preVersion:    'it predates the version check itself (2026-09-09), so client PDFs, photographs, DocuSign, Stripe and Agent One may all be missing as well'
 };
 
@@ -29115,6 +29117,58 @@ function _invApprovalSetAt(it) {
 }
 function invMergeApprovals(win, lose) {
   if (!win || !lose) return null;
+  // ⚠⚠ TWO APPROVALS OF DIFFERENT TERMS ARE NEVER ONE APPROVAL (P5, found on review): Nora's signature recorded on one iPad for
+  // Auction · Kodner Galleries and Thomas's on another, whose older copy had the line re-routed to Distribute · Cousin Pete, were
+  // unioned onto one approval, which then read complete for the cousin: a gift Nora never signed for. Where both copies carry
+  // names and what they approved (`authFor`), and the terms differ (where it goes, who takes it as a name, a firearm's dealer, the
+  // value to the cent: an exact comparison, kept identical on the server), the signers are not combined. The line keeps one
+  // approval with its names and terms: the one whose terms are the line's as merged (where it goes, who takes it, its value),
+  // else the newer one (its latest name added, or its hand edit); the other goes into `authWas`, marked `merged`, as the record of
+  // what was signed. So the line reads partial, or as previously approved for other terms, and goes on the next request.
+  var _tk = function(t, line) {
+    var v = parseFloat(t && t.fmv);
+    var f = (t && t.fmv !== '' && t.fmv != null && !isNaN(v)) ? String(Math.round(v * 100) / 100) : '';
+    var nm = function(s){ return String(s == null ? '' : s).replace(/\s*\([^()]*\)\s*$/, '').replace(/\s+/g, ' ').trim().toLowerCase(); };
+    return [String((t && t.disposition) || ''), nm(t && t.channel), f].join('|') + (line ? '' : '|' + nm(t && t.dealer));
+  };
+  var _wf = win.authFor, _lf = lose.authFor;
+  if (String(win.authBy || '').trim() && String(lose.authBy || '').trim() && _wf && _lf && typeof _wf === 'object' && typeof _lf === 'object'
+      && _tk(_wf) !== _tk(_lf)) {
+    var _st = function(it){
+      var s = _invApprovalSetAt(it), a = it.authAdds || {};
+      for (var q in a) if (Object.prototype.hasOwnProperty.call(a, q) && Number(a[q]) > s) s = Number(a[q]);
+      return s;
+    };
+    var _line = _tk(win, true);
+    var _keepW = _tk(_wf, true) === _line ? true : _tk(_lf, true) === _line ? false : _st(win) >= _st(lose);
+    var keep = _keepW ? win : lose, drop = _keepW ? lose : win;
+    var _wk = function(w){ return String((w && w.authBy) || '') + '|' + String((w && w.approvalDate) || '') + '|' + _tk(w && w.authFor); };
+    var was = [], seen = {};
+    var addWas = function(list){
+      for (var x = 0; x < (list || []).length; x++) {
+        var e = list[x];
+        if (!e || seen[_wk(e)]) continue;
+        seen[_wk(e)] = true;
+        was.push(e);
+      }
+    };
+    addWas(keep.authWas); addWas(drop.authWas);
+    addWas([{ authBy: drop.authBy, approvalDate: drop.approvalDate || '', authFor: drop.authFor, merged: true }]);
+    var fixes = [], fseen = {};
+    var addFix = function(list){
+      for (var y = 0; y < (list || []).length; y++) {
+        var fe = list[y], fk = fe ? String(fe.at || '') + '|' + String(fe.why || '') : '';
+        if (!fe || fseen[fk]) continue;
+        fseen[fk] = true;
+        fixes.push(fe);
+      }
+    };
+    addFix(keep.authFixes); addFix(drop.authFixes);
+    var cx = { authBy: keep.authBy, approvalDate: keep.approvalDate, authFor: keep.authFor, authAdds: keep.authAdds || {},
+               authBySetAt: keep.authBySetAt, authWas: was };
+    if (fixes.length) cx.authFixes = fixes;
+    return cx;
+  }
   var setW = _invApprovalSetAt(win), setL = _invApprovalSetAt(lose);
   var adds = {}, k, hasAdds = false;
   var srcs = [win.authAdds || {}, lose.authAdds || {}];
@@ -29749,11 +29803,20 @@ function _invApprovalReadHtml(ref, job, jobId) {
       + (f.why ? ': \u201c' + esc(f.why) + '\u201d' : '') + (f.was && f.was.authBy ? ' (it read ' + esc(String(f.was.authBy)) + (f.was.approvalDate ? ', ' + esc(fmtDate2(f.was.approvalDate)) : '') + ')' : '') + '</div>';
   }).join('');
   var was = (Array.isArray(ref.authWas) ? ref.authWas : []).map(function(w){
-    return '<div class="inv-auth-was" style="' + small + '">Earlier approval: ' + esc(invApprovalSignedText(w, job) || String(w.authBy || '')) + ' for '
-      + esc(invApprovalTermsWords(w.authFor, true, true)) + (w.replacedOn ? ', replaced ' + esc(fmtDate2(w.replacedOn)) : '') + '</div>';
+    // An approval set aside when two devices' copies met, each signed for other terms (invMergeApprovals, `merged`).
+    return '<div class="inv-auth-was" style="' + small + '">' + (w.merged ? 'Approval set aside: ' : 'Earlier approval: ')
+      + esc(invApprovalSignedText(w, job) || String(w.authBy || '')) + ' for '
+      + esc(invApprovalTermsWords(w.authFor, true, true)) + (w.merged ? ', recorded on another device for other terms'
+        : w.replacedOn ? ', replaced ' + esc(fmtDate2(w.replacedOn)) : '') + '</div>';
   }).join('');
   if (!t) return '<div class="inv-auth-read" style="font-size:11px;color:var(--gray);line-height:1.4;">No written approval recorded'
     + (_approvalLineOpen(ref, job) ? ': select the line and press Record approval once the signed copy is back' : '') + '</div>' + was + fixes;
+  // A kept line's approval (invApprovalSetAside): what was signed, as history, with no flag and nobody still to sign.
+  if (invApprovalSetAside(ref, job)) return '<div class="inv-auth-read inv-auth-aside" style="font-size:11px;color:var(--gray);line-height:1.4;">Signed: '
+    + esc(t) + ' for ' + esc(invApprovalTermsWords(ref.authFor, true, true)) + '. Not leaving the property now, so nothing is owed; '
+    + 'it covers the line again if it goes back there.</div>' + was + fixes
+    + (jid != null ? '<button class="btn-s inv-auth-fix-btn" style="font-size:10px;padding:2px 8px;margin-top:4px;" onclick="invCorrectApproval(' + jid + ',\'' + ref.stableId + '\')" '
+      + 'title="Put right who signed, or the date, as the signed copy reads, with the reason. A new signature is recorded with Record approval.">Correct&hellip;</button>' : '');
   return '<div class="inv-auth-read" style="font-size:11px;line-height:1.4;">Signed: ' + esc(t)
     + (still.length ? ' &middot; <span style="color:var(--bronze);font-weight:600;">still to sign: ' + esc(_andJoin(still)) + '</span>' : '') + '</div>'
     + (mv ? '<div class="inv-auth-moved" style="font-size:10.5px;color:var(--bronze);font-weight:600;margin-top:3px;line-height:1.4;">&#9888; ' + esc(mv) + '</div>' : '')
@@ -29832,7 +29895,9 @@ function _invEdit(jobId, stableId, key, el) {
   if (_apBefore) {
     var _apJob = _invJob(jobId), _pin = _apBefore.authFor || invApprovalTermsOf(_apBefore);
     if (!invApprovalMoved(_apBefore, _apJob) && _invTermsMoved(_pin, ref, _apJob)) {
-      if (!window.confirm(invApprovalChangeAsk(_apBefore, ref, _pin, _apJob))) {
+      // ⚠ A MOVE TO KEEP, HOLD OR UNDECIDED ASKS NOTHING (found on review): nothing leaves, so nothing waits on a signature; the
+      // approval is kept as history (invApprovalSetAside), pinned below all the same.
+      if (!invApprovalSetAside(ref, _apJob) && !window.confirm(invApprovalChangeAsk(_apBefore, ref, _pin, _apJob))) {
         Object.keys(ref).forEach(function(k){ if (!Object.prototype.hasOwnProperty.call(_apBefore, k)) delete ref[k]; });
         Object.keys(_apBefore).forEach(function(k){ ref[k] = _apBefore[k]; });
         if (key === 'fmv' || key === 'unitVal' || key === 'qty') { if (key === 'qty') el.value = (ref.qty != null && ref.qty !== '') ? ref.qty : 1; _invPaintFigures(ref); }
@@ -30248,6 +30313,13 @@ function invSetDealerRoute(jobId, stableId, on) {
   if (!ref || ref.deletedAt) return false;
   var job = _invJob(jobId);
   var keys = ['viaDealer', 'viaDealerBy', 'viaDealerAt'];
+  // ⚠⚠ THE DEALER IS PART OF WHAT A FIREARM'S APPROVAL APPROVED (P5, found on review; invApprovalTermsOf): a route recorded,
+  // changed or taken off after the signature leaves the approval not covering the firearm, so it is held until approved again.
+  // Asked once, as a change on the row is (invApprovalChangeAsk); an approval with nothing recorded of what it approved is pinned
+  // to the line as it read just before. (typeof: a pinned sandbox lifts this without the approval rules.)
+  var _apPin = (typeof invApprovalMoved === 'function' && String(ref.authBy || '').trim() && !invApprovalMoved(ref, job))
+    ? (ref.authFor || invApprovalTermsOf(ref)) : null;
+  var _apMoves = function(after){ return !!(_apPin && _invTermsMoved(_apPin, after, job)); };
   if (on) {
     var why = invDealerRouteRefusal(ref);
     if (why) { alert(why); return false; }
@@ -30256,12 +30328,18 @@ function invSetDealerRoute(jobId, stableId, on) {
       + (who ? ' on its way to ' + who : '') + '?\n\nThe dealer runs the background check and makes the transfer. '
       + 'Havellin carries it to the dealer and hands it to nobody else.', String(ref.viaDealer || '')) || '').trim();
     if (!dealer) return false;
+    var _after = Object.assign({}, ref, { viaDealer: dealer });
+    if (_apMoves(_after) && !window.confirm(invApprovalChangeAsk(ref, _after, _apPin, job))) return false;
+    if (_apMoves(_after) && !ref.authFor) ref.authFor = _apPin;
     ref.viaDealer = dealer;
     ref.viaDealerBy = _invStampBy(job);
     ref.viaDealerAt = Date.now();
     if (ref.clearedAt) keys.forEach(function(k){ delete ref.clearedAt[k]; });
   } else {
-    if (!window.confirm('Take the dealer route off ' + _invNamed(ref) + '?\n\nIt cannot be carried again until the route is recorded.')) return false;
+    var _offMoves = _apMoves(Object.assign({}, ref, { viaDealer: '' }));
+    if (!window.confirm('Take the dealer route off ' + _invNamed(ref) + '?\n\nIt cannot be carried again until the route is recorded.'
+      + (_offMoves ? '\n\nIts written approval names ' + String(ref.viaDealer || '').trim() + ': recorded again through another dealer, it goes on the next request.' : ''))) return false;
+    if (_offMoves && !ref.authFor) ref.authFor = _apPin;
     // ⚠ A DELIBERATE CLEAR IS STAMPED, or the other device's copy puts the route straight back
     // (the fields are sticky, like the authority beside them).
     if (!ref.clearedAt) ref.clearedAt = {};
@@ -31605,21 +31683,31 @@ function invApprovalValueMoved(was, now, job) {
   return had && n > roundCents(w * (1 + INV_APPROVAL_RISE_PCT / 100));
 }
 // A line's terms as an approval or a request carries them: where it goes, who takes it (trimmed) and its value, '' where none.
+// ⚠ AND A FIREARM'S DEALER WHERE IT GOES TO A PERSON (P5, found on review): the request prints each firearm's dealer as part of
+// its written transport authority, and a Distribute firearm's dealer is its route (`viaDealer`), not its Channel / Recipient, so a
+// dealer changed after the signature left the firearm cleared to carry to a dealer nobody signed for. `dealer` is carried only
+// where the route is offered (invDealerRouteOffered: a firearm, To a person, never NFA), '' until one is recorded; a sale or a
+// consignment names its dealer in the channel already.
 function invApprovalTermsOf(ref) {
   var v = parseFloat(ref && ref.fmv);
-  return { disposition: String((ref && ref.disposition) || ''), channel: String((ref && ref.channel) || '').trim(),
+  var t = { disposition: String((ref && ref.disposition) || ''), channel: String((ref && ref.channel) || '').trim(),
            fmv: (ref && ref.fmv !== '' && ref.fmv != null && !isNaN(v)) ? roundCents(v) : '' };
+  if (ref && invDealerRouteOffered(ref)) t.dealer = invDealerRoute(ref);
+  return t;
 }
 // Where it goes and who takes it, as one key: the taker compared as a name (case, spacing and a bracketed relationship aside,
-// as invRecipientName reads one), so a spelling put right is not a change and a different taker is.
+// as invRecipientName reads one), so a spelling put right is not a change and a different taker is; and a Distribute firearm's
+// dealer, where one is recorded (invApprovalTermsOf), so a dealer changed, recorded or taken off is a change. Asked of terms
+// (an approval's `authFor`, a request's line, or a line through invApprovalTermsOf), never of a line itself.
 function approvalLineDestKey(t) {
-  return String((t && t.disposition) || '') + '|' + invRecipientName(t && t.channel).toLowerCase();
+  var dl = invRecipientName(t && t.dealer).toLowerCase();
+  return String((t && t.disposition) || '') + '|' + invRecipientName(t && t.channel).toLowerCase() + (dl ? '|' + dl : '');
 }
 // What `t` (the terms an approval or a request carried) no longer says of the line: 'dest' (where it goes or who takes it),
 // 'value' (Ask 5's rule), or ''.
 function _invTermsMoved(t, ref, job) {
   if (!t || typeof t !== 'object' || !ref) return '';
-  if (approvalLineDestKey(t) !== approvalLineDestKey(ref)) return 'dest';
+  if (approvalLineDestKey(t) !== approvalLineDestKey(invApprovalTermsOf(ref))) return 'dest';
   return invApprovalValueMoved(t.fmv, ref.fmv, job) ? 'value' : '';
 }
 // ⚠⚠ THE ONE ANSWER TO "DOES THE RECORDED APPROVAL STILL COVER THIS LINE": '' while it does, or with no approval recorded (or
@@ -31632,18 +31720,29 @@ function invApprovalMoved(ref, job) {
 // (`paper`) the disposition is the family's word (invDispDocWord: Junk reads Disposed of); on the desk, the desk's.
 function invApprovalTermsWords(t, withValue, paper) {
   var d = t && t.disposition ? (paper ? invDispDocWord(t.disposition) : t.disposition) : 'no disposition';
-  var c = String((t && t.channel) || '').trim();
-  return d + (c ? ' · ' + c : '') + (withValue ? (t && t.fmv !== '' && t.fmv != null ? ' at ' + fmt(t.fmv) : ' with no value recorded') : '');
+  var c = String((t && t.channel) || '').trim(), dl = String((t && t.dealer) || '').trim();
+  return d + (c ? ' · ' + c : '') + (dl ? ', through ' + dl : '')
+    + (withValue ? (t && t.fmv !== '' && t.fmv != null ? ' at ' + fmt(t.fmv) : ' with no value recorded') : '');
 }
-// "previously approved for Auction · Kodner Galleries", or '' where the approval still covers the line.
+// ⚠⚠ AN APPROVAL ON A LINE THAT IS NOT LEAVING IS HISTORY, NOT A FLAG (P5, found on review): the painting approved for Auction ·
+// Kodner Galleries and kept by the family carried "⚠ previously approved for Auction · Kodner Galleries … it goes on the next
+// request" for good, the card said it went on the next request (it never does: a kept line waits on nothing), and the Disposition
+// Ledger the representative signs printed "Not approved as it now reads" against a kept item. On a line kept, held or undecided
+// (not INV_RELEASE_DISPOSITIONS) the recorded approval does not cover it, as before (it covers it again if it goes back to where it
+// was approved for), but nothing asks, flags or prints it: the record shows it as what was signed. Read by the wording below, the
+// paper's text, the gap, the card and both handlers' questions.
+function invApprovalSetAside(ref, job) {
+  return !!ref && !!invApprovalMoved(ref, job) && INV_RELEASE_DISPOSITIONS.indexOf(ref.disposition) < 0;
+}
+// "previously approved for Auction · Kodner Galleries", or '' where the approval still covers the line (or the line is not leaving).
 function invApprovalPrevWords(ref, job, paper) {
   var m = invApprovalMoved(ref, job);
-  return m ? 'previously approved for ' + invApprovalTermsWords(ref.authFor, m === 'value', paper) : '';
+  return m && !invApprovalSetAside(ref, job) ? 'previously approved for ' + invApprovalTermsWords(ref.authFor, m === 'value', paper) : '';
 }
 // The whole of it, in one sentence for a flag (the row's chip, the record, the firearm's reason, the desk's approvals list).
 function invApprovalMovedText(ref, job) {
   var m = invApprovalMoved(ref, job);
-  if (!m) return '';
+  if (!m || invApprovalSetAside(ref, job)) return '';
   var who = _andJoin(invApprovalSigners(ref, job).map(function(s){ return s.name; }));
   var day = String(ref.approvalDate || '').trim();
   return 'Approved' + (day ? ' ' + fmtDate2(day) : '') + (who ? ' by ' + who : '') + ' for ' + invApprovalTermsWords(ref.authFor, m === 'value', true)
@@ -31661,7 +31760,8 @@ function invApprovalChangeAsk(before, after, pin, job) {
     + 'Approved' + (day ? ' ' + fmtDate2(day) : '') + (who ? ' by ' + who : '') + ' for ' + invApprovalTermsWords(pin, m === 'value')
     + ': this change goes on the next request.\n\n'
     + (m === 'value' ? 'At ' + fmt(parseFloat(after.fmv)) : 'Going to ' + invApprovalTermsWords(invApprovalTermsOf(after), false))
-    + ', the signed approval no longer covers it, so it is not offered for sign-out until it is approved again. The approval stays on the line as what was signed.'
+    + ', the signed approval no longer covers it, so it is ' + (invIsFirearm(after) ? 'not cleared to carry' : 'not offered for sign-out')
+    + ' until it is approved again. The approval stays on the line as what was signed.'
     + '\n\nOK makes the change. Cancel leaves the line as it was approved.';
 }
 // ⚠ WHAT A PAPER PRINTS OF AN APPROVAL (P5): who signed and when (invApprovalSignedText) where the approval still covers the
@@ -31670,6 +31770,7 @@ function invApprovalChangeAsk(before, after, pin, job) {
 // sign-out sheet, the Disposition Ledger, the package's record and the client's workbook read this, never the signers alone: a
 // paper prints an approval only where the paper supports it (a test counts the readers).
 function invApprovalPaperText(ref, job) {
+  if (invApprovalSetAside(ref, job)) return '';   // a kept line: no approval to print (found on review)
   var prev = invApprovalPrevWords(ref, job, true);
   if (!prev) return invApprovalSignedText(ref, job);
   return 'Not approved as it now reads: ' + prev + ' by ' + invApprovalSignedText(ref, job);
@@ -31685,6 +31786,7 @@ function invApprovalComplete(ref, job) {
 // ⚠ AN APPROVAL THAT NO LONGER COVERS THE LINE SAYS WHAT IT WAS FOR (P5), never "X has not approved it" over X's signature.
 function invApprovalGap(ref, job) {
   if (!job || !ref || !String(ref.authBy || '').trim() || !String(ref.approvalDate || '').trim()) return '';
+  if (invApprovalSetAside(ref, job)) return '';   // a kept line waits on nobody's signature
   var _mv = invApprovalMovedText(ref, job);
   if (_mv) return _mv;
   var miss = invApprovalMissing(ref, job);
@@ -32693,7 +32795,8 @@ function printApprovalRequest(jobId, selectedOnly, opt) {
         // ⚠ A LINE ONE FIDUCIARY HAS ALREADY SIGNED FOR (P19) says so, and who is still to sign it, each signer with their
         // own date (P20: through invApprovalSignedText, never the raw field, which carries ISO dates once they differ).
         // ⚠ A LINE WHOSE APPROVAL NO LONGER COVERS IT (P5) says what it was approved for, and is asked for again as it reads now.
-        + (invApprovalMoved(r, job) ? '<div class="inv-prev-appr" style="color:#8a5a1e;font-size:10px;">' + esc(invApprovalPrevWords(r, job, true).replace(/^p/, 'P'))
+        // (Asked of the words, which say nothing on a line not leaving: belt-and-braces, since such a line is never on a request.)
+        + (invApprovalPrevWords(r, job, true) ? '<div class="inv-prev-appr" style="color:#8a5a1e;font-size:10px;">' + esc(invApprovalPrevWords(r, job, true).replace(/^p/, 'P'))
             + (r.approvalDate ? ' (' + esc(fmtDate2(r.approvalDate)) + ')' : '') + ': asked for again as it now reads</div>'
           : gap ? '<div style="color:#8a5a1e;font-size:10px;">Signed so far by ' + esc(invApprovalSignedText(r, job))
             + '; still to sign: ' + esc(_andJoin(invApprovalMissing(r, job))) + '</div>'
@@ -32992,32 +33095,39 @@ function _approvalReqTerms(req) {
 // or its value moved past Ask 5's rule (invApprovalValueMoved). Off the request's own terms and the lines as this device holds
 // them, NEVER A CLOCK (P5: it compared a line's `updatedAt` with the draft's `draftedAt`, two devices' clocks, so an edit made on
 // another device before the send that landed after it read as no change). A device that has not read the sheet this session
-// claims nothing: its copy may be older than the paper. [] where the request carries no terms.
-function approvalRequestMovedIds(job, req, rows) {
+// claims nothing on the card and the bar: its copy may be older than the paper. [] where the request carries no terms.
+// ⚠⚠ `evenCold`: WHAT A SIGNATURE IS RECORDED AGAINST IS ALWAYS COMPARED (P5, found on review). Record the signed request on a
+// device whose read of the sheet had not landed drew a line retyped to Habitat ReStore ticked, with no flag, and pinned the
+// signatures on a copy that named Goodwill to Habitat ReStore. The dialog (both routes) and the paper's terms ask with `evenCold`:
+// a line that does not read as the paper carried it starts unticked, and is pinned only where the person ticks it. On a stale
+// device that is the safe direction: an approval pinned to an older copy reads as moved once the sheet lands.
+function approvalRequestMovedIds(job, req, rows, evenCold) {
   if (!job || !req || !rows || !Array.isArray(req.stableIds) || typeof req.terms !== 'string') return [];
-  if (typeof _invCloudSeen !== 'undefined' && !_invCloudSeen[job.id]) return [];
+  if (!evenCold && typeof _invCloudSeen !== 'undefined' && !_invCloudSeen[job.id]) return [];
   var T = _approvalReqTerms(req), by = {};
   rows.forEach(function (r) { if (r) by[String(r.stableId)] = r; });
   return req.stableIds.map(String).filter(function (id) {
     var t = T[id], r = by[id];
     if (!t) return false;
     if (!r || r.deletedAt) return true;
-    if (_approvalHash(approvalLineDestKey(r)) !== t.d) return true;
+    if (_approvalHash(approvalLineDestKey(invApprovalTermsOf(r))) !== t.d) return true;
     return invApprovalValueMoved(t.fmv, r.fmv, job);
   });
 }
 // What each line's signature on a request approved (P5), by stableId, for invApplyApproval: where it goes and who takes it as the
-// line reads (the fingerprint says they are unchanged), and the value the paper printed. A line `asNow` names (one the person
-// ticked although it changed after the request went: the signed copy shows it as it reads now) is pinned to the line as it reads.
+// line reads (the fingerprint says they are unchanged; a firearm's dealer with them), and the value the paper printed. A line
+// `asNow` names (one the person ticked although it changed after the request went: the signed copy shows it as it reads now) is
+// pinned to the line as it reads. ⚠ Compared whether or not this device has read the sheet (`evenCold`, above): a line whose
+// destination or taker is not what the paper carried is never pinned to the paper unless the person ticked it.
 function approvalRequestPaperTerms(job, req, rows, asNow) {
-  var T = _approvalReqTerms(req), moved = approvalRequestMovedIds(job, req, rows), out = {};
+  var T = _approvalReqTerms(req), moved = approvalRequestMovedIds(job, req, rows, true), out = {};
   (rows || []).forEach(function (r) {
     var id = r && String(r.stableId), t = id && T[id];
     if (!t) return;
     var now = invApprovalTermsOf(r);
     if (moved.indexOf(id) >= 0) { if ((asNow || []).indexOf(id) >= 0) out[id] = now; return; }
     var v = parseFloat(t.fmv);
-    out[id] = { disposition: now.disposition, channel: now.channel, fmv: (t.fmv === '' || isNaN(v)) ? '' : roundCents(v) };
+    out[id] = Object.assign({}, now, { fmv: (t.fmv === '' || isNaN(v)) ? '' : roundCents(v) });
   });
   return out;
 }
@@ -33049,6 +33159,14 @@ function approvalRequestOvertaken(job, st) {
   var rows = (typeof _photoRefs !== 'undefined' && _photoRefs[job.id]) || null;
   if (!rows) return false;
   return !rows.some(function (r) { return r && ids.indexOf(String(r.stableId)) >= 0 && _approvalLineOpen(r, job); });
+}
+// The last request that went (by email, or through DocuSign), off its record: a draft waiting on its tap never went, so the
+// request sent before it (`sentReq`), else none; with no draft waiting, the request on record once it has gone. null where none
+// has. Read by the bulk bar's Record approval (P5, found on review), whose signed copy is of a request that went.
+function approvalRequestLastSent(st) {
+  if (!st || !st.req) return null;
+  if (docDraftPending(st)) return st.sentReq || null;
+  return st.sentAt ? st.req : null;
 }
 // The last request against the inventory now (DOM-free): `open`, the lines it carried that still wait; `fresh`, the
 // lines waiting that it never carried (a fresh request is owed for them); `carried`, how many it asked for.
@@ -33957,7 +34075,15 @@ function invRecordApproval(jobId, opt) {
   // ⚠⚠ A LINE CHANGED AFTER THE REQUEST WENT STARTS UNTICKED (P5, REL-02): the signed copy was signed for it as the request
   // carried it (approvalRequestMovedIds), so recording it ticked would put the signatures on where it goes now. Ticked anyway
   // (the signed copy shows the new terms written in), it is pinned to the line as it reads; every other line to the paper's terms.
-  var moved = (fromReq && opt.req) ? approvalRequestMovedIds(job, opt.req, _photoRefs[jobId] || []) : [];
+  // Compared whether or not this device has read the sheet (`evenCold`, found on review).
+  // ⚠⚠ ON THE SELECTION TOO (P5, found on review): the card sends a signed copy of an earlier request here, and the bulk bar's
+  // Record approval recorded it against a line retyped since with no word of it. Each line is listed with where it goes and who
+  // takes it; a line the last request that went carried (approvalRequestLastSent) and that changed since is drawn unticked with
+  // the same sentence, and recorded only if ticked, as it reads now. The rest are the selection, as before: no box of their own.
+  var _lastReq = fromReq ? (opt.req || null) : approvalRequestLastSent(job.docState && job.docState[APPROVAL_REQ_KEY]);
+  var _pickIds = picked.map(function(r){ return String(r.stableId); });
+  var moved = _lastReq ? approvalRequestMovedIds(job, _lastReq, _photoRefs[jobId] || [], true)
+    .filter(function(id){ return _pickIds.indexOf(id) >= 0; }) : [];
   // ⚠ THE BULK BAR'S SELECTION SAYS WHAT IT LEFT OUT (P5, REL-07): a Keep line, or one every fiduciary has already approved.
   var leftOut = fromReq ? '' : invWrittenReleaseLeftOutText(jobId, job);
   _invRecordCtx = { jobId: jobId, stableIds: picked.map(function(r){ return r.stableId; }),
@@ -33972,19 +34098,27 @@ function invRecordApproval(jobId, opt) {
     : n + ' item' + (n > 1 ? 's' : '') + ': ' + esc(picked.slice(0, 6).map(_invNamed).join(' \u00b7 '))
       + (n > 6 ? ' and ' + (n - 6) + ' more' : '')
       + (leftOut ? '<div class="ia-left-out" style="font-size:11px;color:#8a5a1e;margin-top:4px;">' + esc(leftOut) + '</div>' : '');
-  // The request's lines, each ticked, each with its untick (the one sentence says why).
+  // The request's lines, each ticked, each with its untick (the one sentence says why). The selection's lines, each with where it
+  // goes, a box only on a line changed since the last request went.
+  var _lineWords = function(r, ch){
+    return '<span>' + esc(_invNamed(r)) + (r.disposition ? ' <span style="color:var(--gray);">&middot; ' + esc(invDispDocWord(r.disposition))
+      + (String(r.channel || '').trim() ? ' &middot; ' + esc(String(r.channel).trim()) : '')
+      + (invDealerRoute(r) ? ', through ' + esc(invDealerRoute(r)) : '') + '</span>' : '')
+      + (ch ? ' <span class="ia-changed" style="color:#8a5a1e;font-weight:600;">&#9888; ' + esc(INV_REQ_CHANGED_TXT) + '</span>' : '') + '</span>';
+  };
+  var _lineBox = function(r, i, ch){
+    return '<label style="display:flex;align-items:center;gap:8px;margin:3px 0;font-size:12px;text-transform:none;letter-spacing:0;color:var(--gray-dk);font-weight:500;cursor:pointer;">'
+      + '<input type="checkbox" id="ia-line-' + i + '"' + (ch ? '' : ' checked') + ' onchange="invApprovalDialogNote()" style="width:16px;height:16px;flex:0 0 auto;accent-color:var(--gray-dk);">'
+      + _lineWords(r, ch) + '</label>';
+  };
   var lineTicks = fromReq
     ? '<div id="ia-lines" style="margin-bottom:8px;">'
       + '<div style="font-size:11.5px;margin-bottom:4px;">' + esc(INV_REQ_UNTICK_TXT) + '</div>'
-      + picked.map(function(r, i){
-          var ch = moved.indexOf(String(r.stableId)) >= 0;
-          return '<label style="display:flex;align-items:center;gap:8px;margin:3px 0;font-size:12px;text-transform:none;letter-spacing:0;color:var(--gray-dk);font-weight:500;cursor:pointer;">'
-            + '<input type="checkbox" id="ia-line-' + i + '"' + (ch ? '' : ' checked') + ' onchange="invApprovalDialogNote()" style="width:16px;height:16px;flex:0 0 auto;accent-color:var(--gray-dk);">'
-            + '<span>' + esc(_invNamed(r)) + (r.disposition ? ' <span style="color:var(--gray);">&middot; ' + esc(invDispDocWord(r.disposition))
-              + (String(r.channel || '').trim() ? ' &middot; ' + esc(String(r.channel).trim()) : '') + '</span>' : '')
-              + (ch ? ' <span class="ia-changed" style="color:#8a5a1e;font-weight:600;">&#9888; ' + esc(INV_REQ_CHANGED_TXT) + '</span>' : '') + '</span></label>';
-        }).join('') + '</div>'
-    : '';
+      + picked.map(function(r, i){ return _lineBox(r, i, moved.indexOf(String(r.stableId)) >= 0); }).join('') + '</div>'
+    : '<div id="ia-sel-lines" style="margin-bottom:8px;">' + picked.map(function(r, i){
+        return moved.indexOf(String(r.stableId)) >= 0 ? _lineBox(r, i, true)
+          : '<div class="ia-sel" style="margin:3px 0 3px 24px;font-size:12px;color:var(--gray-dk);">' + _lineWords(r, false) + '</div>';
+      }).join('') + '</div>';
   var body = document.getElementById('ia-body');
   if (body) body.innerHTML = lineTicks + (fids.length
       ? '<div style="font-size:11.5px;margin-bottom:6px;">' + (fids.length > 1
@@ -34001,8 +34135,10 @@ function invRecordApproval(jobId, opt) {
               + '</span></label>';
           }).join('')
         + '<div id="ia-note" style="font-size:11.5px;line-height:1.5;margin:6px 0 4px;color:#8a5a1e;"></div>'
+      // ⚠ BLANK ON A CLIENT'S OWN HOME TOO (P5, REL-05, found on review): it opened with the client's name filled in, so one press
+      // recorded written authority for a firearm with nothing read off a signed paper. The name is typed from the signed copy.
       : '<label for="ia-signer">Signed by (name as signed)</label>'
-        + '<input type="text" id="ia-signer" value="' + esc(invFiduciaryMode(job) ? '' : (job.name || '')) + '">')
+        + '<input type="text" id="ia-signer" value="">')
     + '<label for="ia-date">Date of the signed approval</label>'
     + '<input type="date" id="ia-date" value="' + esc(_todayStr()) + '" max="' + esc(_todayStr()) + '">';
   var fb = document.getElementById('ia-fb');
@@ -34028,6 +34164,10 @@ function approvalRequestRecordRefusal(job, S) {
       : 'The request has not gone yet: send the draft and tap I’ve sent it first.';
   }
   if (!st || !st.sentAt) return 'No request has gone from the app yet: there is nothing to record.';
+  // ⚠ NOT BEFORE THIS DEVICE HAS READ THE INVENTORY FROM THE SHEET (P5, found on review), as the package waits: the lines it lists,
+  // and whether each still reads as the request carried it, are this device's copy until then. (typeof: a pinned sandbox lifts
+  // this without the store; the browser always has it.)
+  if (typeof _invCloudSeen !== 'undefined' && job && !_invCloudSeen[job.id]) return 'Waiting for the inventory from the sheet: record the signed copy once it has loaded.';
   // ⚠ A REQUEST SIGNED IN DOCUSIGN IS RECORDED BY ITSELF (2026-10-26c), so nothing is recorded by hand past its envelope.
   var _env = approvalEnvelope(S.req);
   if (_env) return approvalEnvelopeOut(st) ? 'It is out for signature in DocuSign: every signature is recorded by itself once everyone has signed.'
@@ -34060,11 +34200,14 @@ function invRecordRequestApproval(jobId) {
   return invRecordApproval(jobId, { stableIds: S.req.stableIds.map(String).filter(function(id){ return open.indexOf(id) >= 0; }),
                                     sentAt: S.st.sentAt, req: S.req });
 }
-// The lines the open dialog will record: every one it was opened on, or, opened from the request, the ones still ticked.
+// The lines the open dialog will record: opened from the request, the ones still ticked; opened on a selection, every one it
+// was opened on but a line changed since the last request went that is not ticked (P5, found on review: it has a box of its own).
 function _invRecordLineIds(c) {
   if (!c) return [];
-  if (!c.fromRequest) return c.stableIds.slice();
-  return c.stableIds.filter(function(id, i){ var el = document.getElementById('ia-line-' + i); return !!(el && el.checked); });
+  return c.stableIds.filter(function(id, i){
+    if (!c.fromRequest && (c.moved || []).indexOf(String(id)) < 0) return true;
+    var el = document.getElementById('ia-line-' + i); return !!(el && el.checked);
+  });
 }
 // What a fiduciary has already signed of the lines the dialog will record (P20): '' for none.
 function _invFidSignedHtml(job, refs, name) {
@@ -34112,13 +34255,21 @@ function invSaveApproval() {
   var _dayWhy = invApprovalDateRefusal(when);
   if (_dayWhy) return say(_dayWhy);
   var ids = _invRecordLineIds(c);
-  if (c.fromRequest && !ids.length) return say('Not recorded: no line is ticked. Tick each line the signed copy carries.');
+  if (!ids.length) return say(c.fromRequest ? 'Not recorded: no line is ticked. Tick each line the signed copy carries.'
+    : 'Not recorded: no line is ticked. Tick a line changed since the request went only if the signed copy shows it as it reads now.');
   var refs = ids.map(function(id){ return _getPhotoRef(jobId, id); }).filter(function(r){ return r && !r.deletedAt; });
   if (!refs.length) return say('None of the selected lines is on the inventory any more. Nothing was recorded.');
+  // What the signatures approved (P5): the request's terms for each line it carried (a line drawn as changed and ticked anyway,
+  // as it reads now), else the line as it reads.
+  // ⚠ A LINE THAT CHANGED WHILE THE DIALOG WAS OPEN, and was ticked as unchanged, is not recorded (found on review): its paper
+  // terms no longer read as the line, and it was never ticked as changed. Named, so the person records it again knowingly.
+  var _attested = ids.filter(function(id){ return (c.moved || []).indexOf(String(id)) >= 0; });
+  var _terms = c.req ? approvalRequestPaperTerms(job, c.req, _photoRefs[jobId] || [], _attested) : null;
+  var _since = [];
+  if (_terms && typeof c.req.terms === 'string') refs = refs.filter(function(r){ if (_terms[String(r.stableId)]) return true; _since.push(r); return false; });
+  if (!refs.length) return say('Not recorded: ' + esc(_since.map(_invNamed).join(', ')) + (_since.length > 1 ? ' have' : ' has')
+    + ' changed since this dialog opened. Close it and press Record the signed request again.');
   var still = invApprovalOpenText(job, refs, invApprovalLeftOpen(job, refs, names, when));
-  // What the signatures approved (P5): the request's terms for each line it carried (a changed line ticked anyway as it reads
-  // now), else the line as it reads.
-  var _terms = c.req ? approvalRequestPaperTerms(job, c.req, _photoRefs[jobId] || [], ids) : null;
   var _early = invApprovalDateEarly(job, when, c.fromRequest ? c.sentAt : '', refs);
   invApplyApproval(jobId, refs, names, when, _terms);
   showSyncBadge('Approval recorded on ' + refs.length + ' item' + (refs.length > 1 ? 's' : '') + ' ✓');
@@ -34133,6 +34284,9 @@ function invSaveApproval() {
     + ' item' + (refs.length > 1 ? 's' : '') + '</strong>, signed by ' + esc(who) + ' on ' + esc(fmtDate2(when)) + '.</div>'
     + (still ? '<div id="ia-still" style="font-size:11.5px;line-height:1.5;color:#8a5a1e;margin-top:6px;">' + esc(still) + '</div>' : '')
     + (_early ? '<div id="ia-early" style="font-size:11.5px;line-height:1.5;color:#8a5a1e;margin-top:6px;">&#9888; ' + esc(_early) + '</div>' : '')
+    + (_since.length ? '<div id="ia-since" style="font-size:11.5px;line-height:1.5;color:#8a5a1e;margin-top:6px;">&#9888; Not recorded: '
+      + esc(_since.map(_invNamed).join(', ')) + ', changed since this dialog opened: record ' + (_since.length > 1 ? 'them' : 'it') + ' again if the signed copy shows '
+      + (_since.length > 1 ? 'them' : 'it') + ' as ' + (_since.length > 1 ? 'they read' : 'it reads') + ' now.</div>' : '')
     + '<div style="font-size:11.5px;color:var(--gray);margin-top:8px;">File the signed request to the client&rsquo;s Drive folder now: a PDF or a photograph of the signed pages.</div>';
   if (fb) fb.innerHTML = '';
   // ⚠ THE DESK IS REPAINTED FIRST, AND THE DIALOG'S CONTROL IS DRAWN AFTER IT. The foundation keeps one spec per paper
@@ -34585,8 +34739,10 @@ function _renderInvReleasesCard(job, all) {
     parts.push(head('Signed release approvals') + batches.map(function(b){
       // ⚠ A LINE THIS APPROVAL NO LONGER COVERS (P5) is said apart, with what it was approved for, on every job; the gap below is the
       // signatures still owed on the lines it does cover.
-      var movedL = b.open.filter(function(r){ return !!invApprovalMoved(r, job); });
-      var open = b.open.filter(function(r){ return movedL.indexOf(r) < 0; });
+      // A line kept since (invApprovalSetAside) waits on nothing and goes on no request: said apart, as history (found on review).
+      var asideL = b.open.filter(function(r){ return invApprovalSetAside(r, job); });
+      var movedL = b.open.filter(function(r){ return !!invApprovalMoved(r, job) && asideL.indexOf(r) < 0; });
+      var open = b.open.filter(function(r){ return movedL.indexOf(r) < 0 && asideL.indexOf(r) < 0; });
       var missing = jobFiduciaries(job).filter(function(f){
         return open.some(function(r){ return invApprovalMissing(r, job).some(function(n){ return samePerson(n, f.name); }); });
       }).map(function(f){ return f.name; });
@@ -34607,6 +34763,8 @@ function _renderInvReleasesCard(job, all) {
         + (movedL.length ? '<div class="inv-rel-moved" style="color:#8a5a1e;font-weight:600;">&#9888; ' + movedL.map(function(r){
             return '#' + esc(_invItemNo(r)) + ' changed since: ' + esc(invApprovalPrevWords(r, job));
           }).join('; ') + '. ' + (movedL.length > 1 ? 'They go' : 'It goes') + ' on the next approval request as ' + (movedL.length > 1 ? 'they read' : 'it reads') + ' now.</div>' : '')
+        + (asideL.length ? '<div class="inv-rel-aside" style="color:var(--gray);">' + nums(asideL) + (asideL.length > 1 ? ' are' : ' is')
+            + ' not leaving the property now: this approval is kept as the record of what was signed.</div>' : '')
         + (open.length && missing.length ? '<div style="color:#8a5a1e;font-weight:600;">&#9888; ' + esc(gap) + ' '
             + (open.length === b.lines.length ? 'These lines go' : nums(open) + (open.length > 1 ? ' go' : ' goes')) + ' back on the next approval request'
             + (rat.length ? ', ' + nums(rat) + ' apart, for ratification: ' + (rat.length > 1 ? 'they have' : 'it has') + ' already left' : '')
@@ -37880,6 +38038,10 @@ function _invRefreshFromCloud() {
     if (changed || made || signedIn) renderInventoryTab();
     else {
       if (typeof _deskFoldHeadsRepaint === 'function') _deskFoldHeadsRepaint(jobId);
+      // ⚠ AND THE RELEASES CARD, which waits on this read for Record the signed request and the lines changed since a request went
+      // (P5's review: the press is withheld until this device has read the sheet, and a card drawn before the read kept it
+      // withheld until something else redrew the tab). Repainted by id, as every edit repaints it.
+      if (typeof _invRefreshReleases === 'function') _invRefreshReleases(jobId);
       // And the read's line, which waited on this read too (the build's browser step: it kept "still loading" after it).
       if (typeof _invReadLineRepaint === 'function') _invReadLineRepaint(jobId);
     }
@@ -38539,7 +38701,8 @@ function _invBulkApply(jobId, key, value) {
       nx[key] = value;
       if (!_invTermsMoved(pin, nx, job)) return false;
       _apPins[ref.stableId] = pin;
-      return true;
+      // Swept to Keep, Hold or Undecided: pinned, never asked (invApprovalSetAside reads the line as it will be).
+      return !invApprovalSetAside(Object.assign(nx, { authBy: ref.authBy, authFor: pin }), job);
     });
     if (_apHit.length) {
       var _apList = _apHit.slice(0, 6).map(function(ref){

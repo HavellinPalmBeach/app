@@ -1114,6 +1114,12 @@ the receiving dealer"*? (2) Is the dealer's acknowledgement the right receipt fo
 or should the heir's receipt from the dealer also be kept? (3) Known gap: a serial recorded after the request was signed
 satisfies the app's gate without being on the signed paper; should a fresh request be required?
 
+**Since 2026-10-27 (P5's review), for the dealer.** The app now takes the stricter reading for a firearm's dealer, as the block
+above already says to the representative (*"not covered for transport until both are recorded on a request you sign"*): the
+dealer is part of what a signed approval approved, so a dealer route recorded, changed or taken off after the signature asks
+first and holds the firearm until a fresh request is signed (a sale's dealer is its Channel / Recipient, already held the same
+way). A serial recorded after the signature is still the gap in (3).
+
 ---
 
 ## D. Inventory, valuation and filing

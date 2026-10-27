@@ -526,6 +526,58 @@ function _invApprovalSetAt(it) {
 }
 function _invMergeApprovals(win, lose) {
   if (!win || !lose) return null;
+  // ⚠⚠ TWO APPROVALS OF DIFFERENT TERMS ARE NEVER ONE APPROVAL (P5, found on review): Nora's signature recorded on one iPad for
+  // Auction · Kodner Galleries and Thomas's on another, whose older copy had the line re-routed to Distribute · Cousin Pete, were
+  // unioned onto one approval, which then read complete for the cousin: a gift Nora never signed for. Where both copies carry
+  // names and what they approved (`authFor`), and the terms differ (where it goes, who takes it as a name, a firearm's dealer, the
+  // value to the cent: an exact comparison, kept identical to the app's invMergeApprovals), the signers are not combined. The line
+  // keeps one approval with its names and terms: the one whose terms are the line's as merged (where it goes, who takes it, its
+  // value), else the newer one (its latest name added, or its hand edit); the other goes into `authWas`, marked `merged`, as the
+  // record of what was signed. So the line reads partial, or as previously approved for other terms, and goes on the next request.
+  var _tk = function(t, line) {
+    var v = parseFloat(t && t.fmv);
+    var f = (t && t.fmv !== '' && t.fmv != null && !isNaN(v)) ? String(Math.round(v * 100) / 100) : '';
+    var nm = function(s){ return String(s == null ? '' : s).replace(/\s*\([^()]*\)\s*$/, '').replace(/\s+/g, ' ').trim().toLowerCase(); };
+    return [String((t && t.disposition) || ''), nm(t && t.channel), f].join('|') + (line ? '' : '|' + nm(t && t.dealer));
+  };
+  var _wf = win.authFor, _lf = lose.authFor;
+  if (String(win.authBy || '').trim() && String(lose.authBy || '').trim() && _wf && _lf && typeof _wf === 'object' && typeof _lf === 'object'
+      && _tk(_wf) !== _tk(_lf)) {
+    var _st = function(it){
+      var s = _invApprovalSetAt(it), a = it.authAdds || {};
+      for (var q in a) if (Object.prototype.hasOwnProperty.call(a, q) && Number(a[q]) > s) s = Number(a[q]);
+      return s;
+    };
+    var _line = _tk(win, true);
+    var _keepW = _tk(_wf, true) === _line ? true : _tk(_lf, true) === _line ? false : _st(win) >= _st(lose);
+    var keep = _keepW ? win : lose, drop = _keepW ? lose : win;
+    var _wk = function(w){ return String((w && w.authBy) || '') + '|' + String((w && w.approvalDate) || '') + '|' + _tk(w && w.authFor); };
+    var was = [], seen = {};
+    var addWas = function(list){
+      for (var x = 0; x < (list || []).length; x++) {
+        var e = list[x];
+        if (!e || seen[_wk(e)]) continue;
+        seen[_wk(e)] = true;
+        was.push(e);
+      }
+    };
+    addWas(keep.authWas); addWas(drop.authWas);
+    addWas([{ authBy: drop.authBy, approvalDate: drop.approvalDate || '', authFor: drop.authFor, merged: true }]);
+    var fixes = [], fseen = {};
+    var addFix = function(list){
+      for (var y = 0; y < (list || []).length; y++) {
+        var fe = list[y], fk = fe ? String(fe.at || '') + '|' + String(fe.why || '') : '';
+        if (!fe || fseen[fk]) continue;
+        fseen[fk] = true;
+        fixes.push(fe);
+      }
+    };
+    addFix(keep.authFixes); addFix(drop.authFixes);
+    var cx = { authBy: keep.authBy, approvalDate: keep.approvalDate, authFor: keep.authFor, authAdds: keep.authAdds || {},
+               authBySetAt: keep.authBySetAt, authWas: was };
+    if (fixes.length) cx.authFixes = fixes;
+    return cx;
+  }
   var setW = _invApprovalSetAt(win), setL = _invApprovalSetAt(lose);
   var adds = {}, k, hasAdds = false;
   var srcs = [win.authAdds || {}, lose.authAdds || {}];

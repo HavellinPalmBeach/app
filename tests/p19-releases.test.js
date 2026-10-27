@@ -185,6 +185,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       _invCell: 'the record\'s read-only Approval Date (P5)',
       invCorrectApproval: 'Correct… (P5): shows the recorded approval to put right',
       invSaveApprovalFix: 'Correct…\'s writer (P5): with a reason, stamping the hand edit',
+      // P5's review (2026-10-27): a firearm's dealer route asks first where it moves a recorded approval, as a row's change does.
+      invSetDealerRoute: 'the dealer route asks first where it moves a recorded approval (P5\'s review)',
     };
     const extra = [...owners].filter((n) => !ALLOWED[n]).sort();
     eq(extra, [], '⚠⚠ no function outside the rule, the writer and the displays reads authBy or approvalDate');
@@ -268,7 +270,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const V = desk(['invRecordApproval', 'invSaveApproval'], LIVING(), L2, { _invPick: { l: 1 }, _todayStr: () => '2026-10-03' });
     V.invRecordApproval(2);
     const vb = V.__doc.getElementById('ia-body').innerHTML;
-    has(vb, 'id="ia-signer" value="Margaret Ellsworth"', 'a living client: who signed, prefilled with the client');
+    // RESTATED 2026-10-27 (P5's review, REL-05): the box opens blank, typed from the signed copy (prefilled with the client, one
+    // press recorded written authority for a firearm).
+    has(vb, 'id="ia-signer" value=""', 'a living client: who signed, typed from the signed copy (the box opens blank)');
     lacks(vb, 'ia-fid-0', 'and no fiduciary ticks');
     V.__doc.__seed('ia-signer', '  '); V.__doc.__seed('ia-date', '2026-10-03');
     eq(V.invSaveApproval(), false, 'a blank signer is refused');
