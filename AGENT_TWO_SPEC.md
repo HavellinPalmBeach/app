@@ -113,7 +113,7 @@ Written by the agent:
 
 | Field | Meaning |
 |---|---|
-| `fmv` | The point value, to the cent (`roundCents`) |
+| `fmv` | The point value: whole dollars each from $10 each, to the cent below it (`agentValueWhole`, §13; 2026-10-26b and 2026-10-27) |
 | `valLow`, `valHigh` | The range |
 | `valDate` | The valuation date: the date of death on an estate (`job.deathDate`), the day of the run on a living job (`_todayStr`) |
 | `valSource` | `Auction comps`, `Online comps` or `General estimate` |
