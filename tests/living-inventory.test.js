@@ -69,7 +69,7 @@ const PRINT_FNS = ['_invDocPartyHead', 'invLineReviewed', 'invLineOpen', 'invIni
   'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep',
   '_maivSummaryNotice', 'maivFilingApplies', '_gate706', 'invIsMAIV', 'invMAIVCategory',
   'invMAIVDefaultCat',
-  'invReleaseBlocked', 'invIsIntrinsic', 'invCatMeta', 'invNeedsAppraisal', 'invAppraisalThreshold',
+  'invReleaseBlocked', 'invFirearmClientTakes', 'invFirearmDispRefusal', 'invFirearmsDealerFirm', 'invFirearmsDealerFirms', '_vendorNameKey', 'vendorCats', 'invIsIntrinsic', 'invCatMeta', 'invNeedsAppraisal', 'invAppraisalThreshold',
   'gateDispute', '_gateYes', 'invAwaitingAppraisal', 'invAppraised', '_invHasValue', '_invHasAppraisal', '_jobAppraisers',
   'invWorkFlags', '_invNeedsValue', '_invDispOptions', 'fieldDispChips', '_invPanelCols',
   '_invPanelSection', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'estimateAppraiserNames', 'docScopeDef',
@@ -87,13 +87,13 @@ const PRINT_FNS = ['_invDocPartyHead', 'invLineReviewed', 'invLineOpen', 'invIni
   // The job-flow audit (2026-10-08): the Contents Record says every line was photographed, and shared, only where it was.
   '_invHasPhoto', 'photoShareLive',
   // 2026-10-22: the signed schedules, beside the ledger in the close-out papers.
-  '_renderSignedSchedulesCard', 'signedScheduleRows', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invLineAcceptedOnly', '_invAcceptedStampWords', 'invListReadRefusal', '_invManifestUnread', '_arDupEligible', '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_agDupEligible', 'agentNamedTwice', '_invListReadHtml', '_invReadKey', 'invListRead', 'agentNoticesOn'];
+  '_renderSignedSchedulesCard', 'signedScheduleRows', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invLineAcceptedOnly', '_invAcceptedStampWords', 'invListReadRefusal', '_invManifestUnread', '_arDupEligible', '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_agDupEligible', 'agentNamedTwice', '_invListReadHtml', '_invReadKey', 'invListRead', 'agentNoticesOn', 'invDealerNamed', 'invDispGoesToDealer', 'invDealerUnchecked', 'invDealerDirState'];
 const PRINT_VARS = ['INV_LINE_INITIAL_MIN', 'INV_DISP_DOC_WORDS', 'CONTENTS_SIGNED_REF',  'INV_CONTRACT_DOCS',
   '_agRun', '_avRun', '_arRun', 'AGENT_NOTICE_KINDS', 
   'INV_DISPOSITIONS', 'INV_GROUP_ORDER', 'INV_RELEASE_DISPOSITIONS', 'INV_RELEASE_CAUTIONS',
   'INVENTORY_COLUMNS', 'INV_PANEL_SECTIONS', 'INV_WORK_FLAGS', 'FIELD_DISPOSITIONS',
   'DECEDENT_SERVICES', 'MATTER_TYPES', 'CONTENTS_RECORD_GLOSS', 'INV_CAT_GLYPH', 'INV_TAXONOMY',
-  'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'INV_TRANSPORT_REASONS', 'INV_UNDECIDED',
+  'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'INV_FIREARM_CLIENT_TXT', 'FIREARMS_DEALER_CATEGORY', 'INV_TRANSPORT_REASONS', 'INV_UNDECIDED',
   'estimateStore', '_invFilter', '_invShowRoll', '_invOpen', '_invPick',
   'INV_VAL_BASES', 'MAIV_AGGREGATE_THRESHOLD', 'INV_CONDITIONS', 'INV_VAL_SOURCES', 'INV_CATEGORIES',
   'MAIV_OTHER', 'MAIV_BY_CATEGORY',
@@ -355,7 +355,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const { ctx } = rig(LIVING, []);
     // A gun in a downsizing client's closet is still a gun. The category keys on the OBJECT.
-    const gun = { category: 'Firearms', objectName: 'Remington 870', serial: 'RS12345678',
+    // RESTATED (P4, 2026-10-27): sold to a dealer the Vendor Directory lists under Firearms Dealer (FFL), picked by a person.
+    ctx.vendorDirectory = [{ vendor_name: 'Palm Beach Arms (FFL)', category: 'Firearms Dealer (FFL)' }];
+    const gun = { category: 'Firearms', objectName: 'Remington 870', serial: 'RS12345678', disposition: 'Sell',
                   authBy: 'Margaret Ellsworth', approvalDate: '2026-09-20', channel: 'Palm Beach Arms (FFL)' };
     eq(ctx.invIsFirearm(gun), true, 'a firearm is a firearm on a living job');
     eq(ctx.invTransportBlocked(gun), '', 'fully papered to a dealer, it may be carried');

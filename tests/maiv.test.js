@@ -400,7 +400,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             'invLotSplitState', '_invNeedsValue', 'invNeedsAppraisal', 'invIsFirearm',
             'invReleaseBlocked', 'invCatMeta', 'invIsIntrinsic', 'invAppraisalThreshold',
             'gateDispute', '_gateYes', '_invHasAppraisal', '_invJob', 'invIsMAIV', 'invMAIVDefaultCat',
-            'invFirearmAuthorized'],
+            'invFirearmAuthorized', 'invFirearmClientTakes'],
       vars: ['INV_WORK_FLAGS', 'INV_RELEASE_DISPOSITIONS', 'DECEDENT_SERVICES', 'INV_TAXONOMY',
              'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'INV_LOT_ARTICLE_CAP',
              'MAIV_BY_CATEGORY', 'MAIV_OTHER'],
@@ -436,8 +436,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const c = sandbox({
       fns: ['collectionLinesEnsure', '_collLinesOf', 'collectionLineId', '_collDispToInv', '_collDispNeedsAppr',
             '_guessCategory', '_numOrBlank', '_invJob', '_pushInvLine', '_setPhotoRef',
-            'invLotSplitState', 'invLotsToSplit', 'maivFilingApplies', '_gate706', 'isDecedentJob'],
-      vars: ['COLL_LINE_WEAK_STAMP', 'INV_DEFAULT_CATEGORY', 'INV_LOT_ARTICLE_CAP', 'DECEDENT_SERVICES'],
+            'invLotSplitState', 'invLotsToSplit', 'maivFilingApplies', '_gate706', 'isDecedentJob', 'invFirearmSettle', 'invIsFirearm', 'invFirearmDispRefusal', 'invFiduciaryMode'],
+      vars: ['COLL_LINE_WEAK_STAMP', 'INV_DEFAULT_CATEGORY', 'INV_LOT_ARTICLE_CAP', 'DECEDENT_SERVICES', 'INV_FIREARM_NEVER'],
       stubs: {
         jobs: [{ id: 1, svc: 'cleanout' }], isJobWon: () => true, SHEETS_SYNC_URL: '', _invCloudSeen: {},
         _photoRefs: { 1: lines },

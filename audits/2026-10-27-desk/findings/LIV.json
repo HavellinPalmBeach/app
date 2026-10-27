@@ -95,6 +95,7 @@
   },
   {
    "id": "LIV-05",
+   "fixed": "2026-10-27 (P4: CLAUDE.md, Firearms go only to a licensed dealer; tests/p4-firearms-dealer.test.js, browser step 119)",
    "title": "A living client's own firearm on Keep or Move is 'held' for good, and the way out the desk offers does not exist",
    "kind": "defect",
    "severity": "high",

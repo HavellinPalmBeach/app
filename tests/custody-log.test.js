@@ -20,7 +20,7 @@ const VARS = ['_photoUidSeq'];
 const FNS = ['addCustodyEvent', 'removeCustodyEvent', 'custodyEvents', '_renderCustodyList',
              '_custodyEventId', 'mergeCustodyLogs', '_getPhotoRef', '_setPhotoRef',
              '_invTouch', '_photoUid', 'esc', 'fmtDate2', '_custodyHandle', '_custodyUnhandle',
-             '_invJob', '_invStampBy', 'deviceUser'];
+             '_invJob', '_invStampBy', 'deviceUser', 'custodyFirearmQuestion', 'invIsFirearm', 'invDispGoesToDealer', 'invDealerUnchecked', 'invDealerUncheckedText', 'invDealerNamed', 'invDealerDirState'];
 
 // The root's own call graph, derived from the source (as device-user.test.js lifts), for the package record.
 const SRC = source();
@@ -108,7 +108,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // Two events recorded back to back are two events, even if identical.
     const t = ctx([]);
-    const retype = () => { t.__el['cust-party'].value = "Sotheby's";
+    // Since P4 (2026-10-27) the action is cleared with the rest and opens on Choose…, so a person picks it again too.
+    const retype = () => { t.__el['cust-action'].value = 'Released'; t.__el['cust-party'].value = "Sotheby's";
                            t.__el['cust-date'].value = '2026-09-10'; };
     t.addCustodyEvent(); retype(); t.addCustodyEvent();
     const two = t.__ref().custodyLog;
@@ -242,8 +243,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             '_invTouch', 'moneyToNumber', '_invHasVal', 'invStickyValue',
             // P22: the Authorized By box saves the stored form (invApprovalBoxToStored), asked of the job.
             'invApprovalBoxToStored', 'invApprovalBoxText', 'invApprovalSigners', 'invApprovalSignedText', 'invRecipientName',
-            '_invReadableDay', '_invJob', 'invUnitValue', 'invLineQty', '_invQtyCarriesValue', '_invPaintFigures', 'agentValueAfterRename', 'agentValueStale', '_avHasFigure', '_invAcceptCtxOf'],
-      vars: ['INV_STICKY_FIELDS', '_agDupSetJob'],
+            '_invReadableDay', '_invJob', 'invUnitValue', 'invLineQty', '_invQtyCarriesValue', '_invPaintFigures', 'agentValueAfterRename', 'agentValueStale', '_avHasFigure', '_invAcceptCtxOf', 'invFirearmSettle', 'invIsFirearm', 'invFirearmDispRefusal', 'invFiduciaryMode', 'isDecedentJob', 'invFirearmSettleText', '_invNamed', '_invItemNo', 'invTransportDealer', 'invFirearmsDealerFirm', 'invFirearmsDealerFirms', '_vendorNameKey', 'vendorCats', 'invChannelLeftover', 'invDealerRoute', 'invDealerRouteOffered', 'invDealerNamed', 'invDispGoesToDealer'],
+      vars: ['INV_STICKY_FIELDS', '_agDupSetJob', 'INV_FIREARM_NEVER', 'DECEDENT_SERVICES', 'INV_SALE_DISPOSITIONS', 'FIREARMS_DEALER_CATEGORY'],
       // _invRefreshReleases: stubbed with its sibling repaints since _invEdit runs it on every edit (the desk build's review, 2026-10-23).
       stubs: { jobs: [], fmtDate2: (d) => String(d || ''), _invRefreshSummary() {}, _invRefreshGuardrail() {}, _invRefreshFlagStrip() {}, _invRefreshRecords() {}, _invRefreshReleases() {}, _scheduleInventorySync() {},
                _invNetDisplay: () => '', renderInventoryTab() {} },

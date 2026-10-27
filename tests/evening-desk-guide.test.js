@@ -361,15 +361,22 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(ih, 'alert a-warn inc-chip', '…any other open incident amber');
     has(t, 'An open injury or hazard stays red until resolved; other open incidents show in amber.', 'as the page says');
     // The firearms line is red (the protocol's colour), and the page lists it as a red point.
-    const F = sandbox({ fns: ['firearmsWorkspaceLine', 'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', 'guideLinkHtml', 'esc'], vars: ['FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS'] });
+    // P4 (2026-10-27): the line reads the one rule, firearms on this job (jobHasFirearms): the intake tick, or a firearm found.
+    const F = sandbox({ fns: ['firearmsWorkspaceLine', 'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', 'guideLinkHtml', 'esc',
+      'jobHasFirearms', 'jobFirearmLines', '_firearmsFoundText', 'invIsFirearm', 'agentNoticesOn', '_invNamed', '_invItemNo', '_invRoomName', 'firearmsClientTakesAll', 'firearmsClientRuleText', 'invFirearmClientTakes', 'invFiduciaryMode', 'isDecedentJob'],
+      vars: ['FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'DECEDENT_SERVICES'] });
     const fl = attempt(() => F.firearmsWorkspaceLine({ id: 7, svc: 'probate', houseFlags: { firearms: { on: true } } }));
     ok(fl.ok, 'the firearms line draws (' + (fl.err || 'ok') + ')');
     has(fl.ok ? decode(fl.val) : '', 'Firearms flagged on this job — photograph in place, nothing moves.', 'in its words');
     has(fl.ok ? fl.val : '', 'Protocol', 'with the Protocol linked');
+    F._photoRefs[8] = [{ stableId: 'g', itemNo: 2, label: 'inventory', roomIdx: 1, objectName: 'Remington 870 shotgun', category: 'Firearms' }];
+    F.estimateStore[8] = { estimate: { rooms: [{ idx: 1, name: 'Garage' }] } };
+    const ff = attempt(() => F.firearmsWorkspaceLine({ id: 8, svc: 'probate', houseFlags: {} }));
+    has(ff.ok ? decode(ff.val) : (ff.err || ''), 'Firearm found on this job (#2 Remington 870 shotgun · Garage) — photograph in place, nothing moves.', 'and a firearm found on site lights it, with the item and its room');
     has(SRC, '.fa-line{background:#8b1e1e;', 'on a red bar');
     const li = html.slice(html.lastIndexOf('<li', html.indexOf('Firearms flagged on this job')), html.indexOf('Firearms flagged on this job'));
     has(li, '<li class="crit">', '⚠ which the page lists in red, never grey');
-    has(t, 'Firearms flagged on this job — photograph in place, nothing moves, where intake flagged firearms, with a link to the Protocol.', 'in the line’s own words');
+    has(t, 'Firearms flagged on this job — photograph in place, nothing moves, where firearms are flagged or found, with a link to the Protocol.', 'in the line’s own words');
     // The band and its answers.
     has(code(fn('_jtSendAction')), "label: '&#9993; Send ' + what", 'the band’s send, such as ✉ Send midpoint invoice');
     has(t, 'One step and one filled button, such as ✉ Send midpoint invoice.', 'as the page says');
@@ -696,7 +703,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const bulk = code(fn('_renderInvBulk'));
     has(bulk, "menu('disposition', 'Set disposition…'", 'Set disposition…');
     has(bulk, '>Remove lines</button>', 'Remove lines');
-    has(t, 'Remove lines takes them off the list and keeps the photos; Set disposition… gives them all one destination, such as Donate.', 'as the page says');
+    has(t, 'Remove lines takes them off the list and keeps the photos; Set disposition… gives them all one destination, such as Donate, guns aside.', 'as the page says');
     // The Needs you counts and the earlier days.
     has(code(fn('setInvFlag')), "if (_invFilter.flag) _invFilter.when = 'all';", 'a Needs you count covers every day: pressing one shows every day');
     has(code(fn('_renderInvFlagStrip')), '>Needs you</span>', 'the Needs you row');
@@ -714,8 +721,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(t, 'The camera’s words, three renamed (New home is Move, To a person is Distribute, Remove is Junk), plus Auction and Consign, other ways to sell, and Hold, kept back for now.', 'as the page says');
     // The row's select offers the camera's words and three more the camera does not (guide review, 2026-10-24: the page named
     // only the camera's, and Auction, Consign and Hold sat on every row unexplained).
-    has(code(fn('_invInput')), "_invDispOptions(job, v).map(", 'the row’s Where it goes is _invDispOptions');
-    const DO = sandbox({ fns: ['_invDispOptions', '_jobHasDestination'], vars: ['INV_DISPOSITIONS'] });
+    has(code(fn('_invInput')), "_invDispOptions(job, v, ref).map(", 'the row’s Where it goes is _invDispOptions, asked with the line (P4: a gun is offered fewer)');
+    const DO = sandbox({ fns: ['_invDispOptions', '_jobHasDestination', 'invIsFirearm', 'invFirearmDispRefusal', 'invFiduciaryMode', 'isDecedentJob'], vars: ['INV_DISPOSITIONS', 'INV_FIREARM_NEVER', 'DECEDENT_SERVICES'] });
     const offered = attempt(() => DO._invDispOptions({ id: 7, svc: 'downsizing_move', destAddr: '1 Ocean Blvd' }, ''));
     ok(offered.ok, 'the options answer (' + (offered.err || 'ok') + ')');
     const cam = FD.map((d) => d.disposition).filter(Boolean);
@@ -723,7 +730,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(offered.ok ? cam.filter((d) => offered.val.indexOf(d) < 0) : null, [], '…and every camera word');
     eq(sandbox({ vars: ['INV_SALE_DISPOSITIONS'] }).INV_SALE_DISPOSITIONS.slice().sort(), ['Auction', 'Consign', 'Sell'], 'Auction and Consign sell, as Sell does');
     eq(Object.keys(sandbox({ vars: ['INV_PLAN_CHANNEL_KINDS'] }).INV_PLAN_CHANNEL_KINDS), ['Donate', 'Junk', 'Auction', 'Sell'], 'the kinds that fill themselves in from the one confirmed vendor');
-    has(t, 'With one vendor of that kind confirmed on the Job Plan, it fills itself in.', 'as the page says');
+    has(t, 'With one vendor of that kind confirmed on the Job Plan, it fills itself in, a gun aside.', 'as the page says');
+    // P4 (2026-10-27): never on a gun, whose dealer a person picks; and the selection bar's destination leaves guns as they were.
+    has(code(fn('invFillPlanChannel')), 'invIsFirearm(ref)', 'the fill asks whether the line is a gun');
+    has(code(fn('_invBulkApply')), "picked = picked.filter(function(r) { return !invIsFirearm(r); });", 'and the selection bar skips guns for a destination');
+    const gunOpts = attempt(() => DO._invDispOptions({ id: 7, svc: 'downsizing_move', destAddr: '1 Ocean Blvd' }, '', { category: 'Firearms' }));
+    eq(gunOpts.ok ? gunOpts.val.filter((d) => d === 'Donate' || d === 'Junk') : null, [], 'a gun’s own Where it goes offers neither Donate nor Junk');
     // 2026-10-24: + Close-up, a close-up missed in the house, is a label over the record's chooser (closeup-later.test.js).
     ['&#10133; Another item in this photo</button>', '&#10133; Close-up</label>', 'Remove line</button>', '_invPhotoOpenHtml(jid, ref, 240)'].forEach((w) => has(code(fn('_renderInvPanel')), w, 'the record carries ' + decode(w.replace(/<[^>]+>/g, ''))));
     // 2026-10-26b (Anthony: "maybe we just need a little link under each photo"): the record's photograph and each close-up open in Drive.

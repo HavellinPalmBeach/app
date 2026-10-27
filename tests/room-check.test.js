@@ -102,9 +102,9 @@ const APP_FNS = ['agentRoomsToCheck', '_arCheckable', '_arRoomPayload', 'agentRo
   '_collPanelHtml', '_collLineStatusHtml', '_roomCollectionsHtml', '_pushInvLine', '_collDispToInv', '_collDispNeedsAppr',
   '_guessCategory', '_numOrBlank', '_invNamed', '_invTombstoneLine', '_avHasFigure', '_invHasValue', 'fieldDispToInv',
   '_importableFromEstimate', '_importedSourceSet', '_apprEstimateFlags', '_renderInventoryImportPanel', '_vehicleLineName',
-  '_renderCollPhotoCapture', '_invRenderWhenIdle', '_withDeviceKey', 'deviceKey'];
+  '_renderCollPhotoCapture', '_invRenderWhenIdle', '_withDeviceKey', 'deviceKey', 'invFirearmSettle', 'invIsFirearm', 'invFirearmDispRefusal'];
 const APP_VARS = ['_arRun', 'AGENT_ROOM_BATCH_SHOTS', 'AGENT_ROOM_CONF_RANK', 'AGENT_ROOM_CONF_WORDS', 'AGENT_PASS_GAP_MS', 'COLL_LINE_WEAK_STAMP',
-  'INV_DEFAULT_CATEGORY', 'FIELD_DISPOSITIONS', 'FIELD_DISP_DEFAULT', 'INV_TAXONOMY', 'INV_CATEGORIES', 'COLL_DOC_KINDS'];
+  'INV_DEFAULT_CATEGORY', 'FIELD_DISPOSITIONS', 'FIELD_DISP_DEFAULT', 'INV_TAXONOMY', 'INV_CATEGORIES', 'COLL_DOC_KINDS', 'INV_FIREARM_NEVER'];
 
 const EST = (colls, vehicles) => ({ estimate: { rooms: [{ idx: 4, name: 'Bedroom', note: '' }, { idx: 5, name: 'Study', note: '' }],
   collections: colls || [], vehicles: vehicles || [] } });
@@ -528,9 +528,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const uploads = [];
     const ctx = sandbox({
       fns: ['_captureShot', 'photoSubfolder', 'fieldDispToInv', '_cleanName', '_photoUid', '_slotRefs', '_setPhotoRef', '_getPhotoRef',
-            'collectionLineUnshot', '_invHasPhoto', 'collectionLineWithPhoto', '_invFileId'],
+            'collectionLineUnshot', '_invHasPhoto', 'collectionLineWithPhoto', '_invFileId', 'invIsFirearm', 'invFirearmDispRefusal', 'invFiduciaryMode', 'isDecedentJob'],
       vars: ['PHOTO_CAPTURE_LABELS', 'AS_FOUND_SUBFOLDER', 'PHOTO_SUBFOLDER', '_localShotThumbs', '_photoUidSeq', 'INV_DEFAULT_CATEGORY',
-             'FIELD_DISPOSITIONS', 'FIELD_DISP_DEFAULT', 'DETAIL_PHOTO_MAX_W', 'DETAIL_PHOTO_QUALITY'],
+             'FIELD_DISPOSITIONS', 'FIELD_DISP_DEFAULT', 'DETAIL_PHOTO_MAX_W', 'DETAIL_PHOTO_QUALITY', 'INV_FIREARM_NEVER', 'DECEDENT_SERVICES'],
       stubs: {
         jobs: [{ id: 7, hvlId: 'HVL-0007' }], _photoRefs: { 7: [placeholder] },
         estimateStore: { 7: { estimate: { rooms: [{ idx: 4, name: 'Study' }] } } },

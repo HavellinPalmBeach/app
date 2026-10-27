@@ -38,8 +38,10 @@ const APPR_FNS = ['invAwaitingAppraisal', 'invAppraised', '_invHasValue', 'invNe
                   'invApprovalComplete', 'invApprovalMissing', 'invApprovalGap', 'jobFiduciaries', '_andJoin',
                   'invPropertyNoun', 'estateProceedsHolder', 'matterDef', 'matterTypeOf', 'invHavellinRecipient',
                   // P20: the request lists what left before every fiduciary approved apart, and prints who signed readably.
-                  'invRatificationOwed', 'invWrittenReleaseNeeded', 'invRecordedGone', 'invPickupRecord', 'custodyEvents', 'invReceiptRecord', 'invViaDealer', 'invRecipientName', 'signedRecordsOf', 'invStaffRefused'];
-const APPR_VARS = ['INV_PLAN_CHANNEL_KINDS', 'INV_DISP_DOC_WORDS', 'INV_TRANSPORT_REASONS', 'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD',
+                  'invRatificationOwed', 'invWrittenReleaseNeeded', 'invRecordedGone', 'invPickupRecord', 'custodyEvents', 'invReceiptRecord', 'invViaDealer', 'invRecipientName', 'signedRecordsOf', 'invStaffRefused',
+                  // P4: a firearm's dealer is a Vendor Directory firm under Firearms Dealer (FFL); its receipt is the dealer's.
+                  'invIsFirearm', 'invFirearmsDealerFirm', 'invFirearmsDealerFirms', '_vendorNameKey', 'vendorCats', 'invDealerReleased', 'invDealerNamed', 'invDispGoesToDealer'];
+const APPR_VARS = ['INV_PLAN_CHANNEL_KINDS', 'INV_DISP_DOC_WORDS', 'INV_FIREARM_CLIENT_TXT', 'FIREARMS_DEALER_CATEGORY', 'INV_TRANSPORT_REASONS', 'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD',
                    'INV_APPRAISAL_THRESHOLD_DISPUTED', 'DECEDENT_SERVICES', 'INVENTORY_COLUMNS', 'MATTER_TYPES'];
 
 const JOB = { id: 1, hvlId: 'HVL-0007', name: 'Butler Estate', client: 'Butler Estate',
@@ -187,7 +189,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const dom = domStub({});
     const s = sandbox({
       fns: ['_fieldCamPaint', '_getPhotoRef', 'fieldCamSetDisp', 'fieldCamToggleAppr', 'fieldCamToggleDetail',
-            'fieldDispChips', '_jobHasDestination', '_invJob', 'collectionLinesUnshot', 'collectionLineUnshot', '_invHasPhoto', '_jobInvRefs'],
+            'fieldDispChips', '_jobHasDestination', '_invJob', 'collectionLinesUnshot', 'collectionLineUnshot', '_invHasPhoto', '_jobInvRefs', '_fieldCamChipRefusal', 'invIsFirearm', 'invFirearmDispRefusal', 'fieldDispToInv'],
       vars: ['_fieldCam', 'FIELD_DISPOSITIONS', 'FIELD_DISP_DEFAULT', 'FIELD_CAM_MODES'],
       stubs: { document: dom, _photoRefs: { 1: [] } },
     });
@@ -334,8 +336,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const pushed = [];
     const s = sandbox({
       fns: ['collectionLinesEnsure', '_collLinesOf', 'collectionLineId', '_collDispToInv', '_collDispNeedsAppr',
-            '_guessCategory', '_numOrBlank', '_invJob'],
-      vars: ['COLL_LINE_WEAK_STAMP'],
+            '_guessCategory', '_numOrBlank', '_invJob', 'invFirearmSettle', 'invIsFirearm', 'invFirearmDispRefusal', 'invFiduciaryMode', 'isDecedentJob'],
+      vars: ['COLL_LINE_WEAK_STAMP', 'INV_FIREARM_NEVER', 'DECEDENT_SERVICES'],
       stubs: {
         jobs: [Object.assign({}, JOB)], _photoRefs: { 1: [] }, isJobWon: () => true,
         SHEETS_SYNC_URL: '', _invCloudSeen: {},
@@ -440,7 +442,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                             '_invFileId', '_invRoomName', '_invMoney', 'invIsFirearm',
                             '_invDocHead', 'resolveValBasis', 'estateValueDate', '_invPicked',
                             '_invMatchesFilter', '_invFilterHides', '_setPhotoRef', 'savePhotoRefs',
-                            '_warnPhotoStoreFull', 'fmtDate2', 'roundCents', 'fmt']),
+                            '_warnPhotoStoreFull', 'fmtDate2', 'roundCents', 'fmt', 'invDealerUnchecked', 'invDealerDirState', 'invDealerNamed', 'invDispGoesToDealer']),
       vars: APPR_VARS.concat(['INV_LINE_INITIAL_MIN', 'INV_RELEASE_CAUTIONS', 'INV_RELEASE_DISPOSITIONS', 'INV_CAT_GLYPH']),
       stubs: { jobs: [Object.assign({}, JOB)], _photoRefs: { 1: rows },
                _invPick: {}, _invFilter: { when: 'all', room: '', q: '', flag: '' } },
@@ -488,7 +490,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                             '_invFileId', '_invRoomName', '_invMoney', 'invIsFirearm',
                             '_invDocHead', 'resolveValBasis', 'estateValueDate', '_invPicked',
                             '_invMatchesFilter', '_invFilterHides', '_setPhotoRef', 'savePhotoRefs',
-                            '_warnPhotoStoreFull', 'fmtDate2', 'roundCents', 'fmt']),
+                            '_warnPhotoStoreFull', 'fmtDate2', 'roundCents', 'fmt', 'invDealerUnchecked', 'invDealerDirState', 'invDealerNamed', 'invDispGoesToDealer']),
       vars: APPR_VARS.concat(['INV_LINE_INITIAL_MIN', 'INV_RELEASE_CAUTIONS', 'INV_RELEASE_DISPOSITIONS', 'INV_CAT_GLYPH']),
       stubs: { jobs: [Object.assign({}, JOB, {
                  appraisers: [{ id: 'ap1', name: 'M. Wayland', firm: 'Wayland Fine Art' }] })],
@@ -554,7 +556,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                             'maivAggregate', '_maivWorklistBlock', 'maivFilingApplies',
                             'maivStatement', 'maivStatement_', 'invIsMAIV', 'invMAIVDefaultCat',
                             'invMAIVCategory', 'isDecedentJob', '_gate706', 'fmtDate2',
-                            'savePhotoRefs', '_warnPhotoStoreFull', 'roundCents', 'fmt']),
+                            'savePhotoRefs', '_warnPhotoStoreFull', 'roundCents', 'fmt', 'invDispGoesToDealer', 'invDealerNamed', 'invDealerUnchecked', 'invDealerDirState', 'invDealerUncheckedText', '_invDealerDirStaleText', 'invDealerWhy']),
       vars: APPR_VARS.concat(['MAIV_AGGREGATE_THRESHOLD', 'MAIV_CATEGORIES', 'MAIV_OTHER',
                               'MAIV_BY_CATEGORY', 'DECEDENT_SERVICES', 'INVENTORY_COLUMNS',
                               'INV_TAXONOMY', 'INV_CATEGORIES']),
@@ -583,7 +585,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                             'maivAggregate', '_maivWorklistBlock', 'maivFilingApplies',
                             'maivStatement', 'maivStatement_', 'invIsMAIV', 'invMAIVDefaultCat',
                             'invMAIVCategory', 'isDecedentJob', '_gate706', 'fmtDate2',
-                            'savePhotoRefs', '_warnPhotoStoreFull', 'roundCents', 'fmt']),
+                            'savePhotoRefs', '_warnPhotoStoreFull', 'roundCents', 'fmt', 'invDispGoesToDealer', 'invDealerNamed', 'invDealerUnchecked', 'invDealerDirState', 'invDealerUncheckedText', '_invDealerDirStaleText', 'invDealerWhy']),
       vars: APPR_VARS.concat(['MAIV_AGGREGATE_THRESHOLD', 'MAIV_CATEGORIES', 'MAIV_OTHER',
                               'MAIV_BY_CATEGORY', 'DECEDENT_SERVICES', 'INVENTORY_COLUMNS',
                               'INV_TAXONOMY', 'INV_CATEGORIES']),

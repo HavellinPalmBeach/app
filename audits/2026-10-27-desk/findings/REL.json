@@ -60,6 +60,7 @@
   },
   {
    "id": "REL-03",
+   "fixed": "2026-10-27 (P4: CLAUDE.md, Firearms go only to a licensed dealer; tests/p4-firearms-dealer.test.js, browser step 119)",
    "title": "Havellin's beneficiary receipt prints a firearm as 'delivered to me by Havellin'",
    "kind": "defect",
    "severity": "fix-now",
@@ -77,6 +78,7 @@
   },
   {
    "id": "REL-04",
+   "fixed": "2026-10-27 (P4: CLAUDE.md, Firearms go only to a licensed dealer; tests/p4-firearms-dealer.test.js, browser step 119)",
    "title": "The Chain of custody dialog records a held firearm as 'Released' to a relative with one press and no flag",
    "kind": "gap",
    "severity": "high",
@@ -264,6 +266,7 @@
   },
   {
    "id": "REL-15",
+   "fixed": "2026-10-27 (P4: CLAUDE.md, Firearms go only to a licensed dealer; tests/p4-firearms-dealer.test.js, browser step 119)",
    "title": "Firearms sold to a dealer, and any firearm on living work, have nowhere to file the dealer's paper",
    "kind": "gap",
    "severity": "medium",

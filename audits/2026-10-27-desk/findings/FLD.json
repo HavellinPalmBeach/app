@@ -26,6 +26,7 @@
  "findings": [
   {
    "id": "FLD-01",
+   "fixed": "2026-10-27 (P4: CLAUDE.md, Firearms go only to a licensed dealer; tests/p4-firearms-dealer.test.js, browser step 119)",
    "title": "The Job Plan's auction house (or charity, or hauler) becomes a firearm's 'licensed dealer' on the PR's written transport authority",
    "kind": "defect",
    "severity": "fix-now",
@@ -128,6 +129,7 @@
   },
   {
    "id": "FLD-07",
+   "fixed": "2026-10-27 (P4: CLAUDE.md, Firearms go only to a licensed dealer; tests/p4-firearms-dealer.test.js, browser step 119)",
    "title": "A firearm found in the house but not flagged at intake never warns the crew afterwards",
    "kind": "gap",
    "severity": "high",

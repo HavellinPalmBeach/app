@@ -252,6 +252,7 @@
   },
   {
    "id": "SYN-14",
+   "fixed": "2026-10-27 (P4: CLAUDE.md, Firearms go only to a licensed dealer; tests/p4-firearms-dealer.test.js, browser step 119)",
    "title": "Firearms set in an item's record does not redraw the row: the 'Possible NFA item' tick and the 'Not cleared to carry' panel appear only after a full redraw",
    "kind": "inconsistency",
    "severity": "medium",

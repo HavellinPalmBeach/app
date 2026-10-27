@@ -76,6 +76,10 @@ const LINE = (id, over) => Object.assign({
   objectName: 'Sideboard', category: 'Furniture', ts: 100, updatedAt: 100,
   driveFileId: 'f' + id, driveFileUrl: 'https://drive.google.com/file/d/f' + id + '/view',
 }, over || {});
+// The licensed dealers the Vendor Directory lists (P4, 2026-10-27: off Distribute, a firearm's dealer is a directory firm under
+// Firearms Dealer (FFL), picked by a person; a name typed in the box alone is none).
+const FFL_DIR = [{ vendor_name: 'Palm Beach Arms (FFL)', category: 'Firearms Dealer (FFL)' },
+                 { vendor_name: 'Palm Beach Arms', category: 'Firearms Dealer (FFL)' }];
 // A firearm going to the daughter, papered in every other respect.
 const GUN = (id, over) => LINE(id, Object.assign({
   objectName: 'Remington 870', category: 'Firearms', serial: 'RS12345678',
@@ -91,7 +95,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // A5 · TO A PERSON, THROUGH A LICENSED DEALER
   // ═══════════════════════════════════════════════════════════════════════════
   G('A5 · the gate: the route clears the beneficiary arm, and nothing else does', () => {
-    const g = lift(['invTransportBlocked', 'invTransportReason', 'invTransportable', 'invDealerRouteText']);
+    const g = lift(['invTransportBlocked', 'invTransportReason', 'invTransportable', 'invDealerRouteText'], [], { vendorDirectory: FFL_DIR });
     const T = (o) => g.invTransportBlocked(GUN('g', o));
     eq(T({}), 'beneficiary', 'fixture: a papered firearm going to a named person is held, as before');
     eq(T({ viaDealer: 'Palm Beach Arms (FFL)' }), '',
@@ -132,7 +136,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     let painted = 0, synced = 0;
     const rig = (refs) => lift(['invSetDealerRoute', 'invTransportBlocked', 'loadPhotoRefs'],
       ['renderInventoryTab', '_scheduleInventorySync', 'alert', '_invReclaimSpace', '_invNoteReclaim', '_warnPhotoStoreFull'], {
-        jobs: [Object.assign({}, ESTATE)], _photoRefs: { 7: refs }, _photoRetryData: {},
+        // The dealer named at the prompt is on the Vendor Directory under Firearms Dealer (FFL) (restated 2026-10-27, the P4 review:
+        // the route's prompt refuses any other name, as a sale's dealer is held to the directory).
+        jobs: [Object.assign({}, ESTATE)], _photoRefs: { 7: refs }, _photoRetryData: {}, vendorDirectory: FFL_DIR,
         renderInventoryTab: () => { painted++; }, _scheduleInventorySync: () => { synced++; },
         alert: (m) => alerts.push(String(m)), _warnPhotoStoreFull: () => {},
         window: { prompt: (m, d) => { prompts.push([m, d]); return answers.prompt; }, confirm: (m) => { confirms.push(m); return answers.confirm; } },
@@ -208,7 +214,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
           _invInput: () => '', _invThumbHTML: () => '<div></div>', custodyEvents: () => [], _invPanelCols: () => [],
           renderInventoryTab: () => {}, _scheduleInventorySync: () => {}, alert: () => {},
           estimateStore: { 7: { estimate: { rooms: ROOMS } } },
-          window: { prompt: () => 'Palm Beach Arms (FFL)', confirm: () => true },
+          window: { prompt: () => 'Palm Beach Arms (FFL)', confirm: () => true }, vendorDirectory: FFL_DIR,
         });
       s._invOpen = {}; s._agDupSet = {};
       return s;
@@ -249,6 +255,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         _printDocument: (html, title) => { printed.push({ html, title }); return true; },
         _invPrintThumb: () => '', maivAggregate: () => ({ count: 0, total: 0, settled: true, over: false, unvalued: 0 }),
         estimateStore: { [job.id]: { estimate: { rooms: ROOMS } } }, document: domStub({}),
+        vendorDirectory: FFL_DIR,   // the route's dealer is a directory firm under Firearms Dealer (FFL) (the P4 review, 2026-10-27)
       });
     const refs = [GUN('g', { itemNo: 1, viaDealer: 'Palm Beach Arms (FFL)', viaDealerBy: 'Ashley Jerome', viaDealerAt: 5 }),
                   GUN('u', { itemNo: 2, objectName: 'Colt 1911', serial: 'C99' }),

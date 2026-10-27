@@ -494,7 +494,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'invAwaitingAppraisal', '_invHasAppraisal', '_jobAppraisers', '_invAwaitingApproval', 'invWrittenReleaseNeeded',
       'invProbateRows', 'matterDef', 'matterTypeOf', 'maivFilingApplies', '_gate706',
       // P16: the gate reads the dealer route; the share names both photo folders by the filing rule.
-      'invDealerRoute', 'invDealerRouteOffered', 'invTransportDealer', 'invChannelLeftover', 'photoSubfolder', 'photoSharesLine', 'photoSharesOf', 'agentNoticesOn']);
+      'invDealerRoute', 'invDealerRouteOffered', 'invTransportDealer', 'invChannelLeftover', 'photoSubfolder', 'photoSharesLine', 'photoSharesOf', 'agentNoticesOn', 'invDealerNamed', 'invDispGoesToDealer', 'invFirearmsDealerFirm', 'invFirearmsDealerFirms', 'vendorCats', '_vendorNameKey']);
     const BVARS = VARS.concat(['_agDupSetJob', 'INV_OPEN_HOLDS', 'INV_ACCEPT_AMMO_RE', 'INV_WORK_FLAGS', 'INV_DISPOSITIONS', 'INV_GROUP_ORDER',
       'INV_RELEASE_DISPOSITIONS', 'INV_RELEASE_CAUTIONS', 'MATTER_TYPES', 'INV_UNDECIDED',
       '_invFilter', '_invShowRoll', '_invOpen', '_invPick', 'INV_VAL_BASES', 'INVENTORY_COLUMNS',

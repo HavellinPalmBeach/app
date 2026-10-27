@@ -310,9 +310,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       G('g2', { itemNo: 2, objectName: 'Colt 1911', serial: 'C99', disposition: 'Distribute', channel: 'Marie Delgado (daughter)', viaDealer: 'Gulfstream Guns (FFL)', viaDealerBy: 'Ashley Jerome', viaDealerAt: 5 }),
       G('g3', { itemNo: 3, objectName: 'Ruger revolver', serial: '', disposition: 'Consign', channel: 'Palm Beach Arms (FFL)' }),
       { stableId: 'v1', label: 'inventory', itemNo: 4, objectName: 'Vase', category: 'Art & Décor', fmv: '200', disposition: 'Donate', channel: 'Goodwill', authBy: '', approvalDate: '' }];
-    const R = lift(['printApprovalRequest'], STATE.concat(['_printDocument', '_invPrintThumb', '_invPick', '_invFilter']),
+    const P25_FFL_DIR = [{ vendor_name: 'Palm Beach Arms (FFL)', category: 'Firearms Dealer (FFL)' }, { vendor_name: 'Gulfstream Guns (FFL)', category: 'Firearms Dealer (FFL)' }];
+    const R = lift(['printApprovalRequest'], STATE.concat(['_printDocument', '_invPrintThumb', '_invPick', '_invFilter', 'vendorDirectory']),
       Object.assign(BASE(), { jobs: [PROBATE()], _photoRefs: { 7: lines.map((x) => Object.assign({}, x)) }, _invPrintThumb: () => '', _invPick: {},
-        _invFilter: { when: 'all', room: '', q: '', flag: '' }, estimateStore: { 7: { estimate: { rooms: [] } } } }));
+        _invFilter: { when: 'all', room: '', q: '', flag: '' }, estimateStore: { 7: { estimate: { rooms: [] } } },
+        // P4 (2026-10-27): a firearm's dealer is a Vendor Directory firm listed under Firearms Dealer (FFL); since the P4 review the
+        // same day, a route's dealer too.
+        vendorDirectory: P25_FFL_DIR }));
     const r = attempt(() => R.printApprovalRequest(7, false));
     ok(r.ok, 'the request prints (' + (r.err || 'ok') + ')');
     const html = String(R.__printed || ''), t = textOf(html);
@@ -331,7 +335,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const job = PROBATE();
     const appr = (x) => Object.assign({}, x, { authBy: 'Tripp Butler', approvalDate: '2026-10-01' });
     const recs = [appr(lines[1]), appr({ stableId: 'c1', label: 'inventory', itemNo: 5, objectName: 'Mantel clock', category: 'Clocks', disposition: 'Distribute', channel: 'Marie Delgado (daughter)' })];
-    const Q = lift(['invReceiptGroups', 'invReceiptRecord', 'invReceiptOwed', 'invViaDealer'], STATE, Object.assign(BASE(), { jobs: [job] }));
+    const Q = lift(['invReceiptGroups', 'invReceiptRecord', 'invReceiptOwed', 'invViaDealer'], STATE.concat(['vendorDirectory']), Object.assign(BASE(), { jobs: [job], vendorDirectory: P25_FFL_DIR }));
     const groups = attempt(() => Q.invReceiptGroups(job, recs)).val || [];
     const person = groups.find((g) => !g.dealer) || {}, dealer = groups.find((g) => g.dealer) || {};
     eq((person.released || []).map((x) => x.stableId), ['c1'], '⚠⚠ Marie\'s receipt from Havellin lists the clock, not the dealer-routed gun');

@@ -190,7 +190,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // 2026-10-17: the sent request's state (_approvalLineOpen: a line it carried that still waits, and one it never carried)
     // asks the same predicate, so the card and the dashboard count what the request's list counts.
     // P28 (2026-10-18): the sign-out dialog offers an estate's leaving line only once the approval is complete (signoutGroups).
-    eq(callers, ['_approvalLineOpen', '_invAwaitingApproval', 'collectionPartnerLines', 'invApprovalBatches', 'invApprovalLeftOpen', 'invFirearmAuthorized', 'invRatificationOwed',
+    // P4 (2026-10-27): a firearm with a licensed dealer may go to it once approved, and its dealer's receipt is owed then (invDealerReleased).
+    eq(callers, ['_approvalLineOpen', '_invAwaitingApproval', 'collectionPartnerLines', 'invApprovalBatches', 'invApprovalLeftOpen', 'invDealerReleased', 'invFirearmAuthorized', 'invRatificationOwed',
                  'invReleasedToPerson', 'planDerivedLines', 'signoutGroups'].sort(),
        'the direct readers: the request\'s list, the desk\'s acts, the dialog, the firearm gate, ratification, what counts as released for a receipt, the Job Plan line');
     const viaFirearm = [...ALL_FNS].filter((n) => { try { return /\binvFirearmAuthorized\(/.test(noComments(fn(n))) && n !== 'invFirearmAuthorized'; } catch (e) { return false; } }).sort();
@@ -338,7 +339,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   G('C3 · the firearm gate and the Job Plan\'s release-authority line wait for every co-trustee', () => {
     const gun = LINE('g', 5, { category: 'Firearms', objectName: 'Remington 870', disposition: 'Consign', channel: 'Palm Beach Arms (FFL)',
                                serial: 'RS1', authBy: 'Ruth Adler', approvalDate: '2026-10-01' });
-    const S = desk(['invTransportBlocked', 'invTransportReason', 'invReleaseBlocked', 'invTransportable'], TRUST(), [gun]);
+    // P4 (2026-10-27): the dealer is a Vendor Directory firm under Firearms Dealer (FFL).
+    const S = desk(['invTransportBlocked', 'invTransportReason', 'invReleaseBlocked', 'invTransportable'], TRUST(), [gun],
+      { vendorDirectory: [{ vendor_name: 'Palm Beach Arms (FFL)', category: 'Firearms Dealer (FFL)' }] });
     const job = S.jobs[0];
     eq(S.invTransportBlocked(gun, job), 'authority', '⚠⚠ one co-trustee\'s approval does not clear a firearm to carry');
     ok(S.invReleaseBlocked(gun, job), 'and it is held');

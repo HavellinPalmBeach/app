@@ -23,17 +23,22 @@ const FNS = ['invIsFirearm', 'invFirearmAuthorized', 'invReleaseBlocked',
              // P16: the gate reads a line's dealer route (a firearm going to a named person).
              'invDealerRoute', 'invDealerRouteOffered', 'invTransportDealer', 'invChannelLeftover',
              // P19: written authority is every fiduciary's (invApprovalComplete); with no job it is the rule before.
-             'invApprovalComplete', 'invApprovalGap'];
-const VARS = ['INV_TRANSPORT_REASONS'];
+             'invApprovalComplete', 'invApprovalGap',
+             // P4 (2026-10-27): a living client's own firearm (client), and the dealer as a Vendor Directory firm under
+             // Firearms Dealer (FFL) that a person picked, on a sale.
+             'invFirearmClientTakes', 'invFirearmsDealerFirms', 'invFirearmsDealerFirm', '_vendorNameKey', 'vendorCats', 'invDealerWhy', 'invDealerNamed', 'invDispGoesToDealer', 'invDealerUnchecked', 'invDealerDirState', 'invDealerUncheckedText', '_invDealerDirStaleText'];
+const VARS = ['INV_FIREARM_CLIENT_TXT', 'FIREARMS_DEALER_CATEGORY', 'INV_TRANSPORT_REASONS', 'INV_SALE_DISPOSITIONS'];
 
-// A firearm with everything the protocol asks for: authority, serial, named dealer.
-const READY = () => ({ category: 'Firearms', objectName: 'Remington 870',
+// A firearm with everything the protocol asks for: authority, serial, named dealer. RESTATED (P4, 2026-10-27): the dealer is a
+// firm the Vendor Directory lists under Firearms Dealer (FFL), on a sale; a name in the box alone is no dealer.
+const READY = () => ({ category: 'Firearms', objectName: 'Remington 870', disposition: 'Sell',
                        authBy: 'Tripp Butler', approvalDate: '2026-09-14',
                        serial: 'RS12345678', channel: 'Palm Beach Firearms (FFL)' });
+const DIRECTORY = [{ vendor_name: 'Palm Beach Firearms (FFL)', category: 'Firearms Dealer (FFL)' }];
 
 module.exports = function ({ group, ok, eq, has, lacks }) {
   const src = source();
-  const s = sandbox({ fns: FNS, vars: VARS });
+  const s = sandbox({ fns: FNS, vars: VARS, stubs: { vendorDirectory: DIRECTORY } });
   const blocked = (o) => s.invTransportBlocked(Object.assign(READY(), o));
 
   group('⚠⚠ NFA IS ABSOLUTE — no authority reaches it', () => {
