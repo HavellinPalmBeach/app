@@ -251,18 +251,22 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     m._photoRefs[3] = [{ stableId: 'a', label: 'inventory', collId: null }];
     const ref = () => m._photoRefs[3][0];
 
+    // RESTATED 2026-10-27 (P5, REL-05): Authorized By is no longer typed (Record approval writes it, Correct… puts it right), so
+    // the stamp is driven on another sticky field a box writes, the receipt reference; the handler refuses a typed approver.
     m._invEdit(3, 'a', 'authBy', { value: 'Tripp Butler' });
-    eq(ref().authBy, 'Tripp Butler', 'recording an approver writes it');
-    ok(!(ref().clearedAt && ref().clearedAt.authBy), 'and stamps nothing');
+    eq(ref().authBy, undefined, '⚠ a typed approver is never written');
+    m._invEdit(3, 'a', 'receiptDoc', { value: 'SBY-4471' });
+    eq(ref().receiptDoc, 'SBY-4471', 'recording a receipt writes it');
+    ok(!(ref().clearedAt && ref().clearedAt.receiptDoc), 'and stamps nothing');
 
-    m._invEdit(3, 'a', 'authBy', { value: '' });
-    eq(ref().authBy, '', 'emptying it empties it');
-    ok(ref().clearedAt.authBy > 0,
+    m._invEdit(3, 'a', 'receiptDoc', { value: '' });
+    eq(ref().receiptDoc, '', 'emptying it empties it');
+    ok(ref().clearedAt.receiptDoc > 0,
        '⚠⚠ and stamps WHY it is empty — without this the field could never be cleared across '
        + 'two devices: the stale copy would restore it on every sync, forever');
 
-    m._invEdit(3, 'a', 'authBy', { value: 'Ashley Jerome' });
-    ok(!ref().clearedAt.authBy,
+    m._invEdit(3, 'a', 'receiptDoc', { value: 'SBY-4472' });
+    ok(!ref().clearedAt.receiptDoc,
        '⚠ and filling it again withdraws the stamp, or a later clear-by-accident would stick');
 
     // A field that is not sticky is not stamped — the map is not a general edit log.
@@ -272,10 +276,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // ⚠ AND THE STAMP HAS TO SURVIVE A SAVE. savePhotoRefs is a WHITELIST — a field missing
     // from it is dropped silently on every write, which would leave the clear unexplained and
     // the value restored on the next merge.
-    m._invEdit(3, 'a', 'authBy', { value: '' });
+    m._invEdit(3, 'a', 'receiptDoc', { value: '' });
     m.savePhotoRefs(3);
     const saved = JSON.parse(m.localStorage.getItem('hav_media_3'))[0];
-    ok(saved.clearedAt && saved.clearedAt.authBy > 0, 'clearedAt is on the whitelist');
+    ok(saved.clearedAt && saved.clearedAt.receiptDoc > 0, 'clearedAt is on the whitelist');
   }
 
   // ───────────────────────────────────────────────────────────────────────────

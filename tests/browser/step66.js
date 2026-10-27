@@ -164,7 +164,19 @@ const EST = 6601, LIVING = 6603;
       await p.selectOption(sel, 'Sell'); await p.waitForTimeout(700);
       eq((await line(EST, 'g1')).channel, 'Marie Delgado (daughter)', '⚠⚠ the daughter\'s name is kept: nothing clears a person\'s typing');
       has(await rowText('g1'), 'still names Marie Delgado (daughter)', '⚠ the row flags it');
+      // RESTATED 2026-10-27 (P5): the written authority was given for To a person · Marie Delgado, so a sale is not covered by it and
+      // the authority arm holds the firearm first. Approved for the sale through the bulk bar's Record approval (both signers, as
+      // the signed copy would be recorded), the dealer arm is what holds it, on the leftover name.
       await openRec('g1');
+      has(await rowText('g1'), 'Not cleared to carry: Written authority is not complete. Approved Sep 28, 2026 by Tripp Butler and Smith, John for Distribute · Marie Delgado (daughter); it now goes to Sell · Marie Delgado (daughter)',
+          '⚠ P5: an approval given for the daughter does not cover a sale');
+      await pick('g1');
+      await press('button[onclick="invRecordApproval(' + EST + ')"]', 'Record approval on the bulk bar');
+      await p.check('#ia-fid-0'); await p.check('#ia-fid-1');
+      await p.fill('#ia-date', '2026-10-12');
+      await press('#ia-save-btn', 'Record approval in the dialog');
+      await p.evaluate(() => { closeInvApproval(); _invClearPicks(); }); await p.waitForTimeout(300);
+      if (!(await vis('#inv-row-g1 .inv-auth-read'))) await openRec('g1');
       const rec = await rowText('g1');
       has(rec, 'Not cleared to carry: No dealer named — Channel / Recipient still names Marie Delgado (daughter), the person this line was going to.',
           '⚠⚠ the firearm is not cleared to carry on a leftover name');
@@ -214,14 +226,21 @@ const EST = 6601, LIVING = 6603;
       const bar2 = await p.evaluate(() => { const b = document.querySelector('button[onclick*="\'reviewed\',1"]'); return b ? b.closest('.inv-bulk').textContent.replace(/\s+/g, ' ') : ''; });
       has(bar2, '2 items marked reviewed.', '⚠⚠ and Mark reviewed says so');
       await p.evaluate(() => _invClearPicks()); await p.waitForTimeout(300);
-      // The Authorized By box, on a line two co-representatives signed on different days (one name with a comma in it).
+      // The Authorized By record, on a line two co-representatives signed on different days (one name with a comma in it).
+      // RESTATED 2026-10-27 (P5, REL-05): read, never typed; Correct… is the one hand edit, with a reason, and its box reads the
+      // same way and saves the stored form, as the box did.
       await openRec('a1');
-      const box = '#inv-row-a1 input[onchange*="\'authBy\'"]';
-      ok(await vis(box), 'the Authorized By box is on screen');
-      eq(await p.inputValue(box), 'Tripp Butler (Oct 1, 2026); Smith, John (Oct 8, 2026)', '⚠⚠ it reads each day as a person writes it, and "Smith, John" whole');
+      const read = '#inv-row-a1 .inv-auth-read';
+      ok(await vis(read), 'the Authorized By record is on screen');
+      has(await txt(read), 'Tripp Butler (Oct 1, 2026); Smith, John (Oct 8, 2026)', '⚠⚠ it reads each day as a person writes it, and "Smith, John" whole');
+      eq(await p.locator('#inv-row-a1 input[onchange*="\'authBy\'"]').count(), 0, '⚠ and there is no box to type a name into');
       lacks(await rowText('a1'), 'approval incomplete', '⚠ "Smith, John" is matched whole, so the approval is complete');
-      await p.fill(box, 'Tripp Butler (Oct 1, 2026); Smith, John (Oct 9, 2026)');
-      await p.press(box, 'Tab'); await p.waitForTimeout(400);
+      await press('#inv-row-a1 .inv-auth-fix-btn', 'Correct…');
+      eq(await p.inputValue('#ia-fix-who'), 'Tripp Butler (Oct 1, 2026); Smith, John (Oct 8, 2026)', 'Correct… shows it the same way');
+      await p.fill('#ia-fix-who', 'Tripp Butler (Oct 1, 2026); Smith, John (Oct 9, 2026)');
+      await p.fill('#ia-fix-date', '2026-10-09');
+      await p.fill('#ia-fix-why', 'Smith dated his signature the 9th');
+      await press('#ia-fix-save', 'Save correction');
       eq((await line(EST, 'a1')).authBy, 'Tripp Butler (2026-10-01); Smith, John (2026-10-09)', '⚠ a corrected day is saved in the stored form');
       // The estate line going to the concierge: group C's estate mirror (staffEstate) was removed in P22 group E (Anthony,
       // 2026-10-06: prelaunch, the case cannot occur because a new one is refused at the write), so nothing flags it.

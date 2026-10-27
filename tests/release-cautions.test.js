@@ -18,7 +18,7 @@
 
 const { sandbox, source, fn } = require('./harness');
 
-const FNS = ['invLineReviewed', 'invLineOpen', '_invDocPartyHead', 'invOwnInitial', 'invInitialGroupKey', 'estateDirectionWords', '_invDocName', 'printApprovalRequest', 'invDispDocWord', 'printDispositionLedger', 'referralFeeVendorsNote', 'vendorPaysReferral', '_vendorByName', '_vendorNameKey', '_andJoin', '_invBulkApply', '_invStampBy', 'deviceUser', 'invFillPlanChannel', 'invPlanChannel', 'invNoteDispositionMove', 'invReleaseRecipientNamed',
+const FNS = ['invLineReviewed', 'invLineOpen', '_invDocPartyHead', 'invOwnInitial', 'invInitialGroupKey', 'estateDirectionWords', '_invDocName', 'printApprovalRequest', 'invApprovalMoved', 'invApprovalPrevWords', 'approvalRequestTerms', '_approvalHash', 'approvalLineDestKey', 'invApprovalTermsOf', '_approvalLineOpen', 'invApprovalMovedText', 'invDispDocWord', 'printDispositionLedger', 'invApprovalPaperText', 'invApprovalTermsWords', 'referralFeeVendorsNote', 'vendorPaysReferral', '_vendorByName', '_vendorNameKey', '_andJoin', '_invBulkApply', '_invStampBy', 'deviceUser', 'invFillPlanChannel', 'invPlanChannel', 'invNoteDispositionMove', 'invReleaseRecipientNamed',
              'invReleaseCautions', '_invCautionBadges', '_invCautionNotices', '_invNamed',
              '_invItemNo', '_invAwaitingApproval', 'invWrittenReleaseNeeded', '_jobInvRefs', '_invAssignItemNos',
              '_invTouch', '_invPrintThumb', '_invFileId', '_invRoomName', '_invMoney',

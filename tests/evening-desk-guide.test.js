@@ -106,7 +106,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // until the release request's letter, its hold for a taker and Discard draft, the same day (he asked for the session's
     // changes to the process to be on it).
     const words = t.split(/\s+/).length;
-    ok(words < 2750, 'short: ' + words + ' words');
+    // 2,800 from 2026-10-27 (P5): an approval means what was signed, on the page where the page described the old behaviour
+    // (Record the signed request's ticks, the Releases bar opening, a change to an approved item); Anthony to confirm.
+    ok(words < 2800, 'short: ' + words + ' words');
     ['photography-guide.html', 'incident-guide.html', 'sorting-guide.html', 'packing-guide.html', 'move-day-guide.html', 'first-night-guide.html',
      'firearms-protocol.html', 'concierge-guide.html'].forEach((f) => has(html, '<a href="' + f + '">', 'names ' + f));
     has(t, 'Linked from the top of the Job Admin & Inv tab.', 'and says where the app links it');
@@ -216,7 +218,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('Releases & signed papers: opens when a request is owed, in the line’s own words (Q89)');
   {
-    has(t, 'Opens by itself when items wait for written approval that no request has carried (3 items need written approval: send a request), when a drafted request waits for I’ve sent it, or when a signed approval has no copy filed.', 'the page’s rule');
+    has(t, 'Opens by itself when items wait for written approval that no request has carried (3 items need written approval: send a request), when a drafted request waits for I’ve sent it, when an item changed after its request went, or when a signed approval has no copy filed.', 'the page’s rule');
+    // An item changed after its request went (P5, 2026-10-27): the bar's own rule, driven in tests/approval-pinned.test.js group F.
+    has(code(fn('deskFoldState')), "|| envEnded || changedSent.length > 0;", 'the bar opens on it');
     const decided = [LINE('a', { disposition: 'Sell', channel: 'Sotheby’s' }), LINE('b', { disposition: 'Donate', channel: 'Goodwill' }), LINE('c', { disposition: 'Junk', channel: 'Haul-It' })];
     let B = bars(ESTATE(), decided);
     ok(!B.releases.err, 'the bar answers (' + (B.releases.err || 'ok') + ')');
@@ -795,13 +799,22 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(code(fn('approvalRequestRecordRefusal')), "'The request has not gone yet: send the draft and tap I’ve sent it first.'", '…once the request has gone');
     has(code(fn('invRecordRequestApproval')), 'S.req.stableIds.map(String).filter(function(id){ return open.indexOf(id) >= 0; })', 'it opens on the items the request carried that still wait for a signature');
     const dlg = code(fn('invRecordApproval'));
-    has(dlg, 'id="ia-line-\' + i + \'" checked', 'each ticked');
+    // RESTATED 2026-10-27 (P5, REL-02): each ticked except a line changed since the request went (approvalRequestMovedIds).
+    has(dlg, 'id="ia-line-\' + i + \'"\' + (ch ? \'\' : \' checked\')', 'each ticked, except one changed since');
+    has(dlg, 'approvalRequestMovedIds(job, opt.req', '…read off what the request carried');
     eq(sandbox({ vars: ['INV_REQ_UNTICK_TXT'] }).INV_REQ_UNTICK_TXT, 'Untick any line the signed copy struck out.', 'the dialog says to untick what the signed copy struck out');
     has(dlg, 'Date of the signed approval', 'the date on the paper');
     has(dlg, '>Record approval</button>', 'Record approval');
     has(code(fn('invSaveApproval')), "'File the signed request'", 'then File the signed request');
     has(t, 'From then on Record the signed request waits here for the signed copy.', 'the page says where it waits');
-    has(t, 'Record the signed request opens on the items that request carried and that still wait for a signature, each ticked. Untick any the signed copy struck out, tick who signed, set the date on the paper, press Record approval, then File the signed request.', 'and what it does');
+    has(t, 'Record the signed request opens on the items that request carried and that still wait for a signature, each ticked but any changed since it went. Untick any the signed copy struck out, tick who signed, set the date on the paper, press Record approval, then File the signed request.', 'and what it does');
+    // An approval means what was signed (P5, 2026-10-27; Ask 5): a change the approval does not cover asks, and goes on the next request.
+    const A5 = lift(['invApprovalValueMoved'], {});
+    eq([500, 3000, 2401].map((v) => attempt(() => A5.invApprovalValueMoved(450, v, { id: 7 })).val).concat([attempt(() => A5.invApprovalValueMoved(2000, 2501, { id: 7 })).val,
+      attempt(() => A5.invApprovalValueMoved(2000, 2400, { id: 7 })).val]), [true, true, true, true, false], 'past $500, the appraisal threshold, or a quarter more');
+    has(code(fn('_invEdit')), 'window.confirm(invApprovalChangeAsk(', 'a person\'s change asks first');
+    has(code(fn('invApprovalComplete')), 'invApprovalMoved(ref, job)', 'and the approval stops counting, so the item goes on the next request');
+    has(t, 'Moving an approved item, or raising its value past $500, the threshold or a quarter, asks first: it goes on the next request.', 'as the page says');
     // A partial approval is recorded and the rest stay on the next request.
     has(dlg, 'the lines stay on the next request until all', 'one representative’s signature is kept, the items stay on the next request');
     has(t, 'Only one of two representatives signed? Record it anyway. Those items stay on the next request until everyone has signed.', 'as the page says');

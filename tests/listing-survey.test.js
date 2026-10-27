@@ -206,13 +206,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(gsFn('testAgentValue'), "Logger.log('      listing survey: ' + r.survey.count", 'testAgentValue prints the survey');
   }
 
-  group('S6 · the deployment: 2026-10-27, the app relies on it, and the banner leads with the survey gap');
+  // RESTATED 2026-10-27 (P5, backend 2026-10-27d): a later deployment carries this one, so the version is at least 2026-10-27 and
+  // the banner names the survey gap by its vintage after the newer one.
+  group('S6 · the deployment: 2026-10-27 or later, the app relies on it, and the banner names the survey gap by its vintage');
   {
-    eq((GS.match(/var BACKEND_VERSION = '([^']+)';/) || [])[1], '2026-10-27', 'main-sync.gs is 2026-10-27, carrying 2026-10-26c');
+    ok(((GS.match(/var BACKEND_VERSION = '([^']+)';/) || [])[1] || '') >= '2026-10-27', 'main-sync.gs is 2026-10-27 or later, carrying 2026-10-26c');
     const B = sandbox({ vars: ['BACKEND_MIN_VERSION', 'BACKEND_FEATURE_COST'] });
-    eq(B.BACKEND_MIN_VERSION, '2026-10-27', 'the app relies on it');
-    ok(/^an item Agent Two researched and found no sale for stays marked unsure, and its paper reads general estimate, however many close listings it counted; on a deployment older than 2026-10-26b, a search page/
-      .test(B.BACKEND_FEATURE_COST.version), 'the banner names the newest gap first, then 2026-10-26b\'s by its vintage');
+    ok(B.BACKEND_MIN_VERSION >= '2026-10-27', 'the app relies on it');
+    ok(/on a deployment older than 2026-10-27, an item Agent Two researched and found no sale for stays marked unsure, and its paper reads general estimate, however many close listings it counted; on a deployment older than 2026-10-26b, a search page/
+      .test(B.BACKEND_FEATURE_COST.version), 'the banner names the survey gap by its vintage, then 2026-10-26b\'s');
   }
 
   // ═══════════════════════════════ THE APP ═══════════════════════════════════

@@ -234,8 +234,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   G('G · one rule, read where it is needed', () => {
     const body = (name) => codeOnly(fn(name));
-    ['_invAwaitingApproval', '_approvalLineOpen', 'invRatificationOwed', 'signoutGroups', 'collectionPartnerLines', 'invWrittenReleasePicked']
+    ['_invAwaitingApproval', '_approvalLineOpen', 'invRatificationOwed', 'signoutGroups', 'collectionPartnerLines']
       .forEach((n) => has(body(n), 'invWrittenReleaseNeeded(', n + ' reads the one rule'));
+    // RESTATED 2026-10-27 (P5, REL-07): a selection takes what still waits on written approval, on an estate too: the rule and the
+    // approval together, through _approvalLineOpen, which reads the one rule.
+    has(body('invWrittenReleasePicked'), '_approvalLineOpen(', 'invWrittenReleasePicked reads the one rule, through the line still waiting');
     has(body('printApprovalRequest'), 'invWrittenReleasePicked(', 'the request\'s selection reads it');
     has(body('sendApprovalRequest'), 'invWrittenReleasePicked(', 'and the send\'s');
     has(body('_renderInvBulk'), 'invWrittenReleasePicked(', 'the bulk bar\'s three buttons ask it');

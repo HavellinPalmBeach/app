@@ -485,6 +485,7 @@ Publish that rate only as section (a) step 10 allows.
 - Decide first: Ask 4.
 
 **P5. An approval means what was signed.** Fix now · M · saveInventory.gs redeploy.
+- ✓ **Built 2026-10-27** (backend `2026-10-27d`; `BUILD_HISTORY.md`, 2026-10-27e, P5; `tests/approval-pinned.test.js`, browser step 118). On Ask 5's answer: crossing $500 or the appraisal threshold, or a rise of more than 25%, on every route; a fall never. Owed: the redeploy of `saveInventory.gs` (with `main-sync.gs`). Until it lands, another device's older copy saved over a newer one can drop from the sheet what an approval approved, and a device that then loads the line from the sheet reads the approval as covering wherever it goes, until the device that recorded it saves again.
 - Already built, on the DocuSign route only (26 October): a line whose destination or taker moved while the envelope was out is left unrecorded and named (`destSig`, `approvalEnvelopeChanged`). This pack takes that fingerprint to every route, and keeps it after the approval is recorded.
 - TC:
   - Changing where an approved line goes, who takes it, or its value past the threshold asks once: "Approved Oct 12 by Thomas and Nora for Auction · Kodner Galleries: this change goes on the next request."
@@ -842,8 +843,8 @@ Publish that rate only as section (a) step 10 allows.
   - the 2026-10-26c redeploy (it carries 2026-10-26b). Until it lands the card offers only **Send request**;
   - then one sandbox envelope to two of your own addresses, checking that the initials boxes land on their places, that each signer's own signing time comes back, and that the combined copy carries every initial. Production only after that.
 - **What the build left, each still open:**
-  - an approval tied to what it approved once recorded, by either route: after completion a re-routed line stays approved and is offered for sign-out (P5);
-  - a value moved while the envelope is out is recorded at the new figure with no notice (Ask 5);
+  - an approval tied to what it approved once recorded, by either route: after completion a re-routed line stays approved and is offered for sign-out (P5; built 27 Oct);
+  - a value moved while the envelope is out is recorded at the new figure with no notice (Ask 5; built 27 Oct in P5: past the rule it is left unrecorded and named);
   - a strike: a fiduciary signs the whole envelope or declines it, so a struck line is not recorded as a decline (EST-05), and on the hand route **Record the signed request** still records no strike and asks nothing about initials (REL-10; neither rechecked);
   - the DocuSign copy prints no review stamp (P10), and states values on the Contents and None tiers with group-only initials (P7);
   - the new action answers anyone holding the URL (P2);
@@ -980,6 +981,8 @@ Why: the protocol covers only a deceased owner's firearms.
 - Never; only the destination and the taker count
 
 Why: a fiduciary who approved $2,400 did not approve $24,000. The DocuSign build treats a value moved while the envelope is out as no change, so your answer sets both routes.
+
+**Answered 27 October:** *"When the value crosses $500 or the appraisal threshold, or rises more than 25%"*; *"Someone who approved $2,400 did not approve $24,000."* Built in P5, on both routes.
 
 **Ask 6. Answered on 26 October (Q109).** A Court Inventory or Trust Schedule stays FINAL whether or not the list has been read; its value pill is bronze until it is. Nothing to ask. P8's open double count is a different reason, and still a proposal.
 
@@ -1241,7 +1244,7 @@ Severity is the verifier's re-rating, or the reviewer's for RT rows. Pack is one
 
 |Id|Kind|Sev|Ver|Recheck|Finding (shortened)|Pack|Code|
 |---|---|---|---|---|---|---|---|
-|EST-01|defect|fix-now|C|still|A written approval is not tied to what it approved: changing destination…|5|invApprovalComplete|
+|EST-01|defect|fix-now|C|still|A written approval is not tied to what it approved: changing destination…|5 · built 27 Oct|invApprovalComplete|
 |EST-02|defect|fix-now|C|still|A firearm set to Donate or Junk is 'Cleared to carry' to the charity or hauler…|4|_invFirearmPanelHtml|
 |EST-03|accuracy|med|DC||The Court Inventory and Trust Schedule go FINAL, with an adoption block, over…|decided (Q109)|printCourtInventory|
 |EST-04|accuracy|high|C|still|The Release Approval Request carries unreviewed agent names and values with no…|10|printApprovalRequest|
@@ -1263,13 +1266,13 @@ Severity is the verifier's re-rating, or the reviewer's for RT rows. Pack is one
 |EST-20|inconsistency|low|DK||The Trust Schedule is offered and prints 'Held in Trust' on probate-only…|14|printTrustSchedule|
 |EST-21|inconsistency|low|C||Close-out ledger card says 'the client signs' on an estate|16||
 |EST-22|inconsistency|low|C||The request email uses the build's word 'lines' where the paper says 'items'|16|_approvalEmailParas|
-|REL-01|accuracy|fix-now|C|still|An approval stays recorded after the line's destination, recipient or value…|5|invApprovalComplete|
-|REL-02|defect|high|C|still|A line changed after the request was confirmed as sent is recorded as approved…|5|approvalRequestChanged|
+|REL-01|accuracy|fix-now|C|still|An approval stays recorded after the line's destination, recipient or value…|5 · built 27 Oct|invApprovalComplete|
+|REL-02|defect|high|C|still|A line changed after the request was confirmed as sent is recorded as approved…|5 · built 27 Oct|approvalRequestChanged|
 |REL-03|defect|fix-now|C|still|Havellin's beneficiary receipt prints a firearm as 'delivered to me by Havellin'|4|invReceiptGroups|
 |REL-04|gap|high|C|still|The Chain of custody dialog records a held firearm as 'Released' to a relative…|4|addCustodyEvent|
-|REL-05|accuracy|med|C|still|A name typed into Authorized By counts as written approval: the sign-out opens…|5|_invEdit|
+|REL-05|accuracy|med|C|still|A name typed into Authorized By counts as written approval: the sign-out opens…|5 · built 27 Oct|_invEdit|
 |REL-06|inconsistency|high|C|still|An item recorded as with the appraiser can be signed out to a beneficiary; it…|16|signoutGroups|
-|REL-07|defect|high|C|still|The bulk bar's request and Record approval on an estate take Keep and…|5|invWrittenReleasePicked|
+|REL-07|defect|high|C|still|The bulk bar's request and Record approval on an estate take Keep and…|5 · built 27 Oct|invWrittenReleasePicked|
 |REL-08|gap|high|C|still|The Disposition Ledger and the close question say nothing about lines that left…|12|dispositionLedger|
 |REL-09|accuracy|med|C||A co-trustee or co-representative receiving an item approves their own…|26|INV_RELEASE_CAUTIONS|
 |REL-10|gap|med|C||Record the signed request never asks about the initials the paper asks for|26|invRecordApproval|
@@ -1288,7 +1291,7 @@ Severity is the verifier's re-rating, or the reviewer's for RT rows. Pack is one
 |REL-23|accuracy|low|C||The vendor's pickup sheet records the firm as the signer, not the person who…|30|openSignoutDialog|
 |REL-24|accuracy|low|C||A custody event is removed with one tap on ✗, with no confirm and no reason|16|removeCustodyEvent|
 |REL-25|friction|low|C||Removing a line that is matched to a bequest and sitting on a sent request asks…|16|invRemoveLine|
-|REL-26|accuracy|low|C||Record approval accepts any date, including a future date or one before the…|5|invSaveApproval|
+|REL-26|accuracy|low|C||Record approval accepts any date, including a future date or one before the…|5 · built 27 Oct|invSaveApproval|
 |REL-27|docs|low|C||Smaller wording problems around approvals|16|_renderInvReleasesCard|
 |REL-28|automation|low|C||Let the app read the signed request back from its photograph|26||
 |VAL-01|defect|fix-now|C|still|One inventory snapshot of a full house pushes the job past the Sheets cell…|1|takeInventorySnapshot|
@@ -1513,7 +1516,7 @@ Severity is the verifier's re-rating, or the reviewer's for RT rows. Pack is one
 |NEW-26|friction|low|C||Send request is offered again straight after I've sent it, beside Record the…|16|approvalRequestCardHtml|
 |SYN-01|defect|fix-now|C|still|A device with an old copy overwrites the other device's work on any line it…|6, 18|_invRefreshFromCloud|
 |SYN-02|defect|high|C|still|Lines removed on one device come back named and valued when a device with an…|6, 18|agentShotGroups|
-|SYN-03|accuracy|fix-now|C|still|A written approval stays complete after the line is sent somewhere else; the…|5|invApprovalComplete|
+|SYN-03|accuracy|fix-now|C|still|A written approval stays complete after the line is sent somewhere else; the…|5 · built 27 Oct|invApprovalComplete|
 |SYN-04|defect|high|C|still|A deliberate clear of a sticky field (a wrong approval, a wrong recipient) is…|18|invStickyValue|
 |SYN-05|defect|high|C|still|When the sheet is slow or unreachable, the desk redraws on a timer and after…|6|_invRefreshFromCloud|
 |SYN-06|defect|high|C|still|Work can be stranded on a device: an edit within 2.5 s of closing or reloading…|6|_pendingCount|

@@ -1016,7 +1016,11 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
     if (!(await p.locator('#inv-row-q4').isVisible())) await press('#panel-inventory button[onclick="setInvWhen(\'all\')"]', 'All, so the lamp\'s row is drawn');
     await press('#inv-row-q4 input[onchange^="_invTogglePick"]', 'the box on the reading lamp (the person\'s selection)');
     const bulkRec = 'button[onclick="invRecordApproval(' + RSQ + ')"]';
-    ok(await p.locator(bulkRec).isVisible(), 'fixture: the bulk bar is up for the lamp, its own Record approval on it');
+    // RESTATED 2026-10-27 (P5, REL-07): the bulk bar's Record approval takes only lines that wait on written approval, so the bar
+    // held for the lamp the family keeps offers none; the bar itself, and the person's selection, are what this part keeps.
+    const bulkBar = '#inv-bulk-' + RSQ;
+    ok(await p.locator(bulkBar).isVisible(), 'fixture: the bulk bar is up for the lamp');
+    eq(await p.locator(bulkRec).count(), 0, '⚠ P5: and it offers no Record approval for a line kept by the family');
     if (!(await isOpen('releases', RSQ))) await press('#desk-hd-releases-' + RSQ, 'the Releases header, to open it');
     const REC = '#inv-releases button[onclick="invRecordRequestApproval(' + RSQ + ')"]';
     eq(await p.locator('#inventory-content button[onclick^="invRecordRequestApproval("]').count(), 1, '⚠⚠ Record the signed request once on the whole desk');
@@ -1055,7 +1059,7 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
     eq(saved.file, ['File the signed request'], 'and offers the signed copy for filing at once');
     eq(saved.pick, ['q4'], '⚠⚠ the bulk bar\'s selection is as the person left it');
     await press('#ia-actions button[onclick="closeInvApproval()"]', 'Done');
-    ok(await p.locator(bulkRec).isVisible(), 'the bulk bar is still up for the lamp');
+    ok(await p.locator(bulkBar).isVisible(), 'the bulk bar is still up for the lamp');
     ok(await p.locator('#inv-row-q4 input[onchange^="_invTogglePick"]').isChecked(), 'and the lamp\'s box still ticked on its row');
     const card7 = await p.evaluate(() => ((document.getElementById('inv-releases') || {}).textContent || '').replace(/\s+/g, ' '));
     has(card7, '1 line still unsigned', 'the card: the sideboard still waits');
@@ -1376,8 +1380,10 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
           remove: vis('button[onclick^="invBulkRemove("]'), clear: vis('.inv-bulk-clear'), text: (b.querySelector('strong') || {}).textContent,
           line: [top('strong'), top('.inv-bulk-tog'), top('.inv-bulk-clear')], res: (b.querySelector('.inv-bulk-res') || {}).textContent || '' }; }, EST);
       await p.locator(BOX('e01')).scrollIntoViewIfNeeded(); await p.click(BOX('e01')); await p.waitForTimeout(500);
-      await p.locator(BOX('e02')).scrollIntoViewIfNeeded(); await p.click(BOX('e02')); await p.waitForTimeout(500);
-      ok(await p.evaluate(() => !!(_invPick.e01 && _invPick.e02)), '⚠⚠ two rows ticked through their own boxes at 390 (the old bar, over the rows, took the second press)');
+      // RESTATED 2026-10-27 (P5, REL-07): the second row is the brass lamps (to Goodwill, unsigned), not the flatware both signers
+      // approved: the bar's Send request is drawn only while a picked line waits on written approval, and Actions must show it.
+      await p.locator(BOX('e04')).scrollIntoViewIfNeeded(); await p.click(BOX('e04')); await p.waitForTimeout(500);
+      ok(await p.evaluate(() => !!(_invPick.e01 && _invPick.e04)), '⚠⚠ two rows ticked through their own boxes at 390 (the old bar, over the rows, took the second press)');
       const S1 = await bulkBox();
       ok(S1 && S1.h <= 60, '⚠⚠ the bar is one line with two rows ticked: ' + (S1 && S1.h) + ' px (448 px before this group)');
       console.log('    the bulk bar at 390, two rows ticked: ' + (S1 && S1.h) + ' px (448 px before this group)');
@@ -1390,7 +1396,7 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
       eq(await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), 0, 'the open bar fits the screen');
       // An act from the open bar: the render it makes draws the bar open, with the act's confirmation.
       await p.selectOption('#inv-bulk-' + EST + ' select[onchange*="\'condition\'"]', 'Good'); await p.waitForTimeout(700);
-      eq(await p.evaluate(() => ['e01', 'e02'].map((s) => _photoRefs[9601].find((r) => r.stableId === s).condition)), ['Good', 'Good'], 'Set condition… on the phone set both lines');
+      eq(await p.evaluate(() => ['e01', 'e04'].map((s) => _photoRefs[9601].find((r) => r.stableId === s).condition)), ['Good', 'Good'], 'Set condition… on the phone set both lines');
       const S3 = await bulkBox();
       ok(S3 && /inv-bulk-open/.test(S3.cls) && S3.cat, '⚠ after the act\'s render the controls are still shown, as they were left');
       has(S3 && S3.res, 'Good', 'and the act\'s confirmation reads under them');
@@ -1601,9 +1607,12 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
       eq(await p.locator('#inv-releases button[onclick="sendApprovalRequest(' + R3 + ')"]').count(), 0, 'fixture: the line approved, the card offers no send');
       if ((await p.locator('#inv-row-q1').count()) === 0) await press('#panel-inventory button[onclick="setInvWhen(\'all\')"]', 'All, so the painting\'s row is drawn');
       await press('#inv-row-q1 button[onclick="_invToggleOpen(\'q1\')"]', 'the painting\'s ▾');
-      const box = 'input[onchange="_invEdit(' + R3 + ',\'q1\',\'authBy\',this)"]';
-      eq(await p.locator(box).count(), 1, 'fixture: the record\'s Authorized By box');
-      await p.fill(box, ''); await p.locator(box).blur(); await p.waitForTimeout(600);
+      // RESTATED 2026-10-27 (P5, REL-05): the record's Authorized By is read, never typed; the approval is taken off with Correct…
+      // (both fields cleared, and the reason).
+      await press('#inv-row-q1 .inv-auth-fix-btn', 'the record\'s Correct…');
+      await p.fill('#ia-fix-who', ''); await p.fill('#ia-fix-date', ''); await p.fill('#ia-fix-why', 'recorded against the wrong line');
+      await press('#ia-fix-save', 'Save correction');
+      await p.waitForTimeout(600);
       has(await stat('releases', R3), '1 item needs written approval: send a request', 'the approval cleared: the bar\'s line asks for a request');
       const send = p.locator('#inv-releases button[onclick="sendApprovalRequest(' + R3 + ')"]');
       ok((await send.count()) === 1 && (await send.isVisible()), '⚠⚠ and the card under it offers Send request at once (it kept the approved card until a full redraw)');

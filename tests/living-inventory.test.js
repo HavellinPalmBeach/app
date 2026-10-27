@@ -76,7 +76,7 @@ const PRINT_FNS = ['_invDocPartyHead', 'invLineReviewed', 'invLineOpen', 'invIni
   // P16: the dealer route, the one field-on-this-job rule, and the photo folders the share names.
   'invDealerRoute', 'invDealerRouteOffered', 'invTransportDealer', 'invChannelLeftover', '_invColOnJob', 'photoSubfolder', 'roundCents', 'fmt',
   // P19: the bequest caution asks the job's bequest list; written authority is every fiduciary's.
-  'invBequestElsewhere', 'invBequestFor', 'jobListEntries', 'invApprovalComplete',
+  'invBequestElsewhere', 'invBequestFor', 'jobListEntries', 'invApprovalComplete', 'invApprovalMoved', 'invApprovalMovedText',
   'invApprovalGap', 'jobFiduciaries', '_andJoin', 'invPropertyNoun', 'estateProceedsHolder', 'inventoryNetLabel', 'invRepresentativeTitle',
   // P19: the Disposition Ledger's card on the desk, on living work as on an estate.
   '_renderLedgerCards', '_renderContentsCard', 'ledgerApplies', '_renderLedgerCard', '_renderProceedsCard', '_renderDonationsCard', 'dispositionLedger', 'ledgerSignedCopies',

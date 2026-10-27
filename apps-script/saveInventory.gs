@@ -452,7 +452,9 @@ function getMediaStore() {
 // the same names, so a field added to one and not the other fails the suite.
 var INV_STICKY_FIELDS = ['itemNo', 'authBy', 'approvalDate', 'dispDate', 'receiptDoc', 'serial', 'channel',
                          'driveFileId', 'driveFileUrl', 'filename', 'sourceCollId', 'sourceVehId',
-                         'fieldNote', 'groupId', 'derivedFrom', 'viaDealer', 'viaDealerBy', 'viaDealerAt'];
+                         'fieldNote', 'groupId', 'derivedFrom', 'viaDealer', 'viaDealerBy', 'viaDealerAt',
+                         // P5 (2026-10-27d): what a recorded approval approved, the approvals it replaced, its corrections.
+                         'authFor', 'authWas', 'authFixes'];
 function _invHasVal(v) { return v !== undefined && v !== null && v !== ''; }
 // "Never saw a value" and "deliberately emptied it" are different answers: without telling
 // them apart a sticky field could never be cleared at all, because the stale device would
@@ -541,7 +543,13 @@ function _invMergeApprovals(win, lose) {
   var wa = String(win.authBy || '').trim(), la = String(lose.authBy || '').trim();
   var baseIsLose = setL > setW;
   var base = baseIsLose ? lose : win, other = baseIsLose ? win : lose;
+  // ⚠ WHAT AN APPROVAL APPROVED GOES WITH IT (P5): where the other copy holds the later hand edit or the newer approval (the base:
+  // a correction, or an approval recorded over one that no longer covered the line), its date, what it approved, the approvals
+  // it replaced and its corrections are the line's, whether or not the names differ.
+  var withBase = ['approvalDate', 'authFor', 'authWas', 'authFixes'];
+  if (baseIsLose) for (var wb = 0; wb < withBase.length; wb++) if (_invHasVal(lose[withBase[wb]])) fx[withBase[wb]] = lose[withBase[wb]];
   // A cleared or empty base keeps the sticky rule's answer; the same list on both sides needs nothing.
+  // (A base taken from the losing copy always comes with setAt, since setL > setW, so the fields above are returned with it.)
   if (!String(base.authBy || '').trim() || wa === la) return (hasAdds || setAt) ? fx : null;
   var be = _invApprovalEntries(base), oe = _invApprovalEntries(other);
   var have = {};

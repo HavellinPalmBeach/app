@@ -597,8 +597,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     r.c.approvalEnvelopeRefresh({ jobId: 7 });
     eq([r.row('a').approvalDate, r.row('b').authBy, r.row('d').approvalDate], ['2026-10-19', undefined, '2026-10-19'], '⚠⚠ the chairs, now to another charity, are not recorded; the rest are');
     eq(r.env().changed, ['b'], 'named on the record');
-    has(text(r.card()), '1 line changed where it goes or who takes it after the envelope went, so its signatures were not recorded: send a fresh request for it.', 'and on the card');
-    // A value moved by Agent Two after it went is not a change of destination.
+    has(text(r.card()), '1 line changed where it goes, who takes it or its value after the envelope went, so its signatures were not recorded: send a fresh request for it.', 'and on the card');
+    // A value moved by Agent Two after it went is not a change of destination, and within Ask 5's rule (P5, 2026-10-27: past
+    // $500, the appraisal threshold or a 25% rise it is; tests/approval-pinned.test.js group G) not a change at all.
     const v = dsRig();
     v.c.sendApprovalRequestEsign(7);
     v.at(NOW + 5 * MIN);
@@ -606,7 +607,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     v.at(NOW + 21 * MIN);
     v.N.opts.esignStatus = STATUS('completed', [['1', 'completed', '2026-10-18T14:00:00Z'], ['2', 'completed', '2026-10-19T15:00:00Z']]);
     v.c.approvalEnvelopeRefresh({ jobId: 7 });
-    eq(v.row('b').approvalDate, '2026-10-19', 'a value changed after it went: still recorded (nobody approves a value)');
+    eq(v.row('b').approvalDate, '2026-10-19', 'a value changed within the rule after it went: still recorded');
     // A signer DocuSign reports under another email: nothing recorded, said in red, the paper by hand allowed.
     const m = dsRig();
     m.c.sendApprovalRequestEsign(7);

@@ -111,7 +111,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   G('1 · a firearm moved off To a person: the leftover name is flagged, never cleared, and never read as the dealer', () => {
     const job = PROBATE();
-    const S = desk(['_invEdit', '_invBulkApply', 'invTransportBlocked', 'invTransportReason', 'invKeepChannel', '_renderInvRow', '_renderInvPanel'], job,
+    const S = desk(['_invEdit', '_invBulkApply', 'invTransportBlocked', 'invTransportReason', 'invKeepChannel', '_renderInvRow', '_renderInvPanel', 'invApplyApproval'], job,
       [GUN('g', 1, { disposition: 'Distribute', channel: 'Marie Delgado (daughter)' }), GUN('h', 2, { disposition: 'Distribute', channel: 'Sam Delgado', serial: 'SN-2' }),
        LINE('k', 3, { disposition: 'Distribute', channel: 'Ann Lee' }), LINE('m', 4, { disposition: 'Donate', channel: 'Goodwill' })]);
     const g = () => S._getPhotoRef(8, 'g');
@@ -119,6 +119,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const r = attempt(() => S._invEdit(8, 'g', 'disposition', { value: 'Sell', type: 'select-one' }));
     ok(r.ok, 'the disposition changes' + (r.ok ? '' : ': ' + r.err));
     eq(g().channel, 'Marie Delgado (daughter)', '⚠⚠ the person\'s name stays in Channel / Recipient: nothing clears a person\'s typing');
+    // RESTATED 2026-10-27 (P5): the written authority was given for To a person · Marie Delgado, so a sale is not covered by it and
+    // the authority arm holds the firearm first; approved for the sale (the writer, as the signed copy would be recorded), the
+    // dealer arm is what holds it. Each step below that changes where it goes or who takes it is re-approved the same way.
+    eq(S.invTransportBlocked(g(), S.jobs[0]), 'authority', '⚠ P5: an approval given for the daughter does not cover a sale');
+    const reapprove = (id, day) => S.invApplyApproval(8, [S._getPhotoRef(8, id)], ['Tripp Butler'], day);
+    reapprove('g', '2026-09-11');
     eq(S.invTransportBlocked(g(), S.jobs[0]), 'dealer', '⚠⚠ and it is not read as the receiving dealer: the dealer arm holds the firearm');
     has(S.invTransportReason(g(), S.jobs[0]), 'still names Marie Delgado (daughter), the person this line was going to', 'the reason names the leftover name');
     has(S.__log.badges.map((b) => b.m).join('\n'), 'Channel / Recipient still names Marie Delgado (daughter)', 'and the change says so at once');
@@ -131,8 +137,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Retyping the channel retires the flag too; moving back onto Distribute clears it (the name is the recipient again).
     S._invEdit(8, 'g', 'disposition', { value: 'Distribute' });
     S._invEdit(8, 'g', 'disposition', { value: 'Consign' });
+    reapprove('g', '2026-09-12');
     eq(S.invTransportBlocked(g(), S.jobs[0]), 'dealer', 'off Distribute again: held again');
     S._invEdit(8, 'g', 'channel', { value: 'Palm Beach Arms (FFL)' });
+    reapprove('g', '2026-09-13');
     eq([S.invTransportBlocked(g(), S.jobs[0]), g().channelLeftover], ['', undefined], 'a dealer typed in: cleared, and the mark is gone');
     // A line moved off Distribute with no name, or a line never on it, is not flagged.
     S._invEdit(8, 'm', 'disposition', { value: 'Sell' });
@@ -143,6 +151,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const said = S.__log.badges.map((b) => b.m).pop() || '';
     has(said, '2 of them still name the person they were going to in Channel / Recipient', '⚠ the sweep says so');
     has(said, '#2 Shotgun (Sam Delgado)', 'naming each line and the name');
+    reapprove('h', '2026-09-14');
     eq(S.invTransportBlocked(S._getPhotoRef(8, 'h'), S.jobs[0]), 'dealer', '⚠⚠ a firearm swept off Distribute is held too');
   });
 
@@ -298,20 +307,22 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(S.invRecordedGone(sold, J([{ id: 'r2', kind: 'statement', ref: 'ps1', filedAt: 1 }], [Object.assign({}, st, { voidedAt: 5 })])), false, 'never a voided one');
   });
 
-  G('9d · the Authorized By box reads like a person and saves the stored form', () => {
+  // RESTATED 2026-10-27 (P5, REL-05): the Authorized By box is gone from the record (a name typed counted as written approval);
+  // Correct… is the one hand edit left, and its box reads like a person and saves the stored form, as the box did.
+  G('9d · Correct…\'s box reads like a person and saves the stored form', () => {
     const TWO = 'Ruth Adler (2026-10-01); Daniel Adler (2026-10-08)';
-    const S = desk(['_invInput', '_invEdit', '_getPhotoRef'], TRUST(), [LINE('a', 1, { authBy: TWO, approvalDate: '2026-10-08' })]);
-    const col = { key: 'authBy', header: 'Authorized By', kind: 'manage', edit: 'text', group: 'disp' };
-    has(decl('INVENTORY_COLUMNS'), "{key:'authBy',       header:'Authorized By',       kind:'manage',  edit:'text'", 'fixture: the column as the app defines it');
-    const box = S._invInput(7, S._getPhotoRef(7, 'a'), col, S.jobs[0]);
-    has(box, 'value="Ruth Adler (Oct 1, 2026); Daniel Adler (Oct 8, 2026)"', '⚠⚠ the box shows each day as a reader writes it');
-    S._invEdit(7, 'a', 'authBy', { value: 'Ruth Adler (Oct 1, 2026); Daniel Adler (Oct 8, 2026)' });
-    eq(S._getPhotoRef(7, 'a').authBy, TWO, '⚠ saved as shown: the stored form is kept exactly');
-    S._invEdit(7, 'a', 'authBy', { value: 'Ruth Adler (Oct 1, 2026); Daniel Adler (Oct 9, 2026)' });
+    const S = desk(['invCorrectApproval', 'invSaveApprovalFix', '_getPhotoRef'], TRUST(), [LINE('a', 1, { authBy: TWO, approvalDate: '2026-10-08' })],
+      { _todayStr: () => '2026-10-20' });
+    const doc = S.__doc;
+    ok(S.invCorrectApproval(7, 'a'), 'Correct… opens');
+    has(doc.getElementById('ia-body').innerHTML, 'value="Ruth Adler (Oct 1, 2026); Daniel Adler (Oct 8, 2026)"', '⚠⚠ the box shows each day as a reader writes it');
+    doc.__seed('ia-fix-who', 'Ruth Adler (Oct 1, 2026); Daniel Adler (Oct 9, 2026)'); doc.__seed('ia-fix-date', '2026-10-09'); doc.__seed('ia-fix-why', 'Daniel dated it the 9th');
+    ok(S.invSaveApprovalFix(), 'saved');
     eq(S._getPhotoRef(7, 'a').authBy, 'Ruth Adler (2026-10-01); Daniel Adler (2026-10-09)', '⚠⚠ a corrected day is stored as an ISO day');
     ok(S._getPhotoRef(7, 'a').authBySetAt > 0, 'a hand edit stamps the list (for the merge)');
-    const P = desk(['_invInput', '_getPhotoRef'], TRUST(), [LINE('b', 2, { authBy: 'Ruth Adler; Daniel Adler', approvalDate: '2026-10-02' })]);
-    has(P._invInput(7, P._getPhotoRef(7, 'b'), col, P.jobs[0]), 'value="Ruth Adler; Daniel Adler"', 'the plain form shows as stored (the date has its own box)');
+    const P = desk(['invCorrectApproval', '_getPhotoRef'], TRUST(), [LINE('b', 2, { authBy: 'Ruth Adler; Daniel Adler', approvalDate: '2026-10-02' })]);
+    ok(P.invCorrectApproval(7, 'b'), 'Correct… opens on the plain form');
+    has(P.__doc.getElementById('ia-body').innerHTML, 'value="Ruth Adler; Daniel Adler"', 'the plain form shows as stored (the date has its own box)');
   });
 
   G('9e · a signing act whose open lines miss different people says each line\'s own gap', () => {

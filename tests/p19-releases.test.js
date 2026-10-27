@@ -175,6 +175,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       _invApprovalEntries: 'the merge (P22): the entries Record approval writes, keyed by name',
       invMergeApprovals: 'the merge (P22): signers unioned per line, as the server does',
       _invApprovalSetAt: 'the merge (P22): when the list was last edited by hand',
+      // P5 (2026-10-27): what an approval approved (authFor) is read beside who signed, by the one answer and its words; the
+      // record's box is read-only (Correct… is the one hand edit, with a reason); a person's change asks of a recorded approval.
+      invApprovalMoved: 'the one answer (P5): does the recorded approval still cover the line',
+      invApprovalMovedText: 'its sentence (P5): who approved it, when, for what, and what it reads now',
+      invApprovalChangeAsk: 'the question a change asks first (P5): who approved it, when, for what',
+      _invBulkApply: 'a sweep asks first where it moves a recorded approval (P5)',
+      _invApprovalReadHtml: 'the record\'s read-only Authorized By (P5): who signed, earlier approvals, corrections',
+      _invCell: 'the record\'s read-only Approval Date (P5)',
+      invCorrectApproval: 'Correct… (P5): shows the recorded approval to put right',
+      invSaveApprovalFix: 'Correct…\'s writer (P5): with a reason, stamping the hand edit',
     };
     const extra = [...owners].filter((n) => !ALLOWED[n]).sort();
     eq(extra, [], '⚠⚠ no function outside the rule, the writer and the displays reads authBy or approvalDate');
@@ -188,8 +198,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // 2026-10-17: the sent request's state (_approvalLineOpen: a line it carried that still waits, and one it never carried)
     // asks the same predicate, so the card and the dashboard count what the request's list counts.
     // P28 (2026-10-18): the sign-out dialog offers an estate's leaving line only once the approval is complete (signoutGroups).
+    // P5 (2026-10-27): a selection's request names what it left out, an approved line among them (invWrittenReleaseLeftOutText).
     eq(callers, ['_approvalLineOpen', '_invAwaitingApproval', 'collectionPartnerLines', 'invApprovalBatches', 'invApprovalLeftOpen', 'invFirearmAuthorized', 'invRatificationOwed',
-                 'invReleasedToPerson', 'planDerivedLines', 'signoutGroups'].sort(),
+                 'invReleasedToPerson', 'invWrittenReleaseLeftOutText', 'planDerivedLines', 'signoutGroups'].sort(),
        'the direct readers: the request\'s list, the desk\'s acts, the dialog, the firearm gate, ratification, what counts as released for a receipt, the Job Plan line');
     const viaFirearm = [...ALL_FNS].filter((n) => { try { return /\binvFirearmAuthorized\(/.test(noComments(fn(n))) && n !== 'invFirearmAuthorized'; } catch (e) { return false; } }).sort();
     eq(viaFirearm, ['invReleaseBlocked', 'invTransportBlocked'], 'and the two firearm gates read it through invFirearmAuthorized');

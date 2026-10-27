@@ -155,7 +155,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   G('Q24 · Record approval saves a partial approval, says so before saving, and never refuses for it', () => {
     const lines = [LINE('a', 1, { disposition: 'Auction', clearedAt: { authBy: 5 } }), LINE('b', 2, { disposition: 'Donate' }), LINE('c', 3, { disposition: 'Keep' })];
     const S = desk(['invRecordApproval', 'invSaveApproval', 'closeInvApproval', 'invApprovalDialogNote', 'invApprovalComplete', 'fileSignedCopyFromInput'],
-      TRUST(), lines, { _invPick: { a: 1, b: 1 }, _todayStr: () => '2026-10-01' });
+      // Today is the last day it records (P5, 2026-10-27: a signed approval dated after today is refused).
+      TRUST(), lines, { _invPick: { a: 1, b: 1 }, _todayStr: () => '2026-10-09' });
     const doc = S.__doc, job = S.jobs[0];
     ok(S.invRecordApproval(7), 'the dialog opens');
     const body = doc.getElementById('ia-body').innerHTML;
@@ -199,11 +200,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(S.invApprovalComplete(lines[0], job), 'and the line is approved');
     lacks(text(doc.getElementById('ia-body').innerHTML), 'has not signed', 'nothing left to say');
     // Both ticked again later: a name recorded twice keeps its first date, and nothing is dropped.
-    S._invPick = { a: 1 }; S.invRecordApproval(7);
-    doc.__seed('ia-fid-0', true); doc.__seed('ia-fid-1', true); doc.__seed('ia-date', '2026-10-09');
-    ok(S.invSaveApproval(), 'recorded again');
+    // RESTATED 2026-10-27 (P5, REL-07): Record approval on the bulk bar takes only lines still waiting, so an approved line is left
+    // out and named; the writer's rule is driven on the writer itself.
+    S._invPick = { a: 1 };
+    eq(S.invRecordApproval(7), false, '⚠ an approved line selected alone: nothing to record');
+    has(S.__log.alerts.join(' '), 'already approved in writing as it reads', 'and why');
+    S.invApplyApproval(7, [lines[0]], ['Ruth Adler', 'Daniel Adler'], '2026-10-09');
     eq([lines[0].authBy, lines[0].approvalDate], [TWO_DAYS, '2026-10-08'], '⚠ a name recorded twice keeps its first date');
     // Nobody ticked: refused, and nothing written.
+    lines[2].disposition = 'Sell';   // the clock, now waiting on approval
     S._invPick = { c: 1 }; S.invRecordApproval(7);
     doc.__seed('ia-fid-0', false); doc.__seed('ia-fid-1', false);
     eq(S.invSaveApproval(), false, 'nobody ticked: refused');
@@ -537,8 +542,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(noComments(decl('INV_RELEASE_CAUTIONS')), 'invHavellinRecipient(r, _invJob(jobId))', 'the living caution reads the same definition');
     ['_invEdit', '_invBulkApply'].forEach((n) => lacks(noComments(fn(n)), 'invHavellinRecipient(', n + ' never asks the definition bare (the estate refusal is invStaffRefused)'));
     // Every surface that prints who signed reads the one readable form.
-    eq(callers('invApprovalSignedText'), ['_invApprovalReadHtml', '_invExportValue', 'invApprovalBoxText', 'invApprovalGap', 'printApprovalRequest', 'printDispositionLedger', 'probatePackageRecordHtml', 'signoutSheetHtml'],
-       '⚠ the request, the flag, the panel, the ledger, the package\'s record, the workbook, and the sign-out sheet (P28)');
+    // RESTATED 2026-10-27 (P5): the papers (the ledger, the package's record, the workbook, the sign-out sheet) read it through
+    // invApprovalPaperText, which prints an approval only where it still covers the line; Correct… shows it as recorded.
+    eq(callers('invApprovalSignedText'), ['_invApprovalReadHtml', 'invApprovalBoxText', 'invApprovalGap', 'invApprovalPaperText', 'invCorrectApproval', 'printApprovalRequest'],
+       '⚠ the request, the flag, the panel, Correct…, and every paper through the one that asks what it may print');
+    eq(callers('invApprovalPaperText'), ['_invExportValue', 'printDispositionLedger', 'probatePackageRecordHtml', 'signoutSheetHtml'],
+       '⚠ the ledger, the package\'s record, the workbook, and the sign-out sheet (P28)');
     ['printApprovalRequest', 'printDispositionLedger', 'probatePackageRecordHtml', '_invExportValue', 'invApprovalGap'].forEach((n) =>
       ok(!/esc\(r\.authBy|String\(r\.authBy\)|String\(ref\.authBy\)\.trim\(\) \+ ', '/.test(noComments(fn(n))), n + ' never prints the stored field'));
     // The dialog's note and the save's confirmation say one sentence.
