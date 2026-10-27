@@ -4,7 +4,8 @@
 // Drives the REAL page: a probate estate with two rooms, an as-found photograph in one, an unvalued painting flagged for
 // appraisal and a sideboard. A: More ▾ → As-Found Record opens in the viewer, titled, the page on screen, nothing printed.
 // B: the viewer's Print / Save PDF prints that page and the viewer comes back after the dialog; Close takes it away.
-// C: the Appraisal Worklist and the Court Inventory the same way. D: the work bar's Approval Request still prints at once.
+// C: the Appraisal Worklist and the Court Inventory the same way. D: the work bar's Approval Request opens the same way since
+// 2026-10-27 (it printed at once until then; step 116 drives the bar's four papers).
 // E: the viewer at 390 px: no horizontal overflow; zero page errors.
 //
 //   NODE_PATH=/path/to/node_modules node tests/browser/step111.js [/abs/path/to/havellin.html]
@@ -164,12 +165,15 @@ const EST = 11101;
     });
 
     // ── D ───────────────────────────────────────────────────────────────────
-    await section('D. the work bar’s Approval Request still prints at once (not asked)', async () => {
+    // Restated 2026-10-27 (Anthony: "Yes"): the work bar's papers open on screen first too.
+    await section('D. the work bar’s Approval Request opens the same way since 2026-10-27', async () => {
       const before = await prints();
       await press('#inv-workbar button[onclick="printApprovalRequest(' + EST + ')"]', 'Approval Request');
-      for (let i = 0; i < 20 && (await prints()) === before; i++) await p.waitForTimeout(150);
-      eq((await prints()) - before, 1, 'printed at once');
-      ok(!(await viewerOpen()), 'no viewer');
+      ok(await viewerOpen(), '⚠ the viewer is on screen');
+      eq(await txt('#doc-viewer-title'), 'Release Approval Request', 'titled by the paper');
+      await p.waitForTimeout(500);
+      eq(await prints(), before, 'nothing printed by opening it');
+      await press('#doc-viewer-modal button[onclick="closeDocViewer()"]', 'Close');
     });
 
     // ── E ───────────────────────────────────────────────────────────────────
