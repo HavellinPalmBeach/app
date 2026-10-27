@@ -127,7 +127,7 @@ const AV_FNS = ['agentValueMode', 'agentValueInternal', '_avHasFigure', 'agentVa
   '_avdDate', '_ymdLocal', 'resolveValBasis', '_agNameKey', '_agDetailRefs', 'invLineCloseUps', '_invFileId', 'invAppraisalThreshold',
   'gateDispute', '_gateYes', 'invNeedsAppraisal', 'fmt', '_invMoney', '_invNamed', '_invItemNo', '_andJoin',
   'moneyToNumber', '_readAppsScriptJson', '_invJob', '_invRenderWhenIdle', '_invHasPhoto', 'agentValueLooks', '_avPhotoContext', '_invPhotoSource',
-  '_invRoomName', 'agentListedOff', '_invDerivedRefs', '_invPhotoSiblings', '_invCondIsAgents', '_invAgentCondition', '_avSurveyOf'];
+  '_invRoomName', 'agentListedOff', '_invDerivedRefs', '_invPhotoSiblings', '_invCondIsAgents', '_invAgentCondition', '_avSurveyOf', 'invFirearmSettle', 'invIsFirearm', 'invFirearmDispRefusal'];
 const AV_VARS = ['_avRun', 'AGENT_CONDITIONS', '_avForceComps', '_avAfter', '_avAutoAgain', 'AGENT_VALUE_BATCH', 'AGENT_VALUE_GENERAL_CEILING', 'AGENT_VALUE_WHOLE_FROM', 'AGENT_VALUE_MAX_COMPS',
   'AGENT_VALUE_MARK_RE', 'AGENT_VALUE_NO_MARK_RE', 'AGENT_VALUE_READ_RE', 'AGENT_VALUE_HEDGE_RE', 'AGENT_VALUE_CONFS', 'AGENT_VALUE_SOURCES', 'AGENT_VALUE_OWN',
   'AGENT_VALUE_SALE_DATE_RE', 'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
@@ -486,8 +486,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const refs = [ROW({ stableId: 'p', objectName: '', namedBy: undefined, agentNotices: [{ kind: 'firearm', text: 'long gun case behind the coats' }] }),
                   ROW({ stableId: 'q', objectName: '', namedBy: undefined, derivedFrom: 'p' })];
     // invSplitItemN is stubbed, never lifted (a lifted function overrides the stub): a split here is the defect.
-    const S = sandbox({ fns: ['agentApplyResult', '_agWrite', '_invCondIsAgents', '_invAgentCondition', '_agState', '_getPhotoRef', '_setPhotoRef', '_agNameKey'],
-      vars: ['_agRun', 'AGENT_CONDITIONS', 'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY'],
+    const S = sandbox({ fns: ['agentApplyResult', '_agWrite', '_invCondIsAgents', '_invAgentCondition', '_agState', '_getPhotoRef', '_setPhotoRef', '_agNameKey', '_invJob', 'invFirearmSettle', 'invIsFirearm', 'invFirearmDispRefusal', 'invFiduciaryMode', 'isDecedentJob'],
+      vars: ['_agRun', 'AGENT_CONDITIONS', 'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY', 'INV_FIREARM_NEVER', 'DECEDENT_SERVICES'],
       stubs: { _photoRefs: { 7: refs }, _invTouch: (r) => r, invSplitItemN: () => { throw new Error('must not split'); } } });
     S._getPhotoRef(7, 'q').objectName = 'Grey strongbox';   // typed on the desk while the run was out
     S._getPhotoRef(7, 'q').namedBy = 'desk';
@@ -509,8 +509,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠ A2b · on review: the only row named by hand while the run was out, and the answer saw more: one blank row for Name shots to ask again');
   {
     const minted = [];
-    const S = sandbox({ fns: ['agentApplyResult', '_agWrite', '_invCondIsAgents', '_invAgentCondition', '_agState', '_getPhotoRef', '_setPhotoRef', '_agNameKey', '_agStateHtml', '_agFailureKind'],
-      vars: ['_agRun', 'AGENT_CONDITIONS', 'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY'],
+    const S = sandbox({ fns: ['agentApplyResult', '_agWrite', '_invCondIsAgents', '_invAgentCondition', '_agState', '_getPhotoRef', '_setPhotoRef', '_agNameKey', '_agStateHtml', '_agFailureKind', '_invJob', 'invFirearmSettle', 'invIsFirearm', 'invFirearmDispRefusal', 'invFiduciaryMode', 'isDecedentJob'],
+      vars: ['_agRun', 'AGENT_CONDITIONS', 'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY', 'INV_FIREARM_NEVER', 'DECEDENT_SERVICES'],
       stubs: { _photoRefs: { 7: [ROW({ stableId: 'p', objectName: 'Silver tea service', namedBy: 'desk' })] }, _invTouch: (r) => r, esc: (x) => String(x),
         invSplitItemN: (j, src, n) => { const r = ROW({ stableId: 'n' + minted.length, objectName: '', namedBy: undefined, derivedFrom: src }); minted.push([src, n]); return [r]; } } });
     S.agentApplyResult(7, { srcId: 'p', rows: ['p'] }, { objects: [{ name: 'Silver tea service', category: 'Silver & Precious Metal', qty: 1, confidence: 'high', basis: 'x' },
@@ -518,7 +518,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq([S._getPhotoRef(7, 'p').objectName, minted], ['Silver tea service', [['p', 1]]], '⚠ the typed name stands; one blank row is added off the photograph, nothing written by position');
     S._agState(7).total = 1;   // the run sent one photograph
     has(S._agStateHtml(7), '1 left alone: named on the desk meanwhile (press Name shots for what else that photograph shows)', '⚠ the work bar says a row was left alone, and what to press');
-    const T = sandbox({ fns: ['agentApplyResult', '_agWrite', '_invCondIsAgents', '_invAgentCondition', '_agState', '_getPhotoRef', '_setPhotoRef', '_agNameKey'], vars: ['_agRun', 'AGENT_CONDITIONS', 'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY'],
+    const T = sandbox({ fns: ['agentApplyResult', '_agWrite', '_invCondIsAgents', '_invAgentCondition', '_agState', '_getPhotoRef', '_setPhotoRef', '_agNameKey', '_invJob', 'invFirearmSettle', 'invIsFirearm', 'invFirearmDispRefusal', 'invFiduciaryMode', 'isDecedentJob'], vars: ['_agRun', 'AGENT_CONDITIONS', 'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY', 'INV_FIREARM_NEVER', 'DECEDENT_SERVICES'],
       stubs: { _photoRefs: { 7: [ROW({ stableId: 'p', objectName: 'Silver tea service', namedBy: 'desk' })] }, _invTouch: (r) => r, invSplitItemN: () => { throw new Error('must not split'); } } });
     let threw = '';
     try { T.agentApplyResult(7, { srcId: 'p', rows: ['p'] }, { objects: [{ name: 'Tea service', category: 'General/Household', qty: 1, confidence: 'high', basis: 'x' }], notices: [] }); }
@@ -611,7 +611,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('⚠⚠ A7 · a collection once photographed: the walkthrough\'s rough figure goes, for Agent Two to value; a desk figure stays');
   {
-    const S = sandbox({ fns: ['collectionLineWithPhoto', 'fieldDispToInv'], vars: ['FIELD_DISPOSITIONS', 'FIELD_DISP_DEFAULT'] });
+    const S = sandbox({ fns: ['collectionLineWithPhoto', 'fieldDispToInv', 'invIsFirearm', 'invFirearmDispRefusal', 'invFiduciaryMode', 'isDecedentJob'], vars: ['FIELD_DISPOSITIONS', 'FIELD_DISP_DEFAULT', 'INV_FIREARM_NEVER', 'DECEDENT_SERVICES'] });
     const shot = { roomIdx: 2, label: 'inventory', seq: 1, collId: undefined, filename: 'x.jpg', driveFileUrl: null, status: 'uploading', ts: 5 };
     eq(S.collectionLineWithPhoto({ stableId: '7_col1', objectName: 'Coin collection', fmv: 5000, qty: '200' }, shot, {}).fmv, '', '⚠ the walkthrough figure is not carried');
     eq(S.collectionLineWithPhoto({ stableId: '7_col1', objectName: 'Coin collection', fmv: 4200, valuedBy: 'desk' }, shot, {}).fmv, 4200, 'a figure the desk typed stays');
@@ -759,9 +759,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             '_getPhotoRef', '_setPhotoRef', '_invJob', 'invFiduciaryMode', 'isDecedentJob', '_invStampLineReviewed', 'invLineUnsure', 'invLineReviewed', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invLineOpen', 'invAcceptCtx', '_agNameKey', 'agentValueInternal',
             'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep', 'agentNotices', 'agentNoticesOn', 'agentNoticeQuiet', '_jobInvRefs', '_invPhotoSiblings', '_invPhotoSource', '_invDerivedRefs',
             'agentValueNotices', '_avNoticeKinds', '_avNoticeLabel', 'agentValueStale', 'agentValueSpecialistWorth', 'agentValueAgain', '_avState', '_invNamed', '_invItemNo',
-            'invAppraisalThreshold', 'gateDispute', '_gateYes', 'fmt', 'roundCents', 'invNeedsAppraisal', 'invIsIntrinsic', 'invCatMeta', 'invAppraiserFor', '_anArticle'],
+            'invAppraisalThreshold', 'gateDispute', '_gateYes', 'fmt', 'roundCents', 'invNeedsAppraisal', 'invIsIntrinsic', 'invCatMeta', 'invAppraiserFor', '_anArticle', 'invFirearmSettle', 'invIsFirearm', 'invFirearmDispRefusal', '_invFirearmsSkippedText', 'invFirearmSettleText'],
       vars: ['INVENTORY_COLUMNS', 'DECEDENT_SERVICES', 'AGENT_VALUE_OWN', 'AGENT_NOTICE_KINDS', '_avRun', '_avAfter', '_avForceComps', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS',
-             'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'INV_TAXONOMY', 'INV_OPEN_HOLDS'],
+             'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'INV_TAXONOMY', 'INV_OPEN_HOLDS', 'INV_FIREARM_NEVER'],
       stubs: { jobs: [ESTATE()], _photoRefs: { 7: lines }, _invPicked: () => pick, _invTouch(r) { r.updatedAt = (r.updatedAt || 0) + 1; return r; },
                savePhotoRefs() {}, _scheduleInventorySync() {}, showSyncBadge() {}, renderInventoryTab() {}, _invMatchesFilter: () => true, _invBulkLast: null,
                mustFindAllFound: () => false, agentDuplicateGroups: () => (dupRows.length ? [{ rows: dupRows }] : []) } });
@@ -794,7 +794,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     let E = null;
     const job = ESTATE();
     E = rig(job, [ROW({ stableId: 'm', objectName: 'Wooden wall mirror', namedBy: 'agent', valuedBy: 'agent', fmv: 25, valLow: 20, valHigh: 30, valConf: 'high', valNameAt: 'Wooden wall mirror' })], {
-      fns: ['_invEdit', 'invUnitValue', '_invQtyCarriesValue', '_invPaintFigures', 'invAppraised', '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_agDupEligible', '_arDupEligible', 'agentNamedTwice', 'invIsFirearm', '_invPhotoNoteOpen', 'invReleaseCautions', 'invBequestElsewhere', 'invAwaitingAppraisal'], vars: ['_agDupSetJob', 'INV_ACCEPT_AMMO_RE', 'INV_RELEASE_CAUTIONS', 'INV_OPEN_HOLDS'],
+      fns: ['_invEdit', 'invUnitValue', '_invQtyCarriesValue', '_invPaintFigures', 'invAppraised', '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_agDupEligible', '_arDupEligible', 'agentNamedTwice', 'invIsFirearm', '_invPhotoNoteOpen', 'invReleaseCautions', 'invBequestElsewhere', 'invAwaitingAppraisal', 'invFirearmSettle', 'invFirearmDispRefusal', 'invFiduciaryMode', 'isDecedentJob', 'invFirearmSettleText', '_invNamed', '_invItemNo', 'invTransportDealer', 'invFirearmsDealerFirm', 'invFirearmsDealerFirms', '_vendorNameKey', 'vendorCats', 'invChannelLeftover', 'invDealerRoute', 'invDealerRouteOffered'], vars: ['_agDupSetJob', 'INV_ACCEPT_AMMO_RE', 'INV_RELEASE_CAUTIONS', 'INV_OPEN_HOLDS', 'INV_FIREARM_NEVER', 'DECEDENT_SERVICES', 'INV_SALE_DISPOSITIONS', 'FIREARMS_DEALER_CATEGORY'],
       stubs: { _invRefreshSummary() {}, _invRefreshGuardrail() {}, _invRefreshFlagStrip() {}, _invRefreshRecords() {}, _invRefreshReleases() {},
         INV_STICKY_FIELDS: [], invStaffRefused: () => '', invBequestFor: () => null, invNoteDispositionMove: () => false, invFillPlanChannel: () => false,
         _invRowDomId: (s) => 'inv-row-' + s, _renderInvRow: () => '<div></div>',

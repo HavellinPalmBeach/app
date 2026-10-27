@@ -157,7 +157,7 @@ const EST = 6601, LIVING = 6603;
     }, [T0, EST, LIVING]).catch((e) => ok(false, 'seed: ' + e.message.split('\n')[0]));
 
     // ════════════════════════════════════════════════════════════════════════════════════════════════════
-    await section('A. a firearm moved off To a person: the name is kept and flagged, and is not the dealer until a person says so', async () => {
+    await section('A. a firearm moved off To a person: the name is kept and flagged, and is never the dealer unless the directory lists it as one', async () => {
       await toDesk(EST);
       const sel = '#inv-row-g1 select[onchange*="\'disposition\'"]';
       ok(await vis(sel), 'the row\'s disposition select is on screen');
@@ -173,7 +173,11 @@ const EST = 6601, LIVING = 6603;
       await p.waitForTimeout(300);
       const after = await rowText('g1');
       lacks(after, 'still names', 'the flag comes off once a person keeps the name');
-      has(after, 'Cleared to carry. Havellin’s named principal alone takes it to Marie Delgado (daughter)', 'and the record names the named principal (item 3)');
+      // Since P4 (2026-10-27) a kept name is the dealer only where the Vendor Directory lists it as a licensed dealer: a
+      // daughter never is, so the firearm stays uncleared, the record now saying why.
+      has(after, 'Not cleared to carry: No dealer named — Marie Delgado (daughter) is not a licensed dealer on the Vendor Directory',
+          '⚠⚠ and the kept name is still no dealer: a firearm goes only to a licensed dealer (P4)');
+      lacks(after, 'Cleared to carry', 'never cleared to carry to a relative');
       lacks(after, 'Anthony Graziano alone', 'never a person by name');
       eq((await line(EST, 'g1')).channel, 'Marie Delgado (daughter)', 'the channel is as typed');
     });

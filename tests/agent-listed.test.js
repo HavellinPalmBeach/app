@@ -74,8 +74,8 @@ function app(refs) {
   return sandbox({
     fns: ['agentListedOff', 'agentNameableRefs', 'agentShotGroups', '_agDetailRefs', '_agShotPayload', '_agContext', '_agWrite', '_invCondIsAgents', '_invAgentCondition',
       'agentApplyResult', '_agState', 'invSplitItemN', '_invSplitSource', '_getPhotoRef', '_setPhotoRef', '_jobInvRefs', '_invFileId', '_photoUid',
-      '_invPhotoSource', '_invRoomName'],
-    vars: ['_agRun', 'AGENT_CONDITIONS', 'AGENT_MAX_DETAILS', 'AGENT_LISTED_MAX', 'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY', 'INV_SPLIT_MAX', '_photoUidSeq'],
+      '_invPhotoSource', '_invRoomName', '_invJob', 'invFirearmSettle', 'invIsFirearm', 'invFirearmDispRefusal', 'isDecedentJob'],
+    vars: ['_agRun', 'AGENT_CONDITIONS', 'AGENT_MAX_DETAILS', 'AGENT_LISTED_MAX', 'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY', 'INV_SPLIT_MAX', '_photoUidSeq', 'INV_FIREARM_NEVER', 'DECEDENT_SERVICES'],
     stubs: {
       jobs: [{ id: 7, hvlId: 'HVL-0009', svc: 'cleanout' }], _photoRefs: { 7: refs },
       estimateStore: { 7: { estimate: { rooms: [{ idx: 2, name: 'Kitchen', note: '' }] } } },

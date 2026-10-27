@@ -12,7 +12,7 @@ const { sandbox } = require('./harness');
 
 const INV_FNS = ['invAppraised',  'invDocContractBlock', 'docTierProduces',
   'invCatMeta', 'invAppraiserFor', 'invIsIntrinsic', 'invNeedsAppraisal', 'invAppraisalInProgress', 'invFiduciaryMode', 'isDecedentJob',
-  'invIsFirearm', 'invFirearmAuthorized', 'invReleaseBlocked',
+  'invIsFirearm', 'invFirearmAuthorized', 'invReleaseBlocked', 'invFirearmClientTakes',
   '_jobInvRefs', '_invAssignItemNos', '_invItemNo', '_invTouch', 'mergeMediaItems', 'invMergeApprovals', '_invApprovalEntries', '_invApprovalSetAt',
   'mergeCustodyLogs', '_custodyEventId', 'invStickyValue', '_invHasVal',
   '_invJob', 'invAppraisalThreshold', 'gateDispute', '_gateYes',
@@ -226,7 +226,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines',
       'estimateAppraiserNames', 'docTierProduces', 'docScopeDef', 'roundCents', 'fmt',
       'scheduleSigners', 'jobFiduciaries'
-    ]);
+    , 'invFirearmClientTakes']);
     const COURT_VARS = INV_VARS.concat(['INV_VAL_BASES', 'DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MATTER_TYPES',
                                         'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DOC_SCOPES']);
 
@@ -469,7 +469,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'invApprovalMissing', 'invApprovalGap', 'jobFiduciaries', 'jobListEntries', 'invRepresentativeTitle', 'matterDef', 'matterTypeOf'
     ]);
     const WL_VARS = INV_VARS.concat([
-      'INV_TRANSPORT_REASONS', 'MATTER_TYPES',
+      'INV_FIREARM_CLIENT_TXT', 'FIREARMS_DEALER_CATEGORY', 'INV_TRANSPORT_REASONS', 'MATTER_TYPES',
       'MAIV_AGGREGATE_THRESHOLD', 'MAIV_CATEGORIES', 'MAIV_OTHER', 'MAIV_BY_CATEGORY',
       'DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'INVENTORY_COLUMNS',
     ]);
@@ -592,8 +592,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('a cleared value stays blank, and money shows as money');
   {
     const m = sandbox({ fns: ['_invEdit', '_invAcceptCtxOf', 'invLineReviewed', 'invLineOpen', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invLineAcceptedOnly', 'agentValueUnreviewed', '_avTakeValue', '_getPhotoRef', '_setPhotoRef', 'savePhotoRefs',
-                              '_warnPhotoStoreFull', '_invTouch', 'moneyToNumber', '_invHasVal', 'invAppraised', '_invHasValue', '_invJob', 'invUnitValue', 'invLineQty', '_invQtyCarriesValue', '_invPaintFigures', 'agentValueAfterRename', 'agentValueStale', '_avHasFigure', 'invAcceptCtx', '_arDupEligible'],
-                        vars: ['_agDupSetJob', 'INV_ACCEPT_AMMO_RE', 'INV_STICKY_FIELDS'],
+                              '_warnPhotoStoreFull', '_invTouch', 'moneyToNumber', '_invHasVal', 'invAppraised', '_invHasValue', '_invJob', 'invUnitValue', 'invLineQty', '_invQtyCarriesValue', '_invPaintFigures', 'agentValueAfterRename', 'agentValueStale', '_avHasFigure', 'invAcceptCtx', '_arDupEligible', 'invFirearmSettle', 'invIsFirearm', 'invFirearmDispRefusal', 'invFiduciaryMode', 'isDecedentJob', 'invFirearmSettleText', '_invNamed', '_invItemNo', 'invTransportDealer', 'invFirearmsDealerFirm', 'invFirearmsDealerFirms', '_vendorNameKey', 'vendorCats', 'invChannelLeftover', 'invDealerRoute', 'invDealerRouteOffered'],
+                        vars: ['_agDupSetJob', 'INV_ACCEPT_AMMO_RE', 'INV_STICKY_FIELDS', 'INV_FIREARM_NEVER', 'DECEDENT_SERVICES', 'INV_SALE_DISPOSITIONS', 'FIREARMS_DEALER_CATEGORY'],
                         // _invRefreshReleases with its sibling repaints: _invEdit runs it on every edit since the desk build's review (2026-10-23).
                         stubs: { _invRefreshSummary() {}, _invRefreshGuardrail() {}, _invRefreshFlagStrip() {}, _invRefreshRecords() {}, _invRefreshReleases() {},
                                  _scheduleInventorySync() {}, _invNetDisplay: () => '' } });
@@ -765,8 +765,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const lines = [];
     const c = sandbox({
       fns: ['collectionLinesEnsure', '_collLinesOf', 'collectionLineId', '_collDispToInv', '_collDispNeedsAppr',
-            '_guessCategory', '_numOrBlank', '_invJob', '_pushInvLine', '_setPhotoRef'],
-      vars: ['COLL_LINE_WEAK_STAMP', 'INV_DEFAULT_CATEGORY'],
+            '_guessCategory', '_numOrBlank', '_invJob', '_pushInvLine', '_setPhotoRef', 'invFirearmSettle', 'invIsFirearm', 'invFirearmDispRefusal', 'invFiduciaryMode', 'isDecedentJob'],
+      vars: ['COLL_LINE_WEAK_STAMP', 'INV_DEFAULT_CATEGORY', 'INV_FIREARM_NEVER', 'DECEDENT_SERVICES'],
       stubs: {
         jobs: [{ id: 3, svc: 'cleanout' }], isJobWon: () => true, SHEETS_SYNC_URL: 'https://x', _invCloudSeen: { 3: true },
         _photoRefs: { 3: lines },

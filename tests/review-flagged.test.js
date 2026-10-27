@@ -1637,7 +1637,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // photograph line to the first live line split off it, for the list above the rows and the line's record; the rule reads the
     // photograph's line itself, removed or not (A6), so the two say the same.
     lacks(L, 'agentNoticeLoud', 'agentNoticeLoud gone from live code: every note outlives its line');
-    eq(callersOf('agentNoticesOn'), ['_agRecordNoticesHtml', 'agentNotices'], 'what a removed photograph line\'s notes ride on: one answer, read by the list above the rows and the record');
+    // And since P4 (2026-10-27) by the firearms on the job (jobFirearmLines: a Firearm or NFA note on an unreviewed line lights the
+    // crew's banner), reading the same answer, never a copy of it.
+    eq(callersOf('agentNoticesOn'), ['_agRecordNoticesHtml', 'agentNotices', 'jobFirearmLines'], 'what a removed photograph line\'s notes ride on: one answer, read by the list above the rows, the record and the firearms on the job');
     lacks(live(fn('_invPhotoNoteOpen')), 'deletedAt', '…and the rule holds on the photograph\'s notes whether or not its line was removed');
     // ⚠ The hint is the line's alone (Q108): one reader, handed no facts.
     // Restated on the merge of main (2026-10-26): the hint is read by the row, by main's Unsure chip on the work bar (INV_WORK_FLAGS)

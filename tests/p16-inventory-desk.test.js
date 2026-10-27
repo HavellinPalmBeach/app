@@ -76,6 +76,10 @@ const LINE = (id, over) => Object.assign({
   objectName: 'Sideboard', category: 'Furniture', ts: 100, updatedAt: 100,
   driveFileId: 'f' + id, driveFileUrl: 'https://drive.google.com/file/d/f' + id + '/view',
 }, over || {});
+// The licensed dealers the Vendor Directory lists (P4, 2026-10-27: off Distribute, a firearm's dealer is a directory firm under
+// Firearms Dealer (FFL), picked by a person; a name typed in the box alone is none).
+const FFL_DIR = [{ vendor_name: 'Palm Beach Arms (FFL)', category: 'Firearms Dealer (FFL)' },
+                 { vendor_name: 'Palm Beach Arms', category: 'Firearms Dealer (FFL)' }];
 // A firearm going to the daughter, papered in every other respect.
 const GUN = (id, over) => LINE(id, Object.assign({
   objectName: 'Remington 870', category: 'Firearms', serial: 'RS12345678',
@@ -91,7 +95,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // A5 · TO A PERSON, THROUGH A LICENSED DEALER
   // ═══════════════════════════════════════════════════════════════════════════
   G('A5 · the gate: the route clears the beneficiary arm, and nothing else does', () => {
-    const g = lift(['invTransportBlocked', 'invTransportReason', 'invTransportable', 'invDealerRouteText']);
+    const g = lift(['invTransportBlocked', 'invTransportReason', 'invTransportable', 'invDealerRouteText'], [], { vendorDirectory: FFL_DIR });
     const T = (o) => g.invTransportBlocked(GUN('g', o));
     eq(T({}), 'beneficiary', 'fixture: a papered firearm going to a named person is held, as before');
     eq(T({ viaDealer: 'Palm Beach Arms (FFL)' }), '',
@@ -208,7 +212,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
           _invInput: () => '', _invThumbHTML: () => '<div></div>', custodyEvents: () => [], _invPanelCols: () => [],
           renderInventoryTab: () => {}, _scheduleInventorySync: () => {}, alert: () => {},
           estimateStore: { 7: { estimate: { rooms: ROOMS } } },
-          window: { prompt: () => 'Palm Beach Arms (FFL)', confirm: () => true },
+          window: { prompt: () => 'Palm Beach Arms (FFL)', confirm: () => true }, vendorDirectory: FFL_DIR,
         });
       s._invOpen = {}; s._agDupSet = {};
       return s;

@@ -108,10 +108,10 @@ Below are the confirmed defects that meet the triage bar: lost data, wrong money
 15. **A line changed after the request went is recorded at its new terms.** On the DocuSign route a changed destination or taker is now caught, but a changed value is still recorded at the new figure; on the email route nothing is caught once **I've sent it** is pressed. Fix: keep checking each line against the request that was sent; changed lines start unticked in **Record the signed request**. REL-02 → P5.
 16. **The bulk request takes Keep and already-approved lines,** and a Keep approval later authorised a Junk run. Fix: the bulk request takes only lines that need approval. REL-07 → P5.
 17. **A typed name counts as written approval,** and the playbook says to type it. Fix: **Record approval** is the only way in, with **Correct…** and a reason. REL-05 → P5.
-18. **A firearm is "cleared to carry" to a charity, a hauler, or the Job Plan's auction house as its "licensed dealer",** and the signed request says the fiduciaries named it. Fix: only a person names a dealer, and a firearm is never offered Donate or Junk. EST-02, FLD-01 → P4.
-19. **A beneficiary's receipt says Havellin delivered her a revolver.** Fix: no Havellin receipt lists a firearm, and the dealer's receipt gets its own row. REL-03, REL-15 → P4.
-20. **The custody dialog releases a held firearm to a relative in one press.** Fix: it asks what the sign-out asks, starting on "Choose…". REL-04 → P4.
-21. **A firearm found on site that was not flagged at intake never lights the crew's banner.** Fix: one rule for "firearms on this job". FLD-07 → P4.
+18. **A firearm is "cleared to carry" to a charity, a hauler, or the Job Plan's auction house as its "licensed dealer",** and the signed request says the fiduciaries named it. Fix: only a person names a dealer, and a firearm is never offered Donate or Junk. EST-02, FLD-01 → P4. **Fixed 2026-10-27 (P4).**
+19. **A beneficiary's receipt says Havellin delivered her a revolver.** Fix: no Havellin receipt lists a firearm, and the dealer's receipt gets its own row. REL-03, REL-15 → P4. **Fixed 2026-10-27 (P4).**
+20. **The custody dialog releases a held firearm to a relative in one press.** Fix: it asks what the sign-out asks, starting on "Choose…". REL-04 → P4. **Fixed 2026-10-27 (P4).**
+21. **A firearm found on site that was not flagged at intake never lights the crew's banner.** Fix: one rule for "firearms on this job". FLD-07 → P4. **Fixed 2026-10-27 (P4).**
 22. **An item out with the appraiser can be signed out to a beneficiary,** and then reads both gone and still out. Fix: it waits until it is checked back in. REL-06, NEW-03 → P16.
 23. **The ledger the PRs sign as "the final record" hides a release made without written approval.** Close job asks only about rooms, so a living job closed with an unauthorised shotgun, undecided lines, no hours and an unsigned Contents Record. Fix: one close-readiness list, and the ledger prints "ratification owed". DOC-11, EST-14, REL-08, NEW-04, VAL-14 → P12.
 24. **One signature passes for every fiduciary's on the ledger, and a Co-Trustee signs as "Successor Trustee".** Fix: record who signed each copy, and print each signer's own role. EST-13, DOC-13 → P12.
@@ -465,7 +465,7 @@ Publish that rate only as section (a) step 10 allows.
 
 ### Phase 2: make every paper true and defensible (about 18 build days)
 
-**P4. Firearms go only to a licensed dealer.** Fix now · S to M.
+**P4. Firearms go only to a licensed dealer.** Fix now · S to M. **Built 2026-10-27** (CLAUDE.md, Firearms; `tests/p4-firearms-dealer.test.js`, browser step 117).
 - TC:
   - A firearm offers Auction, Consign or Sell to a dealer, To a person through a dealer, Hold and Keep; never Donate or Junk.
   - The dealer is always a person's pick: a recorded dealer route, or a directory firm under *Firearms Dealer (FFL)*. The Job Plan's vendor never fills it.
@@ -966,7 +966,7 @@ Why: scores taken on different models cannot be compared, and a worse model woul
 
 Why: a value Havellin sets measures how often the agents agree with Havellin, not with the market.
 
-**Ask 4. A living client's own firearm going to the new home: who carries it?** (P4; LIV-05)
+**Ask 4. A living client's own firearm going to the new home: who carries it?** (P4; LIV-05) **Answered 2026-10-27:** *"it's always safer for the client just to take it, but I'm not going to mandate that they take it in a locked case. I mean, they can put it in their trunk ... They put it in a backpack in their trunk. There's nothing wrong with that."*
 - The client, in a locked case; Havellin and the movers never touch it; counsel words the protocol (Recommended)
 - A licensed dealer transfers it, as on an estate
 - Held until there is written authority, as on an estate
@@ -1242,7 +1242,7 @@ Severity is the verifier's re-rating, or the reviewer's for RT rows. Pack is one
 |Id|Kind|Sev|Ver|Recheck|Finding (shortened)|Pack|Code|
 |---|---|---|---|---|---|---|---|
 |EST-01|defect|fix-now|C|still|A written approval is not tied to what it approved: changing destination…|5|invApprovalComplete|
-|EST-02|defect|fix-now|C|still|A firearm set to Donate or Junk is 'Cleared to carry' to the charity or hauler…|4|_invFirearmPanelHtml|
+|EST-02|defect|fix-now|C|still; fixed P4|A firearm set to Donate or Junk is 'Cleared to carry' to the charity or hauler…|4|_invFirearmPanelHtml|
 |EST-03|accuracy|med|DC||The Court Inventory and Trust Schedule go FINAL, with an adoption block, over…|decided (Q109)|printCourtInventory|
 |EST-04|accuracy|high|C|still|The Release Approval Request carries unreviewed agent names and values with no…|10|printApprovalRequest|
 |EST-05|gap|high|C||A line a fiduciary strikes is not recorded: it returns unchanged on the next…|26|invRecordApproval|
@@ -1265,8 +1265,8 @@ Severity is the verifier's re-rating, or the reviewer's for RT rows. Pack is one
 |EST-22|inconsistency|low|C||The request email uses the build's word 'lines' where the paper says 'items'|16|_approvalEmailParas|
 |REL-01|accuracy|fix-now|C|still|An approval stays recorded after the line's destination, recipient or value…|5|invApprovalComplete|
 |REL-02|defect|high|C|still|A line changed after the request was confirmed as sent is recorded as approved…|5|approvalRequestChanged|
-|REL-03|defect|fix-now|C|still|Havellin's beneficiary receipt prints a firearm as 'delivered to me by Havellin'|4|invReceiptGroups|
-|REL-04|gap|high|C|still|The Chain of custody dialog records a held firearm as 'Released' to a relative…|4|addCustodyEvent|
+|REL-03|defect|fix-now|C|still; fixed P4|Havellin's beneficiary receipt prints a firearm as 'delivered to me by Havellin'|4|invReceiptGroups|
+|REL-04|gap|high|C|still; fixed P4|The Chain of custody dialog records a held firearm as 'Released' to a relative…|4|addCustodyEvent|
 |REL-05|accuracy|med|C|still|A name typed into Authorized By counts as written approval: the sign-out opens…|5|_invEdit|
 |REL-06|inconsistency|high|C|still|An item recorded as with the appraiser can be signed out to a beneficiary; it…|16|signoutGroups|
 |REL-07|defect|high|C|still|The bulk bar's request and Record approval on an estate take Keep and…|5|invWrittenReleasePicked|
@@ -1277,7 +1277,7 @@ Severity is the verifier's re-rating, or the reviewer's for RT rows. Pack is one
 |REL-12|inconsistency|med|C||The dashboard's request card confirms a changed draft with no warning and no…|16|approvalRequestDashHtml|
 |REL-13|inconsistency|med|C||A line that left without approval cannot have its vendor's pickup paper filed…|16|_leavingRowHtml|
 |REL-14|gap|med|C||A Junk line on an estate has no sign-out row or paper: the hauler takes estate…|30|signoutLineKind|
-|REL-15|gap|med|C|still|Firearms sold to a dealer, and any firearm on living work, have nowhere to file…|4|leavingGroups|
+|REL-15|gap|med|C|still; fixed P4|Firearms sold to a dealer, and any firearm on living work, have nowhere to file…|4|leavingGroups|
 |REL-16|friction|med|C||Row chips do not repaint when a recipient, a disposition date or an approval is…|16|_invEdit|
 |REL-17|friction|low|C||No row mark or filter for approval state on a 300-line estate|27|INV_WORK_FLAGS|
 |REL-18|friction|med|C||On an iPad in landscape the Sign out and Void buttons are 21 px and 15 px tall|29|signedRecordLinksHtml|
@@ -1415,13 +1415,13 @@ Severity is the verifier's re-rating, or the reviewer's for RT rows. Pack is one
 |AGT-16|gap|med|DC||Nothing checks the inventory against the as-found photographs, so a thing never…|Ask 26|agentShotGroups|
 |AGT-17|automation|low|DC||On living work Agent Two researches Keep and New-home lines and flags their…|not built|agentValueAuto|
 |AGT-18|docs|low|C||The Evening Desk says nothing of Agent Two's notes, or that a tick made before…|33||
-|FLD-01|defect|fix-now|C|still|The Job Plan's auction house (or charity, or hauler) becomes a firearm's…|4|_captureShot|
+|FLD-01|defect|fix-now|C|still; fixed P4|The Job Plan's auction house (or charity, or hauler) becomes a firearm's…|4|_captureShot|
 |FLD-02|accuracy|high|C|still|With more than four close-ups, Agent Two never sees the first ones, which the…|7|invLineCloseUps|
 |FLD-03|automation|med|C||Who gets it, said aloud in the house, is typed again for every line at the…|32|_avLineText|
 |FLD-04|accuracy|high|P||Damage the crew names ('big tear on the back', 'one has a broken leg') is kept…|22|AGENT_CONDITION_TEXT|
 |FLD-05|gap|high|C||Vehicles lose the VIN, mileage and title the walkthrough recorded, and can…|19|materializeVehicle|
 |FLD-06|accuracy|high|C|still|A car photographed in the garage and the walkthrough's vehicle are two lines…|8|materializeVehicle|
-|FLD-07|gap|high|C|still|A firearm found in the house but not flagged at intake never warns the crew…|4|firearmsBannerHtml|
+|FLD-07|gap|high|C|still; fixed P4|A firearm found in the house but not flagged at intake never warns the crew…|4|firearmsBannerHtml|
 |FLD-08|automation|med|C||Naming and the room check run only at the desk, so a blurred mark or a missing…|19|agentNameShots|
 |FLD-09|friction|med|C||In the room, a shot can only be deleted: no changing where it goes, no ⚑, no…|19|_roomShotStripHtml|
 |FLD-10|inconsistency|low|DC||On an estate the as-found camera says 'Next: Items' although the guide says the…|not built|_fieldCamPaint|
@@ -1435,7 +1435,7 @@ Severity is the verifier's re-rating, or the reviewer's for RT rows. Pack is one
 |LIV-02|defect|high|C|still|The selection survives bulk actions and filter changes, so Remove lines removes…|9|_invPickGroup|
 |LIV-03|inconsistency|med|DC||The Contents Record the client signs can carry 'IN PROGRESS … may still change'…|Ask 12|printContentsRecord|
 |LIV-04|gap|med|C||Home Transition and Home Editing sell through auction houses but have no…|32|jobTakesProceedsStatements|
-|LIV-05|defect|med|C||A living client's own firearm on Keep or Move is 'held' for good, and the way…|4|_renderInvRow|
+|LIV-05|defect|med|C|fixed P4|A living client's own firearm on Keep or Move is 'held' for good, and the way…|4|_renderInvRow|
 |LIV-06|friction|low|DC||On living jobs, 'Unsure' flags sit on values for Keep, Move and Junk lines that…|not built|INV_WORK_FLAGS|
 |LIV-07|inconsistency|low|DC||A name typed and decided at the desk is not reviewed, and correcting a name…|Ask 23|invLineReviewed|
 |LIV-08|automation|med|C|still|Photographs Agent One found nothing in stay as lines in Unnamed shots and block…|9|INV_WORK_FLAGS|
@@ -1524,7 +1524,7 @@ Severity is the verifier's re-rating, or the reviewer's for RT rows. Pack is one
 |SYN-11|accuracy|med|C||Two devices issue the same next item number; the later-born line's number moves…|18|_invAssignItemNos|
 |SYN-12|friction|med|C|still, wider|KNOWN: a press straight from a row's box is lost, and not only on the Releases…|9|_invEdit|
 |SYN-13|inconsistency|med|C||When an agent run finishes while the cursor sits in a box, the desk keeps…|28|_avFinish|
-|SYN-14|inconsistency|med|C||Firearms set in an item's record does not redraw the row: the 'Possible NFA…|4|_invEdit|
+|SYN-14|inconsistency|med|C|fixed P4|Firearms set in an item's record does not redraw the row: the 'Possible NFA…|4|_invEdit|
 |SYN-15|inconsistency|low|C||The group heading's value total and the close-out vendor count go stale after…|28|_renderInvGroupHead|
 |SYN-16|docs|med|C||The playbook promises 'two people working the same job keep both sets of…|6||
 |SYN-17|gap|low|C||Every manifest save reads and rewrites the whole MediaStore of every job ever…|18|saveMediaStore|

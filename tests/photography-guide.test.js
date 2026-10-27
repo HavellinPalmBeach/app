@@ -72,10 +72,10 @@ function rig(refs, stubs) {
           // P24: the walkthrough's collections join the inventory by themselves and wait for a photograph.
           'collectionLinesEnsure', '_collLinesOf', 'collectionLineId', 'collectionLineUnshot', '_invHasPhoto',
           'collectionsAwaitingPhoto', 'collectionLineWithPhoto', 'collectionUseLine', '_invJob', 'fieldDispToInv',
-          '_invTombstoneLine', '_invItemNo', '_invNamed', '_avHasFigure', '_invHasValue'],
+          '_invTombstoneLine', '_invItemNo', '_invNamed', '_avHasFigure', '_invHasValue', '_invJob', 'invFirearmSettle', 'invIsFirearm', 'invFirearmDispRefusal', 'invFiduciaryMode', 'isDecedentJob', 'invFirearmSettle', 'invIsFirearm', 'invFirearmDispRefusal', 'invFiduciaryMode', 'isDecedentJob', 'invIsFirearm', 'invFirearmDispRefusal', 'invFiduciaryMode', 'isDecedentJob'],
     vars: ['_agRun', 'AGENT_CONDITIONS', 'AGENT_MAX_DETAILS', 'AGENT_LISTED_MAX', 'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY',
            'INV_SPLIT_MAX', '_photoUidSeq', 'AGENT_ROOM_CONF_RANK', 'AGENT_PASS_GAP_MS', 'COLL_LINE_WEAK_STAMP',
-           'FIELD_DISPOSITIONS', 'FIELD_DISP_DEFAULT'],
+           'FIELD_DISPOSITIONS', 'FIELD_DISP_DEFAULT', 'INV_FIREARM_NEVER', 'DECEDENT_SERVICES'],
     stubs: Object.assign({
       jobs: [{ id: 7, hvlId: 'HVL-0007', svc: 'cleanout' }],
       _photoRefs: { 7: refs || [] },

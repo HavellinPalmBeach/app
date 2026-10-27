@@ -527,7 +527,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(callers('invApprovalWithSigners'), ['invApplyApproval', 'invApprovalLeftOpen'], 'the writer\'s rule: the save and what the dialog says it will leave open');
     // P25 (Q43): the Collection Partners' *Released, with its receipt on record* line reads it of the collection's lines.
     // ⚠ restated 2026-10-22: the desk's Closing bar asks it too (a donated or sold line gone with its paper owed), for its shut line.
-    eq(callers('invRecordedGone'), ['collectionPartnerLines', 'deskFoldState', 'invRatificationOwed', 'invReleasedToPerson'], '⚠ recorded as gone: one definition, four readers');
+    // P4 (2026-10-27): a firearm recorded as gone owes its dealer's receipt (invDealerReleased).
+    eq(callers('invRecordedGone'), ['collectionPartnerLines', 'deskFoldState', 'invDealerReleased', 'invRatificationOwed', 'invReleasedToPerson'], '⚠ recorded as gone: one definition, five readers');
     eq(callers('invRatificationOwed'), ['_approvalLineRequestable', '_renderInvReleasesCard', '_renderInvRow', 'deskFoldState', 'planDerivedLines', 'printApprovalRequest'],
        '⚠⚠ left before every fiduciary approved: the request, the desk row, the desk\'s approvals list, the Releases bar\'s line (2026-10-22), the Job Plan, and what the request may carry (2026-10-26: a line held for want of a taker is never one already gone)');
     // P25 (Q44): and the one writer that names a line's recipient from the confirmed vendor of its kind asks it before writing.

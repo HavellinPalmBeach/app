@@ -968,7 +968,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const saleReaders = Object.keys(BODY).filter((f) => /\bINV_SALE_DISPOSITIONS\b/.test(codeOnly(BODY[f]))).sort();
     // P25 (Q51): ledgerApplies reads it too, where the ledger is kept on living work (something sold).
     // P25 (Q43): proceedsReceivedLine reads it too, for the sold lines a paid statement must cover.
-    eq(saleReaders, ['_renderProceedsCard', 'dispositionLedger', 'invHavellinRecipient', 'invPickupLine', 'ledgerApplies', 'openProceedsStatement', 'printDispositionLedger', 'proceedsLine', 'proceedsReceivedLine', 'proceedsReconciliation'], 'the sale dispositions: one list (P19 W3\'s staff rule reads it too)');
+    // P4 (2026-10-27): a firearm's dealer is read only on a sale (invTransportDealer, invDealerWhy), and its row and its Who takes it
+    // box ask whether it is sold to one (_renderInvRow, _invRecipientListAttr).
+    eq(saleReaders, ['_invRecipientListAttr', '_renderInvRow', '_renderProceedsCard', 'dispositionLedger', 'invDealerWhy', 'invHavellinRecipient', 'invPickupLine', 'invTransportDealer', 'ledgerApplies', 'openProceedsStatement', 'printDispositionLedger', 'proceedsLine', 'proceedsReceivedLine', 'proceedsReconciliation'], 'the sale dispositions: one list (P19 W3\'s staff rule reads it too)');
     eq(count(live, "['Auction', 'Consign', 'Sell']"), 1, 'and no second copy of it written out');
   });
 };

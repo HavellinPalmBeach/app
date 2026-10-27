@@ -44,10 +44,10 @@ function rig() {
           '_fieldCamRoomName', '_planRoom', '_getPhotoRef',
           '_captureShot', 'photoSubfolder', 'fieldDispToInv', '_cleanName', '_photoUid', '_slotRefs', '_setPhotoRef',
           '_fieldNoteAppend', '_invTouch', '_invDetailRefs',
-          'collectionLinesUnshot', 'collectionLineUnshot', '_invHasPhoto', '_jobInvRefs', 'collectionLineWithPhoto', 'fieldCamToggleColl'],
+          'collectionLinesUnshot', 'collectionLineUnshot', '_invHasPhoto', '_jobInvRefs', 'collectionLineWithPhoto', 'fieldCamToggleColl', 'invIsFirearm', 'invFirearmDispRefusal', 'invFiduciaryMode', 'isDecedentJob', '_fieldCamChipRefusal'],
     vars: ['_fieldCam', 'FIELD_CAM_MODES', 'FIELD_DISPOSITIONS', 'FIELD_DISP_DEFAULT', 'PHOTO_CAPTURE_LABELS',
            'AS_FOUND_SUBFOLDER', 'PHOTO_SUBFOLDER', 'FIELD_TALK_MAX_MS', 'FIELD_TALK_MAX_RUNS', 'FIELD_TALK_STOP_WAIT_MS',
-           '_localShotThumbs', '_photoUidSeq', 'INV_DEFAULT_CATEGORY', 'DETAIL_PHOTO_MAX_W', 'DETAIL_PHOTO_QUALITY'],
+           '_localShotThumbs', '_photoUidSeq', 'INV_DEFAULT_CATEGORY', 'DETAIL_PHOTO_MAX_W', 'DETAIL_PHOTO_QUALITY', 'INV_FIREARM_NEVER', 'DECEDENT_SERVICES'],
     stubs: {
       document: dom, navigator: { mediaDevices: { getUserMedia } },
       window: { webkitSpeechRecognition: FakeSR },

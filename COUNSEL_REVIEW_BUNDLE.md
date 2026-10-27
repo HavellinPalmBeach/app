@@ -35,7 +35,7 @@ rather than researching from nothing.
 |---|---|---|
 | **1** | the first engagement signing: on a **fixed fee**, and since 2026-09-30 on an **hourly** one too (the deposit) | A1, A2, B2 |
 | **2** | the first **trust** matter signing | A5, A6, A10, A14, A15, A16 |
-| **3** | the first **firearm** encountered on a job | C1, C2, C3, C5, C6 |
+| **3** | the first **firearm** encountered on a job | C1, C2, C3, C5, C6, C8 |
 | **4** | the first **706 estate** | D3 |
 | **5** | general — before launch | A3, A4, A7, A8, A9, A11, A12, A13, A17, B1, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, D1, D2, D4, D5, D6, D7, D8, D9, D10, D11, D12, D13 |
 | — | only if firearms become a **service line** | C4 |
@@ -1113,6 +1113,33 @@ receipt"* for it, and no beneficiary receipt (D8) is printed for it.
 the receiving dealer"*? (2) Is the dealer's acknowledgement the right receipt for a firearm the dealer transfers to an heir (C6),
 or should the heir's receipt from the dealer also be kept? (3) Known gap: a serial recorded after the request was signed
 satisfies the app's gate without being on the signed paper; should a fresh request be required?
+
+### C8. A living client's own firearms, and a dealer chosen by a person ⚠ NEW P4 (2026-10-27) · PRIORITY 3
+
+**What changed.** The protocol covered only a decedent's firearms. On a client's own home a firearm the client keeps, or takes
+to their new home, is the client's to carry. Anthony (2026-10-27, asked who carries it): *"it's always safer for the client just to
+take it, but I'm not going to mandate that they take it in a locked case. I mean, they can put it in their trunk ... They put it in
+a backpack in their trunk. There's nothing wrong with that."* The app now records such a firearm as taken by the client, never held
+and never cleared for Havellin to carry, and says on the desk: *"The client takes it themselves: Havellin and the movers never carry
+it."* It prescribes no case or container and states no law on carrying it. The protocol (`firearms-protocol.html`, revised
+27 Oct 2026) gains one section, drafted, not reviewed:
+
+> *"A living client's own firearms. On a client's own home, a firearm the client keeps, or takes to their new home, is the
+> client's to carry, and the client takes it themselves. Neither Havellin nor the movers carry it, pack it or load it. We
+> photograph it where it lies and leave it there, and we do not advise the client on how to carry it or on the law of carrying it.
+> A firearm the client sells, consigns or gives to someone goes to a licensed dealer on the client's written authority, exactly as
+> an estate's does, and never to a charity or a hauler."*
+
+In the same build the app stopped treating any name in *Channel / Recipient* as the receiving dealer: a firearm's dealer is now a
+firm the Vendor Directory lists under *Firearms Dealer (FFL)*, picked by a person, or the dealer route recorded for a transfer to a
+named person; a firearm can never be set to Donate or Junk; and no Havellin receipt to a beneficiary lists a firearm (the dealer's
+receipt is filed instead, on estate and living work alike). The release request's firearms block (C7) prints *"licensed dealer not
+named yet"* until one is named.
+
+**The question.** (1) Is it right that Havellin gives no instruction at all on how a living client carries their own firearm, or
+should the protocol carry a neutral sentence (for example, that the client is responsible for carrying it lawfully)? (2) Does the
+written authority the client signs for a sale through a dealer need any wording beyond the estate request's (C7)? (3) Is a
+directory entry under *Firearms Dealer (FFL)* enough to treat a firm as a licensed dealer, or should the app record the FFL number?
 
 ---
 

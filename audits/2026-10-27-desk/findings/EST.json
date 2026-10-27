@@ -43,6 +43,7 @@
   },
   {
    "id": "EST-02",
+   "fixed": "2026-10-27 (P4: CLAUDE.md, Firearms go only to a licensed dealer; tests/p4-firearms-dealer.test.js, browser step 117)",
    "title": "A firearm set to Donate or Junk is 'Cleared to carry' to the charity or hauler, and the signed request names it as the licensed dealer",
    "kind": "defect",
    "severity": "fix-now",

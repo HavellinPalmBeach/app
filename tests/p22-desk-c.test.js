@@ -78,6 +78,8 @@ const LINE = (id, n, over) => Object.assign({
 }, over || {});
 const GUN = (id, n, over) => LINE(id, n, Object.assign({ objectName: 'Shotgun', category: 'Firearms', serial: 'SN-1',
   authBy: 'Tripp Butler', approvalDate: '2026-09-10' }, over || {}));
+// P4 (2026-10-27): off Distribute a firearm's dealer is a Vendor Directory firm under Firearms Dealer (FFL).
+const FFL_DIR = [{ vendor_name: 'Palm Beach Arms (FFL)', category: 'Firearms Dealer (FFL)' }];
 
 module.exports = function ({ group, ok, eq, has, lacks }) {
   const G = (name, body) => { group(name); try { body(); } catch (e) { ok(false, name + ' — threw: ' + String(e && e.message || e).split('\n')[0]); } };
@@ -113,7 +115,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const job = PROBATE();
     const S = desk(['_invEdit', '_invBulkApply', 'invTransportBlocked', 'invTransportReason', 'invKeepChannel', '_renderInvRow', '_renderInvPanel'], job,
       [GUN('g', 1, { disposition: 'Distribute', channel: 'Marie Delgado (daughter)' }), GUN('h', 2, { disposition: 'Distribute', channel: 'Sam Delgado', serial: 'SN-2' }),
-       LINE('k', 3, { disposition: 'Distribute', channel: 'Ann Lee' }), LINE('m', 4, { disposition: 'Donate', channel: 'Goodwill' })]);
+       LINE('k', 3, { disposition: 'Distribute', channel: 'Ann Lee' }), LINE('m', 4, { disposition: 'Donate', channel: 'Goodwill' })],
+      { vendorDirectory: FFL_DIR });
     const g = () => S._getPhotoRef(8, 'g');
     eq(S.invTransportBlocked(g(), S.jobs[0]), 'beneficiary', 'fixture: going to the daughter with no dealer route, the beneficiary arm holds it');
     const r = attempt(() => S._invEdit(8, 'g', 'disposition', { value: 'Sell', type: 'select-one' }));
@@ -127,7 +130,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const panel = S._renderInvPanel(S.jobs[0], g());
     has(panel, "invKeepChannel(8,'g')", 'the record offers Keep the name, wired to the real handler');
     eq(S.invKeepChannel(8, 'g'), true, 'Keep the name');
-    eq([g().channel, S.invTransportBlocked(g(), S.jobs[0])], ['Marie Delgado (daughter)', ''], 'the name is kept and now read as the dealer, because a person said so');
+    // RESTATED (P4, 2026-10-27): the name is kept and the flag is off, and a relative's name is still no licensed dealer: off
+    // Distribute the dealer is a Vendor Directory firm under Firearms Dealer (FFL), picked by a person (invTransportDealer).
+    eq([g().channel, S.invTransportBlocked(g(), S.jobs[0])], ['Marie Delgado (daughter)', 'dealer'], '⚠⚠ the name is kept, and is still never read as the dealer (P4)');
+    ok(!g().channelLeftover, 'and the leftover mark is off, because a person said the name is right');
     // Retyping the channel retires the flag too; moving back onto Distribute clears it (the name is the recipient again).
     S._invEdit(8, 'g', 'disposition', { value: 'Distribute' });
     S._invEdit(8, 'g', 'disposition', { value: 'Consign' });
@@ -137,13 +143,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // A line moved off Distribute with no name, or a line never on it, is not flagged.
     S._invEdit(8, 'm', 'disposition', { value: 'Sell' });
     eq(S._getPhotoRef(8, 'm').channelLeftover, undefined, 'a line that was not going to a person is never flagged');
-    // The bulk bar: the same writer, and its confirmation names them.
+    // The bulk bar: the same writer, and its confirmation names them. RESTATED (P4, 2026-10-27): the bulk bar skips firearms (a
+    // firearm's destination is set on its own line), so the shotgun stays going to its person and the sweep says so.
     S._invPick['h'] = 1; S._invPick['k'] = 1;
     S._invBulkApply(8, 'disposition', 'Consign');
     const said = S.__log.badges.map((b) => b.m).pop() || '';
-    has(said, '2 of them still name the person they were going to in Channel / Recipient', '⚠ the sweep says so');
-    has(said, '#2 Shotgun (Sam Delgado)', 'naming each line and the name');
-    eq(S.invTransportBlocked(S._getPhotoRef(8, 'h'), S.jobs[0]), 'dealer', '⚠⚠ a firearm swept off Distribute is held too');
+    has(said, '1 of them still names the person it was going to in Channel / Recipient', '⚠ the sweep says so');
+    has(said, '#3 Line 3 (Ann Lee)', 'naming the line and the name');
+    has(said, '1 firearm left as it was (#2 Shotgun)', '⚠⚠ and the firearm it left as it was (P4)');
+    eq([S._getPhotoRef(8, 'h').disposition, S.invTransportBlocked(S._getPhotoRef(8, 'h'), S.jobs[0])], ['Distribute', 'beneficiary'],
+       '⚠⚠ a firearm is never swept off Distribute (P4): still held for its dealer route');
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -186,7 +195,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   // ═══════════════════════════════════════════════════════════════════════════
   G('3 · the firearm block names the role; the dead seq branch and the alias are gone', () => {
-    const S = desk(['_invFirearmPanelHtml', '_getPhotoRef'], PROBATE(), [GUN('c', 1, { disposition: 'Consign', channel: 'Palm Beach Arms (FFL)' })]);
+    const S = desk(['_invFirearmPanelHtml', '_getPhotoRef'], PROBATE(), [GUN('c', 1, { disposition: 'Consign', channel: 'Palm Beach Arms (FFL)' })], { vendorDirectory: FFL_DIR });
     const h = text(S._invFirearmPanelHtml(S.jobs[0], S._getPhotoRef(8, 'c')));
     has(h, 'Cleared to carry. Havellin’s named principal alone takes it to Palm Beach Arms (FFL)', 'the named principal, as every other firearm text says');
     lacks(h, 'Anthony Graziano', 'no person named');
