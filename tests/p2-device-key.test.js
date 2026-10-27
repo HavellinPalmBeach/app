@@ -501,7 +501,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(fn('refreshJobsFromCloud'), "_noteDeviceKeyRefusal(data.error)", 'and the client list\'s refresh tells the banner when the key is turned away mid-session');
   });
 
-  G('E5 · the probe says where the device stands; a key typed in Settings is sent at once, and an accepted one reloads from the sheet', () => {
+  G('E5 · the probe says where the device stands; a key typed in Settings is sent at once, and an accepted one offers the reload, never fires it', () => {
     const noted = [];
     const P = sandbox({ fns: ['checkBackendVersion', '_withDeviceKey', 'deviceKey'], vars: ['BACKEND_NEEDS', 'BACKEND_NEEDS_TYPES', 'BACKEND_MIN_VERSION', '_backendVersion', '_backendActions'],
       stubs: { SHEETS_SYNC_URL: 'https://s/exec', _showBackendStaleBanner() {}, _noteDeviceKeyAnswer: (a) => noted.push(a),
@@ -525,29 +525,100 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     S.openSettings();
     eq(dom.getElementById('set-device-key').value, KEY, 'opening Settings fills the masked box with the key held, so Save keeps it');
     eq(dom.getElementById('set-device-key-status').textContent, 'Not checked yet: saved on this device.', 'and the line under it says what the Apps Script last said');
-    // The answer after a key typed: refused before, accepted now, nothing waiting: the page reloads from the sheet.
-    const reloads = [], retried = [];
-    const badges = [];
-    const R = sandbox({ fns: ['_noteDeviceKeyAnswer', '_deviceKeyChanged', '_deviceKeyReloadIfDrained', '_paintDeviceKeyBanner', '_paintDeviceKeyStatus', 'deviceKeyBannerHtml', 'deviceKeyStatusText', 'deviceKey'],
-      vars: ['_deviceKeyAnswer', '_deviceKeyRecheck', '_deviceKeyReloadArmed'], stubs: { document: domStub({}), showSyncBadge: (m) => badges.push(m), checkBackendVersion() {},
+    // ⚠⚠ The answer after a key typed: refused before, accepted now. THE PAGE NEVER RELOADS ITSELF (P2's review, 2026-10-27): the
+    // banner turns green and offers Reload from the sheet, the person presses it, and the press refuses by name while a reload
+    // would throw anything away (the queue, a debounced inventory save, a DocuSign send out, an agent at work).
+    const reloads = [], retried = [], badges = [];
+    const rdom = domStub({});
+    const R = sandbox({ fns: ['_noteDeviceKeyAnswer', '_deviceKeyChanged', 'deviceKeyReloadNow', 'deviceKeyReloadBusy', '_paintDeviceKeyBanner', '_paintDeviceKeyStatus', 'deviceKeyBannerHtml', 'deviceKeyStatusText', 'deviceKey'],
+      vars: ['_deviceKeyAnswer', '_deviceKeyRecheck', '_deviceKeyReloadOwed'], stubs: { document: rdom, showSyncBadge: (m) => badges.push(m), checkBackendVersion() {},
         retryPendingWrites: () => retried.push(1), _pendingCount: () => R.__pending || 0, _syncWritesOutstanding: () => (R.__pending || 0) > 0,
+        _invSyncTimer: {}, _approvalEsignOut: {}, _agRun: {}, _arRun: {}, _avRun: {},
         setTimeout: (f) => f(), location: { reload: () => reloads.push(1) } } });
+    const banner = () => String(rdom.getElementById('device-key-banner').innerHTML || '');
+    const why = () => String(rdom.getElementById('device-key-reload-why').textContent || '');
     R._noteDeviceKeyAnswer('missing');
     R._deviceKeyChanged();
     R._noteDeviceKeyAnswer('ok');
-    eq([reloads.length, retried.length], [1, 0], '⚠ refused before, accepted now, nothing held: the page reloads from the sheet');
+    eq([reloads.length, R._deviceKeyReloadOwed], [0, true], '⚠⚠ refused before, accepted now: the reload is owed and NOT fired');
+    has(banner(), 'Key accepted ✓', 'the banner says the key is accepted');
+    has(banner(), 'onclick="deviceKeyReloadNow()">Reload from the sheet</button>', 'and offers the reload as a press');
+    has(String(rdom.getElementById('device-key-banner').style.cssText || ''), 'var(--ok-tx)', 'in green, not the refusal\'s red');
+    has(badges[badges.length - 1], 'press Reload from the sheet', 'the badge points at it');
+    R.__pending = 2;
+    eq([R.deviceKeyReloadNow(), reloads.length], [false, 0], '⚠⚠ pressed with changes still on their way: refused, nothing reloaded');
+    has(why(), 'Not reloaded: changes made here have not reached the sheet yet', 'and the banner says why');
+    R.__pending = 0;
+    R._invSyncTimer[7] = 41;
+    eq([R.deviceKeyReloadNow(), reloads.length], [false, 0], '⚠ a debounced inventory save waiting: refused');
+    has(why(), 'an inventory change is about to be sent', 'named');
+    R._invSyncTimer[7] = 0;
+    R._approvalEsignOut[7] = true;
+    eq([R.deviceKeyReloadNow(), reloads.length], [false, 0], '⚠ a DocuSign request waiting on its answer (its envelope is recorded only in the answer): refused');
+    has(why(), 'waiting on its answer', 'named');
+    delete R._approvalEsignOut[7];
+    ['_agRun', '_arRun', '_avRun'].forEach((m) => {
+      R[m][7] = { running: true };
+      eq([R.deviceKeyReloadNow(), reloads.length], [false, 0], 'an agent at work (' + m + '): refused');
+      R[m][7] = { running: false };
+    });
+    eq([R.deviceKeyReloadNow(), reloads.length, R._deviceKeyReloadOwed], [true, 1, false], 'nothing in flight: the press reloads, once');
     R.__pending = 2;
     R._noteDeviceKeyAnswer('wrong'); R._deviceKeyChanged(); R._noteDeviceKeyAnswer('ok');
-    eq([reloads.length, retried.length], [1, 1], '⚠⚠ with changes held, they are sent with the new key and the page is not reloaded under them');
-    has(badges[badges.length - 1], 'sending what was held here, then reloading from the sheet', 'the badge says what it waits for');
-    R.__pending = 0;
-    R._deviceKeyReloadIfDrained();
-    eq(reloads.length, 2, '⚠ and once the queue has drained it reloads');
-    R._deviceKeyReloadIfDrained();
-    eq(reloads.length, 2, 'once');
+    eq(retried.length, 1, 'with changes held, a key typed sends them with the new key');
+    eq([reloads.length, R._deviceKeyReloadOwed], [1, true], 'and the reload is owed again, not fired');
+    has(R.deviceKeyBannerHtml('wrong', true), 'The key on this device is wrong', 'a refusal after it turns the banner red again, whatever is owed');
+    R.__pending = 0; R.deviceKeyReloadNow();
     R._noteDeviceKeyAnswer('ok'); R._deviceKeyChanged(); R._noteDeviceKeyAnswer('ok');
-    eq(reloads.length, 2, 'a key changed on a device that was never refused reloads nothing');
-    has(fn('flushPendingWrites'), "if (typeof _deviceKeyReloadIfDrained === 'function') _deviceKeyReloadIfDrained();", 'the queue asks when it empties');
+    eq([reloads.length, R._deviceKeyReloadOwed, R.deviceKeyBannerHtml('ok', R._deviceKeyReloadOwed)], [2, false, ''], 'a key changed on a device that was never refused owes nothing and draws no banner');
+  });
+
+  G('E5b · the review\'s sequence on the real queue: a write in the outbox when the key is accepted, an unrelated retry hours later; nothing reloads by itself', () => {
+    // A synchronous thenable that unwraps like a resolved or rejected promise (the harness's rule for a thenable).
+    class SyncP {
+      constructor(ok, v) { this.ok = ok; this.v = v; }
+      static resolve(v) { return new SyncP(true, v); }
+      static reject(e) { return new SyncP(false, e); }
+      then(f, r) { try { if (this.ok) return f ? SyncP.resolve(f(this.v)) : this; return r ? SyncP.resolve(r(this.v)) : this; } catch (e) { return SyncP.reject(e); } }
+      catch(r) { return this.then(null, r); }
+    }
+    const timers = [], answers = [], badges = [];
+    let reloads = 0;
+    const Q = sandbox({
+      fns: ['_noteDeviceKeyAnswer', '_deviceKeyChanged', '_syncWritesOutstanding', '_flushOutbox', 'queuedPostSync', '_writeKey', 'flushPendingWrites',
+            '_enqueueWrite', '_backendErrorKind', '_noteDeviceKeyRefusal', 'deviceKeyRefusedAs', '_pendingCount', 'retryPendingWrites',
+            'deviceKeyReloadNow', 'deviceKeyReloadBusy', 'deviceKeyBannerHtml', '_paintDeviceKeyBanner'],
+      vars: ['_pendingWrites', '_retryStep', '_flushing', '_outbox', '_outboxTimer', '_outboxSending', '_OUTBOX_WINDOW', '_syncWriteSeq',
+             '_deviceKeyAnswer', '_deviceKeyRecheck', '_deviceKeyReloadOwed'],
+      stubs: {
+        SHEETS_SYNC_URL: 'https://script.google.com/macros/s/X/exec', document: domStub({}),
+        setTimeout: (f) => { timers.push(f); return timers.length; }, clearTimeout: () => {},
+        location: { reload: () => { reloads++; } }, showSyncBadge: (m) => badges.push(m), updatePendingIndicator: () => {},
+        _paintDeviceKeyStatus: () => {}, checkBackendVersion: () => {},
+        _retrySoon: () => {}, _scheduleRetry: () => {}, _applyDroppedJobs: () => {},
+        postSyncTo: () => (answers.shift() || 'ok') === 'ok' ? SyncP.resolve({ ok: true }) : SyncP.reject(new Error('Failed to fetch')),
+      },
+    });
+    const runTimers = () => { let n = 0; while (timers.length && n++ < 50) timers.shift()(); };
+    Q._noteDeviceKeyAnswer('missing');
+    Q._deviceKeyChanged();
+    Q.queuedPostSync({ type: 'saveAllJobs', payload: [] }, 'Synced', 'Sync failed');
+    Q._noteDeviceKeyAnswer('ok');
+    eq([reloads, Q._deviceKeyReloadOwed], [0, true], 'the key accepted with a write in the outbox: owed, nothing reloaded');
+    answers.push('ok'); runTimers();
+    eq([reloads, Q._syncWritesOutstanding()], [0, false], '⚠⚠ the outbox write lands: still nothing reloads by itself');
+    answers.push('throw');
+    Q.queuedPostSync({ type: 'saveAllJobPlans', payload: {} }, 'Saved', 'Not saved');
+    runTimers();
+    ok(Q._pendingCount() >= 1, 'hours later a write fails on a dropped connection and waits to be retried');
+    eq(Q.deviceKeyReloadNow(), false, 'the press is refused while it waits');
+    answers.push('ok'); Q.flushPendingWrites(); runTimers();
+    eq([Q._pendingCount(), reloads], [0, 0], '⚠⚠ the retry lands: the page is NOT reloaded under whoever is working (the first build reloaded here)');
+    eq([Q.deviceKeyReloadNow(), reloads], [true, 1], 'and the person\'s own press reloads it, once nothing is on its way');
+    // The source: the one reload the key owes is the press's; neither queue asks the key about anything.
+    ['flushPendingWrites', '_flushOutbox', '_noteDeviceKeyAnswer', '_deviceKeyChanged'].forEach((n) => lacks(noComments(fn(n)), 'location.reload', n + ' reloads nothing'));
+    ['flushPendingWrites', '_flushOutbox'].forEach((n) => lacks(noComments(fn(n)), 'deviceKey', n + ' asks nothing about the key'));
+    has(noComments(fn('deviceKeyReloadNow')), 'location.reload()', 'the press is the one that reloads');
   });
 
   G('E6 · Share w/ Counsel asks the recorded-address rule before it posts', () => {
@@ -573,11 +644,31 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const docs = ['manual.html', 'MANUAL.md', 'concierge-guide.html', 'CONCIERGE_GUIDE.md'].map((f) => [f, fs.readFileSync(path.join(ROOT, f), 'utf8')]);
     docs.forEach(([f, t]) => { has(t, 'This device has no key: ask Anthony', f + ' names the refusal as the app words it'); has(t, 'Device key', f + ' names the box'); });
     docs.slice(0, 2).forEach(([f, t]) => { has(t, 'HAVELLIN_DEVICE_KEY', f + ' names the Script Property'); has(t, 'AccessLog', f + ' names the log'); has(t, 'suggestDeviceKey', f + ' names the editor helper'); });
+    // P2's review: the page never reloads itself (the docs name the press), and the key is typed on every device before it is switched
+    // on, in the words Settings prints while the check is off.
+    docs.forEach(([f, t]) => { has(t, 'Reload from the sheet', f + ' names the reload press'); lacks(t, 'reloads from the sheet by itself', f + ' never says the page reloads by itself'); });
+    const offTyped = sandbox({ fns: ['deviceKeyStatusText'] }).deviceKeyStatusText('off', true);
+    docs.slice(0, 2).forEach(([f, t]) => {
+      const typed = t.indexOf(offTyped.replace(/\.$/, '')), on = t.indexOf('Switch it on last');
+      ok(typed > 0 && on > typed, f + ' types the key on every device (Settings: "' + offTyped + '") before the property is set');
+    });
     const st = fs.readFileSync(path.join(ROOT, 'legal', 'Havellin_Data_Handling_Statement_v1.0.md'), 'utf8');
+    let bundle_ = '';
     has(st, 'Drafted, not reviewed', 'the data-handling statement says it is a draft');
-    ok(/Anthropic[\s\S]{0,700}\[To be confirmed: Anthropic's commercial terms on retention/.test(st), '⚠ and marks the Anthropic API\'s retention terms as to be confirmed, never stated');
+    ok(/Anthropic[\s\S]{0,1400}\[To be confirmed: Anthropic's commercial terms on retention/.test(st), '⚠ and marks the Anthropic API\'s retention terms as to be confirmed, never stated');
+    // ⚠ Two claims the first draft made that the code did not bear out (P2's review): every file removed from Drive logged, and no
+    // client name sent to Anthropic. Each sentence now held to the code that makes it true.
+    lacks(st, 'each file removed from Drive is written to an access log', '⚠ the statement no longer claims every removal is logged');
+    ok(/_accessLog\(/.test(noComments(gsFn('trashFileUnderRoot'))), 'the code: a photograph a person bins is logged');
+    ok(!/_accessLog\(/.test(noComments(gsFn('_fileBlobByName'))) && /setTrashed\(true\)|trashDriveFile\(/.test(noComments(gsFn('_fileBlobByName'))), 'the code: a re-filing trashes its older copy unlogged');
+    has(st, 'A photograph a person removes from a room in the application is written to the same log', 'and the statement says the first');
+    has(st, 'goes to Drive\'s bin without an entry in the log', 'and the second');
+    lacks(st, 'No client name, address or contact detail is sent', '⚠ the statement no longer claims no name is ever sent');
+    has(noComments(fn('_agContext')), 'mustFind:', 'the code: Agent One is sent the must-find list');
+    has(st, 'the list of items the family asked us to find', 'and the statement names it among what is sent');
+    has(st, 'that name goes with it', 'and says a note, a description or the list goes as written, a person\'s name included');
+    has(bundle_ = fs.readFileSync(path.join(ROOT, 'COUNSEL_REVIEW_BUNDLE.md'), 'utf8'), 'Corrected on review the same day', 'the counsel bundle says what was corrected');
     lacks(st, 'insured and bonded', 'it claims no coverage that is still being placed');
-    const bundle = fs.readFileSync(path.join(ROOT, 'COUNSEL_REVIEW_BUNDLE.md'), 'utf8');
-    has(bundle, 'legal/Havellin_Data_Handling_Statement_v1.0.md', 'the counsel bundle lists it');
+    has(bundle_, 'legal/Havellin_Data_Handling_Statement_v1.0.md', 'the counsel bundle lists it');
   });
 };

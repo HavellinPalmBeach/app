@@ -5,9 +5,12 @@
 // Properties): a client saved with no key lands, and Settings says the Apps Script asks for no key yet. B: Anthony sets the key;
 // the page reloads: the red banner says this device has no key, the cached client stays on the list, an edit is held with the
 // chip saying why, and the sheet is untouched. C: the banner's Open Settings, a wrong key typed in the masked box: still held,
-// the banner says the key is wrong. D: the right key typed as a phone types it (lower case, spaces): the held edit lands, the
-// page reloads from the sheet by itself, the banner is gone and Settings says Accepted. E: every request to the jobs backend
-// after that carries the key once, nothing else does, and the key is nowhere on the page. F: 390 px, zero page errors.
+// the banner says the key is wrong. D: the right key typed as a phone types it (lower case, spaces): the held edit lands, and the
+// page does NOT reload itself (P2's review): the banner turns green and offers Reload from the sheet; pressed while a write is
+// still on its way it refuses and says why; pressed once it has landed it reloads, the banner is gone and Settings says Accepted.
+// E: every request to the jobs backend after that carries the key once, nothing else does, and the key is nowhere on the page.
+// F: 390 px, zero page errors. G: the order the manual recommends, on a second device: the key typed while the check is off
+// (Settings: sent and not checked), the property set last: accepted at once, no banner, nothing held, an edit lands.
 //
 //   NODE_PATH=/path/to/node_modules node tests/browser/step116.js [/abs/path/to/havellin.html]
 const fs = require('fs');
@@ -93,15 +96,18 @@ function server() {
     b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
     const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 }, timezoneId: 'America/New_York' });
     await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
-    await ctx.route(SYNC + '**', async (r) => {
+    let holdPosts = 0;   // ms to hold each POST before the server answers it (D: a write still on its way)
+    const route = async (r) => {
       const req = r.request();
+      if (holdPosts && req.method() === 'POST') await new Promise((res) => setTimeout(res, holdPosts));
       const url = req.url();
       const q = {};
       (url.split('?')[1] || '').split('&').forEach((kv) => { if (kv) { const i = kv.indexOf('='); q[decodeURIComponent(kv.slice(0, i))] = decodeURIComponent(kv.slice(i + 1).replace(/\+/g, ' ')); } });
       let text;
       try { text = srv.exec(req.method(), q, req.postData() || ''); } catch (e) { text = JSON.stringify({ ok: false, error: String(e) }); }
       return r.fulfill({ status: 200, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: text });
-    });
+    };
+    await ctx.route(SYNC + '**', route);
     const p = await ctx.newPage();
     p.setDefaultTimeout(10000);
     p.on('request', (req) => { const u = req.url(); if (u.indexOf('file://') !== 0 && u.indexOf('data:') !== 0) seen.push({ url: u, method: req.method(), body: req.postData() || '' }); });
@@ -181,7 +187,7 @@ function server() {
       eq(srv.jobsOnSheet()[0].phone, '555-0101', 'the sheet still untouched');
     });
 
-    await section('D · the right key, typed as a phone types it: the held edit lands, and the page reloads from the sheet by itself', async () => {
+    await section('D · the right key, typed as a phone types it: the held edit lands; the page waits for the person\'s Reload from the sheet', async () => {
       await openSettings();
       eq((await p.inputValue('#set-device-key')).length, 'K7QM-3XWP-9TRA-HC4N-0000'.length, 'the box holds the key on the device, masked');
       const loadsBefore = loads;
@@ -189,10 +195,30 @@ function server() {
       await saveSettings();
       await p.waitForTimeout(4000);
       eq(srv.jobsOnSheet()[0].phone, '555-0199', '⚠⚠ the edit held while the key was missing has landed');
-      ok(loads > loadsBefore, 'the page reloaded from the sheet by itself (' + (loads - loadsBefore) + ')');
-      await p.waitForTimeout(1500);
+      await p.waitForTimeout(3000);
+      eq(loads, loadsBefore, '⚠⚠ the page has NOT reloaded by itself (the first build reloaded here, and could again hours later)');
+      ok(await visible('#device-key-banner'), 'the banner stays up');
+      has(await txt('#device-key-banner'), 'Key accepted ✓', 'turned to Key accepted');
+      const tones = await p.evaluate(() => { const t = document.createElement('div'); t.style.color = 'var(--ok-tx)'; document.body.appendChild(t); const c = getComputedStyle(t).color; t.remove(); return [getComputedStyle(document.getElementById('device-key-banner')).borderLeftColor, c]; });
+      eq(tones[0], tones[1], 'in green, not the refusal\'s red');
+      ok(await visible('#device-key-banner button:has-text("Reload from the sheet")'), 'with Reload from the sheet');
+      eq(await chip(), '', 'and nothing waiting');
+      // A write still on its way (the server slow to answer): the press refuses and says why, and nothing reloads.
+      holdPosts = 3500;
+      await p.evaluate((id) => { const j = jobs.find((x) => x.id === id); j.city = 'West Palm Beach'; _saveJobEdit(j); }, JOB);
+      await p.waitForTimeout(900);
+      await p.click('#device-key-banner button:has-text("Reload from the sheet")');
+      await p.waitForTimeout(400);
+      has(await txt('#device-key-reload-why'), 'Not reloaded: changes made here have not reached the sheet yet', '⚠⚠ pressed while a write is on its way: refused, by name');
+      eq(loads, loadsBefore, 'and the page is not reloaded over it');
+      holdPosts = 0;
+      await p.waitForTimeout(4500);
+      eq(srv.jobsOnSheet()[0].city, 'West Palm Beach', 'the write lands');
+      await p.click('#device-key-banner button:has-text("Reload from the sheet")');
+      await p.waitForTimeout(2500);
+      ok(loads > loadsBefore, 'pressed once it has landed: the page reloads from the sheet (' + (loads - loadsBefore) + ')');
       ok(!(await visible('#device-key-banner')), 'the banner is gone');
-      eq(await p.evaluate(() => [jobs.length, jobs[0] && jobs[0].phone, _jobsState]), [1, '555-0199', 'ready'], 'the client list is read from the sheet, with the edit');
+      eq(await p.evaluate(() => [jobs.length, jobs[0] && jobs[0].phone, jobs[0] && jobs[0].city, _jobsState]), [1, '555-0199', 'West Palm Beach', 'ready'], 'the client list is read from the sheet, with both edits');
       eq(await chip(), '', 'and nothing is waiting');
       await openSettings();
       eq(await txt('#set-device-key-status'), '✓ Accepted by the Apps Script.', 'Settings says the key is accepted');
@@ -226,6 +252,42 @@ function server() {
       has(await txt('#device-key-banner'), 'The key on this device is wrong: ask Anthony', 'and says the key is wrong');
       eq(await overflow(), 0, 'no horizontal overflow at 390 px');
       eq(errs, [], 'zero page errors');
+    });
+
+    await section('G · the recommended order, on a second device: the key typed while the check is off, the property set last', async () => {
+      srv.props.HAVELLIN_DEVICE_KEY = null;
+      const ctx2 = await b.newContext({ viewport: { width: 1440, height: 1000 }, timezoneId: 'America/New_York' });
+      await ctx2.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+      await ctx2.route(SYNC + '**', route);
+      const q = await ctx2.newPage();
+      q.setDefaultTimeout(10000);
+      const errs2 = []; q.on('pageerror', (e) => errs2.push(String(e)));
+      let loads2 = 0; q.on('load', () => { loads2++; });
+      q.on('dialog', async (d) => { await d.accept(); });
+      const txt2 = (sel) => q.evaluate((s2) => { const el = document.querySelector(s2); return el ? el.textContent.replace(/\s+/g, ' ').trim() : ''; }, sel);
+      await q.goto(APP); await q.waitForTimeout(1500);
+      await q.click('button[title="Settings"]'); await q.waitForTimeout(300);
+      await q.fill('#set-sheets-url', SYNC);
+      await q.fill('#set-device-key', 'G2KQ-7MXP-4RTA-WC9N-3ZBE');
+      await q.click('#settings-modal button.btn-p'); await q.waitForTimeout(2500);
+      await q.click('button[title="Settings"]'); await q.waitForTimeout(300);
+      eq(await txt2('#set-device-key-status'), 'The Apps Script does not ask for a key yet (none is set in its Script Properties): this one is sent and not checked.', 'typed while the check is off: sent and not checked');
+      await q.evaluate(() => { document.getElementById('settings-modal').style.display = 'none'; });
+      ok(!(await q.locator('#device-key-banner').first().isVisible().catch(() => false)), 'no banner');
+      // Anthony sets the property last.
+      srv.props.HAVELLIN_DEVICE_KEY = 'ANOTHER-KEY-FOR-ROTATION, G2KQ7MXP4RTAWC9N3ZBE';
+      await q.reload(); await q.waitForTimeout(2500);
+      ok(!(await q.locator('#device-key-banner').first().isVisible().catch(() => false)), '⚠⚠ the property set: this device is let in, no banner, nothing turned away');
+      await q.click('button[title="Settings"]'); await q.waitForTimeout(300);
+      eq(await txt2('#set-device-key-status'), '✓ Accepted by the Apps Script.', 'Settings reads Accepted');
+      await q.evaluate(() => { document.getElementById('settings-modal').style.display = 'none'; });
+      eq(await q.evaluate(() => [jobs.length, _jobsState]), [1, 'ready'], 'the client list is read from the sheet');
+      await q.evaluate((id) => { const j = jobs.find((x) => x.id === id); j.zip = '33405'; _saveJobEdit(j); }, JOB);
+      await q.waitForTimeout(2500);
+      eq(srv.jobsOnSheet()[0].zip, '33405', 'an edit lands');
+      eq(await q.evaluate(() => Object.keys(_pendingWrites).length), 0, 'and nothing is held');
+      eq(errs2, [], 'zero page errors on the second device');
+      await ctx2.close().catch(() => {});
     });
   } catch (e) {
     fail++;

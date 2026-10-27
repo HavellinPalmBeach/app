@@ -1476,7 +1476,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.27 · 5:53am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.27 · 6:51am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -16027,12 +16027,15 @@ function _withDeviceKey(url) {
 // the check is off), 'ok', 'missing', 'wrong'. Set by the version probe (checkBackendVersion) and by any write the server
 // refuses for the key (_backendErrorKind's 'key').
 var _deviceKeyAnswer = '';
-// After a key typed in Settings: whether this page's reads had been refused for the key, so an accepted key reloads the page
-// from the sheet once nothing is waiting to be sent.
+// After a key typed in Settings: whether this page's reads had been refused for the key, so an accepted key offers the reload
+// from the sheet (below).
 var _deviceKeyRecheck = null;
-// Armed when an accepted key follows refused reads: the page reloads from the sheet as soon as nothing is waiting to go (now, or
-// when the queue drains: flushPendingWrites asks), never over a write still on its way.
-var _deviceKeyReloadArmed = false;
+// ⚠⚠ OWED, NEVER ARMED (P2's review, 2026-10-27). Set when an accepted key follows refused reads: what this page holds may be
+// behind the sheet, so the banner offers Reload from the sheet and THE PERSON PRESSES IT (deviceKeyReloadNow). The page never
+// reloads itself. The first build reloaded "once the queue drained", and only the retry queue's drain asked: with a write in the
+// outbox when the key was accepted, the reload stayed armed and fired at the next unrelated retry that landed, hours later, under
+// whoever was typing, and no queue sees a debounced inventory save, a DocuSign send waiting on its answer or a half-typed note.
+var _deviceKeyReloadOwed = false;
 // The server's words for a refusal, read once: 'missing', 'wrong' or ''. They are DEVICE_KEY_REFUSED in main-sync.gs (a test
 // runs these patterns over them), and _backendErrorKind matches the same two phrases.
 function deviceKeyRefusedAs(errText) {
@@ -16041,9 +16044,17 @@ function deviceKeyRefusedAs(errText) {
   if (/key on this device is wrong/i.test(s)) return 'wrong';
   return '';
 }
-// The banner's words, DOM-free: '' unless this device is being turned away.
-function deviceKeyBannerHtml(answer) {
-  if (answer !== 'missing' && answer !== 'wrong') return '';
+// The banner's words, DOM-free: the red one while this device is being turned away; once a key typed here is accepted after
+// refused reads (reloadOwed), the green one offering the reload; '' otherwise.
+function deviceKeyBannerHtml(answer, reloadOwed) {
+  if (answer !== 'missing' && answer !== 'wrong') {
+    if (!reloadOwed || (answer !== 'ok' && answer !== 'off')) return '';
+    return '<div style="font-weight:700;margin-bottom:4px;">Key accepted ✓</div>'
+      + '<div>Nothing came to this device from the sheet while it had no key, so what is on screen may be behind it. Anything held here '
+      + 'goes to the sheet first: once the chip at the foot has cleared, press <strong>Reload from the sheet</strong>.</div>'
+      + '<div style="margin-top:6px;"><button type="button" class="btn-s" onclick="deviceKeyReloadNow()">Reload from the sheet</button>'
+      + '<div id="device-key-reload-why" style="margin-top:4px;"></div></div>';
+  }
   return '<div style="font-weight:700;margin-bottom:4px;">' + (answer === 'missing'
       ? 'This device has no key: ask Anthony'
       : 'The key on this device is wrong: ask Anthony') + '</div>'
@@ -16055,17 +16066,18 @@ function deviceKeyBannerHtml(answer) {
 function _paintDeviceKeyBanner() {
   if (typeof document === 'undefined' || !document.getElementById) return;
   var el = document.getElementById('device-key-banner');
-  var html = deviceKeyBannerHtml(_deviceKeyAnswer);
+  var html = deviceKeyBannerHtml(_deviceKeyAnswer, _deviceKeyReloadOwed);
   if (!html) { if (el && el.parentNode) el.parentNode.removeChild(el); return; }
   if (!el) {
     var host = document.querySelector('.wrap') || document.body;
     if (!host) return;
     el = document.createElement('div');
     el.id = 'device-key-banner';
-    el.style.cssText = 'margin:10px 0;padding:12px 14px;border:1px solid var(--err-tx);border-left-width:4px;'
-      + 'border-radius:4px;background:var(--err-bg);color:var(--err-tx);font-size:12px;line-height:1.6;';
     host.insertBefore(el, host.firstChild);
   }
+  var tone = (_deviceKeyAnswer === 'missing' || _deviceKeyAnswer === 'wrong') ? 'err' : 'ok';
+  el.style.cssText = 'margin:10px 0;padding:12px 14px;border:1px solid var(--' + tone + '-tx);border-left-width:4px;'
+    + 'border-radius:4px;background:var(--' + tone + '-bg);color:var(--' + tone + '-tx);font-size:12px;line-height:1.6;';
   el.innerHTML = html;
 }
 // The line under the key in Settings: what the Apps Script said about it, never the key.
@@ -16091,27 +16103,41 @@ function _paintDeviceKeyStatus() {
                  : _deviceKeyAnswer === 'ok' ? 'var(--ok-tx)' : 'var(--gray)';
 }
 // Every answer about the key lands here: the banner and the Settings line follow it, and a key just typed that the Apps
-// Script now accepts reloads the page from the sheet, once nothing is waiting to go (the reads this page made were refused).
+// Script now accepts, on a page whose reads were refused, owes the reload the banner then offers (never fires it).
 function _noteDeviceKeyAnswer(answer) {
   _deviceKeyAnswer = String(answer || '');
+  var re = _deviceKeyRecheck;
+  var accepted = !!re && (_deviceKeyAnswer === 'ok' || _deviceKeyAnswer === 'off');
+  if (accepted) { _deviceKeyRecheck = null; if (re.wasRefused) _deviceKeyReloadOwed = true; }
   _paintDeviceKeyBanner();
   _paintDeviceKeyStatus();
-  var re = _deviceKeyRecheck;
-  if (re && (_deviceKeyAnswer === 'ok' || _deviceKeyAnswer === 'off')) {
-    _deviceKeyRecheck = null;
-    if (re.wasRefused) { _deviceKeyReloadArmed = true; _deviceKeyReloadIfDrained(); }
-  }
+  if (accepted && re.wasRefused) showSyncBadge('Key accepted ✓ — press Reload from the sheet at the top once the chip clears');
 }
-// The reload an accepted key earned, once nothing is on its way to the sheet (the outbox, the retry sweep, a held write): until
-// then the badge says what it waits for. Asked again by flushPendingWrites whenever the queue empties.
-function _deviceKeyReloadIfDrained() {
-  if (!_deviceKeyReloadArmed) return;
-  var busy = (typeof _syncWritesOutstanding === 'function') ? _syncWritesOutstanding()
-           : !!(typeof _pendingCount === 'function' && _pendingCount());
-  if (busy) { showSyncBadge('Key accepted ✓ — sending what was held here, then reloading from the sheet'); return; }
-  _deviceKeyReloadArmed = false;
-  showSyncBadge('Key accepted ✓ — reloading from the sheet');
-  setTimeout(function () { try { location.reload(); } catch (e) {} }, 600);
+// What a reload now would throw away, DOM-free: '' when nothing, else the words. The person's press asks it (the handler
+// behind the banner's button); a reload is refused by name while any holds, never fired over it.
+function deviceKeyReloadBusy() {
+  var any = function (m, k) {
+    try { return Object.keys(m || {}).some(function (id) { var v = m[id]; return k ? !!(v && v[k]) : !!v; }); } catch (e) { return false; }
+  };
+  if (typeof _syncWritesOutstanding === 'function' && _syncWritesOutstanding()) return 'changes made here have not reached the sheet yet (the chip at the foot says why)';
+  if (typeof _invSyncTimer !== 'undefined' && any(_invSyncTimer)) return 'an inventory change is about to be sent';
+  if (typeof _approvalEsignOut !== 'undefined' && any(_approvalEsignOut)) return 'a release request sent to DocuSign is waiting on its answer';
+  if ((typeof _agRun !== 'undefined' && any(_agRun, 'running')) || (typeof _arRun !== 'undefined' && any(_arRun, 'running'))
+      || (typeof _avRun !== 'undefined' && any(_avRun, 'running'))) return 'the agents are at work';
+  return '';
+}
+// The banner's Reload from the sheet: the reload the accepted key owed, only when nothing would be lost by it.
+function deviceKeyReloadNow() {
+  var why = deviceKeyReloadBusy();
+  if (why) {
+    var msg = 'Not reloaded: ' + why + '. Press it again once that is done.';
+    var el = (typeof document !== 'undefined' && document.getElementById) ? document.getElementById('device-key-reload-why') : null;
+    if (el) el.textContent = msg; else showSyncBadge(msg);
+    return false;
+  }
+  _deviceKeyReloadOwed = false;
+  try { location.reload(); } catch (e) {}
+  return true;
 }
 // A refusal the server sent, wherever it was read (a held write, the client list's own read): if it is about the key, the
 // banner and Settings say so. Anything else is left to its reader.
@@ -43185,12 +43211,7 @@ function flushPendingWrites() {
   function done() {
     _flushing = false;
     updatePendingIndicator();
-    if (_pendingCount() === 0) {
-      _retryStep = 0; showSyncBadge('All changes saved ✓');
-      // A key just accepted after refused reads reloads the page once what was held has landed (P2; typeof: pinned sandboxes).
-      if (typeof _deviceKeyReloadIfDrained === 'function') _deviceKeyReloadIfDrained();
-      return;
-    }
+    if (_pendingCount() === 0) { _retryStep = 0; showSyncBadge('All changes saved ✓'); return; }
     // Nothing left but blocked writes — held, not hammered. They stay queued and go out
     // on the next deliberate retry (the chip's Try again), reconnect, or tab refocus.
     var live = Object.keys(_pendingWrites).some(function(key){ return !_pendingWrites[key].blocked; });
