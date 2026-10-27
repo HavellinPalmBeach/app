@@ -734,6 +734,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     APPROVAL_REQ_KEY: 'the docState key the sent request is recorded under — a constant, not an approval',
     APPROVAL_REQ_TITLE: 'the paper\'s title — a constant, not an approval',
     APPROVAL_REQ_WATCHDOG_MS: 'how long the send waits for its chain of calls — a constant, not an approval',
+    // The request through DocuSign (2026-10-26c): the envelope's finished states and two in-flight maps, never an approval.
+    APPROVAL_ENV_DONE: 'the envelope statuses that end it (completed, declined, voided) — a constant, not an approval',
+    _approvalEnvChecking: 'which clients\' envelopes are being asked about now — a guard, not an approval',
+    _approvalEnvFiling: 'which clients\' signed requests are being filed now — a guard, not an approval',
+    _approvalEsignOut: 'which clients\' DocuSign sends wait on an answer — a guard, not an approval',
+    _approvalEnvAskedAt: 'when this page last asked DocuSign about a client\'s envelope — a floor, not an approval',
+    APPROVAL_ENV_READ_MS: 'how fresh a read must be for the signatures to be written off it — a constant, not an approval',
   };
 
   group('⚠⚠ THE NET: no client-document builder reads a page-level approval variable');

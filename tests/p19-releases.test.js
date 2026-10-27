@@ -159,6 +159,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       invApprovalNames: 'the rule: parses who signed', invApprovalComplete: 'the rule', invApprovalGap: 'the rule: why it is not complete',
       invApprovalBatches: 'the desk\'s list of recorded approvals, grouped as they were recorded',
       invSaveApproval: 'the writer (Record approval)', savePhotoRefs: 'the manifest\'s field whitelist',
+      invApplyApproval: 'the writer\'s body (2026-10-26c): Record approval and a request signed in DocuSign write through it',
       _invCellRead: 'the panel\'s read-only date display', printApprovalRequest: 'prints who has signed so far, beside the gap',
       probatePackageRecordHtml: 'the package\'s record of what was recorded, marked where it is not complete',
       printDispositionLedger: 'W5\'s ledger: prints who authorized each line, as recorded',

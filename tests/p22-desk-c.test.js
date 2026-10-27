@@ -393,7 +393,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq([m.authBy, m.approvalDate], ['Tripp Butler', '2026-09-10'], 'the sticky rule still fills a blank');
     m = both(it({ updatedAt: 2, authBy: 'Smith, John', approvalDate: '2026-10-01' }), it({ updatedAt: 1, authBy: 'Smith, John', approvalDate: '2026-10-01' }));
     eq(m.authBy, 'Smith, John', 'a comma inside a name is never split by the merge');
-    has(noComments(fn('invSaveApproval')), 'ref.authAdds[e.key] = _now', 'Record approval stamps each name it adds');
+    has(noComments(fn('invApplyApproval')), 'ref.authAdds[e.key] = _now', 'Record approval stamps each name it adds (its writer, invApplyApproval, since 2026-10-26c)');
   });
 
   // ═══════════════════════════════════════════════════════════════════════════

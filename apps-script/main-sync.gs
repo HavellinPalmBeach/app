@@ -107,10 +107,17 @@
 // grade an item's condition off its photograph (AGENT_CONDITION_TEXT; Anthony: "Agents grade it"), Agent Two's kept only off a
 // photograph the request carried. No action or type changes; it carries 2026-10-26's. Until it is live a search page or a sale with no price shown can stand as a sold comparable, a
 // researched line resting on one prints "auction comps", a long note stops mid-phrase, and no condition is graded.
-var BACKEND_VERSION = '2026-10-26b';
+// ⚠ 2026-10-26c (Anthony: the estate release approval request "definitely docusign"; a representative with no email refuses the
+// envelope by name, "Refuse, name them"): esignSendRequest sends the request to every fiduciary at once (routing order 1, no
+// countersignature), each with their own initials, signature and date markers ('/hri<n>/', '/hrs<n>/', '/hrd<n>/', the app's
+// ESIGN_REQUEST_ANCHOR), agreements@ and the estate attorney copied once every one has signed; and esignStatus reports every
+// signer on the envelope (`signers`: recipientId, name, email, status, signedAt, declinedReason) and why an envelope was voided.
+// Until it is live the request goes by email only (the app offers no DocuSign send without the action), and an envelope's
+// signatures cannot be read back.
+var BACKEND_VERSION = '2026-10-26c';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
-  'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive',
+  'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive', 'esignSendRequest',
   'stripeLink', 'stripeStatus', 'agentIdentify', 'agentValue', 'agentRoomCheck'
 ];
 var BACKEND_TYPES = [
@@ -196,6 +203,7 @@ function doPost(e) {
     if (data.action === 'esignSend')     { return jsonOut(esignSendEnvelope(data)); }
     if (data.action === 'esignStatus')   { return jsonOut(esignEnvelopeStatus(data)); }
     if (data.action === 'esignArchive')  { return jsonOut(esignArchiveEnvelope(data)); }
+    if (data.action === 'esignSendRequest') { return jsonOut(esignSendRequestEnvelope(data)); }
     if (data.action === 'stripeLink')    { return jsonOut(stripeCreatePaymentLink(data)); }
     if (data.action === 'stripeStatus')  { return jsonOut(stripePaymentsForLink(data)); }
     if (data.action === 'agentIdentify') { return jsonOut(agentIdentifyShots(data)); }
@@ -2011,6 +2019,20 @@ function _dsCoSignerAnchor(key) {
   var kind = m[1] === 'Sig' ? 'sig' : 'date';
   return { kind: kind, n: Number(m[2]), anchor: DS_COSIGNER_ANCHOR[kind].replace('#', m[2]) };
 }
+// ⚠⚠ THE RELEASE APPROVAL REQUEST'S MARKERS (2026-10-26c): the fiduciary numbered n (the job's fiduciary order, the
+// representative first) initials at every '/hri<n>/' (each group's line, each item initialled on its own, the firearms
+// line), signs at '/hrs<n>/' and dates at '/hrd<n>/'. MUST MATCH havellin.html's ESIGN_REQUEST_ANCHOR; a test holds the
+// two equal for every n and nets every pair against each other and against the agreement's markers above.
+// ⚠ ONE INITIALS TAB, EVERY PLACE ITS MARKER STANDS: DocuSign places an anchor tab at each occurrence of its string in the
+// document, so one entry covers every initial point on the page. A request of items already gone asks for no initials, so
+// its marker is absent and the tab is added only where the app measured it (as _dsClientTabs adds the opt-out box).
+var DS_REQUEST_ANCHOR = { init: '/hri#/', sig: '/hrs#/', date: '/hrd#/' };
+function _dsRequestAnchor(key) {
+  var m = /^req(Init|Sig|Date)([1-9][0-9]{0,2})$/.exec(String(key || ''));
+  if (!m) return null;
+  var kind = m[1] === 'Init' ? 'init' : m[1] === 'Sig' ? 'sig' : 'date';
+  return { kind: kind, n: Number(m[2]), anchor: DS_REQUEST_ANCHOR[kind].replace('#', m[2]) };
+}
 
 // ⚠ ONE PLACE TO TUNE THE TAB POSITION, AND IT NEEDS ONE VISUAL CHECK IN THE SANDBOX BEFORE
 // ANYTHING GOES TO A CLIENT. The anchor sits at the TOP of a 36px `.sig-line` box whose
@@ -2343,6 +2365,84 @@ function esignSendEnvelope(data) {
   }
 }
 
+// ─── THE RELEASE APPROVAL REQUEST (2026-10-26c) ───────────────────────────────────
+// Every fiduciary signs the one paper at once (routing order 1): the representative and each co-representative or
+// co-trustee, recipientId '1'..'N' in the app's order, roleName 'Fiduciary', each with their own signature and date tabs and,
+// where the page asks for initials, their own initials tab at every initial point. No countersignature: the paper is the
+// estate's written direction to Havellin, not a contract Havellin signs. agreements@ and the estate attorney are carbon
+// copies at order 2, so each receives the executed request once every fiduciary has signed and never an unsigned one.
+// ⚠ EVERY SIGNER NEEDS A NAME, AN EMAIL AND THEIR OWN SIGNATURE AND DATE MARKERS, ONE NUMBER EACH, OR NOTHING IS CREATED
+// (as esignSendEnvelope refuses a co-signer): a tab on somebody else's line, or a fiduciary with no line, would put a
+// signature where it does not belong. The app refuses the same things first, by name; this is the last word.
+function esignSendRequestEnvelope(data) {
+  try {
+    if (!data || !data.pdfBase64) return { ok: false, error: 'No document supplied to send.' };
+    var list = Array.isArray(data.signers) ? data.signers : [];
+    if (!list.length) return { ok: false, error: 'The request names nobody to sign it.' };
+    var signers = [], why = [], seen = {}, emails = {};
+    list.forEach(function (c, i) {
+      var name = String((c && c.name) || '').trim(), email = String((c && c.email) || '').trim();
+      var who = name || ('signer ' + (i + 1));
+      if (!name || !email) { why.push(who + ' needs a name and an email'); return; }
+      var marks = {};
+      ((c && Array.isArray(c.anchors)) ? c.anchors : []).forEach(function (k) {
+        var a = _dsRequestAnchor(k);
+        if (a) marks[a.kind] = a;
+      });
+      if (!marks.sig || !marks.date || marks.sig.n !== marks.date.n || (marks.init && marks.init.n !== marks.sig.n) || seen[marks.sig.n]) {
+        why.push(who + ' has no signature line of their own on the request'); return;
+      }
+      seen[marks.sig.n] = true;
+      var tabs = _dsTabs(marks.sig.anchor, marks.date.anchor);
+      if (marks.init) {
+        tabs.initialHereTabs = [{
+          anchorString: marks.init.anchor, anchorUnits: 'pixels',
+          anchorXOffset: '0', anchorYOffset: DS_REQUEST_INIT_Y_OFFSET, anchorIgnoreIfNotPresent: 'false'
+        }];
+      }
+      emails[email.toLowerCase()] = true;
+      signers.push({ email: email, name: name, recipientId: String(signers.length + 1), routingOrder: '1',
+                     roleName: 'Fiduciary', tabs: tabs, n: marks.sig.n });
+    });
+    if (why.length) return { ok: false, error: 'The envelope was not created: ' + why.join('; ') + '.' };
+    var ccList = [String(data.fileCopyEmail || 'agreements@havellinpalmbeach.com').trim()]
+      .concat(Array.isArray(data.cc) ? data.cc.map(function (e) { return String(e || '').trim(); }) : []);
+    var carbonCopies = [], ccSeen = {};
+    ccList.forEach(function (e) {
+      if (!e || ccSeen[e.toLowerCase()] || emails[e.toLowerCase()]) return;
+      ccSeen[e.toLowerCase()] = true;
+      carbonCopies.push({ email: e, name: carbonCopies.length ? e : 'Havellin Palm Beach — Agreements',
+                          recipientId: String(signers.length + carbonCopies.length + 1), routingOrder: '2' });
+    });
+    var env = {
+      emailSubject: data.subject || ('Havellin — Release Approval Request — ' + (data.hvlId || '')),
+      emailBlurb: data.blurb || '',
+      documents: [{ documentBase64: data.pdfBase64, name: data.filename || 'Release Approval Request.pdf', fileExtension: 'pdf', documentId: '1' }],
+      recipients: {
+        signers: signers.map(function (s) { return { email: s.email, name: s.name, recipientId: s.recipientId, routingOrder: s.routingOrder, roleName: s.roleName, tabs: s.tabs }; }),
+        carbonCopies: carbonCopies
+      },
+      status: 'sent'
+    };
+    var res = _dsApi('post', '/envelopes', env);
+    if (!res.ok) {
+      var b = res.body || {};
+      if (b.needsConsent) return b;
+      return { ok: false, error: 'DocuSign refused the envelope (HTTP ' + res.code + '): '
+                                 + (b.message || b.error || JSON.stringify(b).slice(0, 300)) };
+    }
+    return { ok: true, envelopeId: res.body.envelopeId, status: res.body.status || 'sent', sentAt: res.body.statusDateTime || '',
+             // Who is on the envelope, with the number of the line each signs: the app records exactly this.
+             signers: signers.map(function (s) { return { name: s.name, email: s.email, recipientId: s.recipientId, n: s.n }; }) };
+  } catch (error) {
+    Logger.log('esignSendRequestEnvelope error: ' + error);
+    return { ok: false, error: String(error) };
+  }
+}
+// The initials box sits on the line its marker opens, so the tab goes down less than a signature's does (DS_TAB_Y_OFFSET
+// is tuned for the agreement's 36 px .sig-line box). A first guess, like that one: look at one sent envelope in the sandbox.
+var DS_REQUEST_INIT_Y_OFFSET = '0';
+
 function _dsTabs(sigAnchor, dateAnchor) {
   return {
     signHereTabs: [{
@@ -2446,7 +2546,15 @@ function esignEnvelopeStatus(data) {
       signerName: (client && client.name) || '',
       signerEmail: (client && client.email) || '',
       signedAt: (client && client.signedDateTime) || '',
-      coSigners: coSigners
+      coSigners: coSigners,
+      // ⚠ EVERY SIGNER, AS DOCUSIGN HOLDS THEM (2026-10-26c): the release approval request has no client and no countersigner,
+      // so its fiduciaries are read off this list by recipientId; a declined signer says why. The agreement's fields above
+      // are unchanged.
+      signers: signers.map(function (s) {
+        return { recipientId: String(s.recipientId || ''), name: s.name || '', email: s.email || '', status: s.status || '',
+                 signedAt: s.signedDateTime || '', declinedReason: s.declinedReason || '' };
+      }),
+      voidedReason: res.body.voidedReason || ''
     };
   } catch (error) {
     Logger.log('esignEnvelopeStatus error: ' + error);
@@ -2514,13 +2622,15 @@ function esignArchiveEnvelope(data) {
   try {
     var id = data && data.envelopeId;
     if (!id) return { ok: false, error: 'No envelope id supplied.' };
-    if (!data.folderId) return { ok: false, error: 'No Drive folder supplied to file the signed agreement into.' };
+    // What was signed, in the error's words: the agreement, or since 2026-10-26c the release approval request (`what`).
+    var what = String(data.what || 'agreement');
+    if (!data.folderId) return { ok: false, error: 'No Drive folder supplied to file the signed ' + what + ' into.' };
     var base = data.baseName || ('Agreement ' + id);
     var enc = encodeURIComponent(id);
 
     var signed = _dsFetchBlob('/envelopes/' + enc + '/documents/combined?certificate=true',
                               base + ' - SIGNED.pdf');
-    if (!signed.ok) return { ok: false, error: 'Could not retrieve the signed agreement — ' + signed.error,
+    if (!signed.ok) return { ok: false, error: 'Could not retrieve the signed ' + what + ' — ' + signed.error,
                              needsConsent: signed.needsConsent, consentUrl: signed.consentUrl };
 
     var cert = _dsFetchBlob('/envelopes/' + enc + '/documents/certificate',

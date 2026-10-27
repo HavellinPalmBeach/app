@@ -584,7 +584,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     attempt(() => FL.setInvFlag('unsure'));
     eq([FL._invFilter.flag, FL._invFilter.when], ['unsure', 'all'], 'pressing Unsure shows the guessed items, every day');
     eq(attempt(() => { unsureFlag.test(standing, EST()); return JSON.stringify(standing) === before; }).val, true, '…and its test writes nothing on the item: a filter, never a tick');
-    has(t, 'Correct the name and count, choose where it goes, type who takes it if it leaves, check the value against what you saw. Nothing flagged? No tick, whatever its value: the box is ticked in grey. Flagged? One Reviewed tick covers it: a note on it or its photo, a firearm or ammunition, an appraisal not yet in or waived, a bequest, a dispute, both agents unsure. Hover the box for every reason. A tick never settles an item with no name or a possible duplicate (the box turns bronze): name it, or Remove or Not duplicates. On a disputed estate every item either agent named or valued takes it. Bronze unsure marks a guess, even on a grey tick, until your tick or a value you type. Press Unsure first (it gathers them, ticking nothing) and read them hardest. A maker added to the name reprices it.', 'as the page says');
+    has(t, 'Correct the name and count, choose where it goes, type who takes it if it leaves, check the value against what you saw. Nothing flagged? No tick, whatever its value: a grey tick. Flagged? One Reviewed tick covers it: a note on it or its photo, a firearm or ammunition, an appraisal not yet in or waived, a bequest, a dispute, both agents unsure. Hover the box for every reason. A tick never settles an item with no name or a possible duplicate (the box turns bronze): name it, or Remove or Not duplicates. On a disputed estate every item either agent named or valued takes it. Bronze unsure marks a guess, even on a grey tick, until your tick or a value you type. Press Unsure first and read them hardest. A maker added to the name reprices it.', 'as the page says');
     lacks(t, 'One Reviewed tick covers it all: a note, a possible duplicate', '⚠ never that a tick covers a possible duplicate (the second review)');
     has(t, 'Not yet decided, room by room: name, where it goes, who takes it, value; tick what is flagged.', 'and the pocket card');
     lacks(t, 'On a disputed estate every item takes it.', '⚠ never every item: a line named and decided on the desk is reviewed by that act');
@@ -608,7 +608,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     for (let i = 0; i < 42; i++) many.push(ITEM(Object.assign({ stableId: 'c' + i, driveFileId: 'Fc' + i, ts: 10 + i, objectName: 'Checked thing ' + i }, ticked)));
     for (let i = 0; i < 158; i++) many.push(ITEM({ stableId: 's' + i, driveFileId: 'Fs' + i, ts: 100 + i, objectName: 'Standing thing ' + i }));
     has(eastern(() => stamp(many, EST(READ_OF(many)))), 'REVIEWED — read by Anthony Graziano, October 26, 2026; 42 items checked; 158 accepted as valued', '⚠⚠ the stamp the page quotes, word for word');
-    has(t, 'Where an Agent Two value stands unticked, they also wait for the list to be read, then print REVIEWED — read by Anthony Graziano, October 26, 2026; 42 items checked; 158 accepted as valued.', 'as the page says');
+    has(t, 'Where an Agent Two value stands unticked, they also wait for the list to be read, then print REVIEWED with who read it and when.', 'as the page says');
     has(stamp(two({ disposition: 'Undecided' }), EST()), 'IN PROGRESS', 'one item undecided: IN PROGRESS');
     has(stamp(two({ fmv: '', valLow: undefined, valHigh: undefined }), EST()), 'IN PROGRESS', 'one item not valued: IN PROGRESS');
     has(stamp(two({ flagDisputed: true }), EST()), 'IN PROGRESS', 'one flagged and unticked: IN PROGRESS');
@@ -663,7 +663,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     RV._invCloudSeen[7] = true; RV._invCloudFailed[7] = true;
     eq(attempt(() => RV.invListReadRefusal(7)).val, 'the sheet is unreachable: this is this device’s copy', '…or while the sheet is unreachable');
     RV.SHEETS_SYNC_URL = ''; delete RV._invCloudFailed[7];
-    has(t, 'Last, read the whole list against what you saw and press ✓ I’ve read the list on the Inventory Review bar: it records who and when, for the list as it stood. Change anything printed about an item after, or remove one, on any device, and it says changed since: press it again. A tick changes nothing. While the list is loading, the sheet is unreachable or Agent One or Agent Two is at work, the press waits.', 'as the page says');
+    has(t, 'Last, read the whole list against what you saw and press ✓ I’ve read the list on the Inventory Review bar: it records who and when, for the list as it stood. Change anything printed about an item after, or remove one, anywhere, and it says changed since: press it again. A tick changes nothing. While the list is loading, the sheet is unreachable or Agent One or Agent Two is at work, the press waits.', 'as the page says');
     eq(sandbox({ vars: ['INV_READ_FIELDS'] }).INV_READ_FIELDS.join(','), 'objectName,category,qty,fmv,valLow,valHigh,valSource,disposition,channel,condition,roomIdx,valNote,valDate,apprId,apprDoc,assetTrack,flagExempt,serial',
       '…"anything printed about an item": what the press reads is what the papers print of a line (the merge\'s review added the basis, the date, the appraiser, the track, the exempt mark and the serial)');
     RV._agRun = { 7: { running: true } };
@@ -779,6 +779,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const liv = attempt(() => P.approvalRequestRecipients(LIVING()));
     eq(liv.ok ? liv.val.to : null, ['meg@ellis.example'], 'to the client on living work');
     has(t, 'Send request makes a Gmail draft with the request as a PDF: to every representative with an email, the estate attorney copied, or to the client on living work.', 'as the page says');
+    // DocuSign on an estate (2026-10-26c): the card's own label, and the signatures recorded by the arrival check, not a press.
+    has(card, "'&#9997;&#65039; Send through DocuSign'", 'Send through DocuSign is the card\'s label');
+    has(code(fn('approvalEnvelopeApply')), 'invApplyApproval(', '…and its signatures are written on the lines by themselves');
+    has(t, 'On an estate Send through DocuSign leads: everyone initials and signs on screen, and the signatures record themselves.', 'as the page says');
     // What a living request carries (2026-10-26; Anthony: "Drop it, firearms aside"), on the real rule.
     const W = lift(['invWrittenReleaseNeeded'], {});
     const need = (o) => attempt(() => W.invWrittenReleaseNeeded(Object.assign({ stableId: 'x', label: 'inventory' }, o), LIVING({ tc: 'Ashley Jerome' }))).val;
