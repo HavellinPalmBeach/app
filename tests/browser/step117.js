@@ -28,12 +28,24 @@
 //   I. The living job: the kept shotgun and the revolver to the new home read "client takes it" in grey, never held; their
 //      record says the client takes it themselves and names no case; no Firearms held chip; the shotgun is offered New home
 //      and no Donate or Junk; the rifle sold to Jupiter has the dealer's row with File the dealer's receipt (#3).
+//   K–O, the review's findings (2026-10-27):
+//   K. The living job: with the rifle sold to a dealer the Job Plan's banner keeps the crew's rule; the rifle put on Keep through
+//      its row, every firearm stays with the client and the banner says the client takes it themselves (Ask 4).
+//   L. The kept shotgun put on Hold through its row: its record says it is going to no dealer, with the client's own choices, and
+//      never sends anyone to Record approval (LIV-05).
+//   M. The estate: the walkthrough's "Dad's hunting gear" (donate) joined to a photographed shotgun by Use that line: the question
+//      says Donate is not carried onto a firearm, and the shotgun stays Undecided.
+//   N. The Colt going to the daughter: Through a licensed dealer… answered "Goodwill Palm Beach" is refused and records nothing;
+//      answered with the directory's Jupiter Gun Exchange, the route is recorded and the row reads via Jupiter.
+//   O. The Vendor Directory unread (a cold device): the shotgun sold to Jupiter reads "dealer not yet checked", never "is not a
+//      licensed dealer"; the directory lands from its web app while the desk is on screen, and the desk is drawn again with it.
 //   J. 1440 and 390 px: no horizontal overflow; zero page errors.
 //
 //   NODE_PATH=/path/to/node_modules node tests/browser/step117.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
 const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/havellin.html'));
 const SYNC = 'https://sync.example.test/exec';
+const VSYNC = 'https://vendors.example.test/exec';
 const J = 11701, L = 11702;
 const ME = 'Ashley Jerome';
 let pass = 0, fail = 0;
@@ -55,13 +67,23 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
       if (/action=loadMedia/.test(req.url())) return json({ ok: true, media: sheet });
       return json({ ok: true });
     });
+    // The Vendor Directory's web app (section O): the directory the seed lists.
+    const DIR = [
+      { vendor_name: 'Jupiter Gun Exchange', category: 'Firearms Dealer (FFL)', status: 'Active' },
+      { vendor_name: 'Goodwill Palm Beach', category: 'Donation Organization', status: 'Active' },
+      { vendor_name: 'Kodner Galleries', category: 'Auction House', status: 'Active' }];
+    await ctx.route(VSYNC + '**', (r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, vendors: DIR }) }));
     await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
     const p = await ctx.newPage();
     p.setDefaultTimeout(10000);
     const errs = []; p.on('pageerror', (e) => errs.push(String(e)));
     // Every dialog is answered as a person would; `answer` says what the next confirm gets.
-    const said = []; let answer = true;
-    p.on('dialog', async (d) => { said.push({ type: d.type(), m: d.message() }); await (d.type() === 'confirm' && !answer ? d.dismiss() : d.accept()); });
+    const said = []; let answer = true; let promptAnswer = null;
+    p.on('dialog', async (d) => {
+      said.push({ type: d.type(), m: d.message() });
+      if (d.type() === 'prompt' && promptAnswer !== null) return d.accept(promptAnswer);
+      await (d.type() === 'confirm' && !answer ? d.dismiss() : d.accept());
+    });
     await p.goto(APP); await p.waitForTimeout(1600);
     await p.evaluate((u) => {
       SHEETS_SYNC_URL = u;
@@ -335,6 +357,95 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
       const rows = await p.evaluate(() => [...document.querySelectorAll('#inv-releases .inv-leaving-row')].map((r) => r.textContent.replace(/\s+/g, ' ').trim()));
       const jup = rows.filter((t) => t.indexOf('Jupiter Gun Exchange') === 0)[0] || '';
       has(jup, 'File the dealer’s receipt (#3', '⚠⚠ REL-15: on a client\'s own home too');
+    });
+
+    // ── K ───────────────────────────────────────────────────────────────────
+    await section('K. the living job\'s banner: the crew\'s rule while a firearm goes to a dealer; the client\'s once every one stays with them', async () => {
+      const toPlan = async (j) => { await p.evaluate((j) => { setCurrentJob(j); }, j); await p.click('.nb[onclick*="\'job-plan\'"]'); await p.waitForTimeout(1200); };
+      await toPlan(L);
+      let banner = await txt('#panel-job-plan .fa-banner');
+      has(banner, 'FIREARMS IN THIS HOUSE — found on site', 'the banner lights on the living job');
+      has(banner, 'family included', 'with the rifle sold to a dealer, the crew\'s rule');
+      await toDesk(L);
+      await p.selectOption('#inv-row-r3 .inv-c-disp select', 'Keep'); await p.waitForTimeout(900);
+      eq((await line(L, 'r3')).disp, 'Keep', 'the rifle put on Keep through its row');
+      await toPlan(L);
+      banner = await txt('#panel-job-plan .fa-banner');
+      has(banner, 'The client takes it themselves: Havellin and the movers never carry it. Photograph it where it lies, and tell the concierge the same day.', '⚠⚠ every firearm stays with the client: the banner says so (Ask 4)');
+      lacks(banner, 'family included', 'and drops "let nobody carry one out — family included"');
+      lacks(banner, 'locked case', 'and names no container');
+      await toDesk(L);
+    });
+
+    // ── L ───────────────────────────────────────────────────────────────────
+    await section('L. the kept shotgun put on Hold: going to no dealer, never "press Record approval" (LIV-05)', async () => {
+      await p.selectOption('#inv-row-k1 .inv-c-disp select', 'Hold'); await p.waitForTimeout(900);
+      eq((await line(L, 'k1')).disp, 'Hold', 'on Hold through its row');
+      await openRec('k1');
+      const rec = await txt('#inv-row-k1');
+      has(rec, 'Not cleared to carry: Not going to a dealer — choose Auction, Consign or Sell to a licensed dealer, or To a person through one; or Keep or New home, which the client takes themselves.', '⚠⚠ the record says where it can go');
+      lacks(rec, 'Record approval once the signed authority is back', 'and never the dead end');
+    });
+
+    // ── M ───────────────────────────────────────────────────────────────────
+    await section('M. Use that line never carries the walkthrough\'s Donate onto a shotgun', async () => {
+      // The walkthrough recorded "Dad's hunting gear" for donation (state a person could not type in one sitting: the estimate).
+      await p.evaluate((j) => { estimateStore[j].estimate.collections = [{ id: 51, name: "Dad's hunting gear", disp: 'donate', qty: 1 }]; }, J);
+      await toDesk(J);
+      const cl = await p.evaluate((j) => { const r = (_photoRefs[j] || []).find((x) => x.sourceCollId === 51 && !x.deletedAt); return r ? { id: r.stableId, disp: r.disposition } : null; }, J);
+      ok(!!cl, 'the collection is on the inventory by itself');
+      eq((cl || {}).disp, 'Donate', 'marked Donate, as the walkthrough said');
+      if (!cl) return;
+      await openRec(cl.id);
+      const pick = '#coll-use-' + cl.id;
+      ok(await vis(pick), 'its record offers the photographed lines');
+      await p.selectOption(pick, 'g3');
+      const n = said.length;
+      await press('#inv-row-' + cl.id + ' button[onclick^="collectionUseLine("]', 'Use that line');
+      has((said[n] || {}).m, 'is a firearm, so the walkthrough’s Donate is not carried onto it: A firearm is never donated.', '⚠⚠ the question says so before anything is written');
+      const g3 = await p.evaluate((j) => { const r = _photoRefs[j].find((x) => x.stableId === 'g3'); return { coll: r.sourceCollId, disp: r.disposition || '' }; }, J);
+      eq(g3, { coll: 51, disp: '' }, '⚠⚠ the shotgun takes the link and stays Undecided, never Donate');
+      const o = await opts(J, 'g3');
+      ok(!!o && o.indexOf('Donate') < 0, 'and its row still offers no Donate');
+    });
+
+    // ── N ───────────────────────────────────────────────────────────────────
+    await section('N. the Colt\'s dealer route: Goodwill refused, the directory\'s Jupiter recorded', async () => {
+      await openRec('g9');
+      const btn = '#inv-row-g9 button[onclick="invSetDealerRoute(' + J + ',\'g9\',true)"]';
+      promptAnswer = 'Goodwill Palm Beach';
+      let n = said.length;
+      await press(btn, 'Through a licensed dealer…');
+      has((said[n] || {}).m, 'Licensed dealers on the Vendor Directory: Jupiter Gun Exchange.', 'the prompt lists the directory\'s dealers');
+      has(said.slice(n).map((x) => x.m).join(' | '), 'Goodwill Palm Beach is not a licensed dealer on the Vendor Directory', '⚠⚠ Goodwill typed as the route is refused, by name');
+      eq(await p.evaluate((j) => (_photoRefs[j].find((x) => x.stableId === 'g9') || {}).viaDealer || '', J), '', 'and nothing is recorded');
+      lacks(await txt('#inv-row-g9'), 'through Goodwill', 'the record names no route through Goodwill');
+      promptAnswer = 'jupiter gun exchange';
+      await openRec('g9');
+      await press(btn, 'Through a licensed dealer… again');
+      eq(await p.evaluate((j) => (_photoRefs[j].find((x) => x.stableId === 'g9') || {}).viaDealer || '', J), 'Jupiter Gun Exchange', 'the directory\'s dealer is recorded as the directory names it');
+      has(await txt('#inv-row-g9'), 'via Jupiter Gun Exchange', 'and the row reads via Jupiter');
+      promptAnswer = null;
+    });
+
+    // ── O ───────────────────────────────────────────────────────────────────
+    await section('O. the Vendor Directory unread: "dealer not yet checked", and the desk drawn again when it lands', async () => {
+      await p.evaluate(() => { vendorDirectory = []; try { localStorage.removeItem('hav_vendor_dir'); } catch (e) {} renderInventoryTab(); });
+      await p.waitForTimeout(600);
+      const row = await txt('#inv-row-g1');
+      has(row, 'dealer not yet checked', '⚠ the shotgun sold to Jupiter reads "dealer not yet checked"');
+      lacks(row, 'no licensed dealer', 'never "no licensed dealer"');
+      const why = await p.evaluate(() => { const s = document.querySelector('#inv-row-g1 .inv-fa-nodealer'); return s ? s.getAttribute('title') : ''; });
+      has(why, 'Dealer not yet checked — the Vendor Directory has not loaded on this device, so Jupiter Gun Exchange cannot be checked', 'its reason says why');
+      await openRec('g1');
+      lacks(await txt('#inv-row-g1'), 'is not a licensed dealer', 'and its record never says it is not one: no negative from an empty store');
+      // The directory's web app answers while the desk is on screen (as at boot on a cold device).
+      await p.evaluate((u) => { VENDOR_SYNC_URL = u; loadVendorDirectory(); }, VSYNC);
+      await p.waitForTimeout(1500);
+      eq(await p.evaluate(() => vendorDirectory.length), 3, 'the directory lands');
+      const after = await txt('#inv-row-g1');
+      lacks(after, 'dealer not yet checked', '⚠ the desk is drawn again: the dealer is checked');
+      lacks(after, 'no licensed dealer', 'and Jupiter is its licensed dealer');
     });
 
     // ── J ───────────────────────────────────────────────────────────────────

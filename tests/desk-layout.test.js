@@ -584,7 +584,7 @@ function bars(job, rows, o) {
   _barsCl = _barsCl || closure(BARS_ROOTS, BARS_STATE);
   const C = sandbox({ fns: _barsCl.fns, vars: _barsCl.vars, stubs: {
     jobs: [job], _photoRefs: { 7: rows }, estimateStore: o.noEst ? {} : { 7: o.est || { estimate: { svc: job.svc, rooms: [] } } }, jobPlanStore: o.plan || {},
-    vendorDirectory: [], SHEETS_SYNC_URL: o.url || '', _invCloudSeen: o.seen || {}, document: domStub({}),
+    vendorDirectory: o.dir || [], SHEETS_SYNC_URL: o.url || '', _invCloudSeen: o.seen || {}, document: domStub({}),
   } });
   const all = rows.filter((r) => !r.deletedAt);
   const at = (f) => { const r = attempt(() => C.deskFoldState(7, job, f, all, TODAY)); return r.ok ? r.val : { show: null, openByDefault: null, bits: [], err: r.err }; };
@@ -2294,7 +2294,9 @@ const voids = (h) => [...String(h || '').matchAll(/voidSignedRecord\(7,'([^']+)'
 function groupL({ group, ok, eq, has, lacks }) {
   group('L1 · one row per taker under Leaving the property · sign out on the iPad: the receipts and the sign-out joined, every note carried');
   {
-    const B = bars(L_JOB(), L_ROWS());
+    // The route's dealer is a Vendor Directory firm under Firearms Dealer (FFL) (restated 2026-10-27, the P4 review: a route is held
+    // to the same rule as a sale's dealer).
+    const B = bars(L_JOB(), L_ROWS(), { dir: [{ vendor_name: 'Gulf Guns (FFL)', category: 'Firearms Dealer (FFL)', status: 'Active' }] });
     const r = attempt(() => B.C._renderInvReleasesCard(B.C.jobs[0], B.all));
     ok(r.ok, 'the card draws (' + (r.err || 'ok') + ')');
     const h = String(r.val || ''), t = readL(h);

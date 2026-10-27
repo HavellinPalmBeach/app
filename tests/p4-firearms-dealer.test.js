@@ -17,7 +17,15 @@
 // only the boundaries stubbed by name.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const { sandbox, source, fn, decl, domStub } = require('./harness');
+const harness = require('./harness');
+const { sandbox, source, domStub } = harness;
+// Lifting one function by source text costs about ten milliseconds, and the call-graph walks and the reader counts below ask for the
+// same few thousand names again and again: each is read once (a throw is remembered as a throw).
+const memo = (f) => { const m = new Map(); return (n) => {
+  if (!m.has(n)) { try { m.set(n, { v: f(n) }); } catch (e) { m.set(n, { e }); } }
+  const r = m.get(n); if (r.e) throw r.e; return r.v;
+}; };
+const fn = memo(harness.fn), decl = memo(harness.decl);
 
 const SRC = source();
 const ALL_FNS = new Set((SRC.match(/(^|\n)function\s+([A-Za-z0-9_$]+)\s*\(/g) || []).map((s) => s.replace(/^\n?function\s+/, '').replace(/\s*\($/, '')));
@@ -25,7 +33,17 @@ const ALL_VARS = new Set((SRC.match(/(^|\n)var\s+([A-Za-z0-9_$]+)\s*=/g) || []).
 const codeOnly = (t) => t.split('\n').filter((l) => !l.trim().startsWith('//')).map((l) => l.replace(/\s\/\/\s.*$/, '')).join('\n')
   .replace(/'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"/g, "''");
 const noComments = (t) => String(t).split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
+// The call graph of a root set is the same every time it is asked, and walking it lifts hundreds of functions by source text (about
+// seven seconds a rig), so each (roots, stop) walk is done once and reused; every sandbox is still built fresh.
+const _closureMemo = new Map();
 function closure(roots, stop) {
+  const memoKey = JSON.stringify([roots, [...new Set(stop || [])].sort()]);
+  if (_closureMemo.has(memoKey)) { const m = _closureMemo.get(memoKey); return { fns: m.fns.slice(), vars: m.vars.slice() }; }
+  const out = _closureWalk(roots, stop);
+  _closureMemo.set(memoKey, out);
+  return { fns: out.fns.slice(), vars: out.vars.slice() };
+}
+function _closureWalk(roots, stop) {
   const stopSet = new Set(stop || []);
   const fns = new Set(), vars = new Set();
   const queue = roots.map((r) => ['f', r]);
@@ -86,16 +104,18 @@ const STOP = ['_printDocument', 'alert', 'showSyncBadge', 'renderInventoryTab', 
   '_docNotice', '_invThumbHTML', '_invInput', '_invRefreshSummary', '_invRefreshGuardrail', '_invRefreshFlagStrip', '_invRefreshRecords',
   '_invRefreshReleases', '_invReviewRepaint', '_invReadLineRepaint', '_invRefreshAgentNotices', '_renderInvWorkbar', '_renderInvBulk',
   '_invPaintFigures', 'agentValueAfterRename', '_fieldCamPaint'];
-function rig(job, rows, extra) {
+// `roots`, where given, replaces the default roots: a sandbox is built per rig (about a second for the default set), so a group
+// that drives two or three functions lifts only their graph.
+function rig(job, rows, extra, moreRoots, roots) {
   const log = { printed: [], alerts: [], badges: [], confirms: [], renders: 0 };
   const doc = domStub({});
-  const c = lift(['_invEdit', '_invBulkApply', '_invDispOptions', 'invFirearmDispRefusal', 'invTransportBlocked', 'invTransportReason',
+  const c = lift(roots || ['_invEdit', '_invBulkApply', '_invDispOptions', 'invFirearmDispRefusal', 'invTransportBlocked', 'invTransportReason',
     'invTransportDealer', 'invDealerWhy', 'invFillPlanChannel', 'invFillPlanChannels', 'agentApplyResult', 'agentValueApply',
     '_renderInvRow', '_renderInvPanel', '_invFirearmPanelHtml', 'invReleaseBlocked', 'invReceiptGroups', 'invReceiptOwed',
     'invReceiptHtml', 'printBeneficiaryReceipt', 'leavingGroups', '_leavingRowHtml', 'printApprovalRequest', 'openCustodyModal',
     'addCustodyEvent', 'custodyFirearmQuestion', 'jobHasFirearms', 'jobFirearmLines', 'firearmsBannerHtml', 'firearmsWorkspaceLine',
     'deskAlertsHtml', 'collectionLineWithPhoto', 'fieldCamSetDisp', '_fieldCamChipRefusal', 'collectionLinesEnsure', 'invWorkFlags',
-    '_apprTransport', '_invFirearmsDealerListHtml', '_invRecipientInput', 'planDerivedLines'], STOP, Object.assign({
+    '_apprTransport', '_invFirearmsDealerListHtml', '_invRecipientInput', 'planDerivedLines'].concat(moreRoots || []), STOP, Object.assign({
     jobs: [job], _photoRefs: { 7: rows }, estimateStore: { 7: { estimate: EST } }, vendorDirectory: DIR, document: doc, _invPick: {},
     _invOpen: {}, _agDupSet: {}, _agDupSetJob: null, _invFilter: { when: 'all', room: '', q: '', flag: '' }, _invBulkLast: null,
     _printDocument: (html, title) => { log.printed.push({ html, title }); return true; }, _invPrintThumb: () => '', _invThumbHTML: () => '<div></div>',
@@ -463,16 +483,223 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(ui.slice(ui.indexOf("fieldCamSetDisp('sell')") - 120, ui.indexOf("fieldCamSetDisp('sell')")), 'disabled', 'Sell is offered');
   });
 
+  const FA_ROOTS = ['firearmsBannerHtml', 'firearmsWorkspaceLine', 'invTransportReason', 'invTransportBlocked', 'custodyFirearmQuestion'];
+  // ── The review's findings (2026-10-27), each driven through the real functions ─────────────────────────────────────────
+  G('N · the settle\'s clear is stamped, so neither merge puts the Job Plan\'s vendor back on a firearm (FLD-01 through the merge)', () => {
+    const fs = require('fs'), vm = require('vm'), path = require('path');
+    const gs = vm.createContext({ console });
+    vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'apps-script', 'saveInventory.gs'), 'utf8'), gs, { filename: 'saveInventory.gs' });
+    // The Job Plan confirms Palm Beach Arms (an auction house the directory also lists as a licensed dealer) for the auction line;
+    // the iPad shot the pile with Sell latched, and the plan's vendor filled Who takes it by itself.
+    const job = ESTATE({ vendorSourcing: { Lv1: { status: 'Confirmed', vendorName: 'Palm Beach Arms' } } });
+    const captured = ROW('n', 3, { objectName: '', namedBy: '', disposition: 'Sell', channel: 'Palm Beach Arms', channelFrom: 'plan',
+      category: 'General/Household', updatedAt: 1000 });
+    const iPad = JSON.parse(JSON.stringify(captured));          // what the field iPad and the sheet still hold
+    const E = rig(job, [captured], {}, ['mergeMediaItems']);
+    E.c.agentApplyResult(7, { srcId: 'n', rows: ['n'] }, { objects: [{ name: 'Remington 870 pump shotgun', category: 'Firearms', qty: 1, confidence: 'high', basis: '' }], notices: [] });
+    const settled = JSON.parse(JSON.stringify(E.row('n')));
+    eq([settled.category, settled.disposition, settled.channel || ''], ['Firearms', 'Sell', ''], 'the laptop: named a shotgun, Sell kept, the plan\'s vendor off');
+    ok(!!(settled.clearedAt && settled.clearedAt.channel > 0), '⚠⚠ and the clear is stamped, as a person\'s clear is');
+    // The server: the sheet holds the iPad's copy; the laptop's save merges into it (saveInventory.gs, the real merge).
+    const onSheet = gs._mergeMediaItems([JSON.parse(JSON.stringify(iPad))], [JSON.parse(JSON.stringify(settled))])[0] || {};
+    eq([onSheet.channel || '', onSheet.channelFrom], ['', undefined], '⚠⚠ the sheet keeps the box empty: the older copy\'s Palm Beach Arms does not come back');
+    // The app: the laptop's refresh merges the sheet's answer, and the iPad merges the laptop's save over its own older copy.
+    const laptop = E.c.mergeMediaItems([JSON.parse(JSON.stringify(settled))], [onSheet])[0] || {};
+    const ipad = E.c.mergeMediaItems([JSON.parse(JSON.stringify(iPad))], [JSON.parse(JSON.stringify(settled))])[0] || {};
+    eq([laptop.channel || '', ipad.channel || ''], ['', ''], '⚠⚠ neither device\'s merge restores it');
+    eq([E.c.invTransportDealer(laptop), E.c.invTransportDealer(ipad), E.c.invTransportDealer(onSheet)], ['', '', ''], 'so no copy reads a licensed dealer');
+    // And with the serial and both signatures recorded, the gate still waits on a dealer a person picks.
+    const papered = Object.assign({}, ipad, { serial: 'RS12345M', authBy: 'Ruth Price', approvalDate: '2026-10-12' });
+    eq(E.c.invTransportBlocked(papered, E.job()), 'dealer', '⚠⚠ never cleared to carry to the plan\'s vendor');
+    E.c._photoRefs[7] = [papered];
+    const req = text((E.c.printApprovalRequest(7, false, { asHtml: true }) || {}).html);
+    lacks(req, 'to Palm Beach Arms, a licensed dealer', 'the request never names it as the dealer');
+    // The category set on the row and across a selection settle through the same function, stamped the same way.
+    const R = rig(PLANNED(ESTATE()), [ROW('a', 1, { objectName: 'Shotgun', disposition: 'Auction', channel: 'Kodner Galleries', channelFrom: 'plan' }),
+      ROW('b', 2, { objectName: 'Rifle', disposition: 'Auction', channel: 'Kodner Galleries', channelFrom: 'plan' })]);
+    R.c._invEdit(7, 'a', 'category', { value: 'Firearms', type: 'select-one' });
+    R.c._invPick = { b: 1 };
+    R.c._invBulkApply(7, 'category', 'Firearms');
+    eq(['a', 'b'].map((id) => !!(R.row(id).clearedAt && R.row(id).clearedAt.channel > 0) && !R.row(id).channel), [true, true], 'the row\'s and the selection\'s category stamp it too');
+  });
+
+  G('N2 · Use that line never carries a walkthrough\'s Donate onto a firearm', () => {
+    [['estate', ESTATE], ['living', LIVING]].forEach(([k, J]) => {
+      const est = { rooms: ROOMS, collections: [{ id: 5, name: "Dad's hunting gear", disp: 'donate', qty: 1 }], vendors: [] };
+      const gun = GUN('g', 2, { disposition: '', namedBy: 'agent', objectName: 'Two rifles in soft cases', serial: '' });
+      const sofa = ROW('s', 3, { disposition: '', objectName: 'Sofa' });
+      const E = rig(J(), [gun, sofa], { estimateStore: { 7: { estimate: est } } }, ['collectionUseLine', 'collectionLineId', '_invTombstoneLine', 'printDonationRecord']);
+      E.c.collectionLinesEnsure(7);
+      const coll = E.c._photoRefs[7].find((r) => r.sourceCollId === 5) || {};
+      eq(coll.disposition, 'Donate', k + ': the walkthrough collection\'s line reads Donate');
+      const r = attempt(() => E.c.collectionUseLine(7, coll.stableId, 'g'));
+      eq(r.ok ? r.val : r.err, true, k + ': Use that line joins them');
+      eq([E.row('g').sourceCollId, E.row('g').disposition || ''], [5, ''], '⚠⚠ ' + k + ': the rifles take the link and stay Undecided, never Donate');
+      const q = E.log.confirms.pop() || '';
+      has(q, 'is a firearm, so the walkthrough’s Donate is not carried onto it: A firearm is never donated.', k + ': and the question says so before anything is written');
+      // Nothing then makes the rifles a donation: the row's select offers no Donate, and the Donation Record has nothing to print.
+      lacks(E.c._invDispOptions(E.job(), E.row('g').disposition, E.row('g')).join(','), 'Donate', k + ': the row offers no Donate');
+      E.c._invEdit(7, 'g', 'channel', { value: 'Goodwill Palm Beach', type: 'text' });
+      const d = attempt(() => E.c.printDonationRecord(7, 'g', { asHtml: true }));
+      lacks(text(d.ok && d.val ? d.val.html : ''), 'rifles', k + ': the Donation Record never lists the rifles');
+    });
+    // An ordinary line still takes the walkthrough's answer.
+    const est = { rooms: ROOMS, collections: [{ id: 6, name: 'Living room set', disp: 'donate', qty: 1 }], vendors: [] };
+    const O = rig(ESTATE(), [ROW('s', 3, { disposition: '', objectName: 'Sofa' })], { estimateStore: { 7: { estimate: est } } }, ['collectionUseLine', 'collectionLineId', '_invTombstoneLine']);
+    O.c.collectionLinesEnsure(7);
+    const oc = O.c._photoRefs[7].find((r) => r.sourceCollId === 6) || {};
+    O.c.collectionUseLine(7, oc.stableId, 's');
+    eq(O.row('s').disposition, 'Donate', 'a sofa joined to the same kind of collection takes Donate, as before');
+    lacks(O.log.confirms.pop() || '', 'is a firearm', 'and its question says nothing of firearms');
+  });
+
+  G('N3 · the dealer route is held to the same rule: a Vendor Directory firm under Firearms Dealer (FFL)', () => {
+    const E = rig(ESTATE(), [GUN('g', 1, { disposition: 'Distribute', channel: 'Margaret Price', authBy: 'Ruth Price', approvalDate: '2026-10-12' })], {}, ['invSetDealerRoute']);
+    const asked = [];
+    E.c.window.prompt = (m, d) => { asked.push({ m: String(m), d }); return E.c.__route; };
+    E.c.__route = 'Goodwill Palm Beach';
+    const r1 = attempt(() => E.c.invSetDealerRoute(7, 'g', true));
+    eq(r1.ok ? r1.val : r1.err, false, '⚠⚠ "Goodwill Palm Beach" typed as the route is refused');
+    eq(E.row('g').viaDealer || '', '', 'and nothing is recorded');
+    has(E.log.alerts.pop() || '', 'Goodwill Palm Beach is not a licensed dealer on the Vendor Directory: a firearm goes to a person only through a firm listed there under Firearms Dealer (FFL). Nothing was recorded.', 'named, with the category');
+    has((asked[0] || {}).m, 'Licensed dealers on the Vendor Directory: Jupiter Gun Exchange; Palm Beach Arms.', 'the prompt lists the directory\'s dealers (Do Not Use left out)');
+    E.c.__route = '  jupiter   gun exchange ';
+    E.c.invSetDealerRoute(7, 'g', true);
+    eq(E.row('g').viaDealer, 'Jupiter Gun Exchange', 'a directory dealer is recorded as the directory names it');
+    eq([E.c.invTransportDealer(E.row('g')), E.c.invTransportBlocked(E.row('g'), E.job())], ['Jupiter Gun Exchange', ''], 'and cleared to carry to it, papered');
+    // A route that names no directory dealer (a copy from elsewhere, a firm since recategorised) is never read as one.
+    const B = rig(ESTATE(), [GUN('g', 1, { disposition: 'Distribute', channel: 'Margaret Price', viaDealer: 'Goodwill Palm Beach' })]);
+    // The request first (a line still waiting on approval), then the same line papered for the gate.
+    const t = text((B.c.printApprovalRequest(7, false, { asHtml: true }) || {}).html);
+    lacks(t, 'through Goodwill Palm Beach, a licensed dealer', '⚠⚠ the request never prints Goodwill as a licensed dealer');
+    has(t, 'Serial RS1 · licensed dealer not named yet', 'it prints the dealer as not named');
+    Object.assign(B.row('g'), { authBy: 'Ruth Price', approvalDate: '2026-10-12' });
+    eq([B.c.invTransportDealer(B.row('g')), B.c.invTransportBlocked(B.row('g'), B.job())], ['', 'dealer'], '⚠⚠ a Goodwill route is no dealer, and not cleared to carry');
+    has(B.c.invTransportReason(B.row('g'), B.job()), 'the dealer route names Goodwill Palm Beach, which is not a licensed dealer on the Vendor Directory', 'the reason says so');
+    eq(B.c.invDealerRouteText(B.row('g')), '', 'the route phrase claims no licensed dealer');
+    B.c._invOpen = { g: 1 };
+    const row = text(B.c._renderInvRow(B.job(), B.row('g')));
+    has(row, 'no licensed dealer', 'the row says so, as for a sale');
+    lacks(row, 'via Goodwill', 'and never "via Goodwill"');
+    has(row, 'The route names Goodwill Palm Beach, which is not a licensed dealer on the Vendor Directory. Change dealer', 'the record offers Change dealer');
+    lacks(row, 'Cleared to carry', 'with no clearance');
+    // With the directory unread, nothing is recorded: it cannot be checked.
+    const C = rig(ESTATE(), [GUN('g', 1, { disposition: 'Distribute', channel: 'Margaret Price' })], { vendorDirectory: [] }, ['invSetDealerRoute']);
+    C.c.window.prompt = () => 'Jupiter Gun Exchange';
+    eq(C.c.invSetDealerRoute(7, 'g', true), false, 'an unread directory records no route');
+    has(C.log.alerts.pop() || '', 'the Vendor Directory has not loaded on this device', 'and says why');
+  });
+
+  G('N4 · an unread Vendor Directory is said as unread, and the desk is drawn again when it lands', () => {
+    const appr = { authBy: 'Ruth Price', approvalDate: '2026-10-12' };
+    const C = rig(ESTATE(), [GUN('g', 1, Object.assign({ disposition: 'Sell', channel: 'Jupiter Gun Exchange' }, appr)), GUN('h', 2, Object.assign({ disposition: 'Sell' }, appr))], { vendorDirectory: [] });
+    eq(C.c.invTransportBlocked(C.row('g'), C.job()), 'dealer', 'not cleared off an unread directory: the safe direction');
+    const why = C.c.invTransportReason(C.row('g'), C.job());
+    has(why, 'Dealer not yet checked — the Vendor Directory has not loaded on this device, so Jupiter Gun Exchange cannot be checked', '⚠⚠ worded as unread');
+    lacks(why, 'is not a licensed dealer', 'never as a negative from an empty store');
+    has(C.c.invTransportReason(C.row('h'), C.job()), 'No dealer named — pick the licensed dealer', 'a box left empty is still "no dealer named"');
+    has(text(C.c._renderInvRow(C.job(), C.row('g'))), 'dealer not yet checked', 'the row says "dealer not yet checked"');
+    lacks(text(C.c._renderInvRow(C.job(), C.row('g'))), 'no licensed dealer', 'not "no licensed dealer"');
+    has(text(C.c._renderInvRow(C.job(), C.row('h'))), 'no licensed dealer', 'the empty one still reads "no licensed dealer"');
+    const C2 = rig(ESTATE(), [GUN('g', 1, { disposition: 'Sell', channel: 'Jupiter Gun Exchange' })], { vendorDirectory: [] });
+    const t = text((C2.c.printApprovalRequest(7, false, { asHtml: true }) || {}).html);
+    has(t, 'Serial RS1 · licensed dealer not yet checked', '⚠ the request prints "not yet checked"');
+    lacks(t, 'licensed dealer not named yet', 'not "not named yet"');
+    const C2html = (C2.c.printApprovalRequest(7, false, { asHtml: true }) || {}).html || '';
+    has(C2html, '>not yet checked</td>', 'and the authority block\'s dealer column says the same');
+    lacks(C2html, '>not named yet</td>', 'never "not named yet" there');
+    // Not yet approved as well: the question's own sentence about the dealer says it cannot be checked, never that none is recorded.
+    const cq = C2.c.custodyFirearmQuestion(C2.row('g'), C2.job(), 'Released', 'Jupiter Gun Exchange');
+    has(cq, 'Dealer not yet checked', 'a firearm not yet approved: the question says its dealer cannot be checked');
+    lacks(cq, 'No licensed dealer is recorded for it.', 'and never that none is recorded');
+    C.c.__answer = false;
+    C.c.openCustodyModal(7, 'g');
+    C.doc.__seed('cust-action', { value: 'Released' }); C.doc.__seed('cust-party', { value: 'Jupiter Gun Exchange' });
+    C.c.addCustodyEvent();
+    const q = C.log.confirms.pop() || '';
+    has(q, 'Dealer not yet checked', 'the custody question says it cannot be checked');
+    lacks(q, 'is not a licensed dealer', 'and never that it is not one');
+    // A stale copy (the last load failed) says where it read it.
+    const S = rig(ESTATE(), [GUN('g', 1, Object.assign({ disposition: 'Sell', channel: 'Kodner Galleries' }, appr))], { _dirStale: { vendor: true, referral: false } });
+    has(S.c.invTransportReason(S.row('g'), S.job()), 'is not a licensed dealer on the Vendor Directory (this device’s copy of it: the last load failed', 'a stale copy names itself');
+    // The desk is drawn again when the directory lands: on screen, on a job with a firearm, through the idle redraw.
+    const sync = (v) => ({ then(f) { return sync(f ? f(v) : v); }, catch() { return this; } });
+    const L = rig(ESTATE(), [GUN('g', 1, { disposition: 'Sell', channel: 'Jupiter Gun Exchange' })], { vendorDirectory: [],
+      fetch: () => sync({}), _readAppsScriptJson: () => ({ vendors: DIR }), VENDOR_SYNC_URL: 'https://script.google.com/macros/s/V/exec',
+      setVendorDirStatus() {}, populateJobMenus() {}, refreshVendorsTabIfActive() {}, normalizeVendorDir() {} }, [],
+      ['_invDealerDirLanded', 'loadVendorDirectory', 'invTransportDealer', '_invRenderWhenIdle']);
+    L.doc.getElementById('panel-inventory').classList.add('active');
+    L.doc.__seed('inv-job', { value: '7' });
+    const before = L.log.renders;
+    eq(L.c._invDealerDirLanded(), true, 'the desk on screen with a firearm: drawn again');
+    eq(L.log.renders, before + 1, 'once');
+    L.c._photoRefs[7] = [ROW('s', 1)];
+    eq(L.c._invDealerDirLanded(), false, 'no firearm on the job: not drawn');
+    L.doc.getElementById('panel-inventory').classList.remove('active');
+    L.c._photoRefs[7] = [GUN('g', 1, { disposition: 'Sell', channel: 'Jupiter Gun Exchange' })];
+    eq(L.c._invDealerDirLanded(), false, 'the desk not on screen: not drawn');
+    // Driven through the loader: the fetch lands with the directory, and the desk on screen is drawn again.
+    L.doc.getElementById('panel-inventory').classList.add('active');
+    const n0 = L.log.renders;
+    const run = attempt(() => L.c.loadVendorDirectory());
+    ok(run.ok, 'the loader runs' + (run.ok ? '' : ': ' + run.err));
+    eq([L.c.vendorDirectory.length, L.log.renders], [DIR.length, n0 + 1], '⚠ the directory lands, and the desk is drawn again with it');
+    eq(L.c.invTransportDealer(L.row('g')), 'Jupiter Gun Exchange', 'and the dealer is checked now');
+  });
+
+  G('N5 · on a client\'s own home where every firearm stays with the client, the banner says so (Ask 4)', () => {
+    const L = rig(LIVING(), [GUN('k', 1, { disposition: 'Keep' }), GUN('m', 2, { disposition: 'Move' })], {}, [], FA_ROOTS);
+    const banner = text(L.c.firearmsBannerHtml(L.job()));
+    has(banner, 'The client takes it themselves: Havellin and the movers never carry it. Photograph it where it lies, and tell the concierge the same day.', '⚠⚠ the living rule on the banner');
+    lacks(banner, 'family included', 'never the crew\'s "let nobody carry one out — family included"');
+    lacks(banner, 'locked case', 'and no container');
+    has(text(L.c.firearmsWorkspaceLine(L.job())), 'photograph in place; the client takes it themselves, and Havellin and the movers never carry it.', 'the room\'s line too');
+    // A firearm going anywhere else, or not yet decided, keeps the crew's rule; and every estate does.
+    const M = rig(LIVING(), [GUN('k', 1, { disposition: 'Keep' }), GUN('s', 2, { disposition: 'Sell', channel: 'Jupiter Gun Exchange' })], {}, [], FA_ROOTS);
+    has(text(M.c.firearmsBannerHtml(M.job())), 'let nobody carry one out — family included', 'one sold to a dealer beside it: the crew\'s rule');
+    const U = rig(LIVING(), [GUN('u', 1, { disposition: '' })], {}, [], FA_ROOTS);
+    has(text(U.c.firearmsBannerHtml(U.job())), 'family included', 'one not yet decided: the crew\'s rule');
+    const E = rig(ESTATE(), [GUN('k', 1, { disposition: 'Keep' })], {}, [], FA_ROOTS);
+    has(text(E.c.firearmsBannerHtml(E.job())), 'family included', 'an estate\'s Keep: the crew\'s rule');
+    has(text(E.c.firearmsWorkspaceLine(E.job())), 'photograph in place, nothing moves.', 'and the room\'s line');
+    const I = rig(LIVING({ houseFlags: { firearms: { on: true, note: 'Two in the closet' } } }), [], {}, [], FA_ROOTS);
+    has(text(I.c.firearmsBannerHtml(I.job())), 'family included', 'the intake tick with nothing photographed: the crew\'s rule');
+  });
+
+  G('N6 · a firearm going to no dealer says so first, never "press Record approval" (LIV-05)', () => {
+    const L = rig(LIVING(), [GUN('h', 1, { disposition: 'Hold' })], {}, [], FA_ROOTS);
+    const why = L.c.invTransportReason(L.row('h'), L.job());
+    has(why, 'Not going to a dealer — choose Auction, Consign or Sell to a licensed dealer, or To a person through one; or Keep or New home, which the client takes themselves.', '⚠⚠ a living client\'s Hold firearm: where it can go, in the client\'s words');
+    lacks(why, 'Record approval', 'never the dead end');
+    const E = rig(ESTATE(), [GUN('h', 1, { disposition: 'Hold' }), GUN('k', 2, { disposition: 'Keep' }), GUN('u', 3, { disposition: '' }),
+      GUN('s', 4, { disposition: 'Sell', channel: 'Jupiter Gun Exchange' }), GUN('n', 5, { disposition: 'Hold', flagNFA: true })], {}, [], FA_ROOTS);
+    ['h', 'k', 'u'].forEach((id) => {
+      const w = E.c.invTransportReason(E.row(id), E.job());
+      has(w, 'Not going to a dealer — choose Auction, Consign or Sell to a licensed dealer, or To a person through one.', 'an estate\'s ' + (E.row(id).disposition || 'Undecided') + ': not going to a dealer, first');
+      lacks(w, 'Keep or New home', 'with no living words on an estate');
+    });
+    has(E.c.invTransportReason(E.row('s'), E.job()), 'No written authority on file', 'a line going somewhere keeps the authority sentence');
+    has(E.c.invTransportReason(E.row('n'), E.job()), 'NFA item', 'and NFA still answers first');
+    // The custody question on a Hold firearm: the reason says where it can go, and no separate "no dealer recorded" beside it.
+    const hq = E.c.custodyFirearmQuestion(E.row('h'), E.job(), 'Released', 'Uncle Bob Price');
+    has(hq, 'Not cleared to carry: Not going to a dealer', 'the custody question on a Hold firearm gives the reason');
+    lacks(hq, 'No licensed dealer is recorded for it.', 'once');
+  });
+
   G('L · one rule each, counted', () => {
     const live = (f) => codeOnly(fn(f));
     const readers = (name) => [...ALL_FNS].filter((f) => f !== name && new RegExp('\\b' + name + '\\(').test(live(f))).sort();
-    eq(readers('invFirearmDispRefusal'), ['_fieldCamChipRefusal', '_invDispOptions', '_invEdit', 'collectionLineWithPhoto', 'invFirearmSettle', 'invFirearmSettleText'],
-      'where a firearm may go: the select, the row\'s handler, the camera, the settle and its words');
+    eq(readers('invFirearmDispRefusal'), ['_fieldCamChipRefusal', '_invDispOptions', '_invEdit', 'collectionLineWithPhoto', 'collectionUseLine', 'invFirearmSettle', 'invFirearmSettleText'],
+      'where a firearm may go: the select, the row\'s handler, the camera, Use that line (P4 review), the settle and its words');
     ok(readers('invFirearmSettle').length >= 5, 'the settle runs wherever a line can become a firearm (' + readers('invFirearmSettle').join(', ') + ')');
     lacks(live('invTransportDealer'), "String(ref.channel || '').trim()", '⚠⚠ the dealer is never the bare channel');
     has(live('invFillPlanChannel'), 'invIsFirearm(ref)', 'the plan fill asks whether the line is a firearm');
     has(live('invReceiptHtml'), 'invIsFirearm(r)', 'the receipt page leaves firearms out itself');
-    eq(readers('invFirearmClientTakes'), ['_renderInvRow', 'invReleaseBlocked', 'invTransportBlocked'], 'the client-takes rule: the hold, the gate and the row');
-    eq(readers('invFirearmsDealerFirm'), ['invTransportDealer'], 'the directory dealer is read through the dealer alone');
+    eq(readers('invFirearmClientTakes'), ['_renderInvRow', 'firearmsClientTakesAll', 'invReleaseBlocked', 'invTransportBlocked'],
+      'the client-takes rule: the hold, the gate, the row and the banner\'s answer (P4 review)');
+    eq(readers('invFirearmsDealerFirm'), ['invSetDealerRoute', 'invTransportDealer'],
+      'the directory dealer: read through the dealer, and asked by the route\'s prompt before it records one (P4 review)');
+    eq(readers('firearmsClientTakesAll'), ['firearmsBannerHtml', 'firearmsWorkspaceLine'], 'the banner\'s living rule: one answer, both builders');
+    eq(readers('invDealerDirState'), ['_invDealerDirStaleText', 'invDealerUnchecked', 'invSetDealerRoute'], 'an unread directory: one answer');
   });
 };

@@ -26,7 +26,7 @@ const FNS = ['invIsFirearm', 'invFirearmAuthorized', 'invReleaseBlocked',
              'invApprovalComplete', 'invApprovalGap',
              // P4 (2026-10-27): a living client's own firearm (client), and the dealer as a Vendor Directory firm under
              // Firearms Dealer (FFL) that a person picked, on a sale.
-             'invFirearmClientTakes', 'invFirearmsDealerFirms', 'invFirearmsDealerFirm', '_vendorNameKey', 'vendorCats', 'invDealerWhy'];
+             'invFirearmClientTakes', 'invFirearmsDealerFirms', 'invFirearmsDealerFirm', '_vendorNameKey', 'vendorCats', 'invDealerWhy', 'invDealerNamed', 'invDispGoesToDealer', 'invDealerUnchecked', 'invDealerDirState', 'invDealerUncheckedText', '_invDealerDirStaleText'];
 const VARS = ['INV_FIREARM_CLIENT_TXT', 'FIREARMS_DEALER_CATEGORY', 'INV_TRANSPORT_REASONS', 'INV_SALE_DISPOSITIONS'];
 
 // A firearm with everything the protocol asks for: authority, serial, named dealer. RESTATED (P4, 2026-10-27): the dealer is a

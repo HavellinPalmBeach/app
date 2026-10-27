@@ -9,7 +9,8 @@
 // (a won estate with a manifest, an approved estimate with its rooms).
 //
 //   A. A5: a firearm going to a named person records its dealer route through the line's record (the
-//      prompt names the dealer), the Approval Request names the route, the bulk bar records the signed
+//      prompt names the dealer, a firm the seeded Vendor Directory lists under Firearms Dealer (FFL) since the P4 review of
+//      2026-10-27), the Approval Request names the route, the bulk bar records the signed
 //      authority, and the worklist then clears it to carry; an NFA line is offered no route and stays
 //      blocked; the route survives a reload. Restated 2026-10-27: the work bar's papers open on screen
 //      first. The Approval Request (like the More ▾ worklist since 2026-10-26) opens in the document
@@ -181,6 +182,10 @@ const T0 = Date.parse('2026-09-24T15:00:00Z');   // a past day, so each desk ope
       ];
       _photoRefs[4704] = [L('x1', { itemNo: 1, objectName: 'Dining table', disposition: 'Sell' })];
       _photoRefs[4702] = [];
+      // The Vendor Directory lists the dealer the route names (restated 2026-10-27, the P4 review: a route, like a sale's dealer,
+      // is a firm listed under Firearms Dealer (FFL), checked at the prompt), kept on the device so the reload still finds it.
+      vendorDirectory = [{ vendor_name: 'Palm Beach Arms (FFL)', category: 'Firearms Dealer (FFL)', status: 'Active' }];
+      localStorage.setItem('hav_vendor_dir', JSON.stringify(vendorDirectory));
       [4701, 4703, 4704, 4702].forEach((id) => savePhotoRefs(id));
       saveJobs();
       // The estimates persist the way the app keeps them, so a reload finds them.

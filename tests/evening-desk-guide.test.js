@@ -363,8 +363,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The firearms line is red (the protocol's colour), and the page lists it as a red point.
     // P4 (2026-10-27): the line reads the one rule, firearms on this job (jobHasFirearms): the intake tick, or a firearm found.
     const F = sandbox({ fns: ['firearmsWorkspaceLine', 'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', 'guideLinkHtml', 'esc',
-      'jobHasFirearms', 'jobFirearmLines', '_firearmsFoundText', 'invIsFirearm', 'agentNoticesOn', '_invNamed', '_invItemNo', '_invRoomName'],
-      vars: ['FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS'] });
+      'jobHasFirearms', 'jobFirearmLines', '_firearmsFoundText', 'invIsFirearm', 'agentNoticesOn', '_invNamed', '_invItemNo', '_invRoomName', 'firearmsClientTakesAll', 'firearmsClientRuleText', 'invFirearmClientTakes', 'invFiduciaryMode', 'isDecedentJob'],
+      vars: ['FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'DECEDENT_SERVICES'] });
     const fl = attempt(() => F.firearmsWorkspaceLine({ id: 7, svc: 'probate', houseFlags: { firearms: { on: true } } }));
     ok(fl.ok, 'the firearms line draws (' + (fl.err || 'ok') + ')');
     has(fl.ok ? decode(fl.val) : '', 'Firearms flagged on this job — photograph in place, nothing moves.', 'in its words');

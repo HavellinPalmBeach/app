@@ -1476,7 +1476,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.27 · 11:26am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.27 · 2:18pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -11026,15 +11026,29 @@ function _firearmsFoundText(job, lines) {
   var shown = lines.slice(0, 3).map(function(r) { return _invNamed(r) + ' \u00b7 ' + _invRoomName(job.id, r.roomIdx); });
   return shown.join('; ') + (lines.length > 3 ? '; and ' + (lines.length - 3) + ' more' : '');
 }
+// ⚠ ON A CLIENT'S OWN HOME, WHERE EVERY FIREARM FOUND STAYS WITH THE CLIENT (P4 review, 2026-10-27; Ask 4): the banner told the crew
+// "let nobody carry one out — family included" while the row said the client takes it themselves. Where every firearm line on a
+// living job is the client's to take (invFirearmClientTakes: Keep, or New home), the banner and the room's line say that rule;
+// anywhere else (an estate, a firearm going elsewhere or not yet decided, a note on a line nobody has filed, the intake tick with
+// nothing photographed) the crew's rule stands. The one answer for both builders. An estate needs no test of its own here:
+// invFirearmClientTakes is never true on one.
+function firearmsClientTakesAll(job, found) {
+  if (!job) return false;
+  var lines = found || jobFirearmLines(job);
+  return lines.length > 0 && lines.every(function(r) { return invFirearmClientTakes(r, job); });
+}
+// A function, not a var: INV_FIREARM_CLIENT_TXT is declared further down the file, and a var reading it here would hoist as undefined.
+function firearmsClientRuleText() { return INV_FIREARM_CLIENT_TXT + ' Photograph it where it lies, and tell the concierge the same day.'; }
 function firearmsBannerHtml(job) {
   if (!jobHasFirearms(job)) return '';
   var intake = firearmsFlaggedAtIntake(job);
   var f = houseFlagsOf(job).firearms || {};
   var row = _firearmsRow();
   var found = jobFirearmLines(job);
+  var mine = firearmsClientTakesAll(job, found);
   return '<div class="fa-banner">'
     + '<div class="fa-hd">&#9888; FIREARMS IN THIS HOUSE &mdash; ' + (intake ? 'flagged at intake' : 'found on site') + '</div>'
-    + '<div class="fa-rule">' + esc(row.crewRule || 'Nothing moves without written authority.') + '</div>'
+    + '<div class="fa-rule">' + esc(mine ? firearmsClientRuleText() : (row.crewRule || 'Nothing moves without written authority.')) + '</div>'
     + (intake ? (f.note ? '<div class="fa-note">Intake: \u201c' + esc(f.note) + '\u201d</div>'
                         : '<div class="fa-note">Ticked at intake, no detail recorded &mdash; ask the client before Day 1.</div>') : '')
     + (found.length ? '<div class="fa-note fa-found">Found on site: ' + esc(_firearmsFoundText(job, found)) + '</div>' : '')
@@ -11046,7 +11060,9 @@ function firearmsWorkspaceLine(job) {
   var row = _firearmsRow();
   var found = jobFirearmLines(job);
   return '<div class="fa-line">&#9888; ' + (firearmsFlaggedAtIntake(job) ? 'Firearms flagged on this job' : 'Firearm found on this job')
-    + (found.length ? ' (' + esc(_firearmsFoundText(job, found)) + ')' : '') + ' &mdash; photograph in place, nothing moves.'
+    + (found.length ? ' (' + esc(_firearmsFoundText(job, found)) + ')' : '')
+    + (firearmsClientTakesAll(job, found) ? ' &mdash; photograph in place; the client takes it themselves, and Havellin and the movers never carry it.'
+                                         : ' &mdash; photograph in place, nothing moves.')
     + (row.doc ? ' ' + guideLinkHtml(row.doc, 'Protocol') : '') + '</div>';
 }
 
@@ -30136,11 +30152,19 @@ function invFirearmsDealerFirm(name) {
 // A line becoming a firearm (Agent One's naming, Agent Two's category, a category set on the row or across a selection, a
 // walkthrough collection's line): a disposition a firearm may not have goes back to Undecided, and a recipient the Job Plan
 // filled by itself comes off (a firearm's dealer is a person's pick). Returns what it took off, or null. The caller saves.
+// ⚠⚠ THE CLEAR IS STAMPED (P4 review, 2026-10-27): `channel` is sticky (INV_STICKY_FIELDS, app and server alike), so an empty box
+// with no `clearedAt.channel` reads to both merges as a device that never saw a value, and the field iPad's older copy put the
+// plan's Palm Beach Arms straight back, without its plan mark, where it read as a dealer a person chose and cleared the shotgun to
+// carry. Stamped as `_invEdit` stamps a person's clear, which the server's _invStickyValue already honours (no redeploy).
 function invFirearmSettle(ref, job) {
   if (!invIsFirearm(ref) || ref.deletedAt) return null;
   var out = null;
   if (ref.disposition && invFirearmDispRefusal(job, ref.disposition)) { out = { disposition: ref.disposition }; ref.disposition = ''; }
-  if (ref.channelFrom === 'plan') { out = out || {}; out.channel = String(ref.channel || ''); ref.channel = ''; delete ref.channelFrom; }
+  if (ref.channelFrom === 'plan') {
+    out = out || {}; out.channel = String(ref.channel || ''); ref.channel = ''; delete ref.channelFrom;
+    if (!ref.clearedAt) ref.clearedAt = {};
+    ref.clearedAt.channel = Date.now();
+  }
   return out;
 }
 // The sentence a settle says: "#12 Remington 870 is a firearm: Donate came off it … ".
@@ -30218,12 +30242,48 @@ function invTransportBlocked(ref, job) {
 // Consign, Sell), only a channel a person typed (never `channelFrom: 'plan'`), and only a firm the Vendor Directory lists under
 // Firearms Dealer (FFL) (invFirearmsDealerFirm), named as the directory names it. Goodwill, a junk hauler and the Job Plan's
 // auction house each read "Cleared to carry" before.
+// ⚠⚠ AND ONE STANDARD FOR THE ROUTE TOO (P4 review, 2026-10-27): the route was whatever was typed at its prompt, so "Goodwill Palm
+// Beach" recorded as the route printed on the request as "through Goodwill Palm Beach, a licensed dealer" and cleared the
+// firearm to carry there, while a sale needed a Vendor Directory firm under Firearms Dealer (FFL). Both now: the name a person
+// put forward (invDealerNamed), read through the directory (invFirearmsDealerFirm), named as the directory names it. The
+// route's prompt asks the same question before it records anything (invSetDealerRoute).
 function invTransportDealer(ref) {
-  if (!ref) return '';
-  if (ref.disposition === 'Distribute') return invDealerRoute(ref);
-  if (INV_SALE_DISPOSITIONS.indexOf(ref.disposition) < 0 || invChannelLeftover(ref) || ref.channelFrom === 'plan') return '';
-  var firm = invFirearmsDealerFirm(ref.channel);
+  var firm = invFirearmsDealerFirm(invDealerNamed(ref));
   return firm ? String(firm.vendor_name).trim().replace(/\s+/g, ' ') : '';
+}
+// Whether a disposition sends a firearm to a dealer at all: Auction, Consign or Sell to one, or To a person through one (P4).
+function invDispGoesToDealer(disp) { return disp === 'Distribute' || INV_SALE_DISPOSITIONS.indexOf(disp) >= 0; }
+// The name a person put forward as a firearm's dealer, before it is checked against the Vendor Directory: the recorded route on a
+// line going to a person; Channel / Recipient on a sale, never a person left from To a person (P22) and never a name the Job
+// Plan filled in (P4); else ''. Read by invTransportDealer, and by the words for a name that is not (or cannot yet be) a dealer.
+function invDealerNamed(ref) {
+  if (!ref || !invDispGoesToDealer(ref.disposition)) return '';
+  if (ref.disposition === 'Distribute') return invDealerRoute(ref);
+  if (invChannelLeftover(ref) || ref.channelFrom === 'plan') return '';
+  return String(ref.channel || '').trim();
+}
+// ⚠ AN EMPTY DIRECTORY IS UNREAD, NOT A DIRECTORY WITH NO DEALERS IN IT (P4 review; the house rule): `vendorDirectory` is [] on a
+// device whose cache is empty until loadVendorDirectory's fetch lands, and every sale then said its dealer "is not a licensed
+// dealer on the Vendor Directory". 'unread' while it is empty, 'stale' when the last load failed and the cache is shown
+// (_dirStale), '' once it has loaded. A dealer still cannot be cleared off an unread directory (the safe direction); it is only
+// worded as what it is.
+function invDealerDirState() {
+  var dir = (typeof vendorDirectory !== 'undefined' && Array.isArray(vendorDirectory)) ? vendorDirectory : [];
+  if (!dir.length) return 'unread';
+  return (typeof _dirStale !== 'undefined' && _dirStale && _dirStale.vendor) ? 'stale' : '';
+}
+// A dealer named that this device cannot check yet: a name put forward, no directory firm found, and the directory unread.
+function invDealerUnchecked(ref) {
+  return invIsFirearm(ref) && !!invDealerNamed(ref) && !invTransportDealer(ref) && invDealerDirState() === 'unread';
+}
+// The words for it, one sentence for the gate, the row, the custody question and the route's prompt.
+function invDealerUncheckedText(name) {
+  return 'Dealer not yet checked — the Vendor Directory has not loaded on this device, so ' + (name || 'the dealer')
+    + ' cannot be checked as a licensed dealer yet. Reload the directory on the Vendors tab; the desk checks again once it lands.';
+}
+// A stale copy says so where it says a name is not a dealer.
+function _invDealerDirStaleText() {
+  return invDealerDirState() === 'stale' ? ' (this device’s copy of it: the last load failed, so reload it on the Vendors tab)' : '';
 }
 // ⚠⚠ THE PERSON A LINE WAS GOING TO, LEFT IN Channel / Recipient AFTER ITS DISPOSITION CHANGED (P22). One writer,
 // asked by both handlers that write a disposition (`_invEdit`, `_invBulkApply`): moving a line off Distribute with a
@@ -30273,28 +30333,42 @@ var INV_TRANSPORT_REASONS = {
 };
 // An approval recorded without every fiduciary says who is missing (P19) rather than "no written authority on file",
 // which would be false: one is on file, and it is not enough.
+// ⚠ A FIREARM GOING TO NO DEALER AT ALL SAYS SO FIRST (P4 review, 2026-10-27; LIV-05): on Hold, an estate's Keep or Undecided the
+// gate answers `authority` before `dealer`, and the reason sent a person to "press Record approval once the signed authority is
+// back" for a line no request carries (a living client's Hold firearm: invWrittenReleasePicked offers nothing for it). The
+// authority sentence is kept for a line that is going somewhere.
 function invTransportReason(ref, job) {
   var why = invTransportBlocked(ref, job);
+  if ((why === 'authority' || why === 'serial' || why === 'dealer') && !invDispGoesToDealer(ref.disposition)) return invDealerWhy(ref, job);
   var gap = why === 'authority' ? invApprovalGap(ref, job) : '';
   // A leftover recipient (P22) is named for what it is, not as an empty channel; and since P4 every other reason a firearm has
   // no dealer, in invDealerWhy.
-  if (why === 'dealer') return invDealerWhy(ref);
+  if (why === 'dealer') return invDealerWhy(ref, job);
   return gap ? 'Written authority is not complete. ' + gap : (INV_TRANSPORT_REASONS[why] || '');
 }
 // ⚠ WHY A FIREARM HAS NO DEALER, SAID FOR WHAT IT IS (P4), whichever arm the gate answers first: not going to one at all, the
-// person a line was going to left in the box (P22), a name the Job Plan filled in, or a name that is not a licensed dealer on the
-// Vendor Directory. '' where it has one. Read by the gate's reason and by the row's *no licensed dealer*.
-function invDealerWhy(ref) {
+// person a line was going to left in the box (P22), a name the Job Plan filled in, a route or a name that is not a licensed dealer
+// on the Vendor Directory, or (P4 review) a name this device cannot check because the directory has not loaded. '' where it has
+// one. Read by the gate's reason and by the row's *no licensed dealer*. `job` words the living client's own choices.
+function invDealerWhy(ref, job) {
   if (!invIsFirearm(ref) || invTransportDealer(ref)) return '';
-  var ch = String(ref.channel || '').trim();
-  if (ref.disposition === 'Distribute') return INV_TRANSPORT_REASONS.beneficiary;
-  if (INV_SALE_DISPOSITIONS.indexOf(ref.disposition) < 0) {
-    return 'Not going to a dealer — choose Auction, Consign or Sell to a licensed dealer, or To a person through one.';
+  var ch = String(ref.channel || '').trim(), named = invDealerNamed(ref);
+  if (!invDispGoesToDealer(ref.disposition)) {
+    return 'Not going to a dealer — choose Auction, Consign or Sell to a licensed dealer, or To a person through one'
+      + (job && !invFiduciaryMode(job) ? '; or Keep or New home, which the client takes themselves' : '') + '.';
+  }
+  if (ref.disposition === 'Distribute') {
+    if (!named) return INV_TRANSPORT_REASONS.beneficiary;
+    if (invDealerUnchecked(ref)) return invDealerUncheckedText(named);
+    return 'No licensed dealer — the dealer route names ' + named + ', which is not a licensed dealer on the Vendor Directory' + _invDealerDirStaleText()
+      + ': a firearm goes to a person only through a firm listed there under ' + FIREARMS_DEALER_CATEGORY + '. Open the line and press Change dealer, '
+      + 'or add the dealer to the Vendor Directory under that category.';
   }
   if (invChannelLeftover(ref)) return 'No dealer named — Channel / Recipient still names ' + invChannelLeftover(ref) + ', the person this line was going to. Record the receiving dealer there.';
   if (ch && ref.channelFrom === 'plan') return 'No dealer named — ' + ch + ' was filled in from the Job Plan, and a firearm’s dealer is chosen by a person: '
     + 'pick the licensed dealer in Who takes it, a Vendor Directory firm listed under ' + FIREARMS_DEALER_CATEGORY + '.';
-  if (ch) return 'No dealer named — ' + ch + ' is not a licensed dealer on the Vendor Directory: a firearm is sold only to a firm listed there under '
+  if (invDealerUnchecked(ref)) return invDealerUncheckedText(named);
+  if (ch) return 'No dealer named — ' + ch + ' is not a licensed dealer on the Vendor Directory' + _invDealerDirStaleText() + ': a firearm is sold only to a firm listed there under '
     + FIREARMS_DEALER_CATEGORY + '. Pick one in Who takes it, or add the dealer to the Vendor Directory under that category.';
   return INV_TRANSPORT_REASONS.dealer;
 }
@@ -30347,11 +30421,29 @@ function invSetDealerRoute(jobId, stableId, on) {
     var why = invDealerRouteRefusal(ref);
     if (why) { alert(why); return false; }
     var who = String(ref.channel || '').trim();
+    // ⚠⚠ THE ROUTE IS A LICENSED DEALER ON THE VENDOR DIRECTORY, AS A SALE'S DEALER IS (P4 review, 2026-10-27): "Goodwill Palm
+    // Beach" typed here printed as "through Goodwill Palm Beach, a licensed dealer" and cleared the firearm to carry there. The
+    // prompt lists the directory's dealers (the box's suggestions on a sale); a name that is not one is refused by name, and one
+    // that is is recorded as the directory names it. With the directory unread nothing is recorded: it cannot be checked.
+    var dirState = invDealerDirState();
+    if (dirState === 'unread') { alert(invDealerUncheckedText('a dealer') + ' Nothing was recorded.'); return false; }
+    var firms = invFirearmsDealerFirms().filter(function(v) { return String(v.status || '').trim() !== 'Do Not Use'; })
+      .map(function(v) { return String(v.vendor_name).trim().replace(/\s+/g, ' '); });
     var dealer = (window.prompt('Which licensed dealer does this firearm go through'
       + (who ? ' on its way to ' + who : '') + '?\n\nThe dealer runs the background check and makes the transfer. '
-      + 'Havellin carries it to the dealer and hands it to nobody else.', String(ref.viaDealer || '')) || '').trim();
+      + 'Havellin carries it to the dealer and hands it to nobody else.\n\n'
+      + (firms.length ? 'Licensed dealers on the Vendor Directory: ' + firms.join('; ') + '.'
+                      : 'The Vendor Directory lists no firm under ' + FIREARMS_DEALER_CATEGORY + ' yet: add the dealer there first.'),
+      String(ref.viaDealer || '') || (firms.length === 1 ? firms[0] : '')) || '').trim();
     if (!dealer) return false;
-    ref.viaDealer = dealer;
+    var firm = invFirearmsDealerFirm(dealer);
+    if (!firm) {
+      alert(dealer + ' is not a licensed dealer on the Vendor Directory' + _invDealerDirStaleText() + ': a firearm goes to a person only through a firm '
+        + 'listed there under ' + FIREARMS_DEALER_CATEGORY + '. Nothing was recorded. '
+        + (firms.length ? 'Listed: ' + firms.join('; ') + '.' : 'Add the dealer to the Vendor Directory under that category, then record the route.'));
+      return false;
+    }
+    ref.viaDealer = String(firm.vendor_name).trim().replace(/\s+/g, ' ');
     ref.viaDealerBy = _invStampBy(job);
     ref.viaDealerAt = Date.now();
     if (ref.clearedAt) keys.forEach(function(k){ delete ref.clearedAt[k]; });
@@ -30368,9 +30460,10 @@ function invSetDealerRoute(jobId, stableId, on) {
   _scheduleInventorySync(jobId);
   return true;
 }
-// The route as a phrase: "to Marie Delgado (daughter), through Palm Beach Arms, a licensed dealer".
+// The route as a phrase: "to Marie Delgado (daughter), through Palm Beach Arms, a licensed dealer". ⚠ Only through a dealer the
+// Vendor Directory lists (invTransportDealer, P4 review): a route naming anything else is no licensed dealer, and says nothing here.
 function invDealerRouteText(ref) {
-  var via = invDealerRoute(ref);
+  var via = invDealerRoute(ref) ? invTransportDealer(ref) : '';
   if (!via) return '';
   var who = String((ref && ref.channel) || '').trim();
   return 'to ' + (who || 'the named person') + ', through ' + via + ', a licensed dealer';
@@ -30732,7 +30825,13 @@ function custodyFirearmQuestion(ref, job, action, party) {
   else {
     bits.push('A firearm leaves the house only to a licensed dealer: Havellin’s named principal alone carries a non-NFA firearm there, on written authority, and nobody else carries one out, family included.');
     if (why) { wrong = true; bits.push('Not cleared to carry: ' + invTransportReason(ref, job)); }
-    if (!dealer) { wrong = true; if (why !== 'dealer') bits.push('No licensed dealer is recorded for it.'); }
+    // A line going to no dealer says so in the reason above; a dealer this device cannot check is said as such (P4 review).
+    if (!dealer) {
+      wrong = true;
+      if (why !== 'dealer' && invDispGoesToDealer(ref.disposition)) {
+        bits.push(invDealerUnchecked(ref) ? invDealerUncheckedText(invDealerNamed(ref)) : 'No licensed dealer is recorded for it.');
+      }
+    }
     else if (who && _vendorNameKey(who) !== _vendorNameKey(dealer)) { wrong = true; bits.push(who + ' is not its licensed dealer (' + dealer + ').'); }
   }
   if (wrong) bits.push('If it did go this way, record it here and report it on the Job Plan’s Incidents card.');
@@ -32674,7 +32773,8 @@ function printApprovalRequest(jobId, selectedOnly, opt) {
         + (invIsFirearm(r) ? '<div class="inv-fa-line" style="color:#888;font-size:10px;">Serial '
             + (String(r.serial || '').trim() ? '<span style="font-family:monospace;">' + esc(String(r.serial).trim()) + '</span>' : 'not recorded')
             + ' &middot; ' + (invTransportDealer(r) ? (r.disposition === 'Distribute' ? 'through ' : 'to ') + esc(invTransportDealer(r)) + ', a licensed dealer'
-              : 'licensed dealer not named yet') + '</div>' : '')
+              // A name this device could not check, the Vendor Directory not loaded, is never printed as no dealer (P4 review).
+              : invDealerUnchecked(r) ? 'licensed dealer not yet checked' : 'licensed dealer not named yet') + '</div>' : '')
         // ⚠ A LINE THAT HAS ALREADY GONE (P20) says when it went.
         + (gone ? '<div style="color:#8a5a1e;font-size:10px;">' + esc(invGoneText(r, job)) + '</div>' : '')
         // ⚠ A LINE ONE FIDUCIARY HAS ALREADY SIGNED FOR (P19) says so, and who is still to sign it, each signer with their
@@ -32811,7 +32911,7 @@ function printApprovalRequest(jobId, selectedOnly, opt) {
           var ser = String(r.serial || '').trim(), dl = invTransportDealer(r);
           return '<tr><td style="padding:2px 6px;">' + esc(_invItemNo(r)) + '</td><td style="padding:2px 6px;">' + esc(r.objectName || '—') + '</td>'
             + '<td style="padding:2px 6px;font-family:monospace;">' + (ser ? esc(ser) : '<span style="font-family:Raleway,sans-serif;">not recorded</span>') + '</td>'
-            + '<td style="padding:2px 6px;">' + (r.flagNFA ? 'NFA: collected by the dealer' : (dl ? esc(dl) : 'not named yet')) + '</td></tr>';
+            + '<td style="padding:2px 6px;">' + (r.flagNFA ? 'NFA: collected by the dealer' : (dl ? esc(dl) : invDealerUnchecked(r) ? 'not yet checked' : 'not named yet')) + '</td></tr>';
         }).join('');
         var gap = gunRows.filter(function (r) { return !r.flagNFA && (!String(r.serial || '').trim() || !invTransportDealer(r)); }).length;
         var carry = firearms - nfaRows;
@@ -36859,11 +36959,18 @@ function collectionUseLine(jobId, collLineId, lineId) {
     alert('#' + _invItemNo(line) + ' is already the line of a collection from the walkthrough. Nothing was changed.');
     return false;
   }
+  // ⚠⚠ A FIREARM NEVER TAKES A DESTINATION A FIREARM MAY NOT HAVE (P4 review, 2026-10-27): "Dad's hunting gear", marked donate at
+  // the walkthrough, joined to the photographed "Two rifles in soft cases" put the rifles on Donate with no refusal, and the
+  // Donation Record and the release request then carried them to Goodwill. The walkthrough's answer is left off such a line
+  // (invFirearmDispRefusal, the one rule), the line stays Undecided, and the question says so before anything is written.
+  var _faNo = (!line.disposition && coll.disposition && invIsFirearm(line)) ? invFirearmDispRefusal(_invJob(jobId), coll.disposition) : '';
   if (!window.confirm('Use #' + _invItemNo(line) + ' (' + _invNamed(line) + ') as ' + name + ' from the walkthrough?\n\n'
       + 'It keeps its photograph and its number, and takes the walkthrough’s instructions where it has none of its own. '
-      + 'Line #' + _invItemNo(coll) + ' comes off the inventory, so the collection is counted once. Removed items, under Removed items & snapshots on Job Admin & Inv, gives it back.')) return false;
+      + 'Line #' + _invItemNo(coll) + ' comes off the inventory, so the collection is counted once. Removed items, under Removed items & snapshots on Job Admin & Inv, gives it back.'
+      + (_faNo ? '\n\n#' + _invItemNo(line) + ' is a firearm, so the walkthrough’s ' + coll.disposition + ' is not carried onto it: ' + _faNo
+        + ' Choose where it goes on its own line.' : ''))) return false;
   line.sourceCollId = coll.sourceCollId;
-  if (!line.disposition && coll.disposition) line.disposition = coll.disposition;
+  if (!line.disposition && coll.disposition && !_faNo) line.disposition = coll.disposition;
   if (coll.needsAppr) line.needsAppr = true;
   // The walkthrough's rough figure is not carried onto the photographed line (2026-10-26, collectionLineWithPhoto): Agent Two values it.
   if (!_avHasFigure(line) && String(coll.fmv == null ? '' : coll.fmv).trim() !== '' && (coll.valuedBy || coll.valSource)) line.fmv = coll.fmv;
@@ -40788,15 +40895,19 @@ function _renderInvRow(job, ref) {
   if (invIsFirearm(ref) && invReleaseBlocked(ref, job)) warn.push('<span title="A firearm moves on written authority only" style="color:#c0392b;font-weight:700;">&#9888; held</span>');
   // ⚠ A FIREARM GOING TO A PERSON SAYS HOW (P16): through a named licensed dealer, or not yet recorded.
   // Bronze, never red: red on this strip is a held firearm and keeps that one meaning.
-  if (invDealerRouteOffered(ref)) {
+  // A route recorded that the Vendor Directory does not list as a dealer (P4 review) reads as the sale's does, below.
+  var _routeNoDealer = invDealerRouteOffered(ref) && !!invDealerRoute(ref) && !invTransportDealer(ref);
+  if (invDealerRouteOffered(ref) && !_routeNoDealer) {
     warn.push(invDealerRoute(ref)
-      ? '<span title="' + esc(invDealerRouteText(ref)) + '" style="color:var(--gray-dk);">via ' + esc(invDealerRoute(ref)) + '</span>'
+      ? '<span title="' + esc(invDealerRouteText(ref)) + '" style="color:var(--gray-dk);">via ' + esc(invTransportDealer(ref)) + '</span>'
       : '<span title="Going to a named person: a licensed dealer makes the transfer. Open the line (&#9662;) and record the route." style="color:var(--bronze);font-weight:700;">no dealer route</span>');
   }
   // ⚠ A FIREARM ON A SALE NAMES ITS LICENSED DEALER, OR SAYS IT HAS NONE (P4): the dealer is a Vendor Directory firm under Firearms
-  // Dealer (FFL), picked by a person (invTransportDealer); a charity, a hauler or the Job Plan's vendor is none. Bronze.
-  if (invIsFirearm(ref) && INV_SALE_DISPOSITIONS.indexOf(ref.disposition) >= 0 && !invTransportDealer(ref)) {
-    warn.push('<span class="inv-fa-nodealer" title="' + esc(invDealerWhy(ref)) + '" style="color:var(--bronze);font-weight:700;">no licensed dealer</span>');
+  // Dealer (FFL), picked by a person (invTransportDealer); a charity, a hauler or the Job Plan's vendor is none. Bronze. And (P4
+  // review) a name this device cannot check while the directory has not loaded reads as what it is: *dealer not yet checked*.
+  if (invIsFirearm(ref) && ((INV_SALE_DISPOSITIONS.indexOf(ref.disposition) >= 0 && !invTransportDealer(ref)) || _routeNoDealer)) {
+    warn.push('<span class="inv-fa-nodealer" title="' + esc(invDealerWhy(ref, job)) + '" style="color:var(--bronze);font-weight:700;">'
+      + (invDealerUnchecked(ref) ? 'dealer not yet checked' : 'no licensed dealer') + '</span>');
   }
   // ⚠ A LIVING CLIENT'S OWN FIREARM STAYING WITH THEM (P4, Ask 4): grey, never red, since nothing is held and nothing is owed.
   if (invFirearmClientTakes(ref, job)) warn.push('<span class="inv-fa-client" title="' + esc(INV_FIREARM_CLIENT_TXT) + '" style="color:var(--gray-dk);">client takes it</span>');
@@ -41155,7 +41266,15 @@ function _invFirearmPanelHtml(job, ref) {
   var routeHtml = '';
   if (invDealerRouteOffered(ref)) {
     var who = String(ref.channel || '').trim();
-    routeHtml = route
+    // A route naming a firm the Vendor Directory does not list as a dealer (P4 review) is no route to a licensed dealer: said in
+    // bronze, with Change dealer, never with the tick.
+    routeHtml = route && !invTransportDealer(ref)
+      ? '<div class="inv-fa-route-nodealer" style="margin-top:5px;color:var(--bronze);">&#9888; The route names ' + esc(route) + ', '
+        + (invDealerUnchecked(ref) ? 'not yet checked: the Vendor Directory has not loaded on this device.'
+                                   : 'which is not a licensed dealer on the Vendor Directory.') + ' '
+        + '<button class="btn-s" onclick="invSetDealerRoute(' + jid + ',\'' + sid + '\',true)">Change dealer</button>'
+        + ' <button class="btn-s" onclick="invSetDealerRoute(' + jid + ',\'' + sid + '\',false)">Take the route off</button></div>'
+      : route
       ? '<div style="margin-top:5px;">&#10003; <strong>' + esc(invDealerRouteText(ref).replace(/^to /, 'To ')) + '</strong>'
         + ' <span style="color:var(--gray);">recorded' + (ref.viaDealerBy ? ' by ' + esc(ref.viaDealerBy) : '')
         + (ref.viaDealerAt ? ' on ' + esc(fmtDate2(_ymdLocal(new Date(ref.viaDealerAt)))) : '') + '</span>'
@@ -43647,6 +43766,7 @@ function loadVendorDirectory() {
         normalizeVendorDir();
         markDirStale('vendor', false);   // live data — clear any stale marker
         if (typeof populateJobMenus === 'function') populateJobMenus();
+        _invDealerDirLanded();   // a firearm's dealer is checked against it (P4 review)
         try { localStorage.setItem('hav_vendor_dir', JSON.stringify(vendorDirectory)); } catch(e) {}
         showSyncBadge('Loaded ' + vendorDirectory.length + ' vendor' + (vendorDirectory.length !== 1 ? 's' : '') + ' from directory ✓');
         setVendorDirStatus('✓ ' + vendorDirectory.length + ' vendors loaded', false);
@@ -43667,6 +43787,19 @@ function loadVendorDirectory() {
       setVendorDirStatus('Load failed — ' + msg, true);
       refreshVendorsTabIfActive();
     });
+}
+// ⚠ THE DESK IS DRAWN AGAIN WHEN THE VENDOR DIRECTORY LANDS (P4 review, 2026-10-27): a firearm's licensed dealer is a firm the
+// directory lists under Firearms Dealer (FFL) (invTransportDealer), and populateJobMenus redraws only the Vendors cards, so a desk
+// drawn on a cold device before the fetch answered read every dealer *not yet checked* until something else redrew the tab. Only
+// while the desk is on screen showing a job with a firearm line, and never under somebody typing (_invRenderWhenIdle).
+function _invDealerDirLanded() {
+  var panel = document.getElementById('panel-inventory');
+  if (!panel || !panel.classList || !panel.classList.contains('active')) return false;
+  var sel = document.getElementById('inv-job');
+  var jobId = sel ? parseInt(sel.value) || 0 : 0;
+  if (!jobId || !_jobInvRefs(jobId).some(invIsFirearm)) return false;
+  _invRenderWhenIdle();
+  return true;
 }
 function setVendorDirStatus(msg, isErr) {
   var el = document.getElementById('vendor-dir-status');

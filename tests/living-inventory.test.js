@@ -87,7 +87,7 @@ const PRINT_FNS = ['_invDocPartyHead', 'invLineReviewed', 'invLineOpen', 'invIni
   // The job-flow audit (2026-10-08): the Contents Record says every line was photographed, and shared, only where it was.
   '_invHasPhoto', 'photoShareLive',
   // 2026-10-22: the signed schedules, beside the ledger in the close-out papers.
-  '_renderSignedSchedulesCard', 'signedScheduleRows', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invLineAcceptedOnly', '_invAcceptedStampWords', 'invListReadRefusal', '_invManifestUnread', '_arDupEligible', '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_agDupEligible', 'agentNamedTwice', '_invListReadHtml', '_invReadKey', 'invListRead', 'agentNoticesOn'];
+  '_renderSignedSchedulesCard', 'signedScheduleRows', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invLineAcceptedOnly', '_invAcceptedStampWords', 'invListReadRefusal', '_invManifestUnread', '_arDupEligible', '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_agDupEligible', 'agentNamedTwice', '_invListReadHtml', '_invReadKey', 'invListRead', 'agentNoticesOn', 'invDealerNamed', 'invDispGoesToDealer', 'invDealerUnchecked', 'invDealerDirState'];
 const PRINT_VARS = ['INV_LINE_INITIAL_MIN', 'INV_DISP_DOC_WORDS', 'CONTENTS_SIGNED_REF',  'INV_CONTRACT_DOCS',
   '_agRun', '_avRun', '_arRun', 'AGENT_NOTICE_KINDS', 
   'INV_DISPOSITIONS', 'INV_GROUP_ORDER', 'INV_RELEASE_DISPOSITIONS', 'INV_RELEASE_CAUTIONS',

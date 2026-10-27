@@ -259,7 +259,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'jobIsFeeOnly', 'renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'jobAtClose', 'closeoutRatedTone', 'closeoutMeta', '_assignedVendorsForJob', 'unratedVendorsForJob',
       'lookupVendorById', 'vendorIdOf', 'bestClientEmail', '_coFmt', 'computeVendorAvg', 'esc', 'fmtDate2', 'coAcceptedHours', 'coHoursTotal',
       'coHours', 'clientRecipient', 'firstName', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope',
-      'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs', 'fmt', 'jobHasFirearms', 'jobFirearmLines', '_firearmsFoundText', 'invIsFirearm', 'agentNoticesOn', '_invNamed', '_invItemNo', '_invRoomName'];
+      'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs', 'fmt', 'jobHasFirearms', 'jobFirearmLines', '_firearmsFoundText', 'invIsFirearm', 'agentNoticesOn', '_invNamed', '_invItemNo', '_invRoomName', 'firearmsClientTakesAll', 'firearmsClientRuleText', 'invFirearmClientTakes'];
     const PLAN_VARS = [ 'PLAN_PROCEDURE', 'BOL_SIGNED_REF', '_signedCopySpecs', '_signedCopyKeys','PLAN_COI_PTYPES', 'PLAN_COI_ACCESS_RE', 'PLAN_VALUABLES_VENDOR_TYPES', 'DECEDENT_SERVICES', 'SVC_LABELS', '_planOpenPhases', 'PLAN_TASKS', 'PLAN_FLOW', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS',
       'jobPlanStore', 'estimateStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS',
       'changeOrders', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'LOGISTICS_CATEGORIES', 'LOG_PLACEHOLDER_NAMES',

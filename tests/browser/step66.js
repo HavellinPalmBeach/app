@@ -150,6 +150,10 @@ const EST = 6601, LIVING = 6603;
       _photoRefs[LIVING] = [L('v1', { itemNo: 1, objectName: 'Armchair', disposition: 'Donate', channel: 'Goodwill' }),
         L('v2', { itemNo: 2, objectName: 'Browning rifle', category: 'Firearms', disposition: 'Distribute', channel: 'Tom Ellsworth' })];
       [EST, LIVING].forEach((id) => savePhotoRefs(id));
+      // The Vendor Directory has loaded on this device (restated 2026-10-27, the P4 review: on a device whose directory has not
+      // loaded a name cannot be checked as a dealer, and the reason says so rather than that it is not one).
+      vendorDirectory = [{ vendor_name: 'Palm Beach Arms (FFL)', category: 'Firearms Dealer (FFL)', status: 'Active' }];
+      localStorage.setItem('hav_vendor_dir', JSON.stringify(vendorDirectory));
       jobLogs[LIVING] = [{ id: 1, date: '2026-10-01', activity: '<img src=x onerror="window.__xss=1">Sorting <b>study</b>',
         members: [{ name: '<b>Eve</b> Ortiz', role: 'PS', hours: 2 }, { name: 'Ashley Jerome', role: 'TC', hours: 1.5 }] }];
       saveJobs();

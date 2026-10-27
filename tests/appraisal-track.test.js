@@ -40,7 +40,7 @@ const APPR_FNS = ['invAwaitingAppraisal', 'invAppraised', '_invHasValue', 'invNe
                   // P20: the request lists what left before every fiduciary approved apart, and prints who signed readably.
                   'invRatificationOwed', 'invWrittenReleaseNeeded', 'invRecordedGone', 'invPickupRecord', 'custodyEvents', 'invReceiptRecord', 'invViaDealer', 'invRecipientName', 'signedRecordsOf', 'invStaffRefused',
                   // P4: a firearm's dealer is a Vendor Directory firm under Firearms Dealer (FFL); its receipt is the dealer's.
-                  'invIsFirearm', 'invFirearmsDealerFirm', 'invFirearmsDealerFirms', '_vendorNameKey', 'vendorCats', 'invDealerReleased'];
+                  'invIsFirearm', 'invFirearmsDealerFirm', 'invFirearmsDealerFirms', '_vendorNameKey', 'vendorCats', 'invDealerReleased', 'invDealerNamed', 'invDispGoesToDealer'];
 const APPR_VARS = ['INV_PLAN_CHANNEL_KINDS', 'INV_DISP_DOC_WORDS', 'INV_FIREARM_CLIENT_TXT', 'FIREARMS_DEALER_CATEGORY', 'INV_TRANSPORT_REASONS', 'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD',
                    'INV_APPRAISAL_THRESHOLD_DISPUTED', 'DECEDENT_SERVICES', 'INVENTORY_COLUMNS', 'MATTER_TYPES'];
 
@@ -442,7 +442,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                             '_invFileId', '_invRoomName', '_invMoney', 'invIsFirearm',
                             '_invDocHead', 'resolveValBasis', 'estateValueDate', '_invPicked',
                             '_invMatchesFilter', '_invFilterHides', '_setPhotoRef', 'savePhotoRefs',
-                            '_warnPhotoStoreFull', 'fmtDate2', 'roundCents', 'fmt']),
+                            '_warnPhotoStoreFull', 'fmtDate2', 'roundCents', 'fmt', 'invDealerUnchecked', 'invDealerDirState', 'invDealerNamed', 'invDispGoesToDealer']),
       vars: APPR_VARS.concat(['INV_LINE_INITIAL_MIN', 'INV_RELEASE_CAUTIONS', 'INV_RELEASE_DISPOSITIONS', 'INV_CAT_GLYPH']),
       stubs: { jobs: [Object.assign({}, JOB)], _photoRefs: { 1: rows },
                _invPick: {}, _invFilter: { when: 'all', room: '', q: '', flag: '' } },
@@ -490,7 +490,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                             '_invFileId', '_invRoomName', '_invMoney', 'invIsFirearm',
                             '_invDocHead', 'resolveValBasis', 'estateValueDate', '_invPicked',
                             '_invMatchesFilter', '_invFilterHides', '_setPhotoRef', 'savePhotoRefs',
-                            '_warnPhotoStoreFull', 'fmtDate2', 'roundCents', 'fmt']),
+                            '_warnPhotoStoreFull', 'fmtDate2', 'roundCents', 'fmt', 'invDealerUnchecked', 'invDealerDirState', 'invDealerNamed', 'invDispGoesToDealer']),
       vars: APPR_VARS.concat(['INV_LINE_INITIAL_MIN', 'INV_RELEASE_CAUTIONS', 'INV_RELEASE_DISPOSITIONS', 'INV_CAT_GLYPH']),
       stubs: { jobs: [Object.assign({}, JOB, {
                  appraisers: [{ id: 'ap1', name: 'M. Wayland', firm: 'Wayland Fine Art' }] })],
@@ -556,7 +556,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                             'maivAggregate', '_maivWorklistBlock', 'maivFilingApplies',
                             'maivStatement', 'maivStatement_', 'invIsMAIV', 'invMAIVDefaultCat',
                             'invMAIVCategory', 'isDecedentJob', '_gate706', 'fmtDate2',
-                            'savePhotoRefs', '_warnPhotoStoreFull', 'roundCents', 'fmt']),
+                            'savePhotoRefs', '_warnPhotoStoreFull', 'roundCents', 'fmt', 'invDispGoesToDealer', 'invDealerNamed', 'invDealerUnchecked', 'invDealerDirState', 'invDealerUncheckedText', '_invDealerDirStaleText', 'invDealerWhy']),
       vars: APPR_VARS.concat(['MAIV_AGGREGATE_THRESHOLD', 'MAIV_CATEGORIES', 'MAIV_OTHER',
                               'MAIV_BY_CATEGORY', 'DECEDENT_SERVICES', 'INVENTORY_COLUMNS',
                               'INV_TAXONOMY', 'INV_CATEGORIES']),
@@ -585,7 +585,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                             'maivAggregate', '_maivWorklistBlock', 'maivFilingApplies',
                             'maivStatement', 'maivStatement_', 'invIsMAIV', 'invMAIVDefaultCat',
                             'invMAIVCategory', 'isDecedentJob', '_gate706', 'fmtDate2',
-                            'savePhotoRefs', '_warnPhotoStoreFull', 'roundCents', 'fmt']),
+                            'savePhotoRefs', '_warnPhotoStoreFull', 'roundCents', 'fmt', 'invDispGoesToDealer', 'invDealerNamed', 'invDealerUnchecked', 'invDealerDirState', 'invDealerUncheckedText', '_invDealerDirStaleText', 'invDealerWhy']),
       vars: APPR_VARS.concat(['MAIV_AGGREGATE_THRESHOLD', 'MAIV_CATEGORIES', 'MAIV_OTHER',
                               'MAIV_BY_CATEGORY', 'DECEDENT_SERVICES', 'INVENTORY_COLUMNS',
                               'INV_TAXONOMY', 'INV_CATEGORIES']),

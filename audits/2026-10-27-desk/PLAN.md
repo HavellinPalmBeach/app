@@ -465,7 +465,7 @@ Publish that rate only as section (a) step 10 allows.
 
 ### Phase 2: make every paper true and defensible (about 18 build days)
 
-**P4. Firearms go only to a licensed dealer.** Fix now · S to M. **Built 2026-10-27** (CLAUDE.md, Firearms; `tests/p4-firearms-dealer.test.js`, browser step 117).
+**P4. Firearms go only to a licensed dealer.** Fix now · S to M. **Built 2026-10-27** (CLAUDE.md, Firearms; `tests/p4-firearms-dealer.test.js`, browser step 117). Its independent review the same day found two ways round it and four rough edges, all fixed before it landed (`BUILD_HISTORY.md` 2026-10-27f): the settle's clear was not stamped, so the merge put the Job Plan's vendor back on a firearm (FLD-01 again); **Use that line** put a firearm on the walkthrough's Donate; the dealer route was free text; an unread Vendor Directory read as "not a licensed dealer"; a living client's banner gave the crew's rule; and a firearm on Hold was told to press Record approval (LIV-05's dead end).
 - TC:
   - A firearm offers Auction, Consign or Sell to a dealer, To a person through a dealer, Hold and Keep; never Donate or Junk.
   - The dealer is always a person's pick: a recorded dealer route, or a directory firm under *Firearms Dealer (FFL)*. The Job Plan's vendor never fills it.
