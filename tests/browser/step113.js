@@ -1,4 +1,4 @@
-// Step 108 — only flagged lines keep a tick, and the list is read (2026-10-26; Q99 to Q109).
+// Step 113 (renumbered from 108 on merging main, whose step 108 landed first) — only flagged lines keep a tick, and the list is read (2026-10-26; Q99 to Q109).
 //
 // Anthony: *"we will be obviously going back to the office and looking over the entire inventory list ourselves to make
 // sure everything looks right. So the idea that … we need to be like ticking boxes is ridiculous to approve everything,
@@ -58,7 +58,7 @@
 //      check that found nothing, on a clock running three days fast, leaves it green and the report REVIEWED. At 1440 and
 //      390 px no horizontal overflow; zero page errors.
 //
-//   NODE_PATH=/path/to/node_modules node tests/browser/step108.js [/abs/path/to/havellin.html]
+//   NODE_PATH=/path/to/node_modules node tests/browser/step113.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
 const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/havellin.html'));
 const SYNC = 'https://sync.example.test/exec';
