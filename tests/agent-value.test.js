@@ -830,14 +830,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(liveLines(fn('printCourtInventory')), '_avUnreviewedStamp(onSched, { fc: invAcceptCtx(job) })', 'the Court Inventory counts its own lines');
     has(liveLines(fn('printTrustSchedule')), '_avUnreviewedStamp(onSched, { fc: invAcceptCtx(job) })', 'the Trust Schedule too');
     has(liveLines(fn('printEstateInventoryReport')), '_avUnreviewedStamp(all, { noAccepted: true, fc: _ac })', 'and the Estate Inventory Report (its own stamp counts the lines that stand, so the pill leaves them out)');
-    const sec = sandbox({ fns: ['invConditionText', '_invScheduleSection', 'invValBasisWord', 'invAppraised', 'invLineAppraiser', '_invHasValue', '_invMoney', 'fmt', 'roundCents'],
+    const sec = sandbox({ fns: ['invConditionText', '_invScheduleSection', 'invValBasisWord', 'invAppraised', 'invLineAppraiser', '_invHasValue', '_invMoney', 'fmt', 'roundCents', '_invItemNo'],
       stubs: { esc: (x) => String(x == null ? '' : x) } })._invScheduleSection('Tangible Personal Property',
       [ROW({ fmv: 640, valSource: 'Auction comps' }), ROW({ stableId: 'b', fmv: 40, valSource: 'General estimate', category: 'General/Household', qty: 60 })]);
     has(sec.html, '<th style="padding:2px 6px;">Basis</th>', 'the table has a Basis column');
     has(sec.html, '>auction comps</td>', 'a researched line reads auction comps');
     has(sec.html, '>general estimate</td>', 'an ordinary lot reads general estimate');
     eq(sec.total, 680, 'and the total still adds up its own rows');
-    has(sec.html, '<td colspan="3"', 'the subtotal spans the three words columns');
+    // RESTATED (P13 of the desk audit, 2026-10-28): the schedules gained Item # and Room, so the subtotal spans five columns.
+    has(sec.html, '<td colspan="5"', 'the subtotal spans the five columns before the figure');
   }
 
   group('A15 · the desk: the button, the chip, the row, the panel, the notices');

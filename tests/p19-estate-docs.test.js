@@ -87,7 +87,7 @@ const phaseText = (P) => JSON.stringify(P);
 
 // ── The two schedules: the Trust Schedule suite's lift list, the real date formatter, and the signers.
 const SCH_FNS = ['invIsFirearm', '_invLineHolds', 'invConditionText', 'invAcceptCtx', 'agentDuplicateGroups', '_arPair', '_arPairOpen', 'agentDupCleared', '_agDupEligible', 'agentNamedTwice', 
-  '_invDocPartyHead', 'printTrustSchedule', 'printCourtInventory', '_avUnreviewedStamp', 'agentValueUnreviewed', '_invScheduleSection', 'invValBasisWord', 'invLineAppraiser', '_invLinkedAppraiser', '_apprLabel', '_invTrack', '_invTrackDefault', '_invOnTrustSchedule',
+  '_invDocPartyHead', 'printTrustSchedule', 'printCourtInventory', '_avUnreviewedStamp', 'agentValueUnreviewed', '_invScheduleSection', '_invItemNo', 'invValBasisWord', 'invLineAppraiser', '_invLinkedAppraiser', '_apprLabel', '_invTrack', '_invTrackDefault', '_invOnTrustSchedule',
   '_invOnProbateSchedule', '_invIsExempt', '_invIsProbateAsset', '_invExcludedTracks', '_invHasValue', 'invDocContractBlock',
   'docTierProduces', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'matterDef', 'matterTypeOf',
   'invProbateRows', 'invFiduciaryMode', 'isDecedentJob', '_invAssignItemNos', '_jobInvRefs', '_invTouch', 'savePhotoRefs',

@@ -438,7 +438,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const s = sandbox({
       fns: APPR_FNS.concat(['_invDocPartyHead', 'invOwnInitial', 'invInitialGroupKey', '_invDocName', 'printApprovalRequest', 'invApprovalMoved', 'invApprovalPrevWords', 'approvalRequestTerms', '_approvalHash', 'approvalLineDestKey', 'invApprovalTermsOf', '_approvalLineOpen', 'invReleaseRecipientNamed', 'invDispDocWord', 'invReleaseCautions', '_invCautionBadges',
                             '_invCautionNotices', '_invNamed', '_invItemNo', '_invAwaitingApproval', 'invWrittenReleaseNeeded',
-                            '_jobInvRefs', '_invAssignItemNos', '_invTouch', '_invPrintThumb',
+                            '_jobInvRefs', '_invAssignItemNos', '_invTouch', '_invPrintThumb', '_invPrintThumbSrc', '_invPaperPhotoUrl',
                             '_invFileId', '_invRoomName', '_invMoney', 'invIsFirearm',
                             '_invDocHead', 'resolveValBasis', 'estateValueDate', '_invPicked',
                             '_invMatchesFilter', '_invFilterHides', '_setPhotoRef', 'savePhotoRefs',
@@ -486,7 +486,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const s = sandbox({
       fns: APPR_FNS.concat(['_invDocPartyHead', 'invOwnInitial', 'invInitialGroupKey', '_invDocName', 'printApprovalRequest', 'invApprovalMoved', 'invApprovalPrevWords', 'approvalRequestTerms', '_approvalHash', 'approvalLineDestKey', 'invApprovalTermsOf', '_approvalLineOpen', 'invReleaseRecipientNamed', 'invDispDocWord', 'invReleaseCautions', '_invCautionBadges',
                             '_invCautionNotices', '_invNamed', '_invItemNo', '_invAwaitingApproval', 'invWrittenReleaseNeeded',
-                            '_jobInvRefs', '_invAssignItemNos', '_invTouch', '_invPrintThumb',
+                            '_jobInvRefs', '_invAssignItemNos', '_invTouch', '_invPrintThumb', '_invPrintThumbSrc', '_invPaperPhotoUrl',
                             '_invFileId', '_invRoomName', '_invMoney', 'invIsFirearm',
                             '_invDocHead', 'resolveValBasis', 'estateValueDate', '_invPicked',
                             '_invMatchesFilter', '_invFilterHides', '_setPhotoRef', 'savePhotoRefs',

@@ -692,8 +692,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        '⚠ every PDF filed to the Estate Inventory folder too, under undated names, so the next package replaces them');
     eq(r.N.log.pdfs.length, 4, 'four conversions, through the one PDF builder');
     // Sequential, never parallel, and in order.
-    eq(r.N.log.posts, ['shareFolder', 'shareFolder', 'shareFolder', 'shareFolder', 'uploadHtml', 'uploadHtml', 'uploadHtml', 'uploadHtml', 'uploadHtml', 'htmlToPdf', 'htmlToPdf', 'htmlToPdf', 'htmlToPdf'],
-       'one Apps Script call after another');
+    // RESTATED (P13 of the desk audit, 2026-10-28; DOC-03): the pages' photographs are gathered first, before any page is built.
+    eq(r.N.log.posts, ['getThumbnails', 'shareFolder', 'shareFolder', 'shareFolder', 'shareFolder', 'uploadHtml', 'uploadHtml', 'uploadHtml', 'uploadHtml', 'uploadHtml', 'htmlToPdf', 'htmlToPdf', 'htmlToPdf', 'htmlToPdf'],
+       'one Apps Script call after another, the photographs first');
     ok(r.N.log.gets.some((u) => /action=loadMedia&jobId=7/.test(u)), '⚠ the inventory is read from the sheet first, never assumed empty');
   });
 

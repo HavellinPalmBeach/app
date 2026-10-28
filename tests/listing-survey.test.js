@@ -254,7 +254,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const R = rig(ESTATE(), []);
     ok(R.INV_VAL_SOURCES.indexOf('Listing survey') >= 0, 'on the source list a person picks from too');
     eq(R.invValBasisWord({ fmv: 240, valSource: 'Listing survey' }), 'listing survey', 'its word on a schedule');
-    const sec = sandbox({ fns: ['invConditionText', '_invScheduleSection', 'invValBasisWord', 'invAppraised', 'invLineAppraiser', '_invHasValue', '_invMoney', 'fmt', 'roundCents'],
+    const sec = sandbox({ fns: ['invConditionText', '_invScheduleSection', 'invValBasisWord', 'invAppraised', 'invLineAppraiser', '_invHasValue', '_invMoney', 'fmt', 'roundCents', '_invItemNo'],
       stubs: { esc: (x) => String(x == null ? '' : x) } })._invScheduleSection('Tangible Personal Property', [ROW({ fmv: 240, valSource: 'Listing survey' })]);
     has(sec.html, '>listing survey</td>', '⚠ the Court Inventory\'s and the Trust Schedule\'s table prints it in the Basis column');
   }

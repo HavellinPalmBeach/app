@@ -14,7 +14,7 @@ const FNS = ['scheduleSignLines', '_invDocPartyHead', 'invLineReviewed', 'invLin
   '_clFlags', '_renderInvWorkbar', 'invColdWords', '_arCheckButtonHtml', '_arState', 'agentRoomsToCheck', '_arCheckable', '_arStateHtml', '_avValueButtonHtml', 'agentValueWaiting', 'agentValueableRefs', '_avHasFigure', '_avStateHtml', '_avState', '_avNoticesHtml', 'agentValueNotices', '_avNoticeKinds', '_avNoticeLabel', 'agentValueInternal', 'agentValueUnreviewed', 'agentValueStale', 'agentValueSpecialistWorth', 'invPrimaryDoc', '_invProgressBar', 'invWorkFlags', '_invNeedsValue',
   '_invAssignItemNos', '_jobInvRefs', '_invItemNo', '_invRoomName', '_planRooms', '_invFileId',
   '_invTouch', 'savePhotoRefs', '_warnPhotoStoreFull', '_invDocHead', '_invDocName',
-  '_invPrintThumb', '_invProgressStamp', '_invReviewStats', '_invThumbFor', '_invThumbCache',
+  '_invPrintThumb', '_invPrintThumbSrc', '_invPaperPhotoUrl', '_invProgressStamp', '_invReviewStats', '_invThumbFor', '_invThumbCache',
   '_invThumbKey', 'invFiduciaryMode', 'isDecedentJob', 'svcFamily', '_invGroupItems',
   '_invDispLabel', '_invIsExempt', '_invIsProbateAsset', '_invTrack', '_invHasAppraisal',
   '_jobAppraisers', 'invAppraiserFor', 'resolveValBasis', 'estateValueDate', 'invNeedsAppraisal', 'invAppraisalChosen',

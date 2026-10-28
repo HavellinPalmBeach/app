@@ -246,11 +246,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // the trust schedule cannot come to disagree about whether a quantity is a lot or a unit price.
     const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'havellin.html'), 'utf8');
     const body = fn('_invScheduleSection');
-    has(body, 'items, valued as a lot', 'the row says the value covers the whole lot');
+    // RESTATED (P13 of the desk audit, 2026-10-28; VAL-29): "(8 items, valued as a lot)" hid each article's figure, so the row
+    // reads the one lot helper, "(8 × $90)", driven here.
+    has(body, 'invLotLineHtml(r, job)', 'the row reads the one lot helper');
     has(body, 'FMV (total)', 'and the column header says total');
     lacks(body, "'(qty '", 'the bare qty label is gone');
-    eq((src.match(/items, valued as a lot/g) || []).length, 1,
-       'and exactly one renderer says it, shared by both schedules');
+    eq((src.match(/function invLotWords\(/g) || []).length, 1, 'and exactly one helper words a lot, shared by both schedules and the Report');
+    const L = sandbox({ fns: ['invLotWords', 'invLineQty', 'invUnitValue', '_invHasValue', '_invMoney', 'fmt', 'roundCents'] });
+    eq(L.invLotWords({ qty: 8, fmv: 720 }), '8 \u00d7 $90', 'the row says what each article is worth: 8 × $90');
     ['printCourtInventory', 'printTrustSchedule'].forEach(function (name) {
       has(fn(name), '_invScheduleSection', name + ' asks the shared renderer rather than keeping a copy');
     });

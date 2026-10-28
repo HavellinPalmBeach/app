@@ -290,7 +290,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(((GS.match(/var BACKEND_VERSION = '([^']+)';/) || [])[1] || '') >= '2026-10-27e', 'main-sync.gs is 2026-10-27e or later, carrying 2026-10-27d');
     const B = sandbox({ vars: ['BACKEND_MIN_VERSION', 'BACKEND_FEATURE_COST'] });
     ok(B.BACKEND_MIN_VERSION >= '2026-10-27e', 'the app relies on it');
-    ok(/^a figure Agent Two researched can carry a basis sentence citing sales nobody could find/.test(B.BACKEND_FEATURE_COST.version), '⚠ the stale banner names it first');
+    // RESTATED (P13, 2026-10-28, which carries 2026-10-27e): a later deployment's gap leads, and this one's follows first under its vintage.
+    const _v7 = B.BACKEND_FEATURE_COST.version, _p7 = 'a figure Agent Two researched can carry a basis sentence citing sales nobody could find';
+    ok(_v7.indexOf(_p7) === 0 || _v7.indexOf('; on a deployment older than 2026-10-27e, ' + _p7) === _v7.indexOf('; on a deployment older than '),
+      '⚠ the stale banner names it first, or first after the newer gap, by its vintage');
     has(B.BACKEND_FEATURE_COST.version, '; on a deployment older than 2026-10-27d, a release approval recorded on one device', '…then 2026-10-27d\'s gap, by its vintage');
   }
 

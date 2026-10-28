@@ -50,6 +50,7 @@
   },
   {
    "id": "ROW-02",
+   "fixed": "2026-10-28 (P13: _invSaveThumbCache trims only the stored copy and the session keeps every photograph it fetched; an id the server's budget never reached is asked again; tests/p13-traceable.test.js, browser step 124). Not built: IndexedDB or a smaller size for the rows.",
    "title": "After the first tick, three quarters of a full house's rows lose their photograph for the rest of the session",
    "kind": "defect",
    "severity": "high",

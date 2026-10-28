@@ -126,7 +126,8 @@ const APP = process.env.APP || 'file:///home/user/app/havellin.html';
       letters: has('Letters Issued'),
       bequests: has('Specific Bequests'),
       net: has('Net to Estate'),
-      items: has('Total Items'),
+      // RESTATED (P13, 2026-10-28, INV-20): the desk's summary counts lines and articles; the workbook keeps Total Items (below).
+      items: has('Total Lines') && has('Total Articles'),
       specialist: has('Needs Specialist Appraisal'),
       dollars: (txt.match(/\$/g) || []).length,
     };
