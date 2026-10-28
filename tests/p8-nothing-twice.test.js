@@ -116,7 +116,7 @@ const PAPER_FNS = ['invLineReviewed', 'invLineOpen', '_invDocPartyHead', 'invCon
   'agentDupCleared', 'agentNamedTwice', 'agentDuplicateGroups', '_arPair', '_arPairOpen', '_agDupEligible', '_arDupEligible', '_agNameKey', 'invDoubleCounts', 'invDoubleCountUnits',
   'agentNotDuplicate', 'agentDropDuplicate', '_agDupHandle', '_agDupUnhandle', '_getPhotoRef', '_setPhotoRef', '_invTombstoneLine', '_invStampBy',
   'deviceUser', 'agentValueWaiting', '_avDupReleased',
-  'invAppraisalChosen', '_avStampCounts', 'invTotalFloor', '_invFloorTotalHtml'];   // P7's floor and source rules, which the printers read since the merge
+  'invAppraisalChosen', '_avStampCounts', 'invTotalFloor', '_invFloorTotalHtml', 'estateValueDateLabel', '_invWaivedNoteHtml', 'invApprWaiverText', 'invValBasisShort', 'invLineStandardNote', 'apprReportOverdue'];   // P7's floor and source rules, which the printers read since the merge
 const PAPER_VARS = ['_agRun', '_avRun', '_arRun', '_avDupHeld', 'AGENT_NOTICE_KINDS',
   'INV_CONTRACT_DOCS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DECEDENT_SERVICES',
   'MATTER_TYPES', 'INV_ASSET_TRACKS', 'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD',

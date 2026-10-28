@@ -143,7 +143,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       '⚠⚠ two co-representatives: the representatives together, and each one\'s written authority');
     lacks(before(two).body, 'you alone', 'never "you alone" with two');
     // The release request's dispute caution reads the same answer.
-    const C = lift(['invReleaseCautions', 'estateDirectionWords'], STATE, BASE());
+    const C = lift(['invReleaseCautions', 'estateDirectionWords', 'invAppraisalInProgress', 'invApprInProgressBadge'], STATE, BASE());
     const disp = attempt(() => C.INV_RELEASE_CAUTIONS.find((c) => c.key === 'flagDisputed')).val;
     C.jobs = [PROBATE({ coFiduciaries: [{ id: 'c1', name: 'Ruth Doe', role: 'Co-Personal Representative', at: 1 }] })];
     has(attempt(() => disp.body(7)).val, 'takes direction from the representatives together', 'the dispute caution names the representatives together');
@@ -283,7 +283,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('Q36 · a line is appraised once the appraisal\'s figure is on it; a linked appraiser alone is the appraisal in progress');
   {
     const AP = [{ id: 'ap1', name: 'M. Wayland', firm: 'Wayland Fine Art' }];
-    const I = lift(['invAppraised', 'invAppraisalInProgress', 'invAwaitingAppraisal', 'invReleaseCautions', '_invSetAppraiser'],
+    const I = lift(['invAppraised', 'invAppraisalInProgress', 'invAwaitingAppraisal', 'invReleaseCautions', '_invSetAppraiser', 'invApprInProgressBadge'],
       STATE.concat(['savePhotoRefs', 'renderInventoryTab', '_scheduleInventorySync']),
       Object.assign(BASE(), { jobs: [PROBATE({ appraisers: AP, gate706: 'yes' })], savePhotoRefs() {}, renderInventoryTab() {}, _scheduleInventorySync() {} }));
     const L = (o) => Object.assign({ stableId: 's1', label: 'inventory', objectName: 'Oil on canvas', category: 'Art & Décor', disposition: 'Auction', channel: 'Christie\'s' }, o || {});

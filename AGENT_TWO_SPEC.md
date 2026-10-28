@@ -95,6 +95,12 @@ link) into the comps, sets `valSource: 'WorthPoint comps'` (new) and marks the v
 If WorthPoint opens partner or API access, the lookup becomes a call in the same place and nothing
 else in this design moves.
 
+Since 2026-10-28 (the desk audit's P15, ACC-04; Anthony, 2026-10-28, Ask 14, as recommended: ask once, use the sale or
+keep the figure and file the sale only) a pasted sale more than 15% (`INV_WP_SALE_APART`) from the line's figure asks once: OK uses the
+sale (its price becomes the whole line's figure, the range and Each go, the source *WorthPoint comps*, the line
+reviewed); Cancel keeps the figure and files the sale with the comparables only, the figure, its source, its owner and
+the line's review untouched. Within 15%, or on a line with no figure, the sale is used as before.
+
 ### 4b · No invented sales
 
 - **A comp must cite a URL the search actually returned.** The server reads the `web_search_tool_result`
@@ -621,3 +627,28 @@ and browser step 69.
   drops it); `_avPanelHtml` draws *LISTED · N close listings for sale, $low to $high each, middle $median* with *the page
   counted*. `invLineUnsure` reads `valConf`, so a medium survey figure carries no *unsure*. `BACKEND_MIN_VERSION`
   `2026-10-27`. `tests/listing-survey.test.js`, browser step 115.
+- **The value follows the job's standard, market and date (2026-10-28, Apps Script `2026-10-28`; the desk audit's P15:
+  ACC-09, VAL-08, ACC-10, VAL-09, ACC-12, VAL-11, VAL-06, AGT-06, VAL-16, VAL-21).** Server: the basis paragraph is
+  `_avBasisText(basis)`, one per basis. Fair Market Value carries the regulation's rule by class (the market where such a
+  thing is most commonly sold to the public: art, antiques, silver and jewellery at auction at the price the buyer paid,
+  the hammer plus the buyer's premium; branded furniture, decor and electronics on the used or resale market; everyday
+  things at the going used rate; never a new retail price, an asking price or an insurance figure), where it had said *"not
+  retail"* of everything; Replacement, Marketable Cash and Liquidation each say what they mean and which evidence they read.
+  The basis sentence names its market. Each comparable carries `premium` (`AGENT_VALUE_PREMIUMS`: `included`, `added`,
+  `hammer only`, `none`; required in `record_values`, an answer off the list kept as `''`): a hammer-only result is grossed
+  up by the house's stated premium (`added`) or labelled `hammer only`. On Replacement Value a kept asking price is evidence
+  (`_avLineResult(v, mode, seen, qty, basis)`: not a *General estimate* for want of a sale), and the range's words follow
+  the basis (`_avTool(mode, categories, conditions, basis)`). A line the app values as of its own day is told so
+  (`valueDate` on the item, `_avLineText`'s *Value as of …, the day it left the estate*). App: `_avWrite` records the basis
+  each figure was made at (`valBasis`, on the save list and `AGENT_VALUE_OWN`; a typed figure drops it) and its date per
+  line (`_avValDate(job, ref)` → `invLineValueDate`: under §2032 a line sold, distributed or otherwise disposed of inside
+  the six months is valued as of that day, §2032(a)(1)); `invValueStandardMoved(ref, job)` (`'basis'`, `'date'` or `''`)
+  holds an agent figure made at another basis or date (`_invLineHolds`' `standard`), the record says so with Re-value, and
+  the Valuation card lists them with **Re-value N lines** (`agentValueRevalueStandard`). Agent Two's `appraiser` and
+  `specialist` notes are routing (`agentValueAdvice`, `agentValueAdvised`): on an estate the line counts as needing an
+  appraisal (`invNeedsAppraisal`) and reaches the guardrail and the worklist marked *advised by Agent Two*; the note, the
+  record and the guardrail carry **Add to appraisal list** (**Send to a specialist** on living work,
+  `agentValueAdviceVerb`; `agentValueAddToAppraisal` sets `needsAppr` with who and when), until linked or waived. The
+  comparable's premium prints in the record (`AGENT_VALUE_PREMIUM_WORDS`). `BACKEND_MIN_VERSION` `2026-10-28`.
+  `tests/p15-value-standard.test.js`, browser step 130. Counsel and an appraiser to confirm the standard by class
+  (bundle D23).

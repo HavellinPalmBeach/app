@@ -110,7 +110,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // (Record the signed request's ticks, the Releases bar opening, a change to an approved item); Anthony to confirm.
     // 2,875 from 2026-10-27 (P6): one person per client on this tab at a time, the tab reading the sheet, and the refusal when it
     // cannot (the desk audit's SYN-16: the page said nothing about two devices); Anthony to confirm.
-    ok(words < 2875, 'short: ' + words + ' words');
+    // 3,025 from 2026-10-28 (P15): Agent Two's advice kept on the appraisal list, Waive's record and Undo waiver, Send worklist, an
+    // overdue report, the basis "counsel only" and the §2032 date's rule, on the page where it described the old behaviour; Anthony to
+    // confirm.
+    ok(words < 3025, 'short: ' + words + ' words');
     ['photography-guide.html', 'incident-guide.html', 'sorting-guide.html', 'packing-guide.html', 'move-day-guide.html', 'first-night-guide.html',
      'firearms-protocol.html', 'concierge-guide.html'].forEach((f) => has(html, '<a href="' + f + '">', 'names ' + f));
     has(t, 'Linked from the top of the Job Admin & Inv tab.', 'and says where the app links it');
@@ -240,7 +243,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('Values & appraisals: opens while an item waiting on an appraisal has no appraiser linked; red on a Formal job, amber otherwise');
   {
-    has(t, 'Opens by itself when an item needs an appraisal and has no appraiser linked. Red on a Formal job, whose record is not complete without it; amber otherwise.', 'the page’s rule');
+    // RESTATED (P15, 2026-10-28): the bar opens for Agent Two's values made at another basis or date too.
+    has(t, 'Opens by itself when an item needs an appraisal and has no appraiser linked, or when Agent Two’s values were made at another basis or date. Red on a Formal job, whose record is not complete without it; amber otherwise.', 'the page’s rule');
     const art = (o) => LINE('a', Object.assign({ objectName: 'Oil on canvas', category: 'Art & Décor', fmv: 9000 }, o));
     let B = bars(ESTATE({ docLevel: 'formal' }), [art()]);
     ok(!B.values.err, 'the bar answers (' + (B.values.err || 'ok') + ')');
@@ -249,6 +253,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq([B.values.openByDefault, B.tones('values')[0]], [true, 'amber'], 'Standard: open, amber');
     B = bars(ESTATE({ gate706: 'no', appraisers: [{ id: 1, name: 'Jane Smith', credential: 'ASA' }] }), [art({ apprId: 1 })]);
     eq(B.values.openByDefault, false, 'an appraiser linked: it does not open by itself');
+    // …or when Agent Two's values were made at another basis (P15): amber, open.
+    const _std = ESTATE({ gate706: 'no', valBasis: 'Replacement Value' });
+    B = bars(_std, [LINE('a', { objectName: 'Walnut side table', category: 'Furniture', fmv: 400, valuedBy: 'agent', valBasis: 'Fair Market Value', valDate: _std.deathDate })]);
+    ok(!B.values.err, 'the bar answers (' + (B.values.err || 'ok') + ')');
+    eq([B.values.openByDefault, B.line('values').indexOf('made at another basis or date') >= 0], [true, true], '⚠ a value made at another basis: open, and the bar says so');
   }
 
   group('Closing the job: grey before the close; amber where a paper is owed; opens at the close, on a refusal or a statement that disagrees');
@@ -904,6 +913,24 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(vs, 'setValBasis(', 'the basis');
     has(vs, 'setEstateAVD(', 'and the date values are as of');
     has(t, 'On an estate whose papers state values: the valuation basis and the date values are as of.', 'as the page says');
+    // P15 (2026-10-28): each sentence the Values section added, held to the code that makes it true.
+    has(t, 'Another basis reads counsel only where a court, a Form 706 or a trust expects fair market value; the §2032 date is offered on an estate filing a 706 once that day has passed.', 'as the page says: counsel only, and the §2032 date');
+    has(vs, "' (counsel only)'", '…the select reads (counsel only)');
+    has(code(fn('invValBasisLocked')), 'jobOnProbateTrack(job)', '…on the probate track');
+    has(code(fn('estateAvdOffered')), 't.firm', '…the §2032 date on an estate filing a 706');
+    has(vs, 'It can be chosen once that day has passed.', '…once that day has passed');
+    has(t, 'Agent Two’s values made at another basis or date are named, with Re-value.', 'as the page says: Re-value');
+    has(vs, 'agentValueRevalueStandard(', '…the card\'s Re-value');
+    has(t, 'Agent Two’s Appraisal advised or Worth a specialist keeps an item here, ticked or not, until an appraiser is linked or you Waive.', 'as the page says: the advice stays on the list');
+    has(code(fn('invNeedsAppraisal')), 'agentValueAdvice(ref, job)', '…the appraisal rule reads the advice, never the tick');
+    has(t, 'Add to appraisal list (on a client’s own home, Send to a specialist) records your decision.', 'as the page says: the press');
+    has(code(fn('agentValueAdviceVerb')), "'Send to a specialist' : 'Add to appraisal list'", '…the press, by the job');
+    has(t, 'the ▾ record keeps who and when, and offers Undo waiver', 'as the page says: Waive\'s record and Undo waiver');
+    has(code(fn('_invPanelAppraisalHtml')), '>Undo waiver</button>', '…in the record');
+    has(code(fn('waiveAppraisal')), 'ref.apprWaivedBy = _invStampBy(job)', '…who waived it');
+    has(t, 'Send worklist on an appraiser’s row drafts their items to them, photos linked. A report past its due date says so on the bar.', 'as the page says: Send worklist, an overdue report');
+    has(code(fn('_apprWorklistCellHtml')), '>Send worklist (', '…on the appraiser\'s row');
+    has(code(fn('deskFoldState')), 'apprReportOverdue(job, a, today || _todayStr(), all)', '…and the bar reads the overdue report');
     const co = code(fn('renderCloseoutBody'));
     ['a call, not a text', 'Referral ask'].forEach((w) => has(co, w, 'the close-out card: ' + w));
     has(SRC, '&#9993; Draft review request</button>', '✉ Draft review request');
@@ -974,7 +1001,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Each and Total (2026-10-25b): one article's value and the count's, under their own headings.
     const head = code(fn('_renderInvColHead'));
     has(head, '<span class="inv-c-each">Each</span><span class="inv-c-val">Total</span>', 'the row’s Each and Total, headed');
-    has(t, 'Each, Total Fair market value of one, and of all; on an estate, as of the date of death.', 'as the page says');
+    has(t, 'Each, Total Fair market value of one, and of all; on an estate, at its basis, as of the date of death or the §2032 date.', 'as the page says');
     has(code(fn('_invEdit')), "if (key === 'fmv' || key === 'unitVal') _avTakeValue(ref, 'typed', _invJob(jobId));", 'a figure typed in either is the desk’s, or the appraisal’s on a linked item');
     const S = sandbox({ fns: ['invSplitItemN', '_invSplitSource', '_invPhotoSource', '_getPhotoRef', '_setPhotoRef', '_invFileId', '_photoUid'],
       vars: ['_photoUidSeq', 'INV_DEFAULT_CATEGORY', 'INV_SPLIT_MAX'],

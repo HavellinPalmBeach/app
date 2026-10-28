@@ -823,7 +823,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(((GS_MAIN.match(/var BACKEND_VERSION = '([^']+)';/) || [])[1] || '') >= '2026-10-27d', 'main-sync.gs is 2026-10-27d or later');
     ok(B.BACKEND_MIN_VERSION >= '2026-10-27d', 'the app relies on it');
     const _v5 = B.BACKEND_FEATURE_COST.version, _p5 = 'a release approval recorded on one device can lose, on the sheet, the record of where the item was going';
-    ok(_v5.indexOf(_p5) === 0 || _v5.indexOf('; on a deployment older than 2026-10-27d, ' + _p5) === _v5.indexOf('; on a deployment older than '),
+    // RESTATED again (P15, 2026-10-28): two newer gaps lead now, so this one follows 2026-10-27e's at once.
+    const _e5 = _v5.indexOf('; on a deployment older than 2026-10-27e, ');
+    ok(_v5.indexOf(_p5) === 0 || _v5.indexOf('; on a deployment older than 2026-10-27d, ' + _p5) === _v5.indexOf('; on a deployment older than ')
+      || (_e5 >= 0 && _v5.indexOf('; on a deployment older than ', _e5 + 1) === _v5.indexOf('; on a deployment older than 2026-10-27d, ' + _p5)),
       'and the stale banner names what an older deployment drops, first or first after the newer gap, by its vintage');
   });
 };

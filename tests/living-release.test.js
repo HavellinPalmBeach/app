@@ -70,7 +70,7 @@ function rig(job, rows, extra) {
   const c = lift(['invWrittenReleaseNeeded', 'invWrittenReleasePicked', '_invAwaitingApproval', '_approvalLineOpen', 'invRatificationOwed',
     'printApprovalRequest', 'approvalRequestState', 'signoutGroups', 'collectionPartnerLines', 'deskFoldState', '_renderInvBulk', '_renderInvWorkbar',
     '_invBulkApply', '_renderInvRow', 'printContentsRecord', 'invReleaseCautions', '_invPanelCautionHtml', 'invRecordApproval', 'printDispositionLedger',
-    'printAppraisalWorklist'], STOP, Object.assign({
+    'printAppraisalWorklist', 'invAppraisalInProgress', 'invApprInProgressBadge', '_apprGroupList'], STOP, Object.assign({
     jobs: [job], _photoRefs: { 7: rows }, estimateStore: { 7: { estimate: { rooms: [{ idx: 1, name: 'Study', st: 'in' }] } } },
     vendorDirectory: [], document: domStub({}), _invPick: {},
     _printDocument: (html, title) => { log.printed.push({ html, title }); return true; }, _invPrintThumb: () => '',

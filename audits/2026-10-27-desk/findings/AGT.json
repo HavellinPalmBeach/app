@@ -112,6 +112,7 @@
   },
   {
    "id": "AGT-06",
+   "fixed": "2026-10-28 (P15: the advice counts as needing an appraisal on an estate and holds the line on every job until linked, waived or added, on the guardrail and the worklist, with Add to appraisal list / Send to a specialist; CLAUDE.md, Appraisal; tests/p15-value-standard.test.js, browser step 130)",
    "title": "Agent Two's 'Appraisal advised' and 'Worth a specialist' never reach the appraisal chip or the Worklist, and they go quiet with the tick",
    "kind": "automation",
    "severity": "high",

@@ -64,7 +64,7 @@ const PRINT_FNS = ['_invDocPartyHead', 'invLineReviewed', 'invLineOpen', 'invIni
   '_invCautionNotices', '_invPicked', '_invAwaitingApproval', 'invWrittenReleaseNeeded',
   '_renderInventorySummary', '_maivWorklistBlock', '_invDateTime', 'maivStatement_', '_avdDate',
   // 2026-10-22: the summary states the basis and the value date as text; their controls head the desk's Values bar.
-  'invStatesEstateValues', '_invValueAsOfHtml', '_renderValueSettings',
+  'invStatesEstateValues', '_invValueAsOfHtml', '_renderValueSettings', 'estateAvdOn', 'estateTaxReturn', 'invValBasisLocked', 'estateAvdOffered', 'invValueStandardStale', 'invValueStandardMoved', 'invLineValueDate',
   'invProbateRows', 'matterDef', 'matterTypeOf',
   'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep',
   '_maivSummaryNotice', 'maivFilingApplies', '_gate706', 'invIsMAIV', 'invMAIVCategory',
@@ -87,7 +87,7 @@ const PRINT_FNS = ['_invDocPartyHead', 'invLineReviewed', 'invLineOpen', 'invIni
   // The job-flow audit (2026-10-08): the Contents Record says every line was photographed, and shared, only where it was.
   '_invHasPhoto', 'photoShareLive',
   // 2026-10-22: the signed schedules, beside the ledger in the close-out papers.
-  '_renderSignedSchedulesCard', 'signedScheduleRows', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invLineAcceptedOnly', '_invAcceptedStampWords', 'invListReadRefusal', '_invManifestUnread', '_arDupEligible', '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_arPair', '_arPairOpen', 'agentDupCleared', '_agDupEligible', 'agentNamedTwice', '_invListReadHtml', '_invReadKey', 'invListRead', 'agentNoticesOn', 'invDealerNamed', 'invDispGoesToDealer', 'invDealerUnchecked', 'invDealerDirState', '_avStampCounts', 'invTotalFloor', '_invFloorTotalHtml', 'maivOwedLines', 'maivOwedText', 'invLineQty', '_avStampText'];
+  '_renderSignedSchedulesCard', 'signedScheduleRows', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invLineAcceptedOnly', '_invAcceptedStampWords', 'invListReadRefusal', '_invManifestUnread', '_arDupEligible', '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_arPair', '_arPairOpen', 'agentDupCleared', '_agDupEligible', 'agentNamedTwice', '_invListReadHtml', '_invReadKey', 'invListRead', 'agentNoticesOn', 'invDealerNamed', 'invDispGoesToDealer', 'invDealerUnchecked', 'invDealerDirState', '_avStampCounts', 'invTotalFloor', '_invFloorTotalHtml', 'maivOwedLines', 'maivOwedText', 'invLineQty', '_avStampText', 'agentValueAdvised', 'agentValueAdvice', 'agentValueAdviceVerb', 'estateValueDateLabel', '_invWaivedNoteHtml', 'invApprWaiverText', 'invValBasisShort', 'invLineStandardNote', 'invAppraisalInProgress', 'invApprInProgressBadge'];
 const PRINT_VARS = ['INV_LINE_INITIAL_MIN', 'INV_DISP_DOC_WORDS', 'CONTENTS_SIGNED_REF',  'INV_CONTRACT_DOCS',
   '_agRun', '_avRun', '_arRun', 'AGENT_NOTICE_KINDS', 
   'INV_DISPOSITIONS', 'INV_GROUP_ORDER', 'INV_RELEASE_DISPOSITIONS', 'INV_RELEASE_CAUTIONS',
@@ -965,7 +965,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // ⚠ RESTATED 2026-10-22 (the desk's Values & appraisals bar), NOT WEAKENED: the two controls left the summary for the head
     // of the Values bar (_renderValueSettings), and the summary states the basis and the date as text. The controls are held
     // to the same tier gate where they are now drawn, and to being gone from the summary at every tier.
-    const vset = (tier) => { const j = Object.assign({}, ESTATE, { docTier: tier }); return rig(j, []).ctx._renderValueSettings(j); };
+    // RESTATED (P15, 2026-10-28): the §2032 tick is drawn only on an estate filing a Form 706 once the alternate date has passed, so
+    // the estate here files one and the card is drawn on a day after Oct 2, 2026 (its date of death Apr 2).
+    const vset = (tier) => { const j = Object.assign({}, ESTATE, { docTier: tier, gate706: 'yes' }); return rig(j, []).ctx._renderValueSettings(j, '2026-10-20'); };
     const Sc = vset('contents'), Sv = vset('values'), Sn = vset('none');
     ['setValBasis', 'setEstateAVD'].forEach((r) => {
       lacks(Sc, r, '⚠ "' + r + '" is off a capture engagement\'s desk');

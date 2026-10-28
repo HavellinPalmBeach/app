@@ -43,7 +43,7 @@ const FNS = ['invLineReviewed', 'invLineOpen', '_invDocPartyHead', 'invOwnInitia
              '_invProgressStamp', '_invReviewStats', 'jobTakesProceedsStatements', 'proceedsReconciliation',
              '_jobDestLabel', '_agrApprover', 'signedRecordsOf',
              // P20: the request lists what left before every fiduciary approved apart, and prints who signed readably.
-             'invRatificationOwed', 'invRecordedGone', 'invPickupRecord', 'custodyEvents', 'invReceiptRecord', 'invViaDealer', 'invRecipientName', 'invApprovalSignedText', 'invApprovalSigners', 'invStaffRefused', 'agentValueUnreviewed', '_avHasFigure', '_invStampLineReviewed', '_avStampReviewed', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'agentValueSpecialistWorth', 'invLineAcceptedOnly', '_invAcceptedStampWords', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', 'invAcceptCtx', 'agentDuplicateGroups', '_arPair', '_arPairOpen', 'agentDupCleared', '_agDupEligible', 'agentNamedTwice', 'invListRead', 'invWrittenReleaseNeeded', 'invDealerUnchecked', 'invDealerDirState', 'invDealerNamed', 'invDispGoesToDealer'];
+             'invRatificationOwed', 'invRecordedGone', 'invPickupRecord', 'custodyEvents', 'invReceiptRecord', 'invViaDealer', 'invRecipientName', 'invApprovalSignedText', 'invApprovalSigners', 'invStaffRefused', 'agentValueUnreviewed', '_avHasFigure', '_invStampLineReviewed', '_avStampReviewed', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'agentValueSpecialistWorth', 'invLineAcceptedOnly', '_invAcceptedStampWords', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', 'invAcceptCtx', 'agentDuplicateGroups', '_arPair', '_arPairOpen', 'agentDupCleared', '_agDupEligible', 'agentNamedTwice', 'invListRead', 'invWrittenReleaseNeeded', 'invDealerUnchecked', 'invDealerDirState', 'invDealerNamed', 'invDispGoesToDealer', 'estateValueDateLabel', 'invAppraisalInProgress', 'invApprInProgressBadge'];
 const VARS = ['INV_LINE_INITIAL_MIN', 'INV_DISP_DOC_WORDS', 'INV_PLAN_CHANNEL_KINDS', 'INV_UNDECIDED', 'INV_RELEASE_CAUTIONS', 'INV_ACCEPT_AMMO_RE', 'INV_OPEN_HOLDS', 'INV_RELEASE_DISPOSITIONS', 'INV_CAT_GLYPH',
               'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
               'DECEDENT_SERVICES', 'INVENTORY_COLUMNS', 'MATTER_TYPES', 'INV_SALE_DISPOSITIONS', 'MAIV_OTHER', 'MAIV_BY_CATEGORY'];
@@ -131,8 +131,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // RESTATED 2026-10-17 (P27, Q82): a sixth caution, `flaggedUnvalued` (a living client's ⚑ line put up for sale with no
     // value recorded: flagged on the paper, never refused), is a PRICE question, so it sits after the authority cautions
     // and beside the estate's price caution, which it mirrors for living work. Authority first, valuation last, unchanged.
+    // RESTATED (P15, 2026-10-28): an appraisal in progress, a valuation caution on every job, sits before the estate's own.
     eq(s.INV_RELEASE_CAUTIONS.map((c) => c.key).join(','),
-       'flagBequest,flagDisputed,bequestElsewhere,staffRecipient,flaggedUnvalued,needsAppraisal',
+       'flagBequest,flagDisputed,bequestElsewhere,staffRecipient,flaggedUnvalued,apprInProgress,needsAppraisal',
        'authority cautions first, the valuation ones last');
     s.INV_RELEASE_CAUTIONS.forEach((c) => {
       ok(c.head && c.body && c.badge && c.tone, c.key + ' carries a heading, a body and a badge');

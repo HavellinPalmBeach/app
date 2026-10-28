@@ -247,7 +247,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'havellin.html'), 'utf8');
     const body = fn('_invScheduleSection');
     has(body, 'items, valued as a lot', 'the row says the value covers the whole lot');
-    has(body, 'FMV (total)', 'and the column header says total');
+    // RESTATED (P15, 2026-10-28; VAL-08): the head reads the estate's basis, FMV on Fair Market Value, always "(total)".
+    has(body, "+ ' (total)'", 'and the column header says total');
+    has(fn('invValBasisShort'), "'Fair Market Value': 'FMV'", '…FMV (total) on Fair Market Value');
     lacks(body, "'(qty '", 'the bare qty label is gone');
     eq((src.match(/items, valued as a lot/g) || []).length, 1,
        'and exactly one renderer says it, shared by both schedules');

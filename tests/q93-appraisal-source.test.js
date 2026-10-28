@@ -104,7 +104,7 @@ const ROOTS = ['_invEdit', '_invBulkApply', '_invSetAppraiser', 'removeAppraiser
   '_renderAppraisalGuardrail', '_renderAppraiserRoster', '_invGuardrailItems', 'deskFoldState', 'fileSignedCopy', 'fileSignedCopyFromInput',
   'voidSignedRecord', 'probatePackageReports', 'probatePackageMovedSince', 'invValBasisWord', '_invScheduleSection', 'printEstateInventoryReport',
   'printAppraisalWorklist', 'invAppraisalReportOwed', 'apprReportOwedLines', '_apprReportsRepaint', '_invRefreshGuardrail', 'signedRecordsOf',
-  'signedRecordLinksHtml', 'photoSubfolder', 'invAwaitingAppraisal', '_renderInvWorkbar'];
+  'signedRecordLinksHtml', 'photoSubfolder', 'invAwaitingAppraisal', '_renderInvWorkbar', 'invValBasisShort', 'invLineStandardNote', 'invApprWaiverText', 'apprReportOverdue', '_apprGroupList'];
 let _cl = null;
 function desk(job, rows, o) {
   o = o || {};

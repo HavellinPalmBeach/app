@@ -173,7 +173,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The flags every page names, each as the pages word it, the reason the code gives, and a fixture that stands but for it.
     const FLAGS = [
       ['a note from either agent', /note from Agent One or Agent Two/, 'note', ESTATE(), [DRAWER({ agentNotices: [{ kind: 'other', text: 'a mark under the base' }] })]],
-      ['…Agent Two\'s too', /note from Agent One or Agent Two/, 'valnote', ESTATE(), [DRAWER({ valNotices: [{ kind: 'appraiser', text: 'a signed piece' }] })]],
+      ['…Agent Two\'s too', /note from Agent One or Agent Two/, 'valnote', ESTATE(), [DRAWER({ valNotices: [{ kind: 'other', text: 'a signed piece' }] })]],
       ['an Agent One note still open on the first line off its photograph', /first (line|item) off its photo/, 'photonote', ESTATE(),
         [DRAWER({ stableId: 'd2', derivedFrom: 'p1', driveFileId: 'Fp1' }), DRAWER({ stableId: 'p1', driveFileId: 'Fp1', agentNotices: [{ kind: 'other', text: 'a hallmark on one spoon' }] })]],
       ['⚠ a Firearm note on a photograph line since removed (the second review)', /Firearm.{0,40}Possible NFA item.{0,30}note holds|firearm note there counts even after you remove/, 'photonote', ESTATE(),

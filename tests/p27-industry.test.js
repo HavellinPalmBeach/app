@@ -308,7 +308,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const mk = (fid) => sandbox({
       vars: ['INV_RELEASE_CAUTIONS', 'INV_SALE_DISPOSITIONS'],
-      fns: ['invReleaseCautions', '_invCautionBadges', '_invPanelCautionHtml', '_invHasValue', 'esc'],
+      fns: ['invReleaseCautions', '_invCautionBadges', '_invPanelCautionHtml', '_invHasValue', 'esc', 'invAppraisalInProgress', 'invApprInProgressBadge'],
       stubs: { invFiduciaryMode: () => fid, _invJob: () => ({ id: 7 }), invBequestFor: () => null, invBequestElsewhere: () => null,
                invHavellinRecipient: () => '', invAwaitingAppraisal: () => false, estateDirectionWords: () => ({ who: 'you alone' }) },
     });

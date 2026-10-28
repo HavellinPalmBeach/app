@@ -519,7 +519,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(text(render('cleanout', 'both').agr), 'Trust The Adler Family Trust, dated March 3, 2015', 'Both\'s trust row too');
     has(text(d.est), 'Trust The Adler Family Trust, dated March 3, 2015', '⚠⚠ the client estimate\'s identity line');
     lacks(d.agr + d.est + d.packet, 'Mar 3, 2015', 'the short date is nowhere on them');
-    const S = lift(['printTrustSchedule'], ['_printDocument'], { jobs: [JOB('cleanout', 'trust')], _photoRefs: { 7: [
+    const S = lift(['printTrustSchedule', 'estateValueDateLabel', '_invWaivedNoteHtml', 'invApprWaiverText', 'invValBasisShort', 'invLineStandardNote'], ['_printDocument'], { jobs: [JOB('cleanout', 'trust')], _photoRefs: { 7: [
       { stableId: 'i1', label: 'inventory', objectName: 'Chesterfield sofa', category: 'Furniture', condition: 'Good', qty: '1', ts: 1, fmv: '4000', assetTrack: 'Trust' }] },
       estimateStore: {}, _printDocument: (h) => !!h });
     const r = attempt(() => S.printTrustSchedule(7, { asHtml: true }));

@@ -83,7 +83,7 @@ const ROOTS = ['_invLineHolds', 'invLineHold', 'invLineOpen', 'invLineAccepted',
   '_invReviewRepaint', '_agDupIndex', 'agentDuplicateGroups', 'agentDupCleared', 'agentNotDuplicate', 'agentValueWaiting', '_avDupReleased', '_agDupHandle', 'agentNotices', 'invListSeen', 'invListRead',
   'invListReadWords', 'invListReadRefusal', 'invMarkListRead', '_invReadKey', '_invListReadHtml', 'invWorkFlags', 'waiveAppraisal', '_agWrite',
   '_arWrite', 'mergeMediaItems', '_invTombstoneLine', 'restoreInventoryItem', '_invAssignItemNos', 'probatePackageGaps', 'collectionLineWithPhoto',
-  'printEstateInventoryReport', 'printContentsList', 'printDispositionLedger', 'printCourtInventory', 'printTrustSchedule', 'printContentsRecord'];
+  'printEstateInventoryReport', 'printContentsList', 'printDispositionLedger', 'printCourtInventory', 'printTrustSchedule', 'printContentsRecord', 'estateValueDateLabel', '_invWaivedNoteHtml', 'invApprWaiverText', 'invValBasisShort', 'invLineStandardNote', 'apprReportOverdue'];
 const STUB_NAMES = ['jobs', '_photoRefs', 'estimateStore', 'vendors', 'vendorDirectory', 'contractors', 'document', 'alert', 'window',
   '_printDocument', 'showSyncBadge', 'savePhotoRefs', '_scheduleInventorySync', 'renderInventoryTab', '_invRefreshSummary',
   '_invRefreshGuardrail', '_invRefreshFlagStrip', '_invRefreshRecords', '_invRefreshReleases', 'agentValueAfterRename',
@@ -238,6 +238,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       dispute: 'a disputed estate: every item takes a tick', firearm: 'a firearm or ammunition',
       noname: 'no name yet: name it', nodest: 'no destination yet (choose where it goes)', onhold: 'on Hold',
       nofigure: 'no value yet', unowned: 'a value nobody has checked', stale: 'its value was made for an earlier name',
+      standard: 'its value was made at another basis or date: Re-value it on the Valuation card',
       guess: 'both agents were guessing', appraisal: 'waiting on an appraisal', bequest: 'a specific bequest',
       disputed: 'marked disputed', note: 'Agent One’s note on it', valnote: 'Agent Two’s note on it',
       photonote: 'Agent One’s note on its photograph',
@@ -257,6 +258,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       ['nofigure', ESTATE(), [DRAWER({ fmv: '', valLow: undefined, valHigh: undefined })]],
       ['unowned', ESTATE(), [DRAWER({ valuedBy: undefined })]],
       ['stale', ESTATE(), [DRAWER({ objectName: 'Sterling flatware, Gorham', valNameAt: 'Stainless flatware and kitchen utensils, drawer d1' })]],
+      // P15 (2026-10-28): Agent Two's figure made at Fair Market Value on an estate now stated at Replacement Value.
+      ['standard', ESTATE({ valBasis: 'Replacement Value' }), [DRAWER()]],
       ['guess', ESTATE(), [DRAWER({ agentConf: 'low', valConf: 'low' })]],
       ['appraisal', ESTATE(), [DRAWER({ apprId: 'a1' })]],
       // A bequest matched and going to its beneficiary, so its flag is the only thing on it (an unmatched flag is a release caution too).
@@ -265,7 +268,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       // A dispute on the line is a release caution as well, always: `every` names both, in the rule's order.
       ['disputed', ESTATE(), [DRAWER({ flagDisputed: true, disposition: 'Keep' })], undefined, ['disputed', 'caution']],
       ['note', ESTATE(), [DRAWER({ agentNotices: [{ kind: 'other', text: 'a mark under the base' }] })]],
-      ['valnote', ESTATE(), [DRAWER({ valNotices: [{ kind: 'appraiser', text: 'a signed piece' }] })]],
+      ['valnote', ESTATE(), [DRAWER({ valNotices: [{ kind: 'other', text: 'a signed piece' }] })]],
       ['photonote', ESTATE(), [PHOTO(), SPLIT()], 's1'],
       ['duplicate', ESTATE(), [TWIN('a'), TWIN('b')], 'a'],
       ['caution', LIVING(), [DRAWER({ disposition: 'Sell', channel: 'Ashley Jerome' })]],
@@ -383,7 +386,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       ['appraisal', 'worth a specialist on living work ($3,500 top)', LIVING(), { fmv: 2000, valLow: 1500, valHigh: 3500 }],
       ['disputed', 'a dispute on the line', ESTATE(), { flagDisputed: true }],
       ['note', 'a note from Agent One on the line', ESTATE(), { agentNotices: [{ kind: 'other', text: 'a mark under the base' }] }],
-      ['valnote', 'a note from Agent Two on the line', ESTATE(), { valNotices: [{ kind: 'appraiser', text: 'a signed piece' }] }],
+      ['valnote', 'a note from Agent Two on the line', ESTATE(), { valNotices: [{ kind: 'other', text: 'a signed piece' }] }],
+      // ⚠ RESTATED (P15, 2026-10-28; VAL-06, AGT-06): an appraiser or specialist note is Agent Two's advice, held as an appraisal
+      // until a person links, waives or adds the line (it was held as a note, which a tick answered).
+      ['appraisal', '⚠ Agent Two advised an appraisal (P15)', ESTATE(), { valNotices: [{ kind: 'appraiser', text: 'a signed piece' }] }],
     ];
     flags.forEach(([why, what, job, o]) => eq(hold(job, [DRAWER(o)]), why, 'held: ' + what));
     // The controls: what makes each a flag, taken away, lets the same line stand.
@@ -518,7 +524,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('⚠⚠ A6c · Agent Two\'s note counts only while the figure is Agent Two\'s');
   {
-    const NOTE = [{ kind: 'appraiser', text: 'a signed piece' }];
+    const NOTE = [{ kind: 'other', text: 'a signed piece' }];   // since P15 an appraiser note is advice, held as an appraisal
     eq(hold(ESTATE(), [DRAWER({ valNotices: NOTE })]), 'valnote', 'on Agent Two\'s own figure: held');
     eq(stands(ESTATE(), [DESK({ valNotices: NOTE })]), true, '⚠⚠ a figure typed on the desk over it: the note is about a figure no longer on the line, it stands');
   }
