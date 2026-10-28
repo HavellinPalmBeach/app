@@ -207,7 +207,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // P28 (2026-10-18): the sign-out dialog offers an estate's leaving line only once the approval is complete (signoutGroups).
     // P4 (2026-10-27): a firearm with a licensed dealer may go to it once approved, and its dealer's receipt is owed then (invDealerReleased).
     // P5 (2026-10-27): a selection's request names what it left out, an approved line among them (invWrittenReleaseLeftOutText).
-    eq(callers, ['_approvalLineOpen', '_invAwaitingApproval', 'collectionPartnerLines', 'invApprovalBatches', 'invApprovalLeftOpen', 'invDealerReleased', 'invFirearmAuthorized', 'invRatificationOwed',
+    // P12 (2026-10-28): the ledger's and the package's Authorized by (invAuthorityText) ask it before saying what is still owed.
+    eq(callers, ['_approvalLineOpen', '_invAwaitingApproval', 'collectionPartnerLines', 'invApprovalBatches', 'invApprovalLeftOpen', 'invAuthorityText', 'invDealerReleased', 'invFirearmAuthorized', 'invRatificationOwed',
                  'invReleasedToPerson', 'invWrittenReleaseLeftOutText', 'planDerivedLines', 'signoutGroups'].sort(),
        'the direct readers: the request\'s list, the desk\'s acts, the dialog, the firearm gate, ratification, what counts as released for a receipt, the Job Plan line');
     const viaFirearm = [...ALL_FNS].filter((n) => { try { return /\binvFirearmAuthorized\(/.test(noComments(fn(n))) && n !== 'invFirearmAuthorized'; } catch (e) { return false; } }).sort();
@@ -397,9 +398,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const PK = desk(['probatePackageRecordHtml'], TRUST(), pl);
     const pr = attempt(() => text(PK.probatePackageRecordHtml(7)));
     // RESTATED 2026-10-05 (P20, Q24): who approved prints through invApprovalSignedText, each signer with their day.
-    has(pr.ok ? pr.val : 'threw: ' + pr.err, 'Ruth Adler (Oct 1, 2026) Not complete: no approval recorded from Daniel Adler',
+    // RESTATED 2026-10-28 (P12, DOC-11): the record's Approved by reads as the ledger's Authorized by (invAuthorityText).
+    has(pr.ok ? pr.val : 'threw: ' + pr.err, 'signed so far by Ruth Adler (Oct 1, 2026); still to sign: Daniel Adler',
         '⚠ the package record marks the approval one co-trustee signed as not complete, naming who is missing');
-    eq(count(pr.val, 'Not complete'), 1, 'and only that one');
+    eq(count(pr.val, 'still to sign'), 1, 'and only that one');
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -748,16 +750,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const sh = SC._renderSignedSchedulesCard(job, lines);
     const sched = [...sh.matchAll(/fileSignedCopyFromInput\(this,(\d+)\)/g)].map((m) => SC._signedCopySpecs[Number(m[1])])
       .filter((s) => s && s.kind === 'schedule').map((s) => s.meta.ref);
-    eq(sched, ['Trust Schedule'], '⚠ a trust matter files the received Trust Schedule, and no Court Inventory');
+    // RESTATED 2026-10-28 (P12, EST-13): the card names each trustee, with a press per trustee still to sign and one for the copy
+    // signed by both, so the specs are counted by the paper they file.
+    eq([...new Set(sched)], ['Trust Schedule'], '⚠ a trust matter files the received Trust Schedule, and no Court Inventory');
+    eq(sched.length, 3, '…a press for each trustee still to sign and one for the copy signed by both');
     has(sh, 'href="https://drive.google.com/file/d/TS/view"', 'its filed copy linked');
     has(text(sh), 'Received Trust Schedule', 'listed by its label');
     const schedOf = (mt) => { const j = Object.assign(TRUST(), { matterType: mt }); const R = desk(['_renderSignedSchedulesCard'], j, lines);
       return [...R._renderSignedSchedulesCard(j, lines).matchAll(/fileSignedCopyFromInput\(this,(\d+)\)/g)].map((m) => R._signedCopySpecs[Number(m[1])])
         .filter((s) => s && s.kind === 'schedule').map((s) => s.meta.ref); };
-    eq(schedOf('probate'), ['Court Inventory'], 'probate: the adopted Court Inventory');
-    eq(schedOf('both'), ['Court Inventory', 'Trust Schedule'], 'a pour-over: both');
+    const uniq = (a) => [...new Set(a)];
+    eq(uniq(schedOf('probate')), ['Court Inventory'], 'probate: the adopted Court Inventory');
+    eq(uniq(schedOf('both')), ['Court Inventory', 'Trust Schedule'], 'a pour-over: both');
     eq(schedOf('neither'), [], 'neither a court nor a trust: neither instrument');
-    eq(schedOf(''), ['Court Inventory'], 'unanswered: the Court Inventory, as the desk prints it');
+    eq(uniq(schedOf('')), ['Court Inventory'], 'unanswered: the Court Inventory, as the desk prints it');
     const cj = Object.assign(TRUST(), { docTier: 'contents' }); const C = desk(['_renderSignedSchedulesCard'], cj, lines);
     eq(C._renderSignedSchedulesCard(cj, lines), '', 'not ours to issue at the contents tier: not offered');
     // A living client with a recorded approval: the approval list, no receipts, no schedules.

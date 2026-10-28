@@ -83,8 +83,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             // The Re-open is its own branch of the transition (2026-09-29).
             'jobReopenBlocker', '_reopenTransition', 'docSentAt', 'docKeyFor', 'docState', '_jobTouch', 'roundCents', 'estateAuthority',
             // P19: an estate's close names its unsigned Disposition Ledger.
-            'ledgerCloseFlag', 'ledgerSignedCopies', 'signedRecordsOf', 'jobListEntries', '_agrApprover'],
-      vars: ['DOC_STAGE_WORD', 'JOB_TRANSITIONS', 'DECEDENT_SERVICES', 'LEDGER_SIGNED_REF'],
+            'ledgerCloseFlag', 'ledgerSignedCopies', 'ledgerSignState', 'signedCopySignState', 'signedByNames', 'ledgerSigners', 'jobFiduciaries', 'fiduciaryCapacity', 'samePerson', 'canonPersonName', 'signedRecordsOf', 'jobListEntries', '_agrApprover'],
+      vars: ['PERSON_NAME_ALIASES', 'DOC_STAGE_WORD', 'JOB_TRANSITIONS', 'DECEDENT_SERVICES', 'LEDGER_SIGNED_REF'],
       stubs: { vendorDirectory: VENDORS, alerts: [] },
     });
     const said = [], asked = [];
@@ -314,11 +314,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('the desk card stops asking a prep job questions that do not apply to it');
   {
     const d = sandbox({
-      fns: ['planDerivedLines', 'prepVendorsConfirmed', 'donationReceiptLine', 'donationGroups', 'invDonationReceipted', 'ledgerDerivedLines', 'proceedsReceivedLine', 'estateDeliveryLine', 'estatePackageRoute', 'ledgerSignedCopies', 'signedRecordsOf', 'jobListEntries', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine', 'planTaskCtx', 'planTaskApplies', 'logisticsLineOn', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', '_planRooms', 'roomStatusNormalize',
+      fns: ['planDerivedLines', 'prepVendorsConfirmed', 'donationReceiptLine', 'donationGroups', 'invDonationReceipted', 'ledgerDerivedLines', 'proceedsReceivedLine', 'estateDeliveryLine', 'estatePackageRoute', 'ledgerSignedCopies', 'ledgerSignState', 'signedCopySignState', 'signedByNames', 'ledgerSigners', 'jobFiduciaries', 'fiduciaryCapacity', 'samePerson', 'canonPersonName', 'signedRecordsOf', 'jobListEntries', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine', 'planTaskCtx', 'planTaskApplies', 'logisticsLineOn', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', '_planRooms', 'roomStatusNormalize',
             'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey', 'matterTypeOf', 'matterDef',
             'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly',
             'planTasksFor', 'jobListEntries', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs', 'fmt', '_hrsTxt'],
-      vars: ['CONTENTS_SIGNED_REF', 'PLAN_VALUABLES_VENDOR_TYPES', 'PLAN_COI_PTYPES', 'DECEDENT_SERVICES', 'jobPlanStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'LEDGER_SIGNED_REF', 'INV_SALE_DISPOSITIONS',
+      vars: ['PERSON_NAME_ALIASES', 'CONTENTS_SIGNED_REF', 'PLAN_VALUABLES_VENDOR_TYPES', 'PLAN_COI_PTYPES', 'DECEDENT_SERVICES', 'jobPlanStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'LEDGER_SIGNED_REF', 'INV_SALE_DISPOSITIONS',
              'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'changeOrders',
              'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'JOB_ADMIN_TASKS', 'DOC_SCOPES'],
       stubs: { isFormalDoc: () => false, docSentAt: () => null, jobLogEntries: () => [], stagePaidTotal: () => 0,

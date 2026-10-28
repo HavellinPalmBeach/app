@@ -206,7 +206,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('⚠ the Job Plan\'s Close-out stage draws the same body, so it reads the same rule');
   {
-    has(code(fn('renderJobPlan')), "'<div id=\"closeout-plan-' + jobId + '\">' + renderCloseoutBody(jobId, job) + '</div>'",
+    // RESTATED 2026-10-28 (P12): the body is told which host it is on, so its fifth step, Before you close, repaints by id there.
+    has(code(fn('renderJobPlan')), "'<div id=\"closeout-plan-' + jobId + '\">' + renderCloseoutBody(jobId, job, 'plan') + '</div>'",
       'the stage\'s card is renderCloseoutBody, the one renderer');
     has(code(fn('renderPrepJobPlan')).replace(/\s+/g, ' '), "renderCloseoutCard(jobId, job, 'plan')", 'and Home Prep\'s plan carries the whole card');
   }

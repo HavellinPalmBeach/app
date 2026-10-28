@@ -190,8 +190,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // jobAppraisalDuty, the job-level answer — the tier before approval, and the approved estimate's
     // appraisalDuty after it, so an appraiser priced on the estimate reads the same on the desk as in the
     // contract. Driven in tests/p15-followups.test.js.
-    has(fn('printCourtInventory'), 'jobAppraisalDuty(job)', 'the Court Inventory DRAFT fix asks the job-level answer');
-    has(fn('printTrustSchedule'), 'jobAppraisalDuty(job)', 'and so does the Trust Schedule\'s');
+    // RESTATED 2026-10-28 (P12): the schedules' DRAFT reasons and fixes are one answer, scheduleDraftState, which both printers
+    // read; the fix asks the job-level answer there, on each arm.
+    has(fn('printCourtInventory'), "scheduleDraftState(job, 'court', items)", 'the Court Inventory reads its DRAFT reasons from the one answer');
+    has(fn('printTrustSchedule'), "scheduleDraftState(job, 'trustee', items)", 'and so does the Trust Schedule');
+    eq((fn('scheduleDraftState').match(/jobAppraisalDuty\(job\)/g) || []).length, 2, 'the DRAFT fix asks the job-level answer, on both arms');
     has(fn('planTaskCtx'), "weAppraise: jobAppraisalDuty(job) !== ''", 'the desk checklist asks it too');
   }
 

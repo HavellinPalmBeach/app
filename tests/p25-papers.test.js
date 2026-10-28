@@ -298,7 +298,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     I._photoRefs[7] = [L({ stableId: 'x', fmv: '6500', valSource: '' })];
     I._invSetAppraiser(7, 'x', 'ap1');
     eq([I._photoRefs[7][0].apprId, I._photoRefs[7][0].valSource], ['ap1', ''], '⚠⚠ linking writes no source, so a figure from anybody never becomes the appraisal\'s');
-    has(codeOnly(fn('printCourtInventory')), '_invGuardrailItems(jobId)', 'the Court Inventory reads the awaiting list for its FINAL stamp');
+    // RESTATED 2026-10-28 (P12): the schedules' DRAFT reasons are one answer, scheduleDraftState, which the Court Inventory reads.
+    has(codeOnly(fn('scheduleDraftState')), '_invGuardrailItems(jobId)', 'the Court Inventory reads the awaiting list for its FINAL stamp');
+    has(codeOnly(fn('printCourtInventory')), 'scheduleDraftState(job, ', '…through the one answer of why a schedule is DRAFT');
   }
 
   // ═══ Q35 · THE REQUEST IS THE FIREARMS' TRANSPORT AUTHORITY; THE DEALER'S RECEIPT ═══
@@ -366,7 +368,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const page = (attempt(() => done.printContentsRecord(7, { asHtml: true })).val || {}).html || '';
     has(textOf(page), 'Disposed of', '⚠⚠ the family\'s record says Disposed of');
     lacks(textOf(page), 'Junk', '…never Junk');
-    has(textOf(page), 'Sign-off Reviewed and accepted as the record of what stayed and what left the property', '⚠⚠ and carries the sign-off');
+    // RESTATED 2026-10-28 (P12; Anthony, Ask 12): the sign-off's words follow the stamp (the record to date while IN PROGRESS).
+    const want25 = /IN PROGRESS/.test(textOf(page)) ? 'the record to date' : 'the final record';
+    has(textOf(page), 'Sign-off Reviewed and accepted as ' + want25 + ' of what stayed and what left the property', '⚠⚠ and carries the sign-off, in the words its stamp allows (' + want25 + ')');
     has(textOf(page), 'Jane Doe, Client', '…for the client');
     const open = rig(LIVING, [item('a', 'Junk'), item('b', '')]);
     has(textOf((attempt(() => open.printContentsRecord(7, { asHtml: true })).val || {}).html), 'The sign-off is withheld.', 'a line with no destination: withheld');

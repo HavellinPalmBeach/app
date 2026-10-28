@@ -377,8 +377,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const pr2 = mk(PROBATE(), [IT('f', { objectName: 'Sideboard', fmv: '900' })]);
     pr2.printCourtInventory(7);
     const ci = textOf(printed.pop() || '');
-    has(ci, 'Reviewed and adopted by: __________________________________ Date: ____________ Michael Brennan · Personal Representative / authorized fiduciary',
+    // RESTATED 2026-10-28 (P12, DOC-13): each signer prints in the role recorded on them, the paper's own word only where none is.
+    has(ci, 'Reviewed and adopted by: __________________________________ Date: ____________ Michael Brennan · Personal Representative',
       '⚠ the Court Inventory\'s adoption line names the one recorded representative');
+    lacks(ci, 'Michael Brennan · Personal Representative / authorized fiduciary', '…in the role recorded on him');
     has(ci, 'Estate of Harold Brennan', '⚠⚠ the court-facing paper heads with the estate');
     has(ci, 'Case 50-2026-CP-004412, Circuit Court for Palm Beach County, Florida, Probate Division', '⚠ and names the court beside the case');
     const trustJob = PROBATE({ svc: 'cleanout', matterType: 'trust', probateCase: '', executor: 'Caroline Whitfield-Hayes', executorRole: 'Successor Trustee',
@@ -413,15 +415,24 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const C = lift(['closeOpenWorkFlag', 'applyJobTransition'], STATE.concat(['jobCloseBlockers', 'ledgerCloseFlag', 'confirm', 'alert', 'saveJobs', 'syncJobToSheets']), stubs);
     const j = LIVING({ payments: [pay('deposit', 10850, 'd1'), pay('midpoint', 5425, 'm1')] });
     C.jobs = [j];
-    eq(C.closeOpenWorkFlag(j), '2 of 3 rooms are not marked cleared (Dining, Bedroom). 1 line leaving the property has no recipient recorded.', '⚠⚠ the flag names the open work');
+    // RESTATED 2026-10-28 (P12): the flag is the one list of what the close leaves open (closeReadiness, p12-close-truth.test.js),
+    // a sentence an entry, each naming its lines (a line with no number yet by its name); the donation unreceipted and the client's
+    // unsigned Contents Record are named too (LIV-13).
+    eq(C.closeOpenWorkFlag(j), '\u2022 2 of 3 rooms are not marked cleared (Dining, Bedroom).\n\u2022 1 line leaving the property has no recipient recorded (Sofa).\n'
+      + '\u2022 1 donated line has no charity receipt (Sofa).\n\u2022 The Contents Record has no signed copy on file. It is filed to Drive as the job closes; have the client sign it, '
+      + 'then file the signed copy on the Contents Record card, under Closing the job on Job Admin & Inv.', '⚠⚠ the flag names the open work');
     C.jobPlanStore = { 7: { rooms: { 0: { status: 'cleared' }, 1: { status: 'cleared' }, 2: { status: 'cleared' } } } };
     refs[0].channel = 'Goodwill';
+    refs[0].receiptDoc = 'Goodwill #4411';
+    j.signedRecords = [{ id: 'cr1', kind: 'contents', ref: 'contents', filedAt: 1 }];
     eq(C.closeOpenWorkFlag(j), '', 'nothing open: nothing said');
     refs[0].channel = '';
+    delete refs[0].receiptDoc;
     C.jobPlanStore = { 7: { rooms: { 0: { status: 'cleared' } } } };
     eq(C.applyJobTransition(j), false, 'the close asks first (cancelled here)');
     has(stubs.__asked, '2 of 3 rooms are not marked cleared', '⚠⚠ the close question names the rooms');
-    has(stubs.__asked, 'Closing does not change them; finish the rooms and name the recipients, or close now.', '…and says it is a flag, not a refusal');
+    has(stubs.__asked, 'Closing does not change any of these: finish them, or close now.', '…and says it is a flag, not a refusal');
+    lacks(stubs.__asked, 'name the recipients', '⚠ NEW-04: never a fix for something that is not open');
     // the Releases card repaints when a recipient is typed
     // (RESTATED ON THE DESK BUILD'S REVIEW, 2026-10-23: the desk shows this client, as it does when a person types on its row;
     // _invRefreshReleases now repaints only the client #inv-job shows, so a minted, empty picker is another client.)

@@ -8,13 +8,13 @@ const { sandbox, source, domStub } = require('./harness.js');
 
 const FNS = ['scheduleSignLines', '_invDocPartyHead', 'invLineReviewed', 'invLineOpen', 'invConditionText', '_invScheduleSection', 'invValBasisWord', '_invTrackDefault', 
   'invDocContractBlock', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep',
-  'printEstateInventoryReport', 'jobOnProbateTrack', 'printCourtInventory', '_avUnreviewedStamp', 'printContentsList', 'contentsList',
+  'printEstateInventoryReport', 'jobOnProbateTrack', 'printCourtInventory', 'scheduleDraftState', '_avUnreviewedStamp', 'printContentsList', 'contentsList',
   'printContentsRecord', '_invHasPhoto', 'photoShareLive', 'photoSharesOf', 'printApprovalRequest', '_lotSplitWorklistBlock', 'invLotSplitState', 'invLotArticleValue', 'invLotSplitSentence', 'invLotsToSplit', 'invLotsUntestable', 'printAppraisalWorklist', 'printDispositionLedger',
   'agentShotGroups', 'agentNameableRefs', '_agState', '_agStateHtml', '_agNoticesHtml', 'agentNotices',
   '_clFlags', '_renderInvWorkbar', 'invColdWords', '_arCheckButtonHtml', '_arState', 'agentRoomsToCheck', '_arCheckable', '_arStateHtml', '_avValueButtonHtml', 'agentValueWaiting', 'agentValueableRefs', '_avHasFigure', '_avStateHtml', '_avState', '_avNoticesHtml', 'agentValueNotices', '_avNoticeKinds', '_avNoticeLabel', 'agentValueInternal', 'agentValueUnreviewed', 'agentValueStale', 'agentValueSpecialistWorth', 'invPrimaryDoc', '_invProgressBar', 'invWorkFlags', '_invNeedsValue',
   '_invAssignItemNos', '_jobInvRefs', '_invItemNo', '_invRoomName', '_planRooms', '_invFileId',
   '_invTouch', 'savePhotoRefs', '_warnPhotoStoreFull', '_invDocHead', '_invDocName',
-  '_invPrintThumb', '_invProgressStamp', '_invReviewStats', '_invThumbFor', '_invThumbCache',
+  '_invPrintThumb', '_invProgressStamp', '_invStampIsReviewed', '_invReviewStats', '_invThumbFor', '_invThumbCache',
   '_invThumbKey', 'invFiduciaryMode', 'isDecedentJob', 'svcFamily', '_invGroupItems',
   '_invDispLabel', '_invIsExempt', '_invIsProbateAsset', '_invTrack', '_invHasAppraisal',
   '_jobAppraisers', 'invAppraiserFor', 'resolveValBasis', 'estateValueDate', 'invNeedsAppraisal', 'invAppraisalChosen',
@@ -31,14 +31,14 @@ const FNS = ['scheduleSignLines', '_invDocPartyHead', 'invLineReviewed', 'invLin
   '_importableFromEstimate', '_importedSourceSet', 'photoSubfolder', 'roundCents', 'fmt',
   'scheduleSigners', 'jobFiduciaries', 'jobListEntries',
   // P19: the Disposition Ledger's own card on the desk, where the ledger moved from the More menu.
-  '_renderLedgerCards', '_renderContentsCard', 'ledgerApplies', '_renderLedgerCard', '_renderProceedsCard', '_renderDonationsCard', 'dispositionLedger', 'ledgerSignedCopies',
+  '_renderLedgerCards', '_renderContentsCard', 'ledgerApplies', '_renderLedgerCard', 'signedCopySignersHtml', '_andJoin', '_renderProceedsCard', '_renderDonationsCard', 'dispositionLedger', '_approvalLineOpen', 'invRatificationOwed', 'ledgerSignedCopies', 'ledgerSignState', 'signedCopySignState', 'signedByNames', 'ledgerSigners', 'fiduciaryCapacity', 'samePerson', 'canonPersonName',
   'signedCopyControlHtml', '_localDateOf', 'signedRecordLinksHtml', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsReconciliation',
   'signedRecordsOf', '_reconFlagText', '_ledgerNames', 'donationGroups', 'estateProceedsHolder', '_invRecipient',
   '_ymdLocal', 'invDonationReceipted', '_jobDestLabel', 'photoSharesLine', 'photoSharesOf',
   // 2026-10-22: the signed schedules, beside the ledger in the close-out papers.
   '_renderSignedSchedulesCard', 'signedScheduleRows', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invLineAcceptedOnly', '_invAcceptedStampWords', 'invListReadRefusal', '_invManifestUnread', '_arDupEligible'
 , '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_arPair', '_arPairOpen', 'agentDupCleared', '_agDupEligible', 'agentNamedTwice', '_invListReadHtml', '_invReadKey', 'invListRead', 'agentNoticesOn', 'invDealerNamed', 'invDispGoesToDealer', 'invDealerUnchecked', 'invDealerDirState', 'invFirearmsDealerFirm', 'invFirearmsDealerFirms', 'vendorCats', '_vendorNameKey', '_avStampCounts', 'invTotalFloor', '_invFloorTotalHtml', 'maivOwedLines', '_avStampText'];
-const VARS = [
+const VARS = ['PERSON_NAME_ALIASES', 
   '_agRun', '_avRun', '_arRun', 'AGENT_NOTICE_KINDS', 
   'INV_CONTRACT_DOCS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DECEDENT_SERVICES',
   'SVC_ORDER', 'SVC_LABELS', 'INV_CAT_GLYPH', 'estimateStore', 'INV_APPRAISAL_THRESHOLD',

@@ -804,8 +804,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ['invApprovalMoved', 'invApprovalValueMoved', 'invApprovalTermsOf', 'approvalLineDestKey', '_invTermsMoved', 'invApprovalPaperText', 'approvalRequestMovedIds',
      'approvalRequestTerms', 'approvalRequestPaperTerms', 'invApplyApproval', 'invCorrectApproval', 'invSaveApprovalFix']
       .forEach((n) => eq((SRC.match(new RegExp('\\nfunction ' + n + '\\(', 'g')) || []).length, 1, n + ' is defined once'));
-    eq(callers('invApprovalPaperText'), ['_invExportValue', 'printDispositionLedger', 'probatePackageRecordHtml', 'signoutSheetHtml'],
-      '⚠⚠ every paper that prints an approval asks what it may print: the workbook and CSV, the ledger, the package\'s record, the sign-out sheet');
+    // P12 (2026-10-28): the ledger and the package's record ask it through invAuthorityText, which adds the gap
+    // (ratification owed, signed so far by …; still to sign …) to what the approval may print.
+    eq(callers('invApprovalPaperText'), ['_invExportValue', 'invAuthorityText', 'signoutSheetHtml'],
+      '⚠⚠ every paper that prints an approval asks what it may print: the workbook and CSV, the sign-out sheet, and the ledger\'s cell');
+    eq(callers('invAuthorityText'), ['printDispositionLedger', 'probatePackageRecordHtml'],
+      '⚠⚠ …which the ledger and the package\'s record read');
     eq(callers('invApprovalValueMoved'), ['_invTermsMoved', 'approvalRequestMovedIds'], '⚠ Ask 5\'s rule, read by an approval and by a request (both routes)');
     eq(callers('approvalRequestMovedIds'), ['approvalEnvelopeChanged', 'approvalRequestChanged', 'approvalRequestPaperTerms', 'approvalRequestState', 'invRecordApproval'],
       'the request\'s changed lines: the draft and the sent request, the card\'s state, the envelope, and Record the signed request');

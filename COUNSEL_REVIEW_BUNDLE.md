@@ -34,7 +34,7 @@ rather than researching from nothing.
 | | Blocks | Items |
 |---|---|---|
 | **1** | the first engagement signing: on a **fixed fee**, and since 2026-09-30 on an **hourly** one too (the deposit) | A1, A2, B2 |
-| **2** | the first **trust** matter signing | A5, A6, A10, A14, A15, A16 |
+| **2** | the first **trust** matter signing | A5, A6, A10, A14, A15, A16, D23 |
 | **3** | the first **firearm** encountered on a job | C1, C2, C3, C5, C6, C8 |
 | **4** | the first **706 estate** | D3, D22 |
 | **5** | general — before launch | A3, A4, A7, A8, A9, A11, A12, A13, A17, B1, B3, B4, B5, B6, B7, B8, B9, B10, B11, B12, D1, D2, D4, D5, D6, D7, D8, D9, D10, D11, D12, D13 |
@@ -376,6 +376,14 @@ Close-Out asks for *"Sign-off on the Disposition Ledger, the final record of whe
 
 **The question.** The §7.1 sentence is meant as a delivery-and-signature expectation, not a condition of payment. Does it
 read that way, and does the sign-off avoid reading as an accounting (A6)?
+
+**Changed 2026-10-28 (P12; Anthony, Ask 12).** The sign-off now reads *"Reviewed and approved as the record to date of the
+disposition of the property listed above."* while the page's review stamp reads IN PROGRESS, and *"… as the final record of
+the disposition …"* only once every flagged line has been checked and the list read (the stamp's REVIEWED). The living
+Contents Record follows the same rule: *"Reviewed and accepted as the record to date of what stayed and what left the
+property, and where each item went."*, then *"… as the final record of …"* (it read *"as the record of"* in either state).
+A signature on a page still IN PROGRESS is therefore an approval of the record to date. See D23 for the ratification
+sentence the ledger now carries above it.
 
 ### A14. The client estimate (Exhibit A) on a trust or a Neither matter ⚠ NEW 2026-10-03 · PRIORITY 2
 
@@ -1499,6 +1507,39 @@ The class table counts articles (twelve goblets on one line are twelve), not lin
 **Questions for counsel.** (1) Is reading the requirement as attaching to every article in the class, once the class passes $3,000, the operative reading of §20.2031-6(b) ("articles … having marked artistic or intrinsic value of a total value in excess of $3,000")? Or does it reach only the articles that make up the excess, or only those over some per-article figure? (2) Is "already over … whatever the remaining N are worth" a safe sentence to hand the attorney preparing the return when some articles are unvalued? (3) Is reading an unreviewed estimate at the top of its range the right direction for a sentence that may conclude "does not require"? (4) Does a waiver logged on the desk for one article (counsel's or the representative's decision) properly take it off the "owed" list, given that the regulation's requirement is the class's? (5) Where the aggregate is passed only if a possible double count is two articles, is it right to say the test waits on Havellin's decision, and name no article as owed, rather than to read the higher figure as the safer one?
 
 **Also for counsel, from P7's review (2026-10-27; drafted, not reviewed).** The Estate Inventory Report lists exempt property with the property carved out of the probate estate (its heading, *"Exempt, Non-probate Property — carved out of the probate estate"*, is the desk audit's DOC-02, to be rebuilt), while its subtotals count exempt property in the probate estate as the Court Inventory does. Until DOC-02 is built, a sentence under the totals reads: *"Exempt property is counted in the probate estate: it is listed above with the carved-out property and claimed under §732.402, not excluded from the estate (#2 Sofa)."* The outside subtotal is named by its tracks: *"Non-probate property, outside the probate estate (Fair Market Value): $14,000."* Question: are both sentences right in a package the estate attorney receives, and what should the carved-out block's heading say?
+
+### D23. The Disposition Ledger's signature ratifies a release made before every written approval ⚠ NEW P12 (2026-10-28) · PRIORITY 2
+
+**What the app now does (drafted, not reviewed; Anthony, Ask 13: "print the gap, and the representatives' signature on the
+ledger at close ratifies it").** Every item leaving an estate needs the written approval of every fiduciary (the
+representative and each co-representative). Where one left before that approval was complete (recorded as gone: a date of
+disposition, a released custody event or a filed receipt), the app has, since P20, listed it on the next release request
+*for ratification* and never undone it. The Disposition Ledger, which each fiduciary signs once at close, said nothing of it:
+such a line read *Authorized by —*. Since 2026-10-28:
+
+1. **The line says so.** *Authorized by* reads *"ratification owed"*, and where some fiduciaries signed and others did not,
+   *"ratification owed — signed so far by Thomas Ashworth (Oct 21, 2026); still to sign: Nora Ashworth"*. A line still in the
+   house that some have signed reads *"signed so far by …; still to sign: …"*.
+2. **The gap is named above the table:** *"1 item left the property before its written approval was complete (ratification
+   owed): #2 Pair of brass table lamps."*, and *"3 items leaving the property do not yet have the written approval of every
+   signer below: …"*. The estate package's *Release Approvals and Chain of Custody* record lists the same lines in the same
+   words.
+3. **A sentence above the sign-off**, printed only where a line owes a ratification, and naming every such item by number:
+   - several fiduciaries: *"By signing below, each signer also ratifies the release of the item marked ratification owed
+     above (#2), which left the property before every signer's written approval was recorded."* (*"the 3 items"* for more);
+   - one: *"By signing below, the Personal Representative also ratifies the release of the item marked ratification owed
+     above (#2), which left the property before their written approval was recorded."* (the role as recorded).
+
+No separate envelope or send is added for it: the next release request already carries such lines for ratification, and the
+ledger, signed at close, is the backstop. The app does **not** yet treat a fiduciary's signature on the ledger as their
+recorded approval of those lines (the desk and the next request still say *ratification owed*); that waits for Anthony.
+
+**Questions for counsel.** (1) Does a signature under that sentence ratify the release of each item it names, for a
+co-representative who had not approved it in writing, under Florida law (and §733.615 where co-representatives must act
+together)? (2) Is "before every signer's written approval was recorded" accurate where a fiduciary may have approved orally
+and Havellin does not accept oral approval as authority? (3) Should the sentence say what ratification does (approves the
+release as though authorised before it happened), or is the word enough? (4) On a trust (co-trustees under §736.0703), the
+same sentence prints over the trustees' signatures: does it read correctly there?
 
 ## E. What is deliberately NOT being asked
 

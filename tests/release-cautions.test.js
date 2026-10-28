@@ -18,7 +18,7 @@
 
 const { sandbox, source, fn } = require('./harness');
 
-const FNS = ['invLineReviewed', 'invLineOpen', '_invDocPartyHead', 'invOwnInitial', 'invInitialGroupKey', 'estateDirectionWords', '_invDocName', 'printApprovalRequest', 'invApprovalMoved', 'invApprovalSetAside', 'invApprovalPrevWords', 'approvalRequestTerms', '_approvalHash', 'approvalLineDestKey', 'invApprovalTermsOf', '_approvalLineOpen', 'invApprovalMovedText', 'invDispDocWord', 'printDispositionLedger', 'invApprovalPaperText', 'invApprovalTermsWords', 'referralFeeVendorsNote', 'vendorPaysReferral', '_vendorByName', '_vendorNameKey', '_andJoin', '_invBulkApply', '_invStampBy', 'deviceUser', 'invFillPlanChannel', 'invPlanChannel', 'invNoteDispositionMove', 'invReleaseRecipientNamed',
+const FNS = ['invLineReviewed', 'invLineOpen', '_invDocPartyHead', 'invOwnInitial', 'invInitialGroupKey', 'estateDirectionWords', '_invDocName', 'printApprovalRequest', 'invApprovalMoved', 'invApprovalSetAside', 'invApprovalPrevWords', 'approvalRequestTerms', '_approvalHash', 'approvalLineDestKey', 'invApprovalTermsOf', '_approvalLineOpen', 'invApprovalMovedText', 'invDispDocWord', 'printDispositionLedger', 'invStampReviewed', '_invStampIsReviewed', '_ledgerApproverWords', 'invAuthorityText', 'invApprovalMissing', 'invApprovalNames', 'invApprovalPaperText', 'invApprovalTermsWords', 'referralFeeVendorsNote', 'vendorPaysReferral', '_vendorByName', '_vendorNameKey', '_andJoin', '_invBulkApply', '_invStampBy', 'deviceUser', 'invFillPlanChannel', 'invPlanChannel', 'invNoteDispositionMove', 'invReleaseRecipientNamed',
              'invReleaseCautions', '_invCautionBadges', '_invCautionNotices', '_invNamed',
              '_invItemNo', '_invAwaitingApproval', 'invWrittenReleaseNeeded', '_jobInvRefs', '_invAssignItemNos',
              '_invTouch', '_invPrintThumb', '_invFileId', '_invRoomName', '_invMoney',
@@ -39,7 +39,7 @@ const FNS = ['invLineReviewed', 'invLineOpen', '_invDocPartyHead', 'invOwnInitia
              'jobFiduciaries', '_andJoin', 'invPropertyNoun', 'estateProceedsHolder', 'matterDef', 'matterTypeOf',
              'invHavellinRecipient',
              // P19: the Disposition Ledger reads its figures, its gaps and its signers through these.
-             'dispositionLedger', '_invRecipient', '_ledgerReceiptCell', '_ledgerNames', '_reconFlagText', 'ledgerSigners',
+             'dispositionLedger', '_invRecipient', '_ledgerReceiptCell', '_ledgerNames', '_reconFlagText', 'ledgerSigners', 'fiduciaryCapacity',
              '_invProgressStamp', '_invReviewStats', 'jobTakesProceedsStatements', 'proceedsReconciliation',
              '_jobDestLabel', '_agrApprover', 'signedRecordsOf',
              // P20: the request lists what left before every fiduciary approved apart, and prints who signed readably.

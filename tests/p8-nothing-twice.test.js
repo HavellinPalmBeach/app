@@ -95,7 +95,7 @@ const ELLISON = () => [
 
 // ─── The papers: the trust-schedule test's lifts, with the double counts ───
 const PAPER_FNS = ['invLineReviewed', 'invLineOpen', '_invDocPartyHead', 'invConditionText',
-  'printTrustSchedule', 'printCourtInventory', '_avUnreviewedStamp', 'printEstateInventoryReport', 'jobOnProbateTrack', '_invScheduleSection', 'invValBasisWord',
+  'printTrustSchedule', 'printCourtInventory', 'scheduleDraftState', 'fiduciaryCapacity', '_avUnreviewedStamp', 'printEstateInventoryReport', 'jobOnProbateTrack', '_invScheduleSection', 'invValBasisWord',
   '_invTrack', '_invTrackDefault', '_invOnTrustSchedule', '_invOnProbateSchedule',
   '_invIsExempt', '_invIsProbateAsset', '_invExcludedTracks', '_invHasValue',
   'invDocContractBlock', 'docTierProduces', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror',
@@ -106,7 +106,7 @@ const PAPER_FNS = ['invLineReviewed', 'invLineOpen', '_invDocPartyHead', 'invCon
   'invNeedsAppraisal', 'invIsIntrinsic', 'invCatMeta', 'invAppraisalThreshold',
   '_invHasAppraisal', '_jobAppraisers', 'resolveValBasis', 'estateValueDate', '_invMoney',
   '_invDocName', '_invItemNo', '_invGroupItems', 'invIsFirearm', '_invDispLabel', '_invRoomName', '_planRooms',
-  '_invProgressStamp',
+  '_invProgressStamp', '_invStampIsReviewed',
   '_invReviewStats', '_invDocHead', 'invAppraiserFor', '_invFileId', '_invNeedsValue',
   'weArrangeAppraisals', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', 'jobAppraisalDuty', 'approvedEstimateFor', 'estimateDocScope', 'docScopeDef', '_agrOtherAppraisalsBy',
   'roundCents', 'fmt', 'trustInstrumentTitle', 'scheduleSigners', 'scheduleSignLines', 'jobFiduciaries', 'jobListEntries',
@@ -650,7 +650,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(Array.isArray(gaps2) && !gaps2.some((x) => /double count/.test(x)), '…and nothing once it is answered');
     has(live(fn('probatePackageGaps')), 'invDoubleCounts(job, ', 'the package reads the one rule');
     // The read decides nothing on either schedule (Q109), and nothing is merged.
-    ['printCourtInventory', 'printTrustSchedule', 'printEstateInventoryReport'].forEach((p) => has(live(fn(p)), 'invDoubleCounts(job, ', p + ' reads the one rule'));
+    // RESTATED 2026-10-28 (P12): the two schedules read it through the one answer of why a schedule is DRAFT (scheduleDraftState).
+    ['scheduleDraftState', 'printEstateInventoryReport'].forEach((p) => has(live(fn(p)), 'invDoubleCounts(job, ', p + ' reads the one rule'));
+    ['printCourtInventory', 'printTrustSchedule'].forEach((p) => has(live(fn(p)), 'scheduleDraftState(job, ', p + ' reads it there'));
     lacks(live(fn('invDoubleCounts')), 'deletedAt', 'the rule never removes a line');
   }
 

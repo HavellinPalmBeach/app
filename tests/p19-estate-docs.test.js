@@ -87,7 +87,7 @@ const phaseText = (P) => JSON.stringify(P);
 
 // ── The two schedules: the Trust Schedule suite's lift list, the real date formatter, and the signers.
 const SCH_FNS = ['invIsFirearm', '_invLineHolds', 'invConditionText', 'invAcceptCtx', 'agentDuplicateGroups', '_arPair', '_arPairOpen', 'agentDupCleared', '_agDupEligible', 'agentNamedTwice', 
-  '_invDocPartyHead', 'printTrustSchedule', 'printCourtInventory', '_avUnreviewedStamp', 'agentValueUnreviewed', '_invScheduleSection', 'invValBasisWord', 'invLineAppraiser', '_invLinkedAppraiser', '_apprLabel', '_invTrack', '_invTrackDefault', '_invOnTrustSchedule',
+  '_invDocPartyHead', 'printTrustSchedule', 'printCourtInventory', 'scheduleDraftState', 'fiduciaryCapacity', '_avUnreviewedStamp', 'agentValueUnreviewed', '_invScheduleSection', 'invValBasisWord', 'invLineAppraiser', '_invLinkedAppraiser', '_apprLabel', '_invTrack', '_invTrackDefault', '_invOnTrustSchedule',
   '_invOnProbateSchedule', '_invIsExempt', '_invIsProbateAsset', '_invExcludedTracks', '_invHasValue', 'invDocContractBlock',
   'docTierProduces', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'matterDef', 'matterTypeOf',
   'invProbateRows', 'invFiduciaryMode', 'isDecedentJob', '_invAssignItemNos', '_jobInvRefs', '_invTouch', 'savePhotoRefs',
@@ -488,18 +488,21 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const OLD = '<div style="margin-top:18px;font-size:11px;">Received for the trust&rsquo;s records by: __________________________________ &nbsp; Date: ____________<br><span style="color:#888;">Successor Trustee</span></div>';
     // RESTATED (2026-10-10, the core-jobs run): the one recorded trustee is named on the line too; the blank line is for nobody recorded.
     lacks(h, OLD, 'no co-trustee: the line is no longer blank');
-    has(h, 'Received for the trust&rsquo;s records by: __________________________________ &nbsp; Date: ____________<br><span style="color:#888;">Ruth Adler &middot; Successor Trustee</span>', '…it names the trustee');
+    // RESTATED 2026-10-28 (P12, DOC-13): each signer in their own recorded role where it is a capacity for the paper (a trustee's on
+    // the Trust Schedule); the fixture records Ruth as Trustee, so she receives it as one, never as a fixed "Successor Trustee".
+    has(h, 'Received for the trust&rsquo;s records by: __________________________________ &nbsp; Date: ____________<br><span style="color:#888;">Ruth Adler &middot; Trustee</span>', '…it names the trustee, in her recorded role');
     eq(count(h, 'Received for the trust&rsquo;s records by'), 1, 'and only one');
     // Co-trustees: a line apiece, named.
     const co = sched('trust', JOB('trust', Object.assign({ coFiduciaries: CO2 }, TRUST)), items());
     eq(count(co, 'Received for the trust&rsquo;s records by'), 3, '⚠⚠ three trustees recorded: three lines');
-    ['Ruth Adler', 'Daniel Adler', 'Eve Adler'].forEach((n) => has(co, '<span style="color:#888;">' + n + ' &middot; Successor Trustee</span>', 'each named under their line: ' + n));
+    ['Ruth Adler', 'Daniel Adler', 'Eve Adler'].forEach((n) => has(co, '<span style="color:#888;">' + n + ' &middot; Trustee</span>', 'each named under their line, in their recorded role: ' + n));
     lacks(co, OLD, 'and no anonymous line beside them');
     ok(co.indexOf('Ruth Adler &middot;') < co.indexOf('Daniel Adler &middot;'), 'the representative first');
     // On a trust-only matter every fiduciary is a trustee, whatever role the record happens to carry.
     const anyRole = sched('trust', JOB('trust', { executorRole: 'Family Member', coFiduciaries: [{ id: 'c1', name: 'Daniel Adler', role: '' }] }), items());
     eq(count(anyRole, 'Received for the trust&rsquo;s records by'), 2, '⚠ trust-only: the representative and a co-trustee recorded with no trustee role both receive it');
-    has(anyRole, 'Ruth Adler &middot; Successor Trustee', 'each as a successor trustee');
+    has(anyRole, 'Ruth Adler &middot; Successor Trustee', 'each as a successor trustee (Family Member is no capacity on this paper: its own word)');
+    has(anyRole, 'Daniel Adler &middot; Successor Trustee', '…and a co-trustee with no role recorded likewise');
     // Both: only those whose recorded role names a trustee receive the trust's schedule.
     const bothItems = () => [IT('i1', { assetTrack: 'Trust' })];
     const mixed = sched('trust', JOB('both', { executorRole: 'Personal Representative', coFiduciaries: [{ id: 'c1', name: 'Tess Trustee', role: 'Trustee' }] }), bothItems());
@@ -512,7 +515,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const draft = sched('trust', JOB('trust', { coFiduciaries: CO2 }), [IT('i1', { assetTrack: 'Trust', fmv: '' })]);
     eq(count(draft, 'Received for the trust&rsquo;s records by'), 0, 'a draft (an unvalued line) withholds the lines, co-trustees or not');
     const xss = sched('trust', JOB('trust', { coFiduciaries: [{ id: 'c1', name: '<b>Eve</b>', role: 'Trustee' }] }), items());
-    has(xss, '&lt;b&gt;Eve&lt;/b&gt; &middot; Successor Trustee', '⚠ a co-trustee\'s typed name is escaped');
+    has(xss, '&lt;b&gt;Eve&lt;/b&gt; &middot; Trustee', '⚠ a co-trustee\'s typed name is escaped');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════════════════════════
@@ -524,12 +527,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(one.indexOf('#357a50') > 0, 'fixture: a FINAL court schedule');
     // RESTATED (2026-10-10): the one recorded representative is named on the adoption line too.
     lacks(one, OLD, 'one personal representative: the line is no longer blank');
-    has(one, 'Reviewed and adopted by: __________________________________ &nbsp; Date: ____________<br><span style="color:#888;">Ruth Adler &middot; Personal Representative / authorized fiduciary</span>', '…it names the representative');
+    // RESTATED 2026-10-28 (P12, DOC-13): in her recorded role, a personal representative's being a capacity on the Court Inventory.
+    has(one, 'Reviewed and adopted by: __________________________________ &nbsp; Date: ____________<br><span style="color:#888;">Ruth Adler &middot; Personal Representative</span>', '…it names the representative, in her recorded role');
+    has(sched('court', JOB('probate', { executorRole: 'Family Member' }), items()), 'Ruth Adler &middot; Personal Representative / authorized fiduciary</span>', '⚠ a role that is no capacity on the paper (Family Member): the paper\'s own word');
     eq(sched('court', JOB(''), items()), one, '⚠ an unanswered matter renders the court schedule exactly as probate');
     const COPR = [{ id: 'c1', name: 'Paul Adler', role: 'Personal Representative' }];
     const two = sched('court', JOB('probate', { coFiduciaries: COPR }), items());
     eq(count(two, 'Reviewed and adopted by'), 2, '⚠⚠ a co-personal representative recorded: two adoption lines');
-    ['Ruth Adler', 'Paul Adler'].forEach((n) => has(two, '<span style="color:#888;">' + n + ' &middot; Personal Representative / authorized fiduciary</span>', 'each named: ' + n));
+    ['Ruth Adler', 'Paul Adler'].forEach((n) => has(two, '<span style="color:#888;">' + n + ' &middot; Personal Representative</span>', 'each named, in their recorded role: ' + n));
     lacks(two, OLD, 'and no anonymous line beside them');
     eq(count(sched('court', JOB('', { coFiduciaries: COPR }), items()), 'Reviewed and adopted by'), 2, 'an unanswered matter with a co-representative: two lines too');
     // Both: a co-trustee does not adopt the estate's inventory.
@@ -553,7 +558,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // RESTATED (2026-10-10): the Trust Schedule asks the title a third time, to print its own trust line only where the head does not already carry it.
     eq(readers('trustInstrumentTitle'), { _agrTrusteeRepresentation: 1, docPartyIdent: 1, invReceiptFrom: 1, printTrustSchedule: 3, probateAgreementHtml: 2 },  // P22 E: §5.1's dated acceptance
        'the trust\'s namer: the agreement\'s two rows, the schedule\'s header and the client estimate\'s identity line');
-    eq(readers('scheduleSigners'), { printCourtInventory: 2, printTrustSchedule: 2 }, 'who signs a schedule: the two schedules');
+    // P12 (2026-10-28): the signed schedules' card asks who signs, to name who has signed the copies filed.
+    eq(readers('scheduleSigners'), { printCourtInventory: 2, printTrustSchedule: 2, signedScheduleRows: 1 }, 'who signs a schedule: the two schedules, and the signed schedules\' card');
     eq(readers('scheduleSignLines'), { printCourtInventory: 1, printTrustSchedule: 1 }, 'and their lines');
     eq(readers('_agrCounsel'), { _agrScopeServices: 1, probateAgreementHtml: 2 }, 'counsel\'s names: §1.2, §2 and §2.1');
     eq(readers('_agrClientCapacity'), { agreementIpadSigners: 1, probateAgreementHtml: 2 }, 'the Client\'s capacity: §6.3 and the signature page, and the iPad dialog\'s client row (P29)');

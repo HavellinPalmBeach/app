@@ -284,6 +284,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(c.invRecordedGone(lines[1], job), false, 'and invRecordedGone agrees');
     ok(c.invOutForAppraisal(lines[1], job), 'out');
     has(text(c._renderInvRow(job, lines[1], {})), '⚖ with Mary Whalen since Oct 18, 2026', '⚠⚠ the row says where it is');
+    // P12 (2026-10-28): the close's question is the one list of what is open (closeReadiness), asked of an inventory this device
+    // has read; this one entry is the hand-off's.
+    c._invCloudSeen = { 7: true };
     has(c.closeOpenWorkFlag(job), '1 line is still out with an appraiser (#6 with Mary Whalen)', 'the close question names it');
     has(text(c._renderInvReleasesCard(job, lines)), 'Mary Whalen · back from appraisal · 1 line (#6) Check 1 back in from Mary Whalen', 'the card offers the return');
     c.openSignoutDialog(7, 'appraisal_back', 'Mary Whalen'); ticks(c, ['f']);
@@ -291,7 +294,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(c.__log.filed[2].kind, 'appraisal_back', 'filed as the return');
     eq(c.custodyEvents(lines[1]).map((e) => e.action), ['Transferred', 'Returned'], 'and a Returned event');
     eq(c.invOutForAppraisal(lines[1], job), null, 'back');
-    eq(c.closeOpenWorkFlag(job), '', 'nothing out');
+    lacks(c.closeOpenWorkFlag(job), 'still out with an appraiser', 'nothing out');
     // A void takes the events off with the paper.
     c.voidSignedRecord(7, 'sr3');
     eq(c.custodyEvents(lines[1]).map((e) => e.action), ['Transferred'], '⚠⚠ voiding the return tombstones its event');
@@ -306,7 +309,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(noComments(fn('fileSignedCopy')), 'glass: !!meta.glass', 'the filer records a signature on the glass');
     has(noComments(fn('voidSignedRecord')), "rec.kind === 'pickup' || rec.kind === 'appraisal_out' || rec.kind === 'appraisal_back'", 'a void of any of the three takes its custody events');
     eq(readers('_signoutRecordCustody'), ['_signoutAfterFile', 'pickupRecordCustody'], 'the one custody writer: the dialog and P22\'s vendor call');
-    eq(readers('invOutForAppraisal'), ['_renderInvRow', 'closeOpenWorkFlag', 'deskFoldState', 'printAppraisalWorklist', 'signoutCovered', 'signoutGroups'],
+    // RESTATED 2026-10-28 (P12): the close asks through the one list of what it leaves open (closeReadiness).
+    eq(readers('invOutForAppraisal'), ['_renderInvRow', 'closeReadiness', 'deskFoldState', 'printAppraisalWorklist', 'signoutCovered', 'signoutGroups'],
       'who asks whether a line is out: the row, the close, the Values bar\'s line (2026-10-22), the worklist, the groups');
     lacks(noComments(fn('invRecordedGone')), 'appraisal', '⚠⚠ gone never reads the appraiser\'s papers');
     has(noComments(fn('signoutLineKind')), 'invIsFirearm(ref)) return \'\'', 'firearms are refused at the one gate');

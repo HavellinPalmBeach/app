@@ -1626,13 +1626,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(live(fn('invLineAccepted')), 'return !invLineHold(ref, fc);', 'invLineAccepted is the reason\'s negation, nothing of its own');
     eq(callersOf('invLineAcceptedOnly'), ['_avStampCounts', '_invRevBoxHtml', '_invReviewStats'], 'the accepted count\'s readers');
     // RESTATED (P7): the §20.2031-6(b) aggregate carries the stamp's words where an agent figure is among its articles, so it asks the context.
-    eq(callersOf('invAcceptCtx'), ['_invAcceptCtxOf', '_invBulkApply', 'maivAggregate', 'printContentsList', 'printContentsRecord', 'printCourtInventory', 'printDispositionLedger',
-      'printEstateInventoryReport', 'printTrustSchedule', 'probatePackageGaps'], '⚠ invAcceptCtx\'s: the desk\'s context, Mark reviewed, the §20.2031-6(b) aggregate, the six printers and the package\'s gaps');
-    eq(calls('invAcceptCtx'), 11, '…and nothing else (the definition and ten calls)');
+    // P12 (2026-10-28): the close's list asks it too, for the lines standing as the agents left them (the list's read).
+    eq(callersOf('invAcceptCtx'), ['_invAcceptCtxOf', '_invBulkApply', 'closeReadiness', 'maivAggregate', 'printContentsList', 'printContentsRecord', 'printCourtInventory', 'printDispositionLedger',
+      'printEstateInventoryReport', 'printTrustSchedule', 'probatePackageGaps'], '⚠ invAcceptCtx\'s: the desk\'s context, Mark reviewed, the close\'s list, the §20.2031-6(b) aggregate, the six printers and the package\'s gaps');
+    eq(calls('invAcceptCtx'), 12, '…and nothing else (the definition and eleven calls)');
     eq(callersOf('_invAcceptCtxOf'), ['_invEdit', '_invGroupItems', '_invReadLineRepaint', '_invRevBoxHtml', '_renderInvRow', '_renderInvWorkbar'], 'the desk\'s context: its readers');
     has(live(decl('INV_WORK_FLAGS')), 'return !invLineReviewed(r, _invAcceptCtxOf(job));', '…and the Not reviewed chip');
     ['printContentsList', 'printEstateInventoryReport', 'printCourtInventory', 'printTrustSchedule', 'printDispositionLedger', 'printContentsRecord']
-      .forEach((p) => ok(/fc: (invAcceptCtx\(job\)|_ac\b)/.test(live(fn(p))), p + ' hands its stamps the facts'));
+      // RESTATED 2026-10-28 (P12): the ledger and the Contents Record read the context once (`_fc`), their sign-off asking the same stamp.
+      .forEach((p) => ok(/fc: (invAcceptCtx\(job\)|_ac\b|_fc\b)/.test(live(fn(p))), p + ' hands its stamps the facts'));
     eq(callersOf('_invPhotoNoteOpen'), ['_invLineHolds'], 'the photograph\'s note: the rule alone');
     has(live(fn('_invPhotoNoteOpen')), 'fc.byId[ref.derivedFrom]', '…reading the facts\' lines by id first');
     // Restated on the merge of main (2026-10-26): agentNoticeLoud is gone. Main's agentNoticesOn carries every note of a removed
@@ -1678,7 +1680,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // RESTATED (P7, 2026-10-27): the §20.2031-6(b) sentence carries the pill's words in text (_avStampText; p7-evidence.test.js holds
     // the two equal), so it reads the list's read too; and (P7's review) the worklist asks whether its figures are still nobody's look
     // (_avStampUnread), so a list read is never said to be unread.
-    eq(callersOf('invListRead'), ['_avAcceptedPill', '_avStampText', '_avStampUnread', '_invListReadHtml', '_invProgressStamp', '_invReadKey', '_renderInvWorkbar', 'probatePackageGaps'],
+    // P12 (2026-10-28): the close's list names an unread list, and the sign-off's words ask the stamp's answer (invStampReviewed).
+    eq(callersOf('invListRead'), ['_avAcceptedPill', '_avStampText', '_avStampUnread', '_invListReadHtml', '_invProgressStamp', '_invReadKey', '_renderInvWorkbar', 'closeReadiness', 'invStampReviewed', 'probatePackageGaps'],
       '⚠ invListRead: the stamp, the pill and its words in text, whether the figures are still unread, the work bar\'s line, its key and its sentence, and the package\'s gaps');
     eq(callersOf('invListReadRefusal'), ['_invListReadHtml', '_invReadKey', 'invMarkListRead'], 'the refusal: the press, its line and its key');
     eq(callersOf('invListReadWords'), ['_avAcceptedPill', '_avStampText', '_invListReadHtml', '_invProgressStamp'], 'the read\'s words: the pill (and its words in text), the line and the stamp');

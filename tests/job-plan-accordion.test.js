@@ -129,7 +129,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // standing between it and an infinite loop is `changed` being honest.
     // P24: the one other trigger is the walkthrough's collections joining the inventory, which collectionLinesEnsure
     // does once (inventory.test.js drives "a second call makes nothing"), so the pass after it is a no-op too.
-    has(fnBody('loadJobPlanTab'), 'refreshPhotoRefs(jobId, function(changed){ if (collectionLinesEnsure(jobId) || changed) loadJobPlanTab(); });',
+    // RESTATED 2026-10-28 (P12): a read that moved nothing repaints the Close-out card's list by id instead (_closeReadyRepaint).
+    has(fnBody('loadJobPlanTab'), 'refreshPhotoRefs(jobId, function(changed){ if (collectionLinesEnsure(jobId) || changed) loadJobPlanTab(); else if (typeof _closeReadyRepaint === \'function\') _closeReadyRepaint(jobId); });',
         'loadJobPlanTab still re-renders on a real change, and once when the collections join');
     lacks(fnBody('refreshPhotoRefs'), 'if (cb) cb(true);',
           'and refreshPhotoRefs no longer reports one unconditionally');

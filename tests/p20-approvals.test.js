@@ -278,7 +278,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const P = desk(['probatePackageRecordHtml'], TRUST(), lines());
     const pr = attempt(() => text(P.probatePackageRecordHtml(7)));
     has(pr.ok ? pr.val : 'threw: ' + pr.err, '3 Lamp Donate Goodwill Ruth Adler (Oct 1, 2026); Daniel Adler (Oct 8, 2026)', '⚠ the package\'s record, readably');
-    has(pr.val, 'Ruth Adler (Oct 1, 2026); Sam Adler (Oct 3, 2026) Not complete: no approval recorded from Daniel Adler', 'marked where it is not complete');
+    // RESTATED 2026-10-28 (P12, DOC-11): the record's Approved by reads as the ledger's Authorized by (invAuthorityText).
+    has(pr.val, 'signed so far by Ruth Adler (Oct 1, 2026); Sam Adler (Oct 3, 2026); still to sign: Daniel Adler', 'marked where it is not complete, naming who is still to sign');
     ok(!ISO_IN_BRACKETS.test(pr.val || ''), 'and no raw ISO date');
     // The client's workbook (and the CSV built off it).
     const B = desk(['buildInventoryPayload', 'buildInventoryCSV'], TRUST(), lines());
@@ -539,8 +540,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // P25 (Q43): the Collection Partners' *Released, with its receipt on record* line reads it of the collection's lines.
     // ⚠ restated 2026-10-22: the desk's Closing bar asks it too (a donated or sold line gone with its paper owed), for its shut line.
     // P4 (2026-10-27): a firearm recorded as gone owes its dealer's receipt (invDealerReleased).
-    eq(callers('invRecordedGone'), ['collectionPartnerLines', 'deskFoldState', 'invDealerReleased', 'invRatificationOwed', 'invReleasedToPerson'], '⚠ recorded as gone: one definition, five readers');
-    eq(callers('invRatificationOwed'), ['_approvalLineRequestable', '_renderInvReleasesCard', '_renderInvRow', 'deskFoldState', 'planDerivedLines', 'printApprovalRequest'],
+    // P12 (2026-10-28, LIV-21): the ledger and the Contents Record say "left" only for a line recorded as gone.
+    eq(callers('invRecordedGone'), ['collectionPartnerLines', 'deskFoldState', 'dispositionLedger', 'dispositionRecord', 'invDealerReleased', 'invRatificationOwed', 'invReleasedToPerson'], '⚠ recorded as gone: one definition, seven readers');
+    // P12 (2026-10-28): the close's list, the ledger's gap and Authorized by, and the package's record read it too (DOC-11, REL-08).
+    eq(callers('invRatificationOwed'), ['_approvalLineRequestable', '_renderInvReleasesCard', '_renderInvRow', 'closeReadiness', 'deskFoldState', 'dispositionLedger', 'invAuthorityText', 'planDerivedLines', 'printApprovalRequest', 'probatePackageRecordHtml'],
        '⚠⚠ left before every fiduciary approved: the request, the desk row, the desk\'s approvals list, the Releases bar\'s line (2026-10-22), the Job Plan, and what the request may carry (2026-10-26: a line held for want of a taker is never one already gone)');
     // P25 (Q44): and the one writer that names a line's recipient from the confirmed vendor of its kind asks it before writing.
     eq(callers('invStaffRefused'), ['_invBulkApply', '_invEdit', 'invFillPlanChannel'], 'the estate\'s refusal: every handler that writes a channel or a disposition');
@@ -551,10 +554,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Every surface that prints who signed reads the one readable form.
     // RESTATED 2026-10-27 (P5): the papers (the ledger, the package's record, the workbook, the sign-out sheet) read it through
     // invApprovalPaperText, which prints an approval only where it still covers the line; Correct… shows it as recorded.
-    eq(callers('invApprovalSignedText'), ['_invApprovalReadHtml', 'invApprovalBoxText', 'invApprovalGap', 'invApprovalPaperText', 'invCorrectApproval', 'printApprovalRequest'],
+    // P12 (2026-10-28): the ledger's and the package's Authorized by (invAuthorityText) print who has signed so far beside who is still to.
+    eq(callers('invApprovalSignedText'), ['_invApprovalReadHtml', 'invApprovalBoxText', 'invApprovalGap', 'invApprovalPaperText', 'invAuthorityText', 'invCorrectApproval', 'printApprovalRequest'],
        '⚠ the request, the flag, the panel, Correct…, and every paper through the one that asks what it may print');
-    eq(callers('invApprovalPaperText'), ['_invExportValue', 'printDispositionLedger', 'probatePackageRecordHtml', 'signoutSheetHtml'],
-       '⚠ the ledger, the package\'s record, the workbook, and the sign-out sheet (P28)');
+    // RESTATED 2026-10-28 (P12): the ledger and the package's record ask it through invAuthorityText.
+    eq(callers('invApprovalPaperText'), ['_invExportValue', 'invAuthorityText', 'signoutSheetHtml'],
+       '⚠ the workbook, the sign-out sheet (P28), and the ledger\'s and the package\'s cell');
+    eq(callers('invAuthorityText'), ['printDispositionLedger', 'probatePackageRecordHtml'], '…which the ledger and the package\'s record read');
     ['printApprovalRequest', 'printDispositionLedger', 'probatePackageRecordHtml', '_invExportValue', 'invApprovalGap'].forEach((n) =>
       ok(!/esc\(r\.authBy|String\(r\.authBy\)|String\(ref\.authBy\)\.trim\(\) \+ ', '/.test(noComments(fn(n))), n + ' never prints the stored field'));
     // The dialog's note and the save's confirmation say one sentence.
