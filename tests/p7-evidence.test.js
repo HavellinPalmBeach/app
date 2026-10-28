@@ -290,7 +290,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(((GS.match(/var BACKEND_VERSION = '([^']+)';/) || [])[1] || '') >= '2026-10-27e', 'main-sync.gs is 2026-10-27e or later, carrying 2026-10-27d');
     const B = sandbox({ vars: ['BACKEND_MIN_VERSION', 'BACKEND_FEATURE_COST'] });
     ok(B.BACKEND_MIN_VERSION >= '2026-10-27e', 'the app relies on it');
-    ok(/^a figure Agent Two researched can carry a basis sentence citing sales nobody could find/.test(B.BACKEND_FEATURE_COST.version), '⚠ the stale banner names it first');
+    // RESTATED 2026-10-28 (the cell-cap probe's backend, which carries this one): a newer gap leads the banner, and this one follows
+    // under its own vintage, every clause before it newer.
+    const _v7 = B.BACKEND_FEATURE_COST.version, _at7 = _v7.indexOf('on a deployment older than 2026-10-27e, a figure Agent Two researched can carry a basis sentence citing sales nobody could find');
+    const _newer7 = (_v7.slice(0, Math.max(0, _at7)).match(/on a deployment older than (\d{4}-\d{2}-\d{2}[a-z]?),/g) || []).map((x) => x.replace(/^on a deployment older than /, '').replace(/,$/, ''));
+    ok(/^a figure Agent Two researched can carry a basis sentence citing sales nobody could find/.test(_v7) || (_at7 > 0 && _newer7.length > 0 && _newer7.every((x) => x > '2026-10-27e')),
+      '⚠ the stale banner names it first, or first after the newer gaps (' + _newer7.join(', ') + ')');
     has(B.BACKEND_FEATURE_COST.version, '; on a deployment older than 2026-10-27d, a release approval recorded on one device', '…then 2026-10-27d\'s gap, by its vintage');
   }
 
