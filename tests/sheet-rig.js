@@ -25,7 +25,8 @@
 //     was, DE empties it, the rest of the queue is dropped, and the error is raised by whatever applied it (flush(), the read, or
 //     the end of the request, where it goes to srv.lateErr: the answer stays what doPost returned, or an error page with
 //     opt.end 'html', since whether the web app still delivers that answer is not known);
-//   · srv.failNext(name) and srv.failClear(name) fail a write when it is applied (a timeout at commit), not at the call;
+//   · srv.failNext(name), srv.failClear(name) and srv.failDelete(name) fail a setValues, a clear or a row deletion when it is
+//     applied (a timeout at commit), not at the call;
 //   · another execution never sees a queue not yet applied: srv.onRelease(fn) runs fn (another request, with its own queue)
 //     inside the next releaseLock, which is where Google's own Lock reference says a flush belongs;
 //   · srv.locks counts the lock acquisitions (waitLock, tryLock) of every execution;
@@ -109,6 +110,12 @@ function fakeSheet(name, header, srv) {
     if (String(cell).length > CELL_MAX) { srv.cellThrows++; if (srv.variant === 'DE') row[j] = ''; throw sheetsError(CELL_ERR); }
     row[j] = put(cell);
   };
+  // A row deletion; srv.failDelete(name) fails it as failNext fails a setValues: when it is applied (D, DE), at the call (A, B).
+  const delRows = (n, k) => {
+    const del = () => { if (srv.failDelete && srv.failDelete(name)) throw sheetsError(TIMEOUT_ERR); rows.splice(n - 1, k); };
+    if (srv.deferred) { srv.write(del); return; }
+    del();
+  };
   return {
     getName: () => name,
     _rows: rows,
@@ -119,8 +126,8 @@ function fakeSheet(name, header, srv) {
       if (srv.deferred) { const cp = r.slice(); srv.write(() => { rows.push([]); const row = rows[rows.length - 1]; cp.forEach((cell, j) => cellD(row, j, cell)); }); return; }
       r.forEach(cap); rows.push(r.slice());
     },
-    deleteRow(n) { if (srv.deferred) { srv.write(() => { rows.splice(n - 1, 1); }); return; } rows.splice(n - 1, 1); },
-    deleteRows(n, k) { if (srv.deferred) { srv.write(() => { rows.splice(n - 1, k); }); return; } rows.splice(n - 1, k); },
+    deleteRow(n) { delRows(n, 1); },
+    deleteRows(n, k) { delRows(n, k); },
     getDataRange() { return { getValues: () => { srv.rf(); return rows.map((r) => r.slice()); } }; },
     getRange(r, c, nr, nc) {
       return {
@@ -182,7 +189,7 @@ function server(variant, src, opt) {
       setProperty: (k, v) => { srv.props[k] = String(v); }, deleteProperty: (k) => { delete srv.props[k]; } }) },
     DriveApp: {}, CacheService: {}, UrlFetchApp: {}, Utilities: {}, Session: {}, props: {},
     sheets, log, clears: [], cellThrows: 0, variant: V, deferred: V === 'D' || V === 'DE', opt: opt || {},
-    checkpoint: null, failNext: null, failClear: null,
+    checkpoint: null, failNext: null, failClear: null, failDelete: null,
     locks: 0, lateErr: null, lateErrs: [], _onRelease: [], _execs: [],
     onThrow() {
       if (srv.variant !== 'B' || !srv.checkpoint) return;

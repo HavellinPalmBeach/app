@@ -8,7 +8,7 @@
 //   S1 · every locked writer applies its writes before it lets go of the lock (SpreadsheetApp.flush()): _writeStoreBlob's end
 //        (every store save), saveJobToSheet, saveAllJobsToSheet and the editor's reset. Without it the next save waiting on the
 //        lock read the old state and wrote over the first, both devices told "saved"; and a write that failed as it was applied
-//        did so after doPost had answered ok.
+//        did so after doPost had returned ok.
 //   S2 · _writeStoreBlob never cuts so that a chunk starts with = + - @ or ' or a surrogate pair is split: setValues reads a cell
 //        as typed, so a chunk starting with = became a formula and the store unreadable, and a leading ' was dropped.
 //   S3 · deleteJobFromSheet runs under the lock, records the deletion first with no catch (a ledger that will not write answers
@@ -104,7 +104,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     let once = true;
     srv.failNext = (n) => { if (n === 'EstimateStore' && once) { once = false; return true; } return false; };
     const r = srv.post({ type: 'saveAllEstimates', payload: { [K]: { savedAt: 2, estimate: { jobId: K } } } });
-    eq(r.ok, false, '⚠⚠ the save says it failed (it answered ok, and the app recorded a write that never landed)');
+    eq(r.ok, false, '⚠⚠ the save says it failed (doPost returned ok, and the app recorded a write that never landed)');
     has(String(r.error), 'timed out', 'with what went wrong');
     eq(srv.keys('EstimateStore'), [String(J)], 'and the store is as it was');
     eq(srv.post({ type: 'saveAllEstimates', payload: { [K]: { savedAt: 2, estimate: { jobId: K } } } }).ok, true, 'the app\'s retry lands');
@@ -210,6 +210,22 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(srv.store('Run'), run, 'and the blob still reads back whole');
   });
 
+  guard('S2 · each of = + - @ and \' at offset 45,000 moves the cut, so no chunk is sent starting with it (the review, 2026-10-28)', () => {
+    // The repeating fixture above never put + - or @ at a cut, so each could leave _blobCutUnsafe and stay green. They are held
+    // here to what is SENT (the raw chunk), not to what reads back: the rig's typed model reads back only = and ', since nothing
+    // yet shows what Sheets makes of a script's cell starting with + - or @. The cut steps off them anyway (the plan's S2).
+    const srv = server('D');
+    ['=', '+', '-', '@', "'"].forEach((ch) => {
+      const obj = { notes: 'n'.repeat(45000 - '{"notes":"'.length) + ch + 'x'.repeat(200) };
+      eq(JSON.stringify(obj).charAt(45000), ch, 'fixture: ' + ch + ' at offset 45,000, where the cut falls');
+      srv._writeStoreBlob('Probe', obj);
+      const cells = srv.sheets.Probe._rows.slice(1).map((r) => String(r[1] || '')).filter(Boolean);
+      eq(cells.length, 2, 'fixture (' + ch + '): two chunks');
+      eq([cells[0].length, cells[1].charAt(0)], [44999, 'n'], '⚠ ' + ch + ': the cut moved back one character, so the second chunk starts with n, never ' + ch);
+      eq(srv.store('Probe'), obj, ch + ': it reads back whole');
+    });
+  });
+
   // ───────────────────────────────────────────────────────────────────────────
   guard('⚠⚠ S3 · deleteJob takes the lock, and a ledger that will not write leaves the row in place and says so', () => {
     const srv = seeded('D');
@@ -219,7 +235,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     srv.failNext = (n) => { if (n === 'JobLedger' && once) { once = false; return true; } return false; };
     const r = srv.post({ type: 'deleteJob', payload: { id: L } });
     ok(srv.locks > locks, '⚠⚠ the delete took the script lock (it took none)');
-    eq(r.ok, false, '⚠⚠ the ledger would not write: the delete says it failed (it answered ok)');
+    eq(r.ok, false, '⚠⚠ the ledger would not write: the delete says it failed (it returned ok)');
     eq(srv.jobIds().indexOf(String(L)) >= 0, true, '⚠⚠ and the client\'s row is still on the tab (it was gone, its deletion unrecorded)');
     ok(!((srv.ledger().deleted || {})[String(L)]), 'nothing recorded');
     eq(srv.keys('EstimateStore'), [String(L)], 'and its records are where they were');
@@ -237,6 +253,32 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(s2.post({ type: 'deleteJob', payload: { id: K } }).ok, true, 'fixture: a client deleted');
     eq([(w && w.dropped) || [], (w && w.recorded) || []].map((x) => x.map(String)), [[String(K)], [String(K)]], '⚠ a stale device saving the moment the delete let go is refused it, the deletion recorded');
     eq(s2.jobIds().sort(), [J, L].map(String).sort(), 'and the row stays gone');
+  });
+
+  // ───────────────────────────────────────────────────────────────────────────
+  guard('⚠⚠ S3 · a row deletion that fails as Sheets applies it answers ok:false, before anything is purged (the review, 2026-10-28)', () => {
+    // The purge's first store read or write applied the queued deleteRow, inside its per-store catch: a deletion that timed out at
+    // commit was logged as "purge EstimateStore: …" and swallowed, and the delete answered ok with the row still on the tab.
+    ['flush', 'none'].forEach((reads) => {
+      const srv = seeded('D', { reads });
+      srv.post({ type: 'saveAllEstimates', payload: { [L]: { savedAt: 1, estimate: { jobId: L } } } });
+      let once = true;
+      srv.failDelete = (n) => { if (n === 'Jobs' && once) { once = false; return true; } return false; };
+      const r = srv.post({ type: 'deleteJob', payload: { id: L } });
+      ok(!once, 'fixture (reads ' + reads + '): the row\'s deletion was applied, and failed');
+      eq(r.ok, false, '⚠⚠ reads ' + reads + ': the delete says it failed (it returned ok, and the device said "Deleted from cloud ✓")');
+      has(String(r.error), 'timed out', 'reads ' + reads + ': with what went wrong');
+      ok(srv.jobIds().indexOf(String(L)) >= 0, 'reads ' + reads + ': the client\'s row is still on the tab');
+      eq(srv.keys('EstimateStore'), [String(L)], '⚠ reads ' + reads + ': and nothing was purged (its estimate is where it was)');
+      eq(srv.log.filter((l) => /^purge /.test(l)), [], 'reads ' + reads + ': no failure swallowed by the purge');
+      eq(srv.get({ action: 'loadJobs' }).jobs.map((j) => String(j.id)).sort(), [J, K, L].map(String).sort(), 'reads ' + reads + ': the next load still lists the client, as the answer said');
+      const r2 = srv.post({ type: 'deleteJob', payload: { id: L } });
+      eq(r2.ok, true, 'reads ' + reads + ': the app\'s retry lands');
+      eq(srv.jobIds().sort(), [J, K].map(String).sort(), 'reads ' + reads + ': the row is gone');
+      ok(!!(srv.ledger().deleted || {})[String(L)], 'reads ' + reads + ': the deletion recorded');
+      eq(srv.keys('EstimateStore'), [], 'reads ' + reads + ': and its records purged');
+      eq(srv.lateErrs, [], 'reads ' + reads + ': nothing applied after an answer');
+    });
   });
 
   // ───────────────────────────────────────────────────────────────────────────

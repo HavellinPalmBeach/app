@@ -122,7 +122,7 @@
 // 2026-10-26c's. Until it is live such a line stays low, marked unsure on the desk, and prints "general estimate".
 // ⚠⚠ 2026-10-27b (P1 of the desk audit, "Nothing is lost"): one inventory Snapshot of a full house put a client's record past
 // a sheet cell's 50,000 characters, saveAllJobsToSheet cleared the Jobs tab and wrote a cell Sheets refused when the execution
-// ended, usually after answering ok (on a fake sheet that throws at the call it emptied the tab; on a real one it cut the tab at
+// ended, usually after doPost had returned ok (on a fake sheet that throws at the call it emptied the tab; on a real one it cut the tab at
 // that client: the probe, 2026-10-28), and the ledger read every client cut off as deleted on every device. So: no tab is cleared before it is written (the Jobs tab, every store
 // tab and the ledger: the new rows go over the old, then only the rows past them are cleared); every Jobs row is built and
 // measured BEFORE the sheet is touched, and a record too large for a cell is refused by name with nothing written (TOO_LARGE,
@@ -132,7 +132,7 @@
 // deleteJob, the reset and the orphan prune), and only a recorded one is swept from the stores; the snapshot's lines live
 // in a store of their own (SnapshotStore, type saveSnapshot, action loadSnapshots), never in the client's one cell. New type
 // saveSnapshot and GET action loadSnapshots. Until it is live a client too large for a cell can still cut the Jobs tab at that
-// client's row under an answer of ok, every client cut off still reads as deleted on every device, and the next estimate, plan,
+// client's row after doPost has returned ok, every client cut off still reads as deleted on every device, and the next estimate, plan,
 // hours or inventory save sweeps their records off the sheet (on an emptied tab, the first new client does), and the app takes
 // no Snapshot (it needs the store).
 // ⚠ 2026-10-27c (P2, the desk audit's RT-01: "Only Havellin's devices reach the data"): every action and type but the version
@@ -166,8 +166,9 @@
 // a chunk never starts with = + - @ ' nor splits a surrogate pair (_blobCutUnsafe); a hard delete locked and recorded first
 // (deleteJobFromSheet); and suggestDeviceKey's log gives the devices first and Script Properties last. No action or type changes;
 // carries 2026-10-27e's. Until it is live two devices saving at the same moment can lose one device's change though both were told
-// it saved, a write that fails as it is applied is answered as saved, a store cut at an = can turn unreadable (every save to it
-// refused until it is restored from version history), and a hard delete can race other saves or go unrecorded.
+// it saved, a write that fails as it is applied fails after doPost has returned ok (whether the device then receives that ok or an
+// error page is not known), a store cut at an = can turn unreadable (every save to it refused until it is restored from version
+// history), and a hard delete can race other saves, go unrecorded, or answer ok with the client's row still on the tab.
 var BACKEND_VERSION = '2026-10-28';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
@@ -831,7 +832,9 @@ var _BLOB_CHUNK = 45000;   // headroom under the 50,000 cap
 var _BLOB_CUT_BACK = 5000;
 
 // ⚠ A cut at this offset would start the next chunk with a character setValues reads as typed (= + - @ starts a formula,
-// ' is the text prefix and is dropped), or split a surrogate pair (an emoji typed in a note) across two cells (2026-10-28).
+// ' is the text prefix and is dropped), or split a surrogate pair (an emoji typed in a note) across two cells (2026-10-28). Each of
+// the five is held at the cut by what is sent (tests/deferred-writes.test.js, since the review the same day); what Sheets reads
+// back is modelled for = and ' only, since nothing yet shows what it makes of a script's cell starting with + - or @.
 function _blobCutUnsafe(json, cut) {
   if ("=+-@'".indexOf(json.charAt(cut)) >= 0) return true;
   var h = json.charCodeAt(cut - 1);
@@ -881,7 +884,7 @@ function _writeStoreBlob(sheetName, obj) {
   // probe: DEFERRED), and every caller of this one runs it last inside its lock: without this the lock went before the write
   // reached the sheet, so the next save waiting for it read the old blob and wrote over this one (two devices each told
   // "saved", one device's change gone: driven on tests/sheet-rig.js's deferred model), and a write that failed as it was
-  // applied did so after doPost had answered ok. Now the failure is raised here, inside the caller's try, and the answer is
+  // applied did so after doPost had returned ok. Now the failure is raised here, inside the caller's try, and the answer is
   // ok:false, which the app sends again. Google's Lock reference asks for exactly this flush before releaseLock.
   SpreadsheetApp.flush();
 }
@@ -1749,7 +1752,7 @@ function getLogStore() {
 // ⚠⚠ A SNAPSHOT'S LINES NEVER RIDE THE CLIENT'S RECORD (2026-10-27, P1 of the desk audit, VAL-01, INV-02). They did: every
 // line of the inventory went into job.invSnapshots, about 132 characters a line, and a Jobs row is ONE cell of JSON, so a
 // snapshot of about 295 named lines (or two of 150, or two devices' of 180 each, merged) passed the 50,000-character cell
-// and cut the Jobs tab off at that client, usually under an answer of ok. The record keeps the snapshot's heading (when, the label, the count, the total, a void); the
+// and cut the Jobs tab off at that client, usually after doPost had returned ok. The record keeps the snapshot's heading (when, the label, the count, the total, a void); the
 // lines live here, { "<jobId>": { "<ts>": { ts, savedAt, items } } }, chunked across rows like every store, so a snapshot of
 // any size, and any number of them, leaves the client's cell as it was.
 // A snapshot is a record of a day and never changes once taken: the first copy of a ts is kept, and a second send of it
@@ -2032,8 +2035,8 @@ function saveJobToSheet(job) {
 // unrecorded, and the client then read as an unexplained absence), and purged the five stores with no lock, so a save between
 // the purge's read and its write was overwritten under an answer of ok. Now: the lock (busy, never unlocked: _lockOrBusy), the
 // deletion recorded with no catch (a ledger that cannot be read or written answers ok:false, the row left in place, and the
-// app sends the delete again: it is idempotent), the row found again under the lock and deleted, the stores purged, and the
-// writes applied before the lock goes.
+// app sends the delete again: it is idempotent), the row found again under the lock and deleted, that deletion applied before
+// the purge (below: the review, 2026-10-28), the stores purged, and the writes applied before the lock goes.
 function deleteJobFromSheet(id) {
   if (!id) return;
   var lock = LockService.getScriptLock();
@@ -2053,6 +2056,14 @@ function deleteJobFromSheet(id) {
     for (var r = data.length - 1; r >= 1; r--) {
       if (String(data[r][idCol]) === String(id)) { sheet.deleteRow(r + 1); break; }
     }
+    // ⚠⚠ THE ROW'S DELETION APPLIED HERE, OUTSIDE THE PURGE'S CATCH (2026-10-28, the cell-cap fix's review). deleteRow is held
+    // until the writes are applied, and the first thing to apply it was the purge's first store read or write, inside
+    // _purgeJobFromStores' per-store try/catch: a deletion that failed as Sheets applied it (a commit timeout) was logged as
+    // "purge EstimateStore: …" and swallowed, the closing flush had nothing left to apply, and the answer was ok with the row
+    // still on the tab and the ledger recording it deleted (driven: the device told "Deleted from cloud ✓", the client back on
+    // its next load). Applied here, a failed deletion answers ok:false before anything is purged, and the app sends the delete
+    // again (it is idempotent; the ledger's mark meanwhile sweeps nothing, since the row is still there).
+    SpreadsheetApp.flush();
     // Purge the job's records from the keyed stores too. Deleting a job used to remove only
     // the Jobs row, so its estimate, job plan and logs stayed behind forever — invisible in
     // the app, but still serialized into every subsequent write. That is how the sheet ends

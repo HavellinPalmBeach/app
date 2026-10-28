@@ -11,7 +11,8 @@
 // them; the failed write was retried for ever and emptied the restored tab again; and every store tab was cleared before
 // it was written. ⚠ The audit's rig threw at the call. On a real sheet (probeClearThenOversizeWrite, 2026-10-28: DEFERRED)
 // Sheets refuses the cell only when the writes are applied, after the clear and every cell before it have landed, so the old
-// save cut the tab at the oversized client and usually answered ok. Variant 'D' (tests/sheet-rig.js, the default since
+// save cut the tab at the oversized client, usually after its doPost had returned ok (whether the device then received that ok
+// or an error page is not known; the rig delivers doPost's answer unless opt.end is 'html'). Variant 'D' (tests/sheet-rig.js, the default since
 // 2026-10-28) is that, and 'DE' the same with the refused cell emptied, since the probe could not tell which; 'A' (a
 // clearContent kept when a setValues throws at the call) and 'B' (the execution's writes rolled back) model no deployment
 // and are kept only for the tests built on them. The groups that guard the cap run under A, D and DE.
@@ -307,7 +308,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   // ───────────────────────────────────────────────────────────────────────────
   // Under D as well (2026-10-28): a write that fails as Sheets applies it fails at _writeStoreBlob's flush, inside the save's own
-  // try, so the save says so; without that flush it failed after doPost had answered ok.
+  // try, so the save says so; without that flush it failed after doPost had returned ok.
   ['A', 'D'].forEach((variant) => guard('[' + variant + '] no store tab is cleared before it is written (GAP3-07)', () => {
     const srv = server(variant);
     const A = device('A', srv); seedDevice(A); seedSheet(srv, A, 3);
@@ -828,10 +829,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     oldRec.invSnapshots = [{ ts: 5, label: 'Filed with court', count: 450, items: manifest(J, 450) }]; oldRec.updatedAt = later();
     const r0 = srv.post({ type: 'saveAllJobs', payload: [oldRec] });
     // RESTATED 2026-10-28 (C3): the oversized client is the first row here, so the tab is left with no client on it either way.
-    // Under A the write threw at the call (ok:false); on a real sheet (D, DE) Sheets refused that cell after doPost had answered,
-    // and ok:true over a write that failed is a false ok.
+    // Under A the write threw at the call (ok:false); on a real sheet (D, DE) Sheets refused that cell after doPost had returned,
+    // and ok:true over a write that failed is a false ok (the rig delivers it; whether a deployment's device receives it is not known).
     eq(srv.jobIds(), [], 'fixture: the old deployment left no client on the Jobs tab');
-    eq(r0.ok, variant === 'A' ? false : true, variant === 'A' ? 'fixture: and said so' : '⚠ fixture: under an answer of ok, a false ok');
+    eq(r0.ok, variant === 'A' ? false : true, variant === 'A' ? 'fixture: and said so' : '⚠ fixture: doPost returned ok, a false ok');
     Y.ctx.refreshJobsFromCloud(); Y.run(100);
     eq([Y.ctx.jobs.length, Y.ctx._sheetNotice], [3, Y.ctx.SHEET_NO_CLIENTS_TXT], 'Y keeps its three and says the sheet has none');
     // One Save Changes in Edit Client: the batch, and the client's own write, which the old deployment answers with that one id dropped.
@@ -884,7 +885,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const oldRec = JSON.parse(JSON.stringify(Y.ctx.jobs[1]));
     oldRec.invSnapshots = [{ ts: 5, label: 'Filed with court', count: 450, items: manifest(K, 450) }]; oldRec.updatedAt = later();
     const r0 = srv.post({ type: 'saveAllJobs', payload: [oldRec] });
-    eq(r0.ok, true, '⚠ fixture: the old deployment answered ok over a write Sheets refused (a false ok)');
+    eq(r0.ok, true, '⚠ fixture: the old deployment\'s doPost returned ok over a write Sheets refused (a false ok)');
     eq(srv.jobIds(), [String(J)], '⚠⚠ fixture: the tab is cut at that client: the client above it survives, the rest are gone');
     ok(!!srv.lateErr && /maximum of 50000 characters in a single cell/.test(srv.lateErr), 'fixture: Sheets refused the cell as the request ended (' + String(srv.lateErr).slice(0, 60) + ')');
     Y.ctx.refreshJobsFromCloud(); Y.run(100);
@@ -896,11 +897,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(Object.keys(Y.ctx.estimateStore).length, 3, '⚠ and the device kept all three estimates');
   }));
 
-  // RESTATED 2026-10-28 (C1, C2): under A and the deferred model. On a real sheet the old deployment answered the client's own
-  // oversized write ok (Sheets refuses the cell after doPost has answered), which let the hold go; so that write is never posted
-  // (_flushOutbox holds it), and the tab is counted by the clients whose record is on it (jobIds), not by rows.
-  ['A', 'D', 'DE'].forEach((variant) => guard('[' + variant + '] [the deployment live until the redeploy] a client too large for a cell never empties the Jobs tab (P1\'s review)', () => {
-    const srv = server(variant, OLD);
+  // RESTATED 2026-10-28 (C1, C2): under A and the deferred model. On a real sheet the old deployment's doPost returned ok for the
+  // client's own oversized write (Sheets refuses the cell after doPost has returned), which let the hold go where the device received
+  // it, and where it received an error page instead the write went again on every retry; so that write is never posted (_flushOutbox
+  // holds it), and the tab is counted by the clients whose record is on it (jobIds), not by rows. The review (2026-10-28): run with
+  // the error page too (D·html), since which of the two a device receives is not known.
+  [['A'], ['D'], ['DE'], ['D', { end: 'html' }]].forEach(([variant, opt]) => guard('[' + variant + (opt ? '·html' : '') + '] [the deployment live until the redeploy] a client too large for a cell never empties the Jobs tab (P1\'s review)', () => {
+    const srv = server(variant, OLD, opt);
     const X = device('X', srv);
     seedDevice(X); seedSheet(srv, X, 3);
     const j = X.ctx.jobs[0];
@@ -911,7 +914,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     X.run(400);
     eq(srv.jobsRows(), 3, '⚠⚠ the old Jobs tab is still whole: the batch never carried the client too large (it emptied the tab)');
     eq(srv.jobIds().length, 3, '⚠⚠ every client\'s record still on it');
-    eq(jobPostsOfJ(), 0, '⚠⚠ the client\'s own write too large for a cell was never posted (the old deployment answered it ok)');
+    eq(jobPostsOfJ(), 0, '⚠⚠ the client\'s own write too large for a cell was never posted (the old deployment\'s doPost returned ok for it)');
     eq(X.held(), ['main/job:' + J], 'the client is held, as its own write');
     eq(X.ctx.jobs.length, 3, 'and kept here (its own write took it off the device)');
     has(X.ctx._pendingChipCopy().head, 'Ellison Estate (HVL-260) is too large for the sheet (', '⚠ the chip names it, not another client');
@@ -1015,10 +1018,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // RESTATED on the merge with P2 (2026-10-27): P2's open URL leads the line (its 2026-10-27c carries this build's 2026-10-27b);
     // this build's gap follows at once, under its own vintage. RESTATED again on the merge with P5 (2026-10-27d, which carries both):
     // P5's gap leads, the open URL follows under 2026-10-27c, and this build's gap at once after it.
-    // RESTATED 2026-10-28 (the probe: DEFERRED): an older deployment's failed write cut the tab at that client under an answer of ok,
-    // rather than emptying it, and this device keeps its copy; the clause says so, still first after the open URL.
+    // RESTATED 2026-10-28 (the probe: DEFERRED): an older deployment's failed write cut the tab at that client after its script had
+    // returned ok, rather than emptying it, and this device keeps its copy; the clause says so, still first after the open URL. Its
+    // review: "possibly with no error shown", since whether the device received that ok or an error page is not known.
     const _v = B.BACKEND_FEATURE_COST.version, _vint = '; on a deployment older than ';
-    const _c = _v.indexOf(_vint + '2026-10-27c, '), _b = _v.indexOf(_vint + '2026-10-27b, a client too large for a sheet cell cuts the Jobs tab off at that client with no error shown');
+    const _c = _v.indexOf(_vint + '2026-10-27c, '), _b = _v.indexOf(_vint + '2026-10-27b, a client too large for a sheet cell cuts the Jobs tab off at that client, possibly with no error shown');
     ok(_c > 0 && _b > _c && _v.indexOf(_vint, _c + 1) === _b,
       'and the version line names what stays broken, first after the open URL, by its vintage');
     lacks(_v, 'each one empties itself', 'and never that a device empties itself (since P1 each keeps its copy)');
