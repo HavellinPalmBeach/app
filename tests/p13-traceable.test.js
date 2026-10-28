@@ -13,7 +13,7 @@
 //   ACC-20, DOC-05, VAL-13: the Court Inventory and the Trust Schedule carried no item number. Item # and Room columns, one set of
 //     column widths, rows by number.
 //   VAL-29, DOC-25, INV-09: lots print "(8 × $90)"; on a Form 706 estate a lot over $100 an article is marked on its line, and a
-//     group recorded with no count (Agent One's `group`, the 2026-10-28 backend) reads "grouped, untested".
+//     group recorded with no count (Agent One's `group`, the 2026-10-28b backend) reads "grouped, untested".
 //   INV-18: a count left in a name is hinted on the row. INV-16: a removal carries its reason and the papers' "Numbers not used"
 //     footnote explains each gap. INV-20: the summary counts lines and articles.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -350,16 +350,21 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(text(W._lotSplitWorklistBlock(J, [LINE('c', 1, 'Copper cookware', 720, { qty: 8 })])), 'permits them to stand as groups', 'and is, where every lot was tested');
   }
 
-  group('G · Agent One marks a group (the 2026-10-28 backend), and the app keeps the mark');
+  group('G · Agent One marks a group (the 2026-10-28b backend), and the app keeps the mark');
   {
     const props = (GS.match(/group:\s*\{ type: 'boolean'[^}]*\}/) || [''])[0];
     has(props, "type: 'boolean'", 'record_contents carries a boolean group');
     ok(/required: \['name', 'category', 'qty', 'group', 'confidence', 'basis', 'crop'\]/.test(GS), 'required, so the strict tool answers it on every line');
     has(GS, "'Set group to true on every line that holds more than one article", 'and the prompt says when');
-    ok(((GS.match(/var BACKEND_VERSION = '([^']+)';/) || [])[1] || '') >= '2026-10-28', 'main-sync.gs is 2026-10-28 or later');
+    // RESTATED at the merge with the cell-cap fix (backend 2026-10-28, which reached main first): this build is 2026-10-28b, carrying it.
+    ok(((GS.match(/var BACKEND_VERSION = '([^']+)';/) || [])[1] || '') >= '2026-10-28b', 'main-sync.gs is 2026-10-28b or later');
     const B = sandbox({ vars: ['BACKEND_MIN_VERSION', 'BACKEND_FEATURE_COST'] });
-    ok(B.BACKEND_MIN_VERSION >= '2026-10-28', 'the app relies on it');
-    ok(/^on a Form 706 estate a drawer, box or shelf of things Agent One names as one line is not marked as a group/.test(B.BACKEND_FEATURE_COST.version), 'and the stale banner names it first');
+    ok(B.BACKEND_MIN_VERSION >= '2026-10-28b', 'the app relies on it');
+    const _v13 = B.BACKEND_FEATURE_COST.version, _p13 = 'a drawer, box or shelf of things Agent One names as one line on a Form 706 estate is not marked as a group';
+    const _at13 = _v13.indexOf('on a deployment older than 2026-10-28b, ' + _p13);
+    const _newer13 = (_v13.slice(0, Math.max(0, _at13)).match(/on a deployment older than (\d{4}-\d{2}-\d{2}[a-z]?),/g) || []).map((x) => x.replace(/^on a deployment older than /, '').replace(/,$/, ''));
+    ok(_at13 === 0 || (_at13 > 0 && _newer13.every((x) => x > '2026-10-28b')), 'and the stale banner names it first, or first after newer gaps, by its vintage (' + _newer13.join(', ') + ')');
+    ok(_v13.indexOf('; on a deployment older than 2026-10-28, two devices saving') > _at13 && _at13 >= 0, '…then 2026-10-28\'s gap, by its vintage');
     has(B.BACKEND_FEATURE_COST.version, '; on a deployment older than 2026-10-27e, a figure Agent Two researched', '…then 2026-10-27e\'s gap, by its vintage');
     const A = sandbox({ fns: ['_agWrite', '_getPhotoRef', '_setPhotoRef', '_invAgentCondition', '_invCondIsAgents'], vars: ['INV_CATEGORIES', 'INV_TAXONOMY', 'INV_DEFAULT_CATEGORY', 'AGENT_CONDITIONS'],
       stubs: { _photoRefs: { 7: [{ stableId: 'a', label: 'inventory' }, { stableId: 'b', label: 'inventory', agentGroup: true }, { stableId: 'c', label: 'inventory', agentGroup: true }] }, _invTouch: (r) => r } });
