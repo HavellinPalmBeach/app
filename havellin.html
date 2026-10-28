@@ -1476,7 +1476,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.27 · 6:51pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.27 · 8:27pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -28044,7 +28044,7 @@ function savePhotoRefs(jobId) {
                // separate times (fieldNote/groupId, serial, clearedAt).
                namedBy:r.namedBy, agentAt:r.agentAt, agentConf:r.agentConf, agentListed:r.agentListed, agentName:r.agentName,
                agentBasis:r.agentBasis, agentNotices:r.agentNotices, crop:r.crop,
-               dupOK:r.dupOK,
+               dupOKWith:r.dupOKWith,   // the lines a person said this one is separate from (Not duplicates, per pair, P8)
                // ⚠ AGENT TWO'S FIELDS (P23): its figure's range, comparables, WorthPoint lookup, confidence, notices,
                // who valued the line and when, the name it valued, a failure's reason, and the desk's acceptance.
                valLow:r.valLow, valHigh:r.valHigh, valComps:r.valComps, valSurvey:r.valSurvey, valLookup:r.valLookup, valConf:r.valConf,
@@ -32255,10 +32255,15 @@ function printEstateInventoryReport(jobId, opt) {
   var noFile  = all.filter(function(r){ return !r.manual && !_invFileId(r); }).length;
   var totalFMV = all.reduce(function(t, r){ var n = parseFloat(r.fmv); return t + (isNaN(n) ? 0 : n); }, 0);
   var _ac = invAcceptCtx(job);   // the review rule's facts, read by both stamps (invLineAccepted)
+  // An open possible duplicate, named under the IN PROGRESS stamp it already holds (P8, invDoubleCounts; the Ref column carries
+  // the numbers). Guarded for a sandbox that lifts this printer alone.
+  var _dbl = typeof invDoubleCounts === 'function' ? invDoubleCounts(job, all) : null;
 
   var html = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
     + _invDocHead(job, 'Estate Inventory &mdash; Asset Schedule')
     + _invProgressStamp(all, { fc: _ac })
+    + (_dbl ? '<div class="inv-dbl-note" style="font-size:10.5px;color:#A32D2D;font-weight:700;margin:-6px 0 12px;">' + esc(_dbl.why)
+        + '. Both lines of each are in the total below until it is decided whether the pair is one item or two.</div>' : '')
     // Agent Two's figures nobody has accepted, counted beside the review stamp, never withheld (P23). The stamp beside it
     // already names the values that stand with nothing flagged, so they are not named twice (noAccepted).
     + _avUnreviewedStamp(all, { noAccepted: true, fc: _ac })
@@ -36118,6 +36123,38 @@ function scheduleSignLines(signers, act, capacity) {
   }).join('');
 }
 
+// ⚠⚠ A TOTAL THAT MAY COUNT ONE THING TWICE IS NOT FINAL (P8 of the desk audit, 2026-10-27; ACC-02, INV-01): the room check
+// linked two lines as *plainly one thing* (a harbour painting over the sofa and again close up), and the Court Inventory printed
+// FINAL with a signature block over a total holding both, $4,200 and $3,900; *duplicate* appeared nowhere on it. An open
+// possible duplicate (agentDuplicateGroups: neither Removed nor answered with Not duplicates) with two or more of its lines on
+// the page's own list is a double count not yet decided. The Court Inventory and the Trust Schedule name it in their status
+// and stay DRAFT, their signature block withheld, as for an unvalued line; the Estate Inventory Report, already IN PROGRESS
+// for it (invLineOpen), names it under its stamp. Nothing is merged or withheld from the page (Decided), and the list's read
+// still decides nothing on either schedule (Q109). DOM-free; `list` is the page's own lines, numbered. Answers null, or
+// {n, why, note, fix}: `why` in the status's words ("1 possible double count not yet decided: #1 and #2"), `note` naming
+// each pair's lines and figures for a page with no number column, `fix` what issues the final copy.
+function invDoubleCounts(job, list) {
+  if (!job) return null;
+  var on = {};
+  (list || []).forEach(function(r) { if (r) on[r.stableId] = 1; });
+  // Grouped over the whole list, then read on the page's own lines: two lines here joined through a third elsewhere stay joined.
+  var groups = agentDuplicateGroups(job.id).map(function(g) {
+    return g.rows.filter(function(r) { return on[r.stableId]; });
+  }).filter(function(rows) { return rows.length >= 2; });
+  if (!groups.length) return null;
+  var and = function(a) { return a.length < 3 ? a.join(' and ') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1]; };
+  var shown = groups.slice(0, 6), more = groups.length - shown.length;
+  var tail = more ? '; and ' + more + ' more' : '';
+  return {
+    n: groups.length,
+    why: groups.length + ' possible double count' + (groups.length === 1 ? '' : 's') + ' not yet decided: '
+      + shown.map(function(rows) { return and(rows.map(function(r) { return '#' + _invItemNo(r); })); }).join('; ') + tail,
+    note: 'Both lines of each possible double count are in the total above, so it may count an item twice: '
+      + shown.map(function(rows) { return and(rows.map(function(r) { return '#' + _invItemNo(r) + ' ' + (r.objectName || 'unnamed') + ' (' + _invMoney(r.fmv) + ')'; })); }).join('; ') + tail + '.',
+    fix: 'a final copy is issued once Havellin has decided whether each pair is one item or two'
+  };
+}
+
 function printCourtInventory(jobId, opt) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   var _blocked = invDocContractBlock(job, 'court') || (typeof invColdRefusal === 'function' ? invColdRefusal(jobId) : '');   // and a cold desk (2026-10-27, P1)
@@ -36187,6 +36224,10 @@ function printCourtInventory(jobId, opt) {
     : 'the estate attorney arranges the appraisal on this engagement');
   if (unvalued.length) _draftWhy.push(unvalued.length + ' item' + (unvalued.length > 1 ? 's' : '') + ' not yet valued');
   if (unvalued.length) _draftFix.push('a final copy is issued once the outstanding items are valued');
+  // ⚠⚠ AN OPEN POSSIBLE DUPLICATE ON THE SCHEDULE (P8, invDoubleCounts): the total may count one item twice, so the page is not
+  // adopted until a person has decided it. Guarded for a sandbox that lifts this printer alone.
+  var _dbl = typeof invDoubleCounts === 'function' ? invDoubleCounts(job, onSched) : null;
+  if (_dbl) { _draftWhy.push(_dbl.why); _draftFix.push(_dbl.fix); }
   // ⚠⚠ THE MATTER TYPE IS READ HERE AND NOWHERE ELSE YET, AND IT ONLY EVER SPEAKS WHEN ANSWERED.
   // Every job created before 2026-09-21 carries none; matterTypeOf returns '' for those and for
   // living-client work, and this block does nothing with it — so the document is unchanged on
@@ -36266,6 +36307,7 @@ function printCourtInventory(jobId, opt) {
           + esc(unvalued.slice(0, 6).map(function(r){ return '#' + (r.itemNo || '?') + ' ' + (r.objectName || 'unnamed'); }).join(', '))
           + (unvalued.length > 6 ? ' and ' + (unvalued.length - 6) + ' more' : '') + '.</div>'
         : '')
+    + (_dbl ? '<div class="inv-dbl-note" style="font-size:10.5px;color:#A32D2D;font-style:italic;margin-top:4px;text-align:right;">' + esc(_dbl.note) + '</div>' : '')
     + (excluded.length ? '<div style="font-size:10px;color:#8a6d3b;font-style:italic;margin-top:8px;">' + excluded.length + ' item' + (excluded.length > 1 ? 's' : '') + ' tagged ' + _invExcludedTracks(excluded, job) + ' ' + (excluded.length > 1 ? 'are' : 'is') + ' excluded from this probate schedule. Exempt property is not excluded &mdash; it is listed above and claimed under &sect;732.402.</div>' : '')
     + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">This schedule covers tangible personal property only. Real property, financial accounts, securities, and business interests are reported separately in the personal representative&rsquo;s §733.604 filing, prepared with counsel. Values are estimated ' + esc(basis.toLowerCase()) + ' as of ' + esc(vlabel) + '.</div>'
     + (draft
@@ -36349,6 +36391,9 @@ function printTrustSchedule(jobId, opt) {
     _draftWhy.push(unvalued.length + ' item' + (unvalued.length > 1 ? 's' : '') + ' not yet valued');
     _draftFix.push('a final copy is issued once the outstanding items are valued');
   }
+  // An open possible duplicate on the schedule (P8, invDoubleCounts): the probate schedule's rule, the same words.
+  var _dbl = typeof invDoubleCounts === 'function' ? invDoubleCounts(job, onSched) : null;
+  if (_dbl) { _draftWhy.push(_dbl.why); _draftFix.push(_dbl.fix); }
   if (_noTrust) {
     _draftWhy.push('this estate has no trust in it');
     _draftFix.push('no final copy of THIS schedule will follow — the estate’s own inventory is the right instrument for it');
@@ -36403,6 +36448,7 @@ function printTrustSchedule(jobId, opt) {
           + esc(unvalued.slice(0, 6).map(function(r){ return '#' + (r.itemNo || '?') + ' ' + (r.objectName || 'unnamed'); }).join(', '))
           + (unvalued.length > 6 ? ' and ' + (unvalued.length - 6) + ' more' : '') + '.</div>'
         : '')
+    + (_dbl ? '<div class="inv-dbl-note" style="font-size:10.5px;color:#A32D2D;font-style:italic;margin-top:4px;text-align:right;">' + esc(_dbl.note) + '</div>' : '')
     // ⚠ THE TWO SCHEDULES ARE NOT COMPLEMENTARY AND THIS SAYS SO. Probate and exempt property is
     // the estate's; homestead and non-probate property passes to heirs and named beneficiaries
     // outside both. A reader holding one schedule must not read the other as covering the rest.
@@ -40374,10 +40420,25 @@ function _agNameKey(s) {
 
 // A row is a candidate while Agent One named it, compared under Agent One's own reading (`agentName`; `valNameFrom`).
 // ⚠ NEITHER A TICK NOR AN EDIT IS AN ANSWER (the reviews, 2026-10-26): with a tick only on flagged lines (Q106), a tick or a
-// name tidied on one half released the other, which stood under a REVIEWED stamp counted twice. Only Remove or Not duplicates.
+// name tidied on one half released the other, which stood under a REVIEWED stamp counted twice. Only Remove or Not duplicates,
+// and Not duplicates answers for the pair it was pressed on (agentDupCleared), never for the line.
 function _agDupEligible(r) {
-  return !!r && (r.namedBy === 'agent' || !!r.agentName) && !r.dupOK && !r.deletedAt
+  return !!r && (r.namedBy === 'agent' || !!r.agentName) && !r.deletedAt
       && !!_agNameKey(r.agentName || r.valNameFrom || r.objectName) && r.roomIdx != null;
+}
+
+// ⚠⚠ NOT DUPLICATES IS AN ANSWER ABOUT A PAIR, NEVER ABOUT A LINE (P8 of the desk audit, 2026-10-27; INV-05, AGT-03): it set
+// `dupOK` on every line of the group and every test of the three kinds of evidence skipped a `dupOK` line whoever it was paired
+// with, so a sofa said to be separate from an armchair was never shown again when the room check later found it photographed
+// twice, while the work bar said a double was flagged; and under the flagged-only rule (Q106) both halves then stood with no
+// tick, counted twice. Each line now keeps the lines it was said to be separate from (`dupOKWith`, stableIds, written by
+// agentNotDuplicate), and a pair is answered when either half names the other: a newer copy of one half that lacks the list
+// still leaves the pair answered by the other. DOM-free; read by every evidence in agentDuplicateGroups, by agentNamedTwice, by
+// the room check's count (_arWrite) and by what Agent Two waits on (agentValueWaiting).
+function agentDupCleared(a, b) {
+  if (!a || !b) return false;
+  var names = function(r, id) { return Array.isArray(r.dupOKWith) && r.dupOKWith.indexOf(id) >= 0; };
+  return names(a, b.stableId) || names(b, a.stableId);
 }
 
 // ─── ONE PHOTOGRAPH NAMED TWICE (2026-10-25) ─────────────────────────────────────────────────────────────────────────
@@ -40389,17 +40450,53 @@ function _agDupEligible(r) {
 // A naming is the lines one answer wrote: one `agentAt` (`_agWrite`'s `pass`), and on a line written before that stamp,
 // lines within `AGENT_PASS_GAP_MS` of each other (one answer writes its lines in milliseconds). A naming told what was
 // listed (`agentListed`) is a reading of what was new; two namings that were told nothing each listed the photograph
-// whole. DOM-free: the live, named lines of an Items photograph, a line a person said is separate (`dupOK`) aside.
+// whole. DOM-free: the live, named lines of an Items photograph, each in a pair of readings a person has not answered
+// (agentDupCleared: Not duplicates, pressed on that pair).
+// ⚠⚠ EACH REPEAT PAIRED WITH ITS ORIGINAL (P8 of the desk audit, 2026-10-27; GAP1-03): the block drew the four Ellison lines on
+// four identical pictures with nothing saying which repeated which, and the three Removes pressed took both salad-plate lines, so
+// the FINAL Trust Schedule listed one stack. A later reading's line repeats the earlier line it overlaps most in the photograph,
+// at least half (`MIN`): Agent One's crop of each (x0, y0, x1, y1, a share of the photograph), measured as the area they share
+// over the area they cover together; where either crop is missing or the whole photograph (Agent One's answer when it cannot
+// place a thing), the share of the words of Agent One's two names, measured the same way. Each earlier line is repeated at most
+// once by one reading. A later line that repeats nothing is new in that reading (`fresh`), and a third reading's line may
+// repeat it. `repeats` ({line, of}) is what Keep the first reading takes off (agentKeepFirstReading); `fresh` is what it keeps.
 var AGENT_PASS_GAP_MS = 2000;
 function agentNamedTwice(all) {
+  var MIN = 0.5;
   var by = {}, order = [];
   (all || []).forEach(function(r) {
-    if (!r || r.deletedAt || r.label !== 'inventory' || r.collId || r.dupOK || r.roomIdx == null) return;
+    if (!r || r.deletedAt || r.label !== 'inventory' || r.collId || r.roomIdx == null) return;
     if (!String(r.objectName || '').trim() || !(Number(r.agentAt) > 0) || r.agentConf === 'none') return;
     var src = r.derivedFrom || r.stableId;
     if (!by[src]) { by[src] = []; order.push(src); }
     by[src].push(r);
   });
+  var box = function(r) {
+    var c = r.crop;
+    if (!Array.isArray(c) || c.length !== 4 || !c.every(function(v) { return isFinite(Number(v)); })) return null;
+    var b = [Math.min(+c[0], +c[2]), Math.min(+c[1], +c[3]), Math.max(+c[0], +c[2]), Math.max(+c[1], +c[3])];
+    var area = (b[2] - b[0]) * (b[3] - b[1]);
+    return area > 0 && area < 0.95 ? { b: b, area: area } : null;
+  };
+  var words = function(r) {
+    var w = {};
+    String(r.agentName || r.valNameFrom || r.objectName || '').toLowerCase().split(/[^a-z0-9]+/).forEach(function(x) {
+      if (x.length > 1 && ['and', 'or', 'of', 'the', 'with', 'in', 'on', 'a', 'an'].indexOf(x) < 0) w[x] = 1;
+    });
+    return w;
+  };
+  var overlap = function(x, y) {
+    var bx = box(x), by_ = box(y);
+    if (bx && by_) {
+      var iw = Math.min(bx.b[2], by_.b[2]) - Math.max(bx.b[0], by_.b[0]), ih = Math.min(bx.b[3], by_.b[3]) - Math.max(bx.b[1], by_.b[1]);
+      var inter = iw > 0 && ih > 0 ? iw * ih : 0;
+      return inter / (bx.area + by_.area - inter);
+    }
+    var wx = words(x), wy = words(y), both = 0, either = 0;
+    Object.keys(wx).forEach(function(k) { either++; if (wy[k]) both++; });
+    Object.keys(wy).forEach(function(k) { if (!wx[k]) either++; });
+    return either ? both / either : 0;
+  };
   var out = [];
   order.forEach(function(src) {
     var lines = by[src];
@@ -40413,10 +40510,43 @@ function agentNamedTwice(all) {
     });
     var blind = passes.filter(function(p) { return !p.some(function(r) { return Number(r.agentListed) > 0; }); });
     if (blind.length < 2) return;
+    // A line is still in question while a line of another reading has not been said to be separate from it.
+    var reading = {};
+    blind.forEach(function(p, i) { p.forEach(function(r) { reading[r.stableId] = i; }); });
+    var open = {};
+    lines.forEach(function(a) {
+      if (!(a.stableId in reading)) return;
+      lines.forEach(function(b) {
+        if ((b.stableId in reading) && reading[b.stableId] !== reading[a.stableId] && !agentDupCleared(a, b)) open[a.stableId] = 1;
+      });
+    });
     // In the order the desk draws them (the lines handed in), so the first naming's lines lead.
-    var keep = {};
-    blind.forEach(function(p) { p.forEach(function(r) { keep[r.stableId] = 1; }); });
-    out.push({ srcId: src, rows: lines.filter(function(r) { return keep[r.stableId]; }) });
+    var rows = lines.filter(function(r) { return open[r.stableId]; });
+    if (rows.length < 2) return;
+    var earlier = blind[0].filter(function(r) { return open[r.stableId]; }), repeats = [], fresh = [];
+    blind.slice(1).forEach(function(p) {
+      var cands = [];
+      p.forEach(function(x) {
+        if (!open[x.stableId]) return;
+        earlier.forEach(function(y) {
+          if (agentDupCleared(x, y)) return;
+          var s = overlap(x, y);
+          if (s >= MIN) cands.push({ x: x, y: y, s: s });
+        });
+      });
+      cands.sort(function(a, b) { return b.s - a.s; });
+      var tookX = {}, tookY = {};
+      cands.forEach(function(c) {
+        if (tookX[c.x.stableId] || tookY[c.y.stableId]) return;
+        tookX[c.x.stableId] = tookY[c.y.stableId] = 1;
+        repeats.push({ line: c.x, of: c.y });
+      });
+      p.forEach(function(x) { if (open[x.stableId] && !tookX[x.stableId]) { fresh.push(x); earlier.push(x); } });
+    });
+    var at = function(r) { return rows.indexOf(r); };
+    repeats.sort(function(a, b) { return at(a.line) - at(b.line); });
+    fresh.sort(function(a, b) { return at(a) - at(b); });
+    out.push({ srcId: src, rows: rows, repeats: repeats, fresh: fresh });
   });
   return out;
 }
@@ -40448,24 +40578,30 @@ function agentDuplicateGroups(jobId, all) {
     var k = String(r.roomIdx) + '\u0000' + _agNameKey(r.agentName || r.valNameFrom || r.objectName);
     (byName[k] = byName[k] || []).push(r);
   });
+  // Pair by pair, so a pair a person answered (agentDupCleared) joins nothing and a new line of the same name still does (P8).
   Object.keys(byName).forEach(function(k) {
     var g = byName[k];
-    if (g.length < 2) return;
-    g.forEach(function(r) { join(g[0].stableId, r.stableId); named[r.stableId] = g[0].objectName; });
+    for (var i = 0; i < g.length; i++) for (var j = i + 1; j < g.length; j++) {
+      if (agentDupCleared(g[i], g[j])) continue;
+      join(g[i].stableId, g[j].stableId);
+      named[g[i].stableId] = named[g[j].stableId] = g[0].objectName;
+    }
   });
   var checked = {};
   rows.filter(_arDupEligible).forEach(function(r) {
     r.dupWith.forEach(function(o) {
       var other = byId[o];
-      if (!_arDupEligible(other) || other.roomIdx !== r.roomIdx) return;
+      if (!_arDupEligible(other) || other.roomIdx !== r.roomIdx || agentDupCleared(r, other)) return;
       join(r.stableId, o);
       checked[r.stableId] = 1; checked[o] = 1;
     });
   });
-  // The third evidence (2026-10-25): one photograph read twice by Agent One, its two readings joined.
-  var twice = {};
+  // The third evidence (2026-10-25): one photograph read twice by Agent One, its two readings joined, each repeat with the line
+  // it repeats (P8).
+  var twice = {}, repeats = [], fresh = [];
   agentNamedTwice(rows).forEach(function(t) {
     t.rows.forEach(function(r) { join(t.rows[0].stableId, r.stableId); twice[r.stableId] = 1; });
+    repeats = repeats.concat(t.repeats || []); fresh = fresh.concat(t.fresh || []);
   });
   var comps = {}, order = [];
   rows.forEach(function(r) {
@@ -40487,6 +40623,8 @@ function agentDuplicateGroups(jobId, all) {
       if (checked[r.stableId] && (!best || (AGENT_ROOM_CONF_RANK[r.dupConf] || 0) > (AGENT_ROOM_CONF_RANK[best.dupConf] || 0))) best = r;
       if (sameName == null && named[r.stableId] != null) sameName = named[r.stableId];
     });
+    var inG = {};
+    g.forEach(function(r) { inG[r.stableId] = 1; });
     return {
       key: String(g[0].roomIdx) + '|' + g.map(function(r) { return r.stableId; }).sort().join('|'),
       roomIdx: g[0].roomIdx,
@@ -40495,15 +40633,18 @@ function agentDuplicateGroups(jobId, all) {
       twice: isTwice,
       why: best ? String(best.dupWhy || '') : '',
       conf: best ? (best.dupConf || 'low') : '',
-      rows: g
+      rows: g,
+      // A photograph read twice: each later line that repeats an earlier one, and each that is new (agentNamedTwice).
+      repeats: repeats.filter(function(p) { return inG[p.line.stableId]; }),
+      fresh: fresh.filter(function(r) { return inG[r.stableId]; })
     };
   }).filter(Boolean);
 }
 
-// A line the room check flagged (P24), still flagged: live, in a room, linked to another, and nobody has said it is
-// separate (`dupOK`). Reviewed or not, named on the desk or not: only Remove or Not duplicates answers it.
+// A line the room check flagged (P24), still flagged: live, in a room, linked to another. Reviewed or not, named on the desk
+// or not: only Remove or Not duplicates answers it, and Not duplicates for the pair it was pressed on (agentDupCleared, P8).
 function _arDupEligible(r) {
-  return !!r && !r.dupOK && !r.deletedAt && r.roomIdx != null && Array.isArray(r.dupWith) && r.dupWith.length > 0;
+  return !!r && !r.deletedAt && r.roomIdx != null && Array.isArray(r.dupWith) && r.dupWith.length > 0;
 }
 
 // ⚠ COMPUTED ONCE PER PAINT AND READ PER ROW. `_renderInvRow` must never call the grouper
@@ -40531,6 +40672,7 @@ function agentDropDuplicate(jobId, stableId) {
   if (!ref) return;
   if (!window.confirm('Remove item #' + _invItemNo(ref) + ' — ' + (ref.objectName || '(unnamed)') + '?\n\n'
     + 'The line comes off the inventory. The photograph stays in Google Drive, and Removed items, under Removed items & snapshots on Job Admin & Inv, gives the line back.')) return;
+  var waiting = agentValueWaiting(jobId);   // a line Agent Two waited on may be released by this (P8)
   // Tombstone, never a splice: absence is indistinguishable from "the other device has not
   // seen it yet", so a splice is undone by the next merge.
   // ⚠ AND NEVER `discardShot`, which TRASHES the photograph in Drive. The frame is real
@@ -40539,21 +40681,61 @@ function agentDropDuplicate(jobId, stableId) {
   _invTombstoneLine(jobId, ref);
   renderInventoryTab();
   _scheduleInventorySync(jobId);
+  _avDupReleased(jobId, waiting);
 }
 
-// "Not duplicates" clears EVERY row in the group, so the pair goes quiet as a pair rather
-// than leaving one survivor flagged against nothing.
+// "Not duplicates" answers EVERY PAIR in the group, so the group goes quiet as a group rather than leaving one survivor
+// flagged against nothing; and only those pairs (P8 of the desk audit, 2026-10-27: agentDupCleared), so a line it covered is
+// flagged again the day the room check or a second reading finds it a new partner. Each line keeps the stableIds of the
+// group's other lines in `dupOKWith`, with any it held before.
 function agentNotDuplicate(jobId, handle) {
   var key = _agDupUnhandle(handle);
   var hit = agentDuplicateGroups(jobId).filter(function(g){ return g.key === key; })[0];
   // The list can move between paint and tap — a merge landing from the other device, a row
   // edited in another tab. Repaint rather than clear a flag on rows nobody meant.
   if (!hit) { renderInventoryTab(); return; }
-  hit.rows.forEach(function(r){ r.dupOK = 1; _invTouch(r); _setPhotoRef(jobId, r); });
+  var waiting = agentValueWaiting(jobId);
+  hit.rows.forEach(function(r){
+    var w = Array.isArray(r.dupOKWith) ? r.dupOKWith.slice() : [];
+    hit.rows.forEach(function(o) { if (o !== r && w.indexOf(o.stableId) < 0) w.push(o.stableId); });
+    r.dupOKWith = w; _invTouch(r); _setPhotoRef(jobId, r);
+  });
   savePhotoRefs(jobId);
   showSyncBadge(hit.rows.length + ' × ' + (hit.name || 'item') + ' confirmed as separate objects', true);
   renderInventoryTab();
   _scheduleInventorySync(jobId);
+  _avDupReleased(jobId, waiting);
+}
+
+// ⚠⚠ KEEP THE FIRST READING (P8 of the desk audit, 2026-10-27; GAP1-03): one press, asked first, takes off only the lines of a
+// later reading that repeat a line of the first (agentNamedTwice's `repeats`), through the desk's one removal writer, the
+// manifest saved once. A line new in a later reading stays, and so does the group while it does: whether it repeats something the
+// crops did not match is for a person, by Remove or Not duplicates (nothing is merged or answered by itself, Decided). No
+// photograph is touched; Removed items gives a line back.
+function agentKeepFirstReading(jobId, handle) {
+  var key = _agDupUnhandle(handle);
+  var hit = agentDuplicateGroups(jobId).filter(function(g){ return g.key === key; })[0];
+  if (!hit) { renderInventoryTab(); return false; }
+  var reps = hit.repeats || [], fresh = hit.fresh || [];
+  var nm = function(r) { return '#' + _invItemNo(r) + ' ' + (r.objectName || '(unnamed)'); };
+  if (!reps.length) {
+    alert('No line of the later reading matches a line of the first in the photograph, so nothing was removed. Remove the extra lines one by one, or press Not duplicates if they are separate items.');
+    return false;
+  }
+  var msg = 'Keep the first reading of this photograph?\n\n'
+    + reps.length + ' line' + (reps.length > 1 ? 's' : '') + ' of the later reading repeat' + (reps.length > 1 ? '' : 's') + ' the first and come' + (reps.length > 1 ? '' : 's') + ' off the inventory:\n'
+    + reps.map(function(p) { return '  · ' + nm(p.line) + ' (repeats #' + _invItemNo(p.of) + ')'; }).join('\n')
+    + (fresh.length ? '\n\nNew in the later reading, and kept:\n' + fresh.map(function(r) { return '  · ' + nm(r); }).join('\n')
+        + '\nIf ' + (fresh.length > 1 ? 'one of these repeats' : 'it repeats') + ' a line too, Remove it under Possible duplicates; if ' + (fresh.length > 1 ? 'they are' : 'it is') + ' its own item, press Not duplicates.' : '')
+    + '\n\nNo photograph is deleted. Anything recorded on a removed line goes with it, and Removed items, under Removed items & snapshots on Job Admin & Inv, gives a line back.';
+  if (!window.confirm(msg)) return false;
+  reps.forEach(function(p) { _invTombstoneLine(jobId, p.line, { defer: true }); });
+  savePhotoRefs(jobId);
+  showSyncBadge(reps.length + ' repeated line' + (reps.length > 1 ? 's' : '') + ' removed: ' + reps.map(function(p) { return '#' + _invItemNo(p.line); }).join(', ')
+    + ' — Removed items, under Removed items & snapshots on Job Admin & Inv, gives ' + (reps.length > 1 ? 'them' : 'it') + ' back', false);
+  renderInventoryTab();
+  _scheduleInventorySync(jobId);
+  return reps.length;
 }
 
 // ⚠ IT RENDERS ABOVE THE ROWS, beside the duplicate-IMPORT notice it is the twin of. The
@@ -40567,9 +40749,17 @@ function _agDupHtml(jobId, all) {
   var lines = shown.map(function(g) {
     // A room-check group leads with what the pictures showed and names each line under its photograph, because the
     // names were written separately and often differ; a same-name group leads with the name, as it always did.
+    // A photograph read twice names each repeat beside the line it repeats ("#87 repeats #73", P8, GAP1-03).
+    var reps = g.repeats || [], fresh = g.fresh || [];
+    var repOf = {}, isFresh = {};
+    reps.forEach(function(p) { repOf[p.line.stableId] = p.of; });
+    fresh.forEach(function(r) { isFresh[r.stableId] = 1; });
+    var pairs = reps.map(function(p) { return '#' + esc(_invItemNo(p.line)) + ' repeats #' + esc(_invItemNo(p.of)); })
+      .concat(fresh.map(function(r) { return '#' + esc(_invItemNo(r)) + ' new in the later reading'; }));
     var head = g.twice
       ? '<strong style="font-size:11.5px;">One photograph named twice</strong> '
-        + '<span style="font-size:10.5px;color:var(--gray);">Agent One read it twice, so the later lines may repeat the earlier ones &middot; '
+        + '<span style="font-size:10.5px;color:var(--gray);">Agent One read it twice, so the later lines may repeat the earlier ones'
+        + (pairs.length ? ': <strong class="inv-dup-pairs" style="color:var(--gray-dk);">' + pairs.join(' &middot; ') + '</strong>' : '') + ' &middot; '
       : g.why
       ? '<strong style="font-size:11.5px;">' + esc(g.why) + '</strong> '
         + '<span style="font-size:10.5px;color:var(--gray);">room check: ' + esc(AGENT_ROOM_CONF_WORDS[g.conf] || AGENT_ROOM_CONF_WORDS.low) + ' &middot; '
@@ -40582,12 +40772,20 @@ function _agDupHtml(jobId, all) {
           return '<span style="display:flex;align-items:center;gap:5px;">'
             + _invThumbHTML(jobId, r, 72)
             + '<span style="font-size:10px;color:var(--gray);font-weight:700;">#' + esc(_invItemNo(r)) + '</span>'
-            + (g.why || g.twice ? '<span style="font-size:10px;color:var(--gray-dk);max-width:170px;">' + esc(r.objectName || '') + '</span>' : '')
+            + (g.why || g.twice ? '<span style="font-size:10px;color:var(--gray-dk);max-width:170px;">' + esc(r.objectName || '')
+                + (repOf[r.stableId] ? ' <em class="inv-dup-rep" style="color:var(--bronze-dk);">repeats #' + esc(_invItemNo(repOf[r.stableId])) + '</em>'
+                  : isFresh[r.stableId] ? ' <em class="inv-dup-new" style="color:var(--gray);">new in the later reading</em>' : '')
+                + '</span>' : '')
             + '<button class="btn-s" style="font-size:10px;color:#c0392b;" '
             + 'onclick="agentDropDuplicate(' + jobId + ',\'' + r.stableId + '\')" '
             + 'title="Take this line off the inventory. The photograph stays in Drive and Removed items, under Removed items &amp; snapshots on Job Admin &amp; Inv, gives the line back.">'
             + 'Remove</button></span>';
         }).join('')
+      + (g.twice && reps.length
+          ? '<button class="btn-s inv-keep-first" style="font-size:10px;" '
+            + 'onclick="agentKeepFirstReading(' + jobId + ',\'' + _agDupHandle(g.key) + '\')" '
+            + 'title="Take off the lines that repeat the first reading (' + reps.map(function(p) { return '#' + esc(_invItemNo(p.line)); }).join(', ') + '). It asks first; a line new in the later reading stays.">Keep the first reading</button>'
+          : '')
       + '<button class="btn-s" style="font-size:10px;" '
       + 'onclick="agentNotDuplicate(' + jobId + ',\'' + _agDupHandle(g.key) + '\')" '
       + 'title="They really are separate objects — stop flagging them">Not duplicates</button>'
@@ -40762,7 +40960,11 @@ function _arWrite(jobId, room, result) {
     var ids = [];
     (d.ids || []).forEach(function(id) { if (sent[id] && ids.indexOf(id) < 0) ids.push(id); });
     if (ids.length < 2) return;
-    n++;
+    // Counted only where Possible duplicates will show it: a pair a person said is two things (agentDupCleared) is linked as
+    // the pictures say, and shown no more (P8: the work bar said a double was flagged that the block did not show).
+    var shown = false;
+    ids.forEach(function(a) { ids.forEach(function(b) { if (a < b && !agentDupCleared(_getPhotoRef(jobId, a), _getPhotoRef(jobId, b))) shown = true; }); });
+    if (shown) n++;
     ids.forEach(function(id) {
       var l = links[id] || (links[id] = { with: [], why: '', conf: '' });
       ids.forEach(function(o) { if (o !== id && l.with.indexOf(o) < 0) l.with.push(o); });
@@ -41241,10 +41443,18 @@ function agentValueRun(jobId) {
   if (!SHEETS_SYNC_URL) { alert('This device has no Apps Script URL set, so it cannot reach the valuing service. Settings > Sync.'); return; }
   var st = _avState(jobId);
   if (st.running) { alert('Agent Two is already valuing lines on this job. Wait for it to finish, then try again.'); return; }
-  var refs = agentValueableRefs(jobId);
+  // The later line of a pair that is plainly one thing waits for a person's answer here too (agentValueWaiting, P8), named.
+  var waits = agentValueWaiting(jobId), waited = [];
+  var refs = agentValueableRefs(jobId).filter(function(r) { if (waits[r.stableId]) { waited.push(r); return false; } return true; });
+  var waitTxt = waited.length
+    ? waited.length + ' line' + (waited.length === 1 ? ' waits' : 's wait') + ' on a possible duplicate ('
+      + waited.slice(0, 6).map(function(r) { return '#' + _invItemNo(r) + ' and #' + _invItemNo(waits[r.stableId]); }).join('; ')
+      + (waited.length > 6 ? '; and ' + (waited.length - 6) + ' more' : '')
+      + '): Remove the extra line or press Not duplicates under Possible duplicates, and Agent Two values what stays.' : '';
   var unnamed = _jobInvRefs(jobId).filter(function(r) { return !String(r.objectName || '').trim(); }).length;
   if (!refs.length) {
-    alert(unnamed
+    alert(waited.length ? waitTxt
+      : unnamed
       ? 'Every named line already has a value. ' + unnamed + ' line' + (unnamed === 1 ? ' has' : 's have') + ' no name yet: name ' + (unnamed === 1 ? 'it' : 'them') + ' first (Name shots), then value ' + (unnamed === 1 ? 'it' : 'them') + '.'
       : 'Every line on this job already has a value.');
     return;
@@ -41254,7 +41464,8 @@ function agentValueRun(jobId) {
       + (research ? research + ' researched against sold comparables, ' : '') + (refs.length - research) + ' valued as everyday lots. '
       + 'A name Agent One gave that nobody has reviewed may come back corrected, and a name you typed or reviewed is valued as named. Each line\u2019s Reviewed tick covers its value too. Nothing else on the line changes.'
       + (agentValueInternal(job) ? '\n\nCounsel values the property on this engagement, so the figures stay on the desk for routing and appraisal advice. No document prints them.' : '')
-      + (unnamed ? '\n\n' + unnamed + ' unnamed line' + (unnamed === 1 ? ' is' : 's are') + ' left out: name ' + (unnamed === 1 ? 'it' : 'them') + ' first.' : ''))) return;
+      + (unnamed ? '\n\n' + unnamed + ' unnamed line' + (unnamed === 1 ? ' is' : 's are') + ' left out: name ' + (unnamed === 1 ? 'it' : 'them') + ' first.' : '')
+      + (waitTxt ? '\n\n' + waitTxt : ''))) return;
   _avStart(jobId, job, refs.map(function(r) { return r.stableId; }), {});
 }
 
@@ -41315,6 +41526,52 @@ function invBulkRevalue(jobId) {
 // ⚠ A RUN ALREADY OUT QUEUES IT, NEVER DROPS IT (2026-10-26): a one-line run started by a rename was out when the room check ended,
 // and the evening's automatic valuation was skipped with nothing said. It goes when that run finishes (_avFinish).
 var _avAutoAgain = {};   // jobId -> 1: an automatic run asked for while another was out (session only)
+
+// ⚠⚠ AGENT TWO WAITS ON THE LATER LINE OF A PAIR THAT IS PLAINLY ONE THING (P8 of the desk audit, 2026-10-27; ACC-02): the room
+// check linked two photographs of one harbour painting *plainly one thing*, and Agent Two researched both, $4,200 and $3,900, so
+// the same object was searched twice and both figures went into the total. Until a person presses Remove or Not duplicates, the
+// later line waits: of a room-check pair both of whose lines the check read as plainly one thing (`dupConf` high on each), the one
+// photographed later (`ts`, else the higher number); and a line of a later reading that repeats a line of the first
+// (agentNamedTwice's `repeats`). A pair flagged less surely, or by the same name alone, is valued as ever. DOM-free; answers
+// {stableId: the line it waits on}, read by the automatic run (agentValueAuto), Value N lines (agentValueRun, which says so) and its
+// count (_avValueButtonHtml). Remove and Not duplicates hand what they released back to the automatic run (_avDupReleased).
+function agentValueWaiting(jobId, all) {
+  var out = {};
+  var later = function(a, b) {
+    var ta = Number(a.ts) || 0, tb = Number(b.ts) || 0;
+    if (ta !== tb) return ta > tb ? a : b;
+    var na = parseInt(a.itemNo, 10) || 0, nb = parseInt(b.itemNo, 10) || 0;
+    if (na !== nb) return na > nb ? a : b;
+    return String(a.stableId) > String(b.stableId) ? a : b;
+  };
+  agentDuplicateGroups(jobId, all).forEach(function(g) {
+    (g.repeats || []).forEach(function(p) { out[p.line.stableId] = p.of; });
+    var byId = {};
+    g.rows.forEach(function(r) { byId[r.stableId] = r; });
+    g.rows.forEach(function(r) {
+      if (r.dupConf !== 'high' || !_arDupEligible(r)) return;
+      r.dupWith.forEach(function(o) {
+        var other = byId[o];
+        if (!other || other.dupConf !== 'high' || agentDupCleared(r, other)) return;
+        var l = later(r, other);
+        if (!out[l.stableId]) out[l.stableId] = l === r ? other : r;
+      });
+    });
+  });
+  return out;
+}
+// A press that answered a pair (Remove, Not duplicates) hands what Agent Two waited on to the automatic run, which values it as
+// it would have done (silent with nothing left to value). `before` is agentValueWaiting as it stood before the press.
+function _avDupReleased(jobId, before) {
+  var now = agentValueWaiting(jobId), freed = false;
+  Object.keys(before || {}).forEach(function(id) {
+    var r = _getPhotoRef(jobId, id);
+    if (r && !r.deletedAt && !now[id] && !_avHasFigure(r)) freed = true;
+  });
+  if (freed) agentValueAuto(jobId);
+  return freed;
+}
+
 function agentValueAuto(jobId) {
   var job = _invJob(jobId);
   if (!job || !SHEETS_SYNC_URL) return false;
@@ -41323,7 +41580,9 @@ function agentValueAuto(jobId) {
   // so a line that came back *not valued* would be researched again each time, and a line typed with + Add line item ("Cash
   // on hand", a brokerage account) or a vehicle brought in by hand is nothing the run was started for. Value N lines and
   // Re-value still send both.
-  var refs = agentValueableRefs(jobId).filter(function(r) { return !r.valFailed && _invHasPhoto(r); });
+  // ⚠ NOR THE LATER LINE OF A PAIR THAT IS PLAINLY ONE THING, until a person answers it (agentValueWaiting, P8).
+  var waits = agentValueWaiting(jobId);
+  var refs = agentValueableRefs(jobId).filter(function(r) { return !r.valFailed && _invHasPhoto(r) && !waits[r.stableId]; });
   if (!refs.length) return false;
   _avStart(jobId, job, refs.map(function(r) { return r.stableId; }), {});
   return true;
@@ -41673,7 +41932,8 @@ function _avRowBadges(job, ref) {
 // are none; a line a person or an appraiser valued is never sent. Its own function so a test renders it (a source check
 // passed with the button switched off, the revert sweep's one green).
 function _avValueButtonHtml(job) {
-  var n = agentValueableRefs(job.id).length;
+  var waits = agentValueWaiting(job.id);   // never the later line of a pair that is plainly one thing (P8)
+  var n = agentValueableRefs(job.id).filter(function(r) { return !waits[r.stableId]; }).length;
   if (!n) return '';
   return '<button class="btn-s" onclick="agentValueRun(' + job.id + ')"'
     + ' title="' + esc(agentValueInternal(job)

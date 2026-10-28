@@ -94,7 +94,7 @@ const ROW = (over) => Object.assign({
 
 const APP_FNS = ['agentRoomsToCheck', '_arCheckable', '_arRoomPayload', 'agentRoomCheckRun', '_arSendNext', '_arWrite',
   '_arFinish', '_arRepaint', '_arStateHtml', '_arState', '_arCheckButtonHtml', '_arDupEligible',
-  'agentDuplicateGroups', 'agentNamedTwice', '_agDupEligible', '_agNameKey', '_agDupHtml', '_agDupHandle', '_agDupUnhandle', 'agentNotDuplicate',
+  'agentDuplicateGroups', 'agentDupCleared', 'agentNamedTwice', '_agDupEligible', '_agNameKey', '_agDupHtml', '_agDupHandle', '_agDupUnhandle', 'agentNotDuplicate', 'agentValueWaiting', '_avDupReleased',
   '_jobInvRefs', '_getPhotoRef', '_setPhotoRef', '_invFileId', '_invRoomName', '_invItemNo', '_invJob',
   // the collections
   'collectionLinesEnsure', '_collLinesOf', 'collectionLineId', 'collectionOf', 'collectionLineUnshot', '_invHasPhoto',

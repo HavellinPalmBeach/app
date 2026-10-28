@@ -82,8 +82,8 @@ function app(refs, over) {
   const ctx = sandbox({
     fns: ['agentListedOff', 'agentNameableRefs', 'agentShotGroups', '_agDetailRefs', '_agShotPayload', '_agContext', '_agWrite', '_invCondIsAgents', '_invAgentCondition',
       'agentApplyResult', '_agState', '_agSendNext', 'invSplitItemN', '_invSplitSource', '_getPhotoRef', '_setPhotoRef', '_jobInvRefs', '_invFileId', '_photoUid',
-      '_invPhotoSource', '_invRoomName', 'agentNamedTwice', 'agentDuplicateGroups', '_agDupEligible', '_arDupEligible', '_agNameKey',
-      '_agDupIndex', '_agDupHtml', '_agDupHandle', '_agDupUnhandle', 'agentDropDuplicate', 'agentNotDuplicate', '_invItemNo',
+      '_invPhotoSource', '_invRoomName', 'agentNamedTwice', 'agentDuplicateGroups', 'agentDupCleared', '_agDupEligible', '_arDupEligible', '_agNameKey',
+      '_agDupIndex', '_agDupHtml', '_agDupHandle', '_agDupUnhandle', 'agentDropDuplicate', 'agentNotDuplicate', 'agentValueWaiting', '_avDupReleased', '_avHasFigure', '_invHasValue', '_invItemNo',
       'savePhotoRefs', 'collectionLineWithPhoto', '_withDeviceKey', 'deviceKey', '_invJob', 'invFirearmSettle', 'invIsFirearm', 'invFirearmDispRefusal', 'isDecedentJob'],
     vars: ['_agRun', 'AGENT_CONDITIONS', 'AGENT_MAX_DETAILS', 'AGENT_LISTED_MAX', 'AGENT_BATCH', 'AGENT_PASS_GAP_MS', 'AGENT_ROOM_CONF_RANK', 'AGENT_ROOM_CONF_WORDS',
       'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY', 'INV_SPLIT_MAX', '_photoUidSeq', 'INV_FIREARM_NEVER', 'DECEDENT_SERVICES'],
@@ -98,6 +98,7 @@ function app(refs, over) {
       renderInventoryTab() {}, showSyncBadge: (m) => badges.push(m), window: { confirm: () => true },
       _invTombstoneLine(jobId, ref) { ref.deletedAt = 5; removed.push(ref.stableId); },
       _agRepaint() {}, _agFinish() {}, SHEETS_SYNC_URL: 'https://script.example/exec',
+      agentValueAuto() {},   // what Not duplicates hands Agent Two (P8): not what this measures
       _readAppsScriptJson: (x) => x,
     }, over.stubs || {}),
   });
@@ -165,7 +166,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const race = ELLISON(); race[2].agentAt = T1 + 9000; race[3].agentAt = T1 + 9001;
     eq(A.agentNamedTwice(race).map((x) => x.rows.length), [4], 'two devices reading it seconds apart are two readings');
     // What a person settled stays settled.
-    const sep = ELLISON().map((r) => Object.assign(r, { dupOK: 1 }));
+    const sep = ELLISON().map((r, i, all) => Object.assign(r, { dupOKWith: all.filter((o) => o !== r).map((o) => o.stableId) }));
     eq(A.agentNamedTwice(sep), [], 'Not duplicates pressed: quiet');
     const gone = ELLISON(); gone[2].deletedAt = 5; gone[3].deletedAt = 5;
     eq(A.agentNamedTwice(gone), [], 'the second reading\'s lines removed: quiet');
@@ -201,7 +202,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const N = app(ELLISON());
     const g = N.agentDuplicateGroups(7)[0];
     N.agentNotDuplicate(7, N._agDupHandle(g.key));
-    eq(N._jobInvRefs(7).map((r) => r.dupOK), [1, 1, 1, 1], 'Not duplicates marks every line of the group');
+    eq(N._jobInvRefs(7).map((r) => (r.dupOKWith || []).length), [3, 3, 3, 3], 'Not duplicates marks every pair of the group (P8: on each line, the other three)');
     eq(N.agentDuplicateGroups(7), [], 'and the group goes quiet');
     // ⚠ The old rule stands: a matching pair split off one frame in one naming is never shown.
     const P = app([L('p', 1, 'Brass table lamp', { agentAt: T1 }), L('s2', 2, 'Brass table lamp', { agentAt: T1 + 1 })]);

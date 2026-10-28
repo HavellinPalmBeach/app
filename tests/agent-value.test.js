@@ -106,7 +106,7 @@ const LINE = (over) => Object.assign({ stableId: 's1', mode: 'comps', name: 'Her
 const CTXP = { estate: true, basis: 'Fair Market Value', valuationDate: '2026-06-14' };
 
 // ─── THE REAL APP SIDE ───────────────────────────────────────────────────────
-const AV_FNS = ['_avValueButtonHtml', 'agentValueMode', 'agentValueInternal', '_avHasFigure', 'agentValueableRefs', 'agentValueUnreviewed',
+const AV_FNS = ['_avValueButtonHtml', 'agentValueWaiting', 'agentDuplicateGroups', 'agentDupCleared', 'agentNamedTwice', '_agDupEligible', 'agentValueMode', 'agentValueInternal', '_avHasFigure', 'agentValueableRefs', 'agentValueUnreviewed',
   'agentValueStale', 'agentValueSpecialistWorth', '_avValDate', '_avContext', '_avItemPayload', 'agentValueGradesCondition', '_avComp', '_avWrite', '_invCondIsAgents', '_invAgentCondition', 'agentValueWhole',
   '_avNoteFailure', 'agentValueApply', '_avTakeValue', '_avStampReviewed', '_invStampBy', 'deviceUser', 'agentValueRun', 'agentRevalue', '_avStart',
   '_avSendNext', '_avFinish', '_avRepaint', '_avStateHtml', '_avState', 'agentValueUseSale',
@@ -121,7 +121,7 @@ const AV_FNS = ['_avValueButtonHtml', 'agentValueMode', 'agentValueInternal', '_
 const AV_VARS = ['_avRun', '_avForceComps', '_avAfter', 'AGENT_VALUE_BATCH', 'AGENT_VALUE_GENERAL_CEILING', 'AGENT_VALUE_WHOLE_FROM', 'AGENT_VALUE_MAX_COMPS', 'AGENT_CONDITIONS', 'INV_FIREARM_NEVER',
   'AGENT_VALUE_MARK_RE', 'AGENT_VALUE_NO_MARK_RE', 'AGENT_VALUE_CONFS', 'AGENT_VALUE_SOURCES', 'AGENT_VALUE_OWN', 'AGENT_VALUE_SALE_DATE_RE',
   'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'DECEDENT_SERVICES', 'DOC_TIERS',
-  'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'AGENT_MAX_DETAILS', 'INV_VAL_SOURCES', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', 'AGENT_VALUE_READ_RE', 'AGENT_VALUE_HEDGE_RE', 'AGENT_LISTED_MAX', '_avAutoAgain', 'INV_CATEGORIES'];
+  'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'AGENT_MAX_DETAILS', 'INV_VAL_SOURCES', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', 'AGENT_VALUE_READ_RE', 'AGENT_VALUE_HEDGE_RE', 'AGENT_LISTED_MAX', '_avAutoAgain', 'INV_CATEGORIES', 'AGENT_PASS_GAP_MS', 'AGENT_ROOM_CONF_RANK'];
 
 // A synchronous, already-settled promise (the runner is synchronous), unwrapping a returned thenable like a real one.
 function sp(v) {
@@ -847,7 +847,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(panel, 'WorthPoint search: <code>Herend Rothschild</code>', 'the WorthPoint lookup');
     has(panel, 'Use this sale', 'the paste form');
     has(panel, 'href="https://drive.google.com', 'or the photograph link when the line carries one');
-    const flags = sandbox({ vars: ['INV_WORK_FLAGS', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', '_agDupSetJob', 'INV_HOLD_WORDS', 'INV_OPEN_HOLDS', 'INV_ACCEPT_AMMO_RE'], fns: ['agentValueStale', '_agNameKey', 'invLineReviewed', 'invLineOpen', 'agentValueUnreviewed', '_avHasFigure', '_invHasValue', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invNeedsAppraisal', 'invIsIntrinsic', 'invCatMeta', 'invLineAcceptedOnly', '_invAcceptCtxOf', '_arDupEligible', 'invAcceptCtx', 'agentDuplicateGroups', '_jobInvRefs', '_agDupEligible', 'agentNamedTwice'] }).INV_WORK_FLAGS;
+    const flags = sandbox({ vars: ['INV_WORK_FLAGS', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', '_agDupSetJob', 'INV_HOLD_WORDS', 'INV_OPEN_HOLDS', 'INV_ACCEPT_AMMO_RE'], fns: ['agentValueStale', '_agNameKey', 'invLineReviewed', 'invLineOpen', 'agentValueUnreviewed', '_avHasFigure', '_invHasValue', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invNeedsAppraisal', 'invIsIntrinsic', 'invCatMeta', 'invLineAcceptedOnly', '_invAcceptCtxOf', '_arDupEligible', 'invAcceptCtx', 'agentDuplicateGroups', 'agentDupCleared', '_jobInvRefs', '_agDupEligible', 'agentNamedTwice'] }).INV_WORK_FLAGS;
     eq(flags[1].key, 'unreviewed', 'the Not reviewed chip sits beside Unnamed shots (2026-10-25b: it replaced Unreviewed values)');
     eq(flags[1].test(Object.assign({}, unrev, { reviewed: true })), true, 'and counts a line whose agent figure is not yet looked at, its name ticked or not');
     const bar = liveLines(fn('_renderInvWorkbar'));
@@ -874,7 +874,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             'invBequestFor', 'jobListEntries', 'invApprovalGap', 'invReceiptOwed', '_invBenListAttr',
             'invRatificationOwed', 'invFiduciaryMode', 'isDecedentJob', 'invReleaseCautions', 'invBequestElsewhere', '_invJob', 'invHavellinRecipient', 'invWrittenReleaseNeeded',
             // P22 (merged): the row reads a pickup record and a name left on a line moved off To a person.
-            'invPickupRecord', 'signedRecordsOf', 'invChannelLeftover', 'invChannelLeftoverText', '_invPanelLeftoverHtml', 'invLineUnsure', '_invEachInput', 'invUnitValue', 'invLineQty', '_invInputStyle', '_invCtrlMinW', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invNeedsAppraisal', 'invIsIntrinsic', 'invCatMeta', 'invLineAcceptedOnly', '_invRevBoxHtml', 'invIsMAIV', 'invMAIVDefaultCat', '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_jobInvRefs', '_agDupEligible', 'agentNamedTwice', 'agentNoticesOn', '_avSurveyOf', 'invFirearmClientTakes', 'invDealerWhy', 'invTransportDealer', 'invFirearmsDealerFirm', 'invFirearmsDealerFirms', '_vendorNameKey', 'vendorCats', 'invViaDealer', 'invDealerReleased', '_invRecipientListAttr', 'invDealerNamed', 'invDispGoesToDealer', 'invDealerUnchecked', 'invDealerDirState', 'invDealerUncheckedText', '_invDealerDirStaleText'],
+            'invPickupRecord', 'signedRecordsOf', 'invChannelLeftover', 'invChannelLeftoverText', '_invPanelLeftoverHtml', 'invLineUnsure', '_invEachInput', 'invUnitValue', 'invLineQty', '_invInputStyle', '_invCtrlMinW', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invNeedsAppraisal', 'invIsIntrinsic', 'invCatMeta', 'invLineAcceptedOnly', '_invRevBoxHtml', 'invIsMAIV', 'invMAIVDefaultCat', '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', 'agentDupCleared', '_jobInvRefs', '_agDupEligible', 'agentNamedTwice', 'agentNoticesOn', '_avSurveyOf', 'invFirearmClientTakes', 'invDealerWhy', 'invTransportDealer', 'invFirearmsDealerFirm', 'invFirearmsDealerFirms', '_vendorNameKey', 'vendorCats', 'invViaDealer', 'invDealerReleased', '_invRecipientListAttr', 'invDealerNamed', 'invDispGoesToDealer', 'invDealerUnchecked', 'invDealerDirState', 'invDealerUncheckedText', '_invDealerDirStaleText'],
       vars: ['INV_PLAN_CHANNEL_KINDS', 'INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick', '_agDupSet', 'DECEDENT_SERVICES', 'INV_RELEASE_CAUTIONS', '_avRun', '_avAfter', '_avForceComps',
              'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'INV_APPRAISAL_THRESHOLD', 'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', '_agDupSetJob', 'INV_HOLD_WORDS', 'INV_OPEN_HOLDS', 'INV_ACCEPT_AMMO_RE', 'INV_FIREARM_CLIENT_TXT', 'INV_SALE_DISPOSITIONS', 'FIREARMS_DEALER_CATEGORY'],
       stubs: {

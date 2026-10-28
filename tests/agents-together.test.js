@@ -56,10 +56,10 @@ function gsCtx() {
 const AV_FNS = ['invHavellinRecipient', 'invAwaitingAppraisal', 'invBequestElsewhere', 'invReleaseCautions', '_invPhotoNoteOpen', 'invLineOpen', '_gate706', 'maivFilingApplies', 'invLotSplitState', 'agentValueMode', 'agentValueInternal', '_avHasFigure', 'agentValueableRefs', 'agentValueUnreviewed',
   'agentValueStale', 'agentValueSpecialistWorth', '_avValDate', '_avContext', '_avItemPayload', '_avComp', '_avWrite', '_avRename', '_avNameIsAgents', 'agentValueGradesCondition', '_invCondIsAgents', '_invAgentCondition', 'agentValueWhole',
   '_avNoteFailure', 'agentValueApply', '_avTakeValue', '_avStampReviewed', '_invStampBy', 'deviceUser', '_avStart',
-  '_avSendNext', '_avFinish', '_avRepaint', '_avStateHtml', '_avState', 'agentValueAuto', 'agentValueAfterRename', 'agentValueUseSale',
+  '_avSendNext', '_avFinish', '_avRepaint', '_avStateHtml', '_avState', 'agentValueAuto', 'agentValueWaiting', 'agentValueAfterRename', 'agentValueUseSale',
   'agentValueNotices', '_avNoticesHtml', '_avNoticeKinds', '_avNoticeLabel', '_deskShowBtnHtml', '_avSummary', '_avRowBadges', '_avPanelHtml',
   'invLineReviewed', '_invStampLineReviewed', '_invSetReviewed', 'invLineUnsure',
-  'agentDuplicateGroups', '_agDupEligible', '_arDupEligible', 'agentNamedTwice',
+  'agentDuplicateGroups', 'agentDupCleared', '_agDupEligible', '_arDupEligible', 'agentNamedTwice',
   'invLineQty', 'invUnitValue', '_invQtyCarriesValue', '_invPaintFigures', '_invEachInput', '_invInputStyle', '_invCtrlMinW',
   'invValBasisWord', 'invAppraised', 'invLineAppraiser', '_invLinkedAppraiser', '_jobAppraisers', '_apprLabel', '_invHasAppraisal', '_invAppraisalDate',
   '_getPhotoRef', '_setPhotoRef', '_jobInvRefs', '_invHasValue', 'roundCents', 'invIsIntrinsic', 'invCatMeta',
@@ -200,7 +200,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const lines = [ROW({ stableId: 'a' }), ROW({ stableId: 'b', fmv: 40, valuedBy: 'desk' }), ROW({ stableId: 'c', objectName: '' })];
     const chain = (roomStarts, error) => {
       const seen = [];
-      const R = rig(ESTATE(), lines, { confirm: false, fns: ['_agFinish', '_arFinish', 'agentValueAuto', '_invRenderWhenIdle', '_invHasPhoto'], stubs: {
+      const R = rig(ESTATE(), lines, { confirm: false, fns: ['_agFinish', '_arFinish', 'agentValueAuto', 'agentValueWaiting', '_invRenderWhenIdle', '_invHasPhoto'], stubs: {
         _agState: () => ({ running: true, error: error || '' }), _arState: () => ({ running: false }),
         agentRoomCheckRun: (j, o) => { seen.push(o && o.auto); return roomStarts; } } });
       return { R, seen };

@@ -49,6 +49,7 @@
   },
   {
    "id": "ACC-02",
+   "fixed": "2026-10-27 (P8, its critical part: CLAUDE.md, Inventory and estate documentation, a schedule that may count a thing twice is not FINAL, and Agent Two's neither-sends rule; tests/p8-nothing-twice.test.js, browser step 121)",
    "title": "A FINAL, adoptable Court Inventory double counts a painting the room check flagged as one object",
    "kind": "accuracy",
    "severity": "fix-now",

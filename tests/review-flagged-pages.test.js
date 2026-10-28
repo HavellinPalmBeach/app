@@ -68,7 +68,7 @@ function closure(roots, stop) {
 const ROOTS = ['invLineHold', '_invLineHolds', 'invLineOpen', 'invLineAccepted', 'invAcceptCtx', 'invLineAcceptedOnly', 'invLineReviewed',
   'invLineUnsure', '_invReviewStats', '_invAcceptedStampWords', '_invProgressStamp', '_avUnreviewedStamp', '_avAcceptedPill', '_invRevBoxHtml',
   '_invProgressBar', 'invMarkListRead', 'invListRead', 'invListReadWords', 'invListSeen', 'invListReadRefusal', '_invListReadHtml', '_invReadKey',
-  'probatePackageGaps', 'agentNotices', 'agentDuplicateGroups'];
+  'probatePackageGaps', 'agentNotices', 'agentDuplicateGroups', 'agentDupCleared'];
 const STUBS = ['jobs', '_photoRefs', 'estimateStore', 'vendors', 'vendorDirectory', 'contractors', 'document', '_saveJobEdit', '_renderInvWorkbar',
   'SHEETS_SYNC_URL', '_invCloudSeen', '_invCloudFailed', 'jobPlanStore', 'alert'];
 function compile(roots, stop) {
@@ -224,7 +224,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         DRAWER({ stableId: 'd2', ts: 2, objectName: 'Blue vase', valNameAt: 'Blue vase', deletedAt: 9, dupWith: ['d1'] })]],
       ['the caution\'s control: given to somebody who is not Havellin\'s', LIVING({ tc: 'Ashley Jerome' }), [DRAWER({ disposition: 'Distribute', channel: 'Karen Smith' })]],
       ['the duplicate\'s control: two lamps Agent One named apart', ESTATE(), [LAMP('d1'), LAMP('d2', { objectName: 'Pair of brass candlesticks', valNameAt: 'Pair of brass candlesticks', agentName: 'Pair of brass candlesticks' })]],
-      ['the duplicate answered: Not duplicates', ESTATE(), [LAMP('d1', { dupOK: true }), LAMP('d2', { dupOK: true })]],
+      ['the duplicate answered: Not duplicates', ESTATE(), [LAMP('d1', { dupOKWith: ['d2'] }), LAMP('d2', { dupOKWith: ['d1'] })]],
     ];
     STANDS.forEach(([what, job, refs]) => eq(hold(job, refs), '', 'the code: stands: ' + what));
     FLAGS.forEach(([what, , why, job, refs]) => eq(hold(job, refs), why, 'the code: keeps its tick: ' + what));
@@ -769,7 +769,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // A tick on a line with no name, or on a line of an open possible duplicate, is not a review; on Undecided or Hold it is.
     eq(reviewed(ESTATE(), [DRAWER(Object.assign({ objectName: '', valNameAt: '' }, tk))]), false, '⚠⚠ a ticked line with no name: not checked');
     eq(reviewed(ESTATE(), [LAMP('d1', tk), LAMP('d2', tk)]), false, '⚠⚠ a ticked half of an open pair: not checked');
-    eq(reviewed(ESTATE(), [LAMP('d1', Object.assign({ dupOK: true }, tk)), LAMP('d2', Object.assign({ dupOK: true }, tk))]), true, '…Not duplicates answers it');
+    eq(reviewed(ESTATE(), [LAMP('d1', Object.assign({ dupOKWith: ['d2'] }, tk)), LAMP('d2', Object.assign({ dupOKWith: ['d1'] }, tk))]), true, '…Not duplicates answers it');
     eq(reviewed(ESTATE(), [DRAWER(Object.assign({ disposition: 'Undecided' }, tk))]), true, '⚠ a ticked line still Not yet decided: checked');
     eq(reviewed(ESTATE(), [DRAWER(Object.assign({ disposition: 'Hold' }, tk))]), true, '…on Hold: checked');
     // And the stamp: both halves of a pair ticked never print REVIEWED (ticking both Brass candlesticks did, counting one twice).
@@ -781,7 +781,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(groups([LAMP('d1'), LAMP('d2')]), [['d1', 'd2']], 'the pair');
     eq(groups([LAMP('d1', { objectName: 'Pair of brass candlesticks', namedBy: 'desk' }), LAMP('d2')]), [['d1', 'd2']], '⚠⚠ …through a name corrected on the desk');
     eq(groups([LAMP('d1', { category: 'Lighting', namedBy: 'desk' }), LAMP('d2')]), [['d1', 'd2']], '⚠ …through a category changed');
-    eq(groups([LAMP('d1', { objectName: 'Pair of brass candlesticks', namedBy: 'desk', dupOK: true }), LAMP('d2', { dupOK: true })]), [], '…until Not duplicates');
+    eq(groups([LAMP('d1', { objectName: 'Pair of brass candlesticks', namedBy: 'desk', dupOKWith: ['d2'] }), LAMP('d2', { dupOKWith: ['d1'] })]), [], '…until Not duplicates');
     has(live(fn('_agWrite')), 'ref.agentName = ref.objectName', 'Agent One\'s own reading is kept as it names');
     // Every note outlives the line it was raised on (the merge with main's 2026-10-26, agentNoticesOn; under the second review
     // only a Firearm or a Possible NFA item did): it rides on the photograph's first line still listed and holds its lines.

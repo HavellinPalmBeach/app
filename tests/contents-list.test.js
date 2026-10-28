@@ -21,7 +21,7 @@ const FNS = ['invLineReviewed', 'invLineOpen', '_invDocPartyHead', 'invCondition
   'printEstateInventoryReport', 'invAppraised', '_invHasValue', 'invAppraisalSourceText', 'invLineAppraiser', '_invLinkedAppraiser', 'invAppraisalInProgress', '_apprLabel', 'jobOnProbateTrack', '_avUnreviewedStamp', 'agentValueUnreviewed', '_invGroupItems', 'invIsFirearm', '_invDispLabel', '_invIsExempt',
   '_invIsProbateAsset', '_invTrack', '_invHasAppraisal', '_jobAppraisers', 'invAppraiserFor',
   'resolveValBasis', '_avHasFigure', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invReleaseCautions', '_invPhotoNoteOpen', 'agentValueSpecialistWorth', 'invLineAcceptedOnly', '_invAcceptedStampWords', 'invListReadRefusal', '_invManifestUnread', '_arDupEligible'
-, 'invAcceptCtx', 'agentDuplicateGroups', '_agDupEligible', 'agentNamedTwice', '_invAcceptCtxOf', 'invListRead', '_invListReadHtml', '_invReadKey'];
+, 'invAcceptCtx', 'agentDuplicateGroups', 'agentDupCleared', '_agDupEligible', 'agentNamedTwice', '_invAcceptCtxOf', 'invListRead', '_invListReadHtml', '_invReadKey'];
 const VARS = ['_agDupSetJob', 'INV_OPEN_HOLDS', 'INV_ACCEPT_AMMO_RE', 'MATTER_TYPES',  'INV_CONTRACT_DOCS',
   '_agRun', '_avRun', '_arRun', 'AGENT_NOTICE_KINDS', 
   'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DECEDENT_SERVICES', 'SVC_ORDER',
@@ -486,9 +486,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     // A build that renders the document perfectly and never puts a button on any screen
     // contains every string a source check would look for. This drives the real workbar.
-    const BAR = FNS.concat(['_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_agDupEligible', 'agentNamedTwice', 
+    const BAR = FNS.concat(['_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', 'agentDupCleared', '_agDupEligible', 'agentNamedTwice', 
       'agentShotGroups', 'agentNameableRefs', '_agState', '_agStateHtml', '_agNoticesHtml', 'agentNotices',
-      '_renderInvWorkbar', 'invColdWords', '_arCheckButtonHtml', '_arState', 'agentRoomsToCheck', '_arCheckable', '_arStateHtml', '_avValueButtonHtml', 'agentValueableRefs', '_avHasFigure', '_invHasValue', '_avStateHtml', '_avState', '_avNoticesHtml', 'agentValueNotices', '_avNoticeKinds', '_avNoticeLabel', 'agentValueInternal', 'agentValueUnreviewed', 'agentValueStale', 'agentValueSpecialistWorth', 'invPrimaryDoc', '_invProgressBar', 'invWorkFlags', '_invNeedsValue',
+      '_renderInvWorkbar', 'invColdWords', '_arCheckButtonHtml', '_arState', 'agentRoomsToCheck', '_arCheckable', '_arStateHtml', '_avValueButtonHtml', 'agentValueWaiting', 'agentValueableRefs', '_avHasFigure', '_invHasValue', '_avStateHtml', '_avState', '_avNoticesHtml', 'agentValueNotices', '_avNoticeKinds', '_avNoticeLabel', 'agentValueInternal', 'agentValueUnreviewed', 'agentValueStale', 'agentValueSpecialistWorth', 'invPrimaryDoc', '_invProgressBar', 'invWorkFlags', '_invNeedsValue',
       'printEstateInventoryReport', '_avUnreviewedStamp', 'printContentsRecord', '_invHasPhoto', 'photoShareLive', 'photoSharesOf', '_invDispLabel',
       'invReleaseBlocked', 'invIsFirearm', 'invTransportBlocked', 'invFirearmAuthorized',
       'invAwaitingAppraisal', '_invHasAppraisal', '_jobAppraisers', '_invAwaitingApproval', 'invWrittenReleaseNeeded',

@@ -66,7 +66,7 @@ function rig(refs, stubs) {
     fns: ['agentShotGroups', 'agentNameableRefs', '_agDetailRefs', '_agShotPayload', 'agentListedOff', '_agWrite', '_invCondIsAgents', '_invAgentCondition',
           'agentApplyResult', '_agState', 'invSplitItemN', '_invSplitSource', '_getPhotoRef', '_setPhotoRef', '_jobInvRefs',
           '_invFileId', '_photoUid', '_invPhotoSource', '_invRoomName', '_invDetailRefs',
-          '_agNameKey', '_agDupEligible', 'agentDuplicateGroups', 'agentNamedTwice', '_arDupEligible', '_arWrite',
+          '_agNameKey', '_agDupEligible', 'agentDuplicateGroups', 'agentDupCleared', 'agentNamedTwice', '_arDupEligible', '_arWrite',
           '_importableFromEstimate', '_importedSourceSet', '_pushInvLine',
           '_collDispToInv', '_collDispNeedsAppr', '_guessCategory', '_numOrBlank',
           // P24: the walkthrough's collections join the inventory by themselves and wait for a photograph.
