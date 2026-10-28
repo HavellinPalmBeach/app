@@ -33,7 +33,7 @@ const DEVICE_FNS = ['saveJobs', 'loadJobs', 'loadJobsVerdict', 'refreshJobsFromC
   '_unsentPhotoCount', 'unsentPhotosKeptText', 'sheetVerdictRefusal', 'sheetDropsTaken', 'sheetKeptText', '_sheetKeptOnce', 'newClientSheetRefusal', 'jobRecordTooLarge', 'jobsForSheetBatch', '_holdTooLargeJobs', '_setSheetNotice', 'sheetNoticeHtml', 'queuedPostSync', '_flushOutbox',
   '_enqueueWrite', 'flushPendingWrites', '_writeKey', '_backendErrorKind', '_writeKindHolds', '_retrySoon', '_scheduleRetry', '_pendingCount',
   'postSyncTo', '_targetUrl', 'postSync', 'postSyncBadge', 'syncToSheets', 'syncJobToSheets', '_readAppsScriptJson', '_syncWritesOutstanding',
-  '_syncWritesHeld', '_pendingChipCopy', '_tooLargeWords', 'migrateRetiredNames', 'canonPersonName', '_jobTouch', '_saveJobEdit',
+  '_syncWritesHeld', '_pendingChipCopy', '_pendingChangeWords', '_tooLargeWords', 'migrateRetiredNames', 'canonPersonName', '_jobTouch', '_saveJobEdit',
   'refreshPlanAndLogFromCloud', 'retryPendingWrites', 'takeInventorySnapshot', 'snapshotRefusal', 'invColdRefusal', '_invManifestUnread', '_snapItemOf', '_snapLinesPut',
   '_snapLinesOf', '_snapPendingOf', '_snapLanded', 'loadSnapshotLines', '_withSnapLines', 'printInventorySnapshot', 'printSnapshotComparison', 'snapshotDiff', 'backendHasType',
   'invLineQty', '_invRoomName', '_invAssignItemNos', '_jobInvRefs', '_invTrack', 'estateValueDate', 'roundCents', '_snapPrevLive', '_snapVal',

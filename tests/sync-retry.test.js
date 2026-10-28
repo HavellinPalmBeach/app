@@ -76,7 +76,7 @@ function rig(opts) {
 
   const ctx = sandbox({
     fns: ['_backendErrorKind', '_writeKey', '_pendingCount', '_pendingWriteLabel',
-          '_pendingChipCopy', '_enqueueWrite', '_retrySoon', '_scheduleRetry', '_writeKindHolds', '_tooLargeWords',
+          '_pendingChipCopy', '_pendingChangeWords', '_enqueueWrite', '_retrySoon', '_scheduleRetry', '_writeKindHolds', '_tooLargeWords',
           'flushPendingWrites', 'retryPendingWrites', '_flushOutbox', 'queuedPostSync'],
     vars: ['_pendingWrites', '_retryTimer', '_retryStep', '_flushing', '_retryDelays',
            'SYNC_STUCK_TRIES', '_outbox', '_outboxTimer', '_outboxSending', '_OUTBOX_WINDOW',
@@ -321,10 +321,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const snippet = src.slice(at, src.indexOf('\n});\n', at) + 5);
 
     const handlers = {};
+    // RESTATED 2026-10-27 (P6 of the desk audit, SYN-06): the guard sends what waits as the page goes (_syncFlushNow) and asks
+    // while anything is owed (_syncOwedOnUnload: a failed write as before, and now one waiting, in the outbox or in flight).
     const ctx = sandbox({
-      fns: ['_pendingCount'],
-      vars: ['_pendingWrites'],
-      stubs: { window: { addEventListener(ev, fn) { handlers[ev] = fn; } } },
+      fns: ['_pendingCount', '_syncOwedOnUnload', '_syncFlushNow'],
+      vars: ['_pendingWrites', '_outbox', '_outboxTimer', '_outboxSending', '_flushing', '_invSyncTimer', '_invSyncIds', '_syncPageGoing'],
+      stubs: { window: { addEventListener(ev, fn) { handlers[ev] = fn; } }, _flushOutbox() {}, _invSyncNow() {} },
     });
     vm.runInContext(snippet, ctx, { filename: 'havellin.html (beforeunload)' });
     ok(typeof handlers.beforeunload === 'function', 'on beforeunload');

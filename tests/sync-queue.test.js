@@ -126,7 +126,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const scheduled = [];
     const ctx = sandbox({
-      fns: ['_backendErrorKind', '_writeKey', '_pendingCount', '_enqueueWrite', '_pendingChipCopy', '_writeKindHolds', '_tooLargeWords'],
+      fns: ['_backendErrorKind', '_writeKey', '_pendingCount', '_enqueueWrite', '_pendingChipCopy', '_pendingChangeWords', '_writeKindHolds', '_tooLargeWords'],
       vars: ['_pendingWrites', 'SYNC_STUCK_TRIES'],
       stubs: {
         showSyncBadge() {},
@@ -221,8 +221,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('both writes fire on an inventory change');
   {
     const src = fs.readFileSync(path.join(__dirname, '..', 'havellin.html'), 'utf8');
-    const sched = src.slice(src.indexOf('function _scheduleInventorySync('));
-    const body = sched.slice(0, sched.indexOf('\n}\n'));
+    // Since P6 (2026-10-27) the debounced timer calls _invSyncNow, which carries both writes (the page going sends it at once).
+    const schedAt = src.indexOf('function _scheduleInventorySync(');
+    const schedBody = src.slice(schedAt, src.indexOf('\n}\n', schedAt));
+    has(schedBody, 'setTimeout(function(){ _invSyncNow(jobId); }, 2500);', 'the inventory waits 2.5 s, then sends through _invSyncNow');
+    const nowAt = src.indexOf('function _invSyncNow(');
+    const body = nowAt >= 0 ? src.slice(nowAt, src.indexOf('\n}\n', nowAt)) : '';
+    ok(body.length > 500, 'fixture: _invSyncNow found (' + body.length + ' characters)');
     has(body, "type: 'saveMedia'", 'the durable manifest write');
     has(body, "type: 'saveInventory'", 'and the client workbook write');
     // The manifest is the record; it must not be conditional on a Drive folder existing.

@@ -128,7 +128,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // RESTATED 2026-10-03 (P19): Record approval opens a dialog (invRecordApproval) and its save writes the lines
     // (invSaveApproval), so the writer read here is the save; tests/p19-releases.test.js drives both.
     // RESTATED 2026-10-26c: the save's body is invApplyApproval, lifted so a request signed in DocuSign writes through it too.
-    has(src.slice(src.indexOf('function invSaveApproval('), src.indexOf('function invSaveApproval(') + 4000), 'invApplyApproval(jobId, refs, names, when, _terms)', 'the save writes through the one writer (P5: with what the signed paper carried)');
+    // RESTATED 2026-10-27 (P6's review): read to the end of the save's own body; the selection's road grew a block before the
+    // write (what the dialog showed), which pushed the call past the 4,000 characters this read.
+    const _isa = src.indexOf('function invSaveApproval('), _isaEnd = src.indexOf('\nfunction ', _isa + 10);
+    ok(_isa > 0 && _isaEnd - _isa > 3000, 'fixture: the save\'s body is found');
+    has(src.slice(_isa, _isaEnd), 'invApplyApproval(jobId, refs, names, when, _terms)', 'the save writes through the one writer (P5: with what the signed paper carried)');
     const rec = src.slice(src.indexOf('function invApplyApproval('));
     const recBody = rec.slice(0, rec.indexOf('\n}\n'));
     // RESTATED 2026-10-05 (P20, Q24): the save adds the signers to whoever each line records already, each keeping their

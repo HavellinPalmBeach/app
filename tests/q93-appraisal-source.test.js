@@ -97,7 +97,8 @@ const EST = { 7: { estimate: { svc: 'probate', rooms: [{ idx: 0, name: 'Study' }
 const STOP = ['jobs', '_photoRefs', 'estimateStore', 'jobPlanStore', 'vendorDirectory', 'document', 'SHEETS_SYNC_URL', '_invCloudSeen', '_invCloudFailed',
   'savePhotoRefs', '_scheduleInventorySync', 'renderInventoryTab', 'showSyncBadge', '_invRefreshSummary', '_invRefreshFlagStrip', '_invRefreshRecords',
   '_invRefreshReleases', '_invRefreshAgentNotices', '_deskFoldHeadsRepaint', '_todayStr', 'saveJobs', 'syncJobToSheets', '_invThumbHTML',
-  'FileReader', 'resolveSubfolderId', 'uploadToDrive', 'setTimeout', 'clearTimeout', '_printDocument', '_invPrintThumb', '_signedCopyRepaint', 'alert'];
+  'FileReader', 'resolveSubfolderId', 'uploadToDrive', 'setTimeout', 'clearTimeout', '_printDocument', '_invPrintThumb', '_signedCopyRepaint', 'alert',
+  'invReadFirst'];
 const ROOTS = ['_invEdit', '_invBulkApply', '_invSetAppraiser', 'removeAppraiser', '_avTakeValue', 'agentValueUseSale', 'invAppraised',
   'invAppraisalSourceText', 'invLineAppraiser', '_invLinkedAppraiser', '_invHasAppraisal', '_renderInvRow', '_renderInvPanel',
   '_renderAppraisalGuardrail', '_renderAppraiserRoster', '_invGuardrailItems', 'deskFoldState', 'fileSignedCopy', 'fileSignedCopyFromInput',
@@ -118,6 +119,9 @@ function desk(job, rows, o) {
     _deskFoldHeadsRepaint() { log.heads++; }, _todayStr: () => '2026-10-24', saveJobs() {}, syncJobToSheets() {}, _invThumbHTML: () => '<i></i>',
     _invPrintThumb: () => '', _printDocument() {}, _signedCopyRepaint() { log.renders++; }, alert() {},
     setTimeout: () => 1, clearTimeout: () => {},
+    // P6 (2026-10-27): every act across the inventory reads the sheet first (invReadFirst; p6-two-devices.test.js holds it).
+    // These checks are of the acts themselves, so the read is taken as landed with nothing moved: the stub answers false, go on.
+    invReadFirst: () => false,
     resolveSubfolderId(j, name, cb) { log.resolves.push(name); cb('SUB-' + name); },
     uploadToDrive(folderId, filename, dataUrl, cb) { log.uploads.push({ folderId, filename }); cb(true, 'https://drive.google.com/file/d/R' + log.uploads.length + '/view', 'R' + log.uploads.length); },
     FileReader: function () { const self = this; self.readAsDataURL = function (f) { self.result = 'data:' + f.type + ';base64,QUJD'; if (self.onload) self.onload(); }; },

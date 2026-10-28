@@ -1476,7 +1476,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.27 · 6:51pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.27 · 11:58pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -18332,9 +18332,10 @@ function sendProbatePackage(jobId) {
 
   step('Reading the inventory…');
   _invEnsureLoaded(jobId);
-  refreshPhotoRefs(jobId, function () {
+  refreshPhotoRefs(jobId, function (_changed, ok) {
     if (over) return;
-    if (!_invCloudSeen[jobId]) {
+    // THIS read, never an earlier one (P6): a read that failed on a desk read an hour ago left it sending the hour-old copy.
+    if (ok === false || !_invCloudSeen[jobId]) {
       finish();
       _docNotice('warn', 'The inventory could not be read from the sheet, so the package would go out without it. Check the connection, then press ' + W.send + ' again.', jobId);
       return;
@@ -26292,7 +26293,8 @@ function fileSignedCopyFromInput(input, i) {
 function _signedCopyRepaint(jobId, kind) {
   var host = _jobBandHost();
   if (host && host.jobId !== jobId) return;
-  if (host && host.kind === 'admin') { renderInventoryTab(); return; }
+  // The filing answers on its own time (P6): the desk is drawn once nobody is in a box.
+  if (host && host.kind === 'admin') { if (typeof _invRenderWhenIdle === 'function') _invRenderWhenIdle(); else renderInventoryTab(); return; }
   if (host && host.kind === 'plan') {
     if ((kind === 'will' || kind === 'cash') && _repaintSiteFinds(jobId)) return;
     loadJobPlanTab(); return;
@@ -26781,7 +26783,10 @@ function _estStoreLanded() {
     var jp = document.getElementById('panel-job-plan');
     if (jp && jp.classList.contains('active') && typeof loadJobPlanTab === 'function') loadJobPlanTab();
     var iv = document.getElementById('panel-inventory');
-    if (iv && iv.classList.contains('active') && typeof renderInventoryTab === 'function') renderInventoryTab();
+    // Never under somebody typing on the desk (P6): the store lands on its own time, and the desk waits for the box to be left.
+    if (iv && iv.classList.contains('active') && typeof renderInventoryTab === 'function') {
+      if (typeof _invRenderWhenIdle === 'function') _invRenderWhenIdle(); else renderInventoryTab();
+    }
     // ⚠ THE CLIENT DASHBOARD IS THE THIRD SURFACE THAT READS THIS STORE AND IT WAS NOT
     // HERE. Its timeline rail reads estimateStore for four of its rows, so on a cold
     // cache — a new iPad, cleared data, or Safari evicting storage for a site not
@@ -27803,19 +27808,31 @@ var _invReadAt = {};
 // device's copy, and the desk asks again while it shows the client (_invCloudRetryArm). Never saved.
 var _invCloudFailed = {};
 function refreshPhotoRefs(jobId, cb) {
-  if (!SHEETS_SYNC_URL) { if (cb) cb(false); return; }
+  // ⚠ THE ANSWER SAYS WHETHER THE READ LANDED (2026-10-27, P6 of the desk audit): cb(changed, ok, diff). `ok` is true only when
+  // the sheet answered this read, false when it did not; `diff` (invSheetDiff) names the lines the read moved. A caller that
+  // acts on the inventory asks `ok`, never whether this device has ever read the sheet (_invCloudSeen): a read that failed on a
+  // desk read an hour ago left the sends acting on the hour-old copy.
+  if (!SHEETS_SYNC_URL) { if (cb) cb(false, false); return; }
+  var landed = false, answered = false;
+  // ⚠ ANSWERED ONCE (P6): the callback runs inside the promise, so a throw in it reached the catch below, which answered again
+  // as a read that failed: an act that had read the sheet and then thrown said the sheet had not answered.
+  var answer = function (c, ok, diff) { answered = true; if (cb) cb(c, ok, diff); };
   fetch(_withDeviceKey(SHEETS_SYNC_URL + '?action=loadMedia&jobId=' + encodeURIComponent(jobId)))
     .then(function(r){ return r.json(); })
     .then(function(d){
       // Record that this device has SEEN the server's copy of this job, which is a
       // different fact from whether the merge changed anything. The workbook write is
       // gated on it — see _scheduleInventorySync.
-      if (d && d.ok) _invCloudSeen[jobId] = true;
+      if (d && d.ok) { _invCloudSeen[jobId] = true; landed = true; }
       if (d && d.ok && typeof _invReadAt !== 'undefined') _invReadAt[jobId] = Date.now();   // when this device last read it (2026-10-26c)
       // typeof: a pinned sandbox lifts this function without the second map.
       if (typeof _invCloudFailed !== 'undefined') { if (d && d.ok) delete _invCloudFailed[jobId]; else _invCloudFailed[jobId] = true; }
       var entry = d && d.ok && d.media && d.media[String(jobId)];
       var remote = entry && entry.items;
+      // What this device held as the answer came, line by line, for the diff (P6: the desk names what another device changed).
+      // typeof: a pinned sandbox lifts this function without P6's helpers, and keeps the meaning it was written for.
+      var p6 = landed && typeof invSheetDiff === 'function' && typeof _invLinesById === 'function' && typeof _invSheetAnswered === 'function';
+      var beforeLines = p6 ? _invLinesById(_photoRefs[jobId] || []) : null;
       // ⚠ THE RESET FIRST (2026-10-19): an entry stamped `invResetAt` takes every line this device holds from before it
       // off, whether or not the sheet has anything left to merge (after a reset it usually holds the as-found pass alone),
       // and that is a change the screen must see. So the stamp is read before the empty-remote return below, and the
@@ -27824,7 +27841,9 @@ function refreshPhotoRefs(jobId, cb) {
       var reset = entry ? _invApplyReset(jobId, entry) : false;
       if (!remote || !remote.length) {
         if (reset) savePhotoRefs(jobId);
-        if (cb) cb(reset);
+        // The sheet holds nothing of this client's inventory: everything this device holds is not on it (P6, SYN-06).
+        if (p6) _invSheetAnswered(jobId, []);
+        answer(reset, landed, p6 ? invSheetDiff(beforeLines, _photoRefs[jobId] || []) : null);
         return;
       }
       // ⚠⚠ `changed` HAS TO MEAN THE MERGE MOVED SOMETHING. It used to be an unconditional
@@ -27846,13 +27865,269 @@ function refreshPhotoRefs(jobId, cb) {
       // ⚠ Still SAVE either way: this device may not have written the merged copy locally
       // yet even when the merge was a no-op for the screen.
       savePhotoRefs(jobId);
-      if (cb) cb(didChange);
+      // ⚠⚠ WHAT THIS DEVICE HOLDS THAT THE SHEET DOES NOT IS SENT AGAIN, FROM THE COPY IT KEEPS (2026-10-27, P6, SYN-06): a line
+      // newer here than on the sheet, or missing from it. The retry queue lives in memory (Decided: never persisted), so a write
+      // that failed before a reload, or an edit made in the last seconds before the tab closed, sat on this device for good,
+      // reaching the sheet only with the next edit of that client from here. The copy in localStorage is the record of it.
+      if (p6) _invSheetAnswered(jobId, remote);
+      answer(didChange, true, p6 ? invSheetDiff(didChange ? beforeLines : null, merged) : null);
     })
-    .catch(function(){
+    .catch(function(e){
+      // The read was answered and what it was handed threw: said once, never answered a second time as a failed read.
+      if (answered) { if (typeof console !== 'undefined' && console.error) console.error('[refreshPhotoRefs] the caller threw:', e); return; }
       // A read that never answered, or a merge that threw after it did: unread unless the answer itself landed above.
-      if (typeof _invCloudFailed !== 'undefined' && !_invCloudSeen[jobId]) _invCloudFailed[jobId] = true;
-      if (cb) cb(false);
+      // ⚠ AND FAILED WHETHER OR NOT AN EARLIER READ LANDED (P6): the desk says its copy is this device's own while the sheet
+      // does not answer (invSheetStaleWords), not only before the first read.
+      if (typeof _invCloudFailed !== 'undefined' && !landed) _invCloudFailed[jobId] = true;
+      // Not `ok` either way: a merge that threw left this device's copy as it was, and nothing may act on it as read.
+      answer(false, false);
     });
+}
+
+// ── What the sheet holds of a client's inventory, as this device knows it (2026-10-27, P6 of the desk audit) ─────────────
+// `_invSheetKnown[jobId]` maps each line's stableId to the clock (updatedAt, else ts, the merge's own) the sheet is known to
+// hold for it: learned from every read that lands (the sheet's own lines) and from every manifest write that lands (each
+// line as this device held it when the write was sent). A line missing from it, or newer here, is not on the sheet yet: the
+// chip counts those (SYN-18: it read "1 unsaved change" for an evening's work), and a read that finds any sends the copy
+// again (SYN-06). Memory only, never saved: after a reload the first read learns it afresh, which is the whole point.
+var _invSheetKnown = {};
+function _invLineClock(r) { return Number((r && (r.updatedAt || r.ts)) || 0); }
+function _invLinesById(list) {
+  var m = {};
+  (list || []).forEach(function (r) { if (r && r.stableId) m[r.stableId] = _stableJson(r); });
+  return m;
+}
+// The lines a copy holds that a sheet holding `known` (stableId -> clock) does not: missing there, or newer here. DOM-free.
+function invUnsentLines(local, known) {
+  known = known || {};
+  return (local || []).filter(function (r) {
+    if (!r || !r.stableId) return false;
+    if (!Object.prototype.hasOwnProperty.call(known, r.stableId)) return true;
+    return _invLineClock(r) > Number(known[r.stableId] || 0);
+  }).map(function (r) { return r.stableId; });
+}
+// What a read moved, line by line, DOM-free: `before` is the copy as the answer came (stableId -> its JSON, _invLinesById),
+// `after` the copy once merged. `gone`: inventory lines live before and removed after; `changed`: inventory lines live after
+// whose content moved; `added`: inventory lines live after that were not here before. `held`: whether this device held a
+// copy of the client before (a first read on a device that held nothing is not "another device's changes").
+function invSheetDiff(before, after) {
+  var out = { gone: [], changed: [], added: [], held: false };
+  if (!before) return out;
+  var was = function (id) { try { return JSON.parse(before[id]); } catch (e) { return null; } };
+  out.held = Object.keys(before).length > 0;
+  (after || []).forEach(function (r) {
+    if (!r || !r.stableId || r.label !== 'inventory') return;
+    var id = r.stableId, had = Object.prototype.hasOwnProperty.call(before, id);
+    if (!had) { if (!r.deletedAt) out.added.push(id); return; }
+    if (before[id] === _stableJson(r)) return;
+    var b = was(id) || {};
+    if (!b.deletedAt && r.deletedAt) out.gone.push(id);
+    else if (!r.deletedAt) out.changed.push(id);
+  });
+  return out;
+}
+// A read landed with the sheet's own lines: learn their clocks, and send this device's copy again where it holds what the
+// sheet does not (the write is the ordinary debounced one, so a burst of reads sends once).
+function _invSheetAnswered(jobId, remote) {
+  var k = _invSheetKnown[jobId] || (_invSheetKnown[jobId] = {});
+  (remote || []).forEach(function (r) {
+    if (r && r.stableId && _invLineClock(r) >= Number(k[r.stableId] || 0)) k[r.stableId] = _invLineClock(r);
+  });
+  var owed = invUnsentLines(_photoRefs[jobId] || [], k);
+  if (owed.length && typeof _scheduleInventorySync === 'function' && !(typeof _invSyncTimer !== 'undefined' && _invSyncTimer[jobId])) _scheduleInventorySync(jobId);
+  else if (!owed.length && typeof _invOwedMark === 'function') _invOwedMark(jobId, false);
+  return owed;
+}
+// A manifest write landed: every line this device held before the write was sent is on the sheet now. An edit made after it
+// went (`>= sentAt`) is not. Then, with nothing left unsent and nothing waiting to go, this client owes the sheet nothing.
+function _invManifestLanded(jobId, sentAt) {
+  var at = Number(sentAt) || 0;
+  var k = _invSheetKnown[jobId] || (_invSheetKnown[jobId] = {});
+  (_photoRefs[jobId] || []).forEach(function (r) {
+    var c = _invLineClock(r);
+    if (r && r.stableId && (!at || c < at) && c >= Number(k[r.stableId] || 0)) k[r.stableId] = c;
+  });
+  var waiting = typeof _invSyncTimer !== 'undefined' && _invSyncTimer[jobId];
+  if (!waiting && !invUnsentLines(_photoRefs[jobId] || [], k).length && typeof _invOwedMark === 'function') _invOwedMark(jobId, false);
+}
+// How many of a client's lines are not on the sheet yet, as far as this device knows; null where it knows nothing yet (no read
+// or write of this client has landed this session).
+function _invUnsentCount(jobId) {
+  var k = _invSheetKnown[jobId];
+  if (!k) return null;
+  return invUnsentLines(_photoRefs[jobId] || [], k).length;
+}
+// ⚠ A CLIENT THIS DEVICE OWES THE SHEET, REMEMBERED ACROSS A RELOAD (P6, SYN-06): a mark per client, set as an inventory
+// write is scheduled and taken off once one lands with nothing left unsent. Not the queue (Decided: the retry queue is never
+// persisted), and no copy of the lines: the lines are already in hav_media_<id>. At start-up each marked client's inventory
+// is read (_invResendOwed), and the read sends again whatever the sheet lacks (_invSheetAnswered). Cleared with the job data.
+function _invOwedRead() {
+  try { var m = JSON.parse(localStorage.getItem('hav_inv_owed') || '{}'); return (m && typeof m === 'object') ? m : {}; } catch (e) { return {}; }
+}
+function _invOwedMark(jobId, on) {
+  var m = _invOwedRead(), key = String(jobId);
+  if (on ? m[key] : !m[key]) return;
+  if (on) m[key] = Date.now(); else delete m[key];
+  try {
+    if (Object.keys(m).length) localStorage.setItem('hav_inv_owed', JSON.stringify(m));
+    else localStorage.removeItem('hav_inv_owed');
+  } catch (e) {}
+}
+// ⚠⚠ AND WHERE THAT READ DOES NOT LAND, THE COPY GOES ANYWAY, THROUGH THE QUEUE (2026-10-27, P6's review): the start-up read was
+// one shot, so a tab reloaded in a dead spot held the lines with nothing on screen saying so (the chip counts the queue, which a
+// reload empties) and nothing sending them once the signal came back. The write is the ordinary inventory write, which the
+// server merges line by line on each line's own clock, so sending a copy nobody has touched changes nothing the sheet holds
+// newer; it waits in the retry queue like any failed write, so the chip names it, the close is challenged, and a reconnect or
+// the page back in view sends it. Asked again on a reconnect and on the page back in view while a mark stands (_invResendSoon),
+// one read per client at a time.
+// ⚠ A MARK WITH NO COPY BEHIND IT IS SAID, NEVER CLEARED IN SILENCE (P6's review): the lines it stood for are not on this device.
+var _invResending = {};   // client id -> true while its start-up read is out. Never saved.
+function _invResendOwed() {
+  if (!SHEETS_SYNC_URL) return 0;
+  var ids = Object.keys(_invOwedRead());
+  ids.forEach(function (k) {
+    var jobId = isNaN(Number(k)) ? k : Number(k);
+    if (_invResending[k]) return;
+    if (typeof _invEnsureLoaded === 'function') _invEnsureLoaded(jobId);
+    if (!(_photoRefs[jobId] || []).length) {
+      _invOwedMark(jobId, false);
+      var job = (typeof jobs !== 'undefined' && jobs) ? jobs.filter(function (j) { return String(j.id) === String(k); })[0] : null;
+      var said = 'Inventory changes for ' + (job ? (job.hvlId || job.name || 'a client') : 'a client no longer on this device')
+        + ' were waiting to reach the sheet, but this device holds no copy of that inventory now, so nothing could be sent. '
+        + 'Open the client on the device the work was done on.';
+      if (typeof console !== 'undefined' && console.warn) console.warn('[Inventory] ' + said);
+      if (typeof showSyncBadge === 'function') showSyncBadge(said, true);
+      return;
+    }
+    _invResending[k] = true;
+    var sent = function () {
+      delete _invResending[k];
+      if (typeof _scheduleInventorySync === 'function' && !(typeof _invSyncTimer !== 'undefined' && _invSyncTimer[jobId])) _scheduleInventorySync(jobId);
+    };
+    var read = function (cb) {
+      if (typeof invReadQuiet === 'function') invReadQuiet(jobId, function () { cb(true); }, function () { cb(false); });
+      else refreshPhotoRefs(jobId, function (c, ok) { cb(ok !== false); });
+    };
+    // Landed: the read sent whatever the sheet lacks (_invSheetAnswered). Not landed: the copy goes through the queue.
+    read(function (landed) { if (landed) delete _invResending[k]; else sent(); });
+  });
+  return ids.length;
+}
+// A reconnect, or the page back in view, while a client is still owed and nothing of it is waiting to go: asked again.
+function _invResendSoon() {
+  var m = _invOwedRead(), any = false;
+  Object.keys(m).forEach(function (k) {
+    var key = 'main/saveMedia:' + k;
+    var waiting = (typeof _invSyncTimer !== 'undefined' && _invSyncTimer[k])
+      || (typeof _pendingWrites === 'object' && _pendingWrites && _pendingWrites[key])
+      || (typeof _outbox === 'object' && _outbox && _outbox[key]);
+    if (!waiting && !_invResending[k]) any = true;
+  });
+  return any ? _invResendOwed() : 0;
+}
+
+// ⚠⚠ EVERY ACT ACROSS THE INVENTORY READS THE SHEET FIRST, OR DOES NOTHING (2026-10-27, P6 of the desk audit; SYN-10, and SYN-01
+// and SYN-02 contained until the merge itself is fixed, P18). The sends always read first; the papers, the CSV, Snapshot, the
+// agents' runs and the bulk bar did not, so they acted on whatever this device last read: a Court Inventory handed to counsel
+// from the laptop missed the iPad's $275, and a stale Name 24 shots brought back eight lines the other device had removed,
+// named and valued, because a line an agent writes carries a newer clock than the removal. Each now reads the client's
+// inventory from the sheet, draws what moved once nobody is typing, says what another device changed, and only then goes on,
+// over the copy as the sheet holds it; where the read does not land it refuses by name and changes nothing. `go(diff)` is
+// handed what the read moved (invSheetDiff), so an act names what it left alone ("8 removed on another device were left
+// alone"). Answers true when it has asked the sheet (the caller stops: `go` runs once the read lands), false when the caller
+// goes on now: no Apps Script URL (this device's copy is the record), `opt.read` (the caller has read), or `opt.asHtml` (a page
+// for a send or a filing, whose caller reads the sheet first itself).
+// ⚠⚠ EVERY PRESS MADE WHILE A READ IS OUT WAITS ON THAT READ AND THEN GOES, IN THE ORDER PRESSED (2026-10-27, P6's review): the
+// first build kept one flag per label, so Set category then Set condition on the bulk bar, the second pressed while the first's
+// read was out (an Apps Script read takes two to four seconds), shared the label "The change across the selection" and the second
+// was dropped with no word: the condition select still read Good and the lines did not. One read is out per client; every press
+// joins it (`R.acts`), and each runs once it lands, in order. Only the same press twice is one (`opt.key`, the act and its value:
+// a sweep's field and what it sets, a Re-value's line), so the CSV pressed twice downloads once.
+// ⚠ AND A READ THAT NEVER ANSWERS LETS GO (P6's review): fetch has no timeout, so on a connected but dead link every press waited
+// on a read that never came, silent after one toast, until the request died minutes later. After INV_READ_WATCHDOG_MS the presses
+// waiting are refused by name, as a read that failed is, the next press asks the sheet afresh, and an answer arriving after that
+// is drawn (it has merged) but acts on nothing.
+var _invReadingFor = {};   // jobId -> { acts: [{ key, what, go }], timer }: the presses waiting on the one read out. Never saved.
+var INV_READ_WATCHDOG_MS = 30000;
+function invReadFirstRefusal(what) {
+  var list = Array.isArray(what) ? what : [what];
+  return 'Not done: ' + _andJoin(list) + (list.length > 1 ? ' read' : ' reads') + ' the inventory from the sheet first, so that nothing acts on a copy another device has moved past, '
+    + 'and the sheet did not answer. Nothing was changed. Check the connection, then try again.';
+}
+function invReadFirst(jobId, what, go, opt) {
+  opt = opt || {};
+  if (opt.read || opt.asHtml) return false;
+  if (!(typeof SHEETS_SYNC_URL !== 'undefined' && SHEETS_SYNC_URL)) return false;
+  var key = String(opt.key != null ? opt.key : what);
+  var R = _invReadingFor[jobId];
+  if (R) {
+    if (!R.acts.some(function (a) { return a.key === key; })) R.acts.push({ key: key, what: what, go: go });
+    return true;
+  }
+  R = _invReadingFor[jobId] = { acts: [{ key: key, what: what, go: go }], timer: null };
+  var done = false;
+  var end = function () {
+    done = true;
+    if (_invReadingFor[jobId] === R) delete _invReadingFor[jobId];
+    if (R.timer != null && typeof clearTimeout === 'function') clearTimeout(R.timer);
+  };
+  var refuse = function () {
+    var whats = [];
+    R.acts.forEach(function (a) { if (whats.indexOf(a.what) < 0) whats.push(a.what); });
+    var no = invReadFirstRefusal(whats);
+    showSyncBadge(no, true);
+    alert(no);
+  };
+  if (typeof _invEnsureLoaded === 'function') _invEnsureLoaded(jobId);
+  showSyncBadge('Reading the inventory from the sheet first…');
+  if (typeof setTimeout === 'function' && typeof INV_READ_WATCHDOG_MS !== 'undefined') {
+    R.timer = setTimeout(function () { R.timer = null; if (done) return; end(); refuse(); }, INV_READ_WATCHDOG_MS);
+  }
+  refreshPhotoRefs(jobId, function (changed, ok, diff) {
+    // The watchdog answered first: what the late read merged is drawn, and nothing acts on it.
+    if (done) { if (changed && ok && typeof _invRenderWhenIdle === 'function') _invRenderWhenIdle(); return; }
+    end();
+    if (ok === false || !_invCloudSeen[jobId]) { refuse(); return; }
+    if (changed && typeof _invRenderWhenIdle === 'function') _invRenderWhenIdle();
+    var said = (changed && typeof invSheetChangeWords === 'function') ? invSheetChangeWords(diff) : '';
+    if (said) showSyncBadge(said);
+    var d = diff || { gone: [], changed: [], added: [], held: false };
+    // Each press its own copy of what the read moved: an act writes on it (`asked`).
+    R.acts.forEach(function (a) { a.go({ gone: d.gone || [], changed: d.changed || [], added: d.added || [], held: !!d.held }); });
+  });
+  return true;
+}
+// Of the lines an act was about (`ids`, as this device held them before the read), how many the read found removed on another
+// device. DOM-free.
+function invReadGone(diff, ids) {
+  var set = {};
+  (ids || []).forEach(function (id) { set[String(id)] = 1; });
+  return ((diff && diff.gone) || []).filter(function (id) { return set[String(id)]; }).length;
+}
+function invReadGoneText(n) {
+  return n ? n + ' line' + (n === 1 ? '' : 's') + ' removed on another device ' + (n === 1 ? 'was' : 'were') + ' left alone.' : '';
+}
+// The options a paper is called again with once the read has landed.
+function _invReadOpt(opt) { var o = {}; for (var k in (opt || {})) if (Object.prototype.hasOwnProperty.call(opt, k)) o[k] = opt[k]; o.read = true; return o; }
+// The agents' own hand-offs read the sheet too, quietly (P6): a naming run of a full house takes minutes, and the room check and
+// Agent Two that follow it by themselves would otherwise act on the copy the press read at its start. `go(diff)` once the read
+// lands; `failed()` where it does not, and nothing follows (the run's state line says so, and the presses stay).
+function invReadQuiet(jobId, go, failed) {
+  if (!(typeof SHEETS_SYNC_URL !== 'undefined' && SHEETS_SYNC_URL)) { go(null); return false; }
+  // A read that never answers lets go after INV_READ_WATCHDOG_MS (P6's review): nothing follows, and the run's line says so.
+  var done = false, timer = null;
+  if (typeof setTimeout === 'function' && typeof INV_READ_WATCHDOG_MS !== 'undefined') {
+    timer = setTimeout(function () { timer = null; if (done) return; done = true; if (failed) failed(); }, INV_READ_WATCHDOG_MS);
+  }
+  refreshPhotoRefs(jobId, function (changed, ok, diff) {
+    if (done) { if (changed && ok && typeof _invRenderWhenIdle === 'function') _invRenderWhenIdle(); return; }
+    done = true;
+    if (timer != null && typeof clearTimeout === 'function') clearTimeout(timer);
+    if (ok === false || !_invCloudSeen[jobId]) { if (failed) failed(); return; }
+    if (changed && typeof _invRenderWhenIdle === 'function') _invRenderWhenIdle();
+    go(diff);
+  });
+  return true;
 }
 
 // JSON with every object's keys in sorted order, so two copies of one record compare equal however each was built.
@@ -27955,6 +28230,13 @@ function _invManifestEvictable(jobId, keepJobId) {
   var k = 'main/saveMedia:' + jobId;
   try { if (typeof _pendingWrites === 'object' && _pendingWrites && _pendingWrites[k]) return false; } catch (e) {}
   try { if (typeof _outbox === 'object' && _outbox && _outbox[k]) return false; } catch (e) {}
+  // ⚠⚠ NOR A CLIENT THIS DEVICE STILL OWES THE SHEET (2026-10-27, P6's review). After a reload the queue is empty (Decided: never
+  // persisted), so the three tests above said "the sheet holds it" of a client whose last write never landed: an iPad in a dead
+  // spot, reloaded and photographing the next client, ran out of room and dropped the very copy P6 sends again at start-up
+  // (_invResendOwed), and the edits were gone with nothing said. The owed mark (hav_inv_owed) outlives a reload, and lines this
+  // session knows are not on the sheet (_invUnsentCount) are counted too: either keeps the copy.
+  try { if (typeof _invOwedRead === 'function' && _invOwedRead()[String(jobId)]) return false; } catch (e) { return false; }
+  try { if (typeof _invUnsentCount === 'function' && _invUnsentCount(jobId) > 0) return false; } catch (e) { return false; }
   return true;
 }
 
@@ -30617,20 +30899,28 @@ function _invTombstoneLine(jobId, ref, opts) {
 // `_jobInvRefs`: inventory lines, no collection document, no tombstone), which is `invRemoveLine`'s own guard. The
 // confirm names the first eight lines rather than a bare count: "212 lines" invites a yes; "#3 Tesla key card ·
 // #15 Scotch tape dispensers …" is the work about to go.
-function invBulkRemove(jobId) {
+function invBulkRemove(jobId, read) {
   var lines = _invPicked(jobId);
   if (!lines.length) return false;
+  // The sheet first (P6): a line the other device removed meanwhile, or changed, is read before anything is removed here.
+  var asked = read ? null : lines.map(function(r) { return r.stableId; });
+  if (!read && typeof invReadFirst === 'function' && invReadFirst(jobId, 'Remove lines', function (diff) { diff.asked = asked; invBulkRemove(jobId, diff); })) return true;
+  var _gone = read ? invReadGone(read, read.asked) : 0;
+  lines = _invPicked(jobId);
+  if (!lines.length) { var _none = invReadGoneText(_gone) || 'Nothing to remove.'; showSyncBadge(_none); alert(_none); return false; }
   var shown = lines.slice(0, 8).map(function(r){ return '  \u00b7 #' + _invItemNo(r) + ' ' + (r.objectName || '(unnamed)'); });
   var msg = 'Remove ' + lines.length + ' line' + (lines.length > 1 ? 's' : '') + ' from the inventory?\n\n'
     + shown.join('\n') + (lines.length > shown.length ? '\n  \u00b7 and ' + (lines.length - shown.length) + ' more' : '')
     + '\n\nTheir numbers are never given to anything else. No photograph is deleted: each stays in Google Drive and in its room, '
     + 'and a line that shares one keeps it.'
-    + '\n\nRemoved items, under Removed items & snapshots on Job Admin & Inv, gives them back.';
+    + '\n\nRemoved items, under Removed items & snapshots on Job Admin & Inv, gives them back.'
+    + (_gone ? '\n\nThe sheet was read first: ' + invReadGoneText(_gone) : '');
   if (!window.confirm(msg)) return false;
   lines.forEach(function(r){ _invTombstoneLine(jobId, r, { defer: true }); });
   savePhotoRefs(jobId);
   _invPick = {};
-  showSyncBadge(lines.length + ' line' + (lines.length > 1 ? 's' : '') + ' removed \u2014 Removed items, under Removed items & snapshots on Job Admin & Inv, gives them back', false);
+  showSyncBadge(lines.length + ' line' + (lines.length > 1 ? 's' : '') + ' removed \u2014 Removed items, under Removed items & snapshots on Job Admin & Inv, gives them back'
+    + (_gone ? '. ' + invReadGoneText(_gone) : ''), false);
   renderInventoryTab();
   _scheduleInventorySync(jobId);
   return lines.length;
@@ -31205,10 +31495,14 @@ function snapshotRefusal(jobId) {
   if (!_jobInvRefs(jobId).length) return 'Not taken: there is nothing in the inventory to snapshot yet.';
   return '';
 }
-function takeInventorySnapshot(jobId) {
+function takeInventorySnapshot(jobId, read) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
   var refused = snapshotRefusal(jobId);
+  if (refused) { alert(refused); return; }
+  // The sheet first (P6, SYN-10): a snapshot is a record of the inventory, so it is taken of the copy the sheet holds now.
+  if (!read && typeof invReadFirst === 'function' && invReadFirst(jobId, 'Snapshot', function (diff) { takeInventorySnapshot(jobId, diff); })) return;
+  refused = snapshotRefusal(jobId);
   if (refused) { alert(refused); return; }
   var items = _invAssignItemNos(jobId);
   // ⚠ CANCEL TAKES NOTHING (P19). It took the snapshot anyway, unlabelled — harmless while one click removed it, and a
@@ -31451,10 +31745,13 @@ function printSnapshotComparison(jobId, ts, against, opt) {
   var prev = against === 'prev' ? _snapPrevLive(job, snap.ts) : null;
   if (against === 'prev' && !prev) return refuse('There is no earlier snapshot to compare this one with.');
   if (!prev) { var _cold = invColdRefusal(jobId); if (_cold) return refuse(_cold); }
+  // The inventory now is the sheet's (P6), read first as every desk paper reads it.
+  if (!prev && typeof invReadFirst === 'function' && invReadFirst(jobId, 'Compare with now', function () { printSnapshotComparison(jobId, ts, against, _invReadOpt(opt)); },
+      { key: 'Compare with now|' + String(ts), read: !!(opt && opt.read), asHtml: !!(opt && opt.asHtml) })) return null;
   var _lines = _snapLinesOf(jobId, snap.ts), _prevLines = prev ? _snapLinesOf(jobId, prev.ts) : null;
   if (!_lines || (prev && !_prevLines)) {
     if ((opt && opt.asHtml) || (opt && opt.loaded)) return refuse(SNAP_LINES_UNREAD_TXT);
-    _withSnapLines(jobId, prev ? [snap.ts, prev.ts] : [snap.ts], function(){ printSnapshotComparison(jobId, ts, against, { loaded: true }); }, function(why){ alert(why); });
+    _withSnapLines(jobId, prev ? [snap.ts, prev.ts] : [snap.ts], function(){ printSnapshotComparison(jobId, ts, against, { loaded: true, read: true }); }, function(why){ alert(why); });
     return null;
   }
   var name = function(s){ return 'the snapshot of ' + _invDateTime(s.ts) + (s.label ? ' (' + s.label + ')' : ''); };
@@ -31999,6 +32296,8 @@ function _clFlags(r, job, jobId) {
 function printContentsList(jobId, opt) {
   var _cold = typeof invColdRefusal === 'function' ? invColdRefusal(jobId) : '';   // 2026-10-27, P1: a cold desk refuses
   if (_cold) { if (opt && opt.asHtml) return { why: _cold }; alert(_cold); return; }
+  // The sheet first, as the sends read it (P6, SYN-10): the page is built off the copy the sheet holds now.
+  if (typeof invReadFirst === 'function' && invReadFirst(jobId, 'The Contents List', function () { printContentsList(jobId, _invReadOpt(opt)); }, opt)) return;
   var rec = contentsList(jobId);
   var job = rec.job;
   if (!job || !document.getElementById('print-target')) return;
@@ -32133,6 +32432,7 @@ function printEstateInventoryReport(jobId, opt) {
   if (!job) return;
   var _cold = typeof invColdRefusal === 'function' ? invColdRefusal(jobId) : '';   // 2026-10-27, P1: a cold desk refuses
   if (_cold) { if (opt && opt.asHtml) return { why: _cold }; alert(_cold); return; }
+  if (typeof invReadFirst === 'function' && invReadFirst(jobId, 'The Estate Inventory PDF', function () { printEstateInventoryReport(jobId, _invReadOpt(opt)); }, opt)) return;   // P6
   // ⚠ THE SAME PREDICATE THE STRIP READS, so the document cannot be reached around the
   // withheld button. `docAction`'s rule: a gate beside the action cannot be bypassed by
   // reaching the action another way.
@@ -32304,11 +32604,12 @@ function buildInventoryCSV(jobId) {
     return row.map(_csvCell).join(',');
   }).join('\r\n');
 }
-function exportInventoryCSV(jobId) {
+function exportInventoryCSV(jobId, read) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
   var _cold = typeof invColdRefusal === 'function' ? invColdRefusal(jobId) : '';   // 2026-10-27, P1: a cold desk refuses
   if (_cold) { alert(_cold); return; }
+  if (!read && typeof invReadFirst === 'function' && invReadFirst(jobId, 'The CSV', function (diff) { exportInventoryCSV(jobId, diff); })) return;   // P6
   if (!_jobInvRefs(jobId).length) { alert('There is nothing in the inventory to export yet.'); return; }
   var csv = buildInventoryCSV(jobId);
   var name = (job.hvlId || 'Havellin') + '_Inventory_' + _todayStr() + '.csv';
@@ -33113,15 +33414,7 @@ function openSignoutDialog(jobId, kind, taker) {
       + (fid && kd.leaving ? ' Only lines ' + esc(invEveryFiduciaryPhrase(job)) + ' has approved in writing are offered.' : '')
       + ' Or photograph a sheet they signed on paper.';
   var body = document.getElementById('ip-body');
-  var line = function(r, checked, disabled, note, tone){
-    return '<label class="ip-line" style="display:flex;align-items:center;gap:8px;margin:4px 0;font-size:12px;text-transform:none;letter-spacing:0;color:var(--gray-dk);font-weight:500;cursor:pointer;' + (disabled ? 'opacity:.7;' : '') + '">'
-      + '<input type="checkbox" class="ip-tick" data-sid="' + esc(String(r.stableId)) + '"' + (checked ? ' checked' : '') + (disabled ? ' disabled' : '')
-      + ' style="width:16px;height:16px;flex:0 0 auto;accent-color:var(--gray-dk);">'
-      + '<span>' + esc(_invNamed(r)) + (note ? ' <span style="color:' + (tone || 'var(--gray)') + ';">&middot; ' + note + '</span>' : '') + '</span></label>';
-  };
-  if (body) body.innerHTML = g.ready.map(function(r){ return line(r, true, false, ''); }).join('')
-    + g.done.map(function(r){ return line(r, false, false, 'already on ' + esc(SIGNED_RECORD_KINDS[kind].label.toLowerCase().replace(/^the /, 'a ')), ''); }).join('')
-    + g.waiting.map(function(r){ return line(r, false, true, 'awaiting written approval: not offered', '#8a5a1e'); }).join('');
+  if (body) body.innerHTML = _signoutBodyHtml(g, kind, null);
   var signer = document.getElementById('ip-signer');
   if (signer) signer.value = kind === 'appraisal_back' ? ((typeof deviceUser === 'function' && deviceUser()) || job.tc || '') : g.taker;
   signPadClear('ip-pad');
@@ -33130,6 +33423,48 @@ function openSignoutDialog(jobId, kind, taker) {
   var m = document.getElementById('inv-pickup-modal');
   if (m) m.style.display = 'flex';
   return true;
+}
+// The dialog's lines: the ready ones ticked, the ones already on a paper of this kind unticked, the ones awaiting written approval
+// listed and not offered. `keep` (stableId -> true), where given, is what to leave ticked when the lines are drawn again.
+function _signoutBodyHtml(g, kind, keep) {
+  var line = function(r, checked, disabled, note, tone){
+    return '<label class="ip-line" style="display:flex;align-items:center;gap:8px;margin:4px 0;font-size:12px;text-transform:none;letter-spacing:0;color:var(--gray-dk);font-weight:500;cursor:pointer;' + (disabled ? 'opacity:.7;' : '') + '">'
+      + '<input type="checkbox" class="ip-tick" data-sid="' + esc(String(r.stableId)) + '"' + (checked ? ' checked' : '') + (disabled ? ' disabled' : '')
+      + ' style="width:16px;height:16px;flex:0 0 auto;accent-color:var(--gray-dk);">'
+      + '<span>' + esc(_invNamed(r)) + (note ? ' <span style="color:' + (tone || 'var(--gray)') + ';">&middot; ' + note + '</span>' : '') + '</span></label>';
+  };
+  var on = function(r, dflt){ return keep ? !!keep[String(r.stableId)] : dflt; };
+  return g.ready.map(function(r){ return line(r, on(r, true), false, ''); }).join('')
+    + g.done.map(function(r){ return line(r, on(r, false), false, 'already on ' + esc(SIGNED_RECORD_KINDS[kind].label.toLowerCase().replace(/^the /, 'a ')), ''); }).join('')
+    + g.waiting.map(function(r){ return line(r, false, true, 'awaiting written approval: not offered', '#8a5a1e'); }).join('');
+}
+// ⚠⚠ THE TICKED LINES AS THE INVENTORY READS WHEN THE PAPER IS FILED (2026-10-27, P6's review): the open desk reads the sheet every
+// minute, and a read landing under the open dialog could move a ticked line off this taker or out of its written approval. The
+// glass route then printed only the lines still this taker's, while it recorded every line ticked as released to them, a custody
+// event each, though the signed PDF did not carry it. A ticked line no longer offered to this taker (not ready, not already on a
+// paper of this kind) stops the filing on either route: it is named, the lines are drawn again as they read now (the other ticks
+// and the signature kept), and the person presses again. `ok` is what may be recorded, in the dialog's order.
+function _signoutStill(ctx, ids) {
+  var job = _invJob(ctx.jobId);
+  var g = job ? signoutGroupFor(job, ctx.kind, ctx.taker) : null;
+  var offered = {};
+  if (g) g.ready.concat(g.done).forEach(function(r){ offered[String(r.stableId)] = 1; });
+  var ok = [], moved = [];
+  (ids || []).forEach(function(sid){
+    if (offered[String(sid)]) ok.push(String(sid));
+    else moved.push(_getPhotoRef(ctx.jobId, String(sid)) || { stableId: sid });
+  });
+  return { g: g, ok: ok, moved: moved };
+}
+function _signoutMovedRefusal(ctx, S) {
+  var names = S.moved.map(function(r){ return r && r.objectName ? _invNamed(r) : '#' + _invItemNo(r); });
+  showFB('ip-fb', 'warn', 'Not filed: ' + esc(_andJoin(names)) + (names.length > 1 ? ' have' : ' has') + ' changed since this dialog opened, and '
+    + (names.length > 1 ? 'are' : 'is') + ' no longer offered to ' + esc(ctx.taker) + ' (another device moved '
+    + (names.length > 1 ? 'them' : 'it') + ', or the written approval no longer covers ' + (names.length > 1 ? 'them' : 'it')
+    + '). The list is drawn again as the inventory reads now: check it, then press again.');
+  var body = document.getElementById('ip-body');
+  if (body && S.g) { var keep = {}; S.ok.forEach(function(id){ keep[id] = 1; }); body.innerHTML = _signoutBodyHtml(S.g, ctx.kind, keep); }
+  return false;
 }
 function closePickupDialog() {
   var m = document.getElementById('inv-pickup-modal');
@@ -33152,6 +33487,8 @@ function pickupFileFromDialog(input) {
   if (!ctx || !file) return false;
   var ids = _signoutTicked();
   if (!ids.length) { showFB('ip-fb', 'warn', 'Tick the lines the sheet lists.'); return false; }
+  var _still = _signoutStill(ctx, ids);
+  if (_still.moved.length) return _signoutMovedRefusal(ctx, _still);
   var signer = String((document.getElementById('ip-signer') || {}).value || '').trim() || ctx.taker;
   showFB('ip-fb', 'info', 'Filing ' + esc(ctx.taker) + '’s sheet…');
   return fileSignedCopy(ctx.jobId, ctx.kind, _signoutMeta(ctx, ids, signer, false), file, function(ok, msg, rec){
@@ -33171,8 +33508,10 @@ function signoutFileFromPad() {
   if (!signer) { showFB('ip-fb', 'warn', 'Type the name of the person signing.'); return false; }
   if (!signPadSigned('ip-pad')) { showFB('ip-fb', 'warn', 'Sign the sheet first: a signature, not a tap.'); return false; }
   if (!SHEETS_SYNC_URL) { showFB('ip-fb', 'warn', 'This device has no Apps Script URL in Settings, so it cannot make the PDF. Photograph a printed sheet instead.'); return false; }
-  var g = signoutGroupFor(job, ctx.kind, ctx.taker);
+  var _still = _signoutStill(ctx, ids);
+  var g = _still.g;
   if (!g) { showFB('ip-fb', 'warn', 'No line on the inventory goes to them now.'); return false; }
+  if (_still.moved.length) return _signoutMovedRefusal(ctx, _still);
   var lines = ids.map(function(sid){ return g.lines.filter(function(r){ return String(r.stableId) === String(sid); })[0]; }).filter(Boolean);
   var html = signoutSheetHtml(job, g, lines, { img: signPadDataUrl('ip-pad'), name: signer, date: _todayStr(), by: _invStampBy(job) });
   var btn = document.getElementById('ip-sign-btn');
@@ -33658,6 +33997,8 @@ function printApprovalRequest(jobId, selectedOnly, opt) {
   if (!job) return _asHtml ? { why: 'This job could not be found.' } : undefined;
   var _cold = typeof invColdRefusal === 'function' ? invColdRefusal(jobId) : '';   // 2026-10-27, P1: a cold desk refuses
   if (_cold) { if (_asHtml) return { why: _cold }; alert(_cold); return; }
+  if (typeof invReadFirst === 'function' && invReadFirst(jobId, 'The release approval request', function () { printApprovalRequest(jobId, selectedOnly, _invReadOpt(opt)); },
+      { key: 'The release approval request|' + (selectedOnly ? 'selection' : 'all'), read: !!(opt && opt.read), asHtml: !!(opt && opt.asHtml) })) return;   // P6; keyed on what it carries (P6's review)
   var items = selectedOnly ? invWrittenReleasePicked(jobId, job) : _invAwaitingApproval(jobId);
   if (!items.length) {
     // A living job (2026-10-26) says why nothing needs signing there, a selection of everyday items included.
@@ -34278,9 +34619,9 @@ function sendApprovalRequest(jobId, selectedOnly, via) {
 
   step('Reading the inventory…');
   _invEnsureLoaded(jobId);
-  refreshPhotoRefs(jobId, function () {
+  refreshPhotoRefs(jobId, function (_changed, ok) {
     if (over) return;
-    if (!_invCloudSeen[jobId]) {
+    if (ok === false || !_invCloudSeen[jobId]) {   // this read (P6)
       finish();
       _docNotice('warn', 'The inventory could not be read from the sheet, so the request could ask for lines another device has already had approved. Check the connection, then press Send request again.', jobId);
       return;
@@ -34562,7 +34903,12 @@ function approvalEnvelopeRefresh(opts, cb) {
           changed++;
           approvalEnvelopeFile(j.id, { auto: true });
           if (typeof _invEnsureLoaded === 'function') _invEnsureLoaded(j.id);
-          refreshPhotoRefs(j.id, function () { if (approvalEnvelopeApply(j.id) && typeof _invRefreshReleases === 'function') _invRefreshReleases(j.id); });
+          // What the read moved and what the envelope recorded are drawn on the desk once nobody is typing (P6: never under a box).
+          refreshPhotoRefs(j.id, function (moved) {
+            var put = approvalEnvelopeApply(j.id);
+            if ((moved || put) && typeof _invDeskShows === 'function' && _invDeskShows(j.id)) _invRenderWhenIdle();
+            else if (put && typeof _invRefreshReleases === 'function') _invRefreshReleases(j.id);
+          });
         }
         else if (out === 'declined' || out === 'voided') changed++;
         else if (out === 'old') _docNotice('warn', 'DocuSign reports the release request for ' + (j.hvlId || 'this client') + ' as signed, but the Apps Script deployment '
@@ -34994,6 +35340,12 @@ var INV_REQ_UNTICK_TXT = 'Untick any line the signed copy struck out.';
 var INV_REQ_CHANGED_TXT = 'changed after the request went: tick it only if the signed copy shows it as it reads now';
 function invRecordApproval(jobId, opt) {
   var fromReq = !!(opt && Array.isArray(opt.stableIds));
+  // ⚠⚠ THE SELECTION BAR'S RECORD APPROVAL READS THE SHEET FIRST, AS EVERY PRESS ON THAT BAR DOES (2026-10-27, P6's review): it was
+  // the one press there that did not, so the dialog listed the lines as this device last read them while the manual and the
+  // playbook said every press on the bar reads first. (The request's road, Record the signed request, compares each line with the
+  // request's own terms at the save, which catches a line moved meanwhile, and waits for the sheet's first read.)
+  if (!fromReq && !(opt && opt.read) && _invPicked(jobId).length && typeof invReadFirst === 'function'
+      && invReadFirst(jobId, 'Record approval', function () { invRecordApproval(jobId, _invReadOpt(opt)); })) return true;
   var want = fromReq ? opt.stableIds.map(String) : null;
   // Opened from the request, the lines run in the order the list gives them (the request's own, invRecordRequestApproval).
   var picked = fromReq
@@ -35037,9 +35389,16 @@ function invRecordApproval(jobId, opt) {
     .filter(function(id){ return _pickIds.indexOf(id) >= 0; }) : [];
   // ⚠ THE BULK BAR'S SELECTION SAYS WHAT IT LEFT OUT (P5, REL-07): a Keep line, or one every fiduciary has already approved.
   var leftOut = fromReq ? '' : invWrittenReleaseLeftOutText(jobId, job);
+  // ⚠⚠ WHAT THE DIALOG SHOWED, LINE BY LINE (2026-10-27, P6's review): `shown`, each line's terms as it was drawn. The open desk
+  // reads the sheet every minute, and a read landing under the open dialog moved a $2,400 consignment to Auction · Kodner
+  // Galleries to a $24,000 gift to Cousin Pete while the dialog still read Auction · Kodner Galleries; Save then recorded the
+  // signature against the gift, and the line was cleared for sign-out. On the selection's road a line whose terms moved since the
+  // dialog opened is not recorded and is named (invSaveApproval), and what is recorded is pinned to what was shown.
+  var _shown = {};
+  picked.forEach(function(r){ _shown[String(r.stableId)] = invApprovalTermsOf(r); });
   _invRecordCtx = { jobId: jobId, stableIds: picked.map(function(r){ return r.stableId; }),
                       names: fids.map(function(f){ return f.name; }), fromRequest: fromReq, req: fromReq ? (opt.req || null) : null,
-                      moved: moved, sentAt: fromReq ? (opt.sentAt || '') : '' };
+                      moved: moved, sentAt: fromReq ? (opt.sentAt || '') : '', shown: _shown };
   var n = picked.length;
   var _ttl = document.getElementById('ia-title');
   if (_ttl) _ttl.textContent = 'Record a signed approval';   // Correct… shares the dialog (P5)
@@ -35218,8 +35577,20 @@ function invSaveApproval() {
   var _terms = c.req ? approvalRequestPaperTerms(job, c.req, _photoRefs[jobId] || [], _attested) : null;
   var _since = [];
   if (_terms && typeof c.req.terms === 'string') refs = refs.filter(function(r){ if (_terms[String(r.stableId)]) return true; _since.push(r); return false; });
+  // ⚠⚠ ON THE SELECTION'S ROAD, AGAINST WHAT THE DIALOG SHOWED (P6's review): a line whose terms moved since it was drawn (where it
+  // goes, who takes it, a firearm's dealer, or its value past Ask 5's rule: _invTermsMoved) is not recorded, and is named; every
+  // other line is pinned to the terms the dialog was opened on, never to whatever a read merged in meanwhile.
+  if (!c.req && c.shown) {
+    _terms = {};
+    refs = refs.filter(function(r){
+      var t = c.shown[String(r.stableId)];
+      if (t && _invTermsMoved(t, r, job)) { _since.push(r); return false; }
+      if (t) _terms[String(r.stableId)] = t;
+      return true;
+    });
+  }
   if (!refs.length) return say('Not recorded: ' + esc(_since.map(_invNamed).join(', ')) + (_since.length > 1 ? ' have' : ' has')
-    + ' changed since this dialog opened. Close it and press Record the signed request again.');
+    + ' changed since this dialog opened. Close it and press ' + (c.fromRequest ? 'Record the signed request' : 'Record approval') + ' again.');
   var still = invApprovalOpenText(job, refs, invApprovalLeftOpen(job, refs, names, when));
   var _early = invApprovalDateEarly(job, when, c.fromRequest ? c.sentAt : '', refs);
   invApplyApproval(jobId, refs, names, when, _terms);
@@ -35478,11 +35849,12 @@ function invReceiptHtml(job, name, lines, sig) {
       + esc(invRecordsNoun(job)) + ' and files a copy to the client&rsquo;s Drive folder. Item numbers are the ones every inventory document cites.</div>'
     + '</div>';
 }
-function printBeneficiaryReceipt(jobId, name) {
+function printBeneficiaryReceipt(jobId, name, read) {
   var job = _invJob(jobId);
   if (!job) return false;
   var _cold = typeof invColdRefusal === 'function' ? invColdRefusal(jobId) : '';   // 2026-10-27, P1: a cold desk refuses
   if (_cold) { alert(_cold); return false; }
+  if (!read && typeof invReadFirst === 'function' && invReadFirst(jobId, 'The receipt', function (diff) { printBeneficiaryReceipt(jobId, name, diff); }, { key: 'The receipt|' + String(name || '') })) return true;   // P6; keyed on the person (P6's review)
   if (!invFiduciaryMode(job)) { alert('A receipt is kept for property released from an estate. The living-client agreement has no receipt requirement.'); return false; }
   var g = invReceiptGroups(job, _invAssignItemNos(jobId)).filter(function(x){ return !x.dealer && samePerson(x.name, invRecipientName(name)); })[0];
   var lines = g ? (g.owed.length ? g.owed : g.released) : [];
@@ -36122,6 +36494,7 @@ function printCourtInventory(jobId, opt) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   var _blocked = invDocContractBlock(job, 'court') || (typeof invColdRefusal === 'function' ? invColdRefusal(jobId) : '');   // and a cold desk (2026-10-27, P1)
   if (_blocked) { if (opt && opt.asHtml) return { why: _blocked }; alert(_blocked); return; }
+  if (typeof invReadFirst === 'function' && invReadFirst(jobId, 'The Court Inventory', function () { printCourtInventory(jobId, _invReadOpt(opt)); }, opt)) return;   // P6
   var pt = document.getElementById('print-target');
   if (!job || !pt) return;
   var items = _invAssignItemNos(jobId);
@@ -36313,6 +36686,7 @@ function printTrustSchedule(jobId, opt) {
   // a carrying value on every line, so it is ours only where the agreement says we state values.
   var _blocked = invDocContractBlock(job, 'trustee') || (typeof invColdRefusal === 'function' ? invColdRefusal(jobId) : '');   // and a cold desk (2026-10-27, P1)
   if (_blocked) { if (opt && opt.asHtml) return { why: _blocked }; alert(_blocked); return; }
+  if (typeof invReadFirst === 'function' && invReadFirst(jobId, 'The Trust Schedule', function () { printTrustSchedule(jobId, _invReadOpt(opt)); }, opt)) return;   // P6
   var pt = document.getElementById('print-target');
   if (!job || !pt) return;
   var items = _invAssignItemNos(jobId);
@@ -36538,6 +36912,7 @@ function printDispositionLedger(jobId, opt) {
   if (!job) return (opt && opt.asHtml) ? { why: 'this client could not be found on this device' } : undefined;
   var _cold = typeof invColdRefusal === 'function' ? invColdRefusal(jobId) : '';   // 2026-10-27, P1: a cold desk refuses
   if (_cold) { if (opt && opt.asHtml) return { why: _cold }; alert(_cold); return; }
+  if (typeof invReadFirst === 'function' && invReadFirst(jobId, 'The Disposition Ledger', function () { printDispositionLedger(jobId, _invReadOpt(opt)); }, opt)) return;   // P6
   var L = dispositionLedger(jobId);
   // An empty inventory has nothing to record, and a sign-off under nothing would approve nothing: refused, as the Estate
   // Inventory Report refuses, so the package leaves it out by name.
@@ -36716,8 +37091,8 @@ function _fileCloseoutPaper(jobId, opt, P) {
   };
   if (P.noInventory) { go(); return true; }
   _invEnsureLoaded(jobId);
-  refreshPhotoRefs(jobId, function () {
-    if (!_invCloudSeen[jobId]) {
+  refreshPhotoRefs(jobId, function (_changed, ok) {
+    if (ok === false || !_invCloudSeen[jobId]) {   // this read (P6)
       if (!release()) return;
       say('err', 'The ' + P.name + ' was not filed to Drive: the inventory could not be read from the sheet, and a page built without it would be empty. Check the connection, then press File to Drive on the ' + P.card + _cpWhere(P) + '.');
       return;
@@ -36851,6 +37226,8 @@ function printDonationRecord(jobId, stableId, opt) {
   if (!job) return refuse('This client could not be found on this device.');
   var _cold = typeof invColdRefusal === 'function' ? invColdRefusal(jobId) : '';   // 2026-10-27, P1: a cold desk refuses
   if (_cold) return refuse(_cold);
+  if (typeof invReadFirst === 'function' && invReadFirst(jobId, 'The Donation Record', function () { printDonationRecord(jobId, stableId, _invReadOpt(opt)); },
+      { key: 'The Donation Record|' + String(stableId), read: !!(opt && opt.read), asHtml: !!(opt && opt.asHtml) })) return null;   // P6; keyed on the charity's line (P6's review)
   var g = donationGroups(job, _invAssignItemNos(jobId)).filter(function (x) {
     return x.charity && x.lines.some(function (r) { return String(r.stableId) === String(stableId); });
   })[0];
@@ -37073,9 +37450,9 @@ function openProceedsStatement(jobId) {
           + '<span style="flex:1 1 160px;min-width:0;">' + esc(_invNamed(r)) + ' &middot; ' + esc(r.disposition) + (r.channel ? ' &middot; ' + esc(r.channel) : '')
           + (on[String(r.stableId)] ? ' <span style="color:#8a6d3b;">(on the ' + esc(on[String(r.stableId)]) + ' statement)</span>' : '') + '</span>'
           + '<span style="font-size:10px;color:var(--gray);flex:0 0 auto;">Gross</span>'
-          + '<input type="number" class="ps-lot-g" data-sid="' + sid + '" min="0" step="0.01" value="' + esc(_num(r.gross)) + '" oninput="psLotsSum()" style="width:84px;flex:0 0 auto;font-size:11px;">'
+          + '<input type="number" class="ps-lot-g" data-sid="' + sid + '" data-was="' + esc(_num(r.gross)) + '" min="0" step="0.01" value="' + esc(_num(r.gross)) + '" oninput="psLotsSum()" style="width:84px;flex:0 0 auto;font-size:11px;">'
           + '<span style="font-size:10px;color:var(--gray);flex:0 0 auto;">Fees</span>'
-          + '<input type="number" class="ps-lot-f" data-sid="' + sid + '" min="0" step="0.01" value="' + esc(_num(r.fees)) + '" oninput="psLotsSum()" style="width:74px;flex:0 0 auto;font-size:11px;">'
+          + '<input type="number" class="ps-lot-f" data-sid="' + sid + '" data-was="' + esc(_num(r.fees)) + '" min="0" step="0.01" value="' + esc(_num(r.fees)) + '" oninput="psLotsSum()" style="width:74px;flex:0 0 auto;font-size:11px;">'
           + '</label>';
       }).join('')
     : '<div style="font-size:11px;color:#8a6d3b;">No line is marked Auction, Consign or Sell yet. Set the disposition on the lines the statement covers first.</div>';
@@ -37130,12 +37507,20 @@ function saveProceedsStatement() {
   if (fees !== null && bad(fees)) miss.push('the commission and fees as a figure');
   if (bad(net)) miss.push('the net paid');
   // The lots' figures, as typed in the table (P25, Q39): a negative one is refused with the rest.
+  // ⚠⚠ ONLY A BOX THE PERSON CHANGED IS A FIGURE TO WRITE (2026-10-27, P6's review): each box opens on what its line recorded
+  // (`data-was`), and the open desk reads the sheet every minute, so a gross the other device typed and a read merged in meanwhile
+  // was overwritten by the box's stale prefill. A box left as it opened writes nothing (`typed` false), and its line keeps whatever
+  // it now records; the statement's own totals are still typed from the paper.
   var lotVal = function (cls, sid) {
     var el = Array.prototype.slice.call(box.querySelectorAll('input.' + cls)).filter(function (i) { return String(i.getAttribute('data-sid')) === sid; })[0];
     var v = el ? String(el.value || '').trim() : '';
-    return v === '' ? null : Number(v);
+    var hasWas = !!el && typeof el.getAttribute === 'function' && el.getAttribute('data-was') != null;
+    var was = hasWas ? String(el.getAttribute('data-was')).trim() : '';
+    var typed = !!el && (!hasWas || (v === '' ? was !== '' : (was === '' || Number(v) !== Number(was))));
+    return { v: v === '' ? null : Number(v), typed: typed };
   };
-  var lots = sids.map(function (sid) { return { sid: sid, gross: lotVal('ps-lot-g', sid), fees: lotVal('ps-lot-f', sid) }; });
+  var lots = sids.map(function (sid) { var gg = lotVal('ps-lot-g', sid), ff = lotVal('ps-lot-f', sid);
+    return { sid: sid, gross: gg.v, fees: ff.v, grossTyped: gg.typed, feesTyped: ff.typed }; });
   if (lots.some(function (l) { return (l.gross !== null && bad(l.gross)) || (l.fees !== null && bad(l.fees)); })) miss.push('each lot\u2019s gross and fees as figures');
   if (miss.length) return refuse('To record this statement, enter ' + _andJoin(miss) + '. Nothing was saved.');
   var byId = {};
@@ -37146,8 +37531,8 @@ function saveProceedsStatement() {
     var r = byId[l.sid];
     if (!r) return;
     var changed = false;
-    if (l.gross !== null && (r.gross === '' || r.gross == null || roundCents(l.gross) !== roundCents(r.gross))) { r.gross = roundCents(l.gross); changed = true; }
-    if (l.fees !== null && (r.fees === '' || r.fees == null || roundCents(l.fees) !== roundCents(r.fees))) { r.fees = roundCents(l.fees); changed = true; }
+    if (l.grossTyped && l.gross !== null && (r.gross === '' || r.gross == null || roundCents(l.gross) !== roundCents(r.gross))) { r.gross = roundCents(l.gross); changed = true; }
+    if (l.feesTyped && l.fees !== null && (r.fees === '' || r.fees == null || roundCents(l.fees) !== roundCents(r.fees))) { r.fees = roundCents(l.fees); changed = true; }
     if (changed) { _setPhotoRef(jobId, _invTouch(r)); _lotsWritten++; }
   });
   if (_lotsWritten) { savePhotoRefs(jobId); _scheduleInventorySync(jobId); }
@@ -37454,6 +37839,7 @@ function printAppraisalWorklist(jobId, opt) {
   if (!job || !pt) return;
   var _cold = typeof invColdRefusal === 'function' ? invColdRefusal(jobId) : '';   // 2026-10-27, P1: a cold desk refuses
   if (_cold) { if (opt && opt.asHtml) return { why: _cold }; alert(_cold); return; }
+  if (typeof invReadFirst === 'function' && invReadFirst(jobId, 'The Appraisal Worklist', function () { printAppraisalWorklist(jobId, _invReadOpt(opt)); }, opt)) return;   // P6
   // ⚠ THE NUMBER ON THIS PAGE IS THE ONE THE APPRAISER REPORTS BACK AGAINST, so it has
   // to be the permanent item number the Court Inventory and the receipts cite — not the
   // row's position, which was what it printed until 2026-09-11. Grouping by appraiser
@@ -37662,6 +38048,7 @@ function printContentsRecord(jobId, opt) {
   if (!job || !job.id) return asHtml ? { why: 'this client could not be found on this device' } : undefined;
   var _cold = typeof invColdRefusal === 'function' ? invColdRefusal(jobId) : '';   // 2026-10-27, P1: a cold desk refuses
   if (_cold) { if (asHtml) return { why: _cold }; alert(_cold); return; }
+  if (typeof invReadFirst === 'function' && invReadFirst(jobId, 'The Contents Record', function () { printContentsRecord(jobId, _invReadOpt(opt)); }, opt)) return;   // P6
   if (!asHtml && !document.getElementById('print-target')) return;
   var fid = invFiduciaryMode(job);
 
@@ -37847,11 +38234,12 @@ function _afDate(ms) {
   return new Date(ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function printAsFoundRecord(jobId) {
+function printAsFoundRecord(jobId, read) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
   var _cold = typeof invColdRefusal === 'function' ? invColdRefusal(jobId) : '';   // 2026-10-27, P1: a cold desk refuses
   if (_cold) { alert(_cold); return; }
+  if (!read && typeof invReadFirst === 'function' && invReadFirst(jobId, 'The As-Found Record', function (diff) { printAsFoundRecord(jobId, diff); })) return;   // P6
   var rec = asFoundRecord(jobId);
   if (!rec.rooms.length) { alert('This job has no rooms priced on its estimate, so there is nothing to index.'); return; }
   if (!rec.total) { alert('No as-found photographs have been taken on this job yet.'); return; }
@@ -39016,13 +39404,32 @@ function onInventoryJobChange() {
 }
 
 // Fetch the selected job's manifest and redraw if the merge actually changed something.
-// Silent by design: this runs on every tab open and a badge each time would be noise.
-function _invRefreshFromCloud() {
+// Silent by design: this runs on every tab open and a badge each time would be noise. (Since P6 it says what another device
+// changed, when something did: invSheetChangeWords.)
+// ⚠⚠ `why` SAYS WHAT ASKED (P6's review): '' (or none) for the tab opened or a client picked, 'visible' for the page back in view,
+// and 'timer', 'retry' or 'held' for a read nobody pressed: the minute's re-read, the 15 s retry after a failed read, and the read a
+// held workbook asks after an edit. DocuSign is asked about a request out for signature only on the first two, an arrival
+// (Decided: never on a timer): the minute's re-read asked it every ESIGN_RECHECK_MINS with nobody at the desk, six times in two
+// hours where the desk opened once had asked once, and DocuSign revokes API access for polling.
+// ⚠ AND A READ THAT NEVER ANSWERS LETS THE DESK ASK AGAIN (P6's review): the minute's re-read was armed only in the answer, so a
+// read that hung stopped the open desk reading for good. After INV_READ_WATCHDOG_MS with no answer the next read is armed (the
+// 15 s retry while the desk has not read the client, else the minute's); an answer arriving after that is applied as ever.
+function _invRefreshFromCloud(why) {
   var sel = document.getElementById('inv-job');
   var jobId = sel ? parseInt(sel.value) || 0 : 0;
   if (!jobId) return;
   if (typeof _invCloudRetry !== 'undefined' && _invCloudRetry.timer) { clearTimeout(_invCloudRetry.timer); _invCloudRetry.timer = null; }
-  refreshPhotoRefs(jobId, function(changed) {
+  if (typeof _invReread !== 'undefined' && _invReread.timer) { clearTimeout(_invReread.timer); _invReread.timer = null; }
+  var _answered = false;
+  var _wd = (typeof INV_READ_WATCHDOG_MS !== 'undefined' && typeof setTimeout === 'function') ? setTimeout(function () {
+    _wd = null;
+    if (_answered) return;
+    if (typeof _invCloudRetryArm === 'function' && _invManifestUnread(jobId)) _invCloudRetryArm(jobId);
+    else if (typeof _invRereadArm === 'function') _invRereadArm(jobId);
+  }, INV_READ_WATCHDOG_MS) : null;
+  refreshPhotoRefs(jobId, function(changed, ok, diff) {
+    _answered = true;
+    if (_wd != null) { clearTimeout(_wd); _wd = null; }
     // ⚠ THE FIRST READ OF THE SHEET IS WHAT LETS THE WALKTHROUGH'S COLLECTIONS JOIN THE INVENTORY (P24), so a read that
     // changed nothing still redraws when it made them.
     var made = collectionLinesEnsure(jobId);
@@ -39030,13 +39437,16 @@ function _invRefreshFromCloud() {
     // removal moved, so a read that carried in what the merge keeps from an older copy (a release approval's signers, a
     // receipt, a disposition date: INV_STICKY_FIELDS, invMergeApprovals) left the rows stale, and, since the bars' lines
     // wait on this read, every bar saying "loading…" and Releases shut over a request owed. `changed` is the merge's own
-    // answer, keys sorted (refreshPhotoRefs), so it moves only when the content did, and this runs on a tab opened or a
-    // client picked, never on a timer that could redraw over somebody typing.
+    // answer, keys sorted (refreshPhotoRefs), so it moves only when the content did.
     // ⚠ AND A READ THAT CHANGED NOTHING STILL ENDS THE BARS' "loading…" (2026-10-22): the heads alone, no redraw.
     // A request signed in DocuSign whose lines waited on this read is recorded on them now (2026-10-26c), and an envelope still
-    // out is asked about (its own floor), the desk redrawn when it moved, never under somebody typing.
+    // out is asked about (its own floor), the desk redrawn when it moved.
+    // ⚠⚠ NEVER UNDER SOMEBODY TYPING (2026-10-27, P6 of the desk audit, SYN-05): this read runs on the 15 s retry after a failed
+    // read and, since P6, every minute while the desk is open, and the redraw it made rewrote the tab under the box being typed
+    // in: "Mahogany secretary desk with glazed bo" was saved, sent to Agent Two and valued at $60. The DocuSign arrival's redraw
+    // (2026-10-26c, `signedIn`) went the same way. The redraw waits until the person leaves the box (_invRenderWhenIdle).
     var signedIn = (typeof approvalEnvelopeApply === 'function') ? approvalEnvelopeApply(jobId) : 0;
-    if (changed || made || signedIn) renderInventoryTab();
+    if (changed || made || signedIn) _invRenderWhenIdle();
     else {
       if (typeof _deskFoldHeadsRepaint === 'function') _deskFoldHeadsRepaint(jobId);
       // ⚠ AND THE RELEASES CARD, which waits on this read for Record the signed request and the lines changed since a request went
@@ -39045,11 +39455,17 @@ function _invRefreshFromCloud() {
       if (typeof _invRefreshReleases === 'function') _invRefreshReleases(jobId);
       // And the read's line, which waited on this read too (the build's browser step: it kept "still loading" after it).
       if (typeof _invReadLineRepaint === 'function') _invReadLineRepaint(jobId);
-      // And what the work bar and an empty list said of a copy that had not read the sheet (2026-10-27, P1, SYN-08).
+      // And what the work bar and an empty list said of a copy that had not read the sheet (2026-10-27, P1, SYN-08), or of a
+      // copy whose last read failed (P6).
       if (typeof _invColdRepaint === 'function') _invColdRepaint(jobId);
     }
-    if (typeof approvalEnvelopeRefresh === 'function') approvalEnvelopeRefresh({ jobId: jobId }, function (n) { if (n) _invRenderWhenIdle(); });
+    // What another device changed, said once it is on screen (P6): "Another device changed 3 lines on this client: shown."
+    if (ok && diff && typeof invSheetChangeWords === 'function') { var said = invSheetChangeWords(diff); if (said) showSyncBadge(said); }
+    // DocuSign on an arrival only (P6's review): a read nobody pressed never asks it.
+    var _onTimer = why === 'timer' || why === 'retry' || why === 'held';
+    if (!_onTimer && typeof approvalEnvelopeRefresh === 'function') approvalEnvelopeRefresh({ jobId: jobId }, function (n) { if (n) _invRenderWhenIdle(); });
     if (typeof _invCloudRetryArm === 'function' && _invManifestUnread(jobId) && _invCloudFailed[jobId]) _invCloudRetryArm(jobId);
+    else if (typeof _invRereadArm === 'function') _invRereadArm(jobId);
   });
 }
 // ⚠ A FAILED READ IS ASKED AGAIN (2026-10-23, the desk's review): every INV_CLOUD_RETRY_MS while the desk still shows this
@@ -39062,13 +39478,67 @@ function _invCloudRetryArm(jobId) {
   if (_invCloudRetry.timer) clearTimeout(_invCloudRetry.timer);
   _invCloudRetry.timer = setTimeout(function () {
     _invCloudRetry.timer = null;
-    var sel = document.getElementById('inv-job'), panel = document.getElementById('panel-inventory');
-    if (!sel || (parseInt(sel.value) || 0) !== jobId) return;
-    if (!panel || !panel.classList || !panel.classList.contains('active')) return;
+    if (!_invDeskShows(jobId)) return;
     if (!_invManifestUnread(jobId)) return;
-    _invRefreshFromCloud();
+    _invRefreshFromCloud('retry');
   }, INV_CLOUD_RETRY_MS);
   return true;
+}
+// ⚠⚠ THE OPEN DESK READS THE SHEET AGAIN EVERY MINUTE (2026-10-27, P6 of the desk audit; SYN-01 and SYN-02 contained until P18).
+// It read only on a tab opened or a client picked, so a desk left open from the afternoon showed the afternoon's copy all
+// evening: Ashley's iPad changed a line's count and wiped Anthony's typed name, his $1,250 dealer quote and his tick, and a
+// stale Name 24 shots brought back eight lines removed on the other device, named and valued. Every INV_DESK_REREAD_MS while
+// the desk shows the client and the page is in view, it reads the sheet as the tab's opening does, says what another device
+// changed, and draws what moved once nobody is in a box (_invRenderWhenIdle). ⚠ IT READS WHILE SOMEBODY IS IN A BOX, AND ONLY
+// THE DRAWING WAITS: after a name and Tab the focus rests in the next box, so "nobody in a box" was hardly ever true at a desk
+// (the build's browser step: the iPad never read again once a name had been typed), while a read only merges into this
+// device's copy and the box keeps what is being typed, written onto the line as the sheet now holds it when it is left. A
+// minute with the page hidden is asked again the next minute; leaving the tab or picking another client stops it (opening it
+// again reads at once), and bringing the page back into view reads at once (the visibility handler, below).
+var INV_DESK_REREAD_MS = 60000;
+var _invReread = { timer: null };
+function _invRereadArm(jobId) {
+  if (_invReread.timer) clearTimeout(_invReread.timer);
+  _invReread.timer = setTimeout(function () { _invReread.timer = null; _invRereadTick(jobId, 'timer'); }, INV_DESK_REREAD_MS);
+  return true;
+}
+// `why`: 'timer' for the minute's re-read, 'visible' for the page back in view (an arrival: DocuSign is asked then, never on the timer).
+function _invRereadTick(jobId, why) {
+  if (!_invDeskShows(jobId)) return false;
+  if (typeof document !== 'undefined' && document && document.hidden) { _invRereadArm(jobId); return false; }
+  _invRefreshFromCloud(why);
+  return true;
+}
+// Whether the desk is on screen with this client (the tab active, the client picked), DOM only.
+function _invDeskShows(jobId) {
+  var sel = document.getElementById('inv-job'), panel = document.getElementById('panel-inventory');
+  if (!sel || (parseInt(sel.value) || 0) !== jobId) return false;
+  return !!(panel && panel.classList && panel.classList.contains('active'));
+}
+// What a read brought from the sheet that this device had not seen, in one sentence for the toast; '' where nothing, or where
+// this device held nothing of the client before (a first read is not another device's changes). DOM-free; `diff` is
+// invSheetDiff's.
+function invSheetChangeWords(diff) {
+  if (!diff || !diff.held) return '';
+  var g = (diff.gone || []).length, c = (diff.changed || []).length, a = (diff.added || []).length;
+  if (!g && !c && !a) return '';
+  var lines = function (n) { return n + ' line' + (n === 1 ? '' : 's'); };
+  var bits = [];
+  if (c) bits.push('changed ' + lines(c));
+  if (g) bits.push('removed ' + lines(g));
+  if (a) bits.push('added ' + lines(a));
+  var said = bits.length > 1 ? bits.slice(0, -1).join(', ') + ' and ' + bits[bits.length - 1] : bits[0];
+  return 'From the sheet: another device ' + said + ' on this client. The desk shows them now.';
+}
+// What a read desk whose last read failed says of its copy, beside the count (P6): '' while the last read landed, or before any
+// has (invColdWords says that). "sheet not answering since 9:42 PM: this device’s copy".
+function invSheetStaleWords(jobId) {
+  if (!(typeof SHEETS_SYNC_URL !== 'undefined' && SHEETS_SYNC_URL) || _invManifestUnread(jobId)) return '';
+  if (!(typeof _invCloudFailed !== 'undefined' && _invCloudFailed[jobId])) return '';
+  var at = (typeof _invReadAt !== 'undefined') ? _invReadAt[jobId] : 0;
+  var when = '';
+  try { if (at) when = new Date(at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); } catch (e) {}
+  return 'sheet not answering' + (when ? ' since ' + when : '') + ': this device’s copy';
 }
 
 // Name the rows that came from one estimate line twice, rather than quietly merging or
@@ -39662,11 +40132,21 @@ function _invClearPicks() { _invPick = {}; renderInventoryTab(); }
 // the appraiser names are a closed list and none of them is an "hour"-shaped exception.
 function _anArticle(w) { return /^[aeiou]/i.test(String(w || '')) ? 'an' : 'a'; }
 
-function _invBulkApply(jobId, key, value) {
+function _invBulkApply(jobId, key, value, read) {
   var picked = _invPicked(jobId);
   if (!picked.length) return;
   // The placeholder is not a value. Selecting it must not blank the field on forty items.
   if (key !== 'reviewed' && (value === '' || value == null)) return;
+  // ⚠ THE SHEET FIRST (P6, SYN-01): a sweep across a selection writes every picked line whole, so off an old copy it put back
+  // what another device had changed on each of them. It reads the sheet, then sweeps the lines as the sheet holds them; a line
+  // removed on another device meanwhile is left alone and said.
+  var _asked = read ? null : picked.map(function(r) { return r.stableId; });
+  // Keyed on the field and what it sets (P6's review): a second sweep pressed while the first one's read is out goes after it.
+  if (!read && typeof invReadFirst === 'function' && invReadFirst(jobId, key === 'reviewed' ? 'Mark reviewed' : 'The change across the selection',
+      function (diff) { diff.asked = _asked; _invBulkApply(jobId, key, value, diff); }, { key: 'bulk|' + key + '|' + String(value) })) return;
+  var _readGone = read ? invReadGone(read, read.asked) : 0;
+  picked = _invPicked(jobId);
+  if (!picked.length) { var _none = invReadGoneText(_readGone) || 'Nothing selected.'; showSyncBadge(_none); return; }
   var job = _invJob(jobId);
   // ⚠ THE HANDLER ASKS WHAT THE BAR ASKS (P16): a field this job does not show is not written from here.
   if (!_invKeyOnJob(job, key)) {
@@ -39857,6 +40337,7 @@ function _invBulkApply(jobId, key, value) {
     + '. Record who each goes to now, or keep the name if it is right.';
   // ⚠ THE FIREARMS THE SWEEP LEFT AS THEY WERE, AND THE LINES FILED AS FIREARMS THAT LOST A DESTINATION (P4): said, never silent.
   if (_faSkipped.length) what += ' ⚠ ' + _invFirearmsSkippedText(_faSkipped);
+  if (_readGone) what += ' ' + invReadGoneText(_readGone);   // P6: removed on another device before the sweep
   if (_faSettled.length) what += ' ⚠ ' + _faSettled.map(function(x) { return invFirearmSettleText(x.ref, job, x.took); }).join(' ');
   // An item that no longer matches the filters on screen has just vanished from the list.
   // Saying so is the difference between "it worked" and "nothing happened".
@@ -40156,23 +40637,34 @@ function agentApplyResult(jobId, group, result) {
 }
 
 // ─── THE RUN ───────────────────────────────────────────────────────────────────
-function agentNameShots(jobId) {
+function agentNameShots(jobId, read) {
   var job = jobs.find(function(j) { return j.id === jobId; });
   if (!job) return;
   if (!SHEETS_SYNC_URL) { alert('This device has no Apps Script URL set, so it cannot reach the naming service. Settings > Sync.'); return; }
   var st = _agState(jobId);
   if (st.running) return;
+  // ⚠ THE SHEET FIRST (P6, SYN-02): a line removed or named on another device is never sent, and the run says so.
+  var asked = read ? null : agentNameableRefs(jobId).map(function(r) { return r.stableId; });
+  if (!read && typeof invReadFirst === 'function' && invReadFirst(jobId, 'Name shots', function (diff) { diff.asked = asked; agentNameShots(jobId, diff); })) return;
+  var leftGone = read ? invReadGone(read, read.asked) : 0;
+  var nowIds = {};
+  agentNameableRefs(jobId).forEach(function(r) { nowIds[r.stableId] = 1; });
+  var leftNamed = read ? (read.asked || []).filter(function(id) { var r = _getPhotoRef(jobId, id); return r && !r.deletedAt && !nowIds[id] && String(r.objectName || '').trim(); }).length : 0;
+  var leftText = (leftGone ? leftGone + ' removed' : '') + (leftGone && leftNamed ? ' and ' : '') + (leftNamed ? leftNamed + ' named' : '');
+  if (leftText) leftText += ' on another device ' + (leftGone + leftNamed === 1 ? 'was' : 'were') + ' left alone';
 
   var groups = agentShotGroups(jobId);
-  if (!groups.length) { alert('Every shot on this job already has a name.'); return; }
+  if (!groups.length) { alert('Every shot on this job already has a name.' + (leftText ? ' ' + leftText.charAt(0).toUpperCase() + leftText.slice(1) + '.' : '')); return; }
 
   if (!confirm('Name ' + groups.length + ' photograph' + (groups.length === 1 ? '' : 's') + ' on this job?\n\n'
              + 'Each one comes back named, categorised and marked unchecked for you to confirm. '
              + 'Nothing is valued and no disposition is set. Then each room’s photographs are checked together '
-             + 'for anything photographed twice.')) return;
+             + 'for anything photographed twice.'
+             + (leftText ? '\n\nThe sheet was read first: ' + leftText + '.' : ''))) return;
 
   st.running = true; st.total = groups.length; st.done = 0;
   st.named = 0; st.split = 0; st.empty = 0; st.failed = 0; st.skipped = 0; st.again = 0; st.failures = {}; st.error = '';
+  st.leftAlone = leftText; st.handOff = '';
   _agRepaint(jobId);
   _agSendNext(jobId, job, groups, 0);
 }
@@ -40235,7 +40727,17 @@ function _agFinish(jobId) {
   // quiet. And a room check already out takes Agent Two at its own tail, so lines are never valued before their room is checked.
   if (st.error && !st.named) return;
   if (_arState(jobId).running) return;
-  if (!agentRoomCheckRun(jobId, { auto: true })) agentValueAuto(jobId);
+  // ⚠ THE SHEET READ AGAIN AT THE HAND-OFF (P6): what follows works on the copy as the sheet holds it now, not as it stood when
+  // the press read it minutes ago; where the sheet does not answer, nothing follows and the line above the rows says so.
+  var hand = function () {
+    if (_arState(jobId).running) return;
+    if (!agentRoomCheckRun(jobId, { auto: true })) agentValueAuto(jobId);
+  };
+  if (typeof invReadQuiet === 'function') invReadQuiet(jobId, hand, function () {
+    st.handOff = 'the room check and Agent Two did not follow: the sheet did not answer after the naming (press Check rooms or Value lines once it does)';
+    _agRepaint(jobId);
+  });
+  else hand();
 }
 
 function _agRepaint(jobId) {
@@ -40254,6 +40756,8 @@ function _agStateHtml(jobId) {
   }
   if (!st.total) return '';
   var bits = [st.named + ' named'];
+  if (st.leftAlone) bits.push(st.leftAlone);   // P6: what the read before the run found removed or named on another device
+  if (st.handOff) bits.push(st.handOff);       // P6: the hand-off's read did not land
   if (st.split)  bits.push(st.split + ' extra line' + (st.split === 1 ? '' : 's') + ' from split frames');
   if (st.empty)  bits.push(st.empty + ' with nothing in frame');
   if (st.skipped) bits.push(st.skipped + ' left alone: named on the desk meanwhile'
@@ -40681,6 +41185,9 @@ function agentRoomCheckRun(jobId, opts) {
   }
   var st = _arState(jobId);
   if (st.running) return false;
+  // The sheet first, on a press (P6); the automatic check follows a run whose hand-off has just read it (_agFinish).
+  if (!opts.auto && !opts.read && typeof invReadFirst === 'function'
+      && invReadFirst(jobId, 'Check rooms', function () { agentRoomCheckRun(jobId, { read: true }); })) return true;
   var rooms = agentRoomsToCheck(jobId);
   if (!rooms.length) {
     if (!opts.auto) alert('Every room has been checked since its last line was named.');
@@ -40690,7 +41197,7 @@ function agentRoomCheckRun(jobId, opts) {
   if (!opts.auto && !confirm('Check ' + rooms.length + ' room' + (rooms.length === 1 ? '' : 's') + ' for anything photographed twice?\n\n'
       + 'Each room’s photographs (' + shots + ' in all) are read together with the lines named off them. Lines that look '
       + 'like one thing counted twice are flagged under Possible duplicates for you to look at. Nothing is removed.')) return false;
-  st.running = true; st.total = rooms.length; st.done = 0; st.doubles = 0; st.failed = 0; st.error = ''; st.failures = {};
+  st.running = true; st.total = rooms.length; st.done = 0; st.doubles = 0; st.failed = 0; st.error = ''; st.failures = {}; st.handOff = '';
   _arRepaint(jobId);
   _arSendNext(jobId, job, rooms);
   return true;
@@ -40793,7 +41300,13 @@ function _arFinish(jobId) {
   // Agent Two follows the room check by itself (2026-10-25b): the agents work in a line, Agent One, the room check, Agent Two.
   // Not after a check that failed outright, as the room check does not follow a naming run that failed: a line counted twice
   // is a line valued twice, so Value N lines waits for the person to run the check again or press it.
-  if (!st.error) agentValueAuto(jobId);
+  if (st.error) return;
+  // The sheet read again at the hand-off (P6), as the naming's is.
+  if (typeof invReadQuiet === 'function') invReadQuiet(jobId, function () { agentValueAuto(jobId); }, function () {
+    st.handOff = 'Agent Two did not follow: the sheet did not answer after the room check (press Value lines once it does)';
+    _arRepaint(jobId);
+  });
+  else agentValueAuto(jobId);
 }
 
 function _arRepaint(jobId) {
@@ -40814,6 +41327,7 @@ function _arStateHtml(jobId) {
     bits.push(st.failed + ' room' + (st.failed === 1 ? '' : 's') + ' could not be read ('
       + Object.keys(st.failures).map(function(k) { return k + ': ' + st.failures[k]; }).join('; ') + ')');
   }
+  if (st.handOff) bits.push(st.handOff);   // P6: the hand-off's read did not land
   return '<span style="color:var(--gray);">Room check: ' + esc(bits.join(' · ')) + '</span>';
 }
 
@@ -41235,12 +41749,16 @@ function _avStampReviewed(ref, job) {
 }
 
 // ─── THE RUN ────────────────────────────────────────────────────────────────────
-function agentValueRun(jobId) {
+function agentValueRun(jobId, read) {
   var job = _invJob(jobId);
   if (!job) return;
   if (!SHEETS_SYNC_URL) { alert('This device has no Apps Script URL set, so it cannot reach the valuing service. Settings > Sync.'); return; }
   var st = _avState(jobId);
   if (st.running) { alert('Agent Two is already valuing lines on this job. Wait for it to finish, then try again.'); return; }
+  // The sheet first (P6): a line valued, renamed or removed on another device is never sent from an old copy.
+  var asked = read ? null : agentValueableRefs(jobId).map(function(r) { return r.stableId; });
+  if (!read && typeof invReadFirst === 'function' && invReadFirst(jobId, 'Value lines', function (diff) { diff.asked = asked; agentValueRun(jobId, diff); })) return;
+  var gone = read ? invReadGone(read, read.asked) : 0;
   var refs = agentValueableRefs(jobId);
   var unnamed = _jobInvRefs(jobId).filter(function(r) { return !String(r.objectName || '').trim(); }).length;
   if (!refs.length) {
@@ -41254,17 +41772,22 @@ function agentValueRun(jobId) {
       + (research ? research + ' researched against sold comparables, ' : '') + (refs.length - research) + ' valued as everyday lots. '
       + 'A name Agent One gave that nobody has reviewed may come back corrected, and a name you typed or reviewed is valued as named. Each line\u2019s Reviewed tick covers its value too. Nothing else on the line changes.'
       + (agentValueInternal(job) ? '\n\nCounsel values the property on this engagement, so the figures stay on the desk for routing and appraisal advice. No document prints them.' : '')
-      + (unnamed ? '\n\n' + unnamed + ' unnamed line' + (unnamed === 1 ? ' is' : 's are') + ' left out: name ' + (unnamed === 1 ? 'it' : 'them') + ' first.' : ''))) return;
+      + (unnamed ? '\n\n' + unnamed + ' unnamed line' + (unnamed === 1 ? ' is' : 's are') + ' left out: name ' + (unnamed === 1 ? 'it' : 'them') + ' first.' : '')
+      + (gone ? '\n\nThe sheet was read first: ' + invReadGoneText(gone) : ''))) return;
   _avStart(jobId, job, refs.map(function(r) { return r.stableId; }), {});
 }
 
 // One line, researched, by a person's choice ("any line a person sends to it", spec §3). Offered on a
 // line the agent valued, could not value, or has not reached; never over a person's or an appraiser's figure.
-function agentRevalue(jobId, stableId) {
+function agentRevalue(jobId, stableId, read) {
   var job = _invJob(jobId), ref = _getPhotoRef(jobId, stableId);
   if (!job || !ref) return;
   if (!SHEETS_SYNC_URL) { alert('This device has no Apps Script URL set, so it cannot reach the valuing service. Settings > Sync.'); return; }
   if (_avState(jobId).running) { alert('Agent Two is already valuing lines on this job. Wait for it to finish, then try again.'); return; }
+  // The sheet first (P6), then the line as the sheet holds it.
+  if (!read && typeof invReadFirst === 'function' && invReadFirst(jobId, 'Re-value', function (diff) { agentRevalue(jobId, stableId, diff); }, { key: 'Re-value|' + stableId })) return;
+  ref = _getPhotoRef(jobId, stableId);
+  if (!ref || ref.deletedAt) { alert('This line was removed on another device, so it was left alone. Removed items, under Removed items & snapshots on Job Admin & Inv, gives it back.'); return; }
   if (_avHasFigure(ref) && ref.valuedBy !== 'agent') {
     alert(_invNamed(ref) + ' carries a value ' + (ref.valuedBy === 'appraiser' || ref.valSource === 'Appraisal' ? 'from an appraisal' : 'a person recorded')
       + ', so Agent Two will not replace it. Nothing was changed.');
@@ -41282,11 +41805,17 @@ function agentRevalue(jobId, stableId) {
 // person or an appraiser recorded, never an unnamed line, never while a run is out. Unlike the record's it sends each line at its
 // own depth (agentValueMode, no _avForceComps): forty everyday lots are not forty researches. A line with no figure yet is valued
 // as Value N lines would; a reviewed line's tick does not cover the new figure, and the confirm says how many.
-function invBulkRevalue(jobId) {
+function invBulkRevalue(jobId, read) {
   var job = _invJob(jobId), lines = _invPicked(jobId);
   if (!job || !lines.length) return false;
   if (!SHEETS_SYNC_URL) { alert('This device has no Apps Script URL set, so it cannot reach the valuing service. Settings > Sync.'); return false; }
   if (_avState(jobId).running) { alert('Agent Two is already valuing lines on this job. Wait for it to finish, then try again.'); return false; }
+  // The sheet first (P6): the selection as the sheet holds it, a line removed on another device left alone and said.
+  var asked = read ? null : lines.map(function(r) { return r.stableId; });
+  if (!read && typeof invReadFirst === 'function' && invReadFirst(jobId, 'Re-value', function (diff) { diff.asked = asked; invBulkRevalue(jobId, diff); }, { key: 'Re-value|selection' })) return true;
+  var _gone = read ? invReadGone(read, read.asked) : 0;
+  lines = _invPicked(jobId);
+  if (!lines.length) { alert('Nothing to value again in this selection. ' + invReadGoneText(_gone)); return false; }
   var theirs = lines.filter(function(r) { return _avHasFigure(r) && r.valuedBy !== 'agent'; });
   var unnamed = lines.filter(function(r) { return theirs.indexOf(r) < 0 && !String(r.objectName || '').trim(); });
   var go = lines.filter(function(r) { return theirs.indexOf(r) < 0 && unnamed.indexOf(r) < 0; });
@@ -41294,6 +41823,7 @@ function invBulkRevalue(jobId) {
       + (theirs.length > 1 ? 'are' : 'is') + ' left as ' + (theirs.length > 1 ? 'they are' : 'it is') + '.' : '')
     + (unnamed.length ? '\n\n' + unnamed.length + ' ha' + (unnamed.length > 1 ? 've' : 's') + ' no name yet and ' + (unnamed.length > 1 ? 'are' : 'is')
       + ' left for Agent One (Name shots).' : '');
+  if (_gone) skip += '\n\n' + invReadGoneText(_gone);
   if (!go.length) { alert('Nothing to value again in this selection.' + skip); return false; }
   var reviewed = go.filter(function(r) { return invLineReviewed(r); }).length;   // a person's look, never the rule's standing
   if (!confirm('Value ' + go.length + ' line' + (go.length > 1 ? 's' : '') + ' again with Agent Two?\n\n'
@@ -41481,7 +42011,12 @@ var _invRenderOwed = false;
 function _invRenderWhenIdle() {
   var el = document.activeElement, panel = document.getElementById('panel-inventory');
   var tag = el ? String(el.tagName || '').toLowerCase() : '';
-  if (!panel || !el || !panel.contains(el) || (tag !== 'input' && tag !== 'textarea' && tag !== 'select')) { renderInventoryTab(); return; }
+  // Only a box a person types into, or a picker, holds the redraw. A file chooser keeps the focus once the file is picked, so a
+  // signed copy's filing (P6 routes its answer here) was never listed until the person clicked elsewhere; a tick or a button
+  // holds nothing that a redraw could lose (found by browser step 99, building P6).
+  var kind = tag === 'input' ? String(el.type || '').toLowerCase() : '';
+  if (!panel || !el || !panel.contains(el) || (tag !== 'input' && tag !== 'textarea' && tag !== 'select')
+      || /^(file|checkbox|radio|button|submit|reset|image|range|color|hidden)$/.test(kind)) { renderInventoryTab(); return; }
   _invRenderOwed = true;   // read by invMarkListRead; renderInventoryTab clears it
   if (el._invRenderHeld) return;
   el._invRenderHeld = true;
@@ -41817,6 +42352,9 @@ function _renderInvWorkbar(job, all) {
   // What a copy that has not read the sheet is, said where the count goes (2026-10-27, P1), and remembered as drawn (_invColdShown).
   var _coldW = invColdWords(job.id);
   if (typeof _invColdShown !== 'undefined') (_invColdShown[job.id] = _invColdShown[job.id] || {}).bar = _coldW;
+  // And a read copy whose last read failed (P6): the count stands, and the line under it says the copy is this device's own.
+  var _staleW = typeof invSheetStaleWords === 'function' ? invSheetStaleWords(job.id) : '';
+  if (typeof _invColdShown !== 'undefined') _invColdShown[job.id].stale = _staleW;
   // The read is owed while a line stands as the agents left it and the list is not read since it last changed (Q107).
   var _rdNow = invListRead(job), _readOwed = st.accepted > 0 && !(_rdNow && _rdNow.current);
   var _moreEl = document.getElementById('inv-more');
@@ -41840,7 +42378,10 @@ function _renderInvWorkbar(job, all) {
         + (job.hvlId ? '<div style="font-size:11px;color:var(--gray);">' + esc(job.hvlId) + '</div>' : '')
       + '</div>'
       // A copy that has not read the sheet counts nothing as reviewed or not (2026-10-27, P1, SYN-08).
-      + (_coldW ? '<span class="inv-cold" style="font-size:11px;color:var(--warn-tx);white-space:nowrap;">' + esc(_coldW) + '</span>' : _invProgressBar(st, 150))
+      + (_coldW ? '<span class="inv-cold" style="font-size:11px;color:var(--warn-tx);white-space:nowrap;">' + esc(_coldW) + '</span>'
+        : _staleW ? '<div style="min-width:0;text-align:right;">' + _invProgressBar(st, 150)
+            + '<div class="inv-stale" style="font-size:11px;color:var(--warn-tx);margin-top:2px;">' + esc(_staleW) + '</div></div>'
+        : _invProgressBar(st, 150))
     + '</div>'
     + '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">'
       // ⚠ AGENT ONE IS FIRST IN THE ROW BECAUSE IT COMES FIRST IN THE WORK. Every document
@@ -43008,10 +43549,20 @@ function _asFoundRows(jobId) {
 // jobs/estimates sheets. Debounced so a burst of edits coalesces into one write,
 // and silent when sync/Drive folder isn't set up (no error spam on every keystroke).
 var _invSyncTimer = {};
+// The client each waiting write is for, as the caller named it (a job id is a number; a map's keys are strings), so the page
+// going can send what waits (_syncFlushNow, P6). Never saved.
+var _invSyncIds = {};
 function _scheduleInventorySync(jobId) {
   if (!SHEETS_SYNC_URL) return;
   clearTimeout(_invSyncTimer[jobId]);
-  _invSyncTimer[jobId] = setTimeout(function(){
+  // This device owes the sheet this client's inventory until a write lands with nothing left unsent (P6, hav_inv_owed).
+  if (typeof _invOwedMark === 'function') _invOwedMark(jobId, true);
+  _invSyncIds[String(jobId)] = jobId;
+  _invSyncTimer[jobId] = setTimeout(function(){ _invSyncNow(jobId); }, 2500);
+}
+// ⚠ A READ OF THE SHEET ONCE PER CLIENT EVERY INV_CLOUD_RETRY_MS FROM THE HELD WORKBOOK, NEVER ONE PER EDIT (P6, SYN-05).
+var _invHeldReadAt = {};
+function _invSyncNow(jobId) {
     // ⚠ CLEARED AS THE FIRST THING THE CALLBACK DOES, so `_invSyncTimer[jobId]` means "a write
     // for this job is still waiting to be sent" and nothing else. It was set and never cleared,
     // which was harmless while nothing read it — `_invManifestEvictable` reads it now, and a
@@ -43023,8 +43574,10 @@ function _scheduleInventorySync(jobId) {
     //   saveInventory — the client's Drive workbook: 26 display columns, no internals.
     // The manifest goes first and is unconditional, because the workbook write needs a
     // Drive folder and the record must not depend on one existing.
+    // Its landing tells this device which lines the sheet now holds (_invManifestLanded, P6): the chip counts the rest.
     postSyncBadge({ type: 'saveMedia', payload: buildMediaPayload(jobId) },
-                  'Inventory saved \u2713', 'Inventory not saved \u2014 still on this device only');
+                  'Inventory saved ✓', 'Inventory not saved — still on this device only',
+                  function (res, sentAt) { if (typeof _invManifestLanded === 'function') _invManifestLanded(jobId, sentAt); });
     var job = jobs.find(function(j){ return j.id === jobId; });
     if (job && job.driveFolder) {
       // ⚠ THE TWO WRITES HAVE DIFFERENT BLAST RADII AND ONLY ONE IS SAFE ON A PARTIAL VIEW.
@@ -43038,20 +43591,35 @@ function _scheduleInventorySync(jobId) {
       // copy of this job. The record (saveMedia) is never gated; only the projection is.
       if (_invCloudSeen[jobId]) {
         postSyncBadge({ type: 'saveInventory', payload: buildInventoryPayload(jobId) },
-                      'Inventory workbook synced \u2713', 'Inventory sync failed');
+                      'Inventory workbook synced ✓', 'Inventory sync failed');
       } else {
-        showSyncBadge('Workbook held \u2014 manifest not loaded from the server yet', false);
-        refreshPhotoRefs(jobId, function(){ renderInventoryTab(); });
+        showSyncBadge('Workbook held — manifest not loaded from the server yet', false);
+        // ⚠⚠ NEVER A REDRAW UNDER SOMEBODY TYPING, AND NOT ONE AFTER EVERY EDIT (2026-10-27, P6, SYN-05). This read redrew the
+        // tab whatever it answered, 2.5 s after each edit on a desk that had not read the sheet: with the sheet unreachable the
+        // name being typed in the next row was cut off mid-word ("Nightstand, mahogany with"), saved and sent to Agent Two.
+        // Now it is asked once per client every INV_CLOUD_RETRY_MS, and what it brings is drawn as the desk's own read draws it:
+        // only where it moved something, and only once nobody is in a box (_invRenderWhenIdle).
+        var heldAt = Date.now();
+        if (heldAt - (_invHeldReadAt[jobId] || 0) >= INV_CLOUD_RETRY_MS) {
+          _invHeldReadAt[jobId] = heldAt;
+          var sel = document.getElementById('inv-job');
+          // The desk on this client reads it as its own read does; any other client's copy is merged, nothing redrawn.
+          if (sel && (parseInt(sel.value) || 0) === jobId && typeof _invRefreshFromCloud === 'function') _invRefreshFromCloud('held');
+          else refreshPhotoRefs(jobId, function () {});
+        }
       }
     }
-  }, 2500);
 }
 
 // The full manifest for one job — every field savePhotoRefs persists, tombstones and
 // all. Deliberately NOT the workbook shape: the workbook is what counsel sees and
 // carries no custody log, no waiver reasons, no upload status.
 function buildMediaPayload(jobId) {
-  return { jobId: String(jobId), savedAt: Date.now(), items: (_photoRefs[jobId] || []) };
+  // ⚠ READ WHEN THE WRITE GOES (2026-10-27, P6): a write held for a retry kept the array it was built with, and a read of the
+  // sheet in between replaces `_photoRefs[jobId]` with the merged copy, so the retry sent the copy from before the read and
+  // the edits made after it went nowhere until another edit. The getters are read as the body is sent, on every attempt
+  // (saveJobs' list goes the same way since P1).
+  return { jobId: String(jobId), get savedAt() { return Date.now(); }, get items() { return _photoRefs[jobId] || []; } };
 }
 
 // Pull every job's manifest back and merge it into what this device holds. Runs at
@@ -44489,11 +45057,12 @@ function _targetUrl(target) {
 function postSyncTo(target, body) {
   var url = _targetUrl(target);
   if (!url) return Promise.reject(new Error('no URL configured for the ' + target + ' backend'));
-  return fetch(_withDeviceKey(url), {
-    method: 'POST', mode: 'cors', redirect: 'follow',
-    body: JSON.stringify(body),
-    headers: { 'Content-Type': 'text/plain' }
-  }).then(_readAppsScriptJson);
+  var text = JSON.stringify(body);
+  var init = { method: 'POST', mode: 'cors', redirect: 'follow', body: text, headers: { 'Content-Type': 'text/plain' } };
+  // ⚠ A SMALL WRITE SENT AS THE PAGE GOES OUTLIVES IT (P6; p6-two-devices G holds the flag): `keepalive` lets the request finish after the tab
+  // closes. Browsers refuse it over 64 KB, so only a body well under that asks; the inventory of a full house goes as it always has.
+  if (typeof _syncPageGoing !== 'undefined' && _syncPageGoing && text.length < 60000) init.keepalive = true;
+  return fetch(_withDeviceKey(url), init).then(_readAppsScriptJson);
 }
 function postSync(body) { return postSyncTo('main', body); }
 
@@ -44601,12 +45170,37 @@ function _pendingWriteLabel(w, key) {
 }
 // What the chip says, derived from the queue alone — no DOM, so it is testable and the
 // wording cannot drift from the classification that produced it.
+// ⚠⚠ AN INVENTORY WRITE IS COUNTED IN LINES, NEVER AS ONE CHANGE (2026-10-27, P6 of the desk audit, SYN-18). Every inventory
+// write of a client is one write key ('main/saveMedia:<id>'), so the chip read "1 unsaved change" over an evening's work done
+// through a dead connection, and the laptop was closed on it. Each such write now counts the client's lines not yet on the
+// sheet as this device knows it (_invUnsentCount: newer here, or missing there); a client it knows nothing of yet, or whose
+// lines are all there already, counts as one change. DOM-free, as the rest of the chip.
+// ⚠ AND A CLIENT A RELOAD LEFT OWED (hav_inv_owed) IS NAMED AS ITS INVENTORY (P6's review): this session has not learned how many
+// of its lines the sheet lacks, so it reads "inventory changes for 1 client", never "1 unsaved change".
+function _pendingChangeWords(keys) {
+  var lines = 0, other = 0, owed = 0;
+  keys.forEach(function (k) {
+    var m = /^main\/saveMedia:(.+)$/.exec(k);
+    var c = (m && typeof _invUnsentCount === 'function') ? _invUnsentCount(m[1]) : null;
+    if (c) lines += c;
+    else if (m && c == null && typeof _invOwedRead === 'function' && _invOwedRead()[String(m[1])]) owed++;
+    else other++;
+  });
+  var o = other + ' change' + (other > 1 ? 's' : '');
+  if (!lines && !owed) return { words: o, lines: 0, owed: 0 };
+  var bits = [];
+  if (lines) bits.push(lines + ' inventory line' + (lines > 1 ? 's' : ''));
+  if (owed) bits.push((lines ? 'inventory changes' : 'Inventory changes') + ' for ' + owed + ' client' + (owed > 1 ? 's' : ''));
+  if (other) bits.push(other > 1 ? o : 'another change');
+  return { words: bits.length > 1 ? bits.slice(0, -1).join(', ') + ' and ' + bits[bits.length - 1] : bits[0], lines: lines, owed: owed };
+}
 function _pendingChipCopy() {
   var keys = Object.keys(_pendingWrites);
   var n = keys.length;
   var anyStale = keys.some(function(k){ return _pendingWrites[k].kind === 'stale'; });
   var anyCrash = keys.some(function(k){ return _pendingWrites[k].kind === 'crash'; });
-  var changes = n + ' change' + (n > 1 ? 's' : '');
+  var cw = _pendingChangeWords(keys);
+  var changes = cw.words;
   // ⚠ THE DEVICE KEY FIRST (P2): nothing else about these writes can be known until the Apps Script lets this device in. And
   // before a record too large for the sheet (the merge of P1 and P2): that one says reloading is safe, which a write held for
   // the key is not (it lives in this tab only), so the key's "do not close or reload it" is the one the chip shows while both are held.
@@ -44681,6 +45275,12 @@ function _pendingChipCopy() {
     return {
       head: '\u26a0 ' + changes + ' not saved \u2014 still failing after ' + worst + ' attempts',
       note: 'This has failed ' + worst + ' times running, so it is not a passing blip. The line above is what the server itself said \u2014 the usual causes are a stale /exec URL in Settings, or an Apps Script deployed with anything other than "Who has access: Anyone". Retrying continues, but until one lands this work is only on THIS DEVICE: do not close or reload the tab.'
+    };
+  }
+  if (cw.lines || cw.owed) {
+    return {
+      head: '\u26a0 ' + changes + ' not yet on the sheet \u2014 retrying\u2026',
+      note: 'Not synced yet \u2014 retrying on its own. Press Try again to send now. Until it lands these lines are on this device only. They are kept here, and go again by themselves: from this tab once the sheet answers, or the next time the app is opened on this device if the tab is closed.'
     };
   }
   return {
@@ -44809,12 +45409,13 @@ function flushPendingWrites() {
     if (w.kind === 'toolarge') { next(); return; }
     // Resolve the URL fresh on every attempt — see SYNC_TARGETS. A write queued while
     // an endpoint was misconfigured lands as soon as the URL in Settings is corrected.
+    var sentAt = Date.now();   // for onLanded (P6)
     postSyncTo(w.target, w.body)
       .then(function(res){
         if (res && res.ok) {
           delete _pendingWrites[k];
           if (res.dropped && res.dropped.length) _applyDroppedJobs(res.dropped, res.recorded);
-          if (typeof w.onLanded === 'function') { try { w.onLanded(res); } catch(e) {} }
+          if (typeof w.onLanded === 'function') { try { w.onLanded(res, sentAt); } catch(e) {} }
           return;
         }
         // Re-read the verdict on every attempt. Before this the flag and the message
@@ -44886,6 +45487,8 @@ function _flushOutbox() {
       return;
     }
     var w = batch[i++];
+    // When this write went, for onLanded (P6: the lines a manifest write carried are the lines held before it went).
+    var sentAt = Date.now();
     postSyncTo(w.target, w.body)
       .then(function(res){
         if (res && res.ok) {
@@ -44897,7 +45500,7 @@ function _flushOutbox() {
           // The sheet took the write but refused some job ids: it has seen them before and no longer holds them. Only a
           // deletion a person recorded takes one off this device (_applyDroppedJobs).
           if (res.dropped && res.dropped.length) _applyDroppedJobs(res.dropped, res.recorded);
-          if (typeof w.onLanded === 'function') { try { w.onLanded(res); } catch(e) {} }
+          if (typeof w.onLanded === 'function') { try { w.onLanded(res, sentAt); } catch(e) {} }
         }
         // A well-formed { ok:false, error } is the SERVER talking — that text may
         // diagnose the deployment.
@@ -45075,20 +45678,62 @@ function queuedDirectoryWrite(target, body, cb, onLanded) {
 // one. A guard on the way out costs nothing and risks nothing.
 // It fires ONLY while writes are outstanding: a prompt on every close would be trained
 // past within a day, on an app people close all day.
+// ⚠⚠ AND IT COVERS WHAT IS ABOUT TO GO, NOT ONLY WHAT FAILED (2026-10-27, P6 of the desk audit, SYN-06): it asked the failed
+// writes alone, so a name typed, Tab and a reload one second later went nowhere with nothing said: the inventory waits 2.5 s
+// before it is sent (_invSyncTimer), a write 250 ms in the outbox, and one in flight. What waits is sent the moment the page is
+// going (_syncFlushNow: beforeunload, pagehide, the page hidden), and while any of it is unanswered the guard asks.
+// One answer, DOM-free: whether this device still owes the sheet a write it has not had answered.
+function _syncOwedOnUnload() {
+  try {
+    if (Object.keys(_pendingWrites).some(function(k){ return _pendingWrites[k] && _pendingWrites[k].kind !== 'toolarge'; })) return true;
+  } catch (e) {}
+  try { if (Object.keys(_outbox).length || _outboxSending || _flushing) return true; } catch (e) {}
+  try { if (Object.keys(_invSyncTimer).some(function(id){ return !!_invSyncTimer[id]; })) return true; } catch (e) {}
+  return false;
+}
+// The page is going (or hidden, which on an iPad is often the last moment it runs): what waits goes now, the inventory's
+// debounce and the outbox's window both skipped. A write already in flight is left to land; a failed one stays queued.
+// ⚠ WHAT NO CHECK CAN SHOW (the flush itself is held by p6-two-devices G and browser step 121 E): a request started as the page unloads may be cut off;
+// what reaches the sheet anyway is what the next read finds missing (refreshPhotoRefs → _invSheetAnswered), from the copy kept
+// in localStorage, and the guard above asks before the tab closes on it. Small writes go with `keepalive` then (postSyncTo).
+var _syncPageGoing = false;
+function _syncFlushNow() {
+  try {
+    Object.keys(_invSyncTimer).forEach(function (k) {
+      if (!_invSyncTimer[k]) return;
+      clearTimeout(_invSyncTimer[k]);
+      _invSyncTimer[k] = 0;
+      _invSyncNow(Object.prototype.hasOwnProperty.call(_invSyncIds, k) ? _invSyncIds[k] : k);
+    });
+  } catch (e) {}
+  if (_outboxTimer) { clearTimeout(_outboxTimer); _outboxTimer = null; }
+  if (Object.keys(_outbox).length) _flushOutbox();
+}
 window.addEventListener('beforeunload', function(e){
-  if (!_pendingCount()) return;
-  // Nothing but records too large for the sheet: closing is safe, as the chip says (2026-10-27, P1's review).
-  if (Object.keys(_pendingWrites).every(function(k){ return _pendingWrites[k] && _pendingWrites[k].kind === 'toolarge'; })) return;
+  _syncPageGoing = true;
+  _syncFlushNow();
+  if (!_syncOwedOnUnload()) return;
   e.preventDefault();
   e.returnValue = '';      // Chrome and Safari require this to show the prompt at all
   return '';
 });
+window.addEventListener('pagehide', function () { _syncPageGoing = true; _syncFlushNow(); });
+window.addEventListener('pageshow', function () { _syncPageGoing = false; });
 
 // Reconnect / tab-refocus are the moments a stuck queue can suddenly succeed —
 // flush eagerly instead of waiting out the backoff.
-window.addEventListener('online', function(){ _retryStep = 0; flushPendingWrites(); });
+// And a client whose inventory a reload left owed to the sheet is asked again (P6's review: the start-up resend was one shot).
+window.addEventListener('online', function(){ _retryStep = 0; flushPendingWrites(); if (typeof _invResendSoon === 'function') _invResendSoon(); });
 document.addEventListener('visibilitychange', function(){
-  if (!document.hidden && _pendingCount()) { _retryStep = 0; flushPendingWrites(); }
+  // Hidden: what waits goes now (P6). Back in view: the stuck queue is tried again, and an open desk reads the sheet at once,
+  // since the other device may have been at this client while this one was put down (P6; _invRereadTick holds it while somebody
+  // is in a box, and asks again the next minute).
+  if (document.hidden) { _syncPageGoing = true; _syncFlushNow(); return; }
+  _syncPageGoing = false;
+  if (_pendingCount()) { _retryStep = 0; flushPendingWrites(); }
+  if (typeof _invResendSoon === 'function') _invResendSoon();
+  var sel = document.getElementById('inv-job'), jid = sel ? parseInt(sel.value) || 0 : 0;
+  if (jid && typeof _invDeskShows === 'function' && _invDeskShows(jid) && !_invManifestUnread(jid)) _invRereadTick(jid, 'visible');
 });
 
 // ── VENDOR DIRECTORY (separate Sheet + web app; read-only) ────────────────────
@@ -50890,7 +51535,8 @@ function invColdRefusal(jobId) { return _invManifestUnread(jobId) ? INV_COLD_TXT
 var _invColdShown = {};
 function _invColdRepaint(jobId) {
   var shown = typeof _invColdShown !== 'undefined' ? _invColdShown[jobId] : null;
-  if (!shown || (shown.bar || '') === invColdWords(jobId)) return;
+  var stale = typeof invSheetStaleWords === 'function' ? invSheetStaleWords(jobId) : '';
+  if (!shown || ((shown.bar || '') === invColdWords(jobId) && (shown.stale || '') === stale)) return;
   if (shown.list) { _invRenderWhenIdle(); return; }
   var job = _invJob(jobId), wb = document.getElementById('inv-workbar');
   if (job && wb) wb.outerHTML = _renderInvWorkbar(job, _jobInvRefs(jobId));
@@ -55989,7 +56635,7 @@ var COST_RATE_FIELDS = [
 // all-clear: worse than no button, because it is believed. There is a test that walks every
 // localStorage key in this file and fails on one that is neither cleared nor deliberately
 // kept, so a new store cannot be added and quietly missed here.
-var LOCAL_JOB_DATA_KEYS = /^(havellin_(jobs|est|jobplan|co|logs)_v\d+$|havellin_est_scratch$|hav_media_)/;
+var LOCAL_JOB_DATA_KEYS = /^(havellin_(jobs|est|jobplan|co|logs)_v\d+$|havellin_est_scratch$|hav_media_|hav_inv_owed$)/;
 // Kept on purpose: the endpoints and rates you would otherwise re-type on a phone, the
 // contractor roster (your crew, not practice data), the two directory caches, who uses the device, and the device's key
 // for the jobs Apps Script (P2: clearing it would turn the device away from the sheet it is about to reload from).
@@ -59976,6 +60622,9 @@ loadChangeOrders();
 // Runs after loadJobs has resolved SHEETS_SYNC_URL from storage. A read-only check; it
 // only ever draws a banner, and says nothing at all when it cannot reach the backend.
 setTimeout(checkBackendVersion, 1200);
+// ⚠ A CLIENT WHOSE INVENTORY NEVER REACHED THE SHEET BEFORE THE LAST RELOAD IS SENT AGAIN, FROM THE COPY KEPT HERE (P6, SYN-06):
+// its inventory is read and whatever the sheet lacks goes (_invResendOwed, hav_inv_owed). Nothing else is waited on.
+setTimeout(_invResendOwed, 2500);
 // Clear stale single-slot estimate if no jobs exist
 if (jobs.length === 0) {
   currentEstimate = null;

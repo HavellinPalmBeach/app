@@ -508,6 +508,7 @@ Publish that rate only as section (a) step 10 allows.
 - Decide first: Ask 5, which now sets both routes. The DocuSign route (P26) is built; this pack is what makes its approvals hold once recorded.
 
 **P6. Two devices: stop the losses now.** Fix now · M.
+- ✓ **Built 2026-10-27** (no backend change; `BUILD_HISTORY.md`, 2026-10-27o; `tests/p6-two-devices.test.js`, two desks built from the real code over the sheet rig's real server merge; browser step 121, two pages). Every press on the list reads the sheet first and says what it left alone, or refuses by name (`invReadFirst`); the open desk reads again every minute and names what another device changed; what waits is sent as the page goes and the browser asks while it is out; what the sheet lacks is sent again from the device's copy, at the next read and at start-up (`hav_inv_owed`, ids only: the queue is still never persisted); the chip counts lines; every redraw the app makes on its own waits for the box to be left. The playbook and *The Evening Desk* say one person per client on the desk at a time. **Contained, not closed:** a row's own edit off a copy up to a minute old still wins an item whole (SYN-01's Qty case), and an agent's answer landing inside the minute can still bring back a line the other device removed: both wait on P18's per-field merge. **Its review, the same evening** (`BUILD_HISTORY.md`, 2026-10-27p; four must-fix and three should-fix): Record approval on the selection bar reads first and records only what its dialog showed, a line another device moved while it was open left unrecorded and named, as the sign-out and the proceeds statement now do (EST-01 had come back through the minute's read); every press made while a read is out goes, in order; a read that never answers lets go after 30 s; the minute's re-read never asks DocuSign; an owed client's copy is never reclaimed for space, and after a reload with the sheet still down it waits in the retry queue under the chip.
 - Goal: until the merge itself is fixed (P18), nothing acts on a stale copy and nothing typed is lost.
 - TC:
   - **Name N shots**, **Check N rooms**, **Value N lines**, **Mark reviewed**, **Remove lines**, every paper, **CSV** and **Snapshot** read the sheet first, and refuse by name when they cannot ("Named 16 of 16; 8 removed on the other device were left alone").
@@ -1522,24 +1523,24 @@ Severity is the verifier's re-rating, or the reviewer's for RT rows. Pack is one
 |NEW-24|friction|low|DC||'No signed receipt' is flagged from the moment of approval, while the item is…|Ask 15|invReleasedToPerson|
 |NEW-25|friction|low|C||Where it goes uses different words from the camera, in alphabetical order|32|_invDispOptions|
 |NEW-26|friction|low|C||Send request is offered again straight after I've sent it, beside Record the…|16|approvalRequestCardHtml|
-|SYN-01|defect|fix-now|C|still|A device with an old copy overwrites the other device's work on any line it…|6, 18|_invRefreshFromCloud|
-|SYN-02|defect|high|C|still|Lines removed on one device come back named and valued when a device with an…|6, 18|agentShotGroups|
+|SYN-01|defect|fix-now|C|still|A device with an old copy overwrites the other device's work on any line it…|6 · contained 27 Oct, 18|_invRefreshFromCloud|
+|SYN-02|defect|high|C|still|Lines removed on one device come back named and valued when a device with an…|6 · contained 27 Oct, 18|agentShotGroups|
 |SYN-03|accuracy|fix-now|C|still|A written approval stays complete after the line is sent somewhere else; the…|5 · built 27 Oct|invApprovalComplete|
 |SYN-04|defect|high|C|still|A deliberate clear of a sticky field (a wrong approval, a wrong recipient) is…|18|invStickyValue|
-|SYN-05|defect|high|C|still|When the sheet is slow or unreachable, the desk redraws on a timer and after…|6|_invRefreshFromCloud|
-|SYN-06|defect|high|C|still|Work can be stranded on a device: an edit within 2.5 s of closing or reloading…|6|_pendingCount|
+|SYN-05|defect|high|C|still|When the sheet is slow or unreachable, the desk redraws on a timer and after…|6 · built 27 Oct|_invRefreshFromCloud|
+|SYN-06|defect|high|C|still|Work can be stranded on a device: an edit within 2.5 s of closing or reloading…|6 · built 27 Oct|_pendingCount|
 |SYN-07|accuracy|high|C|still|The client's Drive workbook in the counsel-shared Estate Inventory folder is…|18|_scheduleInventorySync|
 |SYN-08|defect|high|C|still|A cold or unreachable desk claims none: '0 of 0 reviewed', 'No items yet. Open…|1 · built 27 Oct|_invManifestUnread|
 |SYN-09|accuracy|med|DK|still|KNOWN: the vehicle import on a cold device creates a second line for the same…|8|_renderInventoryImportPanel|
-|SYN-10|inconsistency|med|C|still|Papers and the snapshot print this device's copy without reading the sheet…|6|printEstateInventoryReport|
+|SYN-10|inconsistency|med|C|still|Papers and the snapshot print this device's copy without reading the sheet…|6 · built 27 Oct|printEstateInventoryReport|
 |SYN-11|accuracy|med|C||Two devices issue the same next item number; the later-born line's number moves…|18|_invAssignItemNos|
 |SYN-12|friction|med|C|still, wider|KNOWN: a press straight from a row's box is lost, and not only on the Releases…|9|_invEdit|
 |SYN-13|inconsistency|med|C||When an agent run finishes while the cursor sits in a box, the desk keeps…|28|_avFinish|
 |SYN-14|inconsistency|med|C|fixed P4|Firearms set in an item's record does not redraw the row: the 'Possible NFA…|4|_invEdit|
 |SYN-15|inconsistency|low|C||The group heading's value total and the close-out vendor count go stale after…|28|_renderInvGroupHead|
-|SYN-16|docs|med|C||The playbook promises 'two people working the same job keep both sets of…|6||
+|SYN-16|docs|med|C||The playbook promises 'two people working the same job keep both sets of…|6 · built 27 Oct||
 |SYN-17|gap|low|C||Every manifest save reads and rewrites the whole MediaStore of every job ever…|18|saveMediaStore|
-|SYN-18|friction|low|C|still|The offline chip says '1 unsaved change' for any number of desk edits|6|updatePendingIndicator|
+|SYN-18|friction|low|C|still|The offline chip says '1 unsaved change' for any number of desk edits|6 · built 27 Oct|updatePendingIndicator|
 |GAP1-01|accuracy|high|C|still|The Ellison plates still read 'appear to be Italian majolica' on the FINAL Trust Schedule; every Spanish correction sits on a removed line, and the tick on #73 stops Agent Two correcting it|Ask 22, then 22|_avNameIsAgents|
 |GAP1-02|gap|high|C||The sharp photograph of the plate's mark became its own line, was paired by the room check, and could only be removed|8|agentDropDuplicate|
 |GAP1-03|defect|high|C|still|'One photograph named twice' pairs no repeat with its original; three Removes took both salad-plate lines, so one stack is on no paper|8|agentNamedTwice|

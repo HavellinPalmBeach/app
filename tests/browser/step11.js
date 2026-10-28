@@ -132,6 +132,17 @@ const ANSWER = {
     SHEETS_SYNC_URL = 'https://script.google.com/macros/s/TEST/exec';
     const real = window.fetch;
     window.fetch = (url, opts) => {
+      // Since P6 (2026-10-27) Name shots reads the client's inventory from the sheet first: the sheet answers with this device's
+      // own copy (nothing moved elsewhere), so the press goes on as it did. Without it the read fails and the press refuses.
+      if (!opts || !opts.body) {
+        const m = /action=loadMedia&jobId=([^&]+)/.exec(String(url));
+        if (m) {
+          const id = decodeURIComponent(m[1]), items = JSON.parse(JSON.stringify(_photoRefs[id] || []));
+          const d = { ok: true, media: { [id]: { items } } };
+          return Promise.resolve({ ok: true, json: () => Promise.resolve(d), text: () => Promise.resolve(JSON.stringify(d)) });
+        }
+        return real(url, opts);
+      }
       const body = JSON.parse(opts.body);
       sent.push(body);
       if (body.action !== 'agentIdentify') return real(url, opts);

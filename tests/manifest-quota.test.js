@@ -252,10 +252,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // stub, so a stub that fires immediately would read as failing on correct code.
     let fire = null;
     const ctx = sandbox({
-      fns: ['_scheduleInventorySync'],
+      fns: ['_scheduleInventorySync', '_invSyncNow'],
       stubs: {
         SHEETS_SYNC_URL: 'https://x/exec',
-        _invSyncTimer: {},
+        _invSyncTimer: {}, _invSyncIds: {},
         _invCloudSeen: {},
         jobs: [{ id: 8 }],
         setTimeout: (f) => { fire = f; return 4242; },

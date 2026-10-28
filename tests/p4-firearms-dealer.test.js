@@ -60,6 +60,9 @@ function _closureWalk(roots, stop) {
   return { fns: [...fns], vars: [...vars] };
 }
 function lift(roots, stop, stubs) {
+  // P6 (2026-10-27): every act across the inventory reads the sheet first (invReadFirst; p6-two-devices.test.js holds it).
+  // These checks are of the acts themselves, so the read is taken as landed with nothing moved: the stub answers false, go on.
+  stubs = Object.assign({ invReadFirst: () => false }, stubs || {});
   const c = closure(roots, (stop || []).concat(Object.keys(stubs || {})));
   return sandbox({ fns: c.fns, vars: c.vars, stubs: stubs || {} });
 }
