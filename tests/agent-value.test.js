@@ -46,10 +46,10 @@ const GS_VARS = ['AGENT_API', 'AGENT_API_VERSION', 'AGENT_MAX_IMG', 'AGENT_MODEL
   'AGENT_VALUE_MAX_TOKENS', 'AGENT_VALUE_PARALLEL', 'AGENT_VALUE_MAX_LINES', 'AGENT_VALUE_GENERAL_BATCH',
   'AGENT_VALUE_SEARCHES', 'AGENT_VALUE_FETCHES', 'AGENT_VALUE_CONTINUES', 'AGENT_VALUE_MAX_COMPS',
   'AGENT_VALUE_TIME_BUDGET', 'AGENT_VALUE_SOURCES', 'AGENT_VALUE_NOTICE_KINDS',
-  'AGENT_VALUE_CONF_DOWN', 'AGENT_VALUE_RESULTS_SEGMENTS', 'AGENT_VALUE_RESULTS_PARAMS', 'AGENT_VALUE_NO_PRICE_RE', 'AGENT_VALUE_TEXT_MAX', 'AGENT_VALUE_ABBREV_RE', 'AGENT_VALUE_SURVEY_MIN'];
+  'AGENT_VALUE_CONF_DOWN', 'AGENT_VALUE_RESULTS_SEGMENTS', 'AGENT_VALUE_RESULTS_PARAMS', 'AGENT_VALUE_NO_PRICE_RE', 'AGENT_VALUE_TEXT_MAX', 'AGENT_VALUE_ABBREV_RE', 'AGENT_VALUE_SURVEY_MIN', 'AGENT_VALUE_ITEM_PATHS', 'AGENT_VALUE_ASKING_HOSTS', 'AGENT_VALUE_COUNT_WORDS', 'AGENT_VALUE_SALE_NOUN', 'AGENT_VALUE_NUM_WORDS'];
 const GS_FNS = ['_agProp', '_agMissingProps', '_agImageBlock', '_avCents', '_avTool', '_avTools', '_avSystem',
   '_avLineText', '_avUserContent', '_avBody', '_avHttp', '_avEcho', '_avReadResult', '_avSeenUrls', '_avUrlKey', '_avResultsPage', '_avClip',
-  '_avLineResult', 'agentValueLines', '_agModelVersion', '_agVerCmp', '_agNewestOf', '_agCache', '_agModelList', '_agDemoted', '_agDemote', '_agSlow', '_agModels', '_agSendAll', '_agHttpFailure', '_avSurvey'];
+  '_avLineResult', 'agentValueLines', '_agModelVersion', '_agVerCmp', '_agNewestOf', '_agCache', '_agModelList', '_agDemoted', '_agDemote', '_agSlow', '_agModels', '_agSendAll', '_agHttpFailure', '_avSurvey', '_avHostOf', '_avListedHost', '_avAskingHost', '_avSalesNamed', '_avKeptBasis'];
 
 // `reply(body, i, call)` answers each request of each fetchAll; `throwOn(call)` makes a fetchAll throw, as
 // UrlFetchApp does when one request outruns its own limit. `tick` is the clock's step per reading.
@@ -117,7 +117,7 @@ const AV_FNS = ['_avValueButtonHtml', 'agentValueMode', 'agentValueInternal', '_
   'invFiduciaryMode', 'isDecedentJob', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep', 'estateValueDate',
   '_avdDate', '_ymdLocal', 'resolveValBasis', '_agNameKey', '_agDetailRefs', 'invLineCloseUps', '_invFileId', 'invAppraisalThreshold',
   'gateDispute', '_gateYes', 'invNeedsAppraisal', 'fmt', '_invMoney', '_invNamed', '_invItemNo', '_andJoin',
-  'moneyToNumber', '_readAppsScriptJson', '_invJob', '_avNameIsAgents', '_invStampLineReviewed', '_invRenderWhenIdle', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', 'agentValueLooks', '_avPhotoContext', '_invPhotoSource', '_invRoomName', 'agentListedOff', 'agentValueAgain', 'invLineQty', 'invLineReviewed', 'invLineOpen', '_avSurveyOf', '_withDeviceKey', 'deviceKey', 'invFirearmSettle', 'invFirearmDispRefusal', 'invIsFirearm'];
+  'moneyToNumber', '_readAppsScriptJson', '_invJob', '_avNameIsAgents', '_invStampLineReviewed', '_invRenderWhenIdle', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', 'agentValueLooks', '_avPhotoContext', '_invPhotoSource', '_invRoomName', 'agentListedOff', 'agentValueAgain', 'invLineQty', 'invLineReviewed', 'invLineOpen', '_avSurveyOf', '_withDeviceKey', 'deviceKey', 'invFirearmSettle', 'invFirearmDispRefusal', 'invIsFirearm', '_avStampCounts'];
 const AV_VARS = ['_avRun', '_avForceComps', '_avAfter', 'AGENT_VALUE_BATCH', 'AGENT_VALUE_GENERAL_CEILING', 'AGENT_VALUE_WHOLE_FROM', 'AGENT_VALUE_MAX_COMPS', 'AGENT_CONDITIONS', 'INV_FIREARM_NEVER',
   'AGENT_VALUE_MARK_RE', 'AGENT_VALUE_NO_MARK_RE', 'AGENT_VALUE_CONFS', 'AGENT_VALUE_SOURCES', 'AGENT_VALUE_OWN', 'AGENT_VALUE_SALE_DATE_RE',
   'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'DECEDENT_SERVICES', 'DOC_TIERS',
@@ -333,7 +333,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     vm.runInContext(gsVar('AGENT_COUNT_IN_NAME_RE') + '\n' + gsFn('testAgentValue'), pg);
     let perr = ''; try { pg.testAgentValue(); } catch (e) { perr = String(e && e.message || e); }
     eq(perr, '', 'the probe runs');
-    ok(logs.some((l) => /1 comparable\(s\) left out: a search or results page, or no price of its own/.test(l)), 'testAgentValue prints the comparables it left out');
+    // RESTATED (P7, 2026-10-27): the probe's line names a page cited twice too, now left out as one.
+    ok(logs.some((l) => /1 comparable\(s\) left out: a search or results page, a page cited twice, or no price of its own/.test(l)), 'testAgentValue prints the comparables it left out');
   }
 
   // 2026-10-26b (Anthony, off a cabbage-ware line: "it seems to be cut off at the end. It says check whether this is, and then it just ends").
@@ -399,7 +400,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq([1.005, 2.675, 0.1 + 0.2, 1234.5678, 0].map((x) => a.roundCents(x)), [1.01, 2.68, 0.3, 1234.57, 0], '⚠ and the app\'s roundCents agrees');
     out = one({ comps: [COMP({ saleDate: '2026-03-11T14:00:00Z' })] });
     eq(out.results.s1.comps, [], '(an ordinary lot\'s comparable needs a returned link too)');
-    const g2 = gsCtx({ reply: () => ({ code: 200, body: ANSWER([VAL({ comps: [COMP({ saleDate: '2026-03-11T14:00:00Z' }), COMP({ saleDate: 'March 2026' })] })], [], [SEARCH([SOLD_URL])]) }) });
+    // RESTATED (P7, 2026-10-27): one page counts once on a line, so the second date rides a page of its own.
+    const SOLD_URL2 = SOLD_URL.replace('123456', '123457');
+    const g2 = gsCtx({ reply: () => ({ code: 200, body: ANSWER([VAL({ comps: [COMP({ saleDate: '2026-03-11T14:00:00Z' }), COMP({ saleDate: 'March 2026', url: SOLD_URL2 })] })], [], [SEARCH([SOLD_URL, SOLD_URL2])]) }) });
     const cs = g2.agentValueLines({ context: CTXP, items: [LINE()] }).results.s1.comps;
     eq(cs.map((c) => c.saleDate), ['2026-03-11', ''], 'a sale date kept only in the shape asked for, never cut from a stamp');
   }
@@ -575,12 +578,18 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(L.ctx._getPhotoRef(7, 's1').valDate, '2026-10-06', 'a living job is valued on the day of the run');
 
     // Internal: nothing a document could print.
-    const C = rig(ESTATE({ docTier: 'contents' }), [ROW({ valSource: 'Appraisal' })]);
+    // RESTATED (P7, 2026-10-27): the recorded source here was Appraisal, which since P7 is a line waiting on its appraiser's own
+    // figure, so Agent Two writes nothing on it at all (below); the source a person recorded is a dealer's quote.
+    const C = rig(ESTATE({ docTier: 'contents' }), [ROW({ valSource: 'Dealer quote' })]);
     C.ctx._avWrite(7, 's1', RES(), ESTATE({ docTier: 'contents' }), {});
     const c = C.ctx._getPhotoRef(7, 's1');
     eq([c.fmv, c.valDate, c.valNote], [undefined, undefined, undefined], '⚠⚠ on the contents tier no fmv, valuation date or basis is written');
-    eq(c.valSource, 'Appraisal', 'and a source somebody recorded is left alone');
+    eq(c.valSource, 'Dealer quote', 'and a source somebody recorded is left alone');
     eq([c.valLow, c.valHigh, c.valuedBy], [480, 800, 'agent'], 'the range stays on the desk');
+    const AP = rig(ESTATE(), [ROW({ valSource: 'Appraisal', valuedBy: 'appraiser' })]);
+    eq(AP.ctx._avWrite(7, 's1', RES(), ESTATE(), {}), false, '⚠ P7: a line whose source a person set to Appraisal waits for the appraiser\'s figure: Agent Two writes nothing');
+    eq([AP.ctx._getPhotoRef(7, 's1').valSource, AP.ctx._getPhotoRef(7, 's1').fmv], ['Appraisal', undefined], '…its source and its empty figure as they were');
+    eq(AP.ctx.agentValueableRefs(7).length, 0, '…and it is not among the lines Value N lines sends');
 
     // A missing figure writes nothing (roundCents would have made it $0).
     const M = rig(ESTATE(), [ROW()]);
@@ -637,14 +646,18 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(r.valuedBy, 'appraiser', 'a source set to Appraisal takes the line');
     eq([r.valLow, r.valHigh, r.valComps, r.valLookup, r.valConf, r.valNotices], [undefined, undefined, undefined, undefined, undefined, undefined],
        '⚠ and the agent\'s range, comparables, lookup, confidence and notices go with it');
-    eq(r.fmv, 640, 'the figure on the line is the appraisal\'s to keep or correct');
+    // RESTATED (P7, 2026-10-27; the desk audit's VAL-02): the figure on the line was Agent Two's and became the appraisal's; an
+    // appraisal is the appraiser's own figure, typed after Appraisal is chosen, so the agent's figure goes with the rest of its own.
+    eq(r.fmv, '', '⚠⚠ the figure on the line was Agent Two\'s, so it goes: the appraiser\'s own is typed after the choice');
     const { ctx: c3 } = rig(ESTATE(), [Object.assign(agent(), { apprId: 'a1' })]);
     r = c3._getPhotoRef(7, 's1'); r.fmv = 5200; c3._avTakeValue(r, 'typed');
     eq([r.valuedBy, r.valSource, r.valHigh], ['appraiser', 'Appraisal', undefined], 'a value typed over the agent\'s on a line with an appraiser linked is the appraisal');
     // The real handlers ask the one rule, handing it the job (Q93, 2026-10-24: the roster decides whether the line is linked).
     has(liveLines(fn('_invEdit')), "if (key === 'fmv' || key === 'unitVal') _avTakeValue(ref, 'typed', _invJob(jobId));", '_invEdit asks it for a typed value');
     has(liveLines(fn('_invEdit')), "else if (key === 'valSource' && ref.valSource === 'Appraisal') _avTakeValue(ref, 'appraisal', _invJob(jobId));", 'and for a source set to Appraisal');
-    has(liveLines(fn('_invBulkApply')), "if (key === 'valSource' && value === 'Appraisal') _avTakeValue(ref, 'appraisal', job);", 'and so does the bulk bar');
+    // RESTATED (P7): the bulk bar refuses Appraisal across a selection rather than take each line as the appraisal.
+    has(liveLines(fn('_invBulkApply')), "if (key === 'valSource' && value === 'Appraisal') {", 'the bulk bar refuses Appraisal');
+    lacks(liveLines(fn('_invBulkApply')), "_avTakeValue(ref, 'appraisal', job);", '…and never takes a selection as the appraisal');
   }
 
   group('⚠⚠ A7 · A RANGE THAT CROSSES THE THRESHOLD IS AN APPRAISAL (invNeedsAppraisal, spec §6)');
@@ -802,10 +815,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(SRC.indexOf('General estimate') >= 0 && SRC.indexOf('WorthPoint comps') >= 0, 'the two new sources are on the list');
     SRC.forEach((s) => {
       const w = ctx.invValBasisWord({ fmv: 1, valSource: s });
-      ok(!!w && w.toLowerCase() === s.toLowerCase(), 'every source has its word on a schedule: ' + s + ' → ' + w);
+      // RESTATED (P7, VAL-02): an appraisal with nobody recorded as its appraiser says so.
+      ok(!!w && w.toLowerCase() === (s === 'Appraisal' ? 'appraisal (appraiser not named)' : s.toLowerCase()), 'every source has its word on a schedule: ' + s + ' → ' + w);
     });
     eq(['Appraisal', 'Auction comps', 'General estimate', 'WorthPoint comps'].map((s) => ctx.invValBasisWord({ fmv: 1, valSource: s })),
-       ['appraisal', 'auction comps', 'general estimate', 'WorthPoint comps'], 'Anthony\'s four, in the reader\'s words');
+       ['appraisal (appraiser not named)', 'auction comps', 'general estimate', 'WorthPoint comps'], 'Anthony\'s four, in the reader\'s words (P7: no appraiser recorded, said so)');
     eq(ctx.invValBasisWord({ fmv: '', valSource: 'Appraisal' }), '', 'no value, no basis');
     eq(ctx.invValBasisWord({ fmv: 5, valSource: 'Sotheby\'s estimate' }), 'Sotheby\'s estimate', 'a source typed off the list prints as typed');
     const lines = [ROW({ fmv: 640, valuedBy: 'agent', valHigh: 800 }), ROW({ stableId: 'b', fmv: 90, valuedBy: 'agent', valHigh: 100, valReviewed: true }),
@@ -930,8 +944,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             'agentValueAgain', '_avState', '_invNamed', '_invItemNo', 'invAppraisalThreshold', 'gateDispute', '_gateYes', 'fmt', 'roundCents', 'agentNoticesOn',
             'invLineAccepted', 'invLineHold', '_invLineHolds', 'invLineOpen', 'invAcceptCtx'],
       vars: ['INVENTORY_COLUMNS', 'DECEDENT_SERVICES', 'AGENT_VALUE_OWN', 'AGENT_NOTICE_KINDS', '_avRun', '_avAfter', '_avForceComps', 'DOC_TIERS',
-             'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'INV_OPEN_HOLDS'],
-      stubs: { jobs: [ESTATE()], _photoRefs: { 7: picks }, _invPicked: (j) => picks, _invTouch(r) { r.updatedAt = (r.updatedAt || 0) + 1; return r; },
+             'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'INV_OPEN_HOLDS', 'INV_APPRAISAL_BULK_TXT'],
+      stubs: { jobs: [ESTATE()], _photoRefs: { 7: picks }, _invPicked: (j) => picks, alert() {}, _invTouch(r) { r.updatedAt = (r.updatedAt || 0) + 1; return r; },
                savePhotoRefs() {}, _scheduleInventorySync() {}, showSyncBadge() {}, renderInventoryTab() {}, _invMatchesFilter: () => true, _invBulkLast: null,
                _jobInvRefs: () => picks, agentDuplicateGroups: () => [], _invPhotoSiblings: () => [], mustFindAllFound: () => false },
     });
@@ -941,8 +955,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // 2026-10-26: the agent's figure carried no confidence, so it read unsure, and the bar says the sweep passed it.
     has(B._invBulkLast.msg, '2 items marked reviewed.', 'the bar says what it did');
     has(B._invBulkLast.msg, '1 of them was marked unsure: ', '…and names the unsure line it swept past');
+    // RESTATED (P7, 2026-10-27; VAL-02): Appraisal is never set across a selection: the agent's line stays the agent's.
     B._invBulkApply(7, 'valSource', 'Appraisal');
-    eq([picks[0].valuedBy, picks[0].valHigh], ['appraiser', undefined], 'Appraisal set across a selection takes the agent\'s line outright');
+    eq([picks[0].valuedBy, picks[0].valHigh, picks[0].fmv], ['agent', 800, 640], 'Appraisal across a selection is refused: the agent\'s line is as it was');
   }
 
   group('A16 · the manifest keeps every field (a key missing from the whitelist is dropped on every save)');

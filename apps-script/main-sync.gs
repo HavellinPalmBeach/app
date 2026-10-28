@@ -151,7 +151,14 @@
 // loads the line from the sheet reads its approval as covering wherever the line goes, until the device that recorded it saves
 // again; and the sheet's merge can add a signature given for one destination to an approval for another. It carries 2026-10-27c's
 // (the device key) and 2026-10-27b's (the snapshot store and the Jobs tab never cleared before it is written).
-var BACKEND_VERSION = '2026-10-27d';
+// ⚠ 2026-10-27e (the desk audit's P7, "No figure the evidence does not support"; ACC-01, GAP1-05): Agent Two's basis sentence
+// never names more sales than the server kept, and a figure whose every sale was left out says it rests on no sale (_avSalesNamed,
+// _avKeptBasis in _avLineResult); Etsy's market, category, shop and search pages and the shop pages of 1stDibs and Chairish are
+// results pages (AGENT_VALUE_ITEM_PATHS); one page cited twice on a line counts once; and a comparable from Etsy, 1stDibs,
+// Chairish, Ruby Lane, Replacements or a retail store is always asking, whatever the model says (AGENT_VALUE_ASKING_HOSTS). No
+// action or type changes; it carries 2026-10-27d's. Until it is live a basis can still cite sales no tool returned (it printed
+// "Four sold comparables at Christie's and Kodner" under a general estimate), and an Etsy asking price can stand as a sale.
+var BACKEND_VERSION = '2026-10-27e';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive', 'esignSendRequest',
@@ -4860,6 +4867,42 @@ var AGENT_VALUE_SURVEY_MIN  = 10;
 var AGENT_VALUE_RESULTS_SEGMENTS = ['search', 'sch', 'search-results', 'searchresults', 'results', 'price-result', 'price-results'];
 var AGENT_VALUE_RESULTS_PARAMS = ['q', 'query', 'keyword', 'keywords', '_nkw', 'k', 'kw', 'searchterm', 'search_query', 'searchtext'];
 var AGENT_VALUE_NO_PRICE_RE = /\bprices?\s+(?:(?:is|was|were|are)\s+)?(?:not|(?:is|was|were|are)n['\u2019]t)\s+(?:shown|disclosed|available|listed|given|published|visible|stated|public)\b|\bundisclosed\b|\bno\s+(?:sold\s+|hammer\s+|realized\s+|realised\s+)?price\b|\bprice\s+(?:unknown|hidden|withheld|on\s+request)\b/i;
+// ⚠⚠ A DEALER'S MARKET IS ONE ITEM'S PAGE OR NOTHING (2026-10-27, the desk audit's P7, GAP1-05): Etsy's /market/ pages are searches
+// with no `search` in their path, and one of them stood as three "dealer listings" on the Ellison cabbage ware. On these hosts a page
+// is one item's own only in the shape the site gives an item (Etsy's /listing/, a 1stDibs path carrying its `id-` segment, Chairish's
+// /product/); a market, category, shop or search page is a results page, left out as any other is. A host, and the path segment
+// that marks one item's page there (a country prefix, etsy.com/uk/listing/…, is just another segment).
+var AGENT_VALUE_ITEM_PATHS = {
+  'etsy.com':     /^listing$/,
+  '1stdibs.com':  /^id-[a-z]_?\d+$/,
+  'chairish.com': /^product$/
+};
+// ⚠⚠ ASKING PRICES ARE NOT SALES, WHATEVER THE MODEL CALLS THEM (P7, GAP1-05 and the first half of ACC-11): an Etsy or a Replacements
+// page the model tagged "sold" counted as a sale, and a figure resting on it printed "online comps". On a dealer's marketplace or a
+// retail store the price is what the seller asks, so a comparable from one of these hosts (or a subdomain of one) is always "asking",
+// and a line resting on nothing else has no sale behind it (a general estimate on every paper, low on the desk).
+var AGENT_VALUE_ASKING_HOSTS = [
+  'etsy.com', '1stdibs.com', 'chairish.com', 'rubylane.com', 'replacements.com', 'incollect.com', 'viyet.com', 'kaiyo.com',
+  'amazon.com', 'wayfair.com', 'overstock.com', 'target.com', 'walmart.com', 'ikea.com', 'homedepot.com', 'lowes.com', 'costco.com',
+  'crateandbarrel.com', 'cb2.com', 'potterybarn.com', 'williams-sonoma.com', 'westelm.com', 'rh.com', 'restorationhardware.com',
+  'arhaus.com', 'ballarddesigns.com', 'frontgate.com', 'horchow.com', 'perigold.com', 'ethanallen.com', 'roomandboard.com', 'dwr.com',
+  'neimanmarcus.com', 'bloomingdales.com', 'macys.com', 'nordstrom.com', 'saksfifthavenue.com', 'bergdorfgoodman.com', 'kohls.com',
+  'jcpenney.com', 'bestbuy.com', 'anthropologie.com', 'zgallerie.com', 'lampsplus.com', 'worldmarket.com', 'kirklands.com',
+  'homegoods.com', 'lenox.com', 'waterford.com', 'wedgwood.com', 'tiffany.com', 'juliska.com', 'mackenzie-childs.com'
+];
+function _avHostOf(u) {
+  var m = String(u || '').trim().match(/^https?:\/\/([^\/?#]+)/i);
+  return m ? m[1].toLowerCase().replace(/^www\./, '').replace(/:\d+$/, '') : '';
+}
+// The listed host a URL's host is, or sits under ('uk.etsy.com' is etsy.com), else ''.
+function _avListedHost(host, list) {
+  for (var i = 0; i < list.length; i++) {
+    var h = list[i];
+    if (host === h || host.slice(-(h.length + 1)) === '.' + h) return h;
+  }
+  return '';
+}
+function _avAskingHost(u) { return !!_avListedHost(_avHostOf(u), AGENT_VALUE_ASKING_HOSTS); }
 
 // ⚠ A NOTE OR A BASIS THAT RUNS LONG ENDS AT A WHOLE SENTENCE, OR AT A WORD WITH "…", NEVER MID-PHRASE (2026-10-26b; Anthony, off a
 // cabbage-ware line's note that ended "Check whether this is": "it seems to be cut off at the end"). The basis prints on the Estate
@@ -4894,6 +4937,9 @@ function _avResultsPage(u) {
   var segs = m[2].toLowerCase().split('/').filter(Boolean).map(function (x) { return x.replace(/\.[a-z0-9]+$/, ''); });
   if (segs.some(function (x) { return AGENT_VALUE_RESULTS_SEGMENTS.indexOf(x) >= 0; })) return true;
   if (/(^|\.)ebay\.[a-z.]+$/.test(host) && (segs[0] === 'b' || segs[0] === 'shop')) return true;
+  // A dealer's marketplace (P7): anything but its own item shape.
+  var itemHost = _avListedHost(host, Object.keys(AGENT_VALUE_ITEM_PATHS));
+  if (itemHost && !segs.some(function (x) { return AGENT_VALUE_ITEM_PATHS[itemHost].test(x); })) return true;
   return String(m[3] || '').split('&').some(function (kv) {
     var eq = kv.indexOf('=');
     return eq > 0 && eq < kv.length - 1 && AGENT_VALUE_RESULTS_PARAMS.indexOf(kv.slice(0, eq).toLowerCase()) >= 0;
@@ -4946,7 +4992,7 @@ function _avTool(mode, categories, conditions) {
     // ⚠ PRINTED, NOT DESK SHORTHAND (2026-10-26): it is the line's valNote, printed under the line on the Estate Inventory Report
     // the attorney reads and in the workbook, and since the desk rescales a figure when a person corrects the count, it must
     // never carry the count (a "seven plates at $8" sentence printed beside Qty 8).
-    basis:      { type: 'string', description: 'One plain sentence, about twenty words at most, saying what the figure rests on ("Four sold comparables, 2025 to 2026; the median, less for one chipped rim"; "The going used rate for everyday stainless flatware"), with the valuation-date caveat where the instructions ask for one, and never with this line\'s count or its name. It is printed beside the figure on the inventory the family, their attorney or a trustee reads.' },
+    basis:      { type: 'string', description: 'One plain sentence, about twenty words at most, saying what the figure rests on ("Four sold comparables, 2025 to 2026; the median, less for one chipped rim"; "The going used rate for everyday stainless flatware"), with the valuation-date caveat where the instructions ask for one, and never with this line\'s count or its name. It names no more sales than comps lists. It is printed beside the figure on the inventory the family, their attorney or a trustee reads.' },
     comps: {
       type: 'array',
       description: 'The sales you relied on. Each must be one item\'s own page (the lot, the listing) that your search or fetch returned, with its URL copied exactly: never a search or results page, and never a sale whose page shows no price.',
@@ -5154,6 +5200,9 @@ function _avSystem(ctx) {
 
     + '- Say whether each comparable SOLD or was only ASKING. An asking price is not a sale. You may cite '
     + 'one as "asking", but never set the value on a few asking prices alone.\n'
+    // 2026-10-27, the desk audit's P7 (GAP1-05, ACC-01): the server holds both rules too (AGENT_VALUE_ASKING_HOSTS, _avSalesNamed).
+    + '- Etsy, 1stDibs, Chairish, Ruby Lane, Replacements and retail stores show asking prices, never sales, whatever the page '
+    + 'says. Cite each page once. The basis names only the sales you list in comps: never more, and none you did not list.\n'
     // 2026-10-27 (Anthony: "A listing survey counts"): AGENT_VALUE_SURVEY_MIN, checked again in _avLineResult.
     + '- LISTINGS ARE A CEILING. Where a research line has no sale but you can count many close listings of the same thing '
     + 'still for sale (a results page your search or fetch returned may be the page you count them on), record them in '
@@ -5446,6 +5495,56 @@ function _avSurvey(s, seen) {
   return { count: n, low: lo, median: md, high: hi, url: url.slice(0, 400) };
 }
 
+// ⚠⚠ A BASIS NEVER NAMES MORE SALES THAN WERE KEPT (2026-10-27, the desk audit's P7, ACC-01): the server dropped four Christie's and
+// Kodner sales no tool had returned and kept the sentence "Four sold comparables at Christie's and Kodner, 2025 to 2026; the median",
+// which printed on the Estate Inventory Report under a $4,200 general estimate, and with one of the four real it still said four.
+// How many sales a sentence claims: the largest count it puts on a sale ("four sold comparables", "three similar plates sold", "a
+// sale", "several sales"), never a year, a price or a listing for sale; with `bare`, a plural claim with no count ("recent auction
+// sales") reads as two, and one said with "no" or "without" in front reads as none. A word list, so it errs toward the server's own
+// sentence (below), never toward a claim it cannot show.
+var AGENT_VALUE_COUNT_WORDS = { a: 1, an: 1, one: 1, single: 1, two: 2, pair: 2, three: 3, four: 4, five: 5, six: 6, seven: 7,
+  eight: 8, nine: 9, ten: 10, eleven: 11, twelve: 12, dozen: 12, several: 2, multiple: 2, few: 2, numerous: 2, various: 2 };
+// "sale price" is a price, not a count of sales ("the going sale price for used flatware"); "sold prices" and "hammer prices" are sales.
+var AGENT_VALUE_SALE_NOUN = '(?:sales?(?!\\s+prices?\\b)|sold|comparables|comps|auction results?|hammer prices?|realized prices?|realised prices?|sold prices?)';
+function _avSalesNamed(text, bare) {
+  var t = ' ' + String(text || '').toLowerCase()
+    .replace(/\b(?:for|on|up for)\s+sale\b/g, ' ')                       // "listed for sale" is a listing, never a sale
+    .replace(/\b(?:estate|garage|yard|tag|moving|rummage|charity|warehouse)\s+sales?\b/g, ' venue ')
+    .replace(/\$\s?[\d,]+(?:\.\d+)?/g, ' price ')
+    .replace(/[–—]/g, ' ') + ' ';
+  var most = 0, m;
+  var re = new RegExp('\\b(\\d{1,3}|a\\s+(?:few|dozen|pair|handful|number)|' + Object.keys(AGENT_VALUE_COUNT_WORDS).join('|')
+    + ')\\b(?:\\s+of)?\\s+((?:[a-z0-9\'’&.-]+\\s+){0,3}?)' + AGENT_VALUE_SALE_NOUN + '\\b', 'g');
+  while ((m = re.exec(t))) {
+    var w = m[1].replace(/^a\s+/, ''), n = /^\d+$/.test(w) ? parseInt(w, 10) : (AGENT_VALUE_COUNT_WORDS[w] || (w === 'handful' || w === 'number' ? 2 : 0));
+    // "one sold comparable" is one; "a comparable plate sold" is one; a count on a plural noun of nothing else is the count.
+    if (n > most) most = n;
+    re.lastIndex = m.index + 1;
+  }
+  if (!most && bare) {
+    var b = /(^|[^a-z])((?:no|without|any|none|zero|lacking)\s+(?:[a-z]+\s+){0,2})?(sales|sold comparables|comparable sales|comps|auction results|sold prices|realized prices|realised prices|hammer prices)\b/g;
+    while ((m = b.exec(t))) { if (!m[2]) { most = 2; break; } }
+  }
+  return most;
+}
+// The sentence the server writes in place of one that claimed more sales than it kept: the sales kept, by venue and date, or none.
+var AGENT_VALUE_NUM_WORDS = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six'];
+function _avKeptBasis(sold, survey, asking) {
+  if (!sold.length) {
+    return survey
+      ? 'No sale the research could show; ' + survey.count + ' close listings for sale were counted, the middle asking price $'
+        + (survey.median % 1 ? survey.median.toFixed(2) : survey.median) + ' each.'
+      : asking
+      ? 'No sale the research could show: a best estimate, with ' + asking + ' asking price' + (asking === 1 ? '' : 's') + ' on the record.'
+      : 'No sale the research could show: a best estimate of what this kind of thing sells for.';
+  }
+  var n = sold.length;
+  return (AGENT_VALUE_NUM_WORDS[n] || String(n)) + ' sale' + (n === 1 ? '' : 's') + ' the research could show: '
+    + sold.slice(0, 3).map(function (c) {
+        return (String(c.venue || '').trim() || _avHostOf(c.url) || 'a sale') + (c.saleDate ? ', ' + c.saleDate : '');
+      }).join('; ') + (n > 3 ? '; and ' + (n - 3) + ' more' : '') + '.';
+}
+
 // One line of the model's answer, checked. Returns the result the app writes, or {error}. `qty`, the line's count, reads the
 // figure for one article against a survey's prices (2026-10-27); absent, the line is one article.
 function _avLineResult(v, mode, seen, qty) {
@@ -5457,20 +5556,25 @@ function _avLineResult(v, mode, seen, qty) {
   // the agent's reading and the range is its spread, so the spread widens to include the reading.
   if (low > fmv) low = fmv;
   if (high < fmv) high = fmv;
-  var kept = [], dropped = 0, unfit = 0;
+  var kept = [], dropped = 0, unfit = 0, cited = {};
+  // How many sales the model claimed in comps, before anything was left out: a figure whose sales all went says so (P7, below).
+  var citedSold = (v.comps || []).filter(function (c) { return c && c.kind === 'sold'; }).length;
   (v.comps || []).forEach(function (c) {
     if (!c || !seen[_avUrlKey(c.url)]) { dropped++; return; }
     var price = _avCents(c.price);
     // One item's own page with the price that page shows, or it is not a comparable (AGENT_VALUE_RESULTS_SEGMENTS, 2026-10-26b).
-    if (!(isFinite(price) && price > 0) || _avResultsPage(c.url)
+    // ⚠ AND ONE PAGE COUNTS ONCE (P7, GAP1-05): three "dealer listings" citing one Etsy page were three comparables.
+    if (!(isFinite(price) && price > 0) || _avResultsPage(c.url) || cited[_avUrlKey(c.url)]
         || AGENT_VALUE_NO_PRICE_RE.test(String(c.title || '') + ' ' + String(c.venue || ''))) { unfit++; return; }
+    cited[_avUrlKey(c.url)] = 1;
     kept.push({
       title: String(c.title || '').slice(0, 160),
       venue: String(c.venue || '').slice(0, 80),
       saleDate: (String(c.saleDate || '').trim().match(/^\d{4}(?:-\d{2}(?:-\d{2})?)?/) || [''])[0],
       price: price,
       url: String(c.url || '').slice(0, 400),
-      kind: c.kind === 'sold' ? 'sold' : 'asking'
+      // A dealer's marketplace or a retail store asks; it never sold (P7, AGENT_VALUE_ASKING_HOSTS), whatever the model says.
+      kind: (c.kind === 'sold' && !_avAskingHost(c.url)) ? 'sold' : 'asking'
     });
   });
   kept = kept.slice(0, AGENT_VALUE_MAX_COMPS);
@@ -5497,10 +5601,21 @@ function _avLineResult(v, mode, seen, qty) {
   var notices = (v.notices || []).filter(function (n) {
     return n && AGENT_VALUE_NOTICE_KINDS.indexOf(n.kind) >= 0 && String(n.text || '').trim();
   }).slice(0, 4).map(function (n) { return { kind: n.kind, text: _avClip(n.text) }; });
+  // ⚠⚠ THE BASIS NAMES NO SALE THE LINE DOES NOT KEEP (P7, ACC-01): a sentence that claims more sales than were kept, or a figure
+  // whose every sale the model cited was left out, takes the server's own sentence (the sales kept, by venue and date, or "No sale
+  // the research could show", with the listings counted where a survey stands). Printed on the Estate Inventory Report beside the
+  // figure, so it says only what a person can check on the line's record.
+  var soldList = kept.filter(function (c) { return c.kind === 'sold'; });
+  var basis = _avClip(v.basis), rewrote = false;
+  if (_avSalesNamed(basis, mode === 'comps') > soldList.length || (citedSold > 0 && !soldList.length)) {
+    basis = _avKeptBasis(soldList, surveyed ? survey : null, kept.length - soldList.length);
+    rewrote = true;
+  }
   return {
     fmv: fmv, low: low, high: high, confidence: conf,
     source: sources.indexOf(v.source) >= 0 ? v.source : sources[0],
-    basis: _avClip(v.basis),
+    basis: basis,
+    basisRewritten: rewrote,
     comps: kept,
     survey: survey,
     lookup: mode === 'comps' ? String(v.lookup || '').slice(0, 160) : '',
@@ -5716,7 +5831,8 @@ function testAgentValue() {
     if (AGENT_COUNT_IN_NAME_RE.test(String(r.name || ''))) Logger.log('      WARNING: a count in the name; the count belongs in qty alone.');
     (r.comps || []).forEach(function (c) { Logger.log('      [' + c.kind + '] ' + c.title + ' · ' + c.venue + ' · ' + c.saleDate + ' · $' + c.price + ' · ' + c.url); });
     if (r.dropped) Logger.log('      ' + r.dropped + ' comparable(s) dropped: no tool returned their link');
-    if (r.unfit) Logger.log('      ' + r.unfit + ' comparable(s) left out: a search or results page, or no price of its own');
+    if (r.unfit) Logger.log('      ' + r.unfit + ' comparable(s) left out: a search or results page, a page cited twice, or no price of its own');
+    if (r.basisRewritten) Logger.log('      basis rewritten: it named more sales than were kept');
     if (r.survey) Logger.log('      listing survey: ' + r.survey.count + ' listed, $' + r.survey.low + '-$' + r.survey.high + ' each, middle $' + r.survey.median + ' · ' + r.survey.url);
     if (r.lookup) Logger.log('      WorthPoint: ' + r.lookup);
   });

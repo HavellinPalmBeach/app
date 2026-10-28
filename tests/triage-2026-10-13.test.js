@@ -196,7 +196,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(none, '<span style="color:#A32D2D;">not stated</span>', '⚠⚠ a valued line with no basis reads not stated, in red');
     lacks(text(none), '—', 'never a dash');
     const named = rows([{ objectName: 'Sideboard', qty: 1, fmv: 1200, valSource: 'Appraisal' }]);
-    has(named, '>appraisal</td>', 'a basis prints its word');
+    // RESTATED (P7, 2026-10-27; VAL-02): an appraisal with nobody recorded as its appraiser says so.
+    has(named, '>appraisal (appraiser not named)</td>', 'a basis prints its word');
     lacks(named, 'not stated', '…and nothing else');
     eq(noComments(fn('printEstateInventoryReport')).split('<span style="color:#A32D2D;">not stated</span>').length - 1, 1, 'the report prints the same words');
   });

@@ -47,8 +47,8 @@ function gsVar(name) {
 function gsCtx() {
   const ctx = { JSON, Math, Number, String, Object, Array, Error, parseInt, parseFloat, isFinite };
   vm.createContext(ctx);
-  vm.runInContext(['AGENT_VALUE_SOURCES', 'AGENT_VALUE_NOTICE_KINDS', 'AGENT_VALUE_CONF_DOWN', 'AGENT_VALUE_MAX_COMPS', 'AGENT_VALUE_RESULTS_SEGMENTS', 'AGENT_VALUE_RESULTS_PARAMS', 'AGENT_VALUE_NO_PRICE_RE', 'AGENT_VALUE_TEXT_MAX', 'AGENT_VALUE_ABBREV_RE', 'BACKEND_VERSION', 'AGENT_VALUE_SURVEY_MIN'].map(gsVar)
-    .concat(['_avCents', '_avTool', '_avSystem', '_avLineText', '_avLineResult', '_avUrlKey', '_avResultsPage', '_avClip', '_avSurvey'].map(gsFn)).join('\n'), ctx);
+  vm.runInContext(['AGENT_VALUE_SOURCES', 'AGENT_VALUE_NOTICE_KINDS', 'AGENT_VALUE_CONF_DOWN', 'AGENT_VALUE_MAX_COMPS', 'AGENT_VALUE_RESULTS_SEGMENTS', 'AGENT_VALUE_RESULTS_PARAMS', 'AGENT_VALUE_NO_PRICE_RE', 'AGENT_VALUE_TEXT_MAX', 'AGENT_VALUE_ABBREV_RE', 'BACKEND_VERSION', 'AGENT_VALUE_SURVEY_MIN', 'AGENT_VALUE_ITEM_PATHS', 'AGENT_VALUE_ASKING_HOSTS', 'AGENT_VALUE_COUNT_WORDS', 'AGENT_VALUE_SALE_NOUN', 'AGENT_VALUE_NUM_WORDS'].map(gsVar)
+    .concat(['_avCents', '_avTool', '_avSystem', '_avLineText', '_avLineResult', '_avUrlKey', '_avResultsPage', '_avClip', '_avSurvey', '_avHostOf', '_avListedHost', '_avAskingHost', '_avSalesNamed', '_avKeptBasis'].map(gsFn)).join('\n'), ctx);
   return ctx;
 }
 
@@ -334,7 +334,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const refreshes = { summary: 0, guard: 0 };
     const R = rig(ESTATE(), [SURE({ fmv: 25, valLow: 15, valHigh: 40, qty: 1 })], {
-      fns: ['_invEdit', 'invUnitValue', 'invLineQty', '_invQtyCarriesValue', '_invPaintFigures', 'agentValueAfterRename', 'invAppraised', 'agentValueStale', '_avHasFigure', '_invAcceptCtxOf', 'invAcceptCtx', '_invListReadHtml', 'invListRead'],
+      fns: ['_invEdit', 'invUnitValue', 'invLineQty', '_invQtyCarriesValue', '_invPaintFigures', 'agentValueAfterRename', 'invAppraised', 'agentValueStale', '_avHasFigure', '_invAcceptCtxOf', 'invAcceptCtx', '_invListReadHtml', 'invListRead', 'invAppraisalSourceAsk'],
       stubs: { _invRefreshSummary: () => refreshes.summary++, _invRefreshGuardrail: () => refreshes.guard++, _invRefreshFlagStrip() {},
         _invRefreshRecords() {}, _invRefreshReleases() {}, INV_STICKY_FIELDS: [], invStaffRefused: () => '', invBequestFor: () => null,
         invNoteDispositionMove: () => false, invFillPlanChannel: () => false, _invRowDomId: (s) => 'inv-row-' + s, _renderInvRow: () => '<div></div>',
@@ -366,7 +366,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══ A11 · WHAT THE BUILD'S REVIEW FOUND (2026-10-25b) ═══
   group('⚠⚠ A11 · the review: a renamed line\'s accepted figure, the automatic run\'s lines, a failed check, an answer for a line not sent, the redraw that waits');
   {
-    const EDIT_FNS = ['_invEdit', 'invUnitValue', 'invLineQty', '_invQtyCarriesValue', '_invPaintFigures', 'agentValueAfterRename', 'invAppraised', 'agentValueStale', '_avHasFigure', '_invAcceptCtxOf', 'invAcceptCtx', '_invListReadHtml', 'invListRead'];
+    const EDIT_FNS = ['_invEdit', 'invUnitValue', 'invLineQty', '_invQtyCarriesValue', '_invPaintFigures', 'agentValueAfterRename', 'invAppraised', 'agentValueStale', '_avHasFigure', '_invAcceptCtxOf', 'invAcceptCtx', '_invListReadHtml', 'invListRead', 'invAppraisalSourceAsk'];
     const EDIT_STUBS = { _invRefreshSummary() {}, _invRefreshGuardrail() {}, _invRefreshFlagStrip() {}, _invRefreshRecords() {}, _invRefreshReleases() {},
       INV_STICKY_FIELDS: [], invStaffRefused: () => '', invBequestFor: () => null, invNoteDispositionMove: () => false, invFillPlanChannel: () => false,
       _invRowDomId: (s) => 'inv-row-' + s, _renderInvRow: () => '<div></div>', _invRefreshAgentNotices() {}, SHEETS_SYNC_URL: '' };

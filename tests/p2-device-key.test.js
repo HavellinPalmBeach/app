@@ -691,7 +691,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const B = sandbox({ vars: ['BACKEND_MIN_VERSION', 'BACKEND_FEATURE_COST'] });
     ok(B.BACKEND_MIN_VERSION >= '2026-10-27c', 'the app relies on it: an older deployment draws the banner');
     const _v = B.BACKEND_FEATURE_COST.version, _open = '; on a deployment older than 2026-10-27c, anyone who holds the Apps Script URL can read every client';
-    ok(_v.indexOf(_open) > 0 && _v.indexOf(_open) === _v.indexOf('; on a deployment older than '), 'which names the open URL first after the newer gap, by consequence and by its vintage');
+    // RESTATED again for P7 (2026-10-27e): its gap leads, P5's follows under 2026-10-27d, and the open URL at once after that.
+    const _d = _v.indexOf('; on a deployment older than 2026-10-27d, ');
+    ok(_v.indexOf(_open) > 0 && (_v.indexOf(_open) === _v.indexOf('; on a deployment older than ') || (_d >= 0 && _v.indexOf('; on a deployment older than ', _d + 1) === _v.indexOf(_open))),
+      'which names the open URL first after the newer gaps, by consequence and by its vintage');
     const docs = ['manual.html', 'MANUAL.md', 'concierge-guide.html', 'CONCIERGE_GUIDE.md'].map((f) => [f, fs.readFileSync(path.join(ROOT, f), 'utf8')]);
     docs.forEach(([f, t]) => { has(t, 'This device has no key: ask Anthony', f + ' names the refusal as the app words it'); has(t, 'Device key', f + ' names the box'); });
     docs.slice(0, 2).forEach(([f, t]) => { has(t, 'HAVELLIN_DEVICE_KEY', f + ' names the Script Property'); has(t, 'AccessLog', f + ' names the log'); has(t, 'suggestDeviceKey', f + ' names the editor helper'); });

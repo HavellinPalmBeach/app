@@ -38,8 +38,8 @@ const gsVar = (name) => { const m = GS.match(new RegExp('(^|\\n)(var\\s+' + name
 const SERVER = { JSON, Math, Number, String, Object, Array, Error, parseInt, parseFloat, isFinite, RegExp };
 vm.createContext(SERVER);
 vm.runInContext(['AGENT_VALUE_SOURCES', 'AGENT_VALUE_NOTICE_KINDS', 'AGENT_VALUE_CONF_DOWN', 'AGENT_VALUE_MAX_COMPS', 'AGENT_VALUE_RESULTS_SEGMENTS',
-  'AGENT_VALUE_RESULTS_PARAMS', 'AGENT_VALUE_NO_PRICE_RE', 'AGENT_VALUE_TEXT_MAX', 'AGENT_VALUE_ABBREV_RE', 'AGENT_VALUE_SURVEY_MIN'].map(gsVar)
-  .concat(['_avCents', '_avUrlKey', '_avResultsPage', '_avClip', '_avSurvey', '_avLineResult'].map(gsFn)).join('\n'), SERVER);
+  'AGENT_VALUE_RESULTS_PARAMS', 'AGENT_VALUE_NO_PRICE_RE', 'AGENT_VALUE_TEXT_MAX', 'AGENT_VALUE_ABBREV_RE', 'AGENT_VALUE_SURVEY_MIN', 'AGENT_VALUE_ITEM_PATHS', 'AGENT_VALUE_ASKING_HOSTS', 'AGENT_VALUE_COUNT_WORDS', 'AGENT_VALUE_SALE_NOUN', 'AGENT_VALUE_NUM_WORDS'].map(gsVar)
+  .concat(['_avCents', '_avUrlKey', '_avResultsPage', '_avClip', '_avSurvey', '_avLineResult', '_avHostOf', '_avListedHost', '_avAskingHost', '_avSalesNamed', '_avKeptBasis'].map(gsFn)).join('\n'), SERVER);
 const RESULTS = 'https://www.ebay.com/sch/i.html?_nkw=franciscan+desert+rose+dinner+plate';
 const FIG = 'https://www.ebay.com/sch/i.html?_nkw=lladro+girl+with+goose';
 const ASK = 'https://www.etsy.com/listing/123/franciscan-desert-rose-dinner-plate';

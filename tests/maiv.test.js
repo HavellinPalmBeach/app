@@ -22,7 +22,7 @@ const FNS = [
   'invLotArticleValue', 'invLotSplitState', 'invLotSplitSentence', 'invLotsToSplit',
   'invLotsUntestable', '_lotSplitWorklistBlock', '_invItemNo', 'esc',
   '_invMoney', 'savePhotoRefs', '_warnPhotoStoreFull', '_vehicleLineName', 'roundCents', 'fmt'
-];
+, 'invLineQty', 'maivOwedLines', 'maivOwedText', 'invAppraised', '_invHasValue'];
 const VARS = ['MATTER_TYPES', 
   'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
   'MAIV_AGGREGATE_THRESHOLD', 'MAIV_CATEGORIES', 'MAIV_OTHER', 'MAIV_BY_CATEGORY',

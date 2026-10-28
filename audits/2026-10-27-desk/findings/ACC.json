@@ -32,6 +32,7 @@
  "findings": [
   {
    "id": "ACC-01",
+   "fixed": "2026-10-27 (P7, its critical part: CLAUDE.md, Agent Two, no figure the evidence does not support; tests/p7-evidence.test.js, browser step 121)",
    "title": "A figure built on invented comparables is kept, and its basis sentence still cites them on the paper",
    "kind": "accuracy",
    "severity": "fix-now",
@@ -66,6 +67,7 @@
   },
   {
    "id": "ACC-03",
+   "fixed": "2026-10-27 (P7, its critical part: CLAUDE.md, the §20.2031-6(b) aggregate tells the truth; tests/p7-evidence.test.js, browser step 121)",
    "title": "§20.2031-6(b) 'does not require an expert appraisal' is concluded from unreviewed agent point figures",
    "kind": "accuracy",
    "severity": "fix-now",
@@ -202,6 +204,7 @@
   },
   {
    "id": "ACC-11",
+   "fixed": "2026-10-27, the first half only (P7: an Etsy, 1stDibs, Chairish, Ruby Lane, Replacements or retail-store comparable is always asking; the confidence ceiling is not built)",
    "title": "Confidence is the model's own word: one old listing, or a comparable for a different lot size, stays 'high'",
    "kind": "accuracy",
    "severity": "high",
