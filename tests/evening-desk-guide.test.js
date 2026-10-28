@@ -469,7 +469,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // for its name, count and value. The page's sentences on the real rule, with a real context (invAcceptCtx: the job and the
     // open duplicate groups), each flag the page names, and the box it describes. review-flagged.test.js holds the rule whole.
     const RV = lift(['invLineAccepted', 'invLineHold', 'invAcceptCtx', 'invLineReviewed', 'invLineUnsure', '_invRevBoxHtml', '_invProgressStamp',
-      '_avUnreviewedStamp', 'invMarkListRead', 'invListRead', 'invListSeen', 'invListReadRefusal', '_invListReadHtml', 'agentNotices', 'agentDuplicateGroups'],
+      '_avUnreviewedStamp', 'invMarkListRead', 'invListRead', 'invListSeen', 'invListReadRefusal', '_invListReadHtml', 'agentNotices', 'agentDuplicateGroups', '_arPair', '_arPairOpen', 'agentDupCleared'],
       { jobs: [], _photoRefs: {}, estimateStore: {}, vendors: [], vendorDirectory: [], contractors: [], document: { getElementById: () => null },
         jobPlanStore: {}, SHEETS_SYNC_URL: '', _invCloudSeen: {}, _invCloudFailed: {}, alert(m) { RV.__alerts = (RV.__alerts || []).concat([String(m)]); },
         _saveJobEdit(job) { RV.__saved = (RV.__saved || 0) + 1; RV.__savedJob = job; }, _renderInvWorkbar: () => '' });
@@ -535,7 +535,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       RV.jobs.length = 0; RV.jobs.push(EST()); RV._photoRefs[7] = [a, b];
       const r = attempt(() => { const fc = RV.invAcceptCtx(RV.jobs[0], [a, b]); return [!!fc.dup.k1, RV.invLineHold(a, fc)]; }); return r.ok ? r.val : r.err; };
     eq(pairHeld({}), [true, 'duplicate'], '⚠⚠ "A tick never settles … a possible duplicate": both halves ticked, the pair stays a possible duplicate');
-    eq(pairHeld({ dupOK: true }), [false, ''], '…Not duplicates does');
+    eq(pairHeld({ dupOKIn: ['n1'] }), [false, ''], '…Not duplicates does (P8: recorded for the pair)');
     {
       // "Renaming one does not settle it": a pair Agent One named alike stays a pair through a name corrected on the desk (agentName).
       const A = ITEM({ agentName: 'Kitchen utensils, drawer', objectName: 'Henckels kitchen knives', valNameAt: 'Henckels kitchen knives', namedBy: 'desk' });
@@ -767,7 +767,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(code(fn('_renderInvWorkbar')), '&mdash; they are never withheld.', '…never withheld');
     has(t, 'Papers print marked IN PROGRESS until every flagged item is checked, never held back.', 'as the page says (the stamp itself is driven above)');
     lacks(t, 'until every item is decided, valued and, where flagged, ticked', '⚠ never that every item must be decided and valued (a ticked Undecided item counts; the second review)');
-    has(t, 'The Court Inventory and the Trust Schedule stay FINAL; their count of Agent Two’s values is bronze until the list is read.', 'and the schedules (Q109, driven above)');
+    has(t, 'An open possible duplicate keeps the Court Inventory and the Trust Schedule DRAFT; otherwise they stay FINAL, their count of Agent Two’s values bronze until the list is read.', 'and the schedules (Q109 and P8, driven above)');
     has(code(fn('_renderInvWorkbar')), "'+ Add line item'", '+ Add line item');
     const imp = code(fn('_renderInventoryImportPanel'));
     has(imp, 'From the Estimate Walkthrough', 'the vehicles still to bring in…');

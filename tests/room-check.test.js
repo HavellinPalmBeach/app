@@ -94,7 +94,7 @@ const ROW = (over) => Object.assign({
 
 const APP_FNS = ['agentRoomsToCheck', '_arCheckable', '_arRoomPayload', 'agentRoomCheckRun', '_arSendNext', '_arWrite',
   '_arFinish', '_arRepaint', '_arStateHtml', '_arState', '_arCheckButtonHtml', '_arDupEligible',
-  'agentDuplicateGroups', 'agentNamedTwice', '_agDupEligible', '_agNameKey', '_agDupHtml', '_agDupHandle', '_agDupUnhandle', 'agentNotDuplicate',
+  'agentDuplicateGroups', '_arPair', '_arPairOpen', 'agentDupCleared', 'agentNamedTwice', '_agDupEligible', '_agNameKey', '_agDupHtml', '_agDupHandle', '_agDupUnhandle', 'agentNotDuplicate', 'agentValueWaiting', '_avDupReleased',
   '_jobInvRefs', '_getPhotoRef', '_setPhotoRef', '_invFileId', '_invRoomName', '_invItemNo', '_invJob',
   // the collections
   'collectionLinesEnsure', '_collLinesOf', 'collectionLineId', 'collectionOf', 'collectionLineUnshot', '_invHasPhoto',
@@ -103,7 +103,7 @@ const APP_FNS = ['agentRoomsToCheck', '_arCheckable', '_arRoomPayload', 'agentRo
   '_guessCategory', '_numOrBlank', '_invNamed', '_invTombstoneLine', '_avHasFigure', '_invHasValue', 'fieldDispToInv',
   '_importableFromEstimate', '_importedSourceSet', '_apprEstimateFlags', '_renderInventoryImportPanel', '_vehicleLineName',
   '_renderCollPhotoCapture', '_invRenderWhenIdle', '_withDeviceKey', 'deviceKey', 'invFirearmSettle', 'invIsFirearm', 'invFirearmDispRefusal'];
-const APP_VARS = ['_arRun', 'AGENT_ROOM_BATCH_SHOTS', 'AGENT_ROOM_CONF_RANK', 'AGENT_ROOM_CONF_WORDS', 'AGENT_PASS_GAP_MS', 'COLL_LINE_WEAK_STAMP',
+const APP_VARS = ['_arRun', '_agRun', '_avDupHeld', 'AGENT_ROOM_BATCH_SHOTS', 'AGENT_ROOM_CONF_RANK', 'AGENT_ROOM_CONF_WORDS', 'AGENT_PASS_GAP_MS', 'COLL_LINE_WEAK_STAMP',
   'INV_DEFAULT_CATEGORY', 'FIELD_DISPOSITIONS', 'FIELD_DISP_DEFAULT', 'INV_TAXONOMY', 'INV_CATEGORIES', 'COLL_DOC_KINDS', 'INV_FIREARM_NEVER'];
 
 const EST = (colls, vehicles) => ({ estimate: { rooms: [{ idx: 4, name: 'Bedroom', note: '' }, { idx: 5, name: 'Study', note: '' }],
@@ -353,7 +353,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('app · the one writer: the answer on the lines, and nothing else touched');
   {
-    const rows = [ROW({ stableId: 'a' }), ROW({ stableId: 'b', driveFileId: 'FB', dupWith: ['z'], dupWhy: 'old', dupConf: 'low' }),
+    const rows = [ROW({ stableId: 'a' }), ROW({ stableId: 'b', driveFileId: 'FB', dupWith: ['z'], dupPairs: { z: { conf: 'low', why: 'old' } } }),
                   ROW({ stableId: 'c', driveFileId: 'FC' })];
     const { ctx } = app(rows);
     const room = { roomIdx: 4, photos: [{ srcId: 'a', lines: [ctx._getPhotoRef(7, 'a')] }, { srcId: 'b', lines: [ctx._getPhotoRef(7, 'b')] },
@@ -364,21 +364,29 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       { ids: ['ghost', 'c'], why: 'not sent', confidence: 'high' }] });
     eq(n, 2, 'two doubles recorded; one naming a line that was not sent is not');
     const A = ctx._getPhotoRef(7, 'a'), B = ctx._getPhotoRef(7, 'b'), C = ctx._getPhotoRef(7, 'c');
-    eq([A.dupWith, A.dupWhy, A.dupConf, C.dupWith], [['c'], 'plainly the vase', 'high', ['a']], 'both ways, at the higher confidence');
-    eq([B.dupWith, B.dupWhy, B.dupConf], [undefined, undefined, undefined], 'a line the new look does not repeat is no longer flagged');
+    eq([A.dupWith, A.dupPairs, C.dupWith, C.dupPairs], [['c'], { c: { conf: 'high', why: 'plainly the vase' } }, ['a'], { a: { conf: 'high', why: 'plainly the vase' } }],
+       'both ways, each pair at the higher confidence of the two doubles naming it (P8\'s review: the pair\'s own answer)');
+    eq([B.dupWith, B.dupPairs], [undefined, undefined], 'a line the new look does not repeat is no longer flagged');
+    // One line, two links of different confidence: each keeps its own (P8's review: one per line headed the wrong pair).
+    const R2 = app([ROW({ stableId: 'a' }), ROW({ stableId: 'b', driveFileId: 'FB' }), ROW({ stableId: 'c', driveFileId: 'FC' })]);
+    const room2 = { roomIdx: 4, photos: ['a', 'b', 'c'].map((id) => ({ srcId: id, lines: [R2.ctx._getPhotoRef(7, id)] })) };
+    R2.ctx._arWrite(7, room2, { doubles: [{ ids: ['a', 'b'], why: 'the armchair twice', confidence: 'high' }, { ids: ['a', 'c'], why: 'two sofas, maybe one', confidence: 'low' }] });
+    eq(R2.ctx._getPhotoRef(7, 'a').dupPairs, { b: { conf: 'high', why: 'the armchair twice' }, c: { conf: 'low', why: 'two sofas, maybe one' } },
+       '⚠⚠ a line linked twice keeps each pair\'s own confidence and sentence');
+    eq(R2.ctx._getPhotoRef(7, 'a').dupWhy, undefined, 'and no line-wide sentence');
     ok([A, B, C].every((r) => r.dupChkAt > 0 && r.updatedAt === 99), 'every line sent is stamped as checked, and touched');
     const body = liveLines(fn('_arWrite'));
     ['objectName', 'fmv', 'disposition', 'needsAppr', 'reviewed', 'category', 'qty', 'deletedAt ='].forEach((k) => {
       ok(!new RegExp('r\\.' + k.replace(' =', '') + '\\s*=').test(body) && !body.includes('delete r.' + k), 'the writer never writes ' + k);
     });
-    has(src, 'dupWith:r.dupWith, dupWhy:r.dupWhy, dupConf:r.dupConf, dupChkAt:r.dupChkAt,', 'and the manifest keeps the four fields');
+    has(src, 'dupWith:r.dupWith, dupPairs:r.dupPairs, dupChkAt:r.dupChkAt,', 'and the manifest keeps the three fields');
   }
 
   group('app · Possible duplicates: names and pictures, one grouping, still off two photographs');
   {
     const rows = [
-      ROW({ stableId: 'a', namedBy: 'agent', objectName: 'Blue vase', dupWith: ['c'], dupWhy: 'the vase twice', dupConf: 'high', reviewed: true }),
-      ROW({ stableId: 'c', namedBy: 'agent', objectName: 'Cobalt vase', driveFileId: 'FC', dupWith: ['a'], dupWhy: 'the vase twice', dupConf: 'high' }),
+      ROW({ stableId: 'a', namedBy: 'agent', objectName: 'Blue vase', dupWith: ['c'], dupPairs: { c: { conf: 'high', why: 'the vase twice' } }, reviewed: true }),
+      ROW({ stableId: 'c', namedBy: 'agent', objectName: 'Cobalt vase', driveFileId: 'FC', dupWith: ['a'], dupPairs: { a: { conf: 'high', why: 'the vase twice' } } }),
       ROW({ stableId: 'n1', namedBy: 'agent', objectName: 'Nightstand', driveFileId: 'N1' }),
       ROW({ stableId: 'n2', namedBy: 'agent', objectName: 'nightstand.', driveFileId: 'N2' }),
       ROW({ stableId: 'p', namedBy: 'agent', objectName: 'Lamp', driveFileId: 'P', dupWith: ['q'] }),

@@ -118,7 +118,7 @@ function sr(e) {
 const AV_FNS = ['agentValueMode', 'agentValueInternal', '_avHasFigure', 'agentValueableRefs', 'agentValueUnreviewed',
   'agentValueStale', 'agentValueSpecialistWorth', '_avValDate', '_avContext', '_avItemPayload', 'agentValueGradesCondition', '_avComp', '_avWrite', 'agentValueWhole', '_avRename', '_avNameIsAgents',
   '_avNoteFailure', 'agentValueApply', '_avTakeValue', '_avStampReviewed', '_invStampBy', 'deviceUser', '_avStart',
-  '_avSendNext', '_avFinish', '_avRepaint', '_avStateHtml', '_avState', 'agentValueAuto', 'agentValueAfterRename', 'agentValueAfterCloseUp', 'agentValueRun',
+  '_avSendNext', '_avFinish', '_avRepaint', '_avStateHtml', '_avState', 'agentValueAuto', 'agentValueWaiting', 'agentDuplicateGroups', '_arPair', '_arPairOpen', 'agentDupCleared', 'agentNamedTwice', '_agDupEligible', '_arDupEligible', 'agentValueAfterRename', 'agentValueAfterCloseUp', 'agentValueRun',
   'agentValueNotices', '_avNoticesHtml', '_avNoticeKinds', '_avNoticeLabel', '_deskShowBtnHtml', '_avSummary', '_avRowBadges', '_avPanelHtml', 'agentValueAgain',
   'invLineReviewed', '_invStampLineReviewed', 'invLineUnsure', 'invLineQty', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invLineOpen',
   'invValBasisWord', 'invAppraised', 'invLineAppraiser', '_invLinkedAppraiser', '_jobAppraisers', '_apprLabel', '_invHasAppraisal', '_invAppraisalDate',
@@ -128,10 +128,10 @@ const AV_FNS = ['agentValueMode', 'agentValueInternal', '_avHasFigure', 'agentVa
   'gateDispute', '_gateYes', 'invNeedsAppraisal', 'invAppraisalChosen', 'fmt', '_invMoney', '_invNamed', '_invItemNo', '_andJoin',
   'moneyToNumber', '_readAppsScriptJson', '_invJob', '_invRenderWhenIdle', '_invHasPhoto', 'agentValueLooks', '_avPhotoContext', '_invPhotoSource',
   '_invRoomName', 'agentListedOff', '_invDerivedRefs', '_invPhotoSiblings', '_invCondIsAgents', '_invAgentCondition', '_avSurveyOf', '_withDeviceKey', 'deviceKey', 'invFirearmSettle', 'invIsFirearm', 'invFirearmDispRefusal'];
-const AV_VARS = ['_avRun', 'AGENT_CONDITIONS', '_avForceComps', '_avAfter', '_avAutoAgain', 'AGENT_VALUE_BATCH', 'AGENT_VALUE_GENERAL_CEILING', 'AGENT_VALUE_WHOLE_FROM', 'AGENT_VALUE_MAX_COMPS',
+const AV_VARS = ['_avRun', 'AGENT_CONDITIONS', '_avForceComps', '_avAfter', '_avDupHeld', '_avAutoAgain', 'AGENT_VALUE_BATCH', 'AGENT_VALUE_GENERAL_CEILING', 'AGENT_VALUE_WHOLE_FROM', 'AGENT_VALUE_MAX_COMPS',
   'AGENT_VALUE_MARK_RE', 'AGENT_VALUE_NO_MARK_RE', 'AGENT_VALUE_READ_RE', 'AGENT_VALUE_HEDGE_RE', 'AGENT_VALUE_CONFS', 'AGENT_VALUE_SOURCES', 'AGENT_VALUE_OWN',
   'AGENT_VALUE_SALE_DATE_RE', 'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
-  'DECEDENT_SERVICES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'AGENT_MAX_DETAILS', 'INV_VAL_SOURCES', 'AGENT_LISTED_MAX'];
+  'DECEDENT_SERVICES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'AGENT_MAX_DETAILS', 'INV_VAL_SOURCES', 'AGENT_LISTED_MAX', 'AGENT_PASS_GAP_MS', 'AGENT_ROOM_CONF_RANK'];
 
 const ESTATE = (over) => Object.assign({ id: 7, hvlId: 'HVL-0007', svc: 'cleanout', docTier: 'values', deathDate: '2026-06-14', tc: 'Ashley Jerome' }, over || {});
 const ROW = (over) => Object.assign({ stableId: 's1', label: 'inventory', roomIdx: 2, objectName: 'Hand-painted plates, likely Italian', namedBy: 'agent',
@@ -794,7 +794,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     let E = null;
     const job = ESTATE();
     E = rig(job, [ROW({ stableId: 'm', objectName: 'Wooden wall mirror', namedBy: 'agent', valuedBy: 'agent', fmv: 25, valLow: 20, valHigh: 30, valConf: 'high', valNameAt: 'Wooden wall mirror' })], {
-      fns: ['_invEdit', 'invUnitValue', '_invQtyCarriesValue', '_invPaintFigures', 'invAppraised', '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_agDupEligible', '_arDupEligible', 'agentNamedTwice', 'invIsFirearm', '_invPhotoNoteOpen', 'invReleaseCautions', 'invBequestElsewhere', 'invAwaitingAppraisal', 'invFirearmSettle', 'invFirearmDispRefusal', 'invFiduciaryMode', 'isDecedentJob', 'invFirearmSettleText', '_invNamed', '_invItemNo', 'invTransportDealer', 'invFirearmsDealerFirm', 'invFirearmsDealerFirms', '_vendorNameKey', 'vendorCats', 'invChannelLeftover', 'invDealerRoute', 'invDealerRouteOffered', 'invDealerNamed', 'invDispGoesToDealer', 'invAppraisalSourceAsk'], vars: ['_agDupSetJob', 'INV_ACCEPT_AMMO_RE', 'INV_RELEASE_CAUTIONS', 'INV_OPEN_HOLDS', 'INV_FIREARM_NEVER', 'DECEDENT_SERVICES', 'INV_SALE_DISPOSITIONS', 'FIREARMS_DEALER_CATEGORY'],
+      fns: ['_invEdit', 'invUnitValue', '_invQtyCarriesValue', '_invPaintFigures', 'invAppraised', '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_arPair', '_arPairOpen', 'agentDupCleared', '_agDupEligible', '_arDupEligible', 'agentNamedTwice', 'invIsFirearm', '_invPhotoNoteOpen', 'invReleaseCautions', 'invBequestElsewhere', 'invAwaitingAppraisal', 'invFirearmSettle', 'invFirearmDispRefusal', 'invFiduciaryMode', 'isDecedentJob', 'invFirearmSettleText', '_invNamed', '_invItemNo', 'invTransportDealer', 'invFirearmsDealerFirm', 'invFirearmsDealerFirms', '_vendorNameKey', 'vendorCats', 'invChannelLeftover', 'invDealerRoute', 'invDealerRouteOffered', 'invDealerNamed', 'invDispGoesToDealer', 'invAppraisalSourceAsk'], vars: ['_agDupSetJob', 'INV_ACCEPT_AMMO_RE', 'INV_RELEASE_CAUTIONS', 'INV_OPEN_HOLDS', 'INV_FIREARM_NEVER', 'DECEDENT_SERVICES', 'INV_SALE_DISPOSITIONS', 'FIREARMS_DEALER_CATEGORY'],
       stubs: { _invRefreshSummary() {}, _invRefreshGuardrail() {}, _invRefreshFlagStrip() {}, _invRefreshRecords() {}, _invRefreshReleases() {},
         INV_STICKY_FIELDS: [], invStaffRefused: () => '', invBequestFor: () => null, invNoteDispositionMove: () => false, invFillPlanChannel: () => false,
         _invRowDomId: (s) => 'inv-row-' + s, _renderInvRow: () => '<div></div>',

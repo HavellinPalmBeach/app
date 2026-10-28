@@ -60,6 +60,7 @@
   },
   {
    "id": "AGT-03",
+   "fixed": "2026-10-27 (P8, its critical part: Not duplicates recorded for the pair, dupOKIn since its review (one id per press on every line of the group), agentDupCleared; the room check counts only a double the block shows; tests/p8-nothing-twice.test.js, browser step 123)",
    "title": "'Not duplicates' makes a line immune to every later duplicate finding, while the room-check line says one was flagged",
    "kind": "accuracy",
    "severity": "high",

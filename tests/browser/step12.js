@@ -163,7 +163,7 @@ const panel = () => document.getElementById('panel-inventory').innerText;
     if (!el) return null;
     el.click();
     return { live: _jobInvRefs(id).length,
-             cleared: _jobInvRefs(id).filter(r => r.dupOK).map(r => r.stableId).sort() };
+             cleared: _jobInvRefs(id).filter(r => (r.dupOKIn || []).length).map(r => r.stableId).sort() };   // P8: recorded per press, on every line of the group
   }, jobId);
   eq(nd && nd.live, 5, '⚠ NOTHING is removed — both objects are real');
   eq(nd && nd.cleared, ['f1', 'f2'], 'and the pair is cleared as a pair');

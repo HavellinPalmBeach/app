@@ -22,7 +22,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('grouping — disposition first, undecided at the top, rooms in walkthrough order');
   {
     const ctx = sandbox({
-      fns: ['invLineReviewed', 'invLineOpen', '_invDispLabel', '_invGroupItems', 'invIsFirearm', 'agentValueUnreviewed', '_avHasFigure', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invNeedsAppraisal', 'invAppraisalChosen', 'invFiduciaryMode', 'isDecedentJob', '_invHasValue', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_jobInvRefs', '_agDupEligible', 'agentNamedTwice', 'gateDispute', '_gateYes'],
+      fns: ['invLineReviewed', 'invLineOpen', '_invDispLabel', '_invGroupItems', 'invIsFirearm', 'agentValueUnreviewed', '_avHasFigure', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invNeedsAppraisal', 'invAppraisalChosen', 'invFiduciaryMode', 'isDecedentJob', '_invHasValue', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_arPair', '_arPairOpen', 'agentDupCleared', '_jobInvRefs', '_agDupEligible', 'agentNamedTwice', 'gateDispute', '_gateYes'],
       vars: ['INV_GROUP_ORDER', 'INV_UNDECIDED', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', '_agDupSetJob', 'INV_OPEN_HOLDS', 'INV_ACCEPT_AMMO_RE'],
       stubs: { _invRoomName: (jobId, idx) => (idx == null ? 'Unassigned / estate-wide' : 'Room ' + idx) },
     });

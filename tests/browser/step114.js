@@ -42,8 +42,9 @@
 //      pair stays (Agent One's own reading), and Agent Two values it again under the typed name.
 //   F. The sofa's appraisal waived on the Values bar (Waive, the reason given): its box stands, grey, by id, no full render.
 //   G. The platter's grey box pressed: its unsure goes with the person's look, and the box turns green.
-//   H. The vase ticked: the report prints IN PROGRESS (the box and the pair still open); the Trust Schedule prints FINAL and
-//      its pill in bronze, "3 values as Agent Two left them; list not yet read by Havellin" (Q109).
+//   H. The vase ticked: the report prints IN PROGRESS (the box and the pair still open); the Trust Schedule prints DRAFT for
+//      the open pair alone, naming it (P8, 2026-10-27), and its pill in bronze, "3 values as Agent Two left them; list not yet
+//      read by Havellin" (Q109).
 //   I. ✓ I've read the list pressed: green, who and when, the press gone, the work bar's sentence asking only for the flagged
 //      items; the Trust Schedule's pill grey, "3 accepted as valued · list read by …". Then the box ticked: the read stays
 //      green (a tick never unreads it), and the report is still IN PROGRESS: the ticked pair is still open.
@@ -178,7 +179,7 @@ const DAY = (at) => new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_Yo
     const readRec = () => p.evaluate((j) => { const r = (jobs.find((x) => x.id === j) || {}).invRead; return r ? { at: r.at, by: r.by } : null; }, J);
     const dupGroups = () => p.evaluate(() => [...document.querySelectorAll('#panel-inventory .inv-dup-group')].map((g) => g.textContent.replace(/\s+/g, ' ').trim()));
     const line = (id) => p.evaluate(([j, id]) => { const r = (_photoRefs[j] || []).find((x) => x.stableId === id) || {};
-      return { rev: !!r.reviewed, by: r.reviewedBy || '', vrev: !!r.valReviewed, bq: !!r.flagBequest, dupOK: !!r.dupOK, disp: r.disposition || '', ch: r.channel || '',
+      return { rev: !!r.reviewed, by: r.reviewedBy || '', vrev: !!r.valReviewed, bq: !!r.flagBequest, dupOK: (r.dupOKIn || []).length > 0, disp: r.disposition || '', ch: r.channel || '',
         name: r.objectName || '', agentName: r.agentName || '', fmv: r.fmv, valBy: r.valuedBy || '', waived: !!r.apprWaived, cond: r.condition || '', chk: r.dupChkAt || 0 }; }, [J, id]);
     // Counts full renders of the tab from here on, and remembers the read line's element, to tell a by-id repaint from a redraw.
     const watchRenders = () => p.evaluate((sel) => {
@@ -484,8 +485,10 @@ const DAY = (at) => new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_Yo
       lacks(doc, 'under $100', 'and no floor in it');
       const ts = await schedule();
       ok(ts.length > 200, 'fixture: the Trust Schedule printed (' + ts.length + ' chars)');
-      has(ts, 'FINAL', '⚠ the Trust Schedule stays FINAL (Q109)');
-      lacks(ts, 'DRAFT', 'no DRAFT');
+      // P8 (2026-10-27): the pair still open is a double count not yet decided, so the schedule is DRAFT for it and names it; the
+      // read still decides nothing (Q109), and once the pair is answered it is FINAL (J).
+      has(ts, 'DRAFT — 1 possible double count not yet decided: #', '⚠ the Trust Schedule is DRAFT for the open pair, naming it (P8)');
+      lacks(ts, 'not yet valued', 'for that alone');
       eq(pillOf('as Agent Two left'), ['3 values as Agent Two left them; list not yet read by Havellin', BRONZE],
         '⚠⚠ its pill bronze, saying whose read is owed (Q109: "Bronze until read")');
       lacks(ts, 'accepted as valued', 'no grey "accepted as valued" before anybody has read the list');
@@ -511,7 +514,7 @@ const DAY = (at) => new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_Yo
       const ts = await schedule();
       eq(pillOf('accepted as valued'), ['3 accepted as valued · list read by ' + ME + ', ' + day, GREY], '⚠⚠ the Trust Schedule\'s pill grey once read, naming who and when (Q109)');
       lacks(ts, 'not yet read', 'and no "not yet read" there');
-      has(ts, 'FINAL', 'still FINAL');
+      has(ts, '1 possible double count not yet decided', 'still DRAFT for the open pair: the read decides nothing (Q109, P8)');
       // A flagged line ticked after the read: a tick never unreads the list.
       await press(BOX('guess'), 'the box\'s Reviewed box, after the read');
       eq((await line('guess')).rev, true, 'fixture: the box ticked by a person');
@@ -549,6 +552,8 @@ const DAY = (at) => new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_Yo
       const ts = await schedule();
       eq(pillOf('accepted as valued'), ['4 accepted as valued · list read by ' + ME + ', ' + day, GREY], '⚠ the Trust Schedule\'s pill, grey, with the read');
       lacks(ts, 'not yet reviewed', 'and no value left "not yet reviewed"');
+      has(ts, 'FINAL', '⚠ the pair answered: the Trust Schedule is FINAL (P8)');
+      lacks(ts, 'double count', 'naming no double count');
     });
 
     // ── K ─────────────────────────────────────────────────────────────────────────────────────

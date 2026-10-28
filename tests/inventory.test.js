@@ -216,7 +216,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ── 3. Court inventory: exempt subtotal, cap, and the track/exempt overlap ──
   group('court inventory: exempt property');
   {
-    const COURT_FNS = INV_FNS.concat(['_invAcceptCtxOf', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invLineAcceptedOnly', '_invDocPartyHead', 'invAcceptCtx', '_arDupEligible', 'agentDuplicateGroups', '_agDupEligible', 'agentNamedTwice', 'invConditionText', 
+    const COURT_FNS = INV_FNS.concat(['_invAcceptCtxOf', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invLineAcceptedOnly', '_invDocPartyHead', 'invAcceptCtx', '_arDupEligible', 'agentDuplicateGroups', '_arPair', '_arPairOpen', 'agentDupCleared', '_agDupEligible', 'agentNamedTwice', 'invConditionText', 
       '_invMoney', '_invDocName', 'printCourtInventory', 'jobOnProbateTrack', '_avUnreviewedStamp', 'agentValueUnreviewed', '_invScheduleSection', 'invValBasisWord', 'invLineAppraiser', '_invLinkedAppraiser', '_apprLabel', 'isFormalDoc', 'resolveDocLevel',
       'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'docLevelFloorReason', '_gate706', 'isDecedentJob',
       'resolveValBasis', 'estateValueDate', '_avdDate',

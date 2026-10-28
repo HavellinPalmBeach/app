@@ -28,6 +28,7 @@
  "findings": [
   {
    "id": "INV-01",
+   "fixed": "2026-10-27 in part (P8, its critical part: an open possible duplicate keeps the Court Inventory and the Trust Schedule DRAFT and is named on them and the Estate Inventory Report; tests/p8-nothing-twice.test.js, browser step 123). Open: the walkthrough collection and the vehicle listed twice with no group shown (INV-03, INV-04), for P8's later build",
    "title": "The Court Inventory and Trust Schedule print FINAL with adoption lines over a list that double counts",
    "kind": "accuracy",
    "severity": "fix-now",
@@ -96,6 +97,7 @@
   },
   {
    "id": "INV-05",
+   "fixed": "2026-10-27 (P8, its critical part: Not duplicates recorded for the pair, dupOKIn since its review (one id per press on every line of the group), agentDupCleared; the room check counts only a double the block shows; tests/p8-nothing-twice.test.js, browser step 123)",
    "title": "Not duplicates silences a line for good: a later real double of it is stamped but never shown",
    "kind": "accuracy",
    "severity": "high",
