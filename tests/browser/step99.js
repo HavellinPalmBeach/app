@@ -812,7 +812,8 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
     ok(V6.set < V6.roster && V6.roster < V6.guard, 'the settings first, then the roster, then the guardrail  [' + [V6.set, V6.roster, V6.guard] + ']');
     eq([V6.basis, V6.n], ['Fair Market Value', 1], 'one basis control on the tab, on the default');
     has(V6.text, 'Value as of Apr 2, 2026 (date of death)', 'the date the values are stated as of');
-    has(V6.text, 'Use the §2032 alternate valuation date: six months after death, taxable estates only', 'the election in words on screen');
+    // RESTATED (P15, 2026-10-28): the tick names its date and the return it is elected on.
+    has(V6.text, 'Use the §2032 alternate valuation date, Oct 2, 2026: six months after death, elected on the Form 706', 'the election in words on screen');
     await p.selectOption('#inv-valbasis-' + EST, 'Replacement Value'); await p.waitForTimeout(500);
     eq(await p.evaluate((id) => jobs.find((j) => j.id === id).valBasis, EST), 'Replacement Value', '⚠⚠ the basis chosen in the bar is on the job');
     await press('#inv-workbar details > summary', 'More ▾');
@@ -829,7 +830,10 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
     await p.evaluate(() => { document.getElementById('inv-workbar').__mark6 = 'still here'; });
     await p.selectOption('#inv-valbasis-' + EST, 'Fair Market Value'); await p.waitForTimeout(500);
     has((await sum6()).t, 'Valuation Basis Fair Market Value', '⚠ changed back from the bar, the open summary follows');
-    eq(await p.evaluate(() => document.getElementById('inv-workbar').__mark6), 'still here', 'by id: the tab was not redrawn under the person');
+    // RESTATED (P15, 2026-10-28): the basis asks first, then draws the tab once, so the Valuation card's list of values made at
+    // another basis, the Values bar's line and every row's hold follow (a select: nothing typed is lost); the bar stays open.
+    eq(await p.evaluate(() => document.getElementById('inv-workbar').__mark6), undefined, 'P15: asked first, then the tab drawn once');
+    ok(await isOpen('values'), '…the Values bar still open after it');
     await p.check('#inv-avd-' + EST); await p.waitForTimeout(600);
     eq(await p.evaluate((id) => jobs.find((j) => j.id === id).avd, EST), true, 'the §2032 tick records the election');
     has((await vals6()).text, 'Value as of Oct 2, 2026 (alt. valuation date)', '⚠ the bar names the alternate date');

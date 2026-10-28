@@ -627,7 +627,7 @@ and browser step 69.
   drops it); `_avPanelHtml` draws *LISTED · N close listings for sale, $low to $high each, middle $median* with *the page
   counted*. `invLineUnsure` reads `valConf`, so a medium survey figure carries no *unsure*. `BACKEND_MIN_VERSION`
   `2026-10-27`. `tests/listing-survey.test.js`, browser step 115.
-- **The value follows the job's standard, market and date (2026-10-28, Apps Script `2026-10-28`; the desk audit's P15:
+- **The value follows the job's standard, market and date (2026-10-28, Apps Script `2026-10-28b`; the desk audit's P15:
   ACC-09, VAL-08, ACC-10, VAL-09, ACC-12, VAL-11, VAL-06, AGT-06, VAL-16, VAL-21).** Server: the basis paragraph is
   `_avBasisText(basis)`, one per basis. Fair Market Value carries the regulation's rule by class (the market where such a
   thing is most commonly sold to the public: art, antiques, silver and jewellery at auction at the price the buyer paid,
@@ -649,6 +649,6 @@ and browser step 69.
   appraisal (`invNeedsAppraisal`) and reaches the guardrail and the worklist marked *advised by Agent Two*; the note, the
   record and the guardrail carry **Add to appraisal list** (**Send to a specialist** on living work,
   `agentValueAdviceVerb`; `agentValueAddToAppraisal` sets `needsAppr` with who and when), until linked or waived. The
-  comparable's premium prints in the record (`AGENT_VALUE_PREMIUM_WORDS`). `BACKEND_MIN_VERSION` `2026-10-28`.
+  comparable's premium prints in the record (`AGENT_VALUE_PREMIUM_WORDS`). `BACKEND_MIN_VERSION` `2026-10-28b`.
   `tests/p15-value-standard.test.js`, browser step 130. Counsel and an appraiser to confirm the standard by class
   (bundle D23).

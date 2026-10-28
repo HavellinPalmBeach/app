@@ -95,7 +95,7 @@ function server(opts = {}) {
     console,
     Logger: { log: (s) => log.push(String(s)) },
     LockService: { getScriptLock: () => ({ waitLock() {}, tryLock() { return true; }, releaseLock() {} }) },
-    SpreadsheetApp: {
+    SpreadsheetApp: { flush() {},
       openById: () => ({
         getName: () => 'fake',
         getSheetByName: (n) => sheets[n] || null,

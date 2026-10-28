@@ -2,7 +2,7 @@
 // P15 OF THE DESK AUDIT (2026-10-28): THE VALUE FOLLOWS THE JOB'S STANDARD, MARKET AND DATE. As the plan sets it (audits/2026-10-27-desk/
 // PLAN.md, P15; the findings ACC-09, VAL-08, ACC-10, VAL-09, ACC-12, VAL-11, VAL-06, AGT-06, VAL-16, VAL-21, and Ask 14, ACC-04):
 //
-//   S · the server (main-sync.gs, backend 2026-10-28): the standard by class in place of "not retail", each basis with its own words,
+//   S · the server (main-sync.gs, backend 2026-10-28b, carrying the cell-cap fix's 2026-10-28): the standard by class in place of "not retail", each basis with its own words,
 //       the buyer's premium on every comparable, a like item's asking price as Replacement Value's evidence, a line's own value date;
 //   B · the basis: asked first, "(counsel only)" where fair market value is the law's, the agent's figures made at another basis named
 //       with Re-value, the column and the total by the basis, a line's own basis printed where it differs;
@@ -183,9 +183,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('S3 · the version, and the app\'s copy of the premium list held equal to the server\'s');
   {
-    eq(g.BACKEND_VERSION, '2026-10-28', 'the backend carries 2026-10-28');
+    eq(g.BACKEND_VERSION, '2026-10-28b', 'the backend is 2026-10-28b (main took 2026-10-28 for the cell-cap fix, which this carries)');
     const app = sandbox({ fns: [], vars: ['BACKEND_MIN_VERSION', 'AGENT_VALUE_PREMIUMS'] });
-    eq(app.BACKEND_MIN_VERSION, '2026-10-28', 'the app asks for it');
+    eq(app.BACKEND_MIN_VERSION, '2026-10-28b', 'the app asks for it');
     eq(JSON.stringify(app.AGENT_VALUE_PREMIUMS), JSON.stringify(g.AGENT_VALUE_PREMIUMS), 'one list of premium answers on both sides');
   }
 
@@ -336,6 +336,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const C = rig(LIVING(), [AGENT({ valNotices: [{ kind: 'specialist', text: 'It should sell through a specialist auction house.' }] })]);
     eq(C.invNeedsAppraisal(ref(C), C.jobs[0]), false, 'the rule stays the tick on living work');
     eq(C.agentValueAdvised(ref(C), C.jobs[0]), true, '…the advice stands, undecided');
+    // Below the specialist figure (its range tops at $2,400), so only the advice holds it: as an appraisal, never as a note a tick answers.
+    eq(C.invLineHold(ref(C), C.invAcceptCtx(C.jobs[0])), 'appraisal', '⚠ the line keeps its tick for the advice');
     const chip = C.invWorkFlags(C.jobs[0]).filter((f) => f.key === 'appr')[0];
     eq([chip.label, chip.test(ref(C), C.jobs[0])], ['To a specialist', true], '⚠⚠ counted under To a specialist');
     eq(C._invGuardrailItems(7).length, 1, '…and on the guardrail');

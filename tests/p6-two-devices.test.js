@@ -12,7 +12,8 @@
 // cutting a name mid-word, saving it and sending it to Agent Two (SYN-05).
 //
 // The two-device groups below are that rig turned into tests: the WHOLE of saveInventory.gs and main-sync.gs evaluated as
-// deployed over the fake sheet (tests/sheet-rig.js), and two desks built from the real code in havellin.html (the sync queue,
+// deployed over the fake sheet (tests/sheet-rig.js; since 2026-10-28 its default variant D, Sheets' own deferred writes, where
+// it ran on A, which models no deployment), and two desks built from the real code in havellin.html (the sync queue,
 // the manifest's read and merge, the read-first gate, the agents' naming run, the bulk bar), their fetch answered by the
 // server's real doGet and doPost through a synchronous promise and a virtual clock. Agent One's answer is the one thing
 // stubbed (by photograph, as the audit's harness answered it). Browser step 121 drives the same on two real pages.
@@ -202,7 +203,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   // ═══════════════════════════════════════════════════════════════════════
   guard('B · ⚠⚠ SYN-02: a stale Name 24 shots reads the sheet first, names the 16 left and leaves the 8 the other device removed', () => {
-    const clock = clockOf(), srv = server('A');
+    const clock = clockOf(), srv = server();
     seedSheet(srv, 24);
     const A = desk('Anthony Graziano', srv, clock), B = desk('Ashley Jerome', srv, clock);
     eq([A.open(), B.open()].map((x) => x && x.ok), [true, true], 'fixture: both desks read the client from the sheet');
@@ -234,7 +235,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   });
 
   guard('B2 · the defect reproduces without the read: the same press on a copy that never reads the sheet resurrects the 8', () => {
-    const clock = clockOf(), srv = server('A');
+    const clock = clockOf(), srv = server();
     seedSheet(srv, 24);
     const A = desk('Anthony Graziano', srv, clock), B = desk('Ashley Jerome', srv, clock);
     A.open(); B.open();
@@ -245,7 +246,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(liveIds(sheetItems(srv)).length, 24, 'fixture: and the 8 removed lines are live again on the sheet (the audit measured 26 with its splits)');
   });
   guard('C · ⚠⚠ SYN-01 contained: a stale Mark reviewed reads the sheet first, so the other device\'s typed name and $1,250 stand', () => {
-    const clock = clockOf(), srv = server('A');
+    const clock = clockOf(), srv = server();
     seedSheet(srv, 12);
     const A = desk('Anthony Graziano', srv, clock), B = desk('Ashley Jerome', srv, clock);
     A.open(); B.open();
@@ -268,7 +269,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   });
 
   guard('C2 · the defect reproduces without the read: the stale sweep writes the old copy over A\'s work', () => {
-    const clock = clockOf(), srv = server('A');
+    const clock = clockOf(), srv = server();
     seedSheet(srv, 12);
     const A = desk('Anthony Graziano', srv, clock), B = desk('Ashley Jerome', srv, clock);
     A.open(); B.open();
@@ -280,7 +281,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   });
 
   guard('C3 · a sweep across lines the other device removed leaves them alone and says so', () => {
-    const clock = clockOf(), srv = server('A');
+    const clock = clockOf(), srv = server();
     seedSheet(srv, 6);
     const A = desk('Anthony Graziano', srv, clock), B = desk('Ashley Jerome', srv, clock);
     A.open(); B.open();
@@ -300,7 +301,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   });
 
   guard('C4 · a press whose read does not land refuses by name and changes nothing', () => {
-    const clock = clockOf(), srv = server('A');
+    const clock = clockOf(), srv = server();
     seedSheet(srv, 6);
     const B = desk('Ashley Jerome', srv, clock);
     B.open();
@@ -317,7 +318,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   });
 
   guard('E · ⚠⚠ SYN-06: a write that failed before a reload is sent again from the copy kept on the device', () => {
-    const clock = clockOf(), srv = server('A');
+    const clock = clockOf(), srv = server();
     seedSheet(srv, 6);
     const A1 = desk('Anthony Graziano', srv, clock);
     A1.open();
@@ -341,7 +342,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   });
 
   guard('E2 · without the mark, opening the client reads the sheet and sends what it lacks', () => {
-    const clock = clockOf(), srv = server('A');
+    const clock = clockOf(), srv = server();
     seedSheet(srv, 6);
     const A1 = desk('Anthony Graziano', srv, clock);
     A1.open(); A1.dropMedia = true;
@@ -355,7 +356,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   });
 
   guard('E3 · a read that finds the sheet holding everything sends nothing', () => {
-    const clock = clockOf(), srv = server('A');
+    const clock = clockOf(), srv = server();
     seedSheet(srv, 6);
     const A = desk('Anthony Graziano', srv, clock);
     A.open(); clock.run(4000);
@@ -364,7 +365,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   });
 
   guard('F · ⚠ SYN-18: the chip counts the lines not yet on the sheet, never "1 unsaved change" for an evening', () => {
-    const clock = clockOf(), srv = server('A');
+    const clock = clockOf(), srv = server();
     seedSheet(srv, 6);
     const A = desk('Anthony Graziano', srv, clock);
     A.open();
@@ -510,7 +511,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   });
 
   guard('G · ⚠⚠ SYN-06: an edit made just before the tab closes is sent at once, and the close is challenged while it is unanswered', () => {
-    const clock = clockOf(), srv = server('A');
+    const clock = clockOf(), srv = server();
     seedSheet(srv, 6);
     const A = desk('Anthony Graziano', srv, clock);
     A.open();
@@ -634,7 +635,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   });
 
   guard('H3 · ⚠⚠ the CSV printed on a stale device carries the other device\'s $275 (the audit\'s Court Inventory press did not)', () => {
-    const clock = clockOf(), srv = server('A');
+    const clock = clockOf(), srv = server();
     seedSheet(srv, 6);
     const A = desk('Anthony Graziano', srv, clock), B = desk('Ashley Jerome', srv, clock);
     A.open(); B.open();
@@ -740,7 +741,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   });
   // ═══════════════════════════════════════════════════════════════════════
   guard('F2 · an edit made while a write is on its way is still counted, through the outbox and through the retry', () => {
-    const clock = clockOf(), srv = server('A');
+    const clock = clockOf(), srv = server();
     seedSheet(srv, 6);
     const A = desk('Anthony Graziano', srv, clock);
     A.open();
@@ -867,7 +868,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════
   // P6's review (2026-10-27): what the first build left open, each driven as the review drove it.
   guard('H7 · ⚠⚠ two different sweeps pressed while one read is out both go, in the order pressed (the second was dropped with no word)', () => {
-    const clock = clockOf(), srv = server('A');
+    const clock = clockOf(), srv = server();
     seedSheet(srv, 6);
     const B = desk('Ashley Jerome', srv, clock);
     B.open();
@@ -920,7 +921,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   });
 
   guard('H8 · ⚠ a read that never answers lets go: the presses waiting on it are refused by name after 30 s, and the next press reads afresh', () => {
-    const clock = clockOf(), srv = server('A');
+    const clock = clockOf(), srv = server();
     seedSheet(srv, 6);
     const B = desk('Ashley Jerome', srv, clock);
     B.open();
@@ -1011,7 +1012,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   });
 
   guard('Q · ⚠⚠ the space reclaimer never drops the copy of a client this device still owes the sheet (the stranded edit was lost for good)', () => {
-    const clock = clockOf(), srv = server('A');
+    const clock = clockOf(), srv = server();
     seedSheet(srv, 6);
     const A1 = desk('Anthony Graziano', srv, clock);
     A1.open();
@@ -1050,7 +1051,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   });
 
   guard('E4 · ⚠⚠ after a reload with the sheet still down, the copy waits in the queue: the chip names it, the close is challenged, and it goes once the signal is back', () => {
-    const clock = clockOf(), srv = server('A');
+    const clock = clockOf(), srv = server();
     seedSheet(srv, 6);
     const A1 = desk('Anthony Graziano', srv, clock);
     A1.open();
@@ -1082,7 +1083,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   });
 
   guard('E5 · the owed mark: a read that finds nothing owed takes it off with no write; a mark with no copy behind it is taken off and said', () => {
-    const clock = clockOf(), srv = server('A');
+    const clock = clockOf(), srv = server();
     seedSheet(srv, 6);
     const A = desk('Anthony Graziano', srv, clock);
     A.open(); clock.run(4000);
@@ -1111,7 +1112,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   });
 
   guard('G3 · ⚠ a page put down and picked up again sends its next write as ever, never with keepalive (browsers cap keepalive at 64 KB in flight)', () => {
-    const clock = clockOf(), srv = server('A');
+    const clock = clockOf(), srv = server();
     seedSheet(srv, 6);
     const A = desk('Anthony Graziano', srv, clock);
     A.open();
@@ -1147,7 +1148,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   });
 
   guard('R · ⚠⚠ Record approval on the selection reads the sheet first, and a read under its open dialog never records a signature against terms the dialog did not show (EST-01)', () => {
-    const clock = clockOf(), srv = server('A');
+    const clock = clockOf(), srv = server();
     seedSheet(srv, 6);
     const A = desk('Anthony Graziano', srv, clock);
     const B = desk('Ashley Jerome', srv, clock, null, { roots: ['invRecordApproval', 'invSaveApproval', 'closeInvApproval', 'invApprovalComplete'] });
