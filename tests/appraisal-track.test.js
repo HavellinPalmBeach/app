@@ -26,7 +26,7 @@ const noComments = (s) => String(s)
 
 // The chain behind invAwaitingAppraisal is lifted for real rather than stubbed. Stubbing the
 // predicate would be testing the stub — the lesson this project paid for on `_cePhases`.
-const APPR_FNS = ['invAwaitingAppraisal', 'invAppraised', '_invHasValue', 'invNeedsAppraisal', 'invFiduciaryMode', 'isDecedentJob', '_invHasAppraisal',
+const APPR_FNS = ['invAwaitingAppraisal', 'invAppraised', '_invHasValue', 'invNeedsAppraisal', 'invAppraisalChosen', 'invFiduciaryMode', 'isDecedentJob', '_invHasAppraisal',
                   '_jobAppraisers', 'invAppraisalThreshold', 'gateDispute', '_gateYes',
                   'invIsIntrinsic', 'invCatMeta', '_invJob',
                   // P16: the documents name a firearm's dealer route, the worklist counts only what the
@@ -556,7 +556,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                             'maivAggregate', '_maivWorklistBlock', 'maivFilingApplies',
                             'maivStatement', 'maivStatement_', 'invIsMAIV', 'invMAIVDefaultCat',
                             'invMAIVCategory', 'isDecedentJob', '_gate706', 'fmtDate2',
-                            'savePhotoRefs', '_warnPhotoStoreFull', 'roundCents', 'fmt', 'invDispGoesToDealer', 'invDealerNamed', 'invDealerUnchecked', 'invDealerDirState', 'invDealerUncheckedText', '_invDealerDirStaleText', 'invDealerWhy']),
+                            'savePhotoRefs', '_warnPhotoStoreFull', 'roundCents', 'fmt', 'invDispGoesToDealer', 'invDealerNamed', 'invDealerUnchecked', 'invDealerDirState', 'invDealerUncheckedText', '_invDealerDirStaleText', 'invDealerWhy', 'invLineQty', 'maivOwedLines', 'maivOwedText', '_avStampText', '_avStampCounts']),
       vars: APPR_VARS.concat(['MAIV_AGGREGATE_THRESHOLD', 'MAIV_CATEGORIES', 'MAIV_OTHER',
                               'MAIV_BY_CATEGORY', 'DECEDENT_SERVICES', 'INVENTORY_COLUMNS',
                               'INV_TAXONOMY', 'INV_CATEGORIES']),
@@ -585,7 +585,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                             'maivAggregate', '_maivWorklistBlock', 'maivFilingApplies',
                             'maivStatement', 'maivStatement_', 'invIsMAIV', 'invMAIVDefaultCat',
                             'invMAIVCategory', 'isDecedentJob', '_gate706', 'fmtDate2',
-                            'savePhotoRefs', '_warnPhotoStoreFull', 'roundCents', 'fmt', 'invDispGoesToDealer', 'invDealerNamed', 'invDealerUnchecked', 'invDealerDirState', 'invDealerUncheckedText', '_invDealerDirStaleText', 'invDealerWhy']),
+                            'savePhotoRefs', '_warnPhotoStoreFull', 'roundCents', 'fmt', 'invDispGoesToDealer', 'invDealerNamed', 'invDealerUnchecked', 'invDealerDirState', 'invDealerUncheckedText', '_invDealerDirStaleText', 'invDealerWhy', 'invLineQty', 'maivOwedLines', 'maivOwedText', '_avStampText', '_avStampCounts']),
       vars: APPR_VARS.concat(['MAIV_AGGREGATE_THRESHOLD', 'MAIV_CATEGORIES', 'MAIV_OTHER',
                               'MAIV_BY_CATEGORY', 'DECEDENT_SERVICES', 'INVENTORY_COLUMNS',
                               'INV_TAXONOMY', 'INV_CATEGORIES']),

@@ -440,11 +440,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(lb.val, 'Set valuation source', '⚠⚠ a living job\'s bulk bar does not offer the valuation source');
     has(E._renderInvBulk(ESTATE), 'Set valuation source', 'an estate\'s still does');
     has(lb.val, 'Set disposition', 'and the rest of the living bar is untouched');
-    L._invBulkApply(2, 'valSource', 'Appraisal');
+    // RESTATED (P7, 2026-10-27): Appraisal is never set across a selection (an appraisal is one appraiser's figure, typed on its
+    // own line), so the field's gate is driven with a source the bar still offers.
+    L._invBulkApply(2, 'valSource', 'Dealer quote');
     eq(L._photoRefs[2][0].valSource, undefined, '⚠⚠ the handler writes no valuation source on a living job');
     has(badges[badges.length - 1], 'not recorded on this job', 'and says so');
-    E._invBulkApply(7, 'valSource', 'Appraisal');
-    eq(E._photoRefs[7][0].valSource, 'Appraisal', 'on an estate it writes it');
+    E._invBulkApply(7, 'valSource', 'Dealer quote');
+    eq(E._photoRefs[7][0].valSource, 'Dealer quote', 'on an estate it writes it');
     // ⚠ ONE RULE: for every column, the bar's offer and the handler's answer match the panel's.
     E.INVENTORY_COLUMNS.forEach((c) => {
       [LIVING, ESTATE].forEach((job) => {

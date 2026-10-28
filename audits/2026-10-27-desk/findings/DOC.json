@@ -27,6 +27,7 @@
  "findings": [
   {
    "id": "DOC-01",
+   "fixed": "2026-10-27 (P7, its critical part: CLAUDE.md, a floor is a floor on every valued paper; tests/p7-evidence.test.js, browser step 122)",
    "title": "Estate Inventory Report prints a 'total' that silently counts unvalued lines as $0 and mixes in non-probate property",
    "kind": "accuracy",
    "severity": "fix-now",

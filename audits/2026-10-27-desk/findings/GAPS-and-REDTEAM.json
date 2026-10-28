@@ -87,6 +87,7 @@
     },
     {
      "id": "GAP1-05",
+     "fixed": "2026-10-27 (P7, its critical part: CLAUDE.md, Agent Two, no figure the evidence does not support; tests/p7-evidence.test.js, browser step 122)",
      "title": "Etsy asking prices pass the 2026-10-26b comparable filter: its /market/ search pages are not caught, three 'listings' sharing one URL count as three, and an Etsy or Replacements page the model tags 'sold' counts as a sale",
      "kind": "accuracy",
      "severity": "medium",
@@ -166,6 +167,7 @@
     },
     {
      "id": "GAP2-02",
+     "fixed": "2026-10-27 (P7, its critical part: CLAUDE.md, the §20.2031-6(b) aggregate tells the truth; tests/p7-evidence.test.js, browser step 122)",
      "title": "The Form 706 aggregate says it 'cannot be tested yet' when the valued articles alone are already over $3,000, so the expert-appraisal requirement is withheld",
      "kind": "accuracy",
      "severity": "high",

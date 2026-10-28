@@ -201,12 +201,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const FNS = ['_invDocPartyHead', 'invConditionText', '_invScheduleSection', 'invValBasisWord', 'invLineAppraiser', '_invLinkedAppraiser', '_jobAppraisers', '_apprLabel', 'invProbateRows', '_invTrackDefault', 'printCourtInventory', '_avUnreviewedStamp', 'agentValueUnreviewed', '_invAssignItemNos', '_jobInvRefs', '_invTouch',
                  'savePhotoRefs', 'isFormalDoc', 'resolveDocLevel', 'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'gateDispute',
                  '_gateYes', '_gate706', 'isDecedentJob', '_invGuardrailItems',
-                 'invAwaitingAppraisal', '_invJob', 'invNeedsAppraisal', 'invFiduciaryMode',
+                 'invAwaitingAppraisal', '_invJob', 'invNeedsAppraisal', 'invAppraisalChosen', 'invFiduciaryMode',
                  'invIsIntrinsic', 'invCatMeta', 'invAppraisalThreshold', '_invHasAppraisal', 'invAppraised',
                  '_invOnProbateSchedule', '_invTrack', 'resolveValBasis', 'estateValueDate',
                  '_invMoney', '_invExcludedTracks', '_invDocName', '_invHasValue', '_invIsExempt',
                  'matterDef', 'matterTypeOf', 'invDocContractBlock',
-                 'docTierProduces', 'docTierOf', 'svcHasDocStep', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'estimateAppraiserNames', 'docScopeDef', 'roundCents', 'fmt', 'scheduleSigners', 'jobFiduciaries', 'jobListEntries', '_avHasFigure', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invIsFirearm', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', 'invAcceptCtx', 'agentDuplicateGroups', '_agDupEligible', 'agentNamedTwice'];
+                 'docTierProduces', 'docTierOf', 'svcHasDocStep', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'estimateAppraiserNames', 'docScopeDef', 'roundCents', 'fmt', 'scheduleSigners', 'jobFiduciaries', 'jobListEntries', '_avHasFigure', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invIsFirearm', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', 'invAcceptCtx', 'agentDuplicateGroups', '_agDupEligible', 'agentNamedTwice', '_avStampCounts', 'invTotalFloor', '_invFloorTotalHtml'];
     const VARS = ['DECEDENT_SERVICES', 'INV_ACCEPT_AMMO_RE', 'INV_OPEN_HOLDS', 'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD',
                   'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS',
                   'EXEMPT_CAP_732_402', 'MATTER_TYPES', 'INV_CONTRACT_DOCS', 'DOC_SCOPES', 'MAIV_OTHER', 'MAIV_BY_CATEGORY'];

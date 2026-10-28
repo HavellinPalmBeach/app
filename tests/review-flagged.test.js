@@ -1619,14 +1619,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(calls('invLineHold'), 2, '…and nothing else');
     eq(callersOf('invLineOpen'), ['_invBulkApply', 'invLineReviewed'], 'invLineOpen: the review, and Mark reviewed naming the lines a tick leaves open');
     has(live(fn('invLineOpen')), '_invLineHolds(ref, fc, false, INV_OPEN_HOLDS)', '…asking the rule for the open reasons alone');
-    eq(callersOf('invLineAccepted'), ['_avUnreviewedStamp', '_invRevBoxHtml', 'invLineAcceptedOnly', 'invLineReviewed'],
-      '⚠ invLineAccepted\'s readers: the review, the accepted count, the value stamp and the row\'s tooltip');
+    // RESTATED (P7, 2026-10-27): the value stamp's counts are one function, read by its pills and the §20.2031-6(b) sentence.
+    eq(callersOf('invLineAccepted'), ['_avStampCounts', '_invRevBoxHtml', 'invLineAcceptedOnly', 'invLineReviewed'],
+      '⚠ invLineAccepted\'s readers: the review, the accepted count, the value stamp\'s counts and the row\'s tooltip');
     eq(calls('invLineAccepted'), 5, '…and nothing else (the definition and four calls)');
     has(live(fn('invLineAccepted')), 'return !invLineHold(ref, fc);', 'invLineAccepted is the reason\'s negation, nothing of its own');
-    eq(callersOf('invLineAcceptedOnly'), ['_avUnreviewedStamp', '_invRevBoxHtml', '_invReviewStats'], 'the accepted count\'s readers');
-    eq(callersOf('invAcceptCtx'), ['_invAcceptCtxOf', '_invBulkApply', 'printContentsList', 'printContentsRecord', 'printCourtInventory', 'printDispositionLedger',
-      'printEstateInventoryReport', 'printTrustSchedule', 'probatePackageGaps'], '⚠ invAcceptCtx\'s: the desk\'s context, Mark reviewed, the six printers and the package\'s gaps');
-    eq(calls('invAcceptCtx'), 10, '…and nothing else (the definition and nine calls)');
+    eq(callersOf('invLineAcceptedOnly'), ['_avStampCounts', '_invRevBoxHtml', '_invReviewStats'], 'the accepted count\'s readers');
+    // RESTATED (P7): the §20.2031-6(b) aggregate carries the stamp's words where an agent figure is among its articles, so it asks the context.
+    eq(callersOf('invAcceptCtx'), ['_invAcceptCtxOf', '_invBulkApply', 'maivAggregate', 'printContentsList', 'printContentsRecord', 'printCourtInventory', 'printDispositionLedger',
+      'printEstateInventoryReport', 'printTrustSchedule', 'probatePackageGaps'], '⚠ invAcceptCtx\'s: the desk\'s context, Mark reviewed, the §20.2031-6(b) aggregate, the six printers and the package\'s gaps');
+    eq(calls('invAcceptCtx'), 11, '…and nothing else (the definition and ten calls)');
     eq(callersOf('_invAcceptCtxOf'), ['_invEdit', '_invGroupItems', '_invReadLineRepaint', '_invRevBoxHtml', '_renderInvRow', '_renderInvWorkbar'], 'the desk\'s context: its readers');
     has(live(decl('INV_WORK_FLAGS')), 'return !invLineReviewed(r, _invAcceptCtxOf(job));', '…and the Not reviewed chip');
     ['printContentsList', 'printEstateInventoryReport', 'printCourtInventory', 'printTrustSchedule', 'printDispositionLedger', 'printContentsRecord']
@@ -1673,10 +1675,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(mk.indexOf('invListReadRefusal(jobId)') >= 0 && mk.indexOf('invListReadRefusal(jobId)') < mk.indexOf('job.invRead ='), '⚠ …refusing before it writes');
     eq(callersOf('invListSeen'), ['invListRead', 'invMarkListRead'], '⚠ the fingerprint: taken by the press, compared by the read');
     eq((L.match(/\bINV_READ_FIELDS\b/g) || []).length, 2, 'INV_READ_FIELDS: declared once, read by the fingerprint alone');
-    eq(callersOf('invListRead'), ['_avAcceptedPill', '_invListReadHtml', '_invProgressStamp', '_invReadKey', '_renderInvWorkbar', 'probatePackageGaps'],
-      '⚠ invListRead: the stamp, the pill, the work bar\'s line, its key and its sentence, and the package\'s gaps');
+    // RESTATED (P7, 2026-10-27): the §20.2031-6(b) sentence carries the pill's words in text (_avStampText; p7-evidence.test.js holds
+    // the two equal), so it reads the list's read too; and (P7's review) the worklist asks whether its figures are still nobody's look
+    // (_avStampUnread), so a list read is never said to be unread.
+    eq(callersOf('invListRead'), ['_avAcceptedPill', '_avStampText', '_avStampUnread', '_invListReadHtml', '_invProgressStamp', '_invReadKey', '_renderInvWorkbar', 'probatePackageGaps'],
+      '⚠ invListRead: the stamp, the pill and its words in text, whether the figures are still unread, the work bar\'s line, its key and its sentence, and the package\'s gaps');
     eq(callersOf('invListReadRefusal'), ['_invListReadHtml', '_invReadKey', 'invMarkListRead'], 'the refusal: the press, its line and its key');
-    eq(callersOf('invListReadWords'), ['_avAcceptedPill', '_invListReadHtml', '_invProgressStamp'], 'the read\'s words: the pill, the line and the stamp');
+    eq(callersOf('invListReadWords'), ['_avAcceptedPill', '_avStampText', '_invListReadHtml', '_invProgressStamp'], 'the read\'s words: the pill (and its words in text), the line and the stamp');
     eq(callersOf('invMarkListRead'), ['_invListReadHtml'], 'the press: the work bar\'s button alone');
     eq(callersOf('_invListReadHtml'), ['_renderInvWorkbar'], 'the line: the work bar alone (_invEdit redraws the bar, never the line)');
     eq(callersOf('_invReadKey'), ['_invListReadHtml', '_invReadLineRepaint'], 'the key: drawn on the host, compared by the one repaint');

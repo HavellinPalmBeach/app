@@ -17,7 +17,7 @@ const FNS = ['invLineReviewed', 'invLineOpen', '_invDocPartyHead', 'invCondition
   'isDecedentJob', '_invAssignItemNos', '_jobInvRefs', '_invTouch', 'savePhotoRefs',
   '_warnPhotoStoreFull', 'isFormalDoc', 'resolveDocLevel', 'docLevelFloor', 'gateDispute',
   '_gateYes', '_gate706', '_invGuardrailItems', 'invAwaitingAppraisal', 'invAppraised', '_invJob',
-  'invNeedsAppraisal', 'invIsIntrinsic', 'invCatMeta', 'invAppraisalThreshold',
+  'invNeedsAppraisal', 'invAppraisalChosen', 'invIsIntrinsic', 'invCatMeta', 'invAppraisalThreshold',
   '_invHasAppraisal', '_jobAppraisers', 'resolveValBasis', 'estateValueDate', '_invMoney',
   '_invDocName', '_invItemNo', '_invGroupItems', 'invIsFirearm', '_invDispLabel', '_invRoomName', '_planRooms',
   '_invPrintThumb', '_invThumbFor', '_invThumbCache', '_invThumbKey', '_invProgressStamp',
@@ -28,7 +28,7 @@ const FNS = ['invLineReviewed', 'invLineOpen', '_invDocPartyHead', 'invCondition
   'weArrangeAppraisals', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', 'jobAppraisalDuty', 'approvedEstimateFor', 'estimateDocScope', 'docScopeDef', '_agrOtherAppraisalsBy',
   'photoSubfolder',   // P16: the share button names both photo folders by the rule that files them
   'roundCents', 'fmt',
-  'trustInstrumentTitle', 'scheduleSigners', 'jobFiduciaries', 'jobListEntries', '_agrCounsel', 'photoSharesLine', 'photoSharesOf', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invReleaseCautions', '_invPhotoNoteOpen', 'invLineAcceptedOnly', '_invAcceptedStampWords', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', 'invAcceptCtx', 'agentDuplicateGroups', '_agDupEligible', 'agentNamedTwice', '_invAcceptCtxOf', '_invListReadHtml', '_invReadKey', 'invListRead', 'agentNoticesOn'];
+  'trustInstrumentTitle', 'scheduleSigners', 'jobFiduciaries', 'jobListEntries', '_agrCounsel', 'photoSharesLine', 'photoSharesOf', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invReleaseCautions', '_invPhotoNoteOpen', 'invLineAcceptedOnly', '_invAcceptedStampWords', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', 'invAcceptCtx', 'agentDuplicateGroups', '_agDupEligible', 'agentNamedTwice', '_invAcceptCtxOf', '_invListReadHtml', '_invReadKey', 'invListRead', 'agentNoticesOn', '_avStampCounts', 'invTotalFloor', '_invFloorTotalHtml'];
 const VARS = [
   '_agRun', '_avRun', '_arRun', 'AGENT_NOTICE_KINDS', 
   'INV_CONTRACT_DOCS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DECEDENT_SERVICES',

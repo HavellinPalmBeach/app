@@ -6490,7 +6490,11 @@ var BACKEND_NEEDS_TYPES = ['saveMedia', 'saveInventory', 'job', 'saveAllJobs', '
 // copies approved for different terms (its review). An older deployment can drop them on the sheet, and a device loading the line
 // from there reads the approval as covering it wherever it goes; its merge can also add a signature given for one destination to
 // an approval for another.
-var BACKEND_MIN_VERSION = '2026-10-27d';
+// 2026-10-27e (P7 of the desk audit), carrying 2026-10-27d: Agent Two's basis sentence never names more sales than the server kept
+// (a figure whose every sale was left out says it rests on no sale), Etsy's and the dealer marketplaces' search pages are left out, a
+// page cited twice counts once, and an Etsy, 1stDibs, Chairish, Ruby Lane, Replacements or retail price is always asking. An older
+// deployment keeps a sentence citing sales no tool returned, printed on the Estate Inventory Report, and an asking price as a sale.
+var BACKEND_MIN_VERSION = '2026-10-27e';
 var _backendVersion = null;
 // The actions the deployment says it has (2026-10-26c), once the version probe answers; null until then. A route the app
 // offers only on a deployment that has it reads this (backendHas): the release request's DocuSign send.
@@ -6564,7 +6568,7 @@ var BACKEND_FEATURE_COST = {
   saveSnapshot:  'no inventory Snapshot can be taken (the deployment has nowhere to keep its lines)',
   // One line for any deployment older than BACKEND_MIN_VERSION, so it names the newest gap first and says
   // which vintage the older one belongs to (the banner's title prints the version that answered).
-  version:       'a release approval recorded on one device can lose, on the sheet, the record of where the item was going, who was taking it and its value when it was signed, so another device reads the approval as covering the item wherever it goes now, and two devices\u2019 signatures given for different destinations can be counted as one approval; on a deployment older than 2026-10-27c, anyone who holds the Apps Script URL can read every client and inventory, share a client\u2019s folders with any address, trash any file and send a release request through DocuSign to anybody, with no device key asked for; on a deployment older than 2026-10-27b, one failed write can empty the Jobs tab, an empty Jobs tab tells every device that every client was deleted and each one empties itself, and the first client added after that sweeps every other client\u2019s estimate, plan, hours and inventory off the sheet; on a deployment older than 2026-10-27, an item Agent Two researched and found no sale for stays marked unsure, and its paper reads general estimate, however many close listings it counted; on a deployment older than 2026-10-26b, a search page, or a sale whose price was not shown, can stand as a sold comparable, so a researched figure resting on one prints \u201cauction comps\u201d; a long note from Agent Two stops mid-sentence; and neither agent grades an item\u2019s condition; on a deployment older than 2026-10-26, the agents never move to a newer model by themselves (Agent One still runs on the older Opus 5), Agent Two never looks at the photograph of an item whose name is a guess or fixes a wrong category, a figure with no sale behind it prints as \u201cauction comps\u201d, and one slow request can mark a whole batch \u201cnot valued\u201d or lose a batch of names; on a deployment older than 2026-10-25b, a name you type or review on the desk (a wooden mirror retyped as Restoration Hardware) can come back from Agent Two as the generic thing and be valued as that, and a brand the crew says at the camera is not put into the name; on a deployment older than 2026-10-25, Agent Two flags a name it disagrees with (\u201cName may be wrong\u201d) instead of correcting it, puts a note on nearly every item it values (no condition recorded, a rough count, a search that ran short), and Agent One files everyday dishes as collectibles; on a deployment older than 2026-10-24, a blank line added to a photograph already named (Another item in this photo) makes Agent One read the whole photograph again, so every object in it goes on the list a second time, and its names carry a count (\u201capprox. 7 in stack\u201d) that the Qty box contradicts once corrected; on a deployment older than 2026-10-19b, a client\u2019s inventory reset in the Apps Script editor (resetInventoryConfirm) is undone by the first device that saves a line from before it, unless every device reloads first; on a deployment older than 2026-10-16, an incident reported on one device, or a key or fob received there while another device records a handoff, can be dropped when the sheet merges the job (the Incidents and Keys & access cards\u2019 lists are not yet merged entry by entry); on a deployment older than 2026-10-06, two devices\u2019 release signers are not merged and the client\u2019s workbook rounds its money; on a deployment older than 2026-10-05, a co-executor or co-trustee is not put on the DocuSign envelope beside the client, so they sign a printed copy of the agreement and the page they signed has to be filed from the timeline; on a deployment older than 2026-10-03, a co-trustee, a beneficiary, a signed copy filed to Drive, a find on site or a proceeds statement added on one device can be dropped by another device saving an older copy of the job, and the client\u2019s inventory workbook heads a trust\u2019s net proceeds \u201cNet to Estate\u201d; on a deployment older than 2026-10-01, File signed copy adds a second copy of the signed agreement to the client\u2019s Agreement folder instead of replacing the one there; on a deployment older than 2026-09-30b, a payment voided or marked cleared on one device can come back as it was from another device that changed the same payment before reloading, and count again; a firearm\u2019s serial, recipient or dealer route, recorded on one device, can be dropped from the sheet by another device\u2019s older copy of the item, until the first device next saves the inventory; and on a deployment older than 2026-09-30, two people editing different parts of one job (a vendor quote here, the team there) can also undo each other\u2019s work, a damaged store tab is emptied by the next save instead of refused, and Agent One can stop mid-answer on a busy photograph',
+  version:       'a figure Agent Two researched can carry a basis sentence citing sales nobody could find (\u201cFour sold comparables at Christie\u2019s and Kodner\u201d under a general estimate) on the Estate Inventory Report, and an Etsy, 1stDibs, Chairish, Ruby Lane or Replacements asking price can stand as a sale behind \u201conline comps\u201d; on a deployment older than 2026-10-27d, a release approval recorded on one device can lose, on the sheet, the record of where the item was going, who was taking it and its value when it was signed, so another device reads the approval as covering the item wherever it goes now, and two devices\u2019 signatures given for different destinations can be counted as one approval; on a deployment older than 2026-10-27c, anyone who holds the Apps Script URL can read every client and inventory, share a client\u2019s folders with any address, trash any file and send a release request through DocuSign to anybody, with no device key asked for; on a deployment older than 2026-10-27b, one failed write can empty the Jobs tab, an empty Jobs tab tells every device that every client was deleted and each one empties itself, and the first client added after that sweeps every other client\u2019s estimate, plan, hours and inventory off the sheet; on a deployment older than 2026-10-27, an item Agent Two researched and found no sale for stays marked unsure, and its paper reads general estimate, however many close listings it counted; on a deployment older than 2026-10-26b, a search page, or a sale whose price was not shown, can stand as a sold comparable, so a researched figure resting on one prints \u201cauction comps\u201d; a long note from Agent Two stops mid-sentence; and neither agent grades an item\u2019s condition; on a deployment older than 2026-10-26, the agents never move to a newer model by themselves (Agent One still runs on the older Opus 5), Agent Two never looks at the photograph of an item whose name is a guess or fixes a wrong category, a figure with no sale behind it prints as \u201cauction comps\u201d, and one slow request can mark a whole batch \u201cnot valued\u201d or lose a batch of names; on a deployment older than 2026-10-25b, a name you type or review on the desk (a wooden mirror retyped as Restoration Hardware) can come back from Agent Two as the generic thing and be valued as that, and a brand the crew says at the camera is not put into the name; on a deployment older than 2026-10-25, Agent Two flags a name it disagrees with (\u201cName may be wrong\u201d) instead of correcting it, puts a note on nearly every item it values (no condition recorded, a rough count, a search that ran short), and Agent One files everyday dishes as collectibles; on a deployment older than 2026-10-24, a blank line added to a photograph already named (Another item in this photo) makes Agent One read the whole photograph again, so every object in it goes on the list a second time, and its names carry a count (\u201capprox. 7 in stack\u201d) that the Qty box contradicts once corrected; on a deployment older than 2026-10-19b, a client\u2019s inventory reset in the Apps Script editor (resetInventoryConfirm) is undone by the first device that saves a line from before it, unless every device reloads first; on a deployment older than 2026-10-16, an incident reported on one device, or a key or fob received there while another device records a handoff, can be dropped when the sheet merges the job (the Incidents and Keys & access cards\u2019 lists are not yet merged entry by entry); on a deployment older than 2026-10-06, two devices\u2019 release signers are not merged and the client\u2019s workbook rounds its money; on a deployment older than 2026-10-05, a co-executor or co-trustee is not put on the DocuSign envelope beside the client, so they sign a printed copy of the agreement and the page they signed has to be filed from the timeline; on a deployment older than 2026-10-03, a co-trustee, a beneficiary, a signed copy filed to Drive, a find on site or a proceeds statement added on one device can be dropped by another device saving an older copy of the job, and the client\u2019s inventory workbook heads a trust\u2019s net proceeds \u201cNet to Estate\u201d; on a deployment older than 2026-10-01, File signed copy adds a second copy of the signed agreement to the client\u2019s Agreement folder instead of replacing the one there; on a deployment older than 2026-09-30b, a payment voided or marked cleared on one device can come back as it was from another device that changed the same payment before reloading, and count again; a firearm\u2019s serial, recipient or dealer route, recorded on one device, can be dropped from the sheet by another device\u2019s older copy of the item, until the first device next saves the inventory; and on a deployment older than 2026-09-30, two people editing different parts of one job (a vendor quote here, the team there) can also undo each other\u2019s work, a damaged store tab is emptied by the next save instead of refused, and Agent One can stop mid-answer on a busy photograph',
   preVersion:    'it predates the version check itself (2026-09-09), so client PDFs, photographs, DocuSign, Stripe and Agent One may all be missing as well'
 };
 
@@ -28664,6 +28668,13 @@ function invNeedsAppraisal(ref, job){
   // ⚠ THE `job &&` GUARD IS LOAD-BEARING: with no job the estate behaviour must survive, which
   // is also the safe direction — the same rule invAwaitingAppraisal states two functions down.
   if (job && !invFiduciaryMode(job)) return false;
+  // ⚠⚠ APPRAISAL CHOSEN, AND NO FIGURE YET, IS AN APPRAISAL OWED (P7's review, 2026-10-27): choosing Appraisal over Agent Two's
+  // $9,000 on a sofa takes that figure and its range off (_avTakeValue, VAL-02), and the value arms below then had nothing to read,
+  // so the line left the guardrail, the worklist and the release caution, and nothing would ever fill it (Agent Two leaves a line
+  // waiting on its appraiser alone). A person's choice of the source, so it routes whatever the category, a vehicle included, until
+  // the appraiser's figure lands or the appraisal is waived (invAwaitingAppraisal). Inside this rule, never a second writer of
+  // `needsAppr`.
+  if (invAppraisalChosen(ref)) return true;
   // ⚠⚠ ANY CATEGORY AT THE THRESHOLD (Anthony, 2026-10-14, asked on the pricing grid's open item: "Any category at
   // $3,000+"). Until then only the nine intrinsic categories routed on value, so a $9,000 sofa Agent Two valued reached
   // no appraiser and the Court Inventory never said it was waiting for one. Now a known value, or the top of the
@@ -28698,6 +28709,11 @@ function invNeedsAppraisal(ref, job){
 function invAppraised(ref) {
   return !!ref && ref.valSource === 'Appraisal' && _invHasValue(ref);
 }
+// Appraisal chosen as the source, and no figure on the line yet (P7's review): the state the record's OK leaves when Appraisal is
+// chosen over another's figure, owed the appraiser's figure. One answer, read by invNeedsAppraisal, the namer and the record.
+function invAppraisalChosen(ref) {
+  return !!ref && ref.valSource === 'Appraisal' && !_invHasValue(ref);
+}
 function invAppraisalInProgress(ref, jobId) {
   return !!ref && !invAppraised(ref) && _invHasAppraisal(jobId, ref);
 }
@@ -28723,10 +28739,27 @@ function invLineAppraiser(ref, jobId) {
 function invAppraisalSourceText(ref, jobId) {
   if (!ref) return '';
   var who = invLineAppraiser(ref, jobId);
-  if (invAppraised(ref)) return 'Appraisal' + (who ? ' · ' + who : '');
+  if (invAppraised(ref)) return 'Appraisal' + (who ? ' · ' + who : ' (appraiser not named)');   // P7, VAL-02
   if (invAppraisalInProgress(ref, jobId)) return 'Appraisal' + (who ? ' · ' + who : '') + ' · pending';
+  // Appraisal chosen as the source with no figure yet and nobody linked (P7's review): the appraisal is owed, and says whose, or
+  // that nobody is named; waived, it says so, since no appraisal is coming.
+  if (invAppraisalChosen(ref)) return 'Appraisal' + (who ? ' · ' + who : ' (appraiser not named)') + (ref.apprWaived ? ' · waived' : ' · pending');
   return '';
 }
+// ⚠⚠ APPRAISAL MEANS AN APPRAISER'S FIGURE (P7, 2026-10-27; the desk audit's VAL-02: one select on the bulk bar made Agent Two's
+// $4,800 guess at a painting print "appraisal" on the Court Inventory, its range and basis gone, nobody named, no report in Drive,
+// and the Formal guardrail cleared). Appraisal as a source takes only the appraiser's own figure, typed after it is chosen. What
+// the record asks before the choice is written, where the line already carries somebody else's figure; '' where nothing is lost.
+// DOM-free; _avTakeValue takes the figure off whatever the caller asked (the writer's half).
+function invAppraisalSourceAsk(ref) {
+  if (!ref || ref.valSource === 'Appraisal' || !_invHasValue(ref) || ref.valuedBy === 'appraiser') return '';
+  var v = _invMoney(ref.fmv);
+  var whose = ref.valuedBy === 'agent' ? 'Agent Two’s estimate of ' + v : 'a value of ' + v + ' recorded before Appraisal was chosen';
+  return _invNamed(ref) + ' carries ' + whose + ', not an appraisal. An appraisal is the appraiser’s own figure, typed from their report.\n\n'
+    + 'OK takes ' + v + ' off and records the source as Appraisal: then type the appraiser’s figure. Cancel leaves the line as it was.';
+}
+var INV_APPRAISAL_BULK_TXT = 'Appraisal is never set across a selection: an appraisal is one appraiser’s figure, typed on its own line '
+  + 'once Appraisal is chosen in that line’s record.';
 function invAwaitingAppraisal(ref, jobId) {
   if (!ref) return false;
   // ⚠ NO JOB MEANS NO ANSWER, AND SILENCE IS THE SAFE ONE — a false positive here cries
@@ -28896,16 +28929,49 @@ function invMAIVCategory(ref) {
 // unvalued MAIV article makes the total a FLOOR, not a total, so the app must never
 // print "under the aggregate" while any of them is still blank — that reads as a
 // clearance and it is not one.
-function maivAggregate(items) {
-  var total = 0, count = 0, unvalued = 0;
+// ⚠⚠ ARTICLES, NOT LINES, AND THE TOP OF AGENT TWO'S RANGE (P7, 2026-10-27; the desk audit's ACC-03 and GAP2-02). The class
+// table counted twelve Gorham goblets as one article; and three paintings Agent Two put at $900 to $950, each ranged $500 to $1,500,
+// added to $2,800, "under the $3,000 aggregate … does not require an expert appraisal", while its own ranges reached $4,500.
+// `count` and `unvalued` are articles (invLineQty), `lines` the lines; `total` the figures recorded; `top` the same figures with an
+// agent figure read at the top of its range, the rule invNeedsAppraisal reads one line by (so the two cannot disagree), and `over`
+// is read off `top`. `job`, where a caller has it, adds the stamp's words for figures standing as the agents left them (`stamp`,
+// _avStampText: the schedules' pills in text, read with the review rule's context, invAcceptCtx, over `items`; only where an agent
+// figure is among the articles, since nothing else can stand as the agents left it). `refs` are the MAIV lines, for maivOwedLines.
+function maivAggregate(items, job) {
+  var total = 0, top = 0, count = 0, unvalued = 0, lines = 0, refs = [];
   (items || []).forEach(function(r){
     if (!invIsMAIV(r)) return;
-    count++;
+    var q = invLineQty(r);
+    lines++; count += q; refs.push(r);
     var v = parseFloat(r.fmv);
-    if (isNaN(v)) unvalued++; else total += v;
+    if (isNaN(v)) { unvalued += q; return; }
+    total += v;
+    var hi = (r.valuedBy === 'agent') ? parseFloat(r.valHigh) : NaN;
+    top += (!isNaN(hi) && hi > v) ? hi : v;
   });
-  return { total: total, count: count, unvalued: unvalued,
-           settled: unvalued === 0, over: total > MAIV_AGGREGATE_THRESHOLD };
+  total = roundCents(total); top = roundCents(top);
+  var agents = refs.some(function(r){ return r.valuedBy === 'agent'; });
+  // `unread` (P7's review): some figure here nobody has looked at yet (_avStampUnread, the stamp's own rule). Once the list is read
+  // the stamp still names the reader, and the worklist no longer says the figures are not all a person's.
+  var fc = (job && agents) ? invAcceptCtx(job, items) : null;
+  return { total: total, top: top, count: count, lines: lines, unvalued: unvalued, refs: refs,
+           settled: unvalued === 0, over: top > MAIV_AGGREGATE_THRESHOLD,
+           stamp: fc ? _avStampText(refs, fc) : '', unread: fc ? _avStampUnread(refs, fc) : false };
+}
+// ⚠⚠ PAST THE AGGREGATE, EVERY ARTICLE IS OWED THE SWORN APPRAISAL (P7, 2026-10-27; RT-05, counsel to confirm the reading, bundle
+// D22): §20.2031-6(b) asks for the expert's appraisal of the articles of marked artistic or intrinsic value once they pass $3,000
+// together, whatever each one's own figure, and the per-item $3,000 test routed none of eight such articles to it. On an estate
+// filing a 706 whose aggregate is over (read at the top of the ranges, unvalued articles aside), each MAIV line not yet appraised
+// (invAppraised) or waived. A flag: it joins the worklist's packets (_apprGroups) and is named on the worklist and the desk's
+// notice; it holds no schedule.
+function maivOwedLines(job, a) {
+  if (!a || !a.over || !maivFilingApplies(job)) return [];
+  return (a.refs || []).filter(function(r){ return !r.deletedAt && !invAppraised(r) && !r.apprWaived; });
+}
+function maivOwedText(owed) {
+  return owed.length + ' item' + (owed.length === 1 ? ' is' : 's are') + ' owed the sworn appraisal with the return: '
+    + owed.slice(0, 8).map(function(r){ return '#' + (_invItemNo(r) || '?') + ' ' + (r.objectName || 'unnamed'); }).join(', ')
+    + (owed.length > 8 ? ' and ' + (owed.length - 8) + ' more' : '') + '.';
 }
 
 // §20.2031-6 governs what is filed WITH A 706. A dispute forces Strict Mode without
@@ -28919,16 +28985,27 @@ function maivFilingApplies(job) {
 // One sentence describing the aggregate, used by both surfaces so the summary panel and
 // the printed worklist cannot state it differently.
 function maivStatement(items) { return maivStatement_(maivAggregate(items)); }
+// ⚠⚠ OVER IS SAID AS SOON AS IT IS TRUE (P7, 2026-10-27; GAP2-02): eight articles valued at $8,480 with one bronze unvalued read
+// "cannot be tested yet", so the sentence that matters waited on the last $40 print. Past $3,000 the test is answered whatever the
+// rest are worth; "cannot be tested" stays only while the floor is at or under it. The top of Agent Two's ranges is named where it
+// is what passes the aggregate (ACC-03), and the stamp's words follow where figures stand as the agents left them.
 function maivStatement_(a) {
   if (!a.count) return '';
   var arts = a.count + ' article' + (a.count > 1 ? 's' : '') + ' of marked artistic or intrinsic value';
   var cap  = fmt(MAIV_AGGREGATE_THRESHOLD) + ' aggregate';
-  if (!a.settled) {
-    return arts + ' total at least ' + _invMoney(a.total) + ', but ' + a.unvalued
+  var tops = (a.top > a.total) ? ', and the top of Agent Two\u2019s ranges for them reaches ' + (a.settled ? '' : 'at least ') + _invMoney(a.top) : '';
+  var said;
+  if (a.over && !a.settled) {
+    said = arts + ' total at least ' + _invMoney(a.total) + tops + ': already over the ' + cap + ' whatever the remaining '
+      + a.unvalued + ' ' + (a.unvalued > 1 ? 'are' : 'is') + ' worth, so an expert appraisal must be filed with the return.';
+  } else if (!a.settled) {
+    said = arts + ' total at least ' + _invMoney(a.total) + tops + ', but ' + a.unvalued
       + ' of them still ' + (a.unvalued > 1 ? 'have' : 'has') + ' no value recorded, so the '
       + cap + ' cannot be tested yet.';
+  } else {
+    said = arts + ' total ' + _invMoney(a.total) + tops + ', ' + (a.over ? 'over' : 'under') + ' the ' + cap + '.';
   }
-  return arts + ' total ' + _invMoney(a.total) + ', ' + (a.over ? 'over' : 'under') + ' the ' + cap + '.';
+  return said + (a.stamp ? ' Of these figures: ' + a.stamp + '.' : '');
 }
 
 // ── §20.2031-6(a) — THE ITEMISATION CAP, TESTED WHERE THE DATA STILL EXISTS ───
@@ -30287,7 +30364,7 @@ function _renderInventorySummary(job, items) {
     + hdrRow('Prepared By', 'Havellin Palm Beach, LLC')
     + hdrRow('Last Updated', _invDateTime(Date.now()))
     + '</div>';
-  var maiv = maivAggregate(items);
+  var maiv = maivAggregate(items, _fid ? job : null);
   var totals = '<div>'
     + hdrRow('Total Items', String(items.length))
     // ⚠ "Items Awaiting Valuation" reads every row on a living job forever, because nobody is
@@ -30348,14 +30425,20 @@ function _renderInventorySummary(job, items) {
 // there would be wrong.
 function _maivSummaryNotice(job, maiv) {
   if (!maiv.count || !maivFilingApplies(job)) return '';
+  // Over first (P7, GAP2-02): past the aggregate the requirement stands whatever the unvalued articles are worth, and every
+  // article still owed the appraisal is named (maivOwedLines, the 706's readiness list on the desk).
+  if (maiv.over) {
+    var owed = maivOwedLines(job, maiv);
+    return '<div class="alert a-info" style="font-size:11px;line-height:1.5;">&#9878; <strong>Expert appraisal required with the return.</strong> '
+      + esc(maivStatement_(maiv))
+      + ' Treas. Reg. §20.2031-6(b) requires the appraisal of an expert, under oath, to be filed with the Form 706, with the executor&rsquo;s statement as to the completeness of the itemised list and the appraiser&rsquo;s qualifications.'
+      + (owed.length ? ' <span class="maiv-owed">' + esc(maivOwedText(owed)) + '</span>' : '') + '</div>';
+  }
   if (!maiv.settled) {
     return '<div class="alert a-warn" style="font-size:11px;line-height:1.5;">&#9878; ' + esc(maivStatement_(maiv))
       + ' Value them before the return is prepared &mdash; an untested aggregate is not the same as one under the cap.</div>';
   }
-  if (!maiv.over) return '';
-  return '<div class="alert a-info" style="font-size:11px;line-height:1.5;">&#9878; <strong>Expert appraisal required with the return.</strong> '
-    + esc(maivStatement_(maiv))
-    + ' Treas. Reg. §20.2031-6(b) requires the appraisal of an expert, under oath, to be filed with the Form 706, with the executor&rsquo;s statement as to the completeness of the itemised list and the appraiser&rsquo;s qualifications.</div>';
+  return '';
 }
 
 // ── Build 2: inline editing of app-manage columns + manual line items ─────────
@@ -30633,6 +30716,16 @@ function _invEdit(jobId, stableId, key, el) {
   var _prevDisp = ref.disposition;
   var _dealerWas = invIsFirearm(ref) ? invTransportDealer(ref) : null;   // a firearm's licensed dealer, before the write (P4)
   var _unitWas = invUnitValue(ref), _qWas = invLineQty(ref), _figMoved = false;   // Each × Qty = Total (2026-10-25b)
+  // ⚠⚠ APPRAISAL MEANS AN APPRAISER'S FIGURE (P7, 2026-10-27; VAL-02): a figure already on the line is not the appraisal's, so
+  // choosing Appraisal over one asks first (invAppraisalSourceAsk), and on OK the writer below takes it off (_avTakeValue's appraisal
+  // arm) for the appraiser's own figure to be typed after the choice. Cancel puts the select back and writes nothing. The figure's
+  // boxes and the summary follow (_figMoved, _apprCleared).
+  var _apprCleared = false;
+  if (key === 'valSource' && el.value === 'Appraisal' && ref.valSource !== 'Appraisal') {
+    var _apAsk = invAppraisalSourceAsk(ref);
+    if (_apAsk && !window.confirm(_apAsk)) { el.value = ref.valSource || ''; return; }
+    if (_apAsk) _apprCleared = _figMoved = true;
+  }
   // The line as it stood, where the edit can move what a recorded approval covers (P5: where it goes, who takes it, its value as
   // Total, Each or the count that carries Each across): put back whole if the person cancels. And whether it waits on written
   // approval, for those and for a category (a firearm on a client's own home), so the bars follow the answer.
@@ -30770,7 +30863,7 @@ function _invEdit(jobId, stableId, key, el) {
   // And Agent One's (Q90): a name or a category typed on a decided line reviews it, and its Look at this goes quiet.
   if ((key === 'objectName' || key === 'category') && typeof _invRefreshAgentNotices === 'function') _invRefreshAgentNotices(jobId);
   // These feed the Summary rollups; refresh only the summary (table inputs keep focus).
-  if (['fmv','unitVal','gross','fees','flagExempt','flagBequest','flagDisputed','flagMAIV','maivCat','disposition','category','qty'].indexOf(key) >= 0) {
+  if (['fmv','unitVal','gross','fees','flagExempt','flagBequest','flagDisputed','flagMAIV','maivCat','disposition','category','qty'].indexOf(key) >= 0 || _apprCleared) {
     _invRefreshSummary(jobId);
   }
   // FMV / category / the flag itself can move an item in or out of the appraisal guardrail, and so can a source set to Appraisal
@@ -31347,8 +31440,12 @@ function invDealerRouteText(ref) {
 function _apprGroups(jobId) {
   var groups = {};
   var _j = _invJob(jobId);
-  _jobInvRefs(jobId).forEach(function(r) {
-    if (!invNeedsAppraisal(r, _j)) return;
+  var _all = _jobInvRefs(jobId);
+  // Past the §20.2031-6(b) aggregate on a 706 estate every such article joins its appraiser's packet, as a flag (P7, RT-05).
+  var _owed = {};
+  maivOwedLines(_j, maivAggregate(_all)).forEach(function(r) { _owed[r.stableId] = 1; });
+  _all.forEach(function(r) {
+    if (!invNeedsAppraisal(r, _j) && !_owed[r.stableId]) return;
     if (invReleaseBlocked(r, _j)) return;   // firearm with no complete written authority — see above
     // ⚠ A LINE APPRAISED, OR WAIVED, IS OFF THE WORKLIST (2026-10-10, the core-jobs run): the packet the package sends to
     // counsel listed the painting with its appraisal recorded and the pearls the representative waived, with no mark.
@@ -32472,8 +32569,9 @@ function printEstateInventoryReport(jobId, opt) {
 
   function itemRow(r) {
     var q = parseInt(r.qty, 10);
-    // An appraisal names its appraiser beside the word (Q93): "Appraisal · <appraiser>", through the line's one namer.
-    var src = invAppraised(r) ? invAppraisalSourceText(r, jobId) : (r.valSource || '');
+    // An appraisal names its appraiser beside the word (Q93): "Appraisal · <appraiser>", through the line's one namer; a source of
+    // Appraisal with no figure yet reads "· pending", and "(appraiser not named)" where nobody is (P7's review), never a bare word.
+    var src = (invAppraised(r) || invAppraisalChosen(r)) ? invAppraisalSourceText(r, jobId) : (r.valSource || '');
     var note = r.valNote || '';
     return '<tr>'
       + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;width:52px;">' + _invPrintThumb(jobId, r, 44) + '</td>'
@@ -32553,8 +32651,31 @@ function printEstateInventoryReport(jobId, opt) {
   // is scoped to the rows it can actually fix, and the lost ones are named as what they are.
   var noPhoto = all.filter(function(r){ return !r.manual && _invFileId(r) && !_invThumbFor(jobId, r); }).length;
   var noFile  = all.filter(function(r){ return !r.manual && !_invFileId(r); }).length;
-  var totalFMV = all.reduce(function(t, r){ var n = parseFloat(r.fmv); return t + (isNaN(n) ? 0 : n); }, 0);
+  // ⚠⚠ A FLOOR IS A FLOOR, AND ON A PROBATE MATTER THE ESTATE IS ADDED UP APART (P7, 2026-10-27; DOC-01, VAL-27): the total read
+  // "Total estimated fair market value: $28,475" with three lines unvalued, the $14,000 car outside probate added in, beside the
+  // Court Inventory's floor of $14,475 in the same package. By the Court Inventory's own rule (invTotalFloor, _invFloorTotalHtml):
+  // where the matter has a probate estate and property outside it, a subtotal of each (the probate estate, exempt property
+  // included, as the Court Inventory lists it), then the whole; each one a floor while a line in it has no value, the lines named
+  // under the whole.
   var _ac = invAcceptCtx(job);   // the review rule's facts, read by both stamps (invLineAccepted)
+  var _basisW = resolveValBasis(job);
+  var _inProbate = _probateMatter ? all.filter(function(r){ return _invOnProbateSchedule(r, job); }) : all;
+  var _outside = _probateMatter ? all.filter(function(r){ return !_invOnProbateSchedule(r, job); }) : [];
+  // ⚠ THE SUBTOTALS AGREE WITH THE BLOCKS ABOVE THEM (P7's review): the carved-out block lists exempt property beside the property
+  // outside the estate (its heading is DOC-02's, P14's), so the outside subtotal names the tracks it adds (never "exempt"), and
+  // where an exempt line is listed there a sentence says it is counted in the probate estate, as the Court Inventory claims it.
+  // Under the totals, whether or not the subtotals print (a probate matter whose only carved-out lines are exempt has none).
+  var _exListed = carved.filter(function(r){ return _invOnProbateSchedule(r, job); });
+  var totalsHtml = (_outside.length
+      ? _invFloorTotalHtml(invTotalFloor(_inProbate), _basisW, { what: 'Probate estate, exempt property included', note: false, size: 12, top: 12 })
+        + _invFloorTotalHtml(invTotalFloor(_outside), _basisW, { what: esc(_invExcludedTracks(_outside, job).replace(/ \/ /g, ', ')) + ' property, outside the probate estate',
+            note: false, size: 12, top: 2, rule: false })
+      : '')
+    + _invFloorTotalHtml(invTotalFloor(all), _basisW, { label: 'Total estimated ' + esc(_basisW.toLowerCase()), top: _outside.length ? 6 : 12 })
+    + (_exListed.length ? '<div class="inv-exempt-note" style="font-size:10.5px;color:#666;font-style:italic;margin-top:4px;text-align:right;">'
+        + 'Exempt property is counted in the probate estate: it is listed above with the carved-out property and claimed under '
+        + '§732.402, not excluded from the estate (' + esc(_exListed.slice(0, 6).map(function(r){ return '#' + (r.itemNo || '?') + ' ' + (r.objectName || 'unnamed'); }).join(', '))
+        + (_exListed.length > 6 ? ' and ' + (_exListed.length - 6) + ' more' : '') + ').</div>' : '');
 
   var html = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
     + _invDocHead(job, 'Estate Inventory &mdash; Asset Schedule')
@@ -32564,8 +32685,7 @@ function printEstateInventoryReport(jobId, opt) {
     + _avUnreviewedStamp(all, { noAccepted: true, fc: _ac })
     + block(main, 'Asset Schedule')
     + block(carved, esc(_carvePots(carved)) + ' Property &mdash; carved out of the probate estate')
-    + '<div style="display:flex;justify-content:flex-end;font-size:13px;font-weight:700;margin-top:12px;border-top:2px solid #333;padding-top:6px;">'
-      + 'Total estimated ' + esc(resolveValBasis(job).toLowerCase()) + ': &nbsp;' + _invMoney(totalFMV) + '</div>'
+    + totalsHtml
     + apprBlock
     + (noFile ? '<div style="font-size:10px;color:#8a6d3b;font-style:italic;margin-top:10px;">'
         + noFile + ' item' + (noFile > 1 ? 's were' : ' was') + ' photographed and the image did not reach the '
@@ -36432,6 +36552,37 @@ function invRemoveBequest(jobId, id) {
   return true;
 }
 
+// ⚠⚠ A FLOOR IS A FLOOR, ON EVERY VALUED PAPER, BY ONE RULE (P7, 2026-10-27; the desk audit's DOC-01 and VAL-27). The Court
+// Inventory and the Trust Schedule called a total with an unvalued line "a floor rather than a total" and named the lines; the
+// Estate Inventory Report in the same package printed "Total estimated fair market value" over the same lines with no word, and on a
+// probate matter added the property outside the estate into it ($28,475 beside the Court Inventory's $14,475). One answer for a
+// list (its figures added to the cent, and the lines with no figure, read as _invHasValue reads them) and one way to print it, read
+// by all three papers. A recorded $0 is a figure; a blank is not.
+function invTotalFloor(list) {
+  var total = 0, unvalued = [];
+  (list || []).forEach(function(r){ var n = parseFloat(r && r.fmv); if (isNaN(n)) unvalued.push(r); else total += n; });
+  return { total: roundCents(total), unvalued: unvalued };
+}
+// The total's line, and under it the floor's sentence naming the first six lines with no value. `o.label` is the complete total's
+// words (the basis in them), `o.what` a subtotal's name (its floor reads "<what>, recorded so far"); `o.note === false` leaves the
+// sentence to the grand total below a subtotal; `o.size`, `o.top` and `o.rule` its type size, its margin and its rule above.
+function _invFloorTotalHtml(fl, basis, o) {
+  o = o || {};
+  var n = fl.unvalued.length;
+  var label = o.label || (o.what + ' (' + esc(basis) + ')');
+  var floorLabel = (o.what ? o.what + ', recorded so far' : 'Total recorded so far') + ' (' + esc(basis) + ') &mdash; not a complete total';
+  return '<div class="inv-total-line" style="display:flex;justify-content:flex-end;font-size:' + (o.size || 13) + 'px;font-weight:700;margin-top:'
+      + (o.top != null ? o.top : 10) + 'px;' + (o.rule === false ? '' : 'border-top:2px solid #333;') + 'padding-top:' + (o.rule === false ? 2 : 6) + 'px;">'
+      + (n ? floorLabel : label) + ': &nbsp;' + _invMoney(fl.total) + '</div>'
+    + ((n && o.note !== false)
+        ? '<div class="inv-floor-note" style="font-size:10.5px;color:#8a6d3b;font-style:italic;margin-top:4px;text-align:right;">'
+          + n + ' item' + (n > 1 ? 's are' : ' is') + ' recorded without a value and '
+          + (n > 1 ? 'are' : 'is') + ' NOT included above, so this figure is a floor rather than a total: '
+          + esc(fl.unvalued.slice(0, 6).map(function(r){ return '#' + (r.itemNo || '?') + ' ' + (r.objectName || 'unnamed'); }).join(', '))
+          + (n > 6 ? ' and ' + (n - 6) + ' more' : '') + '.</div>'
+        : '');
+}
+
 // ⚠⚠ ONE TABLE, TWO SCHEDULES — extracted when the trustee's schedule was built (2026-09-21)
 // rather than copied, because a second renderer beside this one is the drift this file records
 // more often than anything else. The probate schedule and the trust schedule state the same
@@ -36602,7 +36753,6 @@ function printCourtInventory(jobId, opt) {
                      ? '<div style="font-size:10px;color:#8a6d3b;font-style:italic;margin-top:4px;text-align:right;">Exceeds the ' + fmt(EXEMPT_CAP_732_402) + ' §732.402 allowance for household furniture, furnishings and appliances &mdash; confirm the composition of this claim with counsel. Motor vehicles are a separate allowance and are not counted here.</div>'
                      : '')
                : '');
-  var total = estateSec.total + exemptTotal;
   var html = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
     + '<h2 style="font-family:\'Cormorant Garamond\',serif;margin-bottom:2px;">Estate Inventory — Tangible Personal Property</h2>'
     + '<div style="font-size:12px;margin-bottom:2px;"><strong>' + _invDocPartyHead(job) + '</strong>' + (job.hvlId ? ' &middot; ' + esc(job.hvlId) : '')
@@ -36629,16 +36779,8 @@ function printCourtInventory(jobId, opt) {
         ? '<div style="margin-bottom:12px;font-size:10.5px;color:#8a6d3b;font-style:italic;line-height:1.5;">Recorded as <em>' + esc(_mt.label) + '</em>, so some property passes under the trust rather than through the estate. Anything tracked Trust is excluded from this schedule and belongs on the trustee\'s.</div>'
         : '')
     + body
-    + '<div style="display:flex;justify-content:flex-end;font-size:13px;font-weight:700;margin-top:10px;border-top:2px solid #333;padding-top:6px;">'
-      + (unvalued.length ? 'Total recorded so far (' + esc(basis) + ') &mdash; not a complete total: &nbsp;' : 'Total tangible personal property (' + esc(basis) + '): &nbsp;')
-      + _invMoney(total) + '</div>'
-    + (unvalued.length
-        ? '<div style="font-size:10.5px;color:#8a6d3b;font-style:italic;margin-top:4px;text-align:right;">'
-          + unvalued.length + ' item' + (unvalued.length > 1 ? 's are' : ' is') + ' recorded without a value and '
-          + (unvalued.length > 1 ? 'are' : 'is') + ' NOT included above, so this figure is a floor rather than a total: '
-          + esc(unvalued.slice(0, 6).map(function(r){ return '#' + (r.itemNo || '?') + ' ' + (r.objectName || 'unnamed'); }).join(', '))
-          + (unvalued.length > 6 ? ' and ' + (unvalued.length - 6) + ' more' : '') + '.</div>'
-        : '')
+    // The one floor rule (P7, invTotalFloor): the Estate Inventory Report prints its probate subtotal by it too.
+    + _invFloorTotalHtml(invTotalFloor(onSched), basis, { label: 'Total tangible personal property (' + esc(basis) + ')' })
     + (excluded.length ? '<div style="font-size:10px;color:#8a6d3b;font-style:italic;margin-top:8px;">' + excluded.length + ' item' + (excluded.length > 1 ? 's' : '') + ' tagged ' + _invExcludedTracks(excluded, job) + ' ' + (excluded.length > 1 ? 'are' : 'is') + ' excluded from this probate schedule. Exempt property is not excluded &mdash; it is listed above and claimed under &sect;732.402.</div>' : '')
     + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">This schedule covers tangible personal property only. Real property, financial accounts, securities, and business interests are reported separately in the personal representative&rsquo;s §733.604 filing, prepared with counsel. Values are estimated ' + esc(basis.toLowerCase()) + ' as of ' + esc(vlabel) + '.</div>'
     + (draft
@@ -36767,16 +36909,7 @@ function printTrustSchedule(jobId, opt) {
         ? '<div style="margin-bottom:12px;font-size:10.5px;color:#8a6d3b;font-style:italic;line-height:1.5;">No matter type is recorded on this job, so Havellin cannot confirm from the record that a trust administers this estate &mdash; the property below is listed because it is tracked as the trust&rsquo;s. Answer it on Edit Client.</div>'
         : '')
     + sec.html
-    + '<div style="display:flex;justify-content:flex-end;font-size:13px;font-weight:700;margin-top:10px;border-top:2px solid #333;padding-top:6px;">'
-      + (unvalued.length ? 'Total recorded so far (' + esc(basis) + ') &mdash; not a complete total: &nbsp;' : 'Total tangible personal property held in trust (' + esc(basis) + '): &nbsp;')
-      + _invMoney(sec.total) + '</div>'
-    + (unvalued.length
-        ? '<div style="font-size:10.5px;color:#8a6d3b;font-style:italic;margin-top:4px;text-align:right;">'
-          + unvalued.length + ' item' + (unvalued.length > 1 ? 's are' : ' is') + ' recorded without a value and '
-          + (unvalued.length > 1 ? 'are' : 'is') + ' NOT included above, so this figure is a floor rather than a total: '
-          + esc(unvalued.slice(0, 6).map(function(r){ return '#' + (r.itemNo || '?') + ' ' + (r.objectName || 'unnamed'); }).join(', '))
-          + (unvalued.length > 6 ? ' and ' + (unvalued.length - 6) + ' more' : '') + '.</div>'
-        : '')
+    + _invFloorTotalHtml(invTotalFloor(onSched), basis, { label: 'Total tangible personal property held in trust (' + esc(basis) + ')' })   // P7
     // ⚠ THE TWO SCHEDULES ARE NOT COMPLEMENTARY AND THIS SAYS SO. Probate and exempt property is
     // the estate's; homestead and non-probate property passes to heirs and named beneficiaries
     // outside both. A reader holding one schedule must not read the other as covering the rest.
@@ -37773,13 +37906,15 @@ function _maivWorklistBlock(job, items, maiv) {
   // and "the §733.604 probate schedule" on the packet handed to a specialist.
   if (!maiv.count || !invFiduciaryMode(job)) return '';
   var byClass = {};
+  // Articles, not lines (P7, GAP2-02): twelve goblets on one line are twelve articles, as the aggregate counts them.
   items.forEach(function(r){
     if (!invIsMAIV(r)) return;
     var c = invMAIVCategory(r);
     var b = byClass[c] = byClass[c] || { n: 0, total: 0, unvalued: 0 };
-    b.n++;
+    var q = invLineQty(r);
+    b.n += q;
     var v = parseFloat(r.fmv);
-    if (isNaN(v)) b.unvalued++; else b.total += v;
+    if (isNaN(v)) b.unvalued += q; else b.total += v;
   });
   var rows = Object.keys(byClass).sort().map(function(c){
     var b = byClass[c];
@@ -37796,18 +37931,26 @@ function _maivWorklistBlock(job, items, maiv) {
     tail = 'Treas. Reg. §20.2031-6(b) governs what is filed with a federal estate tax return. '
       + 'This estate is not recorded as filing one, so the aggregate is reported here as a guide '
       + 'to where the value sits rather than as a filing requirement.';
-  } else if (!maiv.settled) {
-    tail = 'The aggregate cannot be tested until every article above carries a value. '
-      + 'An untested total is not a total under the cap — value them before the return is prepared.';
   } else if (maiv.over) {
+    // ⚠ OVER BEFORE UNSETTLED (P7, GAP2-02): past the aggregate the requirement stands whatever the unvalued articles are worth.
+    var _owed = maivOwedLines(job, maiv);
     tail = '<strong>An expert appraisal must be filed with the return.</strong> Where these articles exceed '
       + fmt(MAIV_AGGREGATE_THRESHOLD) + ' in aggregate, Treas. Reg. §20.2031-6(b) requires the appraisal of an expert, '
       + 'under oath, to be filed with the Form 706, together with the executor&rsquo;s statement as to the completeness '
       + 'of the itemised list and the qualifications of the appraiser. This is separate from the per-item flags above '
-      + 'and is not satisfied by them.';
+      + 'and is not satisfied by them.'
+      + (maiv.settled ? '' : ' The ' + maiv.unvalued + ' article' + (maiv.unvalued > 1 ? 's' : '') + ' with no value yet '
+        + (maiv.unvalued > 1 ? 'are' : 'is') + ' part of it too.')
+      + (_owed.length ? ' <span class="maiv-owed">' + esc(maivOwedText(_owed)) + '</span>' : '');
+  } else if (!maiv.settled) {
+    tail = 'The aggregate cannot be tested until every article above carries a value. '
+      + 'An untested total is not a total under the cap — value them before the return is prepared.';
   } else {
-    tail = 'Below the ' + fmt(MAIV_AGGREGATE_THRESHOLD) + ' aggregate, so §20.2031-6(b) does not require an '
-      + 'expert appraisal to be filed with the return. Re-check this as values are recorded.';
+    // Read at the top of each Agent Two range (P7, ACC-03), and said so where the figures are not all a person's (the statement
+    // above carries the stamp's words).
+    tail = 'Below the ' + fmt(MAIV_AGGREGATE_THRESHOLD) + ' aggregate' + (maiv.top > maiv.total ? ', the top of each Agent Two range included' : '')
+      + ', so §20.2031-6(b) does not require an expert appraisal to be filed with the return'
+      + (maiv.unread ? ', on figures not all yet looked at by a person (above)' : '') + '. Re-check this as values are recorded.';
   }
 
   return '<div style="margin-top:14px;border:1px solid ' + tone + ';border-radius:3px;padding:10px 12px;">'
@@ -37857,7 +38000,9 @@ function printAppraisalWorklist(jobId, opt) {
     + '<div style="font-size:12px;margin-bottom:2px;"><strong>' + _invDocPartyHead(job) + '</strong>' + (job.hvlId ? ' &middot; ' + esc(job.hvlId) : '') + '</div>'
     + '<div style="font-size:11px;color:#888;margin-bottom:16px;">Items flagged for specialist appraisal &middot; value as of date of death' + dod + ' &middot; ' + new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) + '</div>';
   var maivItems = _jobInvRefs(jobId);
-  var maiv = maivAggregate(maivItems);
+  var maiv = maivAggregate(maivItems, job);
+  var _owedIds = {};
+  maivOwedLines(job, maiv).forEach(function(r){ _owedIds[r.stableId] = 1; });   // P7, RT-05: marked on its row
   if (!names.length) {
     // This message used to end the document. It cannot: the per-item test and the
     // §20.2031-6(b) aggregate are different questions, so an estate whose every article
@@ -37878,7 +38023,8 @@ function printAppraisalWorklist(jobId, opt) {
           + '<td style="padding:3px 6px;border-bottom:1px solid #eee;">' + esc(r.objectName || '(unnamed)')
             // The appraiser engaged, named (Q93): the item's source from the link until the report's figure is on it.
             + (invAppraisalInProgress(r, jobId) ? ' <span style="color:#8a6d3b;">&middot; Appraisal in progress &middot; ' + esc(invLineAppraiser(r, jobId)) + '</span>' : '')
-            + (function(){ var o = invOutForAppraisal(r, job); return o ? ' <span style="color:#8a6d3b;">&middot; with ' + esc(o.ref || 'the appraiser') + (o.signedOn ? ' since ' + esc(fmtDate2(o.signedOn)) : '') + '</span>' : ''; })() + '</td>'
+            + (function(){ var o = invOutForAppraisal(r, job); return o ? ' <span style="color:#8a6d3b;">&middot; with ' + esc(o.ref || 'the appraiser') + (o.signedOn ? ' since ' + esc(fmtDate2(o.signedOn)) : '') + '</span>' : ''; })()
+            + (_owedIds[r.stableId] ? ' <span class="maiv-owed" style="color:#8a6d3b;">&middot; owed the sworn appraisal (§20.2031-6(b) aggregate)</span>' : '') + '</td>'
           + '<td style="padding:3px 6px;border-bottom:1px solid #eee;">' + esc(r.category || '') + '</td>'
           + '<td style="padding:3px 6px;border-bottom:1px solid #eee;">' + esc(_invRoomName(jobId, r.roomIdx)) + '</td>'
           // ⚠ WHAT THE ESTATE INTENDS TO DO WITH THE OBJECT CHANGES WHAT THE APPRAISER IS
@@ -40137,6 +40283,13 @@ function _invBulkApply(jobId, key, value, read) {
   if (!picked.length) return;
   // The placeholder is not a value. Selecting it must not blank the field on forty items.
   if (key !== 'reviewed' && (value === '' || value == null)) return;
+  // ⚠⚠ APPRAISAL IS NEVER SET ACROSS A SELECTION (P7, 2026-10-27; VAL-02): one select made forty of Agent Two's estimates read as
+  // appraisals on the Court Inventory, with nobody named and no report. The bar no longer offers it, and the handler refuses it,
+  // before the sheet is read (the merge of P6 and P7: a refusal that needs no read waits on none).
+  if (key === 'valSource' && value === 'Appraisal') {
+    alert(INV_APPRAISAL_BULK_TXT + ' Nothing was changed.');
+    return;
+  }
   // ⚠ THE SHEET FIRST (P6, SYN-01): a sweep across a selection writes every picked line whole, so off an old copy it put back
   // what another device had changed on each of them. It reads the sheet, then sweeps the lines as the sheet holds them; a line
   // removed on another device meanwhile is left alone and said.
@@ -40255,8 +40408,7 @@ function _invBulkApply(jobId, key, value, read) {
       // Filed as a firearm across a selection (P4): what a firearm may not have comes off, as on the row (invFirearmSettle).
       if (key === 'category') { var _ft = invFirearmSettle(ref, job); if (_ft) _faSettled.push({ ref: ref, took: _ft }); }
       if (key === 'condition') ref.condBy = 'desk';   // a grade set across a selection is the person's (2026-10-26b)
-      // The one ownership rule (P23): Appraisal set across a selection takes each line from the agent, as in the row.
-      if (key === 'valSource' && value === 'Appraisal') _avTakeValue(ref, 'appraisal', job);
+      // (Appraisal is refused above, P7: a selection never takes a line from the agent as an appraisal.)
     }
     if (key === 'disposition' && invNoteDispositionMove(ref, _prev)) _leftover.push(ref);
     if (_apPins[ref.stableId] && !ref.authFor) ref.authFor = _apPins[ref.stableId];   // the pin the ask read (P5)
@@ -41435,8 +41587,11 @@ function _avHasFigure(ref) {
 
 // The lines *Value the unvalued lines* sends: named, and with no figure from anybody. An unnamed line is
 // left for Agent One first, because the agent values the line as named (spec §5a).
+// ⚠ NOR A LINE WAITING ON ITS APPRAISER'S FIGURE (P7, 2026-10-27): a source a person set to Appraisal, with the figure to be typed
+// from the report (invAppraisalSourceAsk takes the earlier figure off), is the appraiser's to fill; Agent Two's figure there would
+// write its own source over the person's choice. _avWrite refuses it too.
 function agentValueableRefs(jobId) {
-  return _jobInvRefs(jobId).filter(function(r) { return !!String(r.objectName || '').trim() && !_avHasFigure(r); });
+  return _jobInvRefs(jobId).filter(function(r) { return !!String(r.objectName || '').trim() && !_avHasFigure(r) && r.valSource !== 'Appraisal'; });
 }
 
 // An agent's figure nobody has accepted. The desk's *Unreviewed values* chip, the row's badge, Accept and
@@ -41585,6 +41740,7 @@ function _avWrite(jobId, stableId, res, job, opts) {
   if (!ref || ref.deletedAt || !res) return false;
   var wasAgent = ref.valuedBy === 'agent';
   if (_avHasFigure(ref) && !(opts && opts.revalue && wasAgent)) return false;
+  if (ref.valSource === 'Appraisal') return false;   // the appraiser's to fill (P7, agentValueableRefs)
   // ⚠ READ RAW BEFORE ROUNDING: `roundCents` answers 0 for a missing number, and an answer with no figure
   // must write nothing, never a value of $0 (blank is "not valued", zero is "worthless").
   var _n = function(x) { var v = Number(x); return (x === '' || x == null || !isFinite(v) || v < 0) ? NaN : roundCents(v); };
@@ -41710,6 +41866,10 @@ function agentValueApply(jobId, stableId, res, job, opts) {
 // before Q93. The date an appraisal carries is _invAppraisalDate's, written only with a figure.
 function _avTakeValue(ref, how, job) {
   if (!ref) return;
+  // ⚠⚠ APPRAISAL TAKES ONLY THE APPRAISER'S OWN FIGURE (P7, 2026-10-27; VAL-02): a source set to Appraisal over a figure somebody
+  // else made (Agent Two's, the desk's, a WorthPoint sale, a walkthrough's) takes that figure off, never makes it the appraisal's;
+  // the appraiser's is typed after the choice (`typed` below, through `wasAppraisal`). _invEdit asks first (invAppraisalSourceAsk).
+  if (how === 'appraisal' && _invHasValue(ref) && ref.valuedBy !== 'appraiser') { ref.fmv = ''; delete ref.unitVal; }
   var wasAgent = ref.valuedBy === 'agent';
   var wasAppraisal = ref.valSource === 'Appraisal';
   var figure = how === 'typed' && _invHasValue(ref);
@@ -42307,7 +42467,8 @@ function _avPanelHtml(job, ref) {
 // schedule says whose figure it is. `jobId`, where the caller has one, reads the roster; without it, the label the line keeps.
 function invValBasisWord(ref, jobId) {
   if (!_invHasValue(ref)) return '';
-  if (invAppraised(ref)) { var _who = invLineAppraiser(ref, jobId); return 'appraisal' + (_who ? ' \u00b7 ' + _who : ''); }
+  // Nobody recorded as the appraiser is said so (P7, VAL-02): a schedule never prints a bare "appraisal" nobody can be asked about.
+  if (invAppraised(ref)) { var _who = invLineAppraiser(ref, jobId); return 'appraisal' + (_who ? ' \u00b7 ' + _who : ' (appraiser not named)'); }
   var s = String((ref && ref.valSource) || '').trim();
   var words = { 'Appraisal': 'appraisal', 'Auction comps': 'auction comps', 'Dealer quote': 'dealer quote',
     'General estimate': 'general estimate', 'Listing survey': 'listing survey', 'Online comps': 'online comps', 'PR estimate': 'PR estimate', 'WorthPoint comps': 'WorthPoint comps' };
@@ -42316,12 +42477,41 @@ function invValBasisWord(ref, jobId) {
 
 // ⚠ AN UNREVIEWED AGENT VALUE COUNTS AS VALUED, AND THE PAGE SAYS HOW MANY (Anthony, 2026-10-06, spec
 // §12.2), the way the IN PROGRESS stamp says how many lines are unreviewed. Nothing is withheld for it.
+// The stamp's two counts, one rule (P7, 2026-10-27): the pills below and the §20.2031-6(b) sentence (_avStampText) read the same.
+function _avStampCounts(items, fc) {
+  return {
+    n: (items || []).filter(function(r) { return agentValueUnreviewed(r) && _invHasValue(r) && !invLineAccepted(r, fc); }).length,
+    // The values standing with nothing flagged are not "not yet reviewed", and the page says how many there are (Q100; the
+    // court and trust schedules in the stamp's own words, Q104).
+    f: (items || []).filter(function(r) { return _invHasValue(r) && invLineAcceptedOnly(r, fc); }).length
+  };
+}
+// ⚠ THE STAMP'S WORDS AS TEXT (P7, ACC-03): the §20.2031-6(b) sentence concluded "does not require an expert appraisal" from three
+// figures nobody had looked at, with no word that they were the agent's. The pills' words, plain, joined; '' where none applies.
+function _avStampText(items, fc) {
+  var c = _avStampCounts(items, fc), out = [];
+  if (c.n) out.push(c.n + ' value' + (c.n === 1 ? '' : 's') + ' not yet reviewed');
+  if (c.f) {
+    var rd = fc && fc.job ? invListRead(fc.job) : null;
+    out.push(rd && rd.current ? c.f + ' accepted as valued \u00b7 list ' + invListReadWords(rd)
+      : c.f + ' value' + (c.f === 1 ? '' : 's') + ' as Agent Two left ' + (c.f === 1 ? 'it' : 'them') + '; list not yet read by Havellin'
+        + (rd ? ' since it last changed' : ''));
+  }
+  return out.join('; ');
+}
+// Whether any figure the stamp counts is still nobody's look (P7's review): a value not yet reviewed, or values standing as Agent Two
+// left them with no current read of the list. The worklist's "on figures not all yet looked at by a person" asks it, so a list read
+// is never said to be unread.
+function _avStampUnread(items, fc) {
+  var c = _avStampCounts(items, fc);
+  if (c.n) return true;
+  if (!c.f) return false;
+  var rd = fc && fc.job ? invListRead(fc.job) : null;
+  return !(rd && rd.current);
+}
 function _avUnreviewedStamp(items, opts) {
   var fc = opts && opts.fc;
-  var n = (items || []).filter(function(r) { return agentValueUnreviewed(r) && _invHasValue(r) && !invLineAccepted(r, fc); }).length;
-  // The values standing with nothing flagged are not "not yet reviewed", and the page says how many there are (Q100; the
-  // court and trust schedules in the stamp's own words, Q104).
-  var f = (items || []).filter(function(r) { return _invHasValue(r) && invLineAcceptedOnly(r, fc); }).length;
+  var _c = _avStampCounts(items, fc), n = _c.n, f = _c.f;
   var pill = function(text, bg) { return '<div style="display:inline-block;font-size:11px;font-weight:700;color:#fff;background:' + bg + ';border-radius:3px;padding:1px 8px;margin:0 0 12px 6px;">' + text + '</div>'; };
   return (n ? pill(n + ' value' + (n === 1 ? '' : 's') + ' not yet reviewed', '#8a6d3b') : '')
     + (f && !(opts && opts.noAccepted) ? _avAcceptedPill(f, fc, pill) : '');
@@ -42743,7 +42933,10 @@ function _renderInvRow(job, ref) {
   var _apSrc = invAppraisalSourceText(ref, jid);
   if (invAppraisalInProgress(ref, jid)) warn.push('<span class="inv-appr-src" title="An appraiser is linked: the appraisal in progress. When the report comes back, type its figure on the line; it is recorded as the appraisal\u2019s." style="color:var(--bronze);font-weight:700;">&#9873; ' + esc(_apSrc) + '</span>');
   else if (invAwaitingAppraisal(ref, jid)) warn.push('<span title="Flagged for a specialist appraisal \u2014 no appraisal figure on the line yet" style="color:var(--bronze);font-weight:700;">&#9873; appraise</span>');
-  else if (_apSrc) warn.push('<span class="inv-appr-src" title="The appraisal\u2019s figure is on the line" style="color:var(--gray-dk);">' + esc(_apSrc) + '</span>'
+  // A source of Appraisal with no figure (P7's review) is not the appraisal's figure on the line, and its title says what it is.
+  else if (_apSrc) warn.push('<span class="inv-appr-src" title="' + (invAppraised(ref) ? 'The appraisal\u2019s figure is on the line'
+      : ref.apprWaived ? 'Appraisal chosen as the source, and the appraisal waived: no figure is coming from an appraiser'
+      : 'Appraisal chosen as the source: type the appraiser\u2019s figure when the report comes back') + '" style="color:var(--gray-dk);">' + esc(_apSrc) + '</span>'
     + (invAppraisalReportOwed(ref, job) ? ' <span class="inv-appr-rpt" title="No report filed for this appraiser covers this item: File the report on the appraiser\u2019s row, under Values &amp; appraisals on Job Admin &amp; Inv" style="color:var(--bronze);font-weight:700;">report not filed</span>' : ''));
   // ⚠ A BEQUEST ON THE LIST NAMES ITS PERSON ON THE ROW (P19, call 7), and a matched line proposed to go elsewhere
   // carries the caution the release request prints, through invReleaseCautions (the one rule). A flag no bequest on
@@ -43064,7 +43257,8 @@ function _invPanelAppraisalHtml(job, ref) {
   return '<div class="inv-panel-appr" style="margin-bottom:10px;font-size:11px;line-height:1.5;">'
     + '<span style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;">Valuation source</span> '
     + '<strong>' + esc(t) + '</strong>'
-    + (invAppraisalInProgress(ref, job.id) ? ' <span style="color:var(--gray);">&mdash; when the report comes back, type its figure on the line.</span>' : '')
+    + ((invAppraisalInProgress(ref, job.id) || (invAppraisalChosen(ref) && !ref.apprWaived))
+        ? ' <span style="color:var(--gray);">&mdash; when the report comes back, type its figure on the line.</span>' : '')
     + (invAppraisalReportOwed(ref, job) ? ' <span style="color:var(--bronze);font-weight:700;">&middot; report not filed</span>' : '')
     + '</div>';
 }
@@ -43256,7 +43450,8 @@ function _renderInvBulk(job) {
     + menu('category',    'Set category…', INV_CATEGORIES, _invBulkCommon(picked, 'category'))
     + menu('disposition', 'Set disposition…', _invDispOptions(job, _invBulkCommon(picked, 'disposition')), _invBulkCommon(picked, 'disposition'))
     // Only where the field itself shows (an estate): `_invKeyOnJob` is the panel's own rule.
-    + (_invKeyOnJob(job, 'valSource') ? menu('valSource', 'Set valuation source…', INV_VAL_SOURCES, _invBulkCommon(picked, 'valSource')) : '')
+    // Never Appraisal (P7, VAL-02): an appraisal is one appraiser's figure, typed on its own line after the source is chosen.
+    + (_invKeyOnJob(job, 'valSource') ? menu('valSource', 'Set valuation source…', INV_VAL_SOURCES.filter(function(x){ return x !== 'Appraisal'; }), _invBulkCommon(picked, 'valSource')) : '')
     // Condition across a selection (P25, Q50): Good on forty lines, then the exceptions in their own rows.
     + (_invKeyOnJob(job, 'condition') ? menu('condition', 'Set condition…', INV_CONDITIONS, _invBulkCommon(picked, 'condition')) : '')
     + menu('roomIdx',     'Move to room…', roomVals, _invBulkRoomCommon(picked))

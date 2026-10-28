@@ -340,6 +340,7 @@
    },
    {
     "id": "RT-05",
+    "fixed": "2026-10-27 (P7, its critical part: CLAUDE.md, the §20.2031-6(b) aggregate tells the truth (every such article owed the sworn appraisal, as a flag); tests/p7-evidence.test.js, browser step 122)",
     "status": "STILL",
     "note": "invNeedsAppraisal, maivAggregate and _invGuardrailItems are identical. In rt05.js on app-copy-2 I took the Both/706 seed and typed $500 on the bronze through its own value box, so every article is valued. The aggregate reads {total:8980, settled:true, over:true}, and the worklist now prints 'An expert appraisal must be filed with the return … not satisfied by [the per-item flags]'. Every one of the 8 MAIV articles still gives invNeedsAppraisal=false (the $1,600 Brenner oil, the $1,800 Gorham goblets and the rest). The guardrail lists only the golf cart, and the worklist names none of them as owed the sworn appraisal.",
     "repro": "node /tmp/claude-0/-home-user-app/107e11dc-7b83-525c-829c-97f2e5cca8f9/scratchpad/audit/recheck/R3/GAP2/rt05.js (out-rt05.txt)"

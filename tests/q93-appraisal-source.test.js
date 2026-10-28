@@ -160,6 +160,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(attempt(() => C.invAwaitingAppraisal(ref(C), 7)).val, false, 'fixture: a living line not ticked ⚑ is not awaiting an appraisal');
     has(attempt(() => C._renderInvRow(C.jobs[0], ref(C))).val || '', 'Appraisal · ' + LABEL + ' · pending', '…and still reads pending once linked: the link is the source');
   }
+  {
+    // ⚠ P7's review: Appraisal chosen and no figure yet, nobody linked. On a living job (the flag there is the tick, so no ⚑ appraise)
+    // the row's grey chip says what it is waiting for, never "The appraisal's figure is on the line", and the record says what to do.
+    const C = desk(LIVING(), [LINE({ valSource: 'Appraisal', valuedBy: 'appraiser' })]);
+    const row = attempt(() => C._renderInvRow(C.jobs[0], ref(C))).val || '';
+    has(row, 'title="Appraisal chosen as the source: type the appraiser\u2019s figure when the report comes back"', '⚠ the row\'s chip: chosen, waiting for the figure');
+    lacks(row, 'title="The appraisal\u2019s figure is on the line"', '…never that the figure is on the line');
+    has(textOf(row), 'Appraisal (appraiser not named) · pending', '…reading pending');
+    has(textOf(attempt(() => C._renderInvPanel(C.jobs[0], ref(C))).val || ''), 'Valuation source Appraisal (appraiser not named) · pending — when the report comes back, type its figure on the line.',
+      '⚠ and its record says what to do when the report lands');
+    const W = desk(LIVING(), [LINE({ valSource: 'Appraisal', valuedBy: 'appraiser', apprWaived: true, apprWaiveReason: 'client' })]);
+    has(attempt(() => W._renderInvRow(W.jobs[0], ref(W))).val || '', 'the appraisal waived: no figure is coming from an appraiser', 'waived: the chip says no figure is coming');
+    lacks(textOf(attempt(() => W._renderInvPanel(W.jobs[0], ref(W))).val || ''), 'when the report comes back', '…and the record asks for none');
+  }
 
   // ═══ 2 · THE FIGURE TYPED IS THE APPRAISAL'S ═══
   group('2 · when the report comes back the person types the figure, and it is the appraisal\'s on every job (the real _invEdit)');
@@ -282,11 +296,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══ 6 · THE BULK BAR ═══
   group('6 · the bulk bar\'s Valuation source asks the same rule, handing it the job');
   {
+    // RESTATED (2026-10-27, the desk audit's P7, VAL-02): one select on the bar made forty of Agent Two's estimates read as
+    // appraisals; an appraisal is one appraiser's figure, typed on its own line after Appraisal is chosen there. The bar no longer
+    // offers it and the handler refuses it, naming why; the line keeps its source and its owner.
     const C = desk(ESTATE(), [LINE({ fmv: 3000, valSource: 'Dealer quote', valuedBy: 'desk' })]);
     C._invPick = { s1: 1 };
+    const said = [];
+    C.alert = (m) => said.push(String(m));
     attempt(() => C._invBulkApply(7, 'valSource', 'Appraisal'));
-    eq([ref(C).valSource, ref(C).valuedBy], ['Appraisal', 'appraiser'], 'Appraisal set across a selection takes each line as the appraisal');
-    has(code(fn('_invBulkApply')), "_avTakeValue(ref, 'appraisal', job);", 'through _avTakeValue with the job');
+    eq([ref(C).valSource, ref(C).valuedBy, ref(C).fmv], ['Dealer quote', 'desk', 3000], '⚠⚠ Appraisal across a selection is refused: the line is as it was');
+    has(said.join(' | '), 'Appraisal is never set across a selection', '…and the refusal says why');
+    lacks(code(fn('_invBulkApply')), "_avTakeValue(ref, 'appraisal', job);", 'the bulk bar no longer takes a line as the appraisal');
   }
 
   // ═══ 7 · FILE THE REPORT ═══
@@ -387,7 +407,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const R = C._photoRefs[7];
     eq(attempt(() => C.invValBasisWord(R[0], 7)).val, 'appraisal · ' + LABEL, '⚠⚠ the schedule\'s basis names the appraiser beside "appraisal"');
     eq(attempt(() => C.invValBasisWord(R[0])).val, 'appraisal · ' + LABEL, '…with no job, off the name the line keeps');
-    eq(attempt(() => C.invValBasisWord({ fmv: 1, valSource: 'Appraisal' })).val, 'appraisal', 'an appraisal with no appraiser recorded (counsel\'s) reads "appraisal" as before');
+    // RESTATED (P7, VAL-02): nobody recorded as the appraiser is said so on the schedule, never a bare "appraisal".
+    eq(attempt(() => C.invValBasisWord({ fmv: 1, valSource: 'Appraisal' })).val, 'appraisal (appraiser not named)', 'an appraisal with no appraiser recorded (counsel\'s) says so');
     eq(attempt(() => C.invValBasisWord(R[2], 7)).val, 'dealer quote', 'any other source as before');
     const sec = attempt(() => C._invScheduleSection('Tangible Personal Property', [R[0], R[2]])).val || { html: '' };
     has(sec.html, 'appraisal · ' + LABEL, 'the Court Inventory and the Trust Schedule\'s shared table print it');
@@ -421,7 +442,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The appraised test lives in invAppraised alone: the conjunction of the source and a value is written nowhere else.
     eq(fnsWhere(/valSource === 'Appraisal' && _invHasValue\(/), ['invAppraised'], '⚠⚠ "source Appraisal with a value" is asked in invAppraised alone');
     // Every comparison of a source with 'Appraisal' in live code is in one of the four places that set or name it, never a second "appraised".
-    eq(fnsWhere(/valSource\s*===\s*'Appraisal'/), ['_avTakeValue', '_invEdit', 'agentRevalue', 'invAppraised'], 'the source is compared with Appraisal only where it is set or named');
+    // RESTATED (P7): the ask before Appraisal is chosen over another's figure, and Agent Two's writer, which never fills a line waiting
+    // on its appraiser's figure, compare it too; and (P7's review) the one answer for Appraisal chosen with no figure yet, which keeps
+    // such a line on the guardrail, the worklist and the release caution.
+    eq(fnsWhere(/valSource\s*===\s*'Appraisal'/), ['_avTakeValue', '_avWrite', '_invEdit', 'agentRevalue', 'invAppraisalChosen', 'invAppraisalSourceAsk', 'invAppraised'], 'the source is compared with Appraisal only where it is set or named');
     const readers = callersOf('invAppraised');
     ['invAppraisalSourceText', 'invValBasisWord', 'printEstateInventoryReport', '_invSetAppraiser', 'removeAppraiser', '_invEdit', 'invAppraisalReportOwed']
       .forEach((f) => ok(readers.indexOf(f) >= 0, 'invAppraised is read by ' + f));

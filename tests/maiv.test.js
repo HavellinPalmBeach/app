@@ -12,7 +12,7 @@
 const { sandbox, fn, domStub } = require('./harness');
 
 const FNS = [
-  'invCatMeta', 'invIsIntrinsic', 'invNeedsAppraisal', 'invFiduciaryMode', 'invAppraisalThreshold',
+  'invCatMeta', 'invIsIntrinsic', 'invNeedsAppraisal', 'invAppraisalChosen', 'invFiduciaryMode', 'invAppraisalThreshold',
   '_gateYes', '_gate706', 'gateDispute', 'isDecedentJob',
   'invMAIVDefaultCat', 'invIsMAIV', 'invMAIVCategory', 'maivAggregate',
   'maivFilingApplies', 'maivStatement', 'maivStatement_', '_maivWorklistBlock', 'matterTypeOf', 'matterDef', 'jobOnProbateTrack',
@@ -22,7 +22,7 @@ const FNS = [
   'invLotArticleValue', 'invLotSplitState', 'invLotSplitSentence', 'invLotsToSplit',
   'invLotsUntestable', '_lotSplitWorklistBlock', '_invItemNo', 'esc',
   '_invMoney', 'savePhotoRefs', '_warnPhotoStoreFull', '_vehicleLineName', 'roundCents', 'fmt'
-];
+, 'invLineQty', 'maivOwedLines', 'maivOwedText', 'invAppraised', '_invHasValue'];
 const VARS = ['MATTER_TYPES', 
   'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
   'MAIV_AGGREGATE_THRESHOLD', 'MAIV_CATEGORIES', 'MAIV_OTHER', 'MAIV_BY_CATEGORY',
@@ -397,7 +397,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const ctx2 = sandbox({
       fns: ['invWorkFlags', 'invFiduciaryMode', 'maivFilingApplies', '_gate706', 'isDecedentJob',
-            'invLotSplitState', '_invNeedsValue', 'invNeedsAppraisal', 'invIsFirearm',
+            'invLotSplitState', '_invNeedsValue', 'invNeedsAppraisal', 'invAppraisalChosen', 'invIsFirearm',
             'invReleaseBlocked', 'invCatMeta', 'invIsIntrinsic', 'invAppraisalThreshold',
             'gateDispute', '_gateYes', '_invHasAppraisal', '_invJob', 'invIsMAIV', 'invMAIVDefaultCat',
             'invFirearmAuthorized', 'invFirearmClientTakes'],

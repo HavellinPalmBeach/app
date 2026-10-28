@@ -16,7 +16,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   const DISPUTED = { id: 2, svc: 'cleanout', gateDispute: 'yes' };
   const LIVING = { id: 3, svc: 'home_cleanout' };
   const ctx = sandbox({
-    fns: ['invNeedsAppraisal', 'invIsIntrinsic', 'invCatMeta', 'invAppraisalThreshold', 'gateDispute', '_gateYes', 'invFiduciaryMode', 'isDecedentJob',
+    fns: ['invNeedsAppraisal', 'invAppraisalChosen', 'invIsIntrinsic', 'invCatMeta', 'invAppraisalThreshold', 'gateDispute', '_gateYes', 'invFiduciaryMode', 'isDecedentJob',
           'invAwaitingAppraisal', 'invAppraised', '_invHasValue', '_invHasAppraisal', '_invJob'],
     vars: ['INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'DECEDENT_SERVICES'],
     stubs: { jobs: [ESTATE, DISPUTED, LIVING] },

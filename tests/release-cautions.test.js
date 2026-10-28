@@ -27,7 +27,7 @@ const FNS = ['invLineReviewed', 'invLineOpen', '_invDocPartyHead', 'invOwnInitia
              // The appraisal caution added 2026-09-11 is DERIVED rather than a flag on the row,
              // so the whole chain behind it has to be lifted for real. Stubbing
              // invAwaitingAppraisal would be testing the stub.
-             'invAwaitingAppraisal', 'invAppraised', '_invHasValue', 'invNeedsAppraisal', 'invFiduciaryMode', '_invHasAppraisal', '_jobAppraisers',
+             'invAwaitingAppraisal', 'invAppraised', '_invHasValue', 'invNeedsAppraisal', 'invAppraisalChosen', 'invFiduciaryMode', '_invHasAppraisal', '_jobAppraisers',
              'invAppraisalThreshold', 'gateDispute', '_gateYes', 'invIsIntrinsic', 'invCatMeta',
              'isDecedentJob',
              // P16: the request names a firearm's dealer route; the bulk handler asks the one

@@ -14,14 +14,14 @@ const FNS = ['invLineReviewed', 'invLineOpen', '_invDocPartyHead', 'invCondition
   '_invThumbFor', '_invThumbCache', '_invThumbKey',
   'invFiduciaryMode', 'isDecedentJob', 'svcFamily',
   'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep',
-  'invNeedsAppraisal', 'invAppraisalThreshold', 'invIsIntrinsic', 'invCatMeta',
+  'invNeedsAppraisal', 'invAppraisalChosen', 'invAppraisalThreshold', 'invIsIntrinsic', 'invCatMeta',
   'gateDispute', '_gateYes', '_invJob', 'invIsMAIV', 'invMAIVCategory', 'invMAIVDefaultCat',
   // The Estate Inventory Report, so its twin of this document's defect can be driven — see
   // the last group in this file. Nothing in the suite had ever called it.
   'printEstateInventoryReport', 'invAppraised', '_invHasValue', 'invAppraisalSourceText', 'invLineAppraiser', '_invLinkedAppraiser', 'invAppraisalInProgress', '_apprLabel', 'jobOnProbateTrack', '_avUnreviewedStamp', 'agentValueUnreviewed', '_invGroupItems', 'invIsFirearm', '_invDispLabel', '_invIsExempt',
   '_invIsProbateAsset', '_invTrack', '_invHasAppraisal', '_jobAppraisers', 'invAppraiserFor',
   'resolveValBasis', '_avHasFigure', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invReleaseCautions', '_invPhotoNoteOpen', 'agentValueSpecialistWorth', 'invLineAcceptedOnly', '_invAcceptedStampWords', 'invListReadRefusal', '_invManifestUnread', '_arDupEligible'
-, 'invAcceptCtx', 'agentDuplicateGroups', '_agDupEligible', 'agentNamedTwice', '_invAcceptCtxOf', 'invListRead', '_invListReadHtml', '_invReadKey'];
+, 'invAcceptCtx', 'agentDuplicateGroups', '_agDupEligible', 'agentNamedTwice', '_invAcceptCtxOf', 'invListRead', '_invListReadHtml', '_invReadKey', '_avStampCounts', 'invTotalFloor', '_invFloorTotalHtml', '_invOnProbateSchedule', 'roundCents'];
 const VARS = ['_agDupSetJob', 'INV_OPEN_HOLDS', 'INV_ACCEPT_AMMO_RE', 'MATTER_TYPES',  'INV_CONTRACT_DOCS',
   '_agRun', '_avRun', '_arRun', 'AGENT_NOTICE_KINDS', 
   'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DECEDENT_SERVICES', 'SVC_ORDER',
@@ -489,12 +489,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const BAR = FNS.concat(['_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_agDupEligible', 'agentNamedTwice', 
       'agentShotGroups', 'agentNameableRefs', '_agState', '_agStateHtml', '_agNoticesHtml', 'agentNotices',
       '_renderInvWorkbar', 'invColdWords', '_arCheckButtonHtml', '_arState', 'agentRoomsToCheck', '_arCheckable', '_arStateHtml', '_avValueButtonHtml', 'agentValueableRefs', '_avHasFigure', '_invHasValue', '_avStateHtml', '_avState', '_avNoticesHtml', 'agentValueNotices', '_avNoticeKinds', '_avNoticeLabel', 'agentValueInternal', 'agentValueUnreviewed', 'agentValueStale', 'agentValueSpecialistWorth', 'invPrimaryDoc', '_invProgressBar', 'invWorkFlags', '_invNeedsValue',
-      'printEstateInventoryReport', '_avUnreviewedStamp', 'printContentsRecord', '_invHasPhoto', 'photoShareLive', 'photoSharesOf', '_invDispLabel',
+      'printEstateInventoryReport', 'invAppraisalChosen', '_avUnreviewedStamp', 'printContentsRecord', '_invHasPhoto', 'photoShareLive', 'photoSharesOf', '_invDispLabel',
       'invReleaseBlocked', 'invIsFirearm', 'invTransportBlocked', 'invFirearmAuthorized',
       'invAwaitingAppraisal', '_invHasAppraisal', '_jobAppraisers', '_invAwaitingApproval', 'invWrittenReleaseNeeded',
       'invProbateRows', 'matterDef', 'matterTypeOf', 'maivFilingApplies', '_gate706',
       // P16: the gate reads the dealer route; the share names both photo folders by the filing rule.
-      'invDealerRoute', 'invDealerRouteOffered', 'invTransportDealer', 'invChannelLeftover', 'photoSubfolder', 'photoSharesLine', 'photoSharesOf', 'agentNoticesOn', 'invDealerNamed', 'invDispGoesToDealer', 'invFirearmsDealerFirm', 'invFirearmsDealerFirms', 'vendorCats', '_vendorNameKey']);
+      'invDealerRoute', 'invDealerRouteOffered', 'invTransportDealer', 'invChannelLeftover', 'photoSubfolder', 'photoSharesLine', 'photoSharesOf', 'agentNoticesOn', 'invDealerNamed', 'invDispGoesToDealer', 'invFirearmsDealerFirm', 'invFirearmsDealerFirms', 'vendorCats', '_vendorNameKey', '_avStampCounts', 'invTotalFloor', '_invFloorTotalHtml', '_invOnProbateSchedule', 'roundCents']);
     const BVARS = VARS.concat(['_agDupSetJob', 'INV_OPEN_HOLDS', 'INV_ACCEPT_AMMO_RE', 'INV_WORK_FLAGS', 'INV_DISPOSITIONS', 'INV_GROUP_ORDER',
       'INV_RELEASE_DISPOSITIONS', 'INV_RELEASE_CAUTIONS', 'MATTER_TYPES', 'INV_UNDECIDED',
       '_invFilter', '_invShowRoll', '_invOpen', '_invPick', 'INV_VAL_BASES', 'INVENTORY_COLUMNS',

@@ -17,7 +17,7 @@ const FNS = ['scheduleSignLines', '_invDocPartyHead', 'invLineReviewed', 'invLin
   '_invPrintThumb', '_invProgressStamp', '_invReviewStats', '_invThumbFor', '_invThumbCache',
   '_invThumbKey', 'invFiduciaryMode', 'isDecedentJob', 'svcFamily', '_invGroupItems',
   '_invDispLabel', '_invIsExempt', '_invIsProbateAsset', '_invTrack', '_invHasAppraisal',
-  '_jobAppraisers', 'invAppraiserFor', 'resolveValBasis', 'estateValueDate', 'invNeedsAppraisal',
+  '_jobAppraisers', 'invAppraiserFor', 'resolveValBasis', 'estateValueDate', 'invNeedsAppraisal', 'invAppraisalChosen',
   'invAppraisalThreshold', 'invIsIntrinsic', 'invCatMeta', 'gateDispute', '_gateYes', '_gate706',
   '_invJob', 'invIsMAIV', 'invMAIVCategory', 'invMAIVDefaultCat', '_invGuardrailItems',
   '_invHasValue', '_invOnProbateSchedule', '_invExcludedTracks', 'isFormalDoc', 'resolveDocLevel',
@@ -37,7 +37,7 @@ const FNS = ['scheduleSignLines', '_invDocPartyHead', 'invLineReviewed', 'invLin
   '_ymdLocal', 'invDonationReceipted', '_jobDestLabel', 'photoSharesLine', 'photoSharesOf',
   // 2026-10-22: the signed schedules, beside the ledger in the close-out papers.
   '_renderSignedSchedulesCard', 'signedScheduleRows', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invLineAcceptedOnly', '_invAcceptedStampWords', 'invListReadRefusal', '_invManifestUnread', '_arDupEligible'
-, '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_agDupEligible', 'agentNamedTwice', '_invListReadHtml', '_invReadKey', 'invListRead', 'agentNoticesOn', 'invDealerNamed', 'invDispGoesToDealer', 'invDealerUnchecked', 'invDealerDirState', 'invFirearmsDealerFirm', 'invFirearmsDealerFirms', 'vendorCats', '_vendorNameKey'];
+, '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_agDupEligible', 'agentNamedTwice', '_invListReadHtml', '_invReadKey', 'invListRead', 'agentNoticesOn', 'invDealerNamed', 'invDispGoesToDealer', 'invDealerUnchecked', 'invDealerDirState', 'invFirearmsDealerFirm', 'invFirearmsDealerFirms', 'vendorCats', '_vendorNameKey', '_avStampCounts', 'invTotalFloor', '_invFloorTotalHtml', 'maivOwedLines', '_avStampText'];
 const VARS = [
   '_agRun', '_avRun', '_arRun', 'AGENT_NOTICE_KINDS', 
   'INV_CONTRACT_DOCS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DECEDENT_SERVICES',
