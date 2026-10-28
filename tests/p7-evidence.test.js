@@ -531,6 +531,83 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(callersOf('maivOwedLines'), ['_apprGroups', '_maivSummaryNotice', '_maivWorklistBlock', 'printAppraisalWorklist'], 'one rule, read by the packets, the worklist and the desk\'s notice');
   }
 
+  group('⚠⚠ F3 · an open double count is counted once: never "already over … must be filed" by counting one painting twice (the integration\'s review)');
+  {
+    // One harbour painting photographed twice, both lines valued before the room check linked them as plainly one thing, and an
+    // unvalued bronze: $4,500 counting both, $2,400 counting the painting once.
+    const LINKP = (o) => ({ dupWith: [o], dupPairs: { [o]: { conf: 'high', why: 'The harbour painting twice.' } } });
+    const PA = (o) => LINE(Object.assign({ stableId: 'a1', itemNo: 11, objectName: 'Oil on canvas, harbour scene, gilt frame', fmv: 2400, valSource: 'Estimate', valuedBy: 'desk',
+      ts: 1, namedBy: 'agent', agentName: 'Oil on canvas, harbour scene, gilt frame', driveFileId: 'F1' }, LINKP('a2'), o || {}));
+    const PB = (o) => LINE(Object.assign({ stableId: 'a2', itemNo: 12, objectName: 'Harbour painting in gilt frame', fmv: 2100, valSource: 'Estimate', valuedBy: 'desk',
+      ts: 2, namedBy: 'agent', agentName: 'Harbour painting in gilt frame', driveFileId: 'F2' }, LINKP('a1'), o || {}));
+    const BR = (o) => LINE(Object.assign({ stableId: 'a3', itemNo: 13, objectName: 'Bronze figure of a heron, signed', fmv: '', ts: 3 }, o || {}));
+    const C = rig(ESTATE(), [PA(), PB(), BR()]);
+    const a = attempt(() => C.maivAggregate(C._photoRefs[7], C.jobs[0])).val || {};
+    eq([a.total, a.over, a.waits, a.settled, a.dbl && a.dbl.total, a.dbl && a.dbl.unvalued], [4500, false, true, false, 2400, 1],
+      '⚠⚠ over only by counting both lines: not over, the test waits on the decision (counted once: $2,400, the bronze still unvalued)');
+    const said = attempt(() => C.maivStatement_(a)).val || '';
+    lacks(said, 'already over', '⚠⚠ the sentence never says already over');
+    lacks(said, 'must be filed', '…nor that an expert appraisal must be filed');
+    has(said, '2 articles of marked artistic or intrinsic value total at least $2,400, counting once the possible double count not yet decided (#11 and #12), and at least $4,500 counting both lines: the $3,000 aggregate cannot be tested until it is decided whether the pair is one item or two, and 1 still has no value recorded.',
+      '⚠ it gives both figures and says the test waits on the decision');
+    eq((attempt(() => C.maivOwedLines(C.jobs[0], a)).val || []).map((r) => r.itemNo), [], '⚠⚠ nothing is owed the sworn appraisal for it');
+    const note = textOf(attempt(() => C._maivSummaryNotice(C.jobs[0], a)).val || '');
+    lacks(note, 'Expert appraisal required', 'the desk\'s notice does not say the appraisal is required');
+    has(note, 'Answer it under Possible duplicates', '…and says what settles it');
+    const wl = textOf((attempt(() => C.printAppraisalWorklist(7, { asHtml: true })).val || {}).html || '');
+    lacks(wl, 'An expert appraisal must be filed with the return.', '⚠⚠ the worklist in the package does not say it must be filed');
+    lacks(wl, 'owed the sworn appraisal', '…nor mark a line owed it, in its block or its packets');
+    const packed = Object.keys(attempt(() => C._apprGroups(7)).val || {}).reduce((acc, k) => acc.concat(C._apprGroups(7)[k].map((r) => r.stableId)), []).sort();
+    eq(packed, ['a3'], '⚠ and the packets carry the bronze alone, on its own rule: neither painting joins one as owed');
+    has(wl, 'The aggregate cannot be tested until Havellin has decided whether each possible double count named above is one item or more, and every article above carries a value.',
+      'its tail says the test waits, in the schedules\' words');
+    eq(textOf((attempt(() => C.printCourtInventory(7, { asHtml: true })).val || {}).html).indexOf('1 possible double count not yet decided: #11 and #12') > 0, true,
+      'fixture: the Court Inventory beside it is DRAFT for the same pair');
+    // Every article valued, over only counting both lines: untested all the same, in the untested tone.
+    const W = rig(ESTATE(), [PA(), PB(), BR({ fmv: 100, valuedBy: 'desk', valSource: 'Estimate' })]);
+    const wa = attempt(() => W.maivAggregate(W._photoRefs[7], W.jobs[0])).val || {};
+    eq([wa.settled, wa.over, wa.waits], [true, false, true], 'every article valued, $4,600 counting both, $2,500 counting once: waits');
+    has(attempt(() => W.maivStatement_(wa)).val, '2 articles of marked artistic or intrinsic value total $2,500, counting once the possible double count not yet decided (#11 and #12), and $4,600 counting both lines: the $3,000 aggregate cannot be tested until it is decided whether the pair is one item or two.',
+      '⚠ never "under" or "over": the test waits on the decision');
+    const wwl = (attempt(() => W.printAppraisalWorklist(7, { asHtml: true })).val || {}).html || '';
+    has(wwl, '<div style="margin-top:14px;border:1px solid #8a6d3b;', 'the aggregate\'s block is drawn in the untested tone');
+    has(textOf(wwl), 'The aggregate cannot be tested until Havellin has decided whether each possible double count named above is one item or more. An untested total',
+      '…and its tail asks for the decision alone');
+    has(textOf(attempt(() => W._maivSummaryNotice(W.jobs[0], wa)).val || ''), 'Answer it under Possible duplicates', 'the desk\'s notice too');
+    // The later line waiting on Agent Two, unvalued (P8's wait): counted once it is the earlier line's article, nothing left unvalued.
+    const P8W = rig(ESTATE(), [PA(), PB({ fmv: '', valSource: '', valuedBy: undefined }), BR({ fmv: 900, valuedBy: 'desk', valSource: 'Estimate' })]);
+    const pw = attempt(() => P8W.maivAggregate(P8W._photoRefs[7], P8W.jobs[0])).val || {};
+    eq([pw.over, pw.unvalued, pw.dbl && pw.dbl.unvalued, pw.dbl && pw.dbl.count], [true, 1, 0, 2], 'over counted once; the waiting line is the earlier one\'s article');
+    has(attempt(() => P8W.maivStatement_(pw)).val, '2 articles of marked artistic or intrinsic value total at least $3,300, counting once the possible double count not yet decided (#11 and #12): already over the $3,000 aggregate, so an expert appraisal must be filed with the return.',
+      '⚠ never "whatever the remaining 1 is worth" for the waiting line');
+    // The higher figure is the one kept, whichever line comes first.
+    [[2400, 2100], [2100, 2400]].forEach(([x, y]) => {
+      const H = rig(ESTATE(), [PA({ fmv: x }), PB({ fmv: y }), BR({ fmv: 900, valuedBy: 'desk', valSource: 'Estimate' })]);
+      const ha = attempt(() => H.maivAggregate(H._photoRefs[7], H.jobs[0])).val || {};
+      eq([ha.dbl && ha.dbl.total, ha.over], [3300, true], 'the pair at $' + x + ' and $' + y + ': counted once at its higher figure, $3,300, over');
+    });
+    // Over even counted once: said, the double count named, every article owed.
+    const O = rig(ESTATE(), [PA(), PB(), BR({ fmv: 900, valuedBy: 'desk', valSource: 'Estimate' })]);
+    const oa = attempt(() => O.maivAggregate(O._photoRefs[7], O.jobs[0])).val || {};
+    eq([oa.over, oa.waits, oa.dbl && oa.dbl.total], [true, false, 3300], 'counted once it is still over ($3,300): over');
+    has(attempt(() => O.maivStatement_(oa)).val, '2 articles of marked artistic or intrinsic value total $3,300, counting once the possible double count not yet decided (#11 and #12), over the $3,000 aggregate.',
+      '⚠ the sentence says over on the figures counted once, and says so');
+    eq((attempt(() => O.maivOwedLines(O.jobs[0], oa)).val || []).map((r) => r.itemNo), [11, 12, 13], 'and every article is owed the sworn appraisal');
+    // Answered (Not duplicates on both lines): two paintings, and the aggregate is over as P7 said.
+    const A = rig(ESTATE(), [PA({ dupOKIn: ['n1'] }), PB({ dupOKIn: ['n1'] }), BR()]);
+    const aa = attempt(() => A.maivAggregate(A._photoRefs[7], A.jobs[0])).val || {};
+    eq([aa.over, aa.waits, aa.dbl], [true, false, null], 'Not duplicates pressed: two items, over');
+    has(attempt(() => A.maivStatement_(aa)).val, 'already over the $3,000 aggregate whatever the remaining 1 is worth, so an expert appraisal must be filed with the return.', '…and said as P7 says it');
+    eq((attempt(() => A.maivOwedLines(A.jobs[0], aa)).val || []).map((r) => r.itemNo), [11, 12, 13], '…every article owed');
+    // Under either way: as before.
+    const Un = rig(ESTATE(), [PA({ fmv: 900 }), PB({ fmv: 800 }), BR({ fmv: 300, valuedBy: 'desk', valSource: 'Estimate' })]);
+    const una = attempt(() => Un.maivAggregate(Un._photoRefs[7], Un.jobs[0])).val || {};
+    eq([una.over, una.waits], [false, false], 'under counting both lines: under');
+    has(attempt(() => Un.maivStatement_(una)).val, 'total $2,000, under the $3,000 aggregate.', '…said with every line counted, the larger figure');
+    has(code(fn('maivAggregate')), 'invDoubleCountUnits(job, refs)', 'the aggregate reads the schedules\' own double counts');
+    has(code(fn('_apprGroups')), 'maivAggregate(_all, _j)', 'and the packets read it with the job, as the worklist\'s block does');
+  }
+
   // ═══════════════════════════════ E · A FLOOR IS A FLOOR (DOC-01, VAL-27) ═══════════════════════════════
   group('⚠⚠ E1 · the Estate Inventory Report states a floor by the Court Inventory\'s own rule, the estate and the property outside it subtotalled');
   {

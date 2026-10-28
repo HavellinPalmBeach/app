@@ -8,7 +8,7 @@
 // the crops Agent One gave them (#73 and #81 from one naming, #87 and #88 from a second), and in the living room two
 // photographs of one harbour painting the room check read as plainly one thing (#10 and #11), beside a sofa. Job Admin & Inv
 // through its own nav button, the client through its picker:
-//   A. Possible duplicates names the pairs, *#87 repeats #73 · #88 repeats #81*; Keep the first reading asks first, naming what
+//   A. Possible duplicates names the pairs, *#87 repeats #73 · #88 repeats #81*; Keep the first reading reads the sheet, asks, naming what
 //      it takes off, and takes #87 and #88 off; #73 and #81 stay, and the group goes.
 //   B. The Trust Schedule from More ▾ reads *DRAFT — 1 possible double count not yet decided: #10 and #11*, names the two lines
 //      and their figures under the total and has no receipt line; the Estate Inventory PDF names the pair under its stamp.
@@ -18,7 +18,9 @@
 //      Agent Two, following the check by itself, does not value #12, which waits on #10.
 //      The group is headed by the #10-#12 pair's own sentence, never the answered #10-#11 one's (P8's review); #12's name
 //      tidied through its row's box sends nothing to Agent Two while it waits.
-//   E. Not duplicates on #10 and #12: Agent Two values #12 by itself, once.
+//      With #10 valued and #12 waiting unvalued, the Trust Schedule, the Estate Inventory PDF and (the matter answered probate)
+//      the Court Inventory each say the total counts the painting once, never that both lines are in it (the integration's review).
+//   E. Not duplicates on #10 and #12: after a quiet read of the sheet, Agent Two values #12 by itself, once.
 //   F. (P8's review) A second photograph read twice with whole-photograph crops: the dinner plates read twice and a stack of
 //      salad plates in the second reading only. The block reads *#31 repeats #30 · #32 not matched*, the repeat's line naming
 //      its original by name; Keep the first reading asks, naming both lines of the pair and keeping #32; afterwards #32 is
@@ -47,7 +49,7 @@ const OIL2 = 'Harbor painting in gilt frame';
   try {
     b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
     const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 }, timezoneId: 'America/New_York' });
-    const net = { value: [], room: [] };
+    const net = { value: [], room: [], reads: 0 };
     let sheet = {};
     let roomAnswer = {};
     await ctx.route(SYNC + '**', async (r) => {
@@ -72,7 +74,7 @@ const OIL2 = 'Harbor painting in gilt frame';
         }
         return json({ ok: true });
       }
-      if (/action=loadMedia/.test(req.url())) return json({ ok: true, media: sheet });
+      if (/action=loadMedia/.test(req.url())) { net.reads++; return json({ ok: true, media: sheet }); }
       return json({ ok: true });
     });
     await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
@@ -161,7 +163,9 @@ const OIL2 = 'Harbor painting in gilt frame';
       await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(600);
       eq(await overflow(), 0, '⚠ nor at 390, the pairs\' heading and Keep the first reading on a phone');
       await p.setViewportSize({ width: 1440, height: 1000 }); await p.waitForTimeout(600);
+      const r0 = net.reads;
       await press('#panel-inventory .inv-dup-group button.inv-keep-first', 'Keep the first reading');
+      ok(net.reads > r0, '⚠⚠ the press reads the sheet first (the integration\'s review: P6\'s gate, as Remove lines)');
       const q = said.find((m) => /Keep the first reading of this photograph\?/.test(m)) || '';
       has(q, '#87 ' + DIN2 + '\n      repeats #73 ' + DIN1, 'it asks first, naming each line it takes off and the line it repeats, by number and name');
       has(q, '#88 ' + SAL2 + '\n      repeats #81 ' + SAL1, 'both');
@@ -226,6 +230,29 @@ const OIL2 = 'Harbor painting in gilt frame';
       const t = await trustSchedule();
       has(t, 'DRAFT — ', 'and the Trust Schedule is DRAFT');
       has(t, '1 possible double count not yet decided: #10 and #12', 'for it');
+      // #10 valued, #12 waiting with no figure (the integration's review): what the total holds is said off the lines with a figure.
+      const half = 'Only one line of this possible double count is in the total above, so it counts the item once, and would count it twice once the other line is valued: #10 '
+        + OIL + ' ($2,400) and #12 ' + OIL + ' (not yet valued).';
+      has(t, half, '⚠⚠ the Trust Schedule says the total counts the painting once, under the floor note naming #12');
+      lacks(t, 'Both lines of each possible double count are in the total', '⚠⚠ and never that both lines are in it');
+      await press('#inv-workbar button[onclick="printEstateInventoryReport(' + J + ')"]', 'Estate Inventory PDF, on the work bar');
+      const er = await txt('#doc-viewer-body');
+      has(er, '1 possible double count not yet decided: #10 and #12. Only one line of it is in the total below, which counts the item once and would count it twice once the other line is valued.',
+        '⚠⚠ the Estate Inventory Report says the same under its stamp');
+      lacks(er, 'Both lines of each are in the total below', 'never both');
+      await closeViewer();
+      // The same lines on a probate matter: the Court Inventory says the same.
+      await p.evaluate((J) => { const j = jobs.find((x) => x.id === J); j.matterType = 'probate'; renderInventoryTab(); }, J);
+      await p.waitForTimeout(500);
+      if (!(await vis('#inv-more button[onclick="printCourtInventory(' + J + ')"]'))) await press('#inv-more > summary', 'More ▾');
+      await press('#inv-more button[onclick="printCourtInventory(' + J + ')"]', 'Court Inventory, under More ▾');
+      const ci = await txt('#doc-viewer-body');
+      has(ci, '1 possible double count not yet decided: #10 and #12', 'the Court Inventory is DRAFT for it');
+      has(ci, half, '⚠⚠ and says the total counts the painting once');
+      lacks(ci, 'Both lines of each possible double count are in the total', 'never both');
+      await closeViewer();
+      await p.evaluate((J) => { const j = jobs.find((x) => x.id === J); j.matterType = 'trust'; renderInventoryTab(); }, J);
+      await p.waitForTimeout(500);
       // #12's name tidied through its row's box while it waits: nothing goes to Agent Two (P8's review: it researched the painting twice).
       const vb = net.value.length;
       await p.fill('#inv-row-oil12 .inv-name textarea', 'Harbor scene in oils, gilt frame (doorway view)');
@@ -236,9 +263,10 @@ const OIL2 = 'Harbor painting in gilt frame';
 
     // ── E ─────────────────────────────────────────────────────────────────────────────────────
     await section('E. Not duplicates on #10 and #12: Agent Two values #12 by itself', async () => {
-      const before = net.value.length;
+      const before = net.value.length, r0 = net.reads;
       await press('#panel-inventory .inv-dup-group button:has-text("Not duplicates")', 'Not duplicates on #10 and #12');
       await p.waitForTimeout(1500);
+      ok(net.reads > r0, '⚠⚠ the hand-off to Agent Two reads the sheet first, as the room check\'s does (the integration\'s review)');
       eq(net.value.slice(before).filter((ids) => ids.indexOf('oil12') >= 0).length, 1, '⚠ the waiting line goes to Agent Two, once (the rename held for it, not sent twice)');
       eq(await p.evaluate((j) => { const r = _photoRefs[j].find((x) => x.stableId === 'oil12'); return [r.valuedBy, r.fmv]; }, J), ['agent', 2000], 'and is valued');
       eq(await groups(), [], 'nothing left to flag');

@@ -45,7 +45,7 @@ function desk(refs, over) {
   let clock = 1760000000000;
   class D extends Date { static now() { return clock++; } }
   const c = sandbox({
-    fns: DESK_FNS, vars: DESK_VARS,
+    fns: DESK_FNS.concat(over.fns || []), vars: DESK_VARS.concat(over.vars || []),
     stubs: Object.assign({
       Date: D,
       jobs: [{ id: 7, hvlId: 'HVL-0008', name: 'Margaret Ellison', svc: 'cleanout', matterType: 'trust', tc: 'Ashley Jerome' }],
@@ -113,7 +113,7 @@ const PAPER_FNS = ['invLineReviewed', 'invLineOpen', '_invDocPartyHead', 'invCon
   'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invLineAcceptedOnly', '_invAcceptedStampWords',
   'invIsMAIV', 'invMAIVDefaultCat', 'invAcceptCtx', '_invAcceptCtxOf', 'invListRead', 'agentNoticesOn',
   'agentValueUnreviewed', 'agentValueInternal', 'agentValueStale', 'agentValueSpecialistWorth', '_avHasFigure', 'agentNoticeQuiet',
-  'agentDupCleared', 'agentNamedTwice', 'agentDuplicateGroups', '_arPair', '_arPairOpen', '_agDupEligible', '_arDupEligible', '_agNameKey', 'invDoubleCounts',
+  'agentDupCleared', 'agentNamedTwice', 'agentDuplicateGroups', '_arPair', '_arPairOpen', '_agDupEligible', '_arDupEligible', '_agNameKey', 'invDoubleCounts', 'invDoubleCountUnits',
   'agentNotDuplicate', 'agentDropDuplicate', '_agDupHandle', '_agDupUnhandle', '_getPhotoRef', '_setPhotoRef', '_invTombstoneLine', '_invStampBy',
   'deviceUser', 'agentValueWaiting', '_avDupReleased',
   'invAppraisalChosen', '_avStampCounts', 'invTotalFloor', '_invFloorTotalHtml'];   // P7's floor and source rules, which the printers read since the merge
@@ -369,6 +369,38 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(LP.sent(), [['p1', 'q9']], '⚠ Keep the first reading: what waited on the repeat is valued by itself');
   }
 
+  group('C3 · ⚠⚠ Keep the first reading reads the sheet first, as Remove lines does (the integration\'s review)');
+  {
+    // P6's gate, lifted with its refusal: the read held until the test answers it.
+    const reads = [];
+    // Answer the read out, if one is (defensively: a revert that asks none fails its checks, never throws).
+    const land = (...x) => { const f = reads.shift(); if (typeof f === 'function') f(...x); };
+    const gated = (refs) => desk(refs, { fns: ['invReadFirst', 'invReadFirstRefusal', '_andJoin'], vars: ['_invReadingFor', 'INV_READ_WATCHDOG_MS'],
+      stubs: { _invCloudSeen: { 7: true }, refreshPhotoRefs: (jobId, cb) => { reads.push(cb); } } });
+    const D = gated(ELLISON());
+    eq(D.keep(), true, 'the press asks the sheet first');
+    eq([D.asked.length, D._jobInvRefs(7).length, reads.length], [0, 4, 1], '⚠⚠ nothing asked and nothing removed until the read lands');
+    has(D.badges.join(' | '), 'Reading the inventory from the sheet first', 'the toast says so');
+    land(false, true, { gone: [], changed: [], added: [], held: false });
+    has(D.asked[0] || '', 'Keep the first reading of this photograph?', 'once it lands, the question');
+    eq(D._jobInvRefs(7).map((r) => r.itemNo), [73, 81], 'and the repeats come off');
+    // Another device removed the repeats meanwhile: the read brings the tombstones, and nothing is taken here.
+    const G = gated(ELLISON());
+    G.keep();
+    ['p87', 'p88'].forEach((id) => Object.assign(G.ref(id), { deletedAt: 1760000000500, deletedBy: 'Anthony Graziano' }));   // the read's merge
+    land(true, true, { gone: ['p87', 'p88'], changed: [], added: [], held: false });
+    eq(G.asked, [], '⚠⚠ the group the press was about is gone: nothing is asked');
+    has(G.alerts[0] || '', 'the sheet was read first, and this photograph’s lines had changed on another device, so nothing was removed', 'and it says so');
+    eq(G._jobInvRefs(7).map((r) => r.itemNo), [73, 81], 'the first reading stays as it was');
+    // A read that does not land: refused by name, nothing removed.
+    const F = gated(ELLISON());
+    F.keep();
+    land(false, false, null);
+    eq(F._jobInvRefs(7).length, 4, 'a read that fails: nothing removed');
+    has(F.alerts[0] || '', 'Not done: Keep the first reading reads the inventory from the sheet first', '…refused by name');
+    has(live(fn('agentKeepFirstReading')), "invReadFirst(jobId, 'Keep the first reading'", 'one gate, P6\'s');
+  }
+
   group('D · ⚠⚠ Agent Two waits on the later line of a pair that is plainly one thing (ACC-02)');
   {
     const P = (o1, o2) => [RC('s1', 1, 'Oil painting, harbor scene', Object.assign(LINK('s2'), { ts: 10 }, o1 || {})),
@@ -482,6 +514,50 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(A1.started, [], 'nor while Agent One is out');
   }
 
+  group('D4 · ⚠⚠ a press that releases a line hands Agent Two on only after a quiet read of the sheet (the integration\'s review)');
+  {
+    // P6 put a quiet read in front of the room check's and the naming's hand-offs; Not duplicates, Remove and Keep the first
+    // reading handed Agent Two every line with no figure off this device's copy, unread.
+    const P = () => [RC('s1', 1, 'Oil painting, harbor scene', Object.assign(LINK('s2'), { ts: 10 })),
+      RC('s2', 2, 'Harbor painting in gilt frame', Object.assign(LINK('s1'), { ts: 20 })), RC('s3', 3, 'Camelback sofa', { category: 'Furniture', roomIdx: 2 })];
+    const reads = [];
+    // Answer the read out, if one is (defensively: a revert that asks none fails its checks, never throws).
+    const land = (...x) => { const f = reads.shift(); if (typeof f === 'function') f(...x); };
+    const quiet = (refs) => desk(refs, { fns: ['invReadQuiet', '_avStateHtml'],
+      stubs: { _invCloudSeen: { 7: true }, refreshPhotoRefs: (jobId, cb) => { reads.push(cb); }, _avRepaint() {} } });
+    const N = quiet(P());
+    N.notDup();
+    eq([N.started.length, reads.length], [0, 1], '⚠⚠ Not duplicates: Agent Two waits on a read of the sheet');
+    N.ref('s3').deletedAt = 1760000000500;   // the read's merge: another device removed the sofa a minute ago
+    land(true, true, { gone: ['s3'], changed: [], added: [], held: false });
+    eq(N.sent(), [['s1', 's2']], '⚠⚠ once it lands Agent Two values the copy as the sheet holds it, never the sofa removed on another device');
+    const R = quiet(P());
+    R.agentDropDuplicate(7, 's1');
+    eq([R.started.length, reads.length], [0, 1], 'Remove of the earlier line: the same read first');
+    land(false, true, { gone: [], changed: [], added: [], held: false });
+    eq(R.sent(), [['s2', 's3']], '…then the later line is valued');
+    has(live(fn('_avDupReleased')), 'invReadQuiet(jobId, go, function', 'one hand-off for the three presses (Keep the first reading hands on through it too)');
+    // A read that does not land: nothing is valued, and Agent Two's line says so.
+    const F = quiet(P());
+    F.notDup();
+    land(false, false, null);
+    eq(F.started, [], 'a read that fails: nothing is valued');
+    has(F._avStateHtml(7), 'Agent Two: it did not value what the possible duplicate held back: the sheet did not answer (press Value lines once it does)', '⚠ and Agent Two\'s line says so');
+    // A room check started while the read was out: the chain's own end values what was freed.
+    const M = quiet(P());
+    M.notDup();
+    M._arRun[7] = { running: true };
+    land(false, true, { gone: [], changed: [], added: [], held: false });
+    eq(M.started, [], 'a room check out by the time the read lands: nothing started here');
+    // A run started afterwards (Value N lines) clears the line: the real _avStart, its queue stubbed.
+    const S = sandbox({ fns: ['_avStart', '_avState', '_avStateHtml'], vars: ['_avRun'], stubs: { _avRepaint() {}, _avSendNext() {}, esc: (x) => String(x) } });
+    S._avState(7).handOff = 'it did not value what the possible duplicate held back: the sheet did not answer (press Value lines once it does)';
+    has(S._avStateHtml(7), 'did not value what the possible duplicate held back', 'fixture: the line says so');
+    S._avStart(7, {}, ['s1']);
+    S._avRun[7].running = false;
+    lacks(S._avStateHtml(7), 'held back', 'a run started afterwards clears it');
+  }
+
   group('E · ⚠⚠ the schedules: an open double count is DRAFT, named, its signature withheld (ACC-02, INV-01)');
   {
     // Probate: the Court Inventory.
@@ -576,5 +652,47 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The read decides nothing on either schedule (Q109), and nothing is merged.
     ['printCourtInventory', 'printTrustSchedule', 'printEstateInventoryReport'].forEach((p) => has(live(fn(p)), 'invDoubleCounts(job, ', p + ' reads the one rule'));
     lacks(live(fn('invDoubleCounts')), 'deletedAt', 'the rule never removes a line');
+  }
+
+  group('E2 · ⚠⚠ what a double count says is in the total is read off the lines that carry a figure (the integration\'s review)');
+  {
+    // The state P8's wait produces: the earlier painting valued by Agent Two at $2,400, the later one held unvalued. The Court
+    // Inventory said, under a floor note naming #2 as NOT included, that both lines were in the total.
+    const WAIT = () => PAINTINGS(null, { fmv: undefined, valSource: '', valuedBy: undefined });
+    const half = 'Only one line of this possible double count is in the total above, so it counts the item once, and would count it twice once the other line is valued: '
+      + '#1 Oil painting, harbor scene, gilt frame ($2,400) and #2 Harbor painting in gilt frame (not yet valued).';
+    const C = papers({ matterType: 'probate' }, WAIT());
+    const ct = text(C.print('printCourtInventory'));
+    has(ct, 'DRAFT — 1 item not yet valued · 1 possible double count not yet decided: #1 and #2', '⚠ still DRAFT, for both reasons');
+    lacks(ct, 'Both lines of each possible double count are in the total above', '⚠⚠ the Court Inventory never says both lines are in the total');
+    has(ct, half, '⚠⚠ it says the total counts the painting once, and would count it twice once #2 is valued');
+    has(ct, '#2 Harbor painting in gilt frame. ' + half.slice(0, 20), 'right after the floor note naming #2 as not included');
+    const T = papers({ matterType: 'trust', trustName: 'Butler Family Trust' }, WAIT());
+    const tt = text(T.print('printTrustSchedule'));
+    lacks(tt, 'Both lines of each possible double count are in the total above', '⚠⚠ nor the Trust Schedule');
+    has(tt, half, '…which says the same');
+    const er = text(C.print('printEstateInventoryReport'));
+    lacks(er, 'Both lines of each are in the total below', '⚠⚠ nor the Estate Inventory Report under its stamp');
+    has(er, '1 possible double count not yet decided: #1 and #2. Only one line of it is in the total below, which counts the item once and would count it twice once the other line is valued.',
+      '…which says the same, by number');
+    // Neither line valued: neither is in the total.
+    const Z = text(papers({ matterType: 'probate' }, PAINTINGS({ fmv: undefined, valSource: '' }, { fmv: undefined, valSource: '' })).print('printCourtInventory'));
+    has(Z, 'No line of this possible double count is in the total above yet; valued, both lines would count the item twice: #1 Oil painting, harbor scene, gilt frame (not yet valued) and #2 Harbor painting in gilt frame (not yet valued).',
+      'neither valued: no line is in the total yet');
+    // Mixed: one pair both valued, another half valued; each said in its own sentence, by number on the report.
+    const MIX = PAINTINGS().concat([
+      LINE('s4', 4, 'Pair of brass candlesticks', 300, { namedBy: 'agent', agentName: 'Pair of brass candlesticks', driveFileId: 'F4' }),
+      LINE('s5', 5, 'Pair of brass candlesticks', undefined, { valSource: '', namedBy: 'agent', agentName: 'Pair of brass candlesticks', driveFileId: 'F5' })]);
+    const MX = papers({ matterType: 'probate' }, MIX);
+    const mt = text(MX.print('printCourtInventory'));
+    has(mt, 'Both lines of this possible double count are in the total above, so it may count an item twice: #1 Oil painting, harbor scene, gilt frame ($2,400) and #2 Harbor painting in gilt frame ($2,100).',
+      'mixed: the pair valued twice says so');
+    has(mt, 'Only one line of this possible double count is in the total above, so it counts the item once, and would count it twice once the other line is valued: #4 Pair of brass candlesticks ($300) and #5 Pair of brass candlesticks (not yet valued).',
+      '…and the half-valued pair says what it is');
+    has(text(MX.print('printEstateInventoryReport')), 'For #1 and #2, both lines are in the total below, which may count the item twice. For #4 and #5, only one line is in the total below, which counts the item once and would count it twice once the other line is valued.',
+      'the report names each by number');
+    // Valued on both lines: P8's words, unchanged (group E holds them too).
+    has(text(papers({ matterType: 'probate' }, PAINTINGS()).print('printCourtInventory')), 'Both lines of each possible double count are in the total above, so it may count an item twice:', 'both valued: as P8 printed it');
+    has(live(fn('invDoubleCounts')), '_invHasValue(r)', 'the words follow the lines that carry a figure, by the floor\'s own rule');
   }
 };

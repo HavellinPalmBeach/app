@@ -386,7 +386,9 @@ and browser step 69.
     a room-check pair the check read as plainly one thing (that pair's own answer, `dupPairs`, since P8's review), or a repeat
     of a photograph read twice (`agentValueWaiting`), and nor does a rename or a close-up added to it (held for the line,
     `_avDupHeld`, since P8's review): it waits until a person presses Remove, Keep the first reading or Not duplicates, and
-    then goes by itself once the naming and the room check have finished (`_avDupReleased`). So the app does not research
+    then goes by itself once the naming and the room check have finished (`_avDupReleased`), after a quiet read of the sheet
+    as the room check's hand-off (`invReadQuiet`, since the integration's review of 2026-10-28; a read that fails values
+    nothing, and Agent Two's line says so). So the app does not research
     one object twice off a pair it knows of; a pair the room check reads less surely, or a same-name pair, is valued as
     ever, and so is a line a person sends by hand (Re-value). A run's tail redraw waits while a box on the desk has focus, and keeps waiting as focus moves box to box
     (`_invRenderWhenIdle`).

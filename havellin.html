@@ -1476,7 +1476,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.28 · 2:44am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.28 · 4:12am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -28958,9 +28958,49 @@ function maivAggregate(items, job) {
   // `unread` (P7's review): some figure here nobody has looked at yet (_avStampUnread, the stamp's own rule). Once the list is read
   // the stamp still names the reader, and the worklist no longer says the figures are not all a person's.
   var fc = (job && agents) ? invAcceptCtx(job, items) : null;
+  // ⚠⚠ AN OPEN DOUBLE COUNT IS COUNTED ONCE FOR `over` (the integration's review, 2026-10-28): one harbour painting photographed
+  // twice, both lines valued ($2,400 and $2,100) before the room check linked them, read "already over the $3,000 aggregate … an
+  // expert appraisal must be filed with the return" and owed three articles the sworn appraisal, while the Court Inventory beside
+  // it printed DRAFT for that very pair. Over is said only where it holds with each double count not yet decided counted once, at
+  // its higher figure (the same units the schedules name, invDoubleCountUnits over these articles); where it holds only by
+  // counting both lines, the test waits on the decision (`waits`), and nothing is owed for it. `dbl` carries the counted-once
+  // figures, for the sentence. Guarded for a sandbox that lifts the aggregate alone.
+  var dbl = (job && typeof invDoubleCountUnits === 'function') ? _maivOnce(invDoubleCountUnits(job, refs), count, total, top, unvalued) : null;
+  var over = (dbl ? dbl.top : top) > MAIV_AGGREGATE_THRESHOLD;
   return { total: total, top: top, count: count, lines: lines, unvalued: unvalued, refs: refs,
-           settled: unvalued === 0, over: top > MAIV_AGGREGATE_THRESHOLD,
+           settled: unvalued === 0, over: over, waits: !over && !!dbl && top > MAIV_AGGREGATE_THRESHOLD, dbl: dbl,
            stamp: fc ? _avStampText(refs, fc) : '', unread: fc ? _avStampUnread(refs, fc) : false };
+}
+// The aggregate's figures with each double count counted once: its line with the higher figure (the top of an agent's range, as
+// the aggregate reads it) kept, every other line of it taken out, articles, figure and all. Null where there is no double count.
+function _maivOnce(U, count, total, top, unvalued) {
+  if (!U || !U.units.length) return null;
+  var fig = function(r) {
+    var v = parseFloat(r.fmv);
+    if (isNaN(v)) return NaN;
+    var hi = (r.valuedBy === 'agent') ? parseFloat(r.valHigh) : NaN;
+    return (!isNaN(hi) && hi > v) ? hi : v;
+  };
+  var rank = function(r) { var f = fig(r); return isNaN(f) ? -1 : f; };
+  var o = { count: count, total: total, top: top, unvalued: unvalued, n: U.units.length };
+  var nos = [];
+  U.units.forEach(function(u) {
+    var keep = u.slice().sort(function(a, b) { return rank(b) - rank(a); })[0];
+    var ids = u.map(function(r) { return '#' + (_invItemNo(r) || '?'); });
+    nos.push(ids.length < 3 ? ids.join(' and ') : ids.slice(0, -1).join(', ') + ' and ' + ids[ids.length - 1]);
+    u.forEach(function(r) {
+      if (r === keep) return;
+      var q = invLineQty(r), v = parseFloat(r.fmv);
+      o.count -= q;
+      if (isNaN(v)) { o.unvalued -= q; return; }
+      o.total -= v; o.top -= fig(r);
+    });
+  });
+  o.total = roundCents(o.total); o.top = roundCents(o.top);
+  o.settled = o.unvalued === 0;
+  o.pairs = U.units.every(function(u) { return u.length === 2; });
+  o.ids = nos.slice(0, 6).join('; ') + (nos.length > 6 ? '; and ' + (nos.length - 6) + ' more' : '');
+  return o;
 }
 // ⚠⚠ PAST THE AGGREGATE, EVERY ARTICLE IS OWED THE SWORN APPRAISAL (P7, 2026-10-27; RT-05, counsel to confirm the reading, bundle
 // D22): §20.2031-6(b) asks for the expert's appraisal of the articles of marked artistic or intrinsic value once they pass $3,000
@@ -28993,13 +29033,31 @@ function maivStatement(items) { return maivStatement_(maivAggregate(items)); }
 // "cannot be tested yet", so the sentence that matters waited on the last $40 print. Past $3,000 the test is answered whatever the
 // rest are worth; "cannot be tested" stays only while the floor is at or under it. The top of Agent Two's ranges is named where it
 // is what passes the aggregate (ACC-03), and the stamp's words follow where figures stand as the agents left them.
+// ⚠⚠ AND OVER ONLY COUNTING EACH OPEN DOUBLE COUNT ONCE (the integration's review, 2026-10-28; maivAggregate's `over`): where the
+// aggregate is passed only by counting both lines of a possible double count not yet decided, the sentence says so, gives both
+// figures and says the test waits on the decision; where it is passed counted once, it says it counted them once.
 function maivStatement_(a) {
   if (!a.count) return '';
-  var arts = a.count + ' article' + (a.count > 1 ? 's' : '') + ' of marked artistic or intrinsic value';
+  var artsOf = function(n) { return n + ' article' + (n > 1 ? 's' : '') + ' of marked artistic or intrinsic value'; };
+  var arts = artsOf(a.count);
   var cap  = fmt(MAIV_AGGREGATE_THRESHOLD) + ' aggregate';
   var tops = (a.top > a.total) ? ', and the top of Agent Two\u2019s ranges for them reaches ' + (a.settled ? '' : 'at least ') + _invMoney(a.top) : '';
+  var d = a.dbl;
+  var onceWords = d ? ', counting once ' + (d.n === 1 ? 'the possible double count' : 'each of the ' + d.n + ' possible double counts') + ' not yet decided (' + d.ids + ')' : '';
   var said;
-  if (a.over && !a.settled) {
+  if (a.over && d) {
+    // Over with each double count counted once: the counted-once figures, and what is left unvalued counted once.
+    var dTops = (d.top > d.total) ? ', and the top of Agent Two\u2019s ranges for them reaches ' + (a.settled ? '' : 'at least ') + _invMoney(d.top) : '';
+    said = artsOf(d.count) + ' total ' + (a.settled ? '' : 'at least ') + _invMoney(d.total) + dTops + onceWords
+      + (d.unvalued ? ': already over the ' + cap + ' whatever the remaining ' + d.unvalued + ' ' + (d.unvalued > 1 ? 'are' : 'is') + ' worth, so an expert appraisal must be filed with the return.'
+        : a.settled ? ', over the ' + cap + '.' : ': already over the ' + cap + ', so an expert appraisal must be filed with the return.');
+  } else if (a.waits) {
+    var dTops2 = (d.top > d.total) ? ', and the top of Agent Two\u2019s ranges for them reaches ' + (a.settled ? '' : 'at least ') + _invMoney(d.top) : '';
+    said = artsOf(d.count) + ' total ' + (a.settled ? '' : 'at least ') + _invMoney(d.total) + dTops2 + onceWords + ', and '
+      + (a.settled ? '' : 'at least ') + _invMoney(a.top) + ' counting ' + (d.pairs ? 'both lines' : 'every line') + (a.top > a.total ? ' at the top of Agent Two\u2019s ranges' : '')
+      + ': the ' + cap + ' cannot be tested until it is decided whether ' + (d.n === 1 ? (d.pairs ? 'the pair is one item or two' : 'they are one item or more') : 'each is one item or more')
+      + (d.unvalued ? ', and ' + d.unvalued + ' still ' + (d.unvalued > 1 ? 'have' : 'has') + ' no value recorded' : '') + '.';
+  } else if (a.over && !a.settled) {
     said = arts + ' total at least ' + _invMoney(a.total) + tops + ': already over the ' + cap + ' whatever the remaining '
       + a.unvalued + ' ' + (a.unvalued > 1 ? 'are' : 'is') + ' worth, so an expert appraisal must be filed with the return.';
   } else if (!a.settled) {
@@ -30438,6 +30496,11 @@ function _maivSummaryNotice(job, maiv) {
       + ' Treas. Reg. §20.2031-6(b) requires the appraisal of an expert, under oath, to be filed with the Form 706, with the executor&rsquo;s statement as to the completeness of the itemised list and the appraiser&rsquo;s qualifications.'
       + (owed.length ? ' <span class="maiv-owed">' + esc(maivOwedText(owed)) + '</span>' : '') + '</div>';
   }
+  // Passed only by counting both lines of a possible double count (the integration's review): untested, as an unvalued one is.
+  if (maiv.waits) {
+    return '<div class="alert a-warn" style="font-size:11px;line-height:1.5;">&#9878; ' + esc(maivStatement_(maiv))
+      + ' Answer it under Possible duplicates (Remove the extra line, or Not duplicates) before the return is prepared &mdash; an untested aggregate is not the same as one under the cap.</div>';
+  }
   if (!maiv.settled) {
     return '<div class="alert a-warn" style="font-size:11px;line-height:1.5;">&#9878; ' + esc(maivStatement_(maiv))
       + ' Value them before the return is prepared &mdash; an untested aggregate is not the same as one under the cap.</div>';
@@ -31447,7 +31510,8 @@ function _apprGroups(jobId) {
   var _all = _jobInvRefs(jobId);
   // Past the §20.2031-6(b) aggregate on a 706 estate every such article joins its appraiser's packet, as a flag (P7, RT-05).
   var _owed = {};
-  maivOwedLines(_j, maivAggregate(_all)).forEach(function(r) { _owed[r.stableId] = 1; });
+  // With the job, so an open double count is counted once here as on the worklist's block (the integration's review, 2026-10-28).
+  maivOwedLines(_j, maivAggregate(_all, _j)).forEach(function(r) { _owed[r.stableId] = 1; });
   _all.forEach(function(r) {
     if (!invNeedsAppraisal(r, _j) && !_owed[r.stableId]) return;
     if (invReleaseBlocked(r, _j)) return;   // firearm with no complete written authority — see above
@@ -36667,7 +36731,10 @@ function scheduleSignLines(signers, act, capacity) {
 // repeat with its original (agentNamedTwice's `repeats`, both on the page), each pair is its own double count, the repeat
 // first ("#87 and #73; #88 and #81"); the group's other lines on the page are one more where there are two or more, and a single
 // one not matched to the first reading is named apart. Every other group is one double count, its lines on the page.
-function invDoubleCounts(job, list) {
+// The double counts themselves, one rule for the papers and the §20.2031-6(b) aggregate (the integration's review, 2026-10-28):
+// `units` the lines of each double count found on `list` (a repeat with its original; the rest of a group), `apart` a single line
+// of a later reading not matched to the first. DOM-free; null where there is none.
+function invDoubleCountUnits(job, list) {
   if (!job) return null;
   var on = {};
   (list || []).forEach(function(r) { if (r) on[r.stableId] = 1; });
@@ -36685,22 +36752,66 @@ function invDoubleCounts(job, list) {
     if (rest.length >= 2) units.push(rest);
     else if (rest.length === 1 && isFresh[rest[0].stableId]) apart.push(rest[0]);
   });
-  if (!units.length) return null;
+  return units.length ? { units: units, apart: apart } : null;
+}
+// ⚠⚠ WHAT IS IN THE TOTAL IS SAID OFF THE LINES THAT CARRY A FIGURE (the integration's review, 2026-10-28): P8's wait leaves the
+// later painting unvalued while the earlier one is valued, and the Court Inventory then said, under a floor note naming #2 as NOT
+// included, that *both lines … are in the total above, so it may count an item twice: … #2 Harbor painting in gilt frame (—)*. A
+// double count with two or more lines valued may count an item twice; one with a single line valued counts it once and would count
+// it twice once the other line is valued; one with none counts it not at all yet. `why` is unchanged either way, so the schedule
+// stays DRAFT until a person decides. `note` names each kind in its own sentence, `below` (the Estate Inventory Report, under its
+// stamp) the same by number where the kinds are mixed; with every double count valued twice or more, the words P8 printed.
+function invDoubleCounts(job, list) {
+  var U = invDoubleCountUnits(job, list);
+  if (!U) return null;
+  var units = U.units, apart = U.apart;
   var and = function(a) { return a.length < 3 ? a.join(' and ') : a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1]; };
-  var shown = units.slice(0, 6), more = units.length - shown.length;
-  var tail = more ? '; and ' + more + ' more' : '';
-  var pairs = units.every(function(u) { return u.length === 2; });
-  var line = function(r) { return '#' + _invItemNo(r) + ' ' + (r.objectName || 'unnamed') + ' (' + _invMoney(r.fmv) + ')'; };
+  var cap = function(us) { var s = us.slice(0, 6), m = us.length - s.length; return { s: s, tail: m ? '; and ' + m + ' more' : '' }; };
+  var nos = function(rows) { return and(rows.map(function(r) { return '#' + _invItemNo(r); })); };
+  var line = function(r) { return '#' + _invItemNo(r) + ' ' + (r.objectName || 'unnamed') + ' (' + (_invHasValue(r) ? _invMoney(r.fmv) : 'not yet valued') + ')'; };
+  var named = function(us) { var c = cap(us); return c.s.map(function(rows) { return and(rows.map(line)); }).join('; ') + c.tail; };
+  var valued = function(u) { return u.filter(function(r) { return _invHasValue(r); }).length; };
+  var pairsIn = function(us) { return us.every(function(u) { return u.length === 2; }); };
+  var shown = cap(units);
+  var pairs = pairsIn(units);
+  var twice = units.filter(function(u) { return valued(u) >= 2; });
+  var once = units.filter(function(u) { return valued(u) === 1; });
+  var none = units.filter(function(u) { return valued(u) === 0; });
+  var mixed = (twice.length ? 1 : 0) + (once.length ? 1 : 0) + (none.length ? 1 : 0) > 1;
+  var whole = twice.every(function(u) { return valued(u) === u.length; });
+  var note = [], below = [];
+  if (twice.length) {
+    var both = pairsIn(twice) && whole;
+    var lead = both ? 'Both lines' : whole ? 'Every line' : 'More than one line';
+    note.push(lead + ' of ' + (!mixed ? 'each possible double count ' : twice.length === 1 ? 'this possible double count ' : 'each of these possible double counts ')
+      + (both ? 'are' : 'is') + ' in the total above, so it may count an item twice: ' + named(twice) + '.');
+    below.push(!mixed ? (both ? 'Both lines of each are in the total below until it is decided whether the pair is one item or two.'
+        : lead + ' of each is in the total below until it is decided whether they are one item or more.')
+      : 'For ' + twice.map(nos).join(', and ') + ', ' + lead.toLowerCase() + (both ? ' are' : ' is') + ' in the total below, which may count ' + (twice.length === 1 ? 'the item' : 'each item') + ' twice.');
+  }
+  if (once.length) {
+    var other = pairsIn(once) ? 'the other line' : 'another of its lines';
+    note.push('Only one line of ' + (once.length === 1 ? 'this possible double count' : 'each of these possible double counts') + ' is in the total above, so it counts '
+      + (once.length === 1 ? 'the item' : 'each item') + ' once, and would count it twice once ' + other + ' is valued: ' + named(once) + '.');
+    below.push((mixed ? 'For ' + once.map(nos).join(', and ') + ', only one line ' + (once.length === 1 ? '' : 'of each ')
+        : 'Only one line of ' + (once.length === 1 ? 'it ' : 'each ')) + 'is in the total below, which counts '
+      + (once.length === 1 ? 'the item' : 'each item') + ' once and would count it twice once ' + other + ' is valued.');
+  }
+  if (none.length) {
+    note.push('No line of ' + (none.length === 1 ? 'this possible double count' : 'any of these possible double counts') + ' is in the total above yet; valued, '
+      + (pairsIn(none) ? 'both lines' : 'its lines') + ' would count ' + (none.length === 1 ? 'the item' : 'each item') + ' twice: ' + named(none) + '.');
+    below.push((mixed ? 'For ' + none.map(nos).join(', and ') + ', no line' : 'No line of ' + (none.length === 1 ? 'it' : 'any of them'))
+        + ' is in the total below yet; valued, ' + (pairsIn(none) ? 'both lines' : 'its lines')
+      + ' would count ' + (none.length === 1 ? 'the item' : 'each item') + ' twice.');
+  }
   return {
     n: units.length,
     why: units.length + ' possible double count' + (units.length === 1 ? '' : 's') + ' not yet decided: '
-      + shown.map(function(rows) { return and(rows.map(function(r) { return '#' + _invItemNo(r); })); }).join('; ') + tail
+      + shown.s.map(nos).join('; ') + shown.tail
       + apart.map(function(r) { return '; #' + _invItemNo(r) + ' not matched to the first reading of its photograph'; }).join(''),
-    note: (pairs ? 'Both lines' : 'Every line') + ' of each possible double count ' + (pairs ? 'are' : 'is') + ' in the total above, so it may count an item twice: '
-      + shown.map(function(rows) { return and(rows.map(line)); }).join('; ') + tail + '.'
+    note: note.join(' ')
       + apart.map(function(r) { return ' ' + line(r) + ' was read again off the same photograph and not matched to a line of the first reading.'; }).join(''),
-    below: pairs ? 'Both lines of each are in the total below until it is decided whether the pair is one item or two.'
-      : 'Every line of each is in the total below until it is decided whether they are one item or more.',
+    below: below.join(' '),
     fix: 'a final copy is issued once Havellin has decided whether each ' + (pairs ? 'pair is one item or two' : 'possible double count is one item or more')
   };
 }
@@ -37998,7 +38109,7 @@ function _maivWorklistBlock(job, items, maiv) {
   }).join('');
 
   var applies = maivFilingApplies(job);
-  var tone = (applies && (maiv.over || !maiv.settled)) ? '#8a6d3b' : '#999';
+  var tone = (applies && (maiv.over || maiv.waits || !maiv.settled)) ? '#8a6d3b' : '#999';
   var tail = '';
   if (!applies) {
     tail = 'Treas. Reg. §20.2031-6(b) governs what is filed with a federal estate tax return. '
@@ -38015,6 +38126,12 @@ function _maivWorklistBlock(job, items, maiv) {
       + (maiv.settled ? '' : ' The ' + maiv.unvalued + ' article' + (maiv.unvalued > 1 ? 's' : '') + ' with no value yet '
         + (maiv.unvalued > 1 ? 'are' : 'is') + ' part of it too.')
       + (_owed.length ? ' <span class="maiv-owed">' + esc(maivOwedText(_owed)) + '</span>' : '');
+  } else if (maiv.waits) {
+    // Over only counting both lines of a possible double count not yet decided (the integration's review, 2026-10-28).
+    // The worklist goes in the package: it says what decides the test, in the schedules' words, never which button to press.
+    tail = 'The aggregate cannot be tested until Havellin has decided whether each possible double count named above is one item or more'
+      + (maiv.dbl && maiv.dbl.unvalued ? ', and every article above carries a value' : '') + '. '
+      + 'An untested total is not a total under the cap &mdash; settle it before the return is prepared.';
   } else if (!maiv.settled) {
     tail = 'The aggregate cannot be tested until every article above carries a value. '
       + 'An untested total is not a total under the cap — value them before the return is prepared.';
@@ -41453,10 +41570,21 @@ function agentNotDuplicate(jobId, handle) {
 // Decided). The question names each line it takes off beside the line it repeats, both by number and name (P8's review: a
 // number alone hid a dinner-plate line paired with a salad-plate one). No photograph is touched; Removed items gives a line
 // back. A line Agent Two waited on that this frees is valued by itself (_avDupReleased), as after Remove.
-function agentKeepFirstReading(jobId, handle) {
+// ⚠⚠ THE SHEET FIRST (the integration's review, 2026-10-28): one press takes off every repeat of a photograph, as Remove lines
+// takes off a selection, and P6's gate covered the one and not the other, so a repeat another device had already removed or
+// renamed was acted on from this device's copy. It reads the sheet (invReadFirst), then asks over the group as the sheet holds
+// it; a group the read moved away is said, and nothing is removed. `read` is the read's diff, once it has landed.
+function agentKeepFirstReading(jobId, handle, read) {
   var key = _agDupUnhandle(handle);
   var hit = agentDuplicateGroups(jobId).filter(function(g){ return g.key === key; })[0];
-  if (!hit) { renderInventoryTab(); return false; }
+  if (!hit) {
+    renderInventoryTab();
+    if (read) { var _moved = 'Keep the first reading: the sheet was read first, and this photograph\u2019s lines had changed on another device, so nothing was removed. Look at them again under Possible duplicates.'; showSyncBadge(_moved, true); alert(_moved); }
+    return false;
+  }
+  // The group is keyed on its lines, so one the read finds removed elsewhere moves it away (above) and nothing is taken; a line
+  // renamed elsewhere is matched again, and the question names it as the sheet now holds it.
+  if (!read && typeof invReadFirst === 'function' && invReadFirst(jobId, 'Keep the first reading', function (diff) { agentKeepFirstReading(jobId, handle, diff || {}); }, { key: 'keep:' + key })) return true;
   var reps = hit.repeats || [], fresh = hit.fresh || [];
   var nm = function(r) { return '#' + _invItemNo(r) + ' ' + (r.objectName || '(unnamed)'); };
   if (!reps.length) {
@@ -42353,8 +42481,21 @@ function _avDupReleased(jobId, before) {
     var r = _getPhotoRef(jobId, id);
     if (r && !r.deletedAt && !now[id] && (!_avHasFigure(r) || held[id])) freed = true;
   });
-  if (freed) agentValueAuto(jobId);
-  return freed;
+  if (!freed) return false;
+  // ⚠⚠ THE SHEET READ AGAIN FIRST, QUIETLY, AS AT EVERY OTHER HAND-OFF (the integration's review, 2026-10-28): Not duplicates handed
+  // Agent Two every line with no figure off this device's copy, unread, while _agFinish and _arFinish read the sheet before theirs
+  // (P6), so a line another device had removed a minute before was valued here, and the figure's newer clock brought it back from
+  // its tombstone. Where the read does not land nothing is valued and Agent Two's line says so; Value N lines stays.
+  var go = function() {
+    if ((_agRun[jobId] && _agRun[jobId].running) || (_arRun[jobId] && _arRun[jobId].running)) return;   // the chain's own end runs it
+    agentValueAuto(jobId);
+  };
+  if (typeof invReadQuiet === 'function') invReadQuiet(jobId, go, function() {
+    _avState(jobId).handOff = 'it did not value what the possible duplicate held back: the sheet did not answer (press Value lines once it does)';
+    _avRepaint(jobId);
+  });
+  else go();
+  return true;
 }
 // ⚠⚠ A RENAME OR A CLOSE-UP NEVER VALUES A LINE THAT WAITS (P8's review, 2026-10-27): tidying the later painting's name, or adding
 // a close-up to it, researched the same painting twice, the case the wait exists for. The press is held here (session only, like
@@ -42443,7 +42584,7 @@ function _avStart(jobId, job, ids, opts) {
   var st = _avState(jobId);
   st.running = true; st.total = ids.length; st.done = 0; st.valued = 0; st.researched = 0;
   st.failed = 0; st.skipped = 0; st.timedOut = false; st.error = ''; st.retried = {}; st.later = 0;
-  st.ids = {}; st.out = {};
+  st.ids = {}; st.out = {}; st.handOff = '';
   _avRepaint(jobId);
   _avSendNext(jobId, job, ids.slice(), opts || {});
 }
@@ -42576,8 +42717,10 @@ function _avStateHtml(jobId) {
     return '<span style="color:var(--bronze-dk);">Valuing&hellip; ' + st.done + ' of ' + st.total
       + (st.researched ? ' &middot; ' + st.researched + ' sent on to research' : '') + '</span>';
   }
-  if (!st.total) return '';
+  // A release's hand-off whose read did not land (_avDupReleased), with no run of its own to report.
+  if (!st.total) return st.handOff ? '<span style="color:var(--gray);">Agent Two: ' + esc(st.handOff) + '</span>' : '';
   var bits = [st.valued + ' valued'];
+  if (st.handOff) bits.push(st.handOff);
   if (st.failed) bits.push(st.failed + ' could not be valued (the reason is on the line)');
   if (st.skipped) bits.push(st.skipped + ' left alone: a value was recorded meanwhile');
   if (st.later) bits.push(st.later + ' did not come back (slow or busy): they go with the next run, or press Value N lines');
