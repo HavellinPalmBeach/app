@@ -75,7 +75,7 @@ const S = {
   _jobsTabUnread: () => '', _recordedDeletes: () => [],
 };
 const SHEETS = { Jobs: fakeSheet('Jobs', ['ID', 'HVL ID', 'Name', 'Email', 'Phone', 'Address', 'City', 'Zip', 'Service', 'Status', 'Created', 'Data JSON']) };
-S.SpreadsheetApp = { openById: () => ({ getSheetByName: (n) => SHEETS[n] || null, insertSheet(n) { SHEETS[n] = fakeSheet(n); return SHEETS[n]; } }) };
+S.SpreadsheetApp = { flush() {}, openById: () => ({ getSheetByName: (n) => SHEETS[n] || null, insertSheet(n) { SHEETS[n] = fakeSheet(n); return SHEETS[n]; } }) };
 vm.createContext(S);
 // The payment merge is lifted only where the file has it: against a build from before P16 the sheet merges
 // payments by stamp alone, which is what that build's deployment did.

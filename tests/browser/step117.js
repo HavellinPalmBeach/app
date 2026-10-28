@@ -4,8 +4,10 @@
 // of 81,554 characters; the sheet's writer cleared the Jobs tab before the write that then threw; 2.25 s later the iPad that
 // pressed it held 0 clients under "All changes saved ✓"; every other device emptied itself at first contact ("Loaded 0 jobs
 // from Sheets ✓"); photographs not yet in Drive went with them. Here the page's every call to the main sheet is answered by
-// the REAL apps-script/main-sync.gs and saveInventory.gs (tests/sheet-rig.js) over a fake spreadsheet that holds a cell to
-// 50,000 characters, as Sheets does, the page booting off it as a device does:
+// the REAL apps-script/main-sync.gs and saveInventory.gs (tests/sheet-rig.js) over a fake spreadsheet that refuses a cell over
+// 50,000 characters as Sheets does (variant D since 2026-10-28: writes applied at a flush, a read or the end of the request, the
+// refused cell and everything after it not written; sections A to F run on it, G on the deployment live until the redeploy under
+// variant A, as written), the page booting off it as a device does:
 //   A. The desk: More ▾ › Snapshot pressed on a 450-line probate estate, labelled as typed. The Jobs tab still holds all three
 //      clients, the estate's cell on the sheet is small, the snapshot store holds its 450 lines, every write landed, the page
 //      still holds three clients and says nothing was deleted; the snapshot's page is filed to Drive under a dated name; five
@@ -92,7 +94,7 @@ function seed(srv) {
 (async () => {
   try {
     b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-    const srv = R.server('A');
+    const srv = R.server('D');
     seed(srv);
     eq(srv.state(), { jobs: 3, est: 3, plan: 0, log: 0, media: 2, co: 0 }, 'fixture: the sheet holds three clients and two inventories');
     const uploads = [];

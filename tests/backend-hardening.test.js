@@ -78,7 +78,7 @@ function gsServer(opts = {}) {
     // No device key set (P2): the check is off, as on a deployment before Anthony sets HAVELLIN_DEVICE_KEY.
     PropertiesService: { getScriptProperties: () => ({ getProperty: () => null }) },
     LockService: { getScriptLock: () => ({ tryLock: () => opts.lockFree !== false, waitLock() {}, releaseLock() {} }) },
-    SpreadsheetApp: { openById: () => ({ getSheetByName: (n) => sheets[n] || null,
+    SpreadsheetApp: { flush() {}, openById: () => ({ getSheetByName: (n) => sheets[n] || null,
       insertSheet(n) { sheets[n] = fakeSheet(n); return sheets[n]; } }) },
     ContentService: { MimeType: { JSON: 'json' },
       createTextOutput: (s) => ({ setMimeType() { return this; }, getContent: () => s }) },

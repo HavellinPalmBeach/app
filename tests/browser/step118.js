@@ -69,7 +69,7 @@ function server() {
     PropertiesService: { getScriptProperties: () => ({ getProperty: (k) => (Object.prototype.hasOwnProperty.call(props, k) ? props[k] : null), setProperty() {} }) },
     LockService: { getScriptLock: () => ({ waitLock() {}, tryLock() { return true; }, releaseLock() {} }) },
     ContentService: { MimeType: { JSON: 'application/json' }, createTextOutput: (t) => ({ setMimeType() { return this; }, getContent: () => t }) },
-    SpreadsheetApp: { openById: () => ({ getName: () => 'fake', getSheetByName: (n) => sheets[n] || null, insertSheet(n) { sheets[n] = fakeSheet(n); return sheets[n]; } }) },
+    SpreadsheetApp: { flush() {}, openById: () => ({ getName: () => 'fake', getSheetByName: (n) => sheets[n] || null, insertSheet(n) { sheets[n] = fakeSheet(n); return sheets[n]; } }) },
     DriveApp: { getFolderById() { throw new Error('no Drive here'); }, getFileById() { throw new Error('no Drive here'); } },
     Utilities: { base64Encode: (s) => Buffer.from(String(s)).toString('base64') },
   };

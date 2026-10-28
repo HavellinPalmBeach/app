@@ -1476,7 +1476,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.28 · 4:12am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.28 · 12:09pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6478,9 +6478,9 @@ var BACKEND_NEEDS_TYPES = ['saveMedia', 'saveInventory', 'job', 'saveAllJobs', '
 // 2026-10-27b (P1 of the desk audit, "Nothing is lost"): no tab is cleared before it is written; a client's record too large for
 // a cell is refused by name before the sheet is touched (TOO_LARGE); an empty Jobs tab the ledger cannot explain is unread
 // (JOBS_TAB_EMPTY), never every client deleted; only a deletion somebody recorded is swept from the stores; and the snapshot's
-// lines have a store of their own (saveSnapshot, named above). An older deployment can still empty the Jobs tab on one failed
-// write, tell every device that every client was deleted, and sweep every other client's records off the sheet when the next
-// client is added, so this build relies on it and the banner names it first.
+// lines have a store of their own (saveSnapshot, named above). An older deployment cuts the Jobs tab off at a client too large
+// for a cell under an answer of ok, every client cut off reads as deleted, and the next store save sweeps their records off the
+// sheet, so this build relies on it and the banner names it.
 // 2026-10-27c (P2): the device key, carrying 2026-10-27b. Every action and type but the version probe asks for the key set in Script Properties, a share or
 // revoke goes only to a folder inside that client's own, a share only to an address recorded on that client, a trash only to a file
 // inside the jobs folder, and the release request through DocuSign only to the client's recorded fiduciaries. An older deployment
@@ -6494,7 +6494,12 @@ var BACKEND_NEEDS_TYPES = ['saveMedia', 'saveInventory', 'job', 'saveAllJobs', '
 // (a figure whose every sale was left out says it rests on no sale), Etsy's and the dealer marketplaces' search pages are left out, a
 // page cited twice counts once, and an Etsy, 1stDibs, Chairish, Ruby Lane, Replacements or retail price is always asking. An older
 // deployment keeps a sentence citing sales no tool returned, printed on the Estate Inventory Report, and an asking price as a sale.
-var BACKEND_MIN_VERSION = '2026-10-27e';
+// 2026-10-28 (probeClearThenOversizeWrite, run 2026-10-28: DEFERRED), carrying 2026-10-27e: the script applies its writes before
+// it lets the next save in and before it answers (SpreadsheetApp.flush()), a store cut across cells never starts a cell with
+// = + - @ or ', and a hard delete is locked and recorded first. This build relies on an ok meaning the write is on the sheet
+// (_invManifestLanded, _snapLanded, the release of a held write): on an older deployment two devices saving at the same moment
+// can lose one device's change though both were told it saved, and a store cut at an = turns unreadable.
+var BACKEND_MIN_VERSION = '2026-10-28';
 var _backendVersion = null;
 // The actions the deployment says it has (2026-10-26c), once the version probe answers; null until then. A route the app
 // offers only on a deployment that has it reads this (backendHas): the release request's DocuSign send.
@@ -6568,7 +6573,7 @@ var BACKEND_FEATURE_COST = {
   saveSnapshot:  'no inventory Snapshot can be taken (the deployment has nowhere to keep its lines)',
   // One line for any deployment older than BACKEND_MIN_VERSION, so it names the newest gap first and says
   // which vintage the older one belongs to (the banner's title prints the version that answered).
-  version:       'a figure Agent Two researched can carry a basis sentence citing sales nobody could find (\u201cFour sold comparables at Christie\u2019s and Kodner\u201d under a general estimate) on the Estate Inventory Report, and an Etsy, 1stDibs, Chairish, Ruby Lane or Replacements asking price can stand as a sale behind \u201conline comps\u201d; on a deployment older than 2026-10-27d, a release approval recorded on one device can lose, on the sheet, the record of where the item was going, who was taking it and its value when it was signed, so another device reads the approval as covering the item wherever it goes now, and two devices\u2019 signatures given for different destinations can be counted as one approval; on a deployment older than 2026-10-27c, anyone who holds the Apps Script URL can read every client and inventory, share a client\u2019s folders with any address, trash any file and send a release request through DocuSign to anybody, with no device key asked for; on a deployment older than 2026-10-27b, one failed write can empty the Jobs tab, an empty Jobs tab tells every device that every client was deleted and each one empties itself, and the first client added after that sweeps every other client\u2019s estimate, plan, hours and inventory off the sheet; on a deployment older than 2026-10-27, an item Agent Two researched and found no sale for stays marked unsure, and its paper reads general estimate, however many close listings it counted; on a deployment older than 2026-10-26b, a search page, or a sale whose price was not shown, can stand as a sold comparable, so a researched figure resting on one prints \u201cauction comps\u201d; a long note from Agent Two stops mid-sentence; and neither agent grades an item\u2019s condition; on a deployment older than 2026-10-26, the agents never move to a newer model by themselves (Agent One still runs on the older Opus 5), Agent Two never looks at the photograph of an item whose name is a guess or fixes a wrong category, a figure with no sale behind it prints as \u201cauction comps\u201d, and one slow request can mark a whole batch \u201cnot valued\u201d or lose a batch of names; on a deployment older than 2026-10-25b, a name you type or review on the desk (a wooden mirror retyped as Restoration Hardware) can come back from Agent Two as the generic thing and be valued as that, and a brand the crew says at the camera is not put into the name; on a deployment older than 2026-10-25, Agent Two flags a name it disagrees with (\u201cName may be wrong\u201d) instead of correcting it, puts a note on nearly every item it values (no condition recorded, a rough count, a search that ran short), and Agent One files everyday dishes as collectibles; on a deployment older than 2026-10-24, a blank line added to a photograph already named (Another item in this photo) makes Agent One read the whole photograph again, so every object in it goes on the list a second time, and its names carry a count (\u201capprox. 7 in stack\u201d) that the Qty box contradicts once corrected; on a deployment older than 2026-10-19b, a client\u2019s inventory reset in the Apps Script editor (resetInventoryConfirm) is undone by the first device that saves a line from before it, unless every device reloads first; on a deployment older than 2026-10-16, an incident reported on one device, or a key or fob received there while another device records a handoff, can be dropped when the sheet merges the job (the Incidents and Keys & access cards\u2019 lists are not yet merged entry by entry); on a deployment older than 2026-10-06, two devices\u2019 release signers are not merged and the client\u2019s workbook rounds its money; on a deployment older than 2026-10-05, a co-executor or co-trustee is not put on the DocuSign envelope beside the client, so they sign a printed copy of the agreement and the page they signed has to be filed from the timeline; on a deployment older than 2026-10-03, a co-trustee, a beneficiary, a signed copy filed to Drive, a find on site or a proceeds statement added on one device can be dropped by another device saving an older copy of the job, and the client\u2019s inventory workbook heads a trust\u2019s net proceeds \u201cNet to Estate\u201d; on a deployment older than 2026-10-01, File signed copy adds a second copy of the signed agreement to the client\u2019s Agreement folder instead of replacing the one there; on a deployment older than 2026-09-30b, a payment voided or marked cleared on one device can come back as it was from another device that changed the same payment before reloading, and count again; a firearm\u2019s serial, recipient or dealer route, recorded on one device, can be dropped from the sheet by another device\u2019s older copy of the item, until the first device next saves the inventory; and on a deployment older than 2026-09-30, two people editing different parts of one job (a vendor quote here, the team there) can also undo each other\u2019s work, a damaged store tab is emptied by the next save instead of refused, and Agent One can stop mid-answer on a busy photograph',
+  version:       'on a deployment older than 2026-10-28, two devices saving at the same moment can lose one device\u2019s change on the sheet though both were told it saved, and an inventory or estimate store can become unreadable, refusing every save until it is restored from version history; on a deployment older than 2026-10-27e, a figure Agent Two researched can carry a basis sentence citing sales nobody could find (\u201cFour sold comparables at Christie\u2019s and Kodner\u201d under a general estimate) on the Estate Inventory Report, and an Etsy, 1stDibs, Chairish, Ruby Lane or Replacements asking price can stand as a sale behind \u201conline comps\u201d; on a deployment older than 2026-10-27d, a release approval recorded on one device can lose, on the sheet, the record of where the item was going, who was taking it and its value when it was signed, so another device reads the approval as covering the item wherever it goes now, and two devices\u2019 signatures given for different destinations can be counted as one approval; on a deployment older than 2026-10-27c, anyone who holds the Apps Script URL can read every client and inventory, share a client\u2019s folders with any address, trash any file and send a release request through DocuSign to anybody, with no device key asked for; on a deployment older than 2026-10-27b, a client too large for a sheet cell cuts the Jobs tab off at that client with no error shown, every client below it then reads as deleted (this device keeps its copy of them), and the next estimate, plan, hours or inventory save sweeps their records off the sheet; on a deployment older than 2026-10-27, an item Agent Two researched and found no sale for stays marked unsure, and its paper reads general estimate, however many close listings it counted; on a deployment older than 2026-10-26b, a search page, or a sale whose price was not shown, can stand as a sold comparable, so a researched figure resting on one prints \u201cauction comps\u201d; a long note from Agent Two stops mid-sentence; and neither agent grades an item\u2019s condition; on a deployment older than 2026-10-26, the agents never move to a newer model by themselves (Agent One still runs on the older Opus 5), Agent Two never looks at the photograph of an item whose name is a guess or fixes a wrong category, a figure with no sale behind it prints as \u201cauction comps\u201d, and one slow request can mark a whole batch \u201cnot valued\u201d or lose a batch of names; on a deployment older than 2026-10-25b, a name you type or review on the desk (a wooden mirror retyped as Restoration Hardware) can come back from Agent Two as the generic thing and be valued as that, and a brand the crew says at the camera is not put into the name; on a deployment older than 2026-10-25, Agent Two flags a name it disagrees with (\u201cName may be wrong\u201d) instead of correcting it, puts a note on nearly every item it values (no condition recorded, a rough count, a search that ran short), and Agent One files everyday dishes as collectibles; on a deployment older than 2026-10-24, a blank line added to a photograph already named (Another item in this photo) makes Agent One read the whole photograph again, so every object in it goes on the list a second time, and its names carry a count (\u201capprox. 7 in stack\u201d) that the Qty box contradicts once corrected; on a deployment older than 2026-10-19b, a client\u2019s inventory reset in the Apps Script editor (resetInventoryConfirm) is undone by the first device that saves a line from before it, unless every device reloads first; on a deployment older than 2026-10-16, an incident reported on one device, or a key or fob received there while another device records a handoff, can be dropped when the sheet merges the job (the Incidents and Keys & access cards\u2019 lists are not yet merged entry by entry); on a deployment older than 2026-10-06, two devices\u2019 release signers are not merged and the client\u2019s workbook rounds its money; on a deployment older than 2026-10-05, a co-executor or co-trustee is not put on the DocuSign envelope beside the client, so they sign a printed copy of the agreement and the page they signed has to be filed from the timeline; on a deployment older than 2026-10-03, a co-trustee, a beneficiary, a signed copy filed to Drive, a find on site or a proceeds statement added on one device can be dropped by another device saving an older copy of the job, and the client\u2019s inventory workbook heads a trust\u2019s net proceeds \u201cNet to Estate\u201d; on a deployment older than 2026-10-01, File signed copy adds a second copy of the signed agreement to the client\u2019s Agreement folder instead of replacing the one there; on a deployment older than 2026-09-30b, a payment voided or marked cleared on one device can come back as it was from another device that changed the same payment before reloading, and count again; a firearm\u2019s serial, recipient or dealer route, recorded on one device, can be dropped from the sheet by another device\u2019s older copy of the item, until the first device next saves the inventory; and on a deployment older than 2026-09-30, two people editing different parts of one job (a vendor quote here, the team there) can also undo each other\u2019s work, a damaged store tab is emptied by the next save instead of refused, and Agent One can stop mid-answer on a busy photograph',
   preVersion:    'it predates the version check itself (2026-09-09), so client PDFs, photographs, DocuSign, Stripe and Agent One may all be missing as well'
 };
 
@@ -25542,7 +25547,8 @@ function unsentPhotosKeptText(n) {
 }
 
 // ⚠⚠ MAY A VERDICT FROM THE SHEET TAKE THESE CLIENTS OFF THIS DEVICE? (2026-10-27, P1 of the desk audit, GAP3-02.) One
-// Snapshot of a full house emptied the Jobs tab on a deployment older than 2026-10-27b, which then answered every save ok
+// Snapshot of a full house emptied the Jobs tab on a deployment older than 2026-10-27b (on the rig, which throws at the call; on a
+// real sheet the tab is cut at that client: the probe, 2026-10-28), which then answered every save ok
 // with every client `dropped`, and loadJobs with no jobs and every client deleted: the iPad that pressed Snapshot was at 0
 // clients 2.25 s later under "All changes saved", every other device emptied itself at first contact, and no device kept a
 // copy the sheet could be rebuilt from. So the one rule, DOM-free: '' to apply the verdict, else why not. A verdict that
@@ -26352,10 +26358,11 @@ function saveJobs() {
   // went on sending the old array, a client the sheet had refused included, for as long as it was retried. A getter reads
   // `jobs` at every send (JSON.stringify calls it, and so does every retry of the same body).
   // ⚠⚠ AND NEVER A RECORD TOO LARGE FOR A CELL (2026-10-27, P1's review). One client past 50,000 characters refused the whole
-  // batch, for every client, on every save; and on the deployment live until the redeploy the batch clears the Jobs tab
-  // before the write that then throws, so each save emptied it again, the restored one included. The batch sends every
-  // other client (jobsForSheetBatch), and the one too large is held by name on the chip (_holdTooLargeJobs). (Asked through
-  // typeof because some 26 test sandboxes lift saveJobs for its other half; tests/p1-nothing-lost lifts and drives these.)
+  // batch, for every client, on every save; and on a deployment older than 2026-10-27b the batch clears the Jobs tab
+  // before a write Sheets refuses as the execution ends, so a save carrying it cut the tab at that client again after every
+  // restore. The batch sends every other client (jobsForSheetBatch), and the one too large is held by name on the chip
+  // (_holdTooLargeJobs). (Asked through typeof because some 26 test sandboxes lift saveJobs for its other half;
+  // tests/p1-nothing-lost lifts and drives these.)
   if (typeof _holdTooLargeJobs === 'function') _holdTooLargeJobs(jobs);
   postSyncBadge({ type: 'saveAllJobs', get payload() { return typeof jobsForSheetBatch === 'function' ? jobsForSheetBatch(jobs) : jobs; } }, 'Synced \u2713', 'Sync failed \u2014 saved locally');
 }
@@ -26372,6 +26379,8 @@ function jobsForSheetBatch(list) {
 }
 // Each client too large for the sheet is held as its own write, named, never sent by itself (the chip says so and what to do):
 // the client's own write is the one the sheet would refuse, so that is the write held. A client back under the cap is let go.
+// (and _flushOutbox holds one that grew past the cap after it was queued, 2026-10-28: an older deployment answered that write ok,
+// which let the hold go)
 function _holdTooLargeJobs(list) {
   if (typeof _pendingWrites !== 'object' || !_pendingWrites) return;
   var changed = false, big = {};
@@ -31611,8 +31620,9 @@ function _snapItemOf(r, job) {
 // ⚠⚠ A SNAPSHOT'S LINES NEVER RIDE THE CLIENT'S RECORD (2026-10-27, P1 of the desk audit, VAL-01, INV-02, GAP3-01). They were
 // pushed onto job.invSnapshots, about 132 characters a line, and a client is ONE cell of JSON on the sheet, which holds 50,000:
 // one Snapshot of about 295 named lines, a second of 150, or two devices' of 180 each merged on the sheet, passed it, and the
-// sheet's writer, clearing the tab before a write that then threw, emptied the Jobs tab for every client (driven on the real
-// code and the real page). The record keeps the heading (when, the label, the count, the total, the value date, a void) and
+// sheet's writer, clearing the tab before a write Sheets refused as the execution ended, cut the Jobs tab off at that client
+// (driven on the real code over a fake sheet that threw at the call, where it emptied the tab for every client, and on the real
+// page). The record keeps the heading (when, the label, the count, the total, the value date, a void) and
 // the lines go to their own store on the sheet (saveSnapshot, SnapshotStore), read back to print or compare
 // (_withSnapLines). This device keeps the lines of the snapshots it took or read, in memory only (_snapLines); localStorage is
 // the manifest's and must never be crowded out.
@@ -46120,9 +46130,10 @@ function flushPendingWrites() {
     if (!w) { next(); return; }   // superseded or landed while this sweep was running
     // ⚠⚠ A RECORD TOO LARGE FOR THE SHEET IS NEVER SENT AGAIN FROM THE QUEUE (2026-10-27, P1's review): not on a refocus, a
     // reconnect, another write's backoff or Try again. It fails the same way every time, and on the deployment live until
-    // the redeploy the batch clears the Jobs tab before the write that throws: the iPad put down and picked up again emptied
-    // the restored tab (driven on 7abc836's .gs). It stays on the chip until a newer write of the same thing lands (the
-    // client's next save under the cap, or a batch that no longer carries it: _flushOutbox) or the tab is reloaded.
+    // the redeploy the batch clears the Jobs tab before a write Sheets refuses as the execution ends: the iPad put down and picked
+    // up again cut the restored tab again (driven on 7abc836's .gs over a fake sheet that threw at the call, where it emptied
+    // it). It stays on the chip until a newer write of the same thing lands (the client's next save under the cap, or a batch
+    // that no longer carries it: _flushOutbox) or the tab is reloaded.
     if (w.kind === 'toolarge') { next(); return; }
     // Resolve the URL fresh on every attempt — see SYNC_TARGETS. A write queued while
     // an endpoint was misconfigured lands as soon as the URL in Settings is corrected.
@@ -46204,6 +46215,16 @@ function _flushOutbox() {
       return;
     }
     var w = batch[i++];
+    // ⚠⚠ A CLIENT'S OWN WRITE TOO LARGE FOR A CELL IS HELD, NEVER POSTED (2026-10-28). The payload is held by reference, so a
+    // record can grow past the cap after it was queued, and a deployment older than 2026-10-27b answered that write ok (Sheets
+    // refuses the cell only when the writes are applied, after its doPost had answered: the probe, 2026-10-28, DEFERRED), which
+    // let the hold go and left the old record, or none, on the sheet. (Asked through typeof: sandboxes lift _flushOutbox without these.)
+    if (w.body && w.body.type === 'job' && typeof jobRecordTooLarge === 'function' && typeof _holdTooLargeJobs === 'function'
+        && jobRecordTooLarge(w.body.payload)) {
+      _holdTooLargeJobs([w.body.payload]);
+      next();
+      return;
+    }
     // When this write went, for onLanded (P6: the lines a manifest write carried are the lines held before it went).
     var sentAt = Date.now();
     postSyncTo(w.target, w.body)
@@ -46280,10 +46301,11 @@ function queuedPostSync(body, okMsg, failMsg, onLanded) {
 //             like this, but so does a live bug on a perfectly current deployment, so
 //             this must NOT assert a redeploy. Print what the server said instead.
 //   'toolarge' — (2026-10-27, P1) the sheet refused a client's record as too large for one cell: TOO_LARGE, the
-//             server's own refusal since 2026-10-27b, or the cell-cap words an older deployment's Sheets throws. It
-//             fails the same way every time for that record, so it is HELD and never sent again by itself, and the
-//             chip names the client and the size (_tooLargeWords). Before this it was retried forever, and on an older
-//             deployment every retry cleared the Jobs tab again, the restored one included (GAP3-05).
+//             server's own refusal since 2026-10-27b, or Sheets' own cell-cap words, which an older deployment passed on
+//             only where a read later in the same request forced the refused write through (most of its oversized saves
+//             answered ok: the probe, 2026-10-28). It fails the same way every time for that record, so it is HELD and
+//             never sent again by itself, and the chip names the client and the size (_tooLargeWords). Before this it was
+//             retried forever, and on an older deployment every retry that drew the words cut the Jobs tab again (GAP3-05).
 //   'empty' — (2026-10-27, P1) JOBS_TAB_EMPTY: the sheet's Jobs tab is empty and the ledger cannot explain it, so the
 //             sheet refuses every job write until its rows are restored. Retried with the backoff (it lands once the rows
 //             are back), and the chip says the sheet has no clients and nothing here was changed.

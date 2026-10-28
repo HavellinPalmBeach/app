@@ -122,7 +122,7 @@ function server(opts = {}) {
       computeDigest: (alg, s) => Array.from(crypto.createHash('sha256').update(String(s)).digest()).map((b) => (b > 127 ? b - 256 : b)),
       getUuid: () => crypto.randomUUID() },
     ContentService: { MimeType: { JSON: 'json' }, createTextOutput: (s) => ({ setMimeType() { return this; }, getContent: () => s }) },
-    SpreadsheetApp: { openById: () => ({ getSheetByName: (n) => sheets[n] || null, insertSheet(n) { sheets[n] = fakeSheet(n); return sheets[n]; } }) },
+    SpreadsheetApp: { flush() {}, openById: () => ({ getSheetByName: (n) => sheets[n] || null, insertSheet(n) { sheets[n] = fakeSheet(n); return sheets[n]; } }) },
     DriveApp: drive.DriveApp,
     __sheets: sheets, __props: props,
   };
@@ -233,6 +233,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const fresh = (out.match(/nothing has been set\): ([A-Z0-9-]+)/) || [])[1] || '';
     ok(/^[A-HJ-NP-Z2-9]{4}(-[A-HJ-NP-Z2-9]{4}){4}$/.test(fresh), 'the fresh key is twenty letters and digits with no 0, O, 1 or I, in groups of four (' + fresh + ')');
     eq(s.setProps, [], '⚠ it sets nothing: a new key is put in Script Properties by hand');
+    // 2026-10-28: its steps in the manual's order, the devices first and Script Properties last (it said the reverse).
+    const howTo = s.logs.filter((l) => /^To use it:/.test(l))[0] || '';
+    ok(howTo.indexOf('every device') > 0 && howTo.indexOf('Script Properties') > howTo.indexOf('every device'),
+      '⚠ the log names the devices before Script Properties (' + howTo.slice(0, 80) + '…)');
     s = server({ fns: ['suggestDeviceKey', '_deviceKeyNorm'], vars: ['DEVICE_KEY_PROP', 'DEVICE_KEY_MIN'] });
     s.ctx.suggestDeviceKey();
     has(s.logs.join('\n'), 'The device key check is OFF', 'with no key it says the check is off');
@@ -311,7 +315,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const r = rows[1], at = (h) => r[rows[0].indexOf(h)];
     eq([at('Action'), at('Result'), at('Note by hand'), at('Device user'), at('Email')], ['trash', 'trashed', '', 'Anthony Graziano', ''], 'each value under its own header, a column added by hand left blank');
     const broken = driveServer();
-    broken.ctx.SpreadsheetApp = { openById: () => { throw new Error('Sheets down'); } };
+    broken.ctx.SpreadsheetApp = { flush() {}, openById: () => { throw new Error('Sheets down'); } };
     eq([broken.ctx.trashFileUnderRoot({ fileId: 'p1', jobId: 7 }).ok, broken.drive.trashed], [true, ['p1']], 'with the sheet unreachable the trash still goes (the log never stops the act it records)…');
     ok(broken.logs.some((l) => /AccessLog row not written \(Error: Sheets down\)/.test(l) && /"Folder or file ID":"p1"/.test(l)), '…and its row goes to the execution log instead');
   });

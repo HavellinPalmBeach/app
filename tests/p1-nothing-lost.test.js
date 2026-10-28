@@ -9,8 +9,12 @@
 // under "All changes saved ✓"; every other device emptied itself at first contact; the first new client swept every other
 // client's estimate, plan, hours and 450-line inventory off the stores; a device holding photographs not yet in Drive lost
 // them; the failed write was retried for ever and emptied the restored tab again; and every store tab was cleared before
-// it was written. "Variant A" is Apps Script keeping a clearContent that ran before a setValues that threw; "variant B"
-// rolls the execution's writes back. Nobody outside Google can say which it is (the probe below asks), so both are driven.
+// it was written. ⚠ The audit's rig threw at the call. On a real sheet (probeClearThenOversizeWrite, 2026-10-28: DEFERRED)
+// Sheets refuses the cell only when the writes are applied, after the clear and every cell before it have landed, so the old
+// save cut the tab at the oversized client and usually answered ok. Variant 'D' (tests/sheet-rig.js, the default since
+// 2026-10-28) is that, and 'DE' the same with the refused cell emptied, since the probe could not tell which; 'A' (a
+// clearContent kept when a setValues throws at the call) and 'B' (the execution's writes rolled back) model no deployment
+// and are kept only for the tests built on them. The groups that guard the cap run under A, D and DE.
 //
 // This file is that rig turned into tests: the WHOLE of apps-script/main-sync.gs and saveInventory.gs, evaluated as they
 // are deployed, over the fake sheet; two or three devices built from the real sync code in havellin.html, their fetch
@@ -57,7 +61,8 @@ function device(name, srv, persisted, over) {
     let text;
     if (isPost) {
       const body = JSON.parse(opts.body);
-      net.push({ t: vnow, m: 'POST', what: body.type || body.action, n: Array.isArray(body.payload) ? body.payload.length : undefined, bytes: opts.body.length });
+      net.push({ t: vnow, m: 'POST', what: body.type || body.action, n: Array.isArray(body.payload) ? body.payload.length : undefined, bytes: opts.body.length,
+        id: body.payload && !Array.isArray(body.payload) ? (body.payload.id != null ? body.payload.id : body.payload.jobId) : undefined });
       text = dev.answer ? dev.answer('POST', body) : srv.exec('POST', { postData: { contents: opts.body } });
     } else {
       const q = {};
@@ -178,7 +183,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   const guard = (name, body) => { group(name); try { body(); } catch (e) { ok(false, name + ' threw: ' + (e && e.stack || e).toString().split('\n').slice(0, 3).join(' | ')); } };
 
   // ───────────────────────────────────────────────────────────────────────────
-  ['A', 'B'].forEach((variant) => guard('[' + variant + '] one Snapshot of a 450-line house: the sheet and every device stay whole (GAP3-01, -02, -03, -04)', () => {
+  // RESTATED 2026-10-28 (the cell-cap probe: DEFERRED): under A and the deferred model D and DE; B modelled no deployment.
+  ['A', 'D', 'DE'].forEach((variant) => guard('[' + variant + '] one Snapshot of a 450-line house: the sheet and every device stay whole (GAP3-01, -02, -03, -04)', () => {
     const srv = server(variant);
     const A = device('A', srv), B = device('B', srv);
     seedDevice(A, { manifestN: 450 }); seedDevice(B);
@@ -270,7 +276,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   });
 
   // ───────────────────────────────────────────────────────────────────────────
-  ['A', 'B'].forEach((variant) => guard('[' + variant + '] a record too large for a cell is refused by name, after the merge, and nothing is written (GAP3-01)', () => {
+  ['A', 'D', 'DE'].forEach((variant) => guard('[' + variant + '] a record too large for a cell is refused by name, after the merge, and nothing is written (GAP3-01)', () => {
     const srv = server(variant);
     const A = device('A', srv);
     seedDevice(A); seedSheet(srv, A, 5);
@@ -300,8 +306,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }));
 
   // ───────────────────────────────────────────────────────────────────────────
-  guard('no store tab is cleared before it is written (GAP3-07)', () => {
-    const srv = server('A');
+  // Under D as well (2026-10-28): a write that fails as Sheets applies it fails at _writeStoreBlob's flush, inside the save's own
+  // try, so the save says so; without that flush it failed after doPost had answered ok.
+  ['A', 'D'].forEach((variant) => guard('[' + variant + '] no store tab is cleared before it is written (GAP3-07)', () => {
+    const srv = server(variant);
     const A = device('A', srv); seedDevice(A); seedSheet(srv, A, 3);
     eq(srv.keys('EstimateStore').length, 3, 'fixture: three estimates');
     // One setValues on the store fails (a timeout, a quota): the next save carries one estimate.
@@ -325,7 +333,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     srv._writeStoreBlob('Probe', { small: 2 });
     eq(srv.sheets.Probe.getLastRow() - 1, 1, 'and the leftover rows go once a clear runs');
     eq(srv._readStoreBlob('Probe', null), { small: 2 }, 'reading back what was written');
-  });
+    if (variant === 'D') eq(srv.lateErrs, [], 'and no write failed after its answer');
+  }));
 
   // ───────────────────────────────────────────────────────────────────────────
   guard('an empty Jobs tab is unread until a reset records itself (GAP3-02)', () => {
@@ -698,6 +707,21 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       ok(v === 'A' ? /^VARIANT A/.test(verdict) : /^VARIANT B/.test(verdict), 'variant ' + v + ' reads as such: ' + verdict.slice(0, 60));
       eq(trashed, 1, 'and its throwaway file is trashed');
     });
+    // And under the deferred model (2026-10-28), as an editor run: the probe prints Anthony's log line for line, the rig's D
+    // being what his account did.
+    ['D', 'DE'].forEach((v) => {
+      const srv = server(v);
+      let trashed = 0;
+      srv.SpreadsheetApp.create = () => { const sh = srv.SpreadsheetApp.openById().insertSheet('probe-' + v); return { getSheets: () => [sh], getId: () => 'pid', getUrl: () => 'u' }; };
+      srv.DriveApp = { getFileById: () => ({ setTrashed: () => { trashed++; } }) };
+      const verdict = srv.run(() => srv.probeClearThenOversizeWrite());
+      ok(/^DEFERRED: setValues did not throw at the call; the flush did \(Exception: Your input contains more than the maximum of 50000 characters in a single cell\.\)/.test(verdict),
+        '⚠ variant ' + v + ' reads as DEFERRED, Sheets\' own words: ' + verdict.slice(0, 80));
+      has(verdict, 'whether the web app still delivers that ok is not known', 'and the verdict claims no more than the probe shows');
+      eq(srv.log.slice(0, 3), ['setValues threw at the call: no', 'flush threw: ' + CELL_ERR, 'rows left after the failed write: 2 (cell lengths [7,0])'],
+        '⚠⚠ the log Anthony read on 2026-10-28, line for line');
+      eq(trashed, 1, 'and its throwaway file is trashed');
+    });
     const S = server('A');
     const dispatch = S.doGet.toString() + S.doPost.toString();
     ok(dispatch.length > 2000, 'fixture: the two routers were read (' + dispatch.length + ')');
@@ -791,8 +815,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ───────────────────────────────────────────────────────────────────────────
   // P1's review (2026-10-27): the app reaches Pages before Anthony redeploys, so it meets the deployment live until then. These
   // run against that deployment's own code (tests/old-backend: 7abc836, 2026-10-26c; its ledger is every older deployment's).
-  guard('[the deployment live until the redeploy] after the tab is emptied, no save takes a client off a device (P1\'s review)', () => {
-    const srv = server('A', OLD);
+  // RESTATED 2026-10-28 (the probe: DEFERRED): under A and under the deferred model, D and DE.
+  ['A', 'D', 'DE'].forEach((variant) => guard('[' + variant + '] [the deployment live until the redeploy] after the tab is emptied, no save takes a client off a device (P1\'s review)', () => {
+    const srv = server(variant, OLD);
     ok(/var BACKEND_VERSION = '2026-10-26c'/.test(OLD.GS) && OLD.GS.indexOf('_jobsTabUnread') < 0, 'fixture: the old deployment\'s own code, without P1');
     const Y = device('Y', srv);
     seedDevice(Y, { manifestN: 40 }); seedSheet(srv, Y, 40);
@@ -802,7 +827,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const oldRec = JSON.parse(JSON.stringify(Y.ctx.jobs[0]));
     oldRec.invSnapshots = [{ ts: 5, label: 'Filed with court', count: 450, items: manifest(J, 450) }]; oldRec.updatedAt = later();
     const r0 = srv.post({ type: 'saveAllJobs', payload: [oldRec] });
-    eq([r0.ok, srv.jobsRows()], [false, 0], 'fixture: the old deployment emptied the Jobs tab');
+    // RESTATED 2026-10-28 (C3): the oversized client is the first row here, so the tab is left with no client on it either way.
+    // Under A the write threw at the call (ok:false); on a real sheet (D, DE) Sheets refused that cell after doPost had answered,
+    // and ok:true over a write that failed is a false ok.
+    eq(srv.jobIds(), [], 'fixture: the old deployment left no client on the Jobs tab');
+    eq(r0.ok, variant === 'A' ? false : true, variant === 'A' ? 'fixture: and said so' : '⚠ fixture: under an answer of ok, a false ok');
     Y.ctx.refreshJobsFromCloud(); Y.run(100);
     eq([Y.ctx.jobs.length, Y.ctx._sheetNotice], [3, Y.ctx.SHEET_NO_CLIENTS_TXT], 'Y keeps its three and says the sheet has none');
     // One Save Changes in Edit Client: the batch, and the client's own write, which the old deployment answers with that one id dropped.
@@ -842,30 +871,65 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(srv.jobsRows(), 4, 'fixture: the rows restored, the new client kept');
     X.ctx.estimateStore[J].savedAt = later(); X.ctx.saveAllEstimatesNow(); X.run(400);
     eq(srv.keys('EstimateStore').length, 4, '⚠ and a device that kept its copy puts every estimate back');
-  });
+  }));
 
-  guard('[the deployment live until the redeploy] a client too large for a cell never empties the Jobs tab (P1\'s review)', () => {
-    const srv = server('A', OLD);
+  // The same deployment where the oversized client is in the middle of the sheet (2026-10-28, C3): on a real sheet the tab is CUT
+  // there, not emptied, and the clients below it read as deleted. The client above it stays on the sheet; a device on this app
+  // keeps all three; and the next ordinary estimate save sweeps the cut-off clients' estimates off the sheet (the manual's runbook).
+  ['D', 'DE'].forEach((variant) => guard('[' + variant + '] [the deployment live until the redeploy] a client too large in the middle of the sheet cuts the tab there, and no device loses a client (2026-10-28)', () => {
+    const srv = server(variant, OLD);
+    const Y = device('Y', srv);
+    seedDevice(Y, { manifestN: 40 }); seedSheet(srv, Y, 40);
+    eq(srv.jobIds(), IDS.map(String), 'fixture: the old sheet holds three clients, the second of them in the middle');
+    const oldRec = JSON.parse(JSON.stringify(Y.ctx.jobs[1]));
+    oldRec.invSnapshots = [{ ts: 5, label: 'Filed with court', count: 450, items: manifest(K, 450) }]; oldRec.updatedAt = later();
+    const r0 = srv.post({ type: 'saveAllJobs', payload: [oldRec] });
+    eq(r0.ok, true, '⚠ fixture: the old deployment answered ok over a write Sheets refused (a false ok)');
+    eq(srv.jobIds(), [String(J)], '⚠⚠ fixture: the tab is cut at that client: the client above it survives, the rest are gone');
+    ok(!!srv.lateErr && /maximum of 50000 characters in a single cell/.test(srv.lateErr), 'fixture: Sheets refused the cell as the request ended (' + String(srv.lateErr).slice(0, 60) + ')');
+    Y.ctx.refreshJobsFromCloud(); Y.run(100);
+    eq(Y.ctx.jobs.map((j) => j.id), [J, K, L], '⚠⚠ a device on this app keeps all three');
+    has(Y.badges.join(' | '), '2 clients refused by the sheet are kept on this device', '⚠ and says the two it kept');
+    // The next ordinary estimate save from any device: that deployment sweeps the records of the clients cut off.
+    Y.ctx.estimateStore[J].savedAt = later(); Y.ctx.saveAllEstimatesNow(); Y.run(400);
+    eq(srv.keys('EstimateStore'), [String(J)], 'fixture: on that deployment the next estimate save swept the cut-off clients\' estimates (no new client needed)');
+    eq(Object.keys(Y.ctx.estimateStore).length, 3, '⚠ and the device kept all three estimates');
+  }));
+
+  // RESTATED 2026-10-28 (C1, C2): under A and the deferred model. On a real sheet the old deployment answered the client's own
+  // oversized write ok (Sheets refuses the cell after doPost has answered), which let the hold go; so that write is never posted
+  // (_flushOutbox holds it), and the tab is counted by the clients whose record is on it (jobIds), not by rows.
+  ['A', 'D', 'DE'].forEach((variant) => guard('[' + variant + '] [the deployment live until the redeploy] a client too large for a cell never empties the Jobs tab (P1\'s review)', () => {
+    const srv = server(variant, OLD);
     const X = device('X', srv);
     seedDevice(X); seedSheet(srv, X, 3);
     const j = X.ctx.jobs[0];
     j.signedRecords = Array.from({ length: 420 }, (_, i) => ({ id: 'sr' + i, kind: 'receipt', ref: 'x', note: 'y'.repeat(130) }));
     ok(len(j) > CELL_MAX, 'fixture: the record is ' + len(j) + ' characters');
+    const jobPostsOfJ = () => X.net.filter((n) => n.m === 'POST' && n.what === 'job' && String(n.id) === String(J)).length;
     X.ctx._saveJobEdit(j, 'signedRecords', 'sr0');
     X.run(400);
     eq(srv.jobsRows(), 3, '⚠⚠ the old Jobs tab is still whole: the batch never carried the client too large (it emptied the tab)');
+    eq(srv.jobIds().length, 3, '⚠⚠ every client\'s record still on it');
+    eq(jobPostsOfJ(), 0, '⚠⚠ the client\'s own write too large for a cell was never posted (the old deployment answered it ok)');
     eq(X.held(), ['main/job:' + J], 'the client is held, as its own write');
     eq(X.ctx.jobs.length, 3, 'and kept here (its own write took it off the device)');
     has(X.ctx._pendingChipCopy().head, 'Ellison Estate (HVL-260) is too large for the sheet (', '⚠ the chip names it, not another client');
     X.ctx._retryStep = 0; X.ctx.flushPendingWrites(); X.run(300);
     eq(srv.jobsRows(), 3, '⚠⚠ the page shown again (its handler runs the queue) sends nothing that could empty it (it emptied the restored tab)');
+    eq(srv.jobIds().length, 3, 'every record still on it');
     X.offline = true; X.ctx.estimateStore[K].savedAt = later(); X.ctx.saveAllEstimatesNow(); X.run(300); X.offline = false;
     X.run(6000);
     ok(X.pending().indexOf('main/saveAllEstimates') < 0, 'fixture: another write failed once and its backoff ran the queue');
     eq(srv.jobsRows(), 3, '⚠⚠ nor does another write\'s backoff');
+    eq(srv.jobIds().length, 3, 'every record still on it');
     X.ctx.saveJobs(); X.run(300);
     eq(srv.jobsRows(), 3, 'nor the next save of the list');
-  });
+    eq(srv.jobIds().length, 3, 'every record still on it');
+    // The next edit of that client, still too large: held again, never posted.
+    X.ctx._saveJobEdit(j, 'signedRecords', 'sr1'); X.run(400);
+    eq([jobPostsOfJ(), X.held()], [0, ['main/job:' + J]], '⚠ a second edit: still held, still never posted');
+  }));
 
   // ───────────────────────────────────────────────────────────────────────────
   guard('a snapshot whose lines do not reach the sheet records nothing; once they land it is recorded (P1\'s review)', () => {
@@ -951,10 +1015,26 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // RESTATED on the merge with P2 (2026-10-27): P2's open URL leads the line (its 2026-10-27c carries this build's 2026-10-27b);
     // this build's gap follows at once, under its own vintage. RESTATED again on the merge with P5 (2026-10-27d, which carries both):
     // P5's gap leads, the open URL follows under 2026-10-27c, and this build's gap at once after it.
+    // RESTATED 2026-10-28 (the probe: DEFERRED): an older deployment's failed write cut the tab at that client under an answer of ok,
+    // rather than emptying it, and this device keeps its copy; the clause says so, still first after the open URL.
     const _v = B.BACKEND_FEATURE_COST.version, _vint = '; on a deployment older than ';
-    const _c = _v.indexOf(_vint + '2026-10-27c, '), _b = _v.indexOf(_vint + '2026-10-27b, one failed write can empty the Jobs tab');
+    const _c = _v.indexOf(_vint + '2026-10-27c, '), _b = _v.indexOf(_vint + '2026-10-27b, a client too large for a sheet cell cuts the Jobs tab off at that client with no error shown');
     ok(_c > 0 && _b > _c && _v.indexOf(_vint, _c + 1) === _b,
       'and the version line names what stays broken, first after the open URL, by its vintage');
+    lacks(_v, 'each one empties itself', 'and never that a device empties itself (since P1 each keeps its copy)');
+    // 2026-10-28: the app relies on an ok meaning the write is on the sheet, so a 2026-10-27e deployment draws the banner, and it
+    // names the lost change first.
+    ok(B.BACKEND_MIN_VERSION >= '2026-10-28', '⚠ the app asks for 2026-10-28 (' + B.BACKEND_MIN_VERSION + ')');
+    const shown = [];
+    const C = sandbox({ fns: ['checkBackendVersion', '_withDeviceKey', 'deviceKey'], vars: ['BACKEND_NEEDS', 'BACKEND_NEEDS_TYPES', 'BACKEND_MIN_VERSION', '_backendVersion'],
+      stubs: { SHEETS_SYNC_URL: 'https://sheets', _showBackendStaleBanner: (v, m) => shown.push({ v, m }), localStorage: { getItem: () => null },
+        fetch: () => ({ then(f) { const r = f({ json: () => ({ ok: true, version: '2026-10-27e', actions: C.BACKEND_NEEDS, types: C.BACKEND_NEEDS_TYPES }) }); return { then(g) { g(r); return { catch() {} }; } }; } }) } });
+    C.checkBackendVersion();
+    eq(shown.map((x) => [x.v, x.m]), [['2026-10-27e', ['version']]], '⚠⚠ a 2026-10-27e deployment draws the banner, by version');
+    ok(_v.indexOf('on a deployment older than 2026-10-28, two devices saving at the same moment can lose one device\u2019s change on the sheet though both were told it saved') === 0,
+      '⚠⚠ and it names the lost change first');
+    ok(_v.indexOf(_vint + '2026-10-27e, a figure Agent Two researched') > 0 && _v.indexOf(_vint) === _v.indexOf(_vint + '2026-10-27e, '),
+      'then 2026-10-27e\'s gap, under its own vintage');
     // The rule, one definition with its readers counted.
     const app = fs.readFileSync(path.join(__dirname, '..', 'havellin.html'), 'utf8').split('\n').filter((l) => !/^\s*\/\//.test(l)).join('\n');
     eq((app.match(/sheetVerdictRefusal\(/g) || []).length, 4, 'sheetVerdictRefusal: its definition and three readers (the dropped answer, and loadJobsVerdict twice)');

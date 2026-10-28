@@ -58,7 +58,7 @@ Getting there is about 42 build days, one session at a time (45 before the DocuS
    - a house of about 295 named lines;
    - a second snapshot of a house of 150 lines;
    - two devices snapshotting 180 to 200 lines each.
-2. **Run the five-minute probe** (Appendix B) in a new, standalone Apps Script project. It tells us whether a failed write leaves the tab empty (variant A) or untouched (variant B). It needs no redeploy and touches nothing of Havellin's.
+2. **Run the five-minute probe** (Appendix B) in a new, standalone Apps Script project. It tells us whether a failed write leaves the tab empty (variant A) or untouched (variant B). It needs no redeploy and touches nothing of Havellin's. Answered 2026-10-28: neither (DEFERRED, Appendix B).
 3. **Keep the three Apps Script URLs on Havellin's own devices only** until P2 locks the backend. Today anyone holding the jobs URL can read every client, share any folder and trash any file. Once 2026-10-26c is deployed, the same URL can also send a DocuSign envelope from Havellin's account to any address, carrying any PDF.
 4. **If the sheet empties before P1 lands:** nobody saves, nobody adds a client, and you follow the runbook in Appendix B. A device whose chip says "do not close the tab" should be closed. Restoring the whole file loses any client added since.
 5. **On the Ellison test client**, if you want its record right:
@@ -403,7 +403,7 @@ Publish that rate only as section (a) step 10 allows.
 ### Phase 1: lose nothing, keep it private, start measuring (about 4 build days)
 
 **P1. Nothing is lost: the Jobs sheet and every device's copy.** Fix now · L, two sessions · both .gs files redeployed.
-- ✓ **Built 2026-10-27** (both sessions in one build; backend `2026-10-27b`, carried by P2's `2026-10-27c`; `BUILD_HISTORY.md`, 2026-10-27e). Owed: the redeploy of both files, then `probeClearThenOversizeWrite()` once in the editor. Until the redeploy, Snapshot refuses by name. Beyond the bullets below, the work bar and an empty list say what a cold copy is (the rest of SYN-08). **Reviewed the same day** (`BUILD_HISTORY.md`, 2026-10-27f): on the deployment live until the redeploy a device still lost its clients one save at a time after the tab emptied, so only a deletion the sheet records now takes a client off a device and Save Client refuses while the sheet's refusal stands; a client too large for a cell is held alone and every other client saves; a snapshot is recorded once its lines land; the manual's runbook restores the five stores on an older deployment, as Appendix B does.
+- ✓ **Built 2026-10-27** (both sessions in one build; backend `2026-10-27b`, carried by P2's `2026-10-27c`; `BUILD_HISTORY.md`, 2026-10-27e). Owed: the redeploy of both files (the probe ran 2026-10-28: DEFERRED; CLAUDE.md under Backend). Until the redeploy, Snapshot refuses by name. Beyond the bullets below, the work bar and an empty list say what a cold copy is (the rest of SYN-08). **Reviewed the same day** (`BUILD_HISTORY.md`, 2026-10-27f): on the deployment live until the redeploy a device still lost its clients one save at a time after the tab emptied, so only a deletion the sheet records now takes a client off a device and Save Client refuses while the sheet's refusal stands; a client too large for a cell is held alone and every other client saves; a snapshot is recorded once its lines land; the manual's runbook restores the five stores on an older deployment, as Appendix B does.
 - Goal: no press, failed write or empty sheet can delete a client anywhere, and a cold desk records nothing as fact.
 - Session 1, the server:
   - **Never clear a tab before writing it.** Write the new rows over what is there, then clear only the rows past them. The same goes for every store tab and the ledger (GAP3-01, GAP3-07).
@@ -1642,6 +1642,8 @@ Severity is the verifier's re-rating, or the reviewer's for RT rows. Pack is one
 ### B. The cell-cap probe, and the runbook until P1 lands
 
 *P1 landed on 2026-10-27 (backend `2026-10-27b`): the probe is committed in `apps-script/main-sync.gs` and runs from the jobs script's editor once that redeploy is live, and the runbook, rewritten for it, is in the manual (the note headed "If the client list empties: the runbook"). This appendix stays as written, for a deployment older than `2026-10-27b`.*
+
+*The probe ran on 2026-10-28: DEFERRED. setValues did not throw; the flush did; the clear stayed; the cells before the long one were written, and it and the row after it were not. Neither variant below is what a deployment does: an older deployment's failed write cut the Jobs tab at that client, usually under an answer of ok, and the next estimate, plan, hours or inventory save swept the records of the clients cut off. The variant A runbook applies to a cut tab, with step 1 listing the clients cut off and step 3's stores restored wherever such a save reached the sheet after the cut.*
 
 **The probe** (GAP3-09).
 1. Paste the function below into a new standalone project (script.google.com › New project). Nothing of Havellin's is touched, and no redeploy is needed.
