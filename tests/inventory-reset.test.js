@@ -88,7 +88,7 @@ function gsServer() {
     console, JSON, Date: PinnedDate,
     Logger: { log(s) { logs.push(String(s)); } },
     LockService: { getScriptLock: () => ({ tryLock: () => true, waitLock() {}, releaseLock() {} }) },
-    SpreadsheetApp: { openById: () => ({ getSheetByName: (n) => sheets[n] || null,
+    SpreadsheetApp: { flush() {}, openById: () => ({ getSheetByName: (n) => sheets[n] || null,
       insertSheet(n) { sheets[n] = fakeSheet(n); return sheets[n]; } }) },
     __sheets: sheets, __logs: logs,
   };

@@ -84,7 +84,7 @@ function server() {
   const ctx = {
     console, Logger: { log() {} },
     LockService: { getScriptLock: () => ({ waitLock() {}, tryLock() { return true; }, releaseLock() {} }) },
-    SpreadsheetApp: { openById: () => ({
+    SpreadsheetApp: { flush() {}, openById: () => ({
       getSheetByName: (n) => sheets[n] || null,
       insertSheet(n) { sheets[n] = fakeSheet(n); return sheets[n]; },
     }) },

@@ -823,7 +823,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(((GS_MAIN.match(/var BACKEND_VERSION = '([^']+)';/) || [])[1] || '') >= '2026-10-27d', 'main-sync.gs is 2026-10-27d or later');
     ok(B.BACKEND_MIN_VERSION >= '2026-10-27d', 'the app relies on it');
     const _v5 = B.BACKEND_FEATURE_COST.version, _p5 = 'a release approval recorded on one device can lose, on the sheet, the record of where the item was going';
-    ok(_v5.indexOf(_p5) === 0 || _v5.indexOf('; on a deployment older than 2026-10-27d, ' + _p5) === _v5.indexOf('; on a deployment older than '),
-      'and the stale banner names what an older deployment drops, first or first after the newer gap, by its vintage');
+    // RESTATED 2026-10-28: the gaps before it may be several, each newer than 2026-10-27d (2026-10-28's, then 2026-10-27e's).
+    const _at5 = _v5.indexOf('on a deployment older than 2026-10-27d, ' + _p5);
+    const _newer5 = (_v5.slice(0, Math.max(0, _at5)).match(/on a deployment older than (\d{4}-\d{2}-\d{2}[a-z]?),/g) || []).map((x) => x.replace(/^on a deployment older than /, '').replace(/,$/, ''));
+    ok(_v5.indexOf(_p5) === 0 || (_at5 > 0 && _newer5.every((x) => x > '2026-10-27d') && _v5.indexOf(_p5) === _at5 + 'on a deployment older than 2026-10-27d, '.length),
+      'and the stale banner names what an older deployment drops, first or first after the newer gaps, by its vintage (' + _newer5.join(', ') + ')');
   });
 };
