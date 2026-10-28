@@ -1005,6 +1005,7 @@ Why: a fiduciary who approved $2,400 did not approve $24,000. The DocuSign build
 Why: Q93 made a missing report a flag, never a block; on a 706 estate the sworn appraisal itself goes with the return.
 
 **Ask 8. A figure the concierge types: what basis prints?** (P10; DOC-09; revisits the 2026-10-08 rule)
+- ✓ **Answered 28 October:** the one-tap reason as recommended: a reason picked as the figure is typed (a sale's link, Havellin's own sale, the going rate, a condition adjustment, an appraiser's verbal opinion), the person's name beside it; left unpicked, *Havellin estimate (staff)* under $500 and *basis not stated* in amber at $500 or more.
 - A one-tap reason as the figure is typed (a sale's link, Havellin's own sale, the going rate, a condition adjustment, an appraiser's verbal opinion), with the person's name beside it. Left unpicked, it reads "Havellin estimate (staff)" under $500 and "basis not stated" in amber at $500 or more (Recommended)
 - Always write "Havellin estimate · <name>" automatically
 - "Not stated" in red until a reason is picked, with the new picker
@@ -1013,6 +1014,7 @@ Why: Q93 made a missing report a flag, never a block; on a 706 estate the sworn 
 Why: a name says who, not how, and §733.604(3) entitles a beneficiary to how (both reviewers). Q105 made a typed figure your look; this asks only what its basis says.
 
 **Ask 9. On a pour-over estate, were the household contents assigned to the trust?** (P11; GAP2-04; revisits the Probate default)
+- ✓ **Answered 28 October:** ask once at intake on Both, as recommended: Yes puts untracked lines on the Trust Schedule, No keeps them on the Court Inventory, Not known keeps them there with a DRAFT reason on both schedules until counsel confirms.
 - Ask once at intake on Both: Yes, No or Not known. Yes puts untracked lines on the Trust Schedule. Not known keeps them on the Court Inventory, with a DRAFT reason on both schedules until counsel confirms (Recommended)
 - Keep the Probate default; add only **Set track…** and an amber flag on the Court Inventory card
 - As now
@@ -1020,6 +1022,7 @@ Why: a name says who, not how, and §733.604(3) entitles a beneficiary to how (b
 Why: many Palm Beach trust plans assign the contents to the trust, and today the whole house goes on an adopted §733.604 schedule. Counsel confirms the default reading.
 
 **Ask 10. On a pour-over, must every fiduciary approve every line?** (P11, P26; GAP2-05; revisits P19's "every fiduciary approves")
+- ✓ **Answered 28 October:** signers follow the track, as recommended: estate lines need the personal representatives, trust lines the trustees, two sections on the request and the ledger, and the DocuSign envelope to the right people for each; counsel confirms.
 - Signers follow the track: estate lines need the PR and co-PRs, trust lines the trustees, with two sections on the request and the ledger; counsel confirms (Recommended)
 - Every fiduciary on every line, but each line labelled with its holder, and a co-trustee called a co-trustee
 - As now
@@ -1027,6 +1030,7 @@ Why: many Palm Beach trust plans assign the contents to the trust, and today the
 Why: a corporate co-trustee approving the estate's donations can hold a pickup for weeks, and the paper says one fiduciary approved property outside their authority. The DocuSign envelope built on 26 October puts every fiduciary on every line, so your answer sets the envelope too.
 
 **Ask 11. On a pour-over, record the trustee's own paper as well as the Letters?** (P11; GAP2-10; revisits estateAuthority on Both)
+- ✓ **Answered 28 October:** record both, as recommended: a Certification of Trust chip beside the Letters on Both, and an amber flag on the Releases bar while a trust line leaves without it; never an activation gate.
 - Yes: a Certification of Trust chip beside the Letters, and a flag on the Releases bar while a trust line leaves without it; never an activation gate (Recommended)
 - Drop the Before Day 1 box on Both
 - As now
@@ -1034,6 +1038,7 @@ Why: a corporate co-trustee approving the estate's donations can hold a pickup f
 Why: the plan asks the concierge to tick "read" for a paper the app never asks for or shows.
 
 **Ask 12. A Disposition Ledger or Contents Record still marked IN PROGRESS: what does the sign-off say?** (P12; DOC-27, LIV-03)
+- ✓ **Answered 28 October:** words that fit its state, as recommended: *approved as the record to date* while IN PROGRESS, *the final record* once every flagged line is checked and the list is read.
 - Words that fit its state: "approved as the record to date" (Recommended)
 - Withhold the sign-off until every flagged line is checked and the list is read; the page still prints
 - As now: "the final record"
@@ -1041,12 +1046,14 @@ Why: the plan asks the concierge to tick "read" for a paper the app never asks f
 Why: a family signs a "final record" on what is still a working copy. Since 27 October the stamp above it says how many stood and whether the list was read, but the sign-off under it still says "the final record".
 
 **Ask 13. An item that left before every fiduciary signed: what does the ledger say?** (P12; DOC-11; wording to counsel)
+- ✓ **Answered 28 October:** print the gap, and the representatives' signature on the ledger at close ratifies it (a sentence above the sign-off, counsel words it). Anthony asked first whether this meant a DocuSign envelope for every release or ratification: no. One release request per round carries every line ready to leave and every line owed a ratification, in one envelope to every representative; the ledger, which each signs once at close anyway, is the backstop. Nothing adds an envelope.
 - Print the gap, with a ratification sentence above the sign-off (Recommended)
 - Withhold the sign-off until the ratification is recorded
 
 Why: today it reads "Authorized by —" with no explanation.
 
 **Ask 14. A WorthPoint sale far from the line's figure: what happens?** (P15; ACC-04; revisits the 2026-10-06 rule)
+- ✓ **Answered 28 October:** ask once when the sale and the line's figure differ by more than 15%, as recommended: use the sale, or keep the figure and file the sale only.
 - Ask once when they differ by more than 15%: use the sale, or keep the figure and file the sale only (Recommended)
 - Always replace the figure with the sale
 - As now: the figure is relabelled "WorthPoint comps"
@@ -1054,6 +1061,7 @@ Why: today it reads "Authorized by —" with no explanation.
 Why: a $1,100 sale relabelled a $4,200 figure as if the sale supported it.
 
 **Ask 15. "Receipt owed" while the item is still in the house?** (P16; REL-20, NEW-24; revisits P19)
+- ✓ **Answered 28 October:** grey *ready to sign out* while the item is still in the house, amber *receipt owed* once it has left without a signed receipt, as recommended.
 - Grey "ready to sign out" until it leaves, then amber "receipt owed" (Recommended)
 - As now
 
