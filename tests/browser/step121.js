@@ -16,7 +16,13 @@
 //   D. Day two: a third photograph of the painting is named (#12); Check 1 room pressed, the room check answering #10 with #11
 //      again and #10 with #12, both plainly one thing. Only #10 and #12 are shown; the work bar says one double was flagged;
 //      Agent Two, following the check by itself, does not value #12, which waits on #10.
-//   E. Not duplicates on #10 and #12: Agent Two values #12 by itself.
+//      The group is headed by the #10-#12 pair's own sentence, never the answered #10-#11 one's (P8's review); #12's name
+//      tidied through its row's box sends nothing to Agent Two while it waits.
+//   E. Not duplicates on #10 and #12: Agent Two values #12 by itself, once.
+//   F. (P8's review) A second photograph read twice with whole-photograph crops: the dinner plates read twice and a stack of
+//      salad plates in the second reading only. The block reads *#31 repeats #30 · #32 not matched*, the repeat's line naming
+//      its original by name; Keep the first reading asks, naming both lines of the pair and keeping #32; afterwards #32 is
+//      still *not matched* and Keep is no longer offered, so the salad plates stay.
 //   At 1440 and 390 px no horizontal overflow; zero page errors throughout.
 //
 //   NODE_PATH=/path/to/node_modules node tests/browser/step121.js [/abs/path/to/havellin.html]
@@ -125,10 +131,10 @@ const OIL2 = 'Harbor painting in gilt frame';
         Object.assign({ stableId: 'pl81', itemNo: 81, derivedFrom: 'pl73', objectName: SAL1, qty: 16, category: 'General/Household', crop: [0.03, 0.43, 0.45, 0.78] }, plates, agent(SAL1, A1 + 3), desk(300)),
         Object.assign({ stableId: 'pl87', itemNo: 87, derivedFrom: 'pl73', objectName: DIN2, qty: 6, category: 'General/Household', crop: [0.5, 0.4, 0.98, 0.8] }, plates, agent(DIN2, A2), desk(300)),
         Object.assign({ stableId: 'pl88', itemNo: 88, derivedFrom: 'pl73', objectName: SAL2, qty: 6, category: 'General/Household', crop: [0.05, 0.42, 0.44, 0.8] }, plates, agent(SAL2, A2 + 2), desk(200)),
-        Object.assign({ stableId: 'oil10', itemNo: 10, objectName: OIL, qty: 1, category: 'Art & Décor', dupWith: ['oil11'], dupConf: 'high',
-          dupWhy: 'The harbor painting: over the sofa in one, close up in the other.' }, photo(3, 1, 'FID_OIL10', T + 10), agent(OIL, A1 + 9000), desk(2400)),
-        Object.assign({ stableId: 'oil11', itemNo: 11, objectName: OIL2, qty: 1, category: 'Art & Décor', dupWith: ['oil10'], dupConf: 'high',
-          dupWhy: 'The harbor painting: over the sofa in one, close up in the other.' }, photo(3, 2, 'FID_OIL11', T + 20), agent(OIL2, A1 + 9000), desk(2100)),
+        Object.assign({ stableId: 'oil10', itemNo: 10, objectName: OIL, qty: 1, category: 'Art & Décor', dupWith: ['oil11'],
+          dupPairs: { oil11: { conf: 'high', why: 'The harbor painting: over the sofa in one, close up in the other.' } } }, photo(3, 1, 'FID_OIL10', T + 10), agent(OIL, A1 + 9000), desk(2400)),
+        Object.assign({ stableId: 'oil11', itemNo: 11, objectName: OIL2, qty: 1, category: 'Art & Décor', dupWith: ['oil10'],
+          dupPairs: { oil10: { conf: 'high', why: 'The harbor painting: over the sofa in one, close up in the other.' } } }, photo(3, 2, 'FID_OIL11', T + 20), agent(OIL2, A1 + 9000), desk(2100)),
         Object.assign({ stableId: 'sofa', itemNo: 13, objectName: 'Chesterfield sofa, brown leather', qty: 1, category: 'Furniture' }, photo(3, 3, 'FID_SOFA', T + 30), agent('Chesterfield sofa, brown leather', A1 + 9000), desk(1200))];
       _invCloudSeen[J] = true;
       savePhotoRefs(J); saveJobs(); localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore));
@@ -150,15 +156,15 @@ const OIL2 = 'Harbor painting in gilt frame';
       eq(g.length, 2, 'fixture: two groups under Possible duplicates, the plates and the painting');
       const plates = g.find((x) => /One photograph named twice/.test(x)) || '';
       has(plates, '#87 repeats #73 · #88 repeats #81', '⚠⚠ the block says which line repeats which');
-      has(plates, DIN2 + ' repeats #73', 'and on the repeat\'s own line');
+      has(plates, DIN2 + ' repeats #73 ' + DIN1, '⚠ and on the repeat\'s own line, its original named (P8\'s review)');
       eq(await overflow(), 0, 'no horizontal overflow at 1440 with both groups shown');
       await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(600);
       eq(await overflow(), 0, '⚠ nor at 390, the pairs\' heading and Keep the first reading on a phone');
       await p.setViewportSize({ width: 1440, height: 1000 }); await p.waitForTimeout(600);
       await press('#panel-inventory .inv-dup-group button.inv-keep-first', 'Keep the first reading');
       const q = said.find((m) => /Keep the first reading of this photograph\?/.test(m)) || '';
-      has(q, '#87 ' + DIN2 + ' (repeats #73)', 'it asks first, naming each line it takes off and what it repeats');
-      has(q, '#88 ' + SAL2 + ' (repeats #81)', 'both');
+      has(q, '#87 ' + DIN2 + '\n      repeats #73 ' + DIN1, 'it asks first, naming each line it takes off and the line it repeats, by number and name');
+      has(q, '#88 ' + SAL2 + '\n      repeats #81 ' + SAL1, 'both');
       eq((await live()).sort((a, c) => a - c), [10, 11, 13, 73, 81], '⚠⚠ #87 and #88 are off; #73 and #81 stay');
       eq(await p.evaluate((j) => (_photoRefs[j] || []).filter((r) => r.deletedAt).map((r) => [r.stableId, !!r.deletedBy, !!r.driveFileId]), J),
         [['pl87', true, true], ['pl88', true, true]], 'removed as tombstones with who, the photograph untouched');
@@ -184,8 +190,8 @@ const OIL2 = 'Harbor painting in gilt frame';
     await section('C. Not duplicates on the painting: the Trust Schedule is FINAL', async () => {
       await press('#panel-inventory .inv-dup-group button:has-text("Not duplicates")', 'Not duplicates on the painting');
       eq(await groups(), [], 'the group is answered and gone');
-      eq(await p.evaluate((j) => ['oil10', 'oil11'].map((id) => (_photoRefs[j].find((r) => r.stableId === id) || {}).dupOKWith), J), [['oil11'], ['oil10']],
-        '⚠ the answer is recorded for the pair');
+      eq(await p.evaluate((j) => { const w = ['oil10', 'oil11'].map((id) => (_photoRefs[j].find((r) => r.stableId === id) || {}).dupOKIn || []);
+        return [w[0].length, w[1].length, w[0][0] === w[1][0]]; }, J), [1, 1, true], '⚠ the answer is recorded for the pair: one press\'s id on both lines');
       const t = await trustSchedule();
       has(t, 'FINAL', 'FINAL');
       has(t, 'Received for the trust', 'with its receipt line');
@@ -213,11 +219,19 @@ const OIL2 = 'Harbor painting in gilt frame';
       has(g[0] || '', '#12', '⚠⚠ the new double is shown, with #12');
       has(g[0] || '', '#10', 'and #10');
       lacks(g[0] || '', '#11', '⚠ and not #11, the pair a person answered');
+      has(g[0] || '', 'The same harbor painting from the doorway.', '⚠⚠ headed by the #10-#12 pair\'s own sentence (P8\'s review)');
+      lacks(g[0] || '', 'The harbor painting again.', 'never the answered #10-#11 pair\'s');
       has(await txt('#inv-room-state'), 'Room check: 1 possible double flagged under Possible duplicates', '⚠ the work bar counts the double the block shows');
       eq(net.value.slice(before).filter((ids) => ids.indexOf('oil12') >= 0).length, 0, '⚠⚠ Agent Two, following the check, leaves #12 waiting on #10');
       const t = await trustSchedule();
       has(t, 'DRAFT — ', 'and the Trust Schedule is DRAFT');
       has(t, '1 possible double count not yet decided: #10 and #12', 'for it');
+      // #12's name tidied through its row's box while it waits: nothing goes to Agent Two (P8's review: it researched the painting twice).
+      const vb = net.value.length;
+      await p.fill('#inv-row-oil12 .inv-name textarea', 'Harbor scene in oils, gilt frame (doorway view)');
+      await p.press('#inv-row-oil12 .inv-name textarea', 'Tab'); await p.waitForTimeout(1200);
+      eq(await p.evaluate((j) => (_photoRefs[j].find((r) => r.stableId === 'oil12') || {}).objectName, J), 'Harbor scene in oils, gilt frame (doorway view)', 'fixture: the name is written');
+      eq(net.value.slice(vb).filter((ids) => ids.indexOf('oil12') >= 0).length, 0, '⚠⚠ renamed while it waits: Agent Two is not sent it');
     });
 
     // ── E ─────────────────────────────────────────────────────────────────────────────────────
@@ -225,12 +239,47 @@ const OIL2 = 'Harbor painting in gilt frame';
       const before = net.value.length;
       await press('#panel-inventory .inv-dup-group button:has-text("Not duplicates")', 'Not duplicates on #10 and #12');
       await p.waitForTimeout(1500);
-      eq(net.value.slice(before).filter((ids) => ids.indexOf('oil12') >= 0).length, 1, '⚠ the waiting line goes to Agent Two');
+      eq(net.value.slice(before).filter((ids) => ids.indexOf('oil12') >= 0).length, 1, '⚠ the waiting line goes to Agent Two, once (the rename held for it, not sent twice)');
       eq(await p.evaluate((j) => { const r = _photoRefs[j].find((x) => x.stableId === 'oil12'); return [r.valuedBy, r.fmv]; }, J), ['agent', 2000], 'and is valued');
       eq(await groups(), [], 'nothing left to flag');
       eq(await overflow(), 0, 'no horizontal overflow at 1440');
       await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(600);
       eq(await overflow(), 0, 'no horizontal overflow at 390');
+      await p.setViewportSize({ width: 1440, height: 1000 }); await p.waitForTimeout(600);
+    });
+
+    // ── F ─────────────────────────────────────────────────────────────────────────────────────
+    await section('F. whole-photograph crops: Keep the first reading takes the dinner-plate repeat and never the salad plates', async () => {
+      const W1 = 'White porcelain dinner plates', W2 = 'White porcelain salad plates';
+      await p.evaluate(([J, W1, W2]) => {
+        const T = Date.now() - 86400000, A1 = T + 1000, A2 = A1 + 7 * 60000;
+        const ph = { label: 'inventory', collId: null, roomIdx: 2, seq: 9, status: 'uploaded', ts: T, filename: 'HVL-2610-P8_FID_WHITE.jpg', driveFileId: 'FID_WHITE',
+          driveFileUrl: 'https://drive.google.com/file/d/FID_WHITE/view', crop: [0, 0, 1, 1], category: 'General/Household', qty: 8,
+          fmv: 120, valuedBy: 'desk', valSource: 'Estimate', valDate: '2026-08-14', condition: 'Good', disposition: 'Auction', reviewed: true, reviewedBy: 'Ashley Jerome' };
+        const ag = (name, at) => ({ namedBy: 'agent', agentName: name, objectName: name, agentConf: 'medium', agentAt: at, updatedAt: at, dupChkAt: at + 60000 });
+        _photoRefs[J].push(Object.assign({ stableId: 'wh30', itemNo: 30 }, ph, ag(W1, A1)),
+          Object.assign({ stableId: 'wh31', itemNo: 31, derivedFrom: 'wh30' }, ph, ag(W1, A2)),
+          Object.assign({ stableId: 'wh32', itemNo: 32, derivedFrom: 'wh30' }, ph, ag(W2, A2 + 2)));
+        savePhotoRefs(J); renderInventoryTab();
+      }, [J, W1, W2]);
+      await p.waitForTimeout(600);
+      const g = (await groups()).find((x) => /One photograph named twice/.test(x)) || '';
+      has(g, '#31 repeats #30 · #32 not matched', '⚠⚠ only the same words pair lines the crops cannot place');
+      has(g, W1 + ' repeats #30 ' + W1, 'the repeat names its original');
+      has(g, W2 + ' not matched to the first reading', 'the salad plates say they are not matched');
+      const n0 = said.length;
+      await press('#panel-inventory .inv-dup-group button.inv-keep-first', 'Keep the first reading on the white plates');
+      const q = said.slice(n0).find((m) => /Keep the first reading of this photograph\?/.test(m)) || '';
+      has(q, '#31 ' + W1 + '\n      repeats #30 ' + W1, 'the question names both lines of the pair');
+      has(q, 'Not matched to a line of the first reading, and kept:\n  · #32 ' + W2, '⚠ and keeps the salad plates');
+      const lv = await live();
+      eq([lv.indexOf(30) >= 0, lv.indexOf(31) >= 0, lv.indexOf(32) >= 0], [true, false, true], '⚠⚠ #31 off; #30 and #32 stay');
+      const g2 = (await groups()).find((x) => /One photograph named twice/.test(x)) || '';
+      has(g2, '#32 not matched', '⚠⚠ after the press #32 is still not matched (#30 stays taken by the removed #31)');
+      eq(await p.locator('#panel-inventory .inv-dup-group button.inv-keep-first').count(), 0, '⚠⚠ and Keep the first reading is not offered again');
+      eq(await overflow(), 0, 'no horizontal overflow at 1440');
+      await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(600);
+      eq(await overflow(), 0, 'nor at 390');
     });
 
     eq(errs, [], 'zero page errors');

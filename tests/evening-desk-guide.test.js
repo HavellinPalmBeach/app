@@ -465,7 +465,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // for its name, count and value. The page's sentences on the real rule, with a real context (invAcceptCtx: the job and the
     // open duplicate groups), each flag the page names, and the box it describes. review-flagged.test.js holds the rule whole.
     const RV = lift(['invLineAccepted', 'invLineHold', 'invAcceptCtx', 'invLineReviewed', 'invLineUnsure', '_invRevBoxHtml', '_invProgressStamp',
-      '_avUnreviewedStamp', 'invMarkListRead', 'invListRead', 'invListSeen', 'invListReadRefusal', '_invListReadHtml', 'agentNotices', 'agentDuplicateGroups', 'agentDupCleared'],
+      '_avUnreviewedStamp', 'invMarkListRead', 'invListRead', 'invListSeen', 'invListReadRefusal', '_invListReadHtml', 'agentNotices', 'agentDuplicateGroups', '_arPair', '_arPairOpen', 'agentDupCleared'],
       { jobs: [], _photoRefs: {}, estimateStore: {}, vendors: [], vendorDirectory: [], contractors: [], document: { getElementById: () => null },
         jobPlanStore: {}, SHEETS_SYNC_URL: '', _invCloudSeen: {}, _invCloudFailed: {}, alert(m) { RV.__alerts = (RV.__alerts || []).concat([String(m)]); },
         _saveJobEdit(job) { RV.__saved = (RV.__saved || 0) + 1; RV.__savedJob = job; }, _renderInvWorkbar: () => '' });
@@ -531,7 +531,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       RV.jobs.length = 0; RV.jobs.push(EST()); RV._photoRefs[7] = [a, b];
       const r = attempt(() => { const fc = RV.invAcceptCtx(RV.jobs[0], [a, b]); return [!!fc.dup.k1, RV.invLineHold(a, fc)]; }); return r.ok ? r.val : r.err; };
     eq(pairHeld({}), [true, 'duplicate'], '⚠⚠ "A tick never settles … a possible duplicate": both halves ticked, the pair stays a possible duplicate');
-    eq(pairHeld({ dupOKWith: ['k1', 'k2'] }), [false, ''], '…Not duplicates does (P8: recorded for the pair)');
+    eq(pairHeld({ dupOKIn: ['n1'] }), [false, ''], '…Not duplicates does (P8: recorded for the pair)');
     {
       // "Renaming one does not settle it": a pair Agent One named alike stays a pair through a name corrected on the desk (agentName).
       const A = ITEM({ agentName: 'Kitchen utensils, drawer', objectName: 'Henckels kitchen knives', valNameAt: 'Henckels kitchen knives', namedBy: 'desk' });

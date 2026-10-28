@@ -179,7 +179,7 @@ const DAY = (at) => new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_Yo
     const readRec = () => p.evaluate((j) => { const r = (jobs.find((x) => x.id === j) || {}).invRead; return r ? { at: r.at, by: r.by } : null; }, J);
     const dupGroups = () => p.evaluate(() => [...document.querySelectorAll('#panel-inventory .inv-dup-group')].map((g) => g.textContent.replace(/\s+/g, ' ').trim()));
     const line = (id) => p.evaluate(([j, id]) => { const r = (_photoRefs[j] || []).find((x) => x.stableId === id) || {};
-      return { rev: !!r.reviewed, by: r.reviewedBy || '', vrev: !!r.valReviewed, bq: !!r.flagBequest, dupOK: (r.dupOKWith || []).length > 0, disp: r.disposition || '', ch: r.channel || '',
+      return { rev: !!r.reviewed, by: r.reviewedBy || '', vrev: !!r.valReviewed, bq: !!r.flagBequest, dupOK: (r.dupOKIn || []).length > 0, disp: r.disposition || '', ch: r.channel || '',
         name: r.objectName || '', agentName: r.agentName || '', fmv: r.fmv, valBy: r.valuedBy || '', waived: !!r.apprWaived, cond: r.condition || '', chk: r.dupChkAt || 0 }; }, [J, id]);
     // Counts full renders of the tab from here on, and remembers the read line's element, to tell a by-id repaint from a redraw.
     const watchRenders = () => p.evaluate((sel) => {

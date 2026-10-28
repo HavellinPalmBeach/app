@@ -12,8 +12,14 @@
 //     the three Removes took both salad-plate lines. Each repeat is paired with its original ("#87 repeats #73"), and
 //     Keep the first reading, asked first, takes off only the matched repeats; a line new in the later reading stays.
 //   INV-05, AGT-03: Not duplicates set `dupOK` on the line, and a double the room check found later with another line was
-//     never shown while the work bar said one was flagged. It is recorded for the pair (`dupOKWith`, agentDupCleared).
+//     never shown while the work bar said one was flagged. It is recorded for the pair (`dupOKIn`, one id per press on every
+//     line of the group, agentDupCleared).
 //   Nothing is merged by itself (CLAUDE.md, Decided).
+//   P8's review (2026-10-27): Keep the first reading pressed twice took a real stack (matched once now, removed lines
+//     included, and only the same words pair lines the crops cannot place); an answered pair's sentence and confidence
+//     headed another pair and held Agent Two on a low one (`dupPairs`, _arPair); a rename, a close-up or a press mid-chain
+//     went round the wait (_avDupHeld); a photograph read twice printed as one double count across four lines; one press
+//     grew the manifest as the square of the group; the package's question said nothing of a double count.
 // ─────────────────────────────────────────────────────────────────────────────
 const { sandbox, fn, domStub } = require('./harness.js');
 
@@ -24,12 +30,13 @@ const attempt = (f) => { try { return { ok: true, val: f() }; } catch (e) { retu
 const val = (r, dflt) => (r && r.ok ? r.val : (dflt === undefined ? 'threw: ' + (r && r.err) : dflt));
 
 // ─── The desk's side: the grouper, the presses, the room check's writer, what Agent Two waits on ───
-const DESK_FNS = ['agentDupCleared', 'agentNamedTwice', 'agentDuplicateGroups', '_agDupEligible', '_arDupEligible', '_agNameKey',
+const DESK_FNS = ['agentDupCleared', 'agentNamedTwice', 'agentDuplicateGroups', '_arPair', '_arPairOpen', '_agDupEligible', '_arDupEligible', '_agNameKey',
   '_agDupIndex', '_agDupHtml', '_agDupHandle', '_agDupUnhandle', 'agentDropDuplicate', 'agentNotDuplicate', 'agentKeepFirstReading',
   '_invItemNo', '_invRoomName', '_getPhotoRef', '_setPhotoRef', '_jobInvRefs', '_invJob', '_invTombstoneLine', '_invStampBy', 'deviceUser',
   'savePhotoRefs', '_arWrite', '_arStateHtml', '_arState', 'agentValueWaiting', '_avDupReleased', 'agentValueAuto', 'agentValueRun',
-  '_avValueButtonHtml', 'agentValueableRefs', '_avHasFigure', '_invHasValue', '_invHasPhoto', '_avState'];
-const DESK_VARS = ['AGENT_PASS_GAP_MS', 'AGENT_ROOM_CONF_RANK', 'AGENT_ROOM_CONF_WORDS', '_arRun', '_avRun'];
+  '_avValueButtonHtml', 'agentValueableRefs', '_avHasFigure', '_invHasValue', '_invHasPhoto', '_avState', '_arLineWhy',
+  'agentValueAfterRename', 'agentValueAfterCloseUp', 'agentValueStale', '_avFinish'];
+const DESK_VARS = ['AGENT_PASS_GAP_MS', 'AGENT_ROOM_CONF_RANK', 'AGENT_ROOM_CONF_WORDS', '_arRun', '_avRun', '_agRun', '_avDupHeld', '_avForceComps', '_avAfter', '_avAutoAgain'];
 
 function desk(refs, over) {
   over = over || {};
@@ -52,13 +59,20 @@ function desk(refs, over) {
       SHEETS_SYNC_URL: 'https://script.example/exec',
       _avStart: (jobId, job, ids) => { started.push(ids.slice()); },
       agentValueInternal: () => false, agentValueMode: () => 'general',
+      invLineReviewed: () => false,   // a close-up's rule asks it; the review is not what this measures
+      _invRenderWhenIdle() {},
     }, over.stubs || {}),
   });
   c.started = started; c.sent = () => started.map((ids) => ids.slice().sort()); c.badges = badges; c.asked = asked; c.alerts = alerts;
   c.ref = (id) => c._getPhotoRef(7, id);
   c.groups = () => c.agentDuplicateGroups(7).map((g) => g.rows.map((r) => r.stableId));
+  c.keep = () => { const g = c.agentDuplicateGroups(7).filter((x) => x.twice)[0]; return g ? c.agentKeepFirstReading(7, c._agDupHandle(g.key)) : 'no group'; };
+  c.notDup = (i) => c.agentNotDuplicate(7, c._agDupHandle(c.agentDuplicateGroups(7)[i || 0].key));
+  c.live = () => c._jobInvRefs(7).map((r) => r.itemNo);
   return c;
 }
+// A room-check link with that pair's own answer (`dupPairs`, P8's review).
+const LINK = (o, conf, why) => ({ dupWith: [o], dupPairs: { [o]: { conf: conf || 'high', why: why || 'The harbor painting twice.' } } });
 
 // A room-check line (P24's fields), named by Agent One.
 const RC = (id, no, name, over) => Object.assign({ stableId: id, itemNo: no, label: 'inventory', roomIdx: 3, objectName: name, agentName: name,
@@ -98,10 +112,10 @@ const PAPER_FNS = ['invLineReviewed', 'invLineOpen', '_invDocPartyHead', 'invCon
   'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invLineAcceptedOnly', '_invAcceptedStampWords',
   'invIsMAIV', 'invMAIVDefaultCat', 'invAcceptCtx', '_invAcceptCtxOf', 'invListRead', 'agentNoticesOn',
   'agentValueUnreviewed', 'agentValueInternal', 'agentValueStale', 'agentValueSpecialistWorth', '_avHasFigure', 'agentNoticeQuiet',
-  'agentDupCleared', 'agentNamedTwice', 'agentDuplicateGroups', '_agDupEligible', '_arDupEligible', '_agNameKey', 'invDoubleCounts',
+  'agentDupCleared', 'agentNamedTwice', 'agentDuplicateGroups', '_arPair', '_arPairOpen', '_agDupEligible', '_arDupEligible', '_agNameKey', 'invDoubleCounts',
   'agentNotDuplicate', 'agentDropDuplicate', '_agDupHandle', '_agDupUnhandle', '_getPhotoRef', '_setPhotoRef', '_invTombstoneLine', '_invStampBy',
   'deviceUser', 'agentValueWaiting', '_avDupReleased'];
-const PAPER_VARS = ['_agRun', '_avRun', '_arRun', 'AGENT_NOTICE_KINDS',
+const PAPER_VARS = ['_agRun', '_avRun', '_arRun', '_avDupHeld', 'AGENT_NOTICE_KINDS',
   'INV_CONTRACT_DOCS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DECEDENT_SERVICES',
   'MATTER_TYPES', 'INV_ASSET_TRACKS', 'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD',
   'EXEMPT_CAP_732_402', 'AGR_NOT_AN_ACCOUNTING', 'INV_CATEGORIES', '_invShowRoll', 'INV_GROUP_ORDER', 'INV_CAT_GLYPH', 'INV_UNDECIDED', 'INV_DISPOSITIONS', 'INV_DEFAULT_CATEGORY', 'DOC_SCOPES',
@@ -113,9 +127,9 @@ const LINE = (id, no, name, fmv, over) => Object.assign({ stableId: id, itemNo: 
   condition: 'Good', qty: 1, fmv: fmv, valSource: 'Estimate', valuedBy: 'desk', disposition: 'Auction', reviewed: true, ts: no, updatedAt: 500 }, over || {});
 const PAINTINGS = (over1, over2) => [
   LINE('s1', 1, 'Oil painting, harbor scene, gilt frame', 2400, Object.assign({ category: 'Art & Décor', namedBy: 'agent', agentName: 'Oil painting, harbor scene, gilt frame',
-    dupWith: ['s2'], dupConf: 'high', dupWhy: 'The harbor painting: over the sofa in one, close up in the other.', driveFileId: 'F1' }, over1 || {})),
+    driveFileId: 'F1' }, LINK('s2', 'high', 'The harbor painting: over the sofa in one, close up in the other.'), over1 || {})),
   LINE('s2', 2, 'Harbor painting in gilt frame', 2100, Object.assign({ category: 'Art & Décor', namedBy: 'agent', agentName: 'Harbor painting in gilt frame',
-    dupWith: ['s1'], dupConf: 'high', dupWhy: 'The harbor painting: over the sofa in one, close up in the other.', driveFileId: 'F2' }, over2 || {})),
+    driveFileId: 'F2' }, LINK('s1', 'high', 'The harbor painting: over the sofa in one, close up in the other.'), over2 || {})),
   LINE('s3', 3, 'Chesterfield sofa', 1200),
 ];
 function papers(job, items) {
@@ -136,45 +150,64 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('A · ⚠⚠ Not duplicates is recorded for the pair: a double found later with another line is shown (INV-05, AGT-03)');
   {
-    const D = desk([RC('s0', 1, 'Tufted linen three-seat sofa', { dupWith: ['s2'], dupConf: 'low' }), RC('s2', 2, 'Club chair', { dupWith: ['s0'], dupConf: 'low' })]);
+    const D = desk([RC('s0', 1, 'Tufted linen three-seat sofa', LINK('s2', 'low')), RC('s2', 2, 'Club chair', LINK('s0', 'low'))]);
     eq(D.groups(), [['s0', 's2']], 'fixture: day one, the room check links the sofa and the armchair');
-    D.agentNotDuplicate(7, D._agDupHandle(D.agentDuplicateGroups(7)[0].key));
-    eq([D.ref('s0').dupOKWith, D.ref('s2').dupOKWith], [['s2'], ['s0']], '⚠ Not duplicates records, on each line, the line it is separate from');
-    eq([D.ref('s0').dupOK, D.ref('s2').dupOK], [undefined, undefined], 'and nothing on the line itself');
+    D.notDup();
+    const w0 = D.ref('s0').dupOKIn || [], w2 = D.ref('s2').dupOKIn || [];
+    eq([w0.length, w2.length, w0[0] === w2[0] && !!w0[0]], [1, 1, true], '⚠ Not duplicates records one id on each line of the group, the press\'s own');
+    eq([D.ref('s0').dupOK, D.ref('s0').dupOKWith, D.ref('s2').dupOK], [undefined, undefined, undefined], 'and nothing on the line itself, and no list of the other lines');
     eq(D.groups(), [], 'the pair goes quiet');
     // Day two: a new photograph of the same sofa, which the room check links to s0.
-    D._photoRefs[7].push(RC('s6', 6, 'Tufted linen three-seat sofa', { dupWith: ['s0'], dupConf: 'high', dupWhy: 'The same sofa from two sides.' }));
-    D.ref('s0').dupWith = ['s6']; D.ref('s0').dupConf = 'high';
+    D._photoRefs[7].push(RC('s6', 6, 'Tufted linen three-seat sofa', LINK('s0', 'high', 'The same sofa from two sides.')));
+    Object.assign(D.ref('s0'), LINK('s6', 'high', 'The same sofa from two sides.'));
     eq(D.groups(), [['s0', 's6']], '⚠⚠ the new double is shown: the armchair answer does not cover it');
     eq(Object.keys(D._agDupIndex(7, D._jobInvRefs(7))).sort(), ['s0', 's6'], 'and both rows wear the chip');
-    // The pair's answer stands though one half's newer copy has lost the list.
-    const E = desk([RC('a', 1, 'Brass table lamp', { dupOKWith: ['b'] }), RC('b', 2, 'Brass table lamp')]);
-    eq(E.groups(), [], 'either half naming the other answers the pair');
-    const F = desk([RC('a', 1, 'Brass table lamp', { dupOKWith: ['b'] }), RC('b', 2, 'Brass table lamp'), RC('c', 3, 'Brass table lamp')]);
+    // A pair is answered when both lines carry one press's id.
+    eq(desk([RC('a', 1, 'Brass table lamp', { dupOKIn: ['n1'] }), RC('b', 2, 'Brass table lamp', { dupOKIn: ['n1'] })]).groups(), [], 'both lines carrying one press\'s id: answered');
+    eq(desk([RC('a', 1, 'Brass table lamp', { dupOKIn: ['n1'] }), RC('b', 2, 'Brass table lamp', { dupOKIn: ['n2'] })]).groups(), [['a', 'b']], 'two presses on other groups answer nothing between them');
+    eq(desk([RC('a', 1, 'Brass table lamp', { dupOKIn: ['n1'] }), RC('b', 2, 'Brass table lamp')]).groups(), [['a', 'b']],
+      '⚠ one half\'s newer copy without the id shows the pair again: the safe direction');
+    const F = desk([RC('a', 1, 'Brass table lamp', { dupOKIn: ['n1'] }), RC('b', 2, 'Brass table lamp', { dupOKIn: ['n1'] }), RC('c', 3, 'Brass table lamp')]);
     eq(F.groups(), [['a', 'b', 'c']], 'a third lamp of the same name is flagged with them, the answered pair joined through it');
-    F.agentNotDuplicate(7, F._agDupHandle(F.agentDuplicateGroups(7)[0].key));
-    eq([F.ref('a').dupOKWith, F.ref('b').dupOKWith, F.ref('c').dupOKWith], [['b', 'c'], ['a', 'c'], ['a', 'b']], 'Not duplicates again: every pair of the group, with what each held');
+    F.notDup();
+    const fa = F.ref('a').dupOKIn || [], fb = F.ref('b').dupOKIn || [], fc = F.ref('c').dupOKIn || [];
+    eq([fa.length, fb.length, fc.length, fa[0], fa[1] === fb[1] && fb[1] === fc[0]], [2, 2, 1, 'n1', true], 'Not duplicates again: one more id on every line, after what each held');
     eq(F.groups(), [], 'and quiet');
+    // ⚠ An earlier answer stands (P8's review: a press that replaced what a line held brought an answered pair back).
+    const K = desk([RC('a', 1, 'Lamp', Object.assign({ dupOKIn: ['n1'] }, LINK('b', 'low', 'x'))), RC('b', 2, 'Lamp shade', LINK('a', 'low', 'x')), RC('c', 3, 'Lamp', { dupOKIn: ['n1'] })]);
+    eq(K.groups(), [['a', 'b']], 'fixture: the lamps answered, the room check linking one to a shade');
+    K.notDup();
+    eq(K.groups(), [], '⚠ answering the shade keeps the lamps\' earlier answer: the press adds to what a line held');
+    // One press is one short id a line, never a list of the others (P8's review: 403 KB for 120 lines of one name).
+    const big = [];
+    for (let i = 0; i < 120; i++) big.push(RC('4_r3_inventory_' + String(1e9 + i), i + 1, 'Shelf of hardcover books'));
+    const BG = desk(big), before = JSON.stringify(BG._photoRefs[7]).length;
+    BG.notDup();
+    const grew = JSON.stringify(BG._photoRefs[7]).length - before;
+    ok(grew > 0 && grew < 120 * 60, '⚠⚠ one press on 120 lines of one name adds about one short id a line (' + grew + ' characters; the list of the others on each line added 403,000)');
+    eq(BG.groups(), [], 'and answers every pair');
     // A same-name pair answered, and the room check linking one of them elsewhere.
-    const G = desk([RC('a', 1, 'Lamp', { dupOKWith: ['b'], dupWith: ['d'], dupConf: 'medium' }), RC('b', 2, 'Lamp'), RC('d', 4, 'Brass lamp', { dupWith: ['a'], dupConf: 'medium' })]);
+    const G = desk([RC('a', 1, 'Lamp', Object.assign({ dupOKIn: ['n1'] }, LINK('d', 'medium', 'y'))), RC('b', 2, 'Lamp', { dupOKIn: ['n1'] }), RC('d', 4, 'Brass lamp', LINK('a', 'medium', 'y'))]);
     eq(G.groups(), [['a', 'd']], 'the room check\'s link to another line is shown, the answered pair not');
     // The work bar counts only a double the block will show (AGT-03: it said one was flagged that the block did not show).
-    const H = desk([RC('a', 1, 'Sofa', { dupOKWith: ['b'] }), RC('b', 2, 'Club chair')]);
+    const H = desk([RC('a', 1, 'Sofa', { dupOKIn: ['n1'] }), RC('b', 2, 'Club chair', { dupOKIn: ['n1'] })]);
     const room = { photos: [{ lines: [H.ref('a')] }, { lines: [H.ref('b')] }] };
     eq(H._arWrite(7, room, { doubles: [{ ids: ['a', 'b'], confidence: 'low', why: 'x' }] }), 0, '⚠ the room check finding an answered pair again counts nothing');
     eq(H.ref('a').dupWith, ['b'], 'though the link is written as the pictures say');
-    const H2 = desk([RC('a', 1, 'Sofa', { dupOKWith: ['b'] }), RC('b', 2, 'Club chair'), RC('c', 3, 'Sofa, linen')]);
+    const H2 = desk([RC('a', 1, 'Sofa', { dupOKIn: ['n1'] }), RC('b', 2, 'Club chair', { dupOKIn: ['n1'] }), RC('c', 3, 'Sofa, linen')]);
     const room2 = { photos: [{ lines: [H2.ref('a')] }, { lines: [H2.ref('b')] }, { lines: [H2.ref('c')] }] };
     eq(H2._arWrite(7, room2, { doubles: [{ ids: ['a', 'b'], confidence: 'low', why: 'x' }, { ids: ['a', 'c'], confidence: 'high', why: 'y' }] }), 1, 'and a new one counts');
     // The rule is read by every evidence, never off the line.
     ['_agDupEligible', '_arDupEligible', 'agentNamedTwice'].forEach((f) => lacks(live(fn(f)), 'dupOK', f + ' reads no per-line answer'));
     has(live(fn('agentDuplicateGroups')), 'agentDupCleared(g[i], g[j])', 'the same name, pair by pair');
-    has(live(fn('agentDuplicateGroups')), 'agentDupCleared(r, other)', 'the room check\'s link, pair by pair');
-    has(live(fn('savePhotoRefs')), 'dupOKWith:r.dupOKWith', 'the answer is on the manifest\'s save list');
+    has(live(fn('_arPairOpen')), 'agentDupCleared(r, other)', 'the room check\'s link, pair by pair');
+    has(live(fn('savePhotoRefs')), 'dupOKIn:r.dupOKIn', 'the answer is on the manifest\'s save list');
+    has(live(fn('savePhotoRefs')), 'dupPairs:r.dupPairs', 'and each pair\'s own room-check answer');
     let stored = null;
-    const S = desk([RC('a', 1, 'Sofa', { dupOKWith: ['b'] })], { stubs: { localStorage: { setItem: (k, v) => { stored = v; }, getItem: () => null, removeItem() {} } } });
+    const S = desk([RC('a', 1, 'Sofa', Object.assign({ dupOKIn: ['n1'] }, LINK('b', 'medium', 'z')))], { stubs: { localStorage: { setItem: (k, v) => { stored = v; }, getItem: () => null, removeItem() {} } } });
     S.savePhotoRefs(7);
-    eq(stored && JSON.parse(stored)[0].dupOKWith, ['b'], '⚠ driven: it survives the save');
+    const sv = stored ? JSON.parse(stored)[0] : {};
+    eq([sv.dupOKIn, sv.dupPairs], [['n1'], { b: { conf: 'medium', why: 'z' } }], '⚠ driven: both survive the save');
   }
 
   group('B · ⚠⚠ one photograph named twice: each repeat paired with its original (GAP1-03)');
@@ -188,17 +221,48 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(g.map((x) => [x.twice, x.repeats.map((p) => p.line.stableId)]), [[true, ['p87', 'p88']]], 'the group carries the pairs');
     const h = text(D._agDupHtml(7, D._jobInvRefs(7)));
     has(h, 'Agent One read it twice, so the later lines may repeat the earlier ones: #87 repeats #73 · #88 repeats #81', '⚠ the block says which repeats which');
-    has(h, 'Hand-painted majolica dinner plates, yellow bird and blue flower design repeats #73', 'and on each repeat');
+    has(h, 'Hand-painted majolica dinner plates, yellow bird and blue flower design repeats #73 Hand-painted tin-glazed', 'and on each repeat');
     has(D._agDupHtml(7, D._jobInvRefs(7)), '>Keep the first reading</button>', 'Keep the first reading is offered');
     eq((D._agDupHtml(7, D._jobInvRefs(7)).match(/agentDropDuplicate\(/g) || []).length, 4, 'with a Remove on each line still');
-    // Without crops, the words of Agent One's two names pair them the same way; a whole-photograph crop counts as none.
+    // ⚠⚠ Where the crops cannot place them, only the same words pair two lines (P8's review: half the words paired dinner plates
+    // with salad plates, and Keep took a real stack). The Ellison wordings differ, so nothing is matched and Keep is not offered.
     const N = desk(ELLISON().map((r) => Object.assign(r, { crop: undefined })));
-    eq(N.agentNamedTwice(N._jobInvRefs(7))[0].repeats.map((p) => [p.line.itemNo, p.of.itemNo]), [[87, 73], [88, 81]], 'no crops: paired by Agent One\'s words');
+    const tn = N.agentNamedTwice(N._jobInvRefs(7))[0];
+    eq([tn.repeats.length, tn.fresh.map((r) => r.itemNo)], [0, [87, 88]], '⚠⚠ no crops and other words: not matched, left to a person');
+    lacks(N._agDupHtml(7, N._jobInvRefs(7)), 'Keep the first reading</button>', 'and Keep the first reading is not offered');
+    has(text(N._agDupHtml(7, N._jobInvRefs(7))), '#87 not matched · #88 not matched', 'the block says they are not matched (never that they are new)');
     const W = desk(ELLISON().map((r) => Object.assign(r, { crop: [0, 0, 1, 1] })));
-    eq(W.agentNamedTwice(W._jobInvRefs(7))[0].repeats.map((p) => [p.line.itemNo, p.of.itemNo]), [[87, 73], [88, 81]], 'whole-photograph crops: by the words, not all overlapping');
-    // The second reading listing the salad plates first: a whole-photograph crop would pair them with the dinner plates.
-    const W2 = desk(ELLISON().map((r) => Object.assign(r, { crop: [0, 0, 1, 1] }, r.itemNo === 88 ? { agentAt: T2 } : r.itemNo === 87 ? { agentAt: T2 + 2 } : {})));
-    eq(W2.agentNamedTwice(W2._jobInvRefs(7))[0].repeats.map((p) => [p.line.itemNo, p.of.itemNo]), [[87, 73], [88, 81]], '⚠ whatever order the later reading listed them in');
+    eq(W.agentNamedTwice(W._jobInvRefs(7))[0].repeats.length, 0, 'a whole-photograph crop counts as none');
+    // The same words, in any order and case, pair them, whatever order the later reading listed them in.
+    const SAME = (r) => Object.assign(r, { crop: [0, 0, 1, 1] }, r.itemNo === 87 ? { agentName: 'dinner plates, Hand-painted tin-glazed earthenware: yellow bird, blue flower' }
+      : r.itemNo === 88 ? { agentName: 'Salad plates, hand-painted tin-glazed earthenware, matching', agentAt: T2 - 1 } : {});
+    const SW = desk(ELLISON().map(SAME));
+    eq(SW.agentNamedTwice(SW._jobInvRefs(7))[0].repeats.map((p) => [p.line.itemNo, p.of.itemNo]), [[87, 73], [88, 81]], '⚠ the same words: paired, in either order');
+    // The reviewer's fixture: whole-photograph crops, the dinner plates read twice and a stack of salad plates new in the second.
+    const WP = (id, n, name, at) => PL(id, n, name, [0, 0, 1, 1], { agentAt: at });
+    const DS = () => [WP('p73', 73, 'White porcelain dinner plates', T1), WP('p87', 87, 'White porcelain dinner plates', T2), WP('p88', 88, 'White porcelain salad plates', T2 + 2)];
+    const t1 = desk(DS()).agentNamedTwice(DS())[0];
+    eq([t1.repeats.map((p) => [p.line.itemNo, p.of.itemNo]), t1.fresh.map((r) => r.itemNo)], [[[87, 73]], [88]], '⚠⚠ dinner plates repeat dinner plates; the salad plates are not matched');
+    const t2 = desk([DS()[0], DS()[2]]);
+    eq([t2.agentNamedTwice(t2._jobInvRefs(7))[0].repeats.length, Object.keys(t2.agentValueWaiting(7))], [0, []], 'the salad plates alone in the second reading: no repeat, and Agent Two waits on nothing');
+    // ⚠ Each earlier line is repeated at most once by one reading: two later lines over one stack, the closer one repeats it.
+    const TY = desk([PL('p73', 73, 'Dinner plates', [0.5, 0.4, 1, 0.8], { agentAt: T1 }), PL('p87', 87, 'Dinner plates', [0.5, 0.4, 1, 0.8], { agentAt: T2 }),
+      PL('p88', 88, 'Dinner plates, top of the stack', [0.55, 0.4, 1, 0.75], { agentAt: T2 + 2 })]);
+    const ty = TY.agentNamedTwice(TY._jobInvRefs(7))[0];
+    eq([ty.repeats.map((p) => [p.line.itemNo, p.of.itemNo]), ty.fresh.map((r) => r.itemNo)], [[[87, 73]], [88]], '⚠ one earlier line, one repeat by one reading; the other later line is not matched');
+    // ⚠ A pair a person answered is never matched as a repeat: a third reading repeats the first instead.
+    const C1 = [0.1, 0.1, 0.5, 0.5], T3b = T2 + 5 * 60 * 1000;
+    const AQ = desk([PL('p73', 73, 'Teapot', C1, { agentAt: T1, dupOKIn: ['n1'] }), PL('p87', 87, 'Teapot', C1, { agentAt: T2, dupOKIn: ['n1'] }), PL('p95', 95, 'Teapot', C1, { agentAt: T3b })]);
+    const aq = AQ.agentNamedTwice(AQ._jobInvRefs(7))[0];
+    eq([aq.repeats.map((p) => [p.line.itemNo, p.of.itemNo]), aq.fresh.map((r) => r.itemNo)], [[[95, 73]], [87]], '⚠ #87, said to be its own teapot, repeats nothing; #95 repeats #73');
+    // ⚠ A line not matched in one reading is matched in a later one: a third reading repeating it.
+    const FC = desk([PL('p73', 73, 'Teapot', [0, 0, 0.3, 0.3], { agentAt: T1 }), PL('p87', 87, 'Sugar bowl', [0.6, 0.6, 0.9, 0.9], { agentAt: T2 }),
+      PL('p95', 95, 'Sugar bowl, lidded', [0.6, 0.6, 0.9, 0.9], { agentAt: T3b })]);
+    eq(FC.agentNamedTwice(FC._jobInvRefs(7))[0].repeats.map((p) => [p.line.itemNo, p.of.itemNo]), [[95, 87]], '⚠ the sugar bowl new in the second reading is repeated by the third');
+    // The block names both lines on the repeat (P8's review: a number alone hid the mismatch).
+    const DB = desk(ELLISON());
+    has(text(DB._agDupHtml(7, DB._jobInvRefs(7))), 'Hand-painted majolica dinner plates, yellow bird and blue flower design repeats #73 Hand-painted tin-glazed earthenware dinner plates, yellow bird and blue flower',
+      '⚠ the repeat\'s line names its original by number and name');
     // Crops and names disagreeing: the crop decides (the Ellison wordings differ; the parts of the photograph do not).
     const CR = desk(ELLISON().map((r) => Object.assign(r, r.itemNo === 87 ? { agentName: 'Salad plates', objectName: 'Salad plates' } : {})));
     eq(CR.agentNamedTwice(CR._jobInvRefs(7))[0].repeats.map((p) => [p.line.itemNo, p.of.itemNo]), [[87, 73], [88, 81]], 'the crop decides where both have one');
@@ -206,7 +270,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const X = desk(ELLISON().concat([PL('p89', 89, 'Ceramic teapot, cobalt glaze', [0.2, 0.05, 0.4, 0.3], { agentAt: T2 + 4, qty: 1 })]));
     const tx = X.agentNamedTwice(X._jobInvRefs(7))[0];
     eq([tx.repeats.map((p) => p.line.itemNo), tx.fresh.map((r) => r.itemNo)], [[87, 88], [89]], '⚠ #89, another part of the photograph, is new in the second reading');
-    has(text(X._agDupHtml(7, X._jobInvRefs(7))), '#89 new in the later reading', 'and the block says so');
+    has(text(X._agDupHtml(7, X._jobInvRefs(7))), '#89 not matched', 'and the block says so');
+    has(text(X._agDupHtml(7, X._jobInvRefs(7))), 'Ceramic teapot, cobalt glaze not matched to the first reading', 'on its line too');
     // A third reading's repeats pair with the first reading's lines.
     const T3 = T2 + 5 * 60 * 1000;
     const Y = desk(ELLISON().concat([PL('p95', 95, 'Hand-painted dinner plates, yellow bird', [0.47, 0.37, 0.99, 0.79], { agentAt: T3 })]));
@@ -219,12 +284,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     no.agentKeepFirstReading(7, no._agDupHandle(no.agentDuplicateGroups(7)[0].key));
     eq(no._jobInvRefs(7).length, 4, 'Cancel: nothing removed');
     has(no.asked[0] || '', 'Keep the first reading of this photograph?', 'it asks first');
-    has(no.asked[0] || '', '#87 Hand-painted majolica dinner plates, yellow bird and blue flower design (repeats #73)', 'naming each line it takes off and what it repeats');
-    has(no.asked[0] || '', '#88 Hand-painted majolica salad or dessert plates, matching (repeats #81)', 'both');
+    has(no.asked[0] || '', '#87 Hand-painted majolica dinner plates, yellow bird and blue flower design\n      repeats #73 Hand-painted tin-glazed earthenware dinner plates, yellow bird and blue flower',
+      '⚠ naming each line it takes off and the line it repeats, both by number and name (P8\'s review)');
+    has(no.asked[0] || '', '#88 Hand-painted majolica salad or dessert plates, matching\n      repeats #81 Hand-painted tin-glazed earthenware salad plates, matching', 'both');
     has(no.asked[0] || '', 'No photograph is deleted', 'and what it leaves');
-    const D = desk(ELLISON());
+    let stored = null;
+    const D = desk(ELLISON(), { stubs: { localStorage: { setItem: (k, v) => { stored = v; }, getItem: () => null, removeItem() {} } } });
     const n = D.agentKeepFirstReading(7, D._agDupHandle(D.agentDuplicateGroups(7)[0].key));
     eq(n, 2, 'two lines taken off');
+    const sv = stored ? JSON.parse(stored).filter((r) => r.deletedAt).map((r) => r.stableId).sort() : 'nothing saved';
+    eq(sv, ['p87', 'p88'], '⚠ and the manifest is saved with both removals (the removal writer defers, so the press saves once)');
     eq(D._jobInvRefs(7).map((r) => r.itemNo), [73, 81], '⚠⚠ on the Ellison four, #73 and #81 stay (the three Removes once took both salad lines)');
     eq([D.ref('p87').deletedAt > 0, !!D.ref('p87').deletedBy, D.ref('p88').deletedAt > 0], [true, true, true], 'through the desk\'s removal writer: tombstoned, with who');
     eq(D.groups(), [], 'and the group goes');
@@ -232,7 +301,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // With a line new in the second reading.
     const X = desk(ELLISON().concat([PL('p89', 89, 'Ceramic teapot, cobalt glaze', [0.2, 0.05, 0.4, 0.3], { agentAt: T2 + 4, qty: 1 })]));
     X.agentKeepFirstReading(7, X._agDupHandle(X.agentDuplicateGroups(7)[0].key));
-    has(X.asked[0] || '', 'New in the later reading, and kept:\n  · #89 Ceramic teapot, cobalt glaze', 'the question names what it keeps');
+    has(X.asked[0] || '', 'Not matched to a line of the first reading, and kept:\n  · #89 Ceramic teapot, cobalt glaze', 'the question names what it keeps');
     eq(X._jobInvRefs(7).map((r) => r.itemNo), [73, 81, 89], '⚠ #89 stays');
     const left = X.agentDuplicateGroups(7);
     eq(left.map((g) => [g.rows.map((r) => r.itemNo), g.repeats.length, g.fresh.map((r) => r.itemNo)]), [[[73, 81, 89], 0, [89]]],
@@ -250,10 +319,58 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(Z.alerts[0] || '', 'No line of the later reading matches a line of the first', 'and it says why');
   }
 
+  group('C2 · ⚠⚠ Keep the first reading pressed again never takes a line it kept; removed lines keep the matching (P8\'s review)');
+  {
+    // The reviewer's fixture, through the press: whole-photograph crops, the dinner plates read twice, a new stack of salad plates.
+    const WP = (id, n, name, at) => PL(id, n, name, [0, 0, 1, 1], { agentAt: at });
+    const D = desk([WP('p73', 73, 'White porcelain dinner plates', T1), WP('p87', 87, 'White porcelain dinner plates', T2), WP('p88', 88, 'White porcelain salad plates', T2 + 2)]);
+    has(text(D._agDupHtml(7, D._jobInvRefs(7))), '#87 repeats #73 · #88 not matched', 'fixture: the block before the first press');
+    eq(D.keep(), 1, 'the first press takes #87');
+    has(D.asked[0] || '', 'Not matched to a line of the first reading, and kept:\n  · #88 White porcelain salad plates', 'and says it keeps #88');
+    eq(D.live(), [73, 88], 'the salad plates stay');
+    const after = D.agentDuplicateGroups(7);
+    eq(after.map((g) => [g.rows.map((r) => r.itemNo), g.repeats.length, g.fresh.map((r) => r.itemNo)]), [[[73, 88], 0, [88]]],
+      '⚠⚠ after it, #88 is still not matched: #73 stays taken by the removed #87');
+    lacks(D._agDupHtml(7, D._jobInvRefs(7)), 'Keep the first reading</button>', 'and Keep is no longer offered');
+    eq(D.keep(), false, '⚠⚠ a second press takes nothing');
+    eq(D.live(), [73, 88], '⚠⚠ the salad-plate stack is still on the inventory');
+    has(D.alerts[0] || '', 'No line of the later reading matches a line of the first', 'and it says why');
+    // ⚠⚠ The removed repeat keeps the original it took, whatever the crops would say of what is left: two later lines over one
+    // stack, the closer one taken off, and the other is never offered against the same original afterwards.
+    const TY = desk([PL('p73', 73, 'Dinner plates', [0.5, 0.4, 1, 0.8], { agentAt: T1 }), PL('p87', 87, 'Dinner plates', [0.5, 0.4, 1, 0.8], { agentAt: T2 }),
+      PL('p88', 88, 'Dinner plates, top of the stack', [0.55, 0.4, 1, 0.75], { agentAt: T2 + 2 })]);
+    eq(TY.keep(), 1, 'fixture: Keep takes #87, the closer repeat of #73');
+    const ty = TY.agentDuplicateGroups(7)[0];
+    eq([ty.repeats.length, ty.fresh.map((r) => r.itemNo)], [0, [88]], '⚠⚠ #88 is still not matched: the removed #87 keeps #73');
+    eq([TY.keep(), TY.live()], [false, [73, 88]], '⚠⚠ and a second press takes nothing');
+    // A repeat whose original was removed is the copy that stands: never offered to Keep.
+    const R = desk(ELLISON());
+    R.agentDropDuplicate(7, 'p73');
+    const rg = R.agentDuplicateGroups(7)[0];
+    eq([rg.rows.map((r) => r.itemNo), rg.repeats.map((p) => [p.line.itemNo, p.of.itemNo]), rg.fresh.map((r) => r.itemNo)], [[81, 87, 88], [[88, 81]], []],
+      '⚠ the first reading\'s #73 removed: #87 repeats nothing still listed, and is neither a repeat nor unmatched');
+    eq([R.keep(), R.live()], [1, [81, 87]], '⚠ Keep takes #88 alone: #87, the dinner plates that stand, stays');
+    // Two photographs read twice in one room: Keep on one takes only its own repeats.
+    const B = (id, n, name, crop, at, from) => PL(id, n, name, crop, Object.assign({ agentAt: at, qty: 1, filename: 'B.jpg', driveFileId: 'FID_B' }, { derivedFrom: from }));
+    const TWO = desk([PL('p1', 1, 'Dinner plates', [0, 0, 0.5, 0.5], { agentAt: T1, qty: 1, derivedFrom: undefined }), PL('p2', 2, 'Dinner plates', [0, 0, 0.5, 0.5], { agentAt: T2, qty: 1, derivedFrom: 'p1' }),
+      B('b1', 11, 'Teapot', [0.5, 0.5, 1, 1], T1 + 100, undefined), B('b2', 12, 'Teapot', [0.5, 0.5, 1, 1], T2 + 100, 'b1')]);
+    const tg = TWO.agentDuplicateGroups(7);
+    eq(tg.map((g) => [g.rows.map((r) => r.itemNo), g.repeats.map((p) => p.line.itemNo)]), [[[1, 2], [2]], [[11, 12], [12]]], 'fixture: two photographs, each read twice, two groups');
+    TWO.agentKeepFirstReading(7, TWO._agDupHandle(tg[0].key));
+    eq(TWO.live(), [1, 11, 12], '⚠ Keep on the plates takes the plates\' repeat alone, never the teapot\'s');
+    // Keep frees what Agent Two waited on, as Remove does.
+    const LP = desk([PL('p1', 1, 'Brass table lamp', [0.2, 0.2, 0.6, 0.8], { agentAt: T1, qty: 1, roomIdx: 3, ts: 10, derivedFrom: undefined }),
+      PL('p5', 5, 'Brass table lamp with linen shade', [0.2, 0.2, 0.6, 0.8], Object.assign({ agentAt: T2, qty: 1, roomIdx: 3, ts: 10, derivedFrom: 'p1' }, LINK('q9'))),
+      RC('q9', 9, 'Lamp, brass, pleated shade', Object.assign({ ts: 20 }, LINK('p5')))]);
+    eq(Object.keys(LP.agentValueWaiting(7)).sort(), ['p5', 'q9'], 'fixture: the repeat waits on the first reading, the lamp photographed again on the repeat');
+    LP.keep();
+    eq(LP.sent(), [['p1', 'q9']], '⚠ Keep the first reading: what waited on the repeat is valued by itself');
+  }
+
   group('D · ⚠⚠ Agent Two waits on the later line of a pair that is plainly one thing (ACC-02)');
   {
-    const P = (o1, o2) => [RC('s1', 1, 'Oil painting, harbor scene', Object.assign({ dupWith: ['s2'], dupConf: 'high', ts: 10 }, o1 || {})),
-      RC('s2', 2, 'Harbor painting in gilt frame', Object.assign({ dupWith: ['s1'], dupConf: 'high', ts: 20 }, o2 || {})),
+    const P = (o1, o2) => [RC('s1', 1, 'Oil painting, harbor scene', Object.assign(LINK('s2'), { ts: 10 }, o1 || {})),
+      RC('s2', 2, 'Harbor painting in gilt frame', Object.assign(LINK('s1'), { ts: 20 }, o2 || {})),
       RC('s3', 3, 'Chesterfield sofa')];
     const D = desk(P());
     eq(Object.keys(D.agentValueWaiting(7)), ['s2'], 'the line photographed later waits');
@@ -264,14 +381,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     D.agentValueRun(7);
     has(D.asked[0] || '', '1 line waits on a possible duplicate (#2 and #1): Remove the extra line or press Not duplicates', 'Value N lines says what waits, and how to free it');
     eq(D.sent()[1], ['s1', 's3'], 'and leaves it out');
-    eq(Object.keys(desk(P({ dupConf: 'medium' }, { dupConf: 'medium' })).agentValueWaiting(7)), [], 'a pair read as very likely one thing is valued as ever');
-    eq(Object.keys(desk(P({ dupConf: 'high' }, { dupConf: 'low' })).agentValueWaiting(7)), [], 'one end read less surely: valued');
+    eq(Object.keys(desk(P(LINK('s2', 'medium'), LINK('s1', 'medium'))).agentValueWaiting(7)), [], 'a pair read as very likely one thing is valued as ever');
+    eq(Object.keys(desk(P(LINK('s2', 'low'), LINK('s1', 'low'))).agentValueWaiting(7)), [], 'and one read as possibly one thing');
+    eq(Object.keys(desk(P({ dupPairs: undefined })).agentValueWaiting(7)), ['s2'], 'the pair\'s answer read off either line');
     eq(Object.keys(desk(P({ ts: 30 })).agentValueWaiting(7)), ['s1'], 'the later photograph waits, whichever number it has');
-    eq(Object.keys(desk(P({ dupOKWith: ['s2'] })).agentValueWaiting(7)), [], 'a pair a person answered: nothing waits');
+    eq(Object.keys(desk(P({ dupOKIn: ['n1'] }, { dupOKIn: ['n1'] })).agentValueWaiting(7)), [], 'a pair a person answered: nothing waits');
     eq(Object.keys(desk(ELLISON()).agentValueWaiting(7)).sort(), ['p87', 'p88'], 'a photograph read twice: its repeats wait');
     // Not duplicates hands the waiting line to the automatic run; Remove of the earlier line does too.
     const N = desk(P());
-    N.agentNotDuplicate(7, N._agDupHandle(N.agentDuplicateGroups(7)[0].key));
+    N.notDup();
     eq(N.sent(), [['s1', 's2', 's3']], '⚠ Not duplicates: the later line is valued by itself, with the rest');
     const R = desk(P());
     R.agentDropDuplicate(7, 's1');
@@ -284,6 +402,73 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     all.agentValueRun(7);
     has(all.alerts[0] || '', '1 line waits on a possible duplicate', 'only a waiting line left: it says so, and sends nothing');
     eq(all.started, [], 'nothing sent');
+    // A released line that already has a figure is no reason to run (the release hands on what waited, nothing else).
+    const FG = desk(P(null, { fmv: 2100, valuedBy: 'desk' }));
+    FG.notDup();
+    eq(FG.started, [], 'a released line with a figure of its own: nothing is started');
+  }
+
+  group('D2 · ⚠⚠ each pair\'s own room-check answer heads its group and decides the wait (P8\'s review)');
+  {
+    // Day one: the room check links the sofa and the armchair as plainly one thing; a person says they are two things.
+    const S = desk([RC('a', 10, 'Tufted linen sofa'), RC('b', 11, 'Club armchair'), RC('c', 12, 'Linen sofa, three-seat', { ts: 30 })]);
+    const room = { photos: ['a', 'b', 'c'].map((id) => ({ lines: [S.ref(id)] })) };
+    S._arWrite(7, room, { doubles: [{ ids: ['a', 'b'], confidence: 'high', why: 'The same armchair in the corner.' }] });
+    S.notDup();
+    eq(S.groups(), [], 'fixture: day one answered');
+    // Day two: the check reads the room again, still linking the armchair pair, and now the two sofas, less surely.
+    S._arWrite(7, room, { doubles: [{ ids: ['a', 'b'], confidence: 'high', why: 'The same armchair in the corner.' },
+      { ids: ['a', 'c'], confidence: 'low', why: 'Two sofas of a similar colour; could be one.' }] });
+    const g = S.agentDuplicateGroups(7);
+    eq(g.map((x) => [x.rows.map((r) => r.stableId), x.why, x.conf]), [[['a', 'c'], 'Two sofas of a similar colour; could be one.', 'low']],
+      '⚠⚠ the new group is headed by its own pair\'s sentence and confidence, never the answered armchair pair\'s');
+    has(text(S._agDupHtml(7, S._jobInvRefs(7))), 'Two sofas of a similar colour; could be one. room check: possibly one thing', 'the block says so');
+    eq(Object.keys(S.agentValueWaiting(7)), [], '⚠⚠ and Agent Two waits on nothing: the pair was read as low');
+    eq(S._arLineWhy(7, S.ref('a')), 'Two sofas of a similar colour; could be one.', 'the row\'s chip reads the line\'s open pair, not the answered one');
+    // A line linked high to one line and low to another: only the high pair waits.
+    const W = desk([RC('a', 10, 'Tufted linen sofa', { ts: 10 }), RC('b', 11, 'Club armchair', { ts: 20 }), RC('c', 12, 'Linen sofa, three-seat', { ts: 30 }), RC('d', 13, 'Oak side table', { ts: 5 })]);
+    const room2 = { photos: ['a', 'b', 'c', 'd'].map((id) => ({ lines: [W.ref(id)] })) };
+    W._arWrite(7, room2, { doubles: [{ ids: ['a', 'b'], confidence: 'high', why: 'x' }] });
+    W.notDup();
+    W._arWrite(7, room2, { doubles: [{ ids: ['a', 'b'], confidence: 'high', why: 'x' }, { ids: ['a', 'c'], confidence: 'low', why: 'y' }, { ids: ['c', 'd'], confidence: 'high', why: 'z' }] });
+    const w = W.agentValueWaiting(7);
+    eq(Object.keys(w).map((k) => k + ' on ' + w[k].stableId), ['c on d'], '⚠⚠ the high pair\'s later line waits; the low pair holds nothing back');
+  }
+
+  group('D3 · ⚠⚠ a rename, a close-up or a press mid-chain never goes round the wait (P8\'s review)');
+  {
+    const P = () => [RC('s1', 1, 'Oil painting, harbor scene', Object.assign(LINK('s2'), { ts: 10 })),
+      RC('s2', 2, 'Harbor painting in gilt frame', Object.assign(LINK('s1'), { ts: 20 })), RC('s3', 3, 'Chesterfield sofa', { fmv: 900, valuedBy: 'desk' })];
+    const D = desk(P());
+    D.ref('s2').objectName = 'Harbor scene oil on canvas, gilt frame';
+    eq(D.agentValueAfterRename(7, 's2'), false, '⚠⚠ the waiting line renamed: Agent Two is not sent it');
+    eq(D.agentValueAfterCloseUp(7, 's2'), false, '⚠⚠ nor once a close-up is added to it');
+    eq(D.started, [], 'nothing started');
+    eq(D._avDupHeld[7], { s2: 'closeup' }, 'the press is held for the line');
+    D.notDup();
+    eq(D.sent(), [['s1'], ['s2']], '⚠ released: the earlier line valued by the run, the held line on its own, once each');
+    eq(D._avForceComps.s2, 1, 'researched, as the close-up asked');
+    eq(D._avDupHeld[7], {}, 'and the hold is taken');
+    // A rename queued behind a run that was out, its line come to wait meanwhile: held at the run's end, never sent by it.
+    const Q = desk([RC('s1', 1, 'Oil painting, harbor scene', { ts: 10 }), RC('s2', 2, 'Harbor painting in gilt frame', { ts: 20 })]);
+    Q._avRun[7] = { running: true, ids: {}, out: {} };
+    eq(Q.agentValueAfterRename(7, 's2'), true, 'fixture: renamed while a run is out, queued behind it');
+    Object.assign(Q.ref('s1'), LINK('s2')); Object.assign(Q.ref('s2'), LINK('s1'));
+    Q._avFinish(7);
+    eq(Q.started, [], '⚠ the run ends: the queued line, now waiting, is not sent');
+    eq(Q._avDupHeld[7], { s2: 'rename' }, 'and is held for its release');
+    // A rename of a line that does not wait goes as ever.
+    const E = desk(P());
+    eq(E.agentValueAfterRename(7, 's1'), true, 'the earlier line renamed: valued at once');
+    // Not duplicates while the room check or Agent One is out: the chain's own end values what is freed.
+    const M = desk(P());
+    M._arRun[7] = { running: true };
+    M.notDup();
+    eq(M.started, [], '⚠⚠ a press while the room check is out starts nothing');
+    const A1 = desk(P());
+    A1._agRun[7] = { running: true };
+    A1.notDup();
+    eq(A1.started, [], 'nor while Agent One is out');
   }
 
   group('E · ⚠⚠ the schedules: an open double count is DRAFT, named, its signature withheld (ACC-02, INV-01)');
@@ -335,6 +520,48 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const pt = text(plain.print('printCourtInventory'));
     has(pt, 'FINAL', 'nothing doubled: FINAL');
     lacks(pt, 'double count', 'and nothing said');
+    // ⚠⚠ A photograph read twice: each repeat with its original is its own double count (P8's review: one across four lines).
+    const PLATE = (id, n, name, crop, fmv, over) => LINE(id, n, name, fmv, Object.assign({ roomIdx: 2, namedBy: 'agent', agentName: name, agentConf: 'medium',
+      category: 'General/Household', qty: 8, ts: 1000, filename: 'HVL_Kitchen_INV_5.jpg', driveFileId: 'FID_P', crop: crop }, id === 'p73' ? {} : { derivedFrom: 'p73' }, over || {}));
+    const FOUR = () => [
+      PLATE('p73', 73, 'Hand-painted tin-glazed earthenware dinner plates, yellow bird and blue flower', [0.46, 0.38, 1, 0.78], 240, { agentAt: T1 }),
+      PLATE('p81', 81, 'Hand-painted tin-glazed earthenware salad plates, matching', [0.03, 0.43, 0.45, 0.78], 160, { agentAt: T1 + 3 }),
+      PLATE('p87', 87, 'Hand-painted majolica dinner plates, yellow bird and blue flower design', [0.5, 0.4, 0.98, 0.8], 220, { agentAt: T2 }),
+      PLATE('p88', 88, 'Hand-painted majolica salad or dessert plates, matching', [0.05, 0.42, 0.44, 0.8], 150, { agentAt: T2 + 2 })];
+    const TF = papers({ matterType: 'trust', trustName: 'Ellison Family Trust' }, FOUR());
+    const tf = text(TF.print('printTrustSchedule'));
+    has(tf, 'DRAFT — 2 possible double counts not yet decided: #87 and #73; #88 and #81', '⚠⚠ the Ellison four: two double counts, each repeat with its original');
+    has(tf, 'Both lines of each possible double count are in the total above, so it may count an item twice: #87 Hand-painted majolica dinner plates, yellow bird and blue flower design ($220) and #73',
+      'the note pairs them the same way');
+    // A line of the later reading not matched to the first is named apart.
+    const FIVE = FOUR().concat([PLATE('p89', 89, 'Ceramic teapot, cobalt glaze', [0.2, 0.05, 0.4, 0.3], 90, { agentAt: T2 + 4, qty: 1 })]);
+    const tv = text(papers({ matterType: 'trust', trustName: 'Ellison Family Trust' }, FIVE).print('printTrustSchedule'));
+    has(tv, '2 possible double counts not yet decided: #87 and #73; #88 and #81; #89 not matched to the first reading of its photograph', 'a line not matched is named apart, never counted as a pair');
+    has(tv, '#89 Ceramic teapot, cobalt glaze ($90) was read again off the same photograph and not matched to a line of the first reading.', 'and so in the note');
+    // A group of three: every line, not both.
+    const TRIO = PAINTINGS().slice(2).concat(['s4', 's5', 's6'].map((id, i) => LINE(id, 4 + i, 'Pair of brass candlesticks', 300, { namedBy: 'agent', agentName: 'Pair of brass candlesticks', driveFileId: 'F' + id })));
+    const T3P = papers({ matterType: 'probate' }, TRIO);
+    const t3 = text(T3P.print('printCourtInventory'));
+    has(t3, '1 possible double count not yet decided: #4, #5 and #6', 'three lines of one name: one double count');
+    has(t3, 'Every line of each possible double count is in the total above', '⚠ never "both lines" for three');
+    has(t3, 'a final copy is issued once Havellin has decided whether each possible double count is one item or more', 'and the final copy\'s words fit it');
+    has(text(T3P.print('printEstateInventoryReport')), 'Every line of each is in the total below until it is decided whether they are one item or more.', 'the Estate Inventory Report\'s sentence too');
+    // Seven: six named, then the count of the rest.
+    const SEVEN = [];
+    for (let i = 0; i < 7; i++) ['a', 'b'].forEach((x, j) => SEVEN.push(LINE('g' + i + x, 10 + i * 2 + j, 'Side chair ' + String.fromCharCode(65 + i), 100, { namedBy: 'agent', agentName: 'Side chair ' + String.fromCharCode(65 + i), driveFileId: 'F' + i + x })));
+    const s7 = text(papers({ matterType: 'probate' }, SEVEN).print('printCourtInventory'));
+    has(s7, '7 possible double counts not yet decided: #10 and #11; #12 and #13; #14 and #15; #16 and #17; #18 and #19; #20 and #21; and 1 more', '⚠ six named, then how many more');
+    lacks(s7, '#22 and #23', 'the seventh not named');
+    // The estate package's question names it (P8's review: the confirm that makes an interim copy deliberate said nothing).
+    const PK = sandbox({ fns: PAPER_FNS.concat(['probatePackageGaps', '_planRoomStatus']), vars: PAPER_VARS,
+      stubs: { document: domStub({}), jobs: [Object.assign({}, ESTATE, { matterType: 'probate' })], _photoRefs: { 7: PAINTINGS() }, jobPlanStore: {},
+        invReleaseCautions: () => [], _invPrintThumb: () => '', _invThumbFor: () => '' } });
+    const gaps = val(attempt(() => PK.probatePackageGaps(7)), []);
+    ok(Array.isArray(gaps) && gaps.indexOf('1 possible double count not yet decided: #1 and #2') >= 0, '⚠⚠ the package\'s question names the double count (' + JSON.stringify(gaps) + ')');
+    PK._photoRefs[7] = PAINTINGS(LINK('s2', 'high', 'x'), Object.assign(LINK('s1', 'high', 'x'), { deletedAt: 9 }));
+    const gaps2 = val(attempt(() => PK.probatePackageGaps(7)), []);
+    ok(Array.isArray(gaps2) && !gaps2.some((x) => /double count/.test(x)), '…and nothing once it is answered');
+    has(live(fn('probatePackageGaps')), 'invDoubleCounts(job, ', 'the package reads the one rule');
     // The read decides nothing on either schedule (Q109), and nothing is merged.
     ['printCourtInventory', 'printTrustSchedule', 'printEstateInventoryReport'].forEach((p) => has(live(fn(p)), 'invDoubleCounts(job, ', p + ' reads the one rule'));
     lacks(live(fn('invDoubleCounts')), 'deletedAt', 'the rule never removes a line');

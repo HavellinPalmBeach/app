@@ -383,9 +383,12 @@ and browser step 69.
     to check (`_agFinish`) and a room check that did not fail (`_arFinish`), on every photographed, named line with no
     figure that it has not already failed on (`_invHasPhoto`, `valFailed`). *Value N lines* and Re-value still send the
     rest. Since 2026-10-27 (P8 of the desk audit, ACC-02) neither the automatic run nor *Value N lines* sends the later line of
-    a room-check pair both of whose lines the check read as plainly one thing, or a repeat of a photograph read twice
-    (`agentValueWaiting`): it waits until a person presses Remove or Not duplicates, and then goes by itself (`_avDupReleased`),
-    so one object is never researched twice and its two figures never both reach a schedule unsaid. A run's tail redraw waits while a box on the desk has focus, and keeps waiting as focus moves box to box
+    a room-check pair the check read as plainly one thing (that pair's own answer, `dupPairs`, since P8's review), or a repeat
+    of a photograph read twice (`agentValueWaiting`), and nor does a rename or a close-up added to it (held for the line,
+    `_avDupHeld`, since P8's review): it waits until a person presses Remove, Keep the first reading or Not duplicates, and
+    then goes by itself once the naming and the room check have finished (`_avDupReleased`). So the app does not research
+    one object twice off a pair it knows of; a pair the room check reads less surely, or a same-name pair, is valued as
+    ever, and so is a line a person sends by hand (Re-value). A run's tail redraw waits while a box on the desk has focus, and keeps waiting as focus moves box to box
     (`_invRenderWhenIdle`).
   - **It researches Agent One's guesses:** `agentValueMode` sends a line Agent One named with low confidence, while the
     name is still Agent One's (`_avNameIsAgents`), to research, the depth that reads the photograph, so its correction of
@@ -525,7 +528,7 @@ and browser step 69.
   answers one, since `_agDupEligible` no longer leaves out reviewed lines, and since the second review a rename or a
   category change does not either: `_agWrite` keeps Agent One's own reading as `agentName`, on `savePhotoRefs`' list
   and `collectionLineWithPhoto`'s drop list, and `agentDuplicateGroups` keys on `agentName`, else `valNameFrom`, else
-  `objectName`; only Remove or Not duplicates, since 2026-10-27 recorded for the pair as `dupOKWith`, `agentDupCleared`); any `invReleaseCautions`. A lot over the Form 706 article cap
+  `objectName`; only Remove or Not duplicates, since 2026-10-27 recorded for the pair, since its review as one press's id on every line of the group, `dupOKIn`, `agentDupCleared`); any `invReleaseCautions`. A lot over the Form 706 article cap
   is not a hold (a tick does not split a lot; *Lots to split* asks for it). The intrinsic categories and MAIV are no
   longer flags of their own (the $100 line's were). Sterling that looks like stainless is the photography guide's
   close-up of the mark (Q103), never a rule. Nothing is written to the line: `invLineAcceptedOnly` (accepted, Agent

@@ -82,10 +82,10 @@ function app(refs, over) {
   const ctx = sandbox({
     fns: ['agentListedOff', 'agentNameableRefs', 'agentShotGroups', '_agDetailRefs', '_agShotPayload', '_agContext', '_agWrite', '_invCondIsAgents', '_invAgentCondition',
       'agentApplyResult', '_agState', '_agSendNext', 'invSplitItemN', '_invSplitSource', '_getPhotoRef', '_setPhotoRef', '_jobInvRefs', '_invFileId', '_photoUid',
-      '_invPhotoSource', '_invRoomName', 'agentNamedTwice', 'agentDuplicateGroups', 'agentDupCleared', '_agDupEligible', '_arDupEligible', '_agNameKey',
+      '_invPhotoSource', '_invRoomName', 'agentNamedTwice', 'agentDuplicateGroups', '_arPair', '_arPairOpen', 'agentDupCleared', '_agDupEligible', '_arDupEligible', '_agNameKey',
       '_agDupIndex', '_agDupHtml', '_agDupHandle', '_agDupUnhandle', 'agentDropDuplicate', 'agentNotDuplicate', 'agentValueWaiting', '_avDupReleased', '_avHasFigure', '_invHasValue', '_invItemNo',
       'savePhotoRefs', 'collectionLineWithPhoto', '_withDeviceKey', 'deviceKey', '_invJob', 'invFirearmSettle', 'invIsFirearm', 'invFirearmDispRefusal', 'isDecedentJob'],
-    vars: ['_agRun', 'AGENT_CONDITIONS', 'AGENT_MAX_DETAILS', 'AGENT_LISTED_MAX', 'AGENT_BATCH', 'AGENT_PASS_GAP_MS', 'AGENT_ROOM_CONF_RANK', 'AGENT_ROOM_CONF_WORDS',
+    vars: ['_agRun', '_arRun', '_avDupHeld', 'AGENT_CONDITIONS', 'AGENT_MAX_DETAILS', 'AGENT_LISTED_MAX', 'AGENT_BATCH', 'AGENT_PASS_GAP_MS', 'AGENT_ROOM_CONF_RANK', 'AGENT_ROOM_CONF_WORDS',
       'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY', 'INV_SPLIT_MAX', '_photoUidSeq', 'INV_FIREARM_NEVER', 'DECEDENT_SERVICES'],
     stubs: Object.assign({
       Date: D,
@@ -166,7 +166,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const race = ELLISON(); race[2].agentAt = T1 + 9000; race[3].agentAt = T1 + 9001;
     eq(A.agentNamedTwice(race).map((x) => x.rows.length), [4], 'two devices reading it seconds apart are two readings');
     // What a person settled stays settled.
-    const sep = ELLISON().map((r, i, all) => Object.assign(r, { dupOKWith: all.filter((o) => o !== r).map((o) => o.stableId) }));
+    const sep = ELLISON().map((r) => Object.assign(r, { dupOKIn: ['n1'] }));
     eq(A.agentNamedTwice(sep), [], 'Not duplicates pressed: quiet');
     const gone = ELLISON(); gone[2].deletedAt = 5; gone[3].deletedAt = 5;
     eq(A.agentNamedTwice(gone), [], 'the second reading\'s lines removed: quiet');
@@ -202,7 +202,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const N = app(ELLISON());
     const g = N.agentDuplicateGroups(7)[0];
     N.agentNotDuplicate(7, N._agDupHandle(g.key));
-    eq(N._jobInvRefs(7).map((r) => (r.dupOKWith || []).length), [3, 3, 3, 3], 'Not duplicates marks every pair of the group (P8: on each line, the other three)');
+    eq(N._jobInvRefs(7).map((r) => (r.dupOKIn || []).length), [1, 1, 1, 1], 'Not duplicates marks every pair of the group (P8: one press\'s id on each line)');
     eq(N.agentDuplicateGroups(7), [], 'and the group goes quiet');
     // ⚠ The old rule stands: a matching pair split off one frame in one naming is never shown.
     const P = app([L('p', 1, 'Brass table lamp', { agentAt: T1 }), L('s2', 2, 'Brass table lamp', { agentAt: T1 + 1 })]);
@@ -393,7 +393,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq((apply.match(/_agWrite\([^)]*, pass\)/g) || []).length, 2, '⚠ both writes in an answer take its one pass: the blank rows and the split');
     has(apply, 'var pass = { at: Date.now(), listed: group.listedN || 0 };', 'the pass is the answer\'s time and what it was told');
     has(live(fn('_agSendNext')), 'g.listedN = (payload.listed || []).length;', 'what it was told is read off the payload it sent');
-    has(live(fn('agentDuplicateGroups')), 'agentNamedTwice(rows).forEach(', 'Possible duplicates reads the detector');
+    has(live(fn('agentDuplicateGroups')), 'agentNamedTwice(rows, gone).forEach(', 'Possible duplicates reads the detector, with the photograph\'s removed lines (P8\'s review)');
     has(live(fn('agentValueMode')), ".replace(AGENT_VALUE_NO_MARK_RE, ' ')", 'the mode strikes an unread mark before it tests');
     has(live(fn('agentValueNotices')), 'var order = _avNoticeKinds();', 'the list reads the one catalogue of words');
     has(live(fn('agentValueRun')), 'A name Agent One gave that nobody has reviewed may come back corrected, and a name you typed or reviewed is valued as named.', 'Value N lines\' confirm says a name may come back corrected (and, since 2026-10-25b, that a person\'s name is valued as named)');

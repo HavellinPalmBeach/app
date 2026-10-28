@@ -127,13 +127,13 @@ function rig(refs, over) {
           // The duplicate flag. ⚠ LIFTED, NEVER STUBBED — a stub of the grouping rule is
           // exactly what would let the block above the rows and the chip on the row come to
           // disagree about which lines are contested.
-          '_agNameKey', '_agDupEligible', 'agentDuplicateGroups', 'agentDupCleared', 'agentNamedTwice', '_agDupIndex', '_agDupHtml',
+          '_agNameKey', '_agDupEligible', 'agentDuplicateGroups', '_arPair', '_arPairOpen', 'agentDupCleared', 'agentNamedTwice', '_agDupIndex', '_agDupHtml',
           '_agDupHandle', '_agDupUnhandle', 'agentDropDuplicate', 'agentNotDuplicate', 'agentValueWaiting', '_avDupReleased', '_invItemNo',
           // P16: the desk's one removal writer, which records who removed the line.
           '_invTombstoneLine', '_invStampBy', 'deviceUser', '_invJob',
           // P24: the room check's links join the same-name rule in one grouping.
           '_arDupEligible', 'agentValueUnreviewed', '_avHasFigure', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invNeedsAppraisal', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat', '_invPhotoSiblings', 'agentNoticesOn', '_invJob', 'invFirearmSettle', 'invFirearmDispRefusal', 'isDecedentJob', 'invIsFirearm'],
-    vars: ['_agRun', '_avRun', 'AGENT_NOTICE_KINDS', 'AGENT_BATCH', 'AGENT_MAX_DETAILS', 'AGENT_LISTED_MAX', '_agDupSet', 'AGENT_ROOM_CONF_RANK', 'AGENT_ROOM_CONF_WORDS', 'AGENT_PASS_GAP_MS', 'AGENT_CONDITIONS',
+    vars: ['_agRun', '_arRun', '_avRun', '_avDupHeld', 'AGENT_NOTICE_KINDS', 'AGENT_BATCH', 'AGENT_MAX_DETAILS', 'AGENT_LISTED_MAX', '_agDupSet', 'AGENT_ROOM_CONF_RANK', 'AGENT_ROOM_CONF_WORDS', 'AGENT_PASS_GAP_MS', 'AGENT_CONDITIONS',
            'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY', 'INV_SPLIT_MAX', '_photoUidSeq', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', 'INV_FIREARM_NEVER', 'DECEDENT_SERVICES'],
     stubs: Object.assign({
       jobs: [{ id: 7, hvlId: 'HVL-0007', svc: 'cleanout' }],
@@ -696,7 +696,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(one({ roomIdx: 9 }), 0, 'a different room is a different object');
     eq(one({ reviewed: true }), 1, '⚠ a reviewed row stays in the group: a tick never answers a possible duplicate, Remove or Not duplicates does (2026-10-26, with a tick only on flagged lines)');
     eq(one({ namedBy: 'desk' }), 0, 'and so has one a person renamed');
-    eq(one({ dupOKWith: ['a'] }), 0, 'and one already confirmed as its own object, as against this one (P8: Not duplicates answers the pair)');
+    eq(one({ dupOKIn: ['n1'] }), 1, '⚠ an answer on one half alone is no answer (P8\'s review: one press\'s id on both lines)');
     eq(one({ objectName: '' }), 0, 'a blank row is not a duplicate of anything');
     eq(one({ deletedAt: 1 }), 0, 'nor is a removed one');
     eq(one({}), 1, 'and the control case still fires');
@@ -749,8 +749,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(ctx._agDupUnhandle(h), g.key, 'and round-trips exactly');
 
     ctx.agentNotDuplicate(7, h);
-    eq(ctx._getPhotoRef(7, 'a').dupOKWith, ['b'], 'the first row records the pair (P8: never the line alone)');
-    eq(ctx._getPhotoRef(7, 'b').dupOKWith, ['a'], 'and so does the second — the pair goes quiet as a pair');
+    const wa = ctx._getPhotoRef(7, 'a').dupOKIn || [], wb = ctx._getPhotoRef(7, 'b').dupOKIn || [];
+    eq([wa.length, wb.length], [1, 1], 'each row records one id (P8: never the line alone)');
+    eq(wa[0] === wb[0] && !!wa[0], true, 'and it is the one press\'s, on both — the pair goes quiet as a pair');
     eq(ctx.agentDuplicateGroups(7).length, 0, 'so it stops flagging');
     eq(ctx._jobInvRefs(7).length, 2, 'and NOTHING was removed — both objects are real');
   }
@@ -801,9 +802,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             // P16: the row names a firearm's dealer route and the panel carries the firearm block.
             'invDealerRouteOffered', 'invDealerRoute', 'invDealerRouteText', '_invFirearmPanelHtml',
             // P19: the row names a bequest, an incomplete approval and a receipt owed; the recipient box offers the roster.
-            'invBequestFor', 'jobListEntries', 'invApprovalGap', 'invReceiptOwed', '_invBenListAttr',
+            'invBequestFor', 'jobListEntries', 'invApprovalGap', 'invReceiptOwed', '_invBenListAttr', '_arLineWhy',
             // P20: the row says a ratification is owed apart from an incomplete approval, and flags a living client's line going to one of ours.
-            'invRatificationOwed', 'invFiduciaryMode', 'isDecedentJob', 'invReleaseCautions', 'invBequestElsewhere', '_invJob', 'invHavellinRecipient', 'invChannelLeftover', 'invChannelLeftoverText', '_avHasFigure', 'invLineUnsure', '_invEachInput', 'invUnitValue', 'invLineQty', '_agNameKey', '_invInputStyle', '_invCtrlMinW', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invNeedsAppraisal', 'invLineAcceptedOnly', '_invRevBoxHtml', 'invIsMAIV', 'invMAIVDefaultCat', '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', 'agentDupCleared', '_jobInvRefs', '_agDupEligible', 'agentNamedTwice', 'gateDispute', '_gateYes', 'invWrittenReleaseNeeded', 'agentValueAgain', '_avState', 'agentValueInternal', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep', '_avSurveyOf', 'invFirearmClientTakes', 'invDealerWhy', 'invTransportDealer', 'invFirearmsDealerFirm', 'invFirearmsDealerFirms', '_vendorNameKey', 'vendorCats', 'invDealerRoute', 'invDealerRouteOffered', 'invViaDealer', 'invDealerReleased', '_invRecipientListAttr', '_invBenListAttr', 'invDealerNamed', 'invDispGoesToDealer', 'invDealerUnchecked', 'invDealerDirState', 'invDealerUncheckedText', '_invDealerDirStaleText'],
+            'invRatificationOwed', 'invFiduciaryMode', 'isDecedentJob', 'invReleaseCautions', 'invBequestElsewhere', '_invJob', 'invHavellinRecipient', 'invChannelLeftover', 'invChannelLeftoverText', '_avHasFigure', 'invLineUnsure', '_invEachInput', 'invUnitValue', 'invLineQty', '_agNameKey', '_invInputStyle', '_invCtrlMinW', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invNeedsAppraisal', 'invLineAcceptedOnly', '_invRevBoxHtml', 'invIsMAIV', 'invMAIVDefaultCat', '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_arPair', '_arPairOpen', 'agentDupCleared', '_jobInvRefs', '_agDupEligible', 'agentNamedTwice', 'gateDispute', '_gateYes', 'invWrittenReleaseNeeded', 'agentValueAgain', '_avState', 'agentValueInternal', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep', '_avSurveyOf', 'invFirearmClientTakes', 'invDealerWhy', 'invTransportDealer', 'invFirearmsDealerFirm', 'invFirearmsDealerFirms', '_vendorNameKey', 'vendorCats', 'invDealerRoute', 'invDealerRouteOffered', 'invViaDealer', 'invDealerReleased', '_invRecipientListAttr', '_invBenListAttr', 'invDealerNamed', 'invDispGoesToDealer', 'invDealerUnchecked', 'invDealerDirState', 'invDealerUncheckedText', '_invDealerDirStaleText'],
       vars: ['INV_PLAN_CHANNEL_KINDS', 'INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick', '_agDupSet',
              // P20 vars: the catalogues the row's new questions read.
              'DECEDENT_SERVICES', 'INV_RELEASE_CAUTIONS', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', '_agDupSetJob', 'INV_HOLD_WORDS', 'INV_OPEN_HOLDS', 'INV_ACCEPT_AMMO_RE', '_avRun', '_avAfter', '_avForceComps', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
@@ -866,7 +867,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(tomb, '_invTouch', 'and stamps it so the removal wins the merge');
     lacks(tomb, 'driveTrashed', 'and never marks the photograph trashed either');
 
-    has(src, 'dupOKWith:r.dupOKWith', 'and dupOKWith is on the savePhotoRefs whitelist, or it is dropped on every save');
+    has(src, 'dupOKIn:r.dupOKIn', 'and dupOKIn is on the savePhotoRefs whitelist, or it is dropped on every save');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

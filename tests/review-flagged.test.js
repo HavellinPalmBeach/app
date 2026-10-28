@@ -552,13 +552,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const nd = attempt(() => R.ctx.agentNotDuplicate(7, R.ctx._agDupHandle(g[0].key)));
     ok(nd.ok, 'Not duplicates runs (' + (nd.err || '') + ')');
     const fc2 = val(attempt(() => R.ctx.invAcceptCtx(R.job)));
-    eq([R.ref('a').dupOKWith, R.ref('b').dupOKWith], [['b'], ['a']], 'Not duplicates marks both, each against the other (P8: the pair)');
+    eq([(R.ref('a').dupOKIn || []).length, (R.ref('b').dupOKIn || []).length, (R.ref('a').dupOKIn || [])[0] === (R.ref('b').dupOKIn || [])[0]], [1, 1, true], 'Not duplicates marks both with the press\'s one id (P8: the pair)');
     eq([val(attempt(() => R.ctx.invLineHold(R.ref('a'), fc2))), val(attempt(() => R.ctx.invLineHold(R.ref('b'), fc2)))], ['', ''], '⚠⚠ …and releases both');
     eq([val(attempt(() => R.ctx.invLineReviewed(R.ref('a'), fc2))), val(attempt(() => R.ctx.invLineReviewed(R.ref('b'), fc2)))], [true, true], '…both reviewed now');
     // The room check's link off the pictures.
     eq([hold(ESTATE(), [DRAWER({ stableId: 'a', dupWith: ['b'] }), DRAWER({ stableId: 'b', dupWith: ['a'] })], 'a'),
         hold(ESTATE(), [DRAWER({ stableId: 'a', dupWith: ['b'] }), DRAWER({ stableId: 'b', dupWith: ['a'] })], 'b')], ['duplicate', 'duplicate'], '⚠ a room-check link: both held');
-    eq(stands(ESTATE(), [DRAWER({ stableId: 'a', dupWith: ['b'], dupOKWith: ['b'] }), DRAWER({ stableId: 'b', dupWith: ['a'], dupOKWith: ['a'] })], 'a'), true, '…released by Not duplicates');
+    eq(stands(ESTATE(), [DRAWER({ stableId: 'a', dupWith: ['b'], dupOKIn: ['n1'] }), DRAWER({ stableId: 'b', dupWith: ['a'], dupOKIn: ['n1'] })], 'a'), true, '…released by Not duplicates');
     // ⚠⚠ A room-check survivor: its partner removed, no group is left, and nothing holds it (the link alone never did).
     eq(stands(ESTATE(), [DRAWER({ stableId: 'a', dupWith: ['b'] }), DRAWER({ stableId: 'b', dupWith: ['a'], deletedAt: 9 })], 'a'), true,
       '⚠⚠ the room check\'s pair, one half removed: the survivor stands');
@@ -567,7 +567,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const ONCE = (o) => NAMED('White ironstone dinner plates', Object.assign({ stableId: 'p1', agentAt: 1000, agentListed: 0 }, o || {}));
     const AGAIN = (o) => NAMED('Ironstone plates, white, stacked', Object.assign({ stableId: 'p2', derivedFrom: 'p1', agentAt: 9000, agentListed: 0 }, o || {}));
     eq([hold(ESTATE(), [ONCE(), AGAIN()], 'p1'), hold(ESTATE(), [ONCE(), AGAIN()], 'p2')], ['duplicate', 'duplicate'], '⚠⚠ a photograph named twice: both readings held');
-    eq([stands(ESTATE(), [ONCE({ dupOKWith: ['p2'] }), AGAIN({ dupOKWith: ['p1'] })], 'p1'), stands(ESTATE(), [ONCE({ dupOKWith: ['p2'] }), AGAIN({ dupOKWith: ['p1'] })], 'p2')], [true, true],
+    eq([stands(ESTATE(), [ONCE({ dupOKIn: ['n1'] }), AGAIN({ dupOKIn: ['n1'] })], 'p1'), stands(ESTATE(), [ONCE({ dupOKIn: ['n1'] }), AGAIN({ dupOKIn: ['n1'] })], 'p2')], [true, true],
       '…released by Not duplicates');
     eq(stands(ESTATE(), [ONCE(), AGAIN({ agentAt: 1500 })], 'p2'), true, 'one naming that split the photograph (within the gap) is no double');
   }
@@ -601,7 +601,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(elig({ objectName: 'Lamp', namedBy: 'agent' }), true, 'named by Agent One: a candidate');
     eq(elig({ objectName: 'Pair of lamps', namedBy: 'desk', agentName: 'Lamp' }), true, '⚠⚠ renamed on the desk, Agent One\'s reading kept: still a candidate');
     eq(elig({ objectName: 'Lamp', namedBy: 'desk' }), false, 'named on the desk with no reading of Agent One\'s: not one');
-    eq(elig({ objectName: 'Lamp', namedBy: 'agent', dupOKWith: ['x'] }), true, 'said to be separate from another line: still a candidate (P8: Not duplicates answers the pair, never the line)');
+    eq(elig({ objectName: 'Lamp', namedBy: 'agent', dupOKIn: ['n1'] }), true, 'said to be separate from another line: still a candidate (P8: Not duplicates answers the pair, never the line)');
     eq(elig({ objectName: 'Lamp', namedBy: 'agent', deletedAt: 3 }), false, 'removed: not one');
     eq(elig({ objectName: 'Lamp', namedBy: 'agent', roomIdx: null }), false, 'in no room: not one');
     eq(elig({ objectName: 'Lamp', namedBy: 'agent', reviewed: true }), true, '⚠ ticked: still one (a tick never answers it)');
@@ -1023,7 +1023,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     S.ref('a').custodyLog = [{ id: 'e1', at: READ_AT, action: 'Released', to: 'Goodwill', by: 'Anthony Graziano' }];
     S.ref('a').authBy = 'Tripp Butler'; S.ref('a').approvalDate = '2026-10-26';
     S.ref('b').agentNotices = [{ kind: 'other', text: 'a mark' }]; S.ref('b').valNotices = [{ kind: 'appraiser', text: 'signed' }];
-    S.ref('b').updatedAt = READ_AT + 1e10; S.ref('b').reviewedBy = 'Ashley Jerome'; S.ref('b').dupOKWith = ['a']; S.ref('b').valConf = 'high';
+    S.ref('b').updatedAt = READ_AT + 1e10; S.ref('b').reviewedBy = 'Ashley Jerome'; S.ref('b').dupOKIn = ['n1']; S.ref('b').valConf = 'high';
     eq(fp(S), f0, '⚠⚠ …nor a custody event, an approval, a notice from either agent, a clock, a reviewer, Not duplicates or a confidence');
   }
 
