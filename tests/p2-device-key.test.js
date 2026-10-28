@@ -445,7 +445,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(SRC, '<input type="password" id="set-device-key" autocomplete="off" autocapitalize="off" spellcheck="false">', 'Settings takes it in a masked box, never auto-capitalised or checked');
     const lines = LIVE.split('\n').filter((l) => /deviceKey\(\)/.test(l));
     eq(lines.filter((l) => /console\.|showSyncBadge\(|alert\(|_docNotice\(|innerHTML|textContent|Logger/.test(l)).map((l) => l.trim()), [], '⚠⚠ no line that shows or logs anything reads the key');
-    const W = sandbox({ fns: ['deviceKeyBannerHtml', 'deviceKeyStatusText', '_pendingChipCopy', 'deviceKeyRefusedAs'], vars: ['SYNC_STUCK_TRIES'], stubs: { _pendingWrites: { a: { kind: 'key', lastError: REFUSED.missing, tries: 1 } } } });
+    const W = sandbox({ fns: ['deviceKeyBannerHtml', 'deviceKeyStatusText', '_pendingChipCopy', '_pendingChangeWords', 'deviceKeyRefusedAs'], vars: ['SYNC_STUCK_TRIES'], stubs: { _pendingWrites: { a: { kind: 'key', lastError: REFUSED.missing, tries: 1 } } } });
     W.localStorage.setItem('hav_device_key', KEY);
     const shown = ['missing', 'wrong'].map((a) => W.deviceKeyBannerHtml(a)).concat(['ok', 'off', 'missing', 'wrong', 'old', 'unknown', ''].map((a) => W.deviceKeyStatusText(a, true)))
       .concat([JSON.stringify(W._pendingChipCopy())]);
@@ -464,7 +464,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq([K._backendErrorKind('Unknown action', true, { type: 'saveAllJobs' }), K._backendErrorKind('Unknown type: saveMedia', true)], ['route', 'stale'], 'the other kinds are as they were');
     // Through the real queue.
     const timers = [], noted = [];
-    const Q = sandbox({ fns: ['_enqueueWrite', '_backendErrorKind', '_writeKey', '_pendingChipCopy', 'deviceKeyRefusedAs', '_noteDeviceKeyRefusal', '_writeKindHolds'],
+    const Q = sandbox({ fns: ['_enqueueWrite', '_backendErrorKind', '_writeKey', '_pendingChipCopy', '_pendingChangeWords', 'deviceKeyRefusedAs', '_noteDeviceKeyRefusal', '_writeKindHolds'],
       vars: ['SYNC_STUCK_TRIES', '_pendingWrites'], stubs: { showSyncBadge() {}, updatePendingIndicator() {}, _scheduleRetry() { timers.push('retry'); }, _noteDeviceKeyAnswer: (a) => noted.push(a) } });
     Q._enqueueWrite('main', { type: 'saveAllJobs', payload: [] }, 'ok', 'Sync failed', REFUSED.missing, null, true);
     const w = Q._pendingWrites['main/saveAllJobs'];
@@ -660,7 +660,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq([K._backendErrorKind(REFUSED.missing, true), K._backendErrorKind(REFUSED.wrong, true), K._backendErrorKind('TOO_LARGE: Ellison Estate is 81,554 characters', true),
         K._backendErrorKind('JOBS_TAB_EMPTY: the Jobs tab is empty', true)], ['key', 'key', 'toolarge', 'empty'], 'a key refusal, a record too large and an empty tab: each its own kind');
 
-    const C = sandbox({ fns: ['_pendingChipCopy', '_tooLargeWords'], vars: ['_pendingWrites'] });
+    const C = sandbox({ fns: ['_pendingChipCopy', '_pendingChangeWords', '_tooLargeWords'], vars: ['_pendingWrites'] });
     C._pendingWrites['saveAllJobs|main'] = { kind: 'toolarge', body: { type: 'job', payload: { id: 1, name: 'Ellison Estate', hvlId: 'HVL-260' } }, lastError: 'TOO_LARGE: Ellison Estate (HVL-260) is 81554 characters' };
     has(C._pendingChipCopy().head, 'too large for the sheet', 'a record too large alone: the chip names it');
     C._pendingWrites['saveAllLogs|main'] = { kind: 'key', body: { type: 'saveAllLogs' }, lastError: REFUSED.missing };

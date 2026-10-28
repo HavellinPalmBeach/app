@@ -31,6 +31,7 @@
  "findings": [
   {
    "id": "SYN-01",
+   "contained": "2026-10-27 (P6: every act across the inventory reads the sheet first, the open desk reads again every minute, one person per client on the desk at a time; CLAUDE.md, Data, sync and merges; tests/p6-two-devices.test.js, browser step 121). Not fixed: a row's own edit off a copy up to a minute old still wins the item whole; P18's per-field merge closes it",
    "title": "A device with an old copy overwrites the other device's work on any line it touches: names, values, grades and reviews are lost, and a typed name is replaced by Agent One's guess",
    "kind": "defect",
    "severity": "fix-now",
@@ -48,6 +49,7 @@
   },
   {
    "id": "SYN-02",
+   "contained": "2026-10-27 (P6: every act across the inventory reads the sheet first, the open desk reads again every minute, one person per client on the desk at a time; CLAUDE.md, Data, sync and merges; tests/p6-two-devices.test.js, browser step 121). Not fixed: a row's own edit off a copy up to a minute old still wins the item whole; P18's per-field merge closes it",
    "title": "Lines removed on one device come back named and valued when a device with an old copy runs Name shots",
    "kind": "defect",
    "severity": "fix-now",
@@ -100,6 +102,7 @@
   },
   {
    "id": "SYN-05",
+   "fixed": "2026-10-27 (P6: CLAUDE.md, Data, sync and merges; tests/p6-two-devices.test.js, browser step 121)",
    "title": "When the sheet is slow or unreachable, the desk redraws on a timer and after every edit, saving a half-typed name and sending it to Agent Two",
    "kind": "defect",
    "severity": "high",
@@ -117,6 +120,7 @@
   },
   {
    "id": "SYN-06",
+   "fixed": "2026-10-27 (P6: CLAUDE.md, Data, sync and merges; tests/p6-two-devices.test.js, browser step 121)",
    "title": "Work can be stranded on a device: an edit within 2.5 s of closing or reloading is never sent and never challenged, and after a reload a failed write is never resent",
    "kind": "defect",
    "severity": "high",
@@ -185,6 +189,7 @@
   },
   {
    "id": "SYN-10",
+   "fixed": "2026-10-27 (P6: CLAUDE.md, Data, sync and merges; tests/p6-two-devices.test.js, browser step 121)",
    "title": "Papers and the snapshot print this device's copy without reading the sheet, while the sends read it first",
    "kind": "inconsistency",
    "severity": "medium",
@@ -288,6 +293,7 @@
   },
   {
    "id": "SYN-16",
+   "fixed": "2026-10-27 (P6: CLAUDE.md, Data, sync and merges; tests/p6-two-devices.test.js, browser step 121)",
    "title": "The playbook promises 'two people working the same job keep both sets of edits'; the desk guide says nothing about two devices or that the tab does not re-read",
    "kind": "docs",
    "severity": "medium",
@@ -322,6 +328,7 @@
   },
   {
    "id": "SYN-18",
+   "fixed": "2026-10-27 (P6: CLAUDE.md, Data, sync and merges; tests/p6-two-devices.test.js, browser step 121)",
    "title": "The offline chip says '1 unsaved change' for any number of desk edits",
    "kind": "friction",
    "severity": "low",

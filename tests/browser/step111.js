@@ -181,7 +181,8 @@ const EST = 11101;
       await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(500);
       await toDesk(EST);
       await p.evaluate((id) => printAsFoundRecord(id), EST);
-      ok(await viewerOpen(), 'fixture: the viewer is open');
+      // Since P6 (2026-10-27) a paper reads the sheet first, so the viewer opens once that read has answered.
+      ok(await until(viewerOpen), 'fixture: the viewer is open');
       ok((await overflow()) <= 0, 'no horizontal overflow at 390 (' + (await overflow()) + ')');
       await press('#doc-viewer-modal button[onclick="closeDocViewer()"]', 'Close');
       eq(errs, [], 'zero page errors');

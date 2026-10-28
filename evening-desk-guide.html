@@ -355,6 +355,8 @@ footer p{max-width:66ch;}
     <ul class="plain">
       <li>If a room says <em>&#9888; not saved</em>, tap <span class="btn">Retry</span> there first.</li>
       <li>Leave field mode (<span class="btn">Field &middot; exit</span>): it hides this tab.</li>
+      <li>One person per client on this tab at a time; two on two clients is fine. The tab reads the sheet as you open a client,
+        every minute, and before any press across the list, and says when the other device changed something.</li>
       <li>On a phone the timeline under the brown band folds to one summary (<em>Timeline &middot; 3 of 8 done</em>); tap it
         to open. The selection bar shrinks to <em>2 selected</em>, <span class="btn">Actions &#9662;</span> and
         <span class="btn">Clear</span>, its buttons under Actions.</li>
@@ -639,6 +641,8 @@ footer p{max-width:66ch;}
           sheet, and the bar claims nothing until it has.</td></tr>
         <tr><td>A bar says <em>sheet unreachable: this device&rsquo;s copy</em></td><td>The sheet did not answer: the bar shows
           what this device holds and opens nothing by itself, and the tab asks again every 15 seconds.</td></tr>
+        <tr><td>A press says <em>Not done: &hellip; reads the inventory from the sheet first</em></td><td>The sheet did not
+          answer, so nothing was done. Press again once it does.</td></tr>
         <tr><td>No thumbnails</td><td>Nothing is lost. Reload, or tap the box for Drive.</td></tr>
         <tr><td>No Send request</td><td>Nothing waits, a draft waits for <span class="btn">I&rsquo;ve sent it</span>, or the
           card says in red what is missing.</td></tr>

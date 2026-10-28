@@ -419,7 +419,10 @@ const T0 = Date.parse('2026-09-24T15:00:00Z');   // a past day, so each desk ope
       // with nothing printed; the viewer's Print / Save PDF prints the page measured below, and the viewer is closed once the
       // print has been captured.
       const prBefore = await printCount();
-      eq(await p.evaluate(() => { printApprovalRequest(4701, false); const o = document.getElementById('doc-viewer-modal');
+      // Since P6 (2026-10-27) the paper reads the sheet first, so the viewer opens once that read has answered.
+      await p.evaluate(() => { printApprovalRequest(4701, false); });
+      for (let i = 0; i < 40 && !(await p.evaluate(() => { const o = document.getElementById('doc-viewer-modal'); return !!o && o.style.display === 'flex'; })); i++) await p.waitForTimeout(150);
+      eq(await p.evaluate(() => { const o = document.getElementById('doc-viewer-modal');
         return [!!o && o.style.display === 'flex', (document.getElementById('doc-viewer-title') || {}).textContent || '']; }),
          [true, 'Release Approval Request'], 'the Approval Request opens in the viewer, titled by the paper');
       await p.waitForTimeout(400);

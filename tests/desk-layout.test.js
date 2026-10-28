@@ -230,6 +230,9 @@ function desk(jobO, cards, opt) {
     _invMatchesFilter: () => true, _agDupIndex: () => ({}), _invEnsureThumbs() {},
     _invPaintThumbs: (jid, root) => { log.thumbs.push({ jid, root: root ? root.id : null }); },
     jobPlanStore: {}, vendorDirectory: [], SHEETS_SYNC_URL: '', _invCloudSeen: {},
+    // The browser's timers (2026-10-27, P6: the read arms the minute's re-read, _invRereadArm). A group that counts what is armed
+    // passes its own.
+    setTimeout: () => 0, clearTimeout() {},
   }, opt.stubs || {});
   // `opt.real`: the cards drawn by their real functions rather than a marker (the Urgent strip's group reads Job Admin's count).
   (opt.real || []).forEach((k) => { delete stubs[k]; });
@@ -2137,7 +2140,9 @@ function groupJ({ group, ok, eq, has, lacks }) {
     // so its refusal asks the same answer (invListReadRefusal: the press and the work bar's line read it, never a copy of it).
     // RESTATED 2026-10-27 (P1 of the desk audit, SYN-08): a cold desk records nothing, so the one refusal Snapshot, the papers,
     // CSV and + Add line item ask (invColdRefusal) asks the same answer, and so do the work bar's and the list's words (invColdWords).
-    eq(callersOf('_invManifestUnread'), ['_apprFormIsOpen', '_invCloudRetryArm', '_invRefreshFromCloud', 'deskFoldState', 'invColdRefusal', 'invColdWords', 'invListReadRefusal'],
+    // RESTATED 2026-10-27 (P6): a read copy whose last read failed says so under the count (invSheetStaleWords), and only once
+    // it is not unread, which is the same answer asked.
+    eq(callersOf('_invManifestUnread'), ['_apprFormIsOpen', '_invCloudRetryArm', '_invRefreshFromCloud', 'deskFoldState', 'invColdRefusal', 'invColdWords', 'invListReadRefusal', 'invSheetStaleWords'],
       '⚠ an unread manifest: one answer, read by the bars, the form, the read that asks the sheet again, the list read\'s refusal and the cold desk\'s');
     eq(callersOf('_bqFormIsOpen'), ['_renderInvBequestCard'], 'the bequests card\'s two forms: the same');
     eq(callersOf('_invBqClear'), ['invSaveBeneficiary', 'invSaveBequest', 'invToggleBqForm'], 'the boxes a save and Cancel clear: one list (INV_BQ_FORM_FIELDS)');
@@ -2997,7 +3002,8 @@ function groupO({ group, ok, eq, has, lacks }) {
     eq(before[0].line.split(' · ')[0], UN, 'fixture: unreachable until then');
     eq([after[0].open, after[0].line], [true, '1 item needs written approval: send a request · no beneficiaries recorded'],
       '⚠⚠ read: the line, and Releases open by its rule');
-    eq(timers.length, 3, 'and nothing more is armed once a read has landed');
+    // RESTATED 2026-10-27 (P6): once a read has landed the 15 s retry stops, and what is armed is the minute's re-read of an open desk.
+    eq(timers.map((t) => t.ms), [15000, 15000, 15000, 60000], 'once a read has landed no retry is armed: the minute\'s re-read is (P6)');
     has(fn('refreshPhotoRefs'), '_invCloudFailed[jobId] = true', 'the failure is recorded where the read is made');
   }
 

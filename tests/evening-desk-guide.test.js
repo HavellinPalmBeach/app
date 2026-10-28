@@ -108,7 +108,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const words = t.split(/\s+/).length;
     // 2,800 from 2026-10-27 (P5): an approval means what was signed, on the page where the page described the old behaviour
     // (Record the signed request's ticks, the Releases bar opening, a change to an approved item); Anthony to confirm.
-    ok(words < 2800, 'short: ' + words + ' words');
+    // 2,875 from 2026-10-27 (P6): one person per client on this tab at a time, the tab reading the sheet, and the refusal when it
+    // cannot (the desk audit's SYN-16: the page said nothing about two devices); Anthony to confirm.
+    ok(words < 2875, 'short: ' + words + ' words');
     ['photography-guide.html', 'incident-guide.html', 'sorting-guide.html', 'packing-guide.html', 'move-day-guide.html', 'first-night-guide.html',
      'firearms-protocol.html', 'concierge-guide.html'].forEach((f) => has(html, '<a href="' + f + '">', 'names ' + f));
     has(t, 'Linked from the top of the Job Admin & Inv tab.', 'and says where the app links it');
@@ -454,7 +456,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // themselves, Agent Two correcting Agent One's unreviewed names, and Value N lines is for what is left. The row's Accept
     // value is gone (the page said "Each figure stays unreviewed until you press Accept value").
     has(code(fn('_agFinish')), 'agentValueAuto(jobId)', 'Agent Two follows a naming run with no room to check…');
-    has(code(fn('_arFinish')), 'if (!st.error) agentValueAuto(jobId);', '…and the room check that did not fail, by itself');
+    // RESTATED 2026-10-27 (P6): the hand-off reads the sheet again first (invReadQuiet), as the naming's does.
+    has(code(fn('_arFinish')), 'if (st.error) return;', '…and the room check that did not fail…');
+    has(code(fn('_arFinish')), 'invReadQuiet(jobId, function () { agentValueAuto(jobId); }', '…by itself, once it has read the sheet again');
     has(code(fn('agentValueAuto')), '_invHasPhoto(r)', '…every photographed item (Value N lines does the rest)');
     has(code(fn('_avRename')), '_avNameIsAgents(ref)', '…correcting a name only while it is Agent One’s and unreviewed');
     has(t, 'The values follow by themselves, Agent Two correcting Agent One’s guesses; Value N lines does the rest.', 'as the page says');
