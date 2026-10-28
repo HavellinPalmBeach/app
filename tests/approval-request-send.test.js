@@ -205,6 +205,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         saveJobs: () => saves.push('jobs'), syncJobToSheets: () => saves.push('sync'), _dashRedraw() {},
         _docNotice: (t, m) => notices.push({ t, m: String(m) }), dashNotice: (t, m) => notices.push({ t, m: String(m) }),
         _dashSendState() {}, showSyncBadge: (m) => badges.push(String(m)),
+        // The send asks once where a line on the request is still flagged or the list unread (P10, 2026-10-28): these lines carry
+        // figures nobody is recorded as making, so it asks, and the person answers OK (p10-request-stamp.test.js drives the question).
+        confirm: () => true,
       }, o.stubs || {}));
     return { c, N, dom, notices, opened, hrefs, saves, badges, job: () => c.jobs[0], last: () => (notices[notices.length - 1] || {}),
              st: () => (c.jobs[0].docState || {}).approvalRequest, card: () => c._renderInvReleasesCard(c.jobs[0], c._jobInvRefs(7)) };

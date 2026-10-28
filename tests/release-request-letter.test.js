@@ -200,6 +200,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         saveJobs: () => saves.push('jobs'), syncJobToSheets: () => saves.push('sync'), _dashRedraw() {},
         _docNotice: (t, m) => notices.push({ t, m: String(m) }), dashNotice: (t, m) => notices.push({ t, m: String(m) }),
         _dashSendState() {}, showSyncBadge: (m) => badges.push(String(m)),
+        // The send asks once where a line on the request is still flagged or the list unread (P10, 2026-10-28), and the person
+        // answers OK; rig2 answers as told (p10-request-stamp.test.js drives the question).
+        confirm: () => true,
       }, o.stubs || {}));
     return { c, N, dom, notices, opened, hrefs, saves, badges, job: () => c.jobs[0], last: () => (notices[notices.length - 1] || {}),
              st: () => (c.jobs[0].docState || {}).approvalRequest, card: () => c._renderInvReleasesCard(c.jobs[0], c._jobInvRefs(7)) };
@@ -211,8 +214,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The sheet's copy is the rig's own, so an edit made here is the one the send reads back from the sheet (it reads first).
     const rows = (over && over.rows) || INVENTORY();
     const media = { 7: { items: JSON.parse(JSON.stringify(rows)) } };
-    const r = rig(Object.assign({ roots: ROOTS, net: { media }, stubs: { confirm: (m) => { asked.push(String(m)); return answer !== false; } } }, over || {}));
-    r.asked = asked;
+    // The send's own question (P10, 2026-10-28: a line still flagged, or the list unread) is answered OK and kept apart, so `asked`
+    // is the question this file is about and a Cancel rig still has a draft to cancel (p10-request-stamp.test.js drives that one).
+    const sendAsked = [];
+    const r = rig(Object.assign({ roots: ROOTS, net: { media }, stubs: { confirm: (m) => {
+      if (String(m).indexOf('The request prints IN PROGRESS and marks the flagged lines either way.') >= 0) { sendAsked.push(String(m)); return true; }
+      asked.push(String(m)); return answer !== false; } } }, over || {}));
+    r.asked = asked; r.sendAsked = sendAsked;
     r.c._invCloudSeen = { 7: true };
     r.edit = (id, f) => [r.c._photoRefs[7], media[7].items].forEach((list) => list.filter((x) => x.stableId === id).forEach((x) => f(x, r)));
     r.at = (t) => { r.c.Date = FixedDate(t); };
@@ -440,6 +448,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Cancel: nothing changes.
     const no = rig2({}, false);
     no.c.sendApprovalRequest(7);
+    ok(!!(no.st() && no.st().draftedAt), 'fixture: a draft waits to be cancelled');
     const before = JSON.stringify(no.st());
     eq(no.c.discardApprovalRequestDraft(7), false, 'cancelled');
     eq(JSON.stringify(no.st()), before, 'the record untouched');

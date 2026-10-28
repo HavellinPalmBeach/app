@@ -404,6 +404,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       vars: ['INV_WORK_FLAGS', 'INV_RELEASE_DISPOSITIONS', 'DECEDENT_SERVICES', 'INV_TAXONOMY',
              'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'INV_LOT_ARTICLE_CAP',
              'MAIV_BY_CATEGORY', 'MAIV_OTHER'],
+      // P10's No basis chip asks whether counsel values (its `when`); not this group's question.
+      stubs: { agentValueInternal: () => false },
     });
     const flags = (job) => ctx2.invWorkFlags(job).map((f) => f.key);
     ok(flags(estate()).indexOf('lotsplit') >= 0, 'a 706 estate gets the chip');

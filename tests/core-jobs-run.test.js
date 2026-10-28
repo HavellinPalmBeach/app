@@ -373,8 +373,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const groups = pr._apprGroups(7);
     const listed = [].concat.apply([], Object.keys(groups).map((k) => groups[k])).map((r) => r.objectName);
     eq(listed, ['Bronze'], '⚠ the worklist carries only the line still to be appraised');
-    // a schedule names the one recorded fiduciary (a FINAL schedule: one furniture line, valued)
-    const pr2 = mk(PROBATE(), [IT('f', { objectName: 'Sideboard', fmv: '900' })]);
+    // a schedule names the one recorded fiduciary (a FINAL schedule: one furniture line, valued, its basis stated: since P10,
+    // 2026-10-28, a value with no basis keeps a Formal schedule DRAFT, and this estate is Formal by its unanswered 706)
+    const pr2 = mk(PROBATE(), [IT('f', { objectName: 'Sideboard', fmv: '900', valSource: 'Dealer quote' })]);
     pr2.printCourtInventory(7);
     const ci = textOf(printed.pop() || '');
     has(ci, 'Reviewed and adopted by: __________________________________ Date: ____________ Michael Brennan · Personal Representative / authorized fiduciary',
@@ -383,7 +384,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(ci, 'Case 50-2026-CP-004412, Circuit Court for Palm Beach County, Florida, Probate Division', '⚠ and names the court beside the case');
     const trustJob = PROBATE({ svc: 'cleanout', matterType: 'trust', probateCase: '', executor: 'Caroline Whitfield-Hayes', executorRole: 'Successor Trustee',
       trustName: 'Eleanor Whitfield Revocable Trust', trustDate: '2015-03-03', name: 'Eleanor Whitfield' });
-    const tr = mk(trustJob, [IT('t', { objectName: 'Sideboard', fmv: '900' })]);
+    const tr = mk(trustJob, [IT('t', { objectName: 'Sideboard', fmv: '900', valSource: 'Dealer quote' })]);   // its basis stated (P10)
     tr.printTrustSchedule(7);
     const ts = textOf(printed.pop() || '');
     has(ts, 'Received for the trust’s records by: __________________________________ Date: ____________ Caroline Whitfield-Hayes · Successor Trustee',

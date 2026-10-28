@@ -552,8 +552,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(p.title, 'Havellin Donation Record - Goodwill', 'a record per charity, named for it');
     has(t, 'Charity: Goodwill', 'the charity');
     has(t, 'Donated on behalf of the estate, by Rex Hale, Personal Representative.', 'on whose behalf');
-    has(t, '4 Sofa Furniture 1 Fair Sep 29, 2026 $300', 'each item: number, item, qty, condition, date, value');
-    has(t, '5 Lamps (pair) Furniture 2 Good Sep 29, 2026 $80', 'and its quantity');
+    // RESTATED (P10, 2026-10-28; DOC-14): a line still flagged is marked on its row; these figures were recorded by nobody the app
+    // knows (no valuedBy), which the desk flags as a value nobody has checked.
+    has(t, '4 Sofa Furniture Needs a look: a value nobody has checked 1 Fair Sep 29, 2026 $300', 'each item: number, item, its mark, qty, condition, date, value');
+    has(t, '5 Lamps (pair) Furniture Needs a look: a value nobody has checked 2 Good Sep 29, 2026 $80', 'and its quantity');
     has(t, '2 lines · 3 items · estimated value $380', 'the totals');
     has(t, 'The charity’s receipt: filed Sep 30, 2026 · Charity receipt — Goodwill (1 of the 2 lines below is receipted)', '⚠ a list not wholly receipted says so');
     has(t, 'Values are Havellin’s estimates of what each item would sell for, given for the donor’s records. They are not appraisals.', 'values are marked as estimates, not appraisals');

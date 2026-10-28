@@ -654,7 +654,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq([fast, slow], [true, true], '⚠ a clock running fast or slow: still current');
     const CT = rig(ESTATE({ invRead: { at: AT, by: 'Anthony Graziano' } }), items());
     eq(current(CT), false, '…and a time with no fingerprint vouches for nothing');
-    eq(attempt(() => C0.INV_READ_FIELDS.join(',')).val, 'objectName,category,qty,fmv,valLow,valHigh,valSource,disposition,channel,condition,roomIdx,valNote,valDate,apprId,apprDoc,assetTrack,flagExempt,serial', 'the fields it reads: what the papers print of a line');
+    eq(attempt(() => C0.INV_READ_FIELDS.join(',')).val, 'objectName,category,qty,fmv,valLow,valHigh,valSource,disposition,channel,condition,roomIdx,valNote,valDate,apprId,apprDoc,assetTrack,flagExempt,serial,valWhy,valWhyBy,valWhyUrl', 'the fields it reads: what the papers print of a line (a desk figure\'s reason since P10)');
     // ⚠⚠ THE PRESS WAITS FOR THE SHEET.
     const URL = 'https://sync.example.test/exec';
     const CL = rig(ESTATE(), items(), { url: URL, seen: {} });
