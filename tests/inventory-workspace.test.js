@@ -368,10 +368,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // `job` argument when `_invTrack`'s default started following the matter type, so a pin on
     // `_invIsExempt(r)` failed over a change it has no opinion about. Stated as the requirement
     // this time: both definitions are ASKED, with the job, and neither is re-implemented here.
-    has(body, '_invIsExempt(r, job)', 'the carve-out asks the one definition of exempt');
-    has(body, '!_invIsProbateAsset(r, job)', 'and takes everything off the probate track with it');
+    // RESTATED (P14 of the desk audit, 2026-10-28; DOC-02): exempt property is claimed INSIDE the probate estate, as the Court
+    // Inventory claims it, so the partition is the Court Inventory's own (`_invOnProbateSchedule`) and exempt property has its
+    // own heading inside the estate; what is off the schedule is listed apart as outside the probate estate.
+    has(body, '_invIsExempt(r, job)', 'the exempt heading asks the one definition of exempt');
+    has(body, '!_invOnProbateSchedule(r, job)', 'and the outside block takes everything off the probate schedule, the Court Inventory\'s rule');
     lacks(body, "=== 'Probate'", 'and keeps no private copy of what the probate track is');
-    has(body, 'carved out of the probate estate', 'and the section says so plainly');
+    has(body, "Property &mdash; outside the probate estate')", 'and the outside block says so plainly');
+    has(body, "'Exempt Property Claimed (Fla. Stat. &sect;732.402)'", '…and the exempt heading, inside the estate');
     // ⚠⚠ THE CARVE-OUT IS A PROBATE CONCEPT AND STANDS DOWN WHERE THERE IS NO PROBATE ESTATE.
     // Its own comment says the section exists so a reader can see the property "sits outside the
     // probate estate" — on a matter recorded `trust` or `neither` there is none to sit outside

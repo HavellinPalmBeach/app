@@ -38,7 +38,7 @@ const DEVICE_FNS = ['saveJobs', 'loadJobs', 'loadJobsVerdict', 'refreshJobsFromC
   '_snapLinesOf', '_snapPendingOf', '_snapLanded', 'loadSnapshotLines', '_withSnapLines', 'printInventorySnapshot', 'printSnapshotComparison', 'snapshotDiff', 'backendHasType',
   'invLineQty', '_invRoomName', '_invAssignItemNos', '_jobInvRefs', '_invTrack', 'estateValueDate', 'roundCents', '_snapPrevLive', '_snapVal',
   '_snapVoidedBlock', '_invItemNo', '_invMoney', '_invDateTime', '_invDocName', 'invValBasisWord', '_invHasValue', 'invAppraised',
-  'invLineAppraiser', '_invLinkedAppraiser', '_jobAppraisers', '_apprLabel', '_invJob', 'fmt', '_stableJson', '_withDeviceKey', 'deviceKey'];
+  'invLineAppraiser', '_invLinkedAppraiser', '_jobAppraisers', '_apprLabel', '_apprFirmOf', '_invJob', 'fmt', '_stableJson', '_withDeviceKey', 'deviceKey'];
 const DEVICE_VARS = ['PERSON_NAME_ALIASES', 'SYNC_TARGETS', '_pendingWrites', '_retryTimer', '_retryStep', '_flushing', '_retryDelays', 'SYNC_STUCK_TRIES',
   '_outbox', '_outboxTimer', '_outboxSending', '_OUTBOX_WINDOW', '_syncWriteSeq', 'SHEET_NO_CLIENTS_TXT', '_sheetNotice', '_sheetKeptSaid', 'SHEET_CELL_MAX_APP', 'SNAP_LINES_UNREAD_TXT',
   '_snapLines', '_snapPending', 'INV_COLD_TXT', '_backendTypes'];

@@ -623,16 +623,18 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // RESTATED (P7's review): the outside subtotal names the tracks it adds, and the exempt line listed with the carved-out property
     // is said to be counted in the probate estate, so the subtotals agree with the blocks above them.
     has(rep, 'Non-probate property, outside the probate estate (Fair Market Value): $14,000', '…the property outside it: $14,000, complete, named by its track');
-    has(rep, 'Exempt property is counted in the probate estate: it is listed above with the carved-out property and claimed under §732.402, not excluded from the estate (#31 Household chairs).',
-      '⚠ the exempt line listed with the carved-out property is said to be counted in the probate estate');
+    // RESTATED (P14 of the desk audit, 2026-10-28; DOC-02): the exempt line is listed inside the estate under its own heading, with
+    // its subtotal, so P7's sentence under the totals went with the layout it explained.
+    has(rep, 'Exempt Property Claimed (Fla. Stat.', '⚠ the exempt line is listed inside the estate, under its own heading');
+    has(rep, 'Total exempt property claimed: $10,000', '…with its subtotal');
+    lacks(rep, 'Exempt property is counted in the probate estate', '…and the stopgap sentence is gone');
     lacks(rep, 'Exempt, Non-probate property, outside', '…never "exempt" in the outside subtotal');
     const X = rig(ESTATE(), [rows[0], rows[5]]);
     const xr = textOf((attempt(() => X.printEstateInventoryReport(7, { asHtml: true })).val || {}).html);
     has(xr, 'Total estimated fair market value: $11,200', 'only exempt property carved out: one total, no subtotals');
-    has(xr, 'Exempt property is counted in the probate estate: it is listed above with the carved-out property and claimed under §732.402, not excluded from the estate (#31 Household chairs).',
-      '…and the sentence still says the exempt line is counted in it');
+    has(xr, 'Total exempt property claimed: $10,000', '…and the exempt line is claimed inside it, its subtotal under its heading');
     const T0 = rig(ESTATE({ svc: 'cleanout', matterType: 'trust' }), [rows[0], rows[5]]);
-    lacks(textOf((attempt(() => T0.printEstateInventoryReport(7, { asHtml: true })).val || {}).html), 'Exempt property is counted', 'a trust-only matter carves nothing out, and says nothing of it');
+    lacks(textOf((attempt(() => T0.printEstateInventoryReport(7, { asHtml: true })).val || {}).html), 'Exempt Property Claimed', 'a trust-only matter partitions nothing, and claims nothing');
     has(rep, 'Total recorded so far (Fair Market Value) — not a complete total: $28,475', '⚠⚠ and the whole: a floor, never "Total estimated fair market value: $28,475"');
     has(rep, '2 items are recorded without a value and are NOT included above, so this figure is a floor rather than a total: #20 Nightstand, #23 Copper cookware set.', '…naming the lines');
     lacks(rep, 'Total estimated fair market value', 'no complete total over a floor');

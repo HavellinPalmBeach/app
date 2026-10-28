@@ -351,6 +351,7 @@
   },
   {
    "id": "EST-20",
+   "fixed": "2026-10-28 (P14: More ▾ offers each instrument only where the matter has it, both under \"Matter type not recorded\" while unanswered (invInstrumentOffered); an unanswered Estate Settlement's Court Inventory says the record does not confirm probate; CLAUDE.md, Each paper says the right thing for its matter; tests/p14-papers.test.js, browser step 124)",
    "title": "The Trust Schedule is offered and prints 'Held in Trust' on probate-only, contested and unanswered desks; the Court Inventory on an unanswered Estate Settlement prints as a §733.604 filing",
    "kind": "inconsistency",
    "severity": "low",

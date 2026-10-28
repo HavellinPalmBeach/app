@@ -894,7 +894,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     g._writeInventorySheet({ getSheetByName: () => sheet, insertSheet: () => sheet }, { columns: cols, rows: [cols.map(() => '')] });
     eq(cap, [cols.indexOf('Net Proceeds') + 1], '⚠⚠ the deployed workbook writes its Net formula on the Net column under that name');
     // The panel reads the header.
-    has(noComments(fn('_renderInvPanel')), '+ c.header +', 'the item panel heads the field with `header`');
+    // Restated 2026-10-28 (P14 of the desk audit, LIV-16): the panel heads a field through _invColHeader, which reads `header` (a
+    // living line's bequest flag reads *Promised to someone*).
+    has(noComments(fn('_renderInvPanel')), 'esc(_invColHeader(job, c))', 'the item panel heads the field through the catalogue\'s namer');
+    has(noComments(fn('_invColHeader')), ': col.header', 'which reads `header`');
   });
 
   // ── E7, completed by the lead ────────────────────────────────────────────

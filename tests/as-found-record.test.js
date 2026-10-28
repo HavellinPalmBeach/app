@@ -81,7 +81,7 @@ function rig(over) {
           // "are we contracted to state values" drift from the workbook's.
           'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep',
           '_invExportValue', '_invRoomName', '_invItemNo', 'savePhotoRefs', '_warnPhotoStoreFull',
-          'invIsFirearm', 'invIsMAIV', 'invMAIVCategory', 'invMAIVDefaultCat', 'estateProceedsHolder', 'inventoryNetLabel'],
+          'invIsFirearm', 'invIsMAIV', 'invMAIVCategory', 'invMAIVDefaultCat', 'estateProceedsHolder', 'inventoryNetLabel', 'invDriveFolderWords', 'invTrustOnlyMatter'],
     vars: ['jobPlanStore', 'estimateStore', 'AS_FOUND_COLUMNS', 'INVENTORY_COLUMNS', 'DECEDENT_SERVICES', 'MATTER_TYPES', 'INV_NET_LABELS',
            'INV_CATEGORIES', 'INV_TAXONOMY', 'INV_DISPOSITIONS', 'INV_VAL_BASES',
            'MAIV_OTHER', 'MAIV_BY_CATEGORY', 'INV_CAT_GLYPH',

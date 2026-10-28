@@ -556,7 +556,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                             'maivAggregate', '_maivWorklistBlock', 'maivFilingApplies',
                             'maivStatement', 'maivStatement_', 'invIsMAIV', 'invMAIVDefaultCat',
                             'invMAIVCategory', 'isDecedentJob', '_gate706', 'fmtDate2',
-                            'savePhotoRefs', '_warnPhotoStoreFull', 'roundCents', 'fmt', 'invDispGoesToDealer', 'invDealerNamed', 'invDealerUnchecked', 'invDealerDirState', 'invDealerUncheckedText', '_invDealerDirStaleText', 'invDealerWhy', 'invLineQty', 'maivOwedLines', 'maivOwedText', '_avStampText', '_avStampCounts']),
+                            'savePhotoRefs', '_warnPhotoStoreFull', 'roundCents', 'fmt', 'invDispGoesToDealer', 'invDealerNamed', 'invDealerUnchecked', 'invDealerDirState', 'invDealerUncheckedText', '_invDealerDirStaleText', 'invDealerWhy', 'invLineQty', 'maivOwedLines', 'maivOwedText', '_avStampText', '_avStampCounts', 'invValueAsOfWords', 'invTransportFact', '_apprFirmOf', 'estateValueDate']),
       vars: APPR_VARS.concat(['MAIV_AGGREGATE_THRESHOLD', 'MAIV_CATEGORIES', 'MAIV_OTHER',
                               'MAIV_BY_CATEGORY', 'DECEDENT_SERVICES', 'INVENTORY_COLUMNS',
                               'INV_TAXONOMY', 'INV_CATEGORIES']),
@@ -585,7 +585,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                             'maivAggregate', '_maivWorklistBlock', 'maivFilingApplies',
                             'maivStatement', 'maivStatement_', 'invIsMAIV', 'invMAIVDefaultCat',
                             'invMAIVCategory', 'isDecedentJob', '_gate706', 'fmtDate2',
-                            'savePhotoRefs', '_warnPhotoStoreFull', 'roundCents', 'fmt', 'invDispGoesToDealer', 'invDealerNamed', 'invDealerUnchecked', 'invDealerDirState', 'invDealerUncheckedText', '_invDealerDirStaleText', 'invDealerWhy', 'invLineQty', 'maivOwedLines', 'maivOwedText', '_avStampText', '_avStampCounts']),
+                            'savePhotoRefs', '_warnPhotoStoreFull', 'roundCents', 'fmt', 'invDispGoesToDealer', 'invDealerNamed', 'invDealerUnchecked', 'invDealerDirState', 'invDealerUncheckedText', '_invDealerDirStaleText', 'invDealerWhy', 'invLineQty', 'maivOwedLines', 'maivOwedText', '_avStampText', '_avStampCounts', 'invValueAsOfWords', 'invTransportFact', '_apprFirmOf', 'estateValueDate']),
       vars: APPR_VARS.concat(['MAIV_AGGREGATE_THRESHOLD', 'MAIV_CATEGORIES', 'MAIV_OTHER',
                               'MAIV_BY_CATEGORY', 'DECEDENT_SERVICES', 'INVENTORY_COLUMNS',
                               'INV_TAXONOMY', 'INV_CATEGORIES']),
@@ -597,8 +597,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     s.printAppraisalWorklist(1);
     const text = readable(s.__printed || '');
     has(text, 'No individual item is currently flagged', 'it still says nothing is flagged');
-    has(text, 'tick Needs Appraisal on the manifest',
-        '⚠ and names the control that now exists — it used to name one that did not');
-    has(text, 'Appraise', 'plus the field route');
+    // RESTATED (P14 of the desk audit, 2026-10-28; DOC-20): the worklist goes in every package to counsel, so it states what it
+    // lists, never which control to press (it named Needs Appraisal on the manifest and the field's ⚑ Appraise).
+    has(text, 'Art, jewelry, silver and rugs are listed here on their category alone, and any other item once it is flagged for appraisal.',
+        '⚠ and says what it lists');
+    lacks(text, 'tick Needs Appraisal', '…never which control to press');
   }
 };

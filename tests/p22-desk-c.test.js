@@ -354,7 +354,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   G('9f · the worklist points at Record approval; the request agrees with its count', () => {
     const w = noComments(fn('printAppraisalWorklist'));
-    has(w, 'Record approval</strong> on Job Admin', '⚠ the withheld-firearms block names the control');
+    // Restated 2026-10-28 (P14 of the desk audit, DOC-20): the worklist goes in the package to counsel and the trustee, so the
+    // withheld-firearms block states what clears a firearm and names no control on the desk (the desk's row and record do).
+    lacks(w, 'Record approval</strong> on Job Admin', '⚠ the withheld-firearms block names no control on the desk (P14)');
+    has(w, 'Once the authority, the serial and the dealer are all on the record', 'it states what clears a firearm');
     lacks(w, 'Authorized By and Approval Date', 'not the raw boxes');
     const S = desk(['printApprovalRequest'], PROBATE(), [LINE('a', 1, { disposition: 'Sell', channel: 'Kodner' })]);
     S.printApprovalRequest(8);

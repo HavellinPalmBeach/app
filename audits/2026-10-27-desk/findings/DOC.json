@@ -45,6 +45,7 @@
   },
   {
    "id": "DOC-02",
+   "fixed": "2026-10-28 (P14: exempt property claimed inside the probate estate on the Report, under its own heading with the Court Inventory's subtotal block (_invExemptClaimTotalHtml); CLAUDE.md, Each paper says the right thing for its matter; tests/p14-papers.test.js, browser step 124)",
    "title": "Exempt property is 'carved out of the probate estate' on the Report but 'listed and claimed' on the Court Inventory",
    "kind": "inconsistency",
    "severity": "fix-now",
@@ -130,6 +131,7 @@
   },
   {
    "id": "DOC-07",
+   "fixed": "2026-10-28 (P14: the worklist values as of the estate's day (invValueAsOfWords: the alternate date named where elected), on a living job as of the appraiser's inspection; CLAUDE.md, Each paper says the right thing for its matter; tests/p14-papers.test.js, browser step 124)",
    "title": "The Appraisal Worklist tells the appraiser 'value as of date of death' on a living client's job, and ignores the alternate valuation date",
    "kind": "defect",
    "severity": "fix-now",
@@ -300,6 +302,7 @@
   },
   {
    "id": "DOC-17",
+   "fixed": "2026-10-28 (P14: the Court Inventory is headed Court Inventory (§733.604), and the package email says what each attachment is for (probatePackageDocPurpose); the one-line reconciliation of the two totals is not built; CLAUDE.md, Each paper says the right thing for its matter; tests/p14-papers.test.js, browser step 124)",
    "title": "Two inventory papers in one package with near-identical titles, different scopes and different totals, and nothing says which is the filing",
    "kind": "inconsistency",
    "severity": "medium",
@@ -351,6 +354,7 @@
   },
   {
    "id": "DOC-20",
+   "fixed": "2026-10-28 (P14: the worklist states facts, never the desk's presses (invTransportFact and the worklist's own sentences); CLAUDE.md, Each paper says the right thing for its matter; tests/p14-papers.test.js, browser step 124)",
    "title": "The Appraisal Worklist, attached to every package, prints app instructions to the TC",
    "kind": "inconsistency",
    "severity": "medium",
@@ -487,6 +491,7 @@
   },
   {
    "id": "DOC-28",
+   "fixed": "2026-10-28 (P14: a trust-only matter's Report reads Inventory, files as the Inventory Report, links Inventory photographs and names the trust's Drive folder (invInventoryWord, invDriveFolderWords, probatePackageTitle); CLAUDE.md, Each paper says the right thing for its matter; tests/p14-papers.test.js, browser step 124)",
    "title": "Trust-only packages still call the papers and folders 'Estate Inventory' and 'the estate's Drive folder'",
    "kind": "inconsistency",
    "severity": "low",

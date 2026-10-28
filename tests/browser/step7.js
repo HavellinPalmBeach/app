@@ -114,7 +114,9 @@ const APP = process.env.APP || 'file:///home/user/app/havellin.html';
   // Caught here by a withheld-button assertion that failed while the gate was working perfectly.
   const strip = await p.evaluate(() => document.getElementById('panel-inventory').innerHTML);
   ok(/printTrustSchedule\(/.test(strip), 'the Trust Schedule is offered under More …');
-  ok(/printCourtInventory\(/.test(strip), '… beside the Court Inventory, which is not gated by matter');
+  // Restated 2026-10-28 (P14 of the desk audit, EST-20): More ▾ offers each instrument only where the matter has it, so a trust
+  // matter's strip carries no Court Inventory; the page still refuses on its own face when reached directly (above).
+  ok(!/printCourtInventory\(/.test(strip), '… and no Court Inventory beside it: the matter holds no probate estate (P14)');
 
   // ── THE TIER GATE, REACHED DIRECTLY ──────────────────────────────────────
   const blocked = await print('printTrustSchedule', { docTier: 'contents' });

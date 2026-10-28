@@ -309,7 +309,8 @@ const DAY = (at) => new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_Yo
     const pillOf = (words) => { const f = pills.find((x) => x.text.indexOf(words) >= 0); return f ? [f.text, f.bg] : null; };
     const REPORT = '#inv-workbar button:has-text("Estate Inventory PDF")', SCHEDULE = '#inv-more button:has-text("Trust Schedule")';
     // Restated 2026-10-27: the work bar's papers open on screen first; each is named with the title its viewer carries.
-    const report = () => printed(REPORT, 'Estate Inventory PDF, on the work bar', false, 'Estate Inventory');
+    // A trust-only matter (these estates): the paper is the Inventory, its viewer titled so (P14 of the desk audit, 2026-10-28; DOC-28).
+    const report = () => printed(REPORT, 'Estate Inventory PDF, on the work bar', false, 'Inventory');
     const schedule = () => printed(SCHEDULE, 'Trust Schedule, under More ▾', true, 'Trust Schedule');
     // The report's stamp: the words from IN PROGRESS or REVIEWED up to the next sentence of the page.
     const stampOf = (doc) => { const m = /(?:IN PROGRESS|REVIEWED) — [^.]*?(?=This is a working copy|Estate of|Ellison Family Trust|Item|#|$)/.exec(doc); return m ? m[0].trim().slice(0, 160) : doc.slice(0, 160); };

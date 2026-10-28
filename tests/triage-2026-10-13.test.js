@@ -220,7 +220,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(csv[0], cols.join(','), 'the CSV\'s header row is the payload\'s own column list');
     eq(csv.length, 2, 'one line');
     lacks(noComments(fn('buildInventoryPayload')), 'sheetHeader', 'the payload reads header alone');
-    lacks(noComments(fn('buildInventoryCSV')), 'INVENTORY_COLUMNS', 'the CSV keeps no header list of its own');
+    // Restated 2026-10-28 (P14 of the desk audit, LIV-16): the CSV takes the columns on the job (_invColOnJob, so a living client's
+    // file leaves out the estate's) and names each through the catalogue (_invColHeader, *Promised to someone* on living work); it
+    // still keeps no list of names of its own, and on this estate its header row is the payload's list exactly (above).
+    const _csvBody = noComments(fn('buildInventoryCSV'));
+    lacks(_csvBody, 'sheetHeader', 'the CSV keeps no second name for a column');
+    eq((_csvBody.replace("'Job ID'", '').match(/'[A-Z][a-z]+ [A-Za-z]+'/g) || []), [], 'nor a header of its own beyond Job ID');
+    has(_csvBody, '_invColHeader(job, c)', 'each named through the catalogue');
     // The script finds the column under the one name (2026-10-03, live).
     const gs = require('fs').readFileSync(require('path').join(__dirname, '..', 'apps-script', 'saveInventory.gs'), 'utf8');
     has(gs, "idx('Net Proceeds')", 'saveInventory.gs resolves the Net formula by Net Proceeds');

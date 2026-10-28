@@ -182,7 +182,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     attempt(() => C._invSetAppraiser(7, 's1', '501'));
     eq(attempt(() => C._invGuardrailItems(7).length).val, 1, what + ': fixture: the linked line waits on the guardrail');
     const before = attempt(() => C.deskFoldState(7, C.jobs[0], 'values', C._photoRefs[7], '2026-10-24')).val || { bits: [] };
-    has(before.bits.map((b) => b.text).join(' | '), '1 needs an appraisal, each linked', what + ': fixture: and on the Values bar\'s line');
+    // Restated 2026-10-28 (P14 of the desk audit, NEW-14): on living work the Values bar reads the chip's words, *to a specialist*.
+    const _oneW = J === LIVING ? '1 to a specialist, each linked' : '1 needs an appraisal, each linked';
+    const _noneW = J === LIVING ? '✓ nothing to a specialist' : '✓ nothing needs an appraisal';
+    has(before.bits.map((b) => b.text).join(' | '), _oneW, what + ': fixture: and on the Values bar\'s line');
     const t = typeFigure(C, '$18,500');
     ok(t.ok, what + ': the figure is typed (' + (t.err || 'ok') + ')');
     const r = ref(C);
@@ -191,7 +194,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(r.valDate, J === ESTATE ? '2026-06-14' : '2026-10-24', what + ': the valuation date the job\'s rule sets (the estate\'s value date; else the day it is recorded)');
     eq(attempt(() => C._invGuardrailItems(7).length).val, 0, what + ': ⚠⚠ it leaves the guardrail, no Waive needed');
     const after = attempt(() => C.deskFoldState(7, C.jobs[0], 'values', C._photoRefs[7], '2026-10-24')).val || { bits: [] };
-    has(after.bits.map((b) => b.text).join(' | '), '✓ nothing needs an appraisal', what + ': and the Values bar\'s count with it');
+    has(after.bits.map((b) => b.text).join(' | '), _noneW, what + ': and the Values bar\'s count with it');
     eq(attempt(() => C.invAppraisalSourceText(r, 7)).val, 'Appraisal · ' + LABEL, what + ': the line now reads "Appraisal · <appraiser>"');
     // The row the figure landed on is redrawn in place, carrying the appraisal it records.
     has(String(C.dom.getElementById('inv-row-s1').outerHTML || ''), 'Appraisal · ' + LABEL, what + ': ⚠ the row is redrawn as the figure lands (no longer "pending")');
@@ -484,7 +487,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     if (J === LIVING) {
       eq(attempt(() => C._invGuardrailItems(7).length).val, 1, what + ': ⚠ so it stays on the guardrail (a desk estimate clears no appraisal)');
       const bar = attempt(() => C.deskFoldState(7, C.jobs[0], 'values', C._photoRefs[7], '2026-10-24')).val || { bits: [] };
-      lacks(bar.bits.map((b) => b.text).join(' | '), '✓ nothing needs an appraisal', what + ': and the Values bar does not say nothing needs one');
+      // Restated 2026-10-28 (P14, NEW-14): the living bar's words.
+      lacks(bar.bits.map((b) => b.text).join(' | '), '✓ nothing to a specialist', what + ': and the Values bar does not say nothing needs one');
     }
   });
   {
