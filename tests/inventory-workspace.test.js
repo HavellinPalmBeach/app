@@ -205,7 +205,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         'the placeholder is not a value and cannot wipe forty items');
     has(body, "(value === '__none') ? null : parseInt(value, 10)",
         'estate-wide is applied deliberately, not as a fallback for an empty string');
-    has(body, '_invBulkLast = { msg: what, hidden: hidden };', 'the bar records what it just did');
+    // RESTATED 2026-10-28 (P9 of the desk audit, LIV-02): the bar records what it did through _invBulkDone, which also clears the
+    // selection and keeps the line until OK, a pick or a filter change (p9-every-press.test.js D drives it).
+    has(body, '_invBulkDone(jobId, what, hidden);', 'the bar records what it just did');
+    const doneAt = src.indexOf('function _invBulkDone(');
+    has(src.slice(doneAt, src.indexOf('\n}\n', doneAt)), '_invBulkLast = { msg: what, hidden: !!hidden, done: true, job: jobId };', '…and keeps it, with the selection cleared');
     has(body, '!_invMatchesFilter(r, job)',
         'and notices when the change filtered the items off the screen');
 

@@ -174,7 +174,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   G('T4 · the desk\'s More ▾ menu keeps its state across a redraw', () => {
     const bar = (seed) => {
       const job = ESTATE();
-      const s = lift(['_renderInvWorkbar'], [], {
+      const s = lift(['_renderInvWorkbar', '_invNothingLineHtml', 'invLineNothingToList'], [], {
         jobs: [job], _photoRefs: { 7: [LINE('a')] }, estimateStore: { 7: { estimate: { rooms: ROOMS } } }, document: domStub(seed || {}),
       });
       return s._renderInvWorkbar(job, s._jobInvRefs(7));

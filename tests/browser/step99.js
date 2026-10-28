@@ -1398,10 +1398,13 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
       await p.selectOption('#inv-bulk-' + EST + ' select[onchange*="\'condition\'"]', 'Good'); await p.waitForTimeout(700);
       eq(await p.evaluate(() => ['e01', 'e04'].map((s) => _photoRefs[9601].find((r) => r.stableId === s).condition)), ['Good', 'Good'], 'Set condition… on the phone set both lines');
       const S3 = await bulkBox();
-      ok(S3 && /inv-bulk-open/.test(S3.cls) && S3.cat, '⚠ after the act\'s render the controls are still shown, as they were left');
-      has(S3 && S3.res, 'Good', 'and the act\'s confirmation reads under them');
-      await press('#inv-bulk-' + EST + ' .inv-bulk-clear', 'Clear');
-      eq(await p.evaluate((id) => !!document.getElementById('inv-bulk-' + id), EST), false, 'Clear: no bar');
+      // RESTATED 2026-10-28 (P9 of the desk audit, LIV-02): the selection clears after each bulk action, so the act's render draws
+      // the bar as one line saying what was done, with OK, the controls gone with the selection.
+      ok(S3 && /inv-bulk-done/.test(S3.cls) && !S3.cat, '⚠ after the act the selection is cleared: the bar says what was done, the controls gone with it');
+      has(S3 && S3.res, 'Good', 'and the act\'s confirmation reads there');
+      has(S3 && S3.res, 'The selection is cleared.', '…saying the selection is cleared');
+      await press('#inv-bulk-' + EST + ' .inv-bulk-clear', 'OK');
+      eq(await p.evaluate((id) => !!document.getElementById('inv-bulk-' + id), EST), false, 'OK: no bar');
       await p.locator(BOX('e04')).scrollIntoViewIfNeeded(); await p.click(BOX('e04')); await p.waitForTimeout(500);
       const S4 = await bulkBox();
       eq(S4 && [S4.text, S4.tog, S4.cat], ['1 selected', true, false], '⚠ a new selection starts as one line again');

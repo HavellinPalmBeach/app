@@ -516,7 +516,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ];
     let badge = '';
     const s = sandbox({
-      fns: APPR_FNS.concat(['_invBulkApply', '_invStampBy', 'deviceUser', 'invFillPlanChannel', 'invPlanChannel', 'invNoteDispositionMove', 'invReleaseCautions', '_invNamed', '_invItemNo',
+      fns: APPR_FNS.concat(['_invBulkApply', '_invPickedAsked', '_invBulkDone', '_invNoNameLeftText', 'invLineNothingToList', '_invStampBy', 'deviceUser', 'invFillPlanChannel', 'invPlanChannel', 'invNoteDispositionMove', 'invReleaseCautions', '_invNamed', '_invItemNo',
                             '_invPicked', '_jobInvRefs', '_invTouch', '_invMatchesFilter', '_invFilterHides',
                             '_setPhotoRef', 'savePhotoRefs', '_warnPhotoStoreFull', '_invRoomName']),
       vars: APPR_VARS.concat(['INV_RELEASE_CAUTIONS', 'INV_RELEASE_DISPOSITIONS']),

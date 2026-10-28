@@ -275,7 +275,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // Through the desk's own writer: the disposition set fills it; a recipient typed takes the mark off.
     const ref = { stableId: 'l9', label: 'inventory', disposition: '', channel: '', updatedAt: 1 };
-    const E = lift(['_invEdit'], STATE.concat(['savePhotoRefs', '_invRefreshSummary', '_invRefreshGuardrail', '_invRefreshFlagStrip', '_invRefreshRecords',
+    const E = lift(['_invEdit', '_invPatch'], STATE.concat(['savePhotoRefs', '_invRefreshSummary', '_invRefreshGuardrail', '_invRefreshFlagStrip', '_invRefreshRecords',
       'showSyncBadge', '_renderInvRow', '_invRowDomId']), Object.assign(BASE(), {
       jobs: [one], estimateStore: { 7: { estimate: est1 } }, _photoRefs: { 7: [ref] }, savePhotoRefs() {}, _invRefreshSummary() {}, _invRefreshGuardrail() {},
       _invRefreshFlagStrip() {}, _invRefreshRecords() {}, showSyncBadge() {}, _renderInvRow: () => '', _invRowDomId: (s) => 'row-' + s }));

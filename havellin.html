@@ -802,6 +802,9 @@ body.field-cam-open #sync-pending{display:none !important;}
 /* Show the item puts its row at the top of the screen UNDER the sticky header and tabs, never behind them: scrolled to
    y 0 the row sat under the 122 px bar, on screen by its box and seen by nobody. --topbar-h is setTopbarHeight's. */
 [id^="inv-row-"]{scroll-margin-top:calc(var(--topbar-h,0px) + 8px);}
+/* P9 · a row ticked under Not reviewed or Unsure is held in place, greyed, its Undo beside the name at full strength. */
+.inv-row-held .inv-row-main > *:not(.inv-c-item){opacity:.5;}
+.inv-row-held .inv-name,.inv-row-held .inv-row-sub,.inv-row-held .inv-note{opacity:.55;}
 /* ⚠ THE DESK ON A PHONE (2026-10-22). On a laptop: the bulk bar's actions sit in a wrapper that is display:contents, so the
    bar is the one flex row it always was, and its Actions toggle is not drawn; the desk band's timeline line is not drawn,
    so the rail and the track show as they always did. The phone block hides the actions until Actions is pressed and folds
@@ -1476,7 +1479,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.28 · 4:12am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.28 · 12:53pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -17958,27 +17961,50 @@ function probatePackageBlocker(job) {
 // The lines (2026-10-19): the package carries the inventory, so with no named line on it there is nothing to send. Pure:
 // takes the manifest rows (the card hands it this device's once the sheet has been read, the send the rows it just fetched);
 // `null` rows mean unread, which refuses nothing here (the send reads the sheet first).
+// ⚠ NEVER THE WALKTHROUGH'S OWN COLLECTION LINE (P9 of the desk audit, 2026-10-28; INV-07): the app makes it by itself, named, on a
+// won job (collectionLinesEnsure), so one collection on the estimate let a package of nothing but unnamed photographs pass this
+// guard. A line still waiting for its photograph (collectionLineUnshot) is the walkthrough's estimate, not the inventory.
 function probatePackageInventoryBlocker(job, refs) {
   var R = estatePackageRoute(job);
   if (!R || refs === null || refs === undefined) return '';
-  var named = (refs || []).some(function (r) { return r && r.label === 'inventory' && !r.deletedAt && !!String(r.objectName || '').trim(); });
+  var named = (refs || []).some(function (r) {
+    return r && r.label === 'inventory' && !r.deletedAt && !!String(r.objectName || '').trim()
+      && !(typeof collectionLineUnshot === 'function' && collectionLineUnshot(r));
+  });
   return named ? '' : 'The ' + R.name + ' cannot be sent yet: the inventory holds no named line. Photograph the house (the Job Plan) and name the shots (Job Admin & Inv): the package carries that inventory.';
 }
 // What the inventory still lacks when a package goes early (2026-10-19): rooms not yet locked, lines with no disposition, and on
 // a tier that states values lines with none. The send names them and asks first; the pages mark the same gaps.
+// ⚠⚠ EVERY GAP THE DESK COUNTS (P9 of the desk audit, 2026-10-28; INV-07, NEW-07): it counted named lines only, so a house of 31
+// unnamed photographs read as one line short, and the confirm and the desk's chips quoted two different numbers for one inventory.
+// It reads the lines the papers print (every live inventory line, a collection's document aside) through the Needs you chips' own
+// tests (INV_WORK_FLAGS, one definition each), in the desk's words: photographs not yet named, those Agent One found nothing in and
+// nobody has taken off, no destination, no value on a tier that states values, the lines the app has flagged that nobody has
+// ticked; then an open possible duplicate (the schedules' DRAFT) and the list's read (Q107).
 function probatePackageGaps(jobId) {
   var job = jobs.find(function (j) { return j.id === jobId; });
   if (!job) return [];
   var out = [];
   var rooms = _planRooms(jobId).rooms.filter(function (r) { var st = _planRoomStatus(jobId, r.idx); return st !== 'locked' && st !== 'cleared'; }).length;
   if (rooms) out.push(rooms + ' room' + (rooms === 1 ? '' : 's') + ' not yet locked');
-  var live = ((typeof _photoRefs !== 'undefined' && _photoRefs[jobId]) || []).filter(function (r) { return r && r.label === 'inventory' && !r.deletedAt && !!String(r.objectName || '').trim(); });
-  var und = live.filter(function (r) { return !String(r.disposition || '').trim(); }).length;
-  if (und) out.push(und + ' line' + (und === 1 ? '' : 's') + ' with no disposition');
-  if (docTierProduces(job, 'values')) {
-    var nov = live.filter(function (r) { return r.fmv === undefined || r.fmv === null || r.fmv === ''; }).length;
-    if (nov) out.push(nov + ' line' + (nov === 1 ? '' : 's') + ' with no value');
-  }
+  var lines = ((typeof _photoRefs !== 'undefined' && _photoRefs[jobId]) || []).filter(function (r) { return r && r.label === 'inventory' && !r.deletedAt && !r.collId; });
+  var live = lines.filter(function (r) { return !!String(r.objectName || '').trim(); });
+  var chip = function (k) { return INV_WORK_FLAGS.filter(function (f) { return f.key === k; })[0]; };
+  var count = function (k) { var f = chip(k); return f ? lines.filter(function (r) { return f.test(r, job); }).length : 0; };
+  var say = function (n, one, many) { if (n) out.push(n + ' ' + (n === 1 ? one : many)); };
+  say(count('unnamed'), 'photograph not yet named', 'photographs not yet named');
+  say(count('nothing'), 'photograph Agent One found nothing in, not yet taken off the list', 'photographs Agent One found nothing in, not yet taken off the list');
+  say(count('undecided'), 'line with no disposition', 'lines with no disposition');
+  if (docTierProduces(job, 'values')) say(count('noval'), 'line with no value', 'lines with no value');
+  // The lines the app flags for a look that nobody has ticked (Q106): the Not reviewed chip, less what is already said above (no
+  // name, no destination, no value) and an open duplicate (said below, in the schedules' own words).
+  var fc = invAcceptCtx(job, lines);
+  var said = { noname: 1, nodest: 1, onhold: 1, nofigure: 1, unowned: 1, duplicate: 1 };
+  var flagged = lines.filter(function (r) {
+    if (invLineReviewed(r, fc)) return false;
+    return _invLineHolds(r, fc, true).some(function (k) { return !said[k]; });
+  }).length;
+  say(flagged, 'line flagged for a look and not yet ticked', 'lines flagged for a look and not yet ticked');
   // An open possible duplicate (P8's review, 2026-10-27): the Court Inventory or the Trust Schedule inside prints DRAFT for it,
   // and the question that makes an interim copy deliberate said nothing of it (invDoubleCounts, the schedules' own words).
   var _dbl = invDoubleCounts(job, live);
@@ -29404,8 +29430,18 @@ function _invPanelCols(job) {
     // seq is the row's identity, fmv and disposition are edited on the row itself. Two
     // inputs bound to one value is how a panel and a row silently disagree. And qty since
     // 2026-10-24, when the count moved onto the row (Anthony: "viewable at the headline level").
-    return c.key !== 'seq' && c.key !== 'fmv' && c.key !== 'disposition' && c.key !== 'qty';
+    // ⚠ AND THE NAME (P9 of the desk audit, 2026-10-28; ROW-05): the row has carried it in a box of its own since 2026-10-24, and a
+    // name typed in the record left the row's box showing the old one, which the next edit there wrote back over the correction.
+    // Who takes it goes the same way on the lines whose row carries its box (_invPanelColsFor).
+    return c.key !== 'seq' && c.key !== 'fmv' && c.key !== 'disposition' && c.key !== 'qty' && c.key !== 'objectName';
   });
+}
+// The record's fields for one line: the job's, less Who takes it where the row carries that box (_invRowHasWho: a disposition
+// leaving the property, or Move). On Keep, Hold or Undecided the row has none, so the record keeps it (a name left from To a
+// person is retyped there, P22).
+function _invPanelColsFor(job, ref) {
+  var rowWho = !!ref && _invRowHasWho(ref.disposition);
+  return _invPanelCols(job).filter(function(c) { return !(rowWho && c.key === 'channel'); });
 }
 function _invPanelSection(col) {
   if (['objectName','category','room','qty','condition'].indexOf(col.key) >= 0) return 'item';
@@ -30901,14 +30937,17 @@ function _invEdit(jobId, stableId, key, el) {
   var _dealerMoved = _dealerWas !== null && invIsFirearm(ref) && invTransportDealer(ref) !== _dealerWas;
   if ((_wasAgentValue && ref.valuedBy !== 'agent') || _planFilled || invAppraised(ref) !== _wasAppraised || key === 'category' || _dealerMoved) {
     var _rowEl = document.getElementById(_invRowDomId(stableId)), _rowJob = _invJob(jobId);
-    if (_rowEl && _rowJob) _rowEl.outerHTML = _renderInvRow(_rowJob, ref);
+    // ⚠ IN PLACE (P9 of the desk audit, 2026-10-28; ROW-04): the first figure typed over Agent Two's replaced the whole row, and
+    // with it the box the person had tabbed or tapped into next (Where it goes, Each), so the iPad's keyboard closed. The row is
+    // patched (_invPatch): what changed is redrawn, and the box with the focus, or the select being opened, stays where it is.
+    if (_rowEl && _rowJob) _invPatch(_rowEl, _renderInvRow(_rowJob, ref));
   }
   // ⚠ A NAME CHANGED IS VALUED AGAIN, BY ITSELF (2026-10-25b): the wooden mirror that is Restoration Hardware. Sent before the
   // notices repaint (2026-10-26), so the note reads "Agent Two is valuing it again", never "open the line and Re-value it".
   if (key === 'objectName') agentValueAfterRename(jobId, stableId);
   if (key === 'objectName' && ref.valuedBy === 'agent') {
     var _noteEl = document.getElementById('inv-value-notices'), _noteJob = _invJob(jobId);
-    if (_noteEl && _noteJob) _noteEl.innerHTML = _avNoticesHtml(_noteJob, _jobInvRefs(jobId));
+    if (_noteEl && _noteJob) _invPatch(_noteEl, _avNoticesHtml(_noteJob, _jobInvRefs(jobId)), true);   // in place (P9, SYN-12)
   }
   // ⚠ STANDING AS IT IS OR FLAGGED (the review, 2026-10-26): a bequest or appraisal ticked, a name that makes it a duplicate,
   // a figure typed. The row's box, its group's count and the work bar follow, by id, so the box the person tabbed into keeps
@@ -30947,12 +30986,12 @@ function _invEdit(jobId, stableId, key, el) {
   if (_openWas !== null && _approvalLineOpen(ref, _invJob(jobId)) !== _openWas) _livingRelease = true;
   if ((key === 'fmv' || _figMoved || _livingRelease) && typeof _renderInvWorkbar === 'function') {
     var _wbEl = document.getElementById('inv-workbar'), _wbJob = _invJob(jobId);
-    if (_wbEl && _wbJob) _wbEl.outerHTML = _renderInvWorkbar(_wbJob, _jobInvRefs(jobId));
+    if (_wbEl && _wbJob) _invPatch(_wbEl, _renderInvWorkbar(_wbJob, _jobInvRefs(jobId)));   // in place (P9, SYN-12)
   }
   // (The bulk bar's half is untested on its own: browser step 112 drives the work bar's, on the same condition.)
   if (_livingRelease && _invPick[stableId]) {
     var _bbEl = document.getElementById('inv-bulk-' + jobId), _bbJob = _invJob(jobId);
-    if (_bbEl && _bbJob) _bbEl.outerHTML = _renderInvBulk(_bbJob);
+    if (_bbEl && _bbJob) _invPatch(_bbEl, _renderInvBulk(_bbJob));
   }
   // Every one of the counts is derived from a field editable on this row, so the strip is
   // repainted whatever changed rather than on a list of keys that would fall out of step with
@@ -31028,6 +31067,10 @@ function invRemoveLine(jobId, stableId) {
           + ' that share it keep it' : '') + '.';
   }
   msg += '\n\nRemoved items, under Removed items & snapshots on Job Admin & Inv, gives the line back.';
+  // What Agent One noted on it (P9, AGT-02: a too-dark frame's *photograph it again* went with the line, unsaid).
+  // (typeof: a pinned sandbox lifts invRemoveLine without the agents' notes.)
+  var _notes = typeof agentNoticesOn === 'function' ? agentNoticesOn(jobId, ref).map(function(x) { return x.n; }).filter(function(n) { return n && n.text; }) : [];
+  if (_notes.length) msg += '\n\nAgent One noted on it: ' + _notes.map(function(n) { return String(n.text).trim(); }).join('; ') + '. It goes off the list with the line; Restore gives both back.';
   if (!window.confirm(msg)) return false;
   _invTombstoneLine(jobId, ref);
   renderInventoryTab();
@@ -31060,13 +31103,15 @@ function _invTombstoneLine(jobId, ref, opts) {
 // confirm names the first eight lines rather than a bare count: "212 lines" invites a yes; "#3 Tesla key card ·
 // #15 Scotch tape dispensers …" is the work about to go.
 function invBulkRemove(jobId, read) {
-  var lines = _invPicked(jobId);
+  var lines = _invPickedAsked(jobId, read);
   if (!lines.length) return false;
+  // Selected lines not on screen are asked about first (P9, LIV-02: the twelve Move lines went with a three-line cleanup).
+  if (!read && typeof _invAskOffScreen === 'function' && !_invAskOffScreen(jobId)) { renderInventoryTab(); return false; }
   // The sheet first (P6): a line the other device removed meanwhile, or changed, is read before anything is removed here.
-  var asked = read ? null : lines.map(function(r) { return r.stableId; });
+  var asked = read ? null : _invPicked(jobId).map(function(r) { return r.stableId; });   // after the ask over picks off screen
   if (!read && typeof invReadFirst === 'function' && invReadFirst(jobId, 'Remove lines', function (diff) { diff.asked = asked; invBulkRemove(jobId, diff); })) return true;
   var _gone = read ? invReadGone(read, read.asked) : 0;
-  lines = _invPicked(jobId);
+  lines = _invPickedAsked(jobId, read);
   if (!lines.length) { var _none = invReadGoneText(_gone) || 'Nothing to remove.'; showSyncBadge(_none); alert(_none); return false; }
   var shown = lines.slice(0, 8).map(function(r){ return '  \u00b7 #' + _invItemNo(r) + ' ' + (r.objectName || '(unnamed)'); });
   var msg = 'Remove ' + lines.length + ' line' + (lines.length > 1 ? 's' : '') + ' from the inventory?\n\n'
@@ -31079,11 +31124,74 @@ function invBulkRemove(jobId, read) {
   lines.forEach(function(r){ _invTombstoneLine(jobId, r, { defer: true }); });
   savePhotoRefs(jobId);
   _invPick = {};
+  _invBulkLast = null;   // the bar goes with the selection; the toast says what was done
   showSyncBadge(lines.length + ' line' + (lines.length > 1 ? 's' : '') + ' removed \u2014 Removed items, under Removed items & snapshots on Job Admin & Inv, gives them back'
     + (_gone ? '. ' + invReadGoneText(_gone) : ''), false);
   renderInventoryTab();
   _scheduleInventorySync(jobId);
   return lines.length;
+}
+
+// ⚠⚠ THE PHOTOGRAPHS AGENT ONE FOUND NOTHING IN, OFF THE LIST IN ONE PRESS (P9 of the desk audit, 2026-10-28; EST-09, LIV-08, DOC-19,
+// INV-08, ROW-17, AGT-01). A house photographed drawer by drawer leaves about 25 of them per 300 photographs, and each was a ▾, Remove
+// line and a confirm (or a chip, Select all, Remove lines and a confirm that also took whatever else was selected, LIV-02). Meanwhile
+// each kept *Not reviewed* counting and every paper at IN PROGRESS with a blank numbered row. **Remove the N with nothing to list**,
+// on the work bar while there are some, takes every such line off through the desk's one removal writer (`_invTombstoneLine`, the
+// manifest saved once): each a stamped tombstone, its number spent, the photograph kept in Drive and in its room as the record of what
+// was there, Removed items giving it back. The sheet is read first (P6's gate, invReadFirst), so a line named or removed on another
+// device meanwhile is left alone; one confirm names the lines by number and room (they have no names) and, flagged, never refused,
+// any that carries something the field said over it (a note, a destination, ⚑ Appraise). Never a photograph Agent One could not
+// read (invLineUnread): that one waits for a close-up or a name.
+function _invNothingLineHtml(job, all) {
+  var n = (all || []).filter(invLineNothingToList).length;
+  if (!n) return '<div id="inv-nothing-' + job.id + '" class="inv-nothing"></div>';
+  return '<div id="inv-nothing-' + job.id + '" class="inv-nothing" style="font-size:10.5px;color:var(--gray);margin-top:7px;">'
+    + 'Agent One found nothing to list in ' + n + ' photograph' + (n === 1 ? '' : 's') + ' &middot; '
+    + '<button class="btn-s" onclick="invRemoveNothingToList(' + job.id + ')" style="font-size:10px;" '
+    + 'title="Take those lines off the inventory. The photographs stay in Google Drive and in their rooms, and Removed items, under Removed items &amp; snapshots on Job Admin &amp; Inv, gives the lines back.">'
+    + 'Remove the ' + n + ' with nothing to list</button> <span>(the photographs stay)</span></div>';
+}
+// What the field said over a line, for the confirm: its note, a destination chosen, ⚑. '' where nothing.
+function _invFieldSaidText(r) {
+  var bits = [];
+  if (String(r.fieldNote || '').trim()) bits.push('note “' + String(r.fieldNote).trim().slice(0, 60) + (String(r.fieldNote).trim().length > 60 ? '…' : '') + '”');
+  if (r.disposition && r.disposition !== 'Undecided') bits.push(invDispDocWord(r.disposition));
+  if (r.needsAppr) bits.push('⚑ Appraise');
+  return bits.join(', ');
+}
+function invRemoveNothingToList(jobId, read) {
+  var lines = _jobInvRefs(jobId).filter(invLineNothingToList);
+  if (!lines.length && !read) return false;
+  var asked = read ? null : lines.map(function(r) { return r.stableId; });
+  if (!read && typeof invReadFirst === 'function' && invReadFirst(jobId, 'Remove the lines with nothing to list',
+      function (diff) { diff.asked = asked; invRemoveNothingToList(jobId, diff); }, { key: 'nothing-to-list' })) return true;
+  var _gone = read ? invReadGone(read, read.asked) : 0;
+  lines = _jobInvRefs(jobId).filter(invLineNothingToList);
+  if (!lines.length) {
+    var _none = invReadGoneText(_gone) || 'No line with nothing to list is left: each has a name now, or has been removed.';
+    showSyncBadge(_none); alert(_none); return false;
+  }
+  var n = lines.length;
+  var where = function(r) { return '#' + _invItemNo(r) + ' (' + _invRoomName(jobId, r.roomIdx) + ')'; };
+  var shown = lines.slice(0, 8).map(function(r) { return '  · ' + where(r); });
+  var said = lines.filter(function(r) { return !!_invFieldSaidText(r); });
+  var msg = 'Remove the ' + n + ' line' + (n === 1 ? '' : 's') + ' Agent One found nothing to list in?\n\n'
+    + shown.join('\n') + (n > shown.length ? '\n  · and ' + (n - shown.length) + ' more' : '')
+    + '\n\nNo photograph is deleted: each stays in Google Drive and in its room, as the record of what was there. Their numbers are never given to anything else.'
+    + '\n\nRemoved items, under Removed items & snapshots on Job Admin & Inv, gives them back.'
+    + (said.length ? '\n\n⚠ ' + said.length + ' of them carr' + (said.length === 1 ? 'ies' : 'y') + ' something said in the field: '
+        + said.slice(0, 6).map(function(r) { return where(r) + ': ' + _invFieldSaidText(r); }).join('; ')
+        + (said.length > 6 ? '; and ' + (said.length - 6) + ' more' : '') + '. Cancel to look at ' + (said.length === 1 ? 'it' : 'them') + ' first.' : '')
+    + (_gone ? '\n\nThe sheet was read first: ' + invReadGoneText(_gone) : '');
+  if (!window.confirm(msg)) return false;
+  lines.forEach(function(r) { _invTombstoneLine(jobId, r, { defer: true }); delete _invPick[r.stableId]; });
+  savePhotoRefs(jobId);
+  showSyncBadge(n + ' line' + (n === 1 ? '' : 's') + ' with nothing to list removed, the photographs kept — Removed items, under Removed items & snapshots on Job Admin & Inv, gives them back'
+    + (_gone ? '. ' + invReadGoneText(_gone) : ''), false);
+  if (_invFilter.flag === 'nothing') _invFilter.flag = '';   // the pile is empty: the list it filtered is the whole list again
+  renderInventoryTab();
+  _scheduleInventorySync(jobId);
+  return n;
 }
 
 // ── Appraisal worklist ────────────────────────────────────────────────────────
@@ -34190,6 +34298,8 @@ function printApprovalRequest(jobId, selectedOnly, opt) {
   if (!job) return _asHtml ? { why: 'This job could not be found.' } : undefined;
   var _cold = typeof invColdRefusal === 'function' ? invColdRefusal(jobId) : '';   // 2026-10-27, P1: a cold desk refuses
   if (_cold) { if (_asHtml) return { why: _cold }; alert(_cold); return; }
+  // The selection bar's request asks about selected lines not on screen first (P9, LIV-02); never a page built for a send.
+  if (selectedOnly && !opt && typeof _invAskOffScreen === 'function' && !_invAskOffScreen(jobId)) { renderInventoryTab(); return; }
   if (typeof invReadFirst === 'function' && invReadFirst(jobId, 'The release approval request', function () { printApprovalRequest(jobId, selectedOnly, _invReadOpt(opt)); },
       { key: 'The release approval request|' + (selectedOnly ? 'selection' : 'all'), read: !!(opt && opt.read), asHtml: !!(opt && opt.asHtml) })) return;   // P6; keyed on what it carries (P6's review)
   var items = selectedOnly ? invWrittenReleasePicked(jobId, job) : _invAwaitingApproval(jobId);
@@ -34786,6 +34896,8 @@ function sendApprovalRequest(jobId, selectedOnly, via) {
   var _sendBlk = approvalRequestSendBlocker(job);
   if (_sendBlk) { openBar(); _docNotice('warn', _sendBlk, jobId); return false; }
   if (ds) { var dsWhy = approvalRequestEsignRefusal(job); if (dsWhy) { openBar(); _docNotice('warn', dsWhy, jobId); return false; } }
+  // The selection bar's send asks about selected lines not on screen first (P9, LIV-02).
+  if (selectedOnly && typeof _invAskOffScreen === 'function' && !_invAskOffScreen(jobId)) { renderInventoryTab(); return false; }
   var picked = selectedOnly ? invWrittenReleasePicked(jobId, job) : _invAwaitingApproval(jobId);
   // What a selection left out (P5, REL-07), said with the send: read now, as the selection stands when it is pressed.
   var leftOut = selectedOnly ? invWrittenReleaseLeftOutText(jobId, job) : '';
@@ -35507,7 +35619,7 @@ function _invRefreshReleases(jobId) {
   var el = document.getElementById('inv-releases'), job = _invJob(jobId), sel = document.getElementById('inv-job');
   if (!el || !job || !sel || (parseInt(sel.value) || 0) !== jobId) { if (typeof _deskFoldHeadsRepaint === 'function') _deskFoldHeadsRepaint(jobId); return false; }
   var html = _renderInvReleasesCard(job, _jobInvRefs(jobId));
-  el.outerHTML = html || INV_RELEASES_HOST_EMPTY;
+  _invPatch(el, html || INV_RELEASES_HOST_EMPTY);   // in place (P9, SYN-12: a press on the card straight from a row's box was lost)
   if (typeof _deskFoldHeadsRepaint === 'function') _deskFoldHeadsRepaint(jobId);
   return !!html;
 }
@@ -35537,6 +35649,8 @@ function invRecordApproval(jobId, opt) {
   // the one press there that did not, so the dialog listed the lines as this device last read them while the manual and the
   // playbook said every press on the bar reads first. (The request's road, Record the signed request, compares each line with the
   // request's own terms at the save, which catches a line moved meanwhile, and waits for the sheet's first read.)
+  // Selected lines not on screen are asked about first (P9, LIV-02), before the read.
+  if (!fromReq && !(opt && opt.read) && _invPicked(jobId).length && typeof _invAskOffScreen === 'function' && !_invAskOffScreen(jobId)) { renderInventoryTab(); return false; }
   if (!fromReq && !(opt && opt.read) && _invPicked(jobId).length && typeof invReadFirst === 'function'
       && invReadFirst(jobId, 'Record approval', function () { invRecordApproval(jobId, _invReadOpt(opt)); })) return true;
   var want = fromReq ? opt.stableIds.map(String) : null;
@@ -39389,7 +39503,7 @@ function _apprReportsRepaint(jobId) {
   var n = 0;
   (job.appraisers || []).forEach(function (a) {
     var el = document.getElementById('appr-rpt-' + jobId + '-' + a.id);
-    if (el) { el.innerHTML = _apprReportCellHtml(job, a); n++; }
+    if (el) { _invPatch(el, _apprReportCellHtml(job, a), true); n++; }
   });
   return n;
 }
@@ -39465,10 +39579,11 @@ function waiveAppraisal(jobId, stableId) {
 function _invRefreshFlagStrip(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   var el = document.getElementById('inv-flagstrip');
-  if (job && el) el.innerHTML = _renderInvFlagStrip(job, _jobInvRefs(jobId));
+  // In place (P9, SYN-12): a chip pressed straight from a row's box is the chip that gets the press.
+  if (job && el) _invPatch(el, _renderInvFlagStrip(job, _jobInvRefs(jobId)), true);
   // The filter row's earlier-days hint is a count over the same lines (2026-10-22): a split can add an undecided line.
   var hint = document.getElementById('inv-earlier');
-  if (job && hint && typeof _invEarlierHintHtml === 'function') hint.innerHTML = _invEarlierHintHtml(job, _jobInvRefs(jobId));
+  if (job && hint && typeof _invEarlierHintHtml === 'function') _invPatch(hint, _invEarlierHintHtml(job, _jobInvRefs(jobId)), true);
 }
 // Agent One's notices above the rows, repainted in place (2026-10-22, Q90): a name typed on a decided line reviews it, which
 // quiets its Look at this, and the last Found it quiets the Must finds. Nothing else on the tab is touched.
@@ -39477,7 +39592,7 @@ function _invRefreshAgentNotices(jobId) {
   if (!sel || (parseInt(sel.value) || 0) !== jobId) return false;
   var el = document.getElementById('inv-agent-notices');
   if (!el || !_invJob(jobId)) return false;
-  el.innerHTML = _agNoticesHtml(jobId, _jobInvRefs(jobId));
+  _invPatch(el, _agNoticesHtml(jobId, _jobInvRefs(jobId)), true);
   return true;
 }
 // The close-out records' host (P19): the Disposition Ledger (where it applies), the Contents Record (living work), the signed
@@ -39487,14 +39602,14 @@ function _invRefreshAgentNotices(jobId) {
 function _invRefreshRecords(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   var el = document.getElementById('inv-records');
-  if (job && el) el.innerHTML = _renderLedgerCards(job, _jobInvRefs(jobId));
+  if (job && el) _invPatch(el, _renderLedgerCards(job, _jobInvRefs(jobId)), true);
   if (typeof _deskFoldHeadsRepaint === 'function') _deskFoldHeadsRepaint(jobId);
 }
 
 function _invRefreshGuardrail(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   var el = document.getElementById('inv-guardrail');
-  if (job && el) el.innerHTML = _renderAppraisalGuardrail(job);
+  if (job && el) _invPatch(el, _renderAppraisalGuardrail(job), true);
   // And the roster's report cells (Q93): an appraisal figure typed on a row may now be owed its report.
   if (job && typeof _apprReportsRepaint === 'function') _apprReportsRepaint(jobId);
   if (typeof _deskFoldHeadsRepaint === 'function') _deskFoldHeadsRepaint(jobId);
@@ -40021,6 +40136,7 @@ var _invWhenJob   = 0;    // the job whose desk the when-default was last applie
 var _invOpen      = {};   // stableId -> panel expanded
 var _invFold      = {};   // disposition key -> section collapsed
 var _invPick      = {};   // stableId -> selected for a bulk action
+var _invHeld      = {};   // stableId -> jobId: a row ticked under Not reviewed or Unsure, held in place (P9; session only)
 var _invShowRoll  = false;
 
 function _invDispLabel(d) { return d || INV_UNDECIDED; }
@@ -40041,16 +40157,35 @@ function _invCapturedToday(items) {
 // The five reasons to open this tab. Each is a count AND a filter — a number you cannot
 // act on is decoration.
 function _invNeedsValue(r) { var n = parseFloat(r.fmv); return isNaN(n); }
+// ⚠⚠ A PHOTOGRAPH AGENT ONE FOUND NOTHING IN IS NOT A LINE WAITING FOR A NAME (P9 of the desk audit, 2026-10-28; EST-09, LIV-08,
+// DOC-19, INV-08, ROW-17, AGT-01). An empty answer is stamped `agentConf: 'none'` (agentApplyResult: a sock drawer, packaging, a
+// bare surface), and the line sat in *Unnamed shots* beside photographs never read, in Select all, and on every paper as a blank
+// numbered item holding it at IN PROGRESS, to be taken off one ▾ at a time. One predicate, read by its own chip (*Nothing to
+// list N*), the work bar's one press (invRemoveNothingToList), the Unnamed shots chip (which leaves them out, so it reaches zero
+// once naming is done), Select all (which skips them, _invPickGroup) and the package's question (probatePackageGaps). They stay
+// on the papers until that press: removal is a recorded act, never an absence.
+// A photograph Agent One could not read (`'unread'`: an empty answer carrying a note, a frame too dark to name) is not one of
+// them: it waits for a close-up or a name (invLineUnread), and no press sweeps it away.
+function invLineNothingToList(r) {
+  return !!r && !r.deletedAt && r.agentConf === 'none' && !String(r.objectName || '').trim();
+}
+function invLineUnread(r) {
+  return !!r && !r.deletedAt && r.agentConf === 'unread' && !String(r.objectName || '').trim();
+}
 var INV_WORK_FLAGS = [
   // First, because since 2026-09-19 every field shot arrives without a name — naming is the
   // desk's job (and, next, the agent's) — so this is the evening's first pile.
-  {key:'unnamed',   label:'Unnamed shots',   test:function(r){ return !r.objectName; }},
+  // Never a photograph Agent One found nothing in (P9): that is its own pile, below, so this one reaches zero once naming is done.
+  {key:'unnamed',   label:'Unnamed shots',   test:function(r){ return !r.objectName && !invLineNothingToList(r); }},
   // Second, beside it: the lines nobody has looked at yet (2026-10-25b, the one look: invLineReviewed, its value included), on
   // every job. It replaced P23's *Unreviewed values*, which counted the second tier, Agent Two's figures nobody had accepted.
   {key:'unreviewed', label:'Not reviewed', test:function(r, job){ return !invLineReviewed(r, _invAcceptCtxOf(job)); }},
   // Third (2026-10-26): the lines the agents were guessing at, gathered (invLineUnsure, the row's one hint). The playbook and *The
   // Evening Desk* say to work the unsure lines first, and nothing gathered them. A filter on the hint, not a review of its own.
   {key:'unsure', label:'Unsure', test:function(r, job){ return invLineUnsure(r, job); }},
+  // Fourth (P9, 2026-10-28): the photographs Agent One found nothing in, gathered, with the work bar's one press beside them
+  // (Remove the N with nothing to list). Drawn only while there are some (`hideAtZero`): a cleanup pile, not a reading one.
+  {key:'nothing', label:'Nothing to list', hideAtZero:true, test:function(r){ return invLineNothingToList(r); }},
   {key:'undecided', label:'Not yet decided', test:function(r){ return !r.disposition; }},
   // fid: a living job enters no values, so this would count every row on the job forever.
   {key:'noval',     label:'No value yet',    fid:true, test:function(r){ return _invNeedsValue(r); }},
@@ -40101,7 +40236,24 @@ function _invFilterHides(r, job) {
   return out;
 }
 function _invMatchesFilter(r, job) {
-  return _invFilterHides(r, job).length === 0;
+  var h = _invFilterHides(r, job);
+  // (typeof: a pinned sandbox lifts the filter without the held rows' session state; the browser always has them.)
+  return h.length === 0 || (typeof _invHeldShown === 'function' && _invHeldShown(r, job, h));
+}
+// ⚠⚠ A ROW TICKED UNDER NOT REVIEWED OR UNSURE STAYS WHERE IT WAS (P9 of the desk audit, 2026-10-28; ROW-08). Each tick redrew the
+// list and the ticked line, no longer matching the chip, left it, so the next line slid under the finger: ten presses at one point
+// ticked ten lines, and a quick double tap reviewed one nobody had looked at, which then vanished from the view. A row ticked there
+// is held on screen, greyed, its box shut to a second press, with *Reviewed · Undo* beside its name, until the view changes (the
+// chip pressed again, another chip, a filter, another client: _invFilterChanged). Only the chip hides it; anything else that would
+// hide it does. Session state, never saved.
+function _invHeldShown(r, job, hides) {
+  if (!r || !job || r.deletedAt || _invHeld[r.stableId] !== job.id) return false;
+  var h = hides || _invFilterHides(r, job);
+  return h.length === 1 && h[0] === 'flag' && (_invFilter.flag === 'unreviewed' || _invFilter.flag === 'unsure');
+}
+function _invUndoHeld(jobId, stableId) {
+  delete _invHeld[stableId];
+  _invSetReviewed(jobId, stableId, false);
 }
 // ⚠ TODAY HIDES YESTERDAY'S LEFTOVERS (2026-10-22). The desk opens on Today on a day with a capture, so a line shot
 // yesterday and still undecided fell off the evening's view unless somebody thought to press All. The filter row says how
@@ -40397,7 +40549,7 @@ function invMarkListRead(jobId) {
   job.invRead = { at: Date.now(), by: _invStampBy(job), seen: invListSeen(jobId) };
   _saveJobEdit(job);
   var wb = document.getElementById('inv-workbar');
-  if (wb) wb.outerHTML = _renderInvWorkbar(job, _jobInvRefs(jobId));
+  if (wb) _invPatch(wb, _renderInvWorkbar(job, _jobInvRefs(jobId)));
 }
 // The work bar's line and the press, drawn only while a line stands as the agents left it; the host always, carrying the state
 // it drew (`data-rk`), so _invEdit redraws the bar only when that moves.
@@ -40412,8 +40564,9 @@ function _invReadLineRepaint(jobId) {
   var el = document.getElementById('inv-read-' + jobId), job = _invJob(jobId);
   if (!el || !job || typeof _renderInvWorkbar !== 'function') return false;
   if ((el.getAttribute ? el.getAttribute('data-rk') : null) === _invReadKey(job, _invReviewStats(_jobInvRefs(jobId), _invAcceptCtxOf(job)))) return false;
+  // In place (P9, SYN-12): ✓ I've read the list, pressed straight after a name or a figure, is the button that gets the press.
   var wb = document.getElementById('inv-workbar');
-  if (wb) wb.outerHTML = _renderInvWorkbar(job, _jobInvRefs(jobId));
+  if (wb) _invPatch(wb, _renderInvWorkbar(job, _jobInvRefs(jobId)));
   return !!wb;
 }
 function _invListReadHtml(job, st) {
@@ -40432,6 +40585,12 @@ function _invSetReviewed(jobId, stableId, on) {
   var ref = _getPhotoRef(jobId, stableId);
   if (!ref) return;
   var job = _invJob(jobId);
+  // Held in place under the chip it was ticked under (P9, ROW-08: _invHeldShown); an untick lets it go.
+  // (typeof: a pinned sandbox lifts the tick without the filter's and the held rows' session state; the browser always has them.)
+  if (typeof _invHeld !== 'undefined' && typeof _invFilter !== 'undefined') {
+    if (on && (_invFilter.flag === 'unreviewed' || _invFilter.flag === 'unsure')) _invHeld[stableId] = jobId;
+    else if (!on) delete _invHeld[stableId];
+  }
   if (on) _invStampLineReviewed(ref, job);
   else {
     ref.reviewed = false; ref.reviewedAt = null; ref.reviewedBy = '';
@@ -40449,27 +40608,88 @@ function _invSetReviewed(jobId, stableId, on) {
 function _invPicked(jobId) {
   return _jobInvRefs(jobId).filter(function(r){ return _invPick[r.stableId]; });
 }
+// ⚠ THE SELECTION AS IT STOOD WHEN PRESSED (P9, 2026-10-28; found by browser step 121): a press across the selection that waited on
+// the sheet's read acts, once the read lands, on the lines that were picked when it was pressed (`read.asked`, recorded after the
+// ask over picks off screen), never on the selection as it stands then. A bulk action clears the selection as it ends (LIV-02), so
+// Set condition pressed while Set category's read was out found nothing picked and was dropped with no word, which P6's review had
+// closed. A line removed meanwhile is not among them (_jobInvRefs), as before.
+function _invPickedAsked(jobId, read) {
+  if (!read || !Array.isArray(read.asked)) return _invPicked(jobId);
+  var want = {};
+  read.asked.forEach(function(id) { want[String(id)] = 1; });
+  return _jobInvRefs(jobId).filter(function(r){ return want[String(r.stableId)]; });
+}
+// ⚠⚠ A PRESS OVER SELECTED LINES NOT ON SCREEN ASKS FIRST (P9 of the desk audit, 2026-10-28; LIV-02). The selection survived every
+// bulk action and every filter, so a three-line cleanup under *Unnamed shots* removed the twelve Move lines picked before it, named
+// only among "and 7 more". The selection now clears after each bulk action and each filter change (_invBulkDone, _invFilterChanged),
+// and a line can still drop out of sight while picked (its group folded, a row's own edit moving it out of the filter, a read of the
+// sheet): every press on the selection bar asks this first. OK goes on with the lines on screen and takes the rest out of the
+// selection; Cancel changes nothing; with none on screen nothing is done. A row the desk holds in place after a tick counts as on
+// screen (_invHeldShown). DOM-free but for the alert and the confirm.
+function _invPicksOffScreen(jobId) {
+  var job = _invJob(jobId);
+  if (!job || typeof _invMatchesFilter !== 'function') return [];
+  return _invPicked(jobId).filter(function(r) { return !_invMatchesFilter(r, job) || !!_invFold[r.disposition || '']; });
+}
+function _invAskOffScreen(jobId) {
+  var off = _invPicksOffScreen(jobId);
+  if (!off.length) return true;
+  var all = _invPicked(jobId).length, on = all - off.length;
+  var list = off.slice(0, 6).map(function(r) { return '#' + _invItemNo(r) + ' ' + (String(r.objectName || '').trim() || '(unnamed)'); }).join(', ')
+    + (off.length > 6 ? ' and ' + (off.length - 6) + ' more' : '');
+  var where = '(in a folded group, or hidden by the filters on screen)';
+  if (!on) {
+    alert('None of the ' + all + ' selected line' + (all === 1 ? ' is' : 's is') + ' on screen ' + where + ': ' + list
+      + '. Nothing was changed. Clear filters or open the group to see ' + (all === 1 ? 'it' : 'them') + ', or Clear the selection.');
+    return false;
+  }
+  if (!window.confirm(off.length + ' of the ' + all + ' selected lines ' + (off.length === 1 ? 'is' : 'are') + ' not on screen ' + where + ':\n\n  ' + list
+      + '\n\nOK goes on with the ' + on + ' on screen and takes ' + (off.length === 1 ? 'that one' : 'those') + ' out of the selection. Cancel changes nothing.')) return false;
+  off.forEach(function(r) { delete _invPick[r.stableId]; });
+  return true;
+}
+// After a bulk action (P9): the selection goes, the bar keeps saying what was done until a new pick, a filter change or OK.
+function _invBulkDone(jobId, what, hidden) {
+  _invPick = {};
+  _invBulkLast = { msg: what, hidden: !!hidden, done: true, job: jobId };
+}
+function _invBulkDismiss() { _invBulkLast = null; renderInventoryTab(); }
 function _invTogglePick(stableId, el) {
   if (el && el.checked) _invPick[stableId] = 1; else delete _invPick[stableId];
   _invBulkLast = null;   // the confirmation described a different selection
   renderInventoryTab();
 }
+// ⚠ NEVER A PHOTOGRAPH AGENT ONE FOUND NOTHING IN (P9, 2026-10-28; EST-09): Select all then Donate put a blank line on the trustees'
+// request (*8 — · Dining Room 1 — Donate Goodwill Palm Beach*) and counted it among the items donated. They are left out, except
+// under their own chip, where Select all picks the pile on screen. A tick on the row still picks one.
 function _invPickGroup(jobId, key, on) {
   var job = _invJob(jobId);
   _invAssignItemNos(jobId).forEach(function(r){
     if ((r.disposition || '') !== key) return;
     if (!_invMatchesFilter(r, job)) return;
+    if (on && invLineNothingToList(r) && _invFilter.flag !== 'nothing') return;
     if (on) _invPick[r.stableId] = 1; else delete _invPick[r.stableId];
   });
   renderInventoryTab();
 }
-function _invClearPicks() { _invPick = {}; renderInventoryTab(); }
+function _invClearPicks() { _invPick = {}; _invBulkLast = null; renderInventoryTab(); }
 // "for a Art Appraiser" reads as a typo on a confirmation somebody trusts. Vowel test only —
 // the appraiser names are a closed list and none of them is an "hour"-shaped exception.
 function _anArticle(w) { return /^[aeiou]/i.test(String(w || '')) ? 'an' : 'a'; }
 
+// The lines Mark reviewed left alone for want of a name (P9), and what settles each: a name, or the work bar's one press where Agent
+// One found nothing in the photograph.
+function _invNoNameLeftText(rs) {
+  if (!rs || !rs.length) return '';
+  var n = rs.length, nothing = rs.filter(invLineNothingToList).length;
+  return n + (n === 1 ? ' has' : ' have') + ' no name, so ' + (n === 1 ? 'it was' : 'they were') + ' left alone: '
+    + rs.slice(0, 8).map(function(r) { return '#' + _invItemNo(r); }).join(', ') + (n > 8 ? ' and ' + (n - 8) + ' more' : '') + '. '
+    + (nothing ? 'Name ' + (n === 1 ? 'it' : 'each') + ', or take the ' + (nothing === 1 ? 'one' : nothing) + ' Agent One found nothing in off with Remove the '
+        + nothing + ' with nothing to list, on the Inventory Review bar.'
+      : 'Name ' + (n === 1 ? 'it' : 'each') + ' first: a tick does not settle a line with no name.');
+}
 function _invBulkApply(jobId, key, value, read) {
-  var picked = _invPicked(jobId);
+  var picked = _invPickedAsked(jobId, read);
   if (!picked.length) return;
   // The placeholder is not a value. Selecting it must not blank the field on forty items.
   if (key !== 'reviewed' && (value === '' || value == null)) return;
@@ -40480,15 +40700,17 @@ function _invBulkApply(jobId, key, value, read) {
     alert(INV_APPRAISAL_BULK_TXT + ' Nothing was changed.');
     return;
   }
+  // Selected lines not on screen are asked about first (P9, LIV-02); Cancel puts the bar back as it was.
+  if (!read && typeof _invAskOffScreen === 'function' && !_invAskOffScreen(jobId)) { renderInventoryTab(); return; }
   // ⚠ THE SHEET FIRST (P6, SYN-01): a sweep across a selection writes every picked line whole, so off an old copy it put back
   // what another device had changed on each of them. It reads the sheet, then sweeps the lines as the sheet holds them; a line
   // removed on another device meanwhile is left alone and said.
-  var _asked = read ? null : picked.map(function(r) { return r.stableId; });
+  var _asked = read ? null : _invPicked(jobId).map(function(r) { return r.stableId; });   // after the ask over picks off screen
   // Keyed on the field and what it sets (P6's review): a second sweep pressed while the first one's read is out goes after it.
   if (!read && typeof invReadFirst === 'function' && invReadFirst(jobId, key === 'reviewed' ? 'Mark reviewed' : 'The change across the selection',
       function (diff) { diff.asked = _asked; _invBulkApply(jobId, key, value, diff); }, { key: 'bulk|' + key + '|' + String(value) })) return;
   var _readGone = read ? invReadGone(read, read.asked) : 0;
-  picked = _invPicked(jobId);
+  picked = _invPickedAsked(jobId, read);
   if (!picked.length) { var _none = invReadGoneText(_readGone) || 'Nothing selected.'; showSyncBadge(_none); return; }
   var job = _invJob(jobId);
   // ⚠ THE HANDLER ASKS WHAT THE BAR ASKS (P16): a field this job does not show is not written from here.
@@ -40557,6 +40779,22 @@ function _invBulkApply(jobId, key, value, read) {
           + '\n\nOK makes the change. Cancel changes nothing.')) return;
     }
   }
+  // ⚠⚠ MARK REVIEWED LEAVES A LINE WITH NO NAME ALONE (P9 of the desk audit, 2026-10-28; ROW-01, NEW-01, AGT-01). Since the flagged-
+  // only build a tick cannot settle an unnamed line (INV_OPEN_HOLDS), yet the sweep still wrote that stuck tick onto every blank line
+  // in the selection, and with it a too-dark frame's note left the list above the rows (agentNoticeQuiet read the tick) while the
+  // line stayed open. Nothing is written on them now, not even the clock, and the confirmation names them with what settles each.
+  var _noName = [];
+  if (key === 'reviewed') {
+    _noName = picked.filter(function(r) { return !String(r.objectName || '').trim(); });
+    picked = picked.filter(function(r) { return !!String(r.objectName || '').trim(); });
+    if (!picked.length) {
+      var _nn = _invNoNameLeftText(_noName) + ' Nothing was marked reviewed.';
+      _invBulkDone(jobId, _nn, false);
+      showSyncBadge(_nn, true);
+      renderInventoryTab();
+      return;
+    }
+  }
   var what = '';
   var _leftover = [];   // lines moved off To a person still naming the person (P22)
   var _faSettled = [];  // lines filed as firearms here that lost what a firearm may not have (P4)
@@ -40622,7 +40860,9 @@ function _invBulkApply(jobId, key, value, read) {
       .concat(_rv.twoNoted).filter(function(r) { if (_seen[r.stableId]) return false; _seen[r.stableId] = 1; return true; });
     if (_rv.unsure.length) what += ' \u26a0 ' + _rv.unsure.length + ' of them ' + (_rv.unsure.length > 1 ? 'were' : 'was') + ' marked unsure: ' + _list(_rv.unsure) + '.';
     if (_rv.noted.length) what += ' ' + _rv.noted.length + ' carried an agent\u2019s note, now off the list (still in each record): ' + _list(_rv.noted) + '.';
-    if (_open.length) what += ' \u26a0 ' + _open.length + ' stay' + (_open.length > 1 ? '' : 's') + ' open: a tick does not settle an unnamed line or a possible duplicate (name it, or Remove or Not duplicates under Possible duplicates): ' + _list(_open) + '.';
+    // Unnamed lines are no longer ticked (P9, above), so what stays open here is a possible duplicate.
+    if (_open.length) what += ' \u26a0 ' + _open.length + ' stay' + (_open.length > 1 ? '' : 's') + ' open: a tick does not settle a possible duplicate (Remove or Not duplicates, under Possible duplicates): ' + _list(_open) + '.';
+    if (_noName.length) what += ' ' + _invNoNameLeftText(_noName);
     if (_rv.landing) what += ' Agent Two is still valuing lines on this job: a figure that lands on one of these after this tick is not covered by it.';
   }
   if (key === 'disposition')       what = value + ' set on ' + items + ' \u2014 they are now under the ' + value + ' section.';
@@ -40684,19 +40924,34 @@ function _invBulkApply(jobId, key, value, read) {
   // An item that no longer matches the filters on screen has just vanished from the list.
   // Saying so is the difference between "it worked" and "nothing happened".
   var hidden = picked.some(function(r){ return !_invMatchesFilter(r, job); });
-  _invBulkLast = { msg: what, hidden: hidden };
+  // ⚠⚠ AND THE SELECTION GOES WITH IT (P9 of the desk audit, 2026-10-28; LIV-02): after Mark reviewed on Move the bar still read
+  // "12 selected", and a three-line cleanup under another chip removed all twelve. The bar keeps the confirmation until a new pick.
+  _invBulkDone(jobId, what, hidden);
   showSyncBadge(what);
   renderInventoryTab();
 }
 
 // ── Filter / fold plumbing ────────────────────────────────────────────────────
-function setInvWhen(v)  { _invFilter.when = v; renderInventoryTab(); }
-function setInvRoom(v)  { _invFilter.room = v; renderInventoryTab(); }
-function setInvQuery(v) { _invFilter.q = String(v || '').trim(); renderInventoryTab(); }
+// ⚠⚠ A FILTER CHANGED CLEARS THE SELECTION (P9 of the desk audit, 2026-10-28; LIV-02): picks made under one view stayed picked out
+// of sight under the next, and Remove lines took them. The rows held in place after a tick go with the view they were held in
+// (_invHeld), and the bar's last confirmation with them.
+function _invFilterChanged() { _invPick = {}; _invBulkLast = null; _invHeld = {}; }
+function setInvWhen(v)  { _invFilter.when = v; _invFilterChanged(); renderInventoryTab(); }
+function setInvRoom(v)  { _invFilter.room = v; _invFilterChanged(); renderInventoryTab({ morph: true }); }
+// The search keeps what was typed, spaces and all, in its box (_invQRaw, P9: the box was redrawn from the trimmed filter, so a
+// space typed between two words was lost), and the filter reads it trimmed. A search that filters nothing new clears nothing.
+var _invQRaw = '';
+function setInvQuery(v) {
+  var raw = String(v == null ? '' : v), q = raw.trim(), moved = q !== _invFilter.q;
+  _invQRaw = raw;
+  _invFilter.q = q;
+  if (moved) _invFilterChanged();
+  renderInventoryTab({ morph: true });   // in place: the box keeps its focus and the iPad's keyboard (_invPatch)
+}
 // ⚠ A Needs you chip counts the whole job, so pressing one shows the whole job (2026-10-22): When goes to All with it. Under
 // Today, "No value yet 32" filtered the rows to 24 with nothing saying why. Pressing it off leaves When as it is.
-function setInvFlag(v)  { _invFilter.flag = (_invFilter.flag === v) ? '' : v; if (_invFilter.flag) _invFilter.when = 'all'; renderInventoryTab(); }
-function invClearFilters() { _invFilter = { when:'all', room:'', q:'', flag:'' }; renderInventoryTab(); }
+function setInvFlag(v)  { _invFilter.flag = (_invFilter.flag === v) ? '' : v; if (_invFilter.flag) _invFilter.when = 'all'; _invFilterChanged(); renderInventoryTab(); }
+function invClearFilters() { _invFilter = { when:'all', room:'', q:'', flag:'' }; _invQRaw = ''; _invFilterChanged(); renderInventoryTab(); }
 function _invToggleFold(k) { if (_invFold[k]) delete _invFold[k]; else _invFold[k] = 1; renderInventoryTab(); }
 function _invToggleOpen(id) { if (_invOpen[id]) delete _invOpen[id]; else _invOpen[id] = 1; renderInventoryTab(); }
 // ⚠⚠ SHOW THE ITEM (2026-10-22). A notice above the rows names its line by number, and the reader had to find #31 by
@@ -40783,9 +41038,12 @@ function _agFailureKind(why) {
 // socks, packaging, a bare surface), and it was sent again on every Name N shots, never letting *Unnamed shots* reach zero and
 // looking exactly like a photograph never read. The row says *nothing to list*; a blank line added to that photograph later carries
 // no stamp, so it is still sent (with the lines already listed off it).
+// ⚠ NOR ONE IT COULD NOT READ (P9, 2026-10-28; AGT-02): an empty answer that carried a note (a frame too dark to name) is stamped
+// `'unread'`, and sending the same photograph again gets the same answer. A close-up added to the line takes the stamp off
+// (invCloseUpLanded), so Name shots then reads the photograph again with it.
 function agentNameableRefs(jobId) {
   return _jobInvRefs(jobId).filter(function(r) {
-    return !r.objectName && !r.deletedAt && _invFileId(r) && r.agentConf !== 'none';
+    return !r.objectName && !r.deletedAt && _invFileId(r) && r.agentConf !== 'none' && r.agentConf !== 'unread';
   });
 }
 
@@ -40922,11 +41180,18 @@ function agentApplyResult(jobId, group, result) {
     // ⚠ THE ROWS IT WAS ASKED ABOUT (2026-10-24), never the photograph's own line as such: with lines already listed off
     // the photograph (agentListedOff) an empty answer means *nothing else in it*, and the photograph's line may be one of
     // those, named, which an empty stamp must not touch.
+    // ⚠⚠ AN EMPTY ANSWER THAT CARRIES A NOTE IS NOT "NOTHING TO LIST" (P9 of the desk audit, 2026-10-28; AGT-02). Agent One's prompt
+    // sends a frame too dark or blurred to name to a kind "other" note and never guesses at an object it cannot see, so its answer
+    // is no objects and *too dark to tell what is on the shelf: photograph it again*. Stamped 'none', the row read *nothing to list*
+    // and advised Remove line, and the note went with the line. Stamped 'unread', the row reads *could not be read: <the note>* with
+    // + Close-up beside it (invLineUnread), and no press sweeps it away. Any note counts: a Firearm or a Must find raised over a
+    // frame with nothing listed must never leave the list with a one-press removal.
+    var _unread = notices.length > 0;
     group.rows.forEach(function(id) {
       var only = _getPhotoRef(jobId, id);
-      if (only && !String(only.objectName || '').trim()) { only.agentAt = Date.now(); only.agentConf = 'none'; _setPhotoRef(jobId, _invTouch(only)); }
+      if (only && !String(only.objectName || '').trim()) { only.agentAt = Date.now(); only.agentConf = _unread ? 'unread' : 'none'; _setPhotoRef(jobId, _invTouch(only)); }
     });
-    st.empty++;
+    if (_unread) st.unread = (st.unread || 0) + 1; else st.empty++;
     return;
   }
 
@@ -41005,7 +41270,7 @@ function agentNameShots(jobId, read) {
              + (leftText ? '\n\nThe sheet was read first: ' + leftText + '.' : ''))) return;
 
   st.running = true; st.total = groups.length; st.done = 0;
-  st.named = 0; st.split = 0; st.empty = 0; st.failed = 0; st.skipped = 0; st.again = 0; st.failures = {}; st.error = '';
+  st.named = 0; st.split = 0; st.empty = 0; st.unread = 0; st.failed = 0; st.skipped = 0; st.again = 0; st.failures = {}; st.error = '';
   st.leftAlone = leftText; st.handOff = '';
   _agRepaint(jobId);
   _agSendNext(jobId, job, groups, 0);
@@ -41102,6 +41367,8 @@ function _agStateHtml(jobId) {
   if (st.handOff) bits.push(st.handOff);       // P6: the hand-off's read did not land
   if (st.split)  bits.push(st.split + ' extra line' + (st.split === 1 ? '' : 's') + ' from split frames');
   if (st.empty)  bits.push(st.empty + ' with nothing in frame');
+  // A photograph read but not readable (P9, AGT-02): its row says why, with + Close-up.
+  if (st.unread) bits.push(st.unread + ' not named: Agent One left a note instead (its row says why: add a close-up, or type a name)');
   if (st.skipped) bits.push(st.skipped + ' left alone: named on the desk meanwhile'
     + (st.again ? ' (press Name shots for what else ' + (st.again > 1 ? 'those photographs show' : 'that photograph shows') + ')' : ''));
   if (st.failed) {
@@ -41135,10 +41402,14 @@ var AGENT_NOTICE_KINDS = [
 // ⚠ A LOOK AT THIS GOES QUIET WHEN EVERY LINE OFF ITS PHOTOGRAPH IS REVIEWED (2026-10-26, Q90 refined): Agent One stores a
 // photograph's notes on the photograph's own line, whichever object they are about, and ticking that line quieted a note about the
 // third thing in the frame before anybody had looked at it. With no job to find the photograph by, the line alone, as before.
+// ⚠ AND A LINE WITH NO NAME HAS HAD NO LOOK, WHATEVER ITS TICK (P9 of the desk audit, 2026-10-28; AGT-01, AGT-02): a tick cannot
+// settle an unnamed line (INV_OPEN_HOLDS), yet one on a too-dark frame took its *photograph it again* off the list while the line
+// stayed open. Read without the job-wide context (a person's look, never the rule's standing), so the name is asked here.
 function agentNoticeQuiet(kind, ref, job) {
   if (kind === 'other') {
+    var looked = function(r) { return invLineReviewed(r) && !!String((r && r.objectName) || '').trim(); };
     var sib = (job && job.id != null) ? _invPhotoSiblings(job.id, ref) : [];
-    return sib.length ? sib.every(function(r) { return invLineReviewed(r); }) : invLineReviewed(ref);   // a person's look (every() hands an index)
+    return sib.length ? sib.every(function(r) { return looked(r); }) : looked(ref);   // a person's look (every() hands an index)
   }
   if (kind === 'mustfind') return mustFindAllFound(job);
   return false;
@@ -42399,15 +42670,16 @@ function agentRevalue(jobId, stableId, read) {
 // own depth (agentValueMode, no _avForceComps): forty everyday lots are not forty researches. A line with no figure yet is valued
 // as Value N lines would; a reviewed line's tick does not cover the new figure, and the confirm says how many.
 function invBulkRevalue(jobId, read) {
-  var job = _invJob(jobId), lines = _invPicked(jobId);
+  var job = _invJob(jobId), lines = _invPickedAsked(jobId, read);
   if (!job || !lines.length) return false;
   if (!SHEETS_SYNC_URL) { alert('This device has no Apps Script URL set, so it cannot reach the valuing service. Settings > Sync.'); return false; }
   if (_avState(jobId).running) { alert('Agent Two is already valuing lines on this job. Wait for it to finish, then try again.'); return false; }
+  if (!read && typeof _invAskOffScreen === 'function' && !_invAskOffScreen(jobId)) { renderInventoryTab(); return false; }   // P9, LIV-02
   // The sheet first (P6): the selection as the sheet holds it, a line removed on another device left alone and said.
-  var asked = read ? null : lines.map(function(r) { return r.stableId; });
+  var asked = read ? null : _invPicked(jobId).map(function(r) { return r.stableId; });   // after the ask over picks off screen
   if (!read && typeof invReadFirst === 'function' && invReadFirst(jobId, 'Re-value', function (diff) { diff.asked = asked; invBulkRevalue(jobId, diff); }, { key: 'Re-value|selection' })) return true;
   var _gone = read ? invReadGone(read, read.asked) : 0;
-  lines = _invPicked(jobId);
+  lines = _invPickedAsked(jobId, read);
   if (!lines.length) { alert('Nothing to value again in this selection. ' + invReadGoneText(_gone)); return false; }
   var theirs = lines.filter(function(r) { return _avHasFigure(r) && r.valuedBy !== 'agent'; });
   var unnamed = lines.filter(function(r) { return theirs.indexOf(r) < 0 && !String(r.objectName || '').trim(); });
@@ -43194,6 +43466,7 @@ function _renderInvWorkbar(job, all) {
           + ' &mdash; they are never withheld.</div>'
         : '')
     + _invListReadHtml(job, st)
+    + _invNothingLineHtml(job, all)
     + '<div id="inv-agent-state" style="font-size:10.5px;margin-top:7px;">' + _agStateHtml(jid) + '</div>'
     + '<div id="inv-room-state" style="font-size:10.5px;margin-top:4px;">' + _arStateHtml(jid) + '</div>'
     + '<div id="inv-value-state" style="font-size:10.5px;margin-top:4px;">' + _avStateHtml(jid) + '</div>'
@@ -43230,6 +43503,7 @@ function _renderInvFlagStrip(job, all) {
     var n = all.filter(function(r){ return f.test(r, job); }).length;
     var on = _invFilter.flag === f.key;
     var dim = (n === 0 && !on);
+    if (dim && f.hideAtZero) return '';   // a cleanup pile shows only while it holds something (P9: Nothing to list)
     return '<button class="btn-s" onclick="setInvFlag(\'' + f.key + '\')" style="font-size:10.5px;'
       + (on ? 'background:var(--gray-dk);color:var(--cream);border-color:var(--gray-dk);' : (dim ? 'opacity:.45;' : ''))
       + '">' + esc(f.label) + ' <strong>' + n + '</strong></button>';
@@ -43258,8 +43532,9 @@ function _renderInvFilterRow(job, all) {
   var active = _invFilter.when !== 'all' || _invFilter.room !== '' || _invFilter.q || _invFilter.flag;
   return '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:10px;">'
     + wb
-    + '<select onchange="setInvRoom(this.value)" style="font-size:11px;padding:3px 5px;max-width:200px;">' + roomOpts + '</select>'
-    + '<input type="search" placeholder="Search items…" value="' + esc(_invFilter.q) + '" '
+    + '<select id="inv-room-pick" onchange="setInvRoom(this.value)" style="font-size:11px;padding:3px 5px;max-width:200px;">' + roomOpts + '</select>'
+    // What was typed, spaces and all, while it is the search on screen (P9, ROW-03: a trailing space was trimmed off under the caret).
+    + '<input type="search" placeholder="Search items…" value="' + esc(String(_invQRaw).trim() === _invFilter.q ? _invQRaw : _invFilter.q) + '" '
       + 'oninput="clearTimeout(window._invQT);window._invQT=setTimeout(function(){setInvQuery(document.getElementById(\'inv-q\').value);},250)" '
       + 'id="inv-q" style="font-size:11px;padding:3px 6px;flex:1;min-width:140px;max-width:260px;">'
     + (active ? '<button class="btn-s" onclick="invClearFilters()" style="font-size:10.5px;">Clear filters</button>' : '')
@@ -43378,19 +43653,23 @@ function _invRecipientInput(jid, ref, job) {
 function _invReviewRepaint(jobId, ref) {
   var job = _invJob(jobId), rb = document.getElementById('inv-rev-' + ref.stableId);
   if (!job || !rb) return false;
-  rb.outerHTML = _invRevBoxHtml(jobId, ref);
+  // In place (P9, SYN-12): the box ticked straight after typing a name is the box that takes the tick, and the work bar's buttons
+  // are the buttons pressed.
+  _invPatch(rb, _invRevBoxHtml(jobId, ref));
   var items = _invAssignItemNos(jobId).filter(function(r) { return _invMatchesFilter(r, job); });
   _invGroupItems(job, items).forEach(function(g) {
     if (!g.items.some(function(r) { return r.stableId === ref.stableId; })) return;
     var head = document.getElementById(_invGroupHeadDomId(g.key));
-    if (head) head.outerHTML = _renderInvGroupHead(job, g);
+    if (head) _invPatch(head, _renderInvGroupHead(job, g));
   });
   var wb = document.getElementById('inv-workbar');
-  if (wb) wb.outerHTML = _renderInvWorkbar(job, _jobInvRefs(jobId));
+  if (wb) _invPatch(wb, _renderInvWorkbar(job, _jobInvRefs(jobId)));
   return true;
 }
 function _invRevBoxHtml(jid, ref, fc) {
   fc = fc || _invAcceptCtxOf(_invJob(jid));
+  // A row held in place after a tick (P9, ROW-08) takes no second press: a double tap lands on a shut box, never on the next line.
+  var held = typeof _invHeldShown === 'function' && _invHeldShown(ref, _invJob(jid));
   var rev = invLineReviewed(ref, fc), only = invLineAcceptedOnly(ref, fc), holds = rev ? [] : _invLineHolds(ref, fc, true);
   var open = holds.filter(function(k) { return !!INV_OPEN_HOLDS[k]; }), rest = holds.filter(function(k) { return !INV_OPEN_HOLDS[k]; });
   var words = function(ks) { return ks.map(function(k) { return INV_HOLD_WORDS[k]; }).filter(Boolean).join('; '); };
@@ -43413,7 +43692,7 @@ function _invRevBoxHtml(jid, ref, fc) {
         + 'title="' + title + '">'
         // A line reviewed by a person's own act (a name and a destination typed, a figure typed) reads ticked and cannot be
         // unticked: it is not a tick.
-        + '<input type="checkbox"' + (rev || stuck ? ' checked' : '') + (rev && !ref.reviewed && !only ? ' disabled' : '')
+        + '<input type="checkbox"' + (rev || stuck ? ' checked' : '') + ((rev && !ref.reviewed && !only) || held ? ' disabled' : '')
         + ' onchange="_invSetReviewed(' + jid + ',\'' + ref.stableId + '\',' + (only ? 'true' : 'this.checked') + ')" '
         + 'style="width:14px;height:14px;cursor:pointer;accent-color:' + (only ? 'var(--gray)' : stuck ? 'var(--bronze)' : 'var(--ok-tx)') + ';">Reviewed</label>';
 }
@@ -43422,6 +43701,9 @@ function _renderInvRow(job, ref) {
   var sid = ref.stableId;
   var open = !!_invOpen[sid];
   var picked = !!_invPick[sid];
+  // Ticked under Not reviewed or Unsure, held in place (P9, ROW-08). (typeof: a pinned sandbox lifts the row without the held
+  // rows' session state; the browser always has them.)
+  var held = typeof _invHeldShown === 'function' && _invHeldShown(ref, job);
   var fmvCol  = INVENTORY_COLUMNS.filter(function(c){ return c.key === 'fmv'; })[0];
   var dispCol = INVENTORY_COLUMNS.filter(function(c){ return c.key === 'disposition'; })[0];
   var warn = [];
@@ -43542,8 +43824,17 @@ function _renderInvRow(job, ref) {
   }
   // ⚠ AGENT ONE READ THIS PHOTOGRAPH AND FOUND NOTHING (MORE) IN IT (2026-10-26): told apart from a photograph never read. Remove line
   // takes the line off and keeps the photograph as the record (the room's bin would delete it from Drive).
-  if (!String(ref.objectName || '').trim() && ref.agentConf === 'none') {
-    warn.push('<span class="inv-empty-shot" title="Agent One read this photograph and found nothing (more) in it to put on the inventory: a surface, packaging, or things that are not inventory. Remove line takes the line off and keeps the photograph; type a name if something is there." style="color:var(--gray-dk);">nothing to list</span>');
+  // ⚠ AND ALL OF THEM GO IN ONE PRESS (P9, 2026-10-28): the Nothing to list chip gathers them and the work bar's Remove the N with
+  // nothing to list takes them off, the photographs kept.
+  if (invLineNothingToList(ref)) {
+    warn.push('<span class="inv-empty-shot" title="Agent One read this photograph and found nothing (more) in it to put on the inventory: a surface, packaging, or things that are not inventory. Remove the N with nothing to list, on the Inventory Review bar, takes them all off and keeps the photographs; type a name if something is there." style="color:var(--gray-dk);">nothing to list</span>');
+  }
+  // ⚠ A PHOTOGRAPH AGENT ONE COULD NOT READ SAYS WHY, AND OFFERS THE REMEDY (P9, AGT-02): its note in bronze (a frame too dark to
+  // name), and + Close-up on the row while the record is shut (the record carries its own: no control twice). Never Remove advice.
+  if (invLineUnread(ref)) {
+    var _unN = agentUnreadNote(jid, ref);
+    warn.push('<span class="inv-unread-shot" title="Agent One could not tell what is in this photograph and left a note instead of a name. Add a close-up (Name shots then reads the photograph again with it), or type the name." style="color:var(--bronze);font-weight:700;">could not be read' + (_unN ? ': ' + esc(_unN) : '') + '</span>'
+      + (open || invCloseUpRefusal(ref) ? '' : ' ' + _invCloseUpAddHtml(jid, ref)));
   }
   // ⚠ AGENT TWO'S ROW BADGES (P23): made for an earlier name, internal, worth a specialist, or not valued and why.
   _avRowBadges(job, ref).forEach(function(b){ warn.push(b); });
@@ -43572,7 +43863,7 @@ function _renderInvRow(job, ref) {
     + (sibs.length > 1 ? ' &middot; <span title="This photograph carries ' + sibs.length
         + ' inventory lines" style="color:var(--bronze);">&#128279; 1 of ' + sibs.length
         + ' in this photo</span>' : '');
-  return '<div id="' + esc(_invRowDomId(sid)) + '" style="border-bottom:1px solid var(--border);background:' + (picked ? 'var(--cream)' : 'transparent') + ';">'
+  return '<div id="' + esc(_invRowDomId(sid)) + '"' + (held ? ' class="inv-row-held"' : '') + ' style="border-bottom:1px solid var(--border);background:' + (held ? '#f1eee8' : picked ? 'var(--cream)' : 'transparent') + ';">'
     // ⚠ COLUMNS UNDER THE GROUP'S HEADINGS (2026-10-24): each box sits in the column class _renderInvColHead heads, and on
     // a phone names itself (data-cap). Photo · # · Item · Qty · Value · Where it goes · Who takes it · Reviewed · ▾.
     + '<div class="inv-row-main">'
@@ -43613,6 +43904,11 @@ function _renderInvRow(job, ref) {
         + (warn.length ? ' &middot; ' + warn.join(' ') : '') + '</div>'
         // The spoken note runs to two lines before it is cut (it was one), the whole of it on hover and in the record.
         + (ref.fieldNote ? '<div class="inv-note" title="' + esc(ref.fieldNote) + '">&#127908; ' + esc(ref.fieldNote) + '</div>' : '')
+        // Held after a tick (P9): what was done, and its undo, beside the name and away from the box a second tap would land on.
+        + (held ? '<div class="inv-held-line" style="font-size:10.5px;color:var(--ok-tx);margin-top:2px;">&#10003; Reviewed'
+            + (ref.reviewedBy ? ' by ' + esc(ref.reviewedBy) : '') + ' &middot; '
+            + '<button class="btn-s inv-held-undo" onclick="_invUndoHeld(' + jid + ',\'' + sid + '\')" style="font-size:10px;padding:1px 7px;">Undo</button>'
+            + ' <span style="color:var(--gray);">it leaves this view when the view changes</span></div>' : '')
       + '</div>'
       // ⚠ HOW MANY, ON THE ROW (2026-10-24; Anthony: "the number of items viewable at the headline level … so if it counts
       // things wrong, we can quickly update it"). Agent One writes a count above one; a line with none is one, as every
@@ -43690,7 +43986,7 @@ function _renderInvColHead(job, g) {
 // column switcher. One definition of a column, two surfaces.
 function _renderInvPanel(job, ref) {
   var jid = job.id;
-  var cols = _invPanelCols(job);
+  var cols = _invPanelColsFor(job, ref);   // one box per value (P9, ROW-05)
   var secs = INV_PANEL_SECTIONS.map(function(sec){
     var mine = cols.filter(function(c){ return _invPanelSection(c) === sec.key; });
     if (!mine.length) return '';
@@ -43739,10 +44035,7 @@ function _renderInvPanel(job, ref) {
                         + '&#10133; Another item in this photo</button>')
         // ⚠ A CLOSE-UP AFTER THE FACT (2026-10-24): one of THIS line, from the iPad's camera or a photograph already taken.
         // Offered wherever the line has a photograph to be a close-up of (invCloseUpRefusal, asked again by the handler).
-        + (invCloseUpRefusal(ref) ? ''
-            : '<label class="btn-s inv-cu-add" title="A close-up of this item: the back, a mark, a label. It is filed with this line and never adds one">'
-              + '<input type="file" accept="image/*" style="display:none;" onchange="invAddCloseUp(' + jid + ',\'' + ref.stableId + '\',this)">'
-              + '&#10133; Close-up</label>')
+        + (invCloseUpRefusal(ref) ? '' : _invCloseUpAddHtml(jid, ref))
         // ⚠ ONE REMOVE FOR EVERY LINE (P16): typed, photographed or split. It takes the LINE, never
         // the photograph — the room's 🗑 is the only thing that deletes an image.
         + '<button class="btn-s" onclick="invRemoveLine(' + jid + ',\'' + ref.stableId + '\')" style="color:#c0392b;" '
@@ -43918,6 +44211,20 @@ function toggleInvBulk(jobId) {
 }
 function _renderInvBulk(job) {
   var picked = _invPicked(job.id);
+  // ⚠ A BULK ACTION CLEARS THE SELECTION AND THE BAR SAYS WHAT IT DID (P9, 2026-10-28; LIV-02): what Mark reviewed swept past runs
+  // to three sentences, and the toast goes in four seconds. One line and an OK, at the foot where the bar was, until a new pick, a
+  // filter change, Clear or OK.
+  if (!picked.length && _invBulkLast && _invBulkLast.done && _invBulkLast.job === job.id) {
+    delete _invBulkOpen[job.id];   // the next selection starts as one line on a phone
+    return '<div class="inv-bulk inv-bulk-done" id="inv-bulk-' + job.id + '" style="position:sticky;bottom:0;z-index:40;background:var(--gray-dk);color:var(--cream);'
+      + 'border-radius:6px;padding:9px 12px;margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;box-shadow:0 -2px 14px rgba(0,0,0,.15);">'
+      + '<div class="inv-bulk-res" style="flex:1 1 260px;min-width:0;font-size:11px;font-weight:400;color:var(--cream);opacity:.9;">'
+      + '&#10003; ' + esc(_invBulkLast.msg)
+      + (_invBulkLast.hidden ? ' <span style="opacity:.8;">They no longer match the filters on screen &mdash; press <strong>Clear filters</strong> to see them.</span>' : '')
+      + ' <span style="opacity:.8;">The selection is cleared.</span></div>'
+      + '<button class="inv-bulk-clear" onclick="_invBulkDismiss()" style="font-size:11px;padding:5px 12px;border-radius:4px;border:1px solid var(--cream);'
+      + 'background:none;color:var(--cream);font-weight:600;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;font-family:Raleway,sans-serif;">OK</button></div>';
+  }
   // The selection emptied (Clear, or the last line unticked): the next one starts as one line on a phone.
   if (!picked.length) { _invBulkLast = null; delete _invBulkOpen[job.id]; return ''; }
   var jid = job.id;
@@ -44011,9 +44318,70 @@ function _invApplyWhenDefault(jobId, all) {
   if (_invWhenJob === jobId) return;
   _invWhenJob = jobId;
   _invFilter = { when: _invCapturedToday(all) ? 'today' : 'all', room: '', q: '', flag: '' };
+  _invQRaw = ''; _invHeld = {};   // P9: the search box's own text, and the rows held after a tick, are this desk's
 }
 
-function renderInventoryTab() {
+// ⚠⚠ A REPAINT IN PLACE, NEVER UNDER THE POINTER (P9 of the desk audit, 2026-10-28; SYN-12, ROW-03). A box's change fires on the
+// mousedown that leaves it, and the desk then repainted by id the very controls a person reaches for next: the Needs you chips, the
+// work bar (once or twice per name or figure since the list's read, Q107), the Releases card, the row's Reviewed box. The element
+// under the pointer was replaced before the mouseup, so the press did nothing (typing a Total and pressing *No value yet*, *Estate
+// Inventory PDF* or *✓ I've read the list*, the first press lost, every time). And the search box was rewritten 250 ms after each
+// key, so on the iPad the keyboard closed and only the first letter stayed. `_invPatch(el, html, inner)` puts the new markup on
+// screen by changing only what differs: an element at the same place, with the same tag and the same id, is kept and its attributes,
+// text and state brought up to date; anything else is replaced. So a button keeps being the button the person is pressing, a box
+// keeps its focus and its keyboard, and what it shows is what the markup says (a focused box keeps what is typed in it). `inner`
+// patches the element's children (an innerHTML repaint), else the element itself (an outerHTML one). Where the page cannot parse a
+// <template> (the tests' DOM stub) it assigns as before, so a repaint reads the same either way.
+function _invPatch(el, html, inner) {
+  if (!el) return false;
+  html = String(html == null ? '' : html);
+  var tpl = null;
+  try { tpl = (typeof document !== 'undefined' && document.createElement) ? document.createElement('template') : null; } catch (e) { tpl = null; }
+  var can = !!(tpl && tpl.content && typeof tpl.content.childNodes !== 'undefined' && el.childNodes && el.attributes && typeof el.replaceChild === 'function');
+  if (!can) { if (inner) el.innerHTML = html; else el.outerHTML = html; return true; }
+  tpl.innerHTML = html;
+  var frag = tpl.content;
+  if (inner) { _invMorphKids(el, frag); return true; }
+  var kids = Array.prototype.filter.call(frag.childNodes, function(n) { return !(n.nodeType === 3 && !/\S/.test(n.nodeValue)); });
+  var one = kids.length === 1 && kids[0].nodeType === 1 ? kids[0] : null;
+  if (!one || one.tagName !== el.tagName) { el.outerHTML = html; return true; }
+  _invMorphNode(el, one);
+  return true;
+}
+function _invMorphNode(a, b) {
+  var i, att, active = (typeof document !== 'undefined') ? document.activeElement : null;
+  for (i = a.attributes.length - 1; i >= 0; i--) { att = a.attributes[i]; if (!b.hasAttribute(att.name)) a.removeAttribute(att.name); }
+  for (i = 0; i < b.attributes.length; i++) { att = b.attributes[i]; if (a.getAttribute(att.name) !== att.value) a.setAttribute(att.name, att.value); }
+  var tag = a.tagName;
+  if (tag === 'INPUT') {
+    var ty = String(a.type || '').toLowerCase();
+    if (ty === 'checkbox' || ty === 'radio') a.checked = b.hasAttribute('checked');
+    else if (ty !== 'file' && a !== active) a.value = b.getAttribute('value') || '';
+    a.disabled = b.hasAttribute('disabled');
+    return;
+  }
+  if (tag === 'TEXTAREA') { if (a !== active) a.value = b.textContent; return; }
+  _invMorphKids(a, b);
+  if (tag === 'SELECT' && a !== active) {
+    var opts = b.querySelectorAll ? b.querySelectorAll('option') : [], want = null;
+    for (i = 0; i < opts.length; i++) if (opts[i].hasAttribute('selected')) want = opts[i].getAttribute('value') != null ? opts[i].getAttribute('value') : opts[i].textContent;
+    if (want !== null && a.value !== want) a.value = want;
+  }
+}
+function _invMorphKids(a, b) {
+  var ak = Array.prototype.slice.call(a.childNodes), bk = Array.prototype.slice.call(b.childNodes), i;
+  for (i = 0; i < bk.length; i++) {
+    var x = ak[i], y = bk[i];
+    if (!x) { a.appendChild(y); continue; }
+    var same = x.nodeType === y.nodeType && (x.nodeType !== 1 || (x.tagName === y.tagName && (x.id || '') === (y.id || '')));
+    if (!same) { a.replaceChild(y, x); continue; }
+    if (x.nodeType !== 1) { if (x.nodeValue !== y.nodeValue) x.nodeValue = y.nodeValue; continue; }
+    _invMorphNode(x, y);
+  }
+  for (i = ak.length - 1; i >= bk.length; i--) a.removeChild(ak[i]);
+}
+
+function renderInventoryTab(opt) {
   var sel = document.getElementById('inv-job');
   var jobId = sel ? parseInt(sel.value) || 0 : 0;
   var cont = document.getElementById('inventory-content');
@@ -44097,7 +44465,16 @@ function renderInventoryTab() {
   };
   // The two intake questions above Job Admin: the desk names that evening's shots against
   // the must-find list, and can record a Found the crew phoned in.
-  cont.innerHTML = top + _sfHost('sf-host-desk', job)
+  // ⚠ THE SEARCH AND THE ROOM PICKER REDRAW IN PLACE (P9, ROW-03): their own press, through `opt.morph`, patches the tab rather than
+  // rewriting it, so the box keeps its focus, its caret and the iPad's keyboard (_invPatch). Any other redraw that lands while one of
+  // them has the focus puts the focus and the caret back. That half is belt-and-braces: the redraws the app makes on its own wait
+  // for the box to be left (_invRenderWhenIdle), so none was found to reach it, and its revert stays green (P9's sweep).
+  var _ae = document.activeElement, _keep = null;
+  if (_ae && (_ae.id === 'inv-q' || _ae.id === 'inv-room-pick')) {
+    _keep = { id: _ae.id, s: null, e: null };
+    try { _keep.s = _ae.selectionStart; _keep.e = _ae.selectionEnd; } catch (e) {}
+  }
+  var _html = top + _sfHost('sf-host-desk', job)
     + renderJobAdmin(jobId, job)
     // ── Tonight's items, never folded: the work bar, the walkthrough's vehicles still to bring in (a start-of-job task,
     // gone once every vehicle is in), the chips, the filter, the rows, and the bulk bar, outside every wrapper so it
@@ -44126,6 +44503,15 @@ function renderInventoryTab() {
     // A read-out, not a workspace — so it sits at the bottom, outside every bar, and starts closed. It was
     // occupying the top of the tab, above the work.
     + '<div id="inv-summary">' + (_invShowRoll ? _renderInventorySummary(job, all) : '') + '</div>';
+  if (opt && opt.morph) _invPatch(cont, _html, true);
+  else cont.innerHTML = _html;
+  if (_keep) {
+    var _kel = document.getElementById(_keep.id);
+    if (_kel && _kel !== document.activeElement && _kel.focus) {
+      _kel.focus();
+      try { if (_keep.s != null && _kel.setSelectionRange) _kel.setSelectionRange(_keep.s, _keep.e); } catch (e) {}
+    }
+  }
 
   // Images are painted in AFTER the markup, never inlined into it — see _invThumbHTML.
   _invPaintThumbs(jobId);
@@ -44644,12 +45030,44 @@ function invAddCloseUp(jobId, stableId, input) {
       onThumb: function() { _invCloseUpsRepaint(jobId, stableId); },
       onDone: function(d) {
         _invCloseUpsRepaint(jobId, stableId);
-        if (d && d.status === 'uploaded' && _invFileId(d)) agentValueAfterCloseUp(jobId, stableId);
+        if (d && d.status === 'uploaded' && _invFileId(d)) { invCloseUpLanded(jobId, stableId); agentValueAfterCloseUp(jobId, stableId); }
       }
     });
   };
   reader.readAsDataURL(file);
   input.value = '';   // so the same photograph can be chosen again
+  return true;
+}
+// The + Close-up control, one builder: the line's record, and the row of a photograph Agent One could not read while its record is
+// shut (P9). A label over a file chooser with no `capture`, so the iPad offers its camera or its photos.
+function _invCloseUpAddHtml(jid, ref) {
+  return '<label class="btn-s inv-cu-add" title="A close-up of this item: the back, a mark, a label. It is filed with this line and never adds one">'
+    + '<input type="file" accept="image/*" style="display:none;" onchange="invAddCloseUp(' + jid + ',\'' + ref.stableId + '\',this)">'
+    + '&#10133; Close-up</label>';
+}
+// The note Agent One left on a photograph it could not read (P9, AGT-02): on the line, or on its photograph's own line where the line
+// was split off one (the notes sit there). The newest "Look at this" first, else the newest note of any kind. '' where there is none.
+function agentUnreadNote(jobId, ref) {
+  if (!ref) return '';
+  var notes = (ref.agentNotices || []).slice();
+  if (ref.derivedFrom) { var src = _getPhotoRef(jobId, ref.derivedFrom); if (src) notes = notes.concat(src.agentNotices || []); }
+  var other = notes.filter(function(n) { return n && n.kind === 'other'; });
+  var pick = other.length ? other[other.length - 1] : notes[notes.length - 1];
+  return pick ? String(pick.text || '').trim() : '';
+}
+// ⚠ A CLOSE-UP ON A PHOTOGRAPH AGENT ONE COULD NOT READ (P9, 2026-10-28; AGT-02): once it is in Drive the stamp comes off, so Name
+// shots reads the photograph again with the close-up (_agDetailRefs, the photograph's own close-ups). Only the photograph's own line,
+// still unnamed: a line split off a photograph is sent with the photograph's close-ups, never its own, so a resend would say the same.
+function invCloseUpLanded(jobId, stableId) {
+  var ref = _getPhotoRef(jobId, stableId);
+  if (!invLineUnread(ref) || ref.derivedFrom) return false;
+  delete ref.agentConf;
+  _setPhotoRef(jobId, _invTouch(ref));
+  savePhotoRefs(jobId);
+  _scheduleInventorySync(jobId);
+  var wb = document.getElementById('inv-workbar'), job = _invJob(jobId);
+  if (wb && job && typeof _renderInvWorkbar === 'function') _invPatch(wb, _renderInvWorkbar(job, _jobInvRefs(jobId)));
+  showSyncBadge('#' + _invItemNo(ref) + ': the close-up is in Drive. Press Name shots and Agent One reads the photograph again with it.');
   return true;
 }
 // The close-ups that go to Agent Two with a line: the ones added to it from its record first, then its photograph's (the
@@ -44710,7 +45128,7 @@ function invRetryCloseUp(jobId, detailId) {
   retryPhotoUpload(jobId, detailId, function() {
     _invCloseUpsRepaint(jobId, d.groupId);
     var now = _getPhotoRef(jobId, detailId);
-    if (now && now.status === 'uploaded' && _invFileId(now)) agentValueAfterCloseUp(jobId, d.groupId);
+    if (now && now.status === 'uploaded' && _invFileId(now)) { invCloseUpLanded(jobId, d.groupId); agentValueAfterCloseUp(jobId, d.groupId); }
   });
   _invCloseUpsRepaint(jobId, d.groupId);
   return true;
@@ -52185,11 +52603,12 @@ function _deskNowRepaint(jobId) {
   var a = document.getElementById('desk-alerts-' + jobId);
   if (!job || !a) return false;
   var parts = _jobAdminParts(jobId, job);
-  a.outerHTML = deskAlertsHtml(jobId, job, parts);
+  // In place (P9, SYN-12): the strip's own buttons, pressed straight from a row's box, keep the press.
+  _invPatch(a, deskAlertsHtml(jobId, job, parts));
   var n = document.getElementById('ja-n-' + jobId);
   if (n) n.textContent = jobAdminHeadText(jobId, job, parts);
   var d = document.getElementById('plan-derived-admin-' + jobId);
-  if (d && parts) d.outerHTML = derivedLinesHtml(parts.admin, 'plan-derived-admin-' + jobId);
+  if (d && parts) _invPatch(d, derivedLinesHtml(parts.admin, 'plan-derived-admin-' + jobId));
   return true;
 }
 
@@ -52256,7 +52675,7 @@ function _invColdRepaint(jobId) {
   if (!shown || ((shown.bar || '') === invColdWords(jobId) && (shown.stale || '') === stale)) return;
   if (shown.list) { _invRenderWhenIdle(); return; }
   var job = _invJob(jobId), wb = document.getElementById('inv-workbar');
-  if (job && wb) wb.outerHTML = _renderInvWorkbar(job, _jobInvRefs(jobId));
+  if (job && wb) _invPatch(wb, _renderInvWorkbar(job, _jobInvRefs(jobId)));
 }
 function invColdWords(jobId) {
   if (!_invManifestUnread(jobId)) return '';

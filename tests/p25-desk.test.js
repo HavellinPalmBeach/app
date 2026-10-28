@@ -148,7 +148,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       lacks(codeOnly(fn(f)), "r.condition ||", f + ' never prints its own fallback');
     });
     const picked = [L('a'), L('b'), L('c', { condition: 'Poor' })];
-    const B = lift(['_invBulkApply'], STATE.concat(['_invPicked', 'savePhotoRefs', '_scheduleInventorySync', 'showSyncBadge', 'renderInventoryTab', '_invMatchesFilter']),
+    const B = lift(['_invBulkApply', '_invPickedAsked', '_invBulkDone', '_invNoNameLeftText', 'invLineNothingToList'], STATE.concat(['_invPicked', 'savePhotoRefs', '_scheduleInventorySync', 'showSyncBadge', 'renderInventoryTab', '_invMatchesFilter']),
       Object.assign(BASE(), { jobs: [LIVING()], _photoRefs: { 7: picked }, _invPicked: () => picked, savePhotoRefs() {}, _scheduleInventorySync() {},
         showSyncBadge() {}, renderInventoryTab() {}, _invMatchesFilter: () => true }));
     attempt(() => B._invBulkApply(7, 'condition', 'Good'));

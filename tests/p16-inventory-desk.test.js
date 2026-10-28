@@ -219,7 +219,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   G('A5 · the line\'s record and the desk row name the route; the control is offered only where it applies', () => {
     const rowRig = (refs) => {
-      const s = lift(['_renderInvRow', 'invSetDealerRoute'],
+      const s = lift(['_renderInvRow', 'invLineNothingToList', 'invLineUnread', 'invSetDealerRoute'],
         ['_invInput', '_invThumbHTML', 'custodyEvents', '_invPanelCols', 'renderInventoryTab', '_scheduleInventorySync', 'alert'], {
           jobs: [Object.assign({}, ESTATE)], _photoRefs: { 7: refs },
           _invInput: () => '', _invThumbHTML: () => '<div></div>', custodyEvents: () => [], _invPanelCols: () => [],
@@ -322,7 +322,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const printed = [];
     // ⚠ On a living job the two lines are firearms (2026-10-26, Anthony: "Drop it, firearms aside"): on a client's own home only
     // a firearm, or a line going to someone who works with Havellin, reaches the request at all.
-    const docRig = (job, gun) => lift(['printApprovalRequest', '_invBulkApply'],
+    const docRig = (job, gun) => lift(['printApprovalRequest', '_invBulkApply', '_invPickedAsked', '_invBulkDone', '_invNoNameLeftText', 'invLineNothingToList'],
       ['_printDocument', '_invPrintThumb', 'showSyncBadge', 'renderInventoryTab', '_scheduleInventorySync'], {
         jobs: [Object.assign({}, job)],
         _photoRefs: { [job.id]: [
@@ -361,7 +361,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     });
     // The bulk bar's own warning reads the same rule.
     const badges = [];
-    const B = lift(['_invBulkApply'], ['showSyncBadge', 'renderInventoryTab', '_scheduleInventorySync'], {
+    const B = lift(['_invBulkApply', '_invPickedAsked', '_invBulkDone', '_invNoNameLeftText', 'invLineNothingToList'], ['showSyncBadge', 'renderInventoryTab', '_scheduleInventorySync'], {
       jobs: [Object.assign({}, LIVING)], _photoRefs: { 2: [LINE('a', { objectName: 'Oil painting', category: 'Art & Décor', needsAppr: true })] },
       showSyncBadge: (m) => badges.push(String(m)), renderInventoryTab: () => {}, _scheduleInventorySync: () => {},
     });
@@ -425,7 +425,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   G('B12 · Set valuation source… only where the field shows, and the handler refuses elsewhere', () => {
     const badges = [];
     const rig = (job) => {
-      const s = lift(['_renderInvBulk', '_invBulkApply', '_invPanelCols'],
+      const s = lift(['_renderInvBulk', '_invBulkApply', '_invPickedAsked', '_invBulkDone', '_invNoNameLeftText', 'invLineNothingToList', '_invPanelCols'],
         ['showSyncBadge', 'renderInventoryTab', '_scheduleInventorySync'], {
           jobs: [Object.assign({}, job)], _photoRefs: { [job.id]: [LINE('a')] },
           showSyncBadge: (m) => badges.push(String(m)), renderInventoryTab: () => {}, _scheduleInventorySync: () => {},
@@ -462,7 +462,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   G('B22a · the workbar draws the Approval Request once, at every tier', () => {
     const bar = (job, over) => {
-      const s = lift(['_renderInvWorkbar'], [], {
+      const s = lift(['_renderInvWorkbar', '_invNothingLineHtml', 'invLineNothingToList'], [], {
         jobs: [Object.assign({}, job)], _photoRefs: { [job.id]: [LINE('a', over || {})] },
         estimateStore: { [job.id]: { estimate: { rooms: ROOMS } } }, document: domStub({}),
       });
@@ -603,7 +603,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   });
 
   G('B22b · the control: one Remove line in every line\'s record', () => {
-    const s = lift(['_renderInvRow'], ['_invInput', '_invThumbHTML', 'custodyEvents', '_invPanelCols'], {
+    const s = lift(['_renderInvRow', 'invLineNothingToList', 'invLineUnread'], ['_invInput', '_invThumbHTML', 'custodyEvents', '_invPanelCols'], {
       jobs: [Object.assign({}, ESTATE)],
       _photoRefs: { 7: [LINE('p', { itemNo: 1 }), LINE('d1', { itemNo: 2, derivedFrom: 'p', driveFileId: 'fp' }),
                         LINE('m', { itemNo: 3, manual: true, driveFileId: null })] },

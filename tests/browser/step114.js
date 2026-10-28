@@ -35,7 +35,7 @@
 //   B. The same job recorded as disputed on Edit Client: nothing stands (Not reviewed 9, every box unticked, its tooltip
 //      naming the dispute, no "accepted"); recorded back as no dispute: 5 again.
 //   C. The tray's grey box pressed: a person's look, green, "Reviewed by Ashley Jerome"; the work bar · 3 accepted.
-//   D. Specific Bequest ticked in the drawer's record: its box unticked with no full render (the box replaced by id, the
+//   D. Specific Bequest ticked in the drawer's record: its box unticked with no full render (the box patched in place, the
 //      row kept), its tooltip naming the bequest and the caution it raises, Not reviewed 6; unticked again: back, by id.
 //   E. Both candlesticks ticked: each box checked in bronze, "Ticked by Ashley Jerome, but still open: …", Not reviewed and
 //      the work bar unmoved, the pair still under Possible duplicates. One half renamed through its row's own name box: the
@@ -390,9 +390,12 @@ const DAY = (at) => new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_Yo
       await p.evaluate(() => { window.__box = document.getElementById('inv-rev-cut'); window.__row = document.getElementById('inv-row-cut'); });
       await press(BQ, 'Specific Bequest, in the drawer\'s record');
       eq((await line('cut')).bq, true, 'fixture: the line is a specific bequest now');
-      const st = await p.evaluate(() => ({ renders: window.__renders, boxNew: !!document.getElementById('inv-rev-cut') && document.getElementById('inv-rev-cut') !== window.__box,
-        oldGone: !!window.__box && !window.__box.isConnected, rowKept: document.getElementById('inv-row-cut') === window.__row }));
-      eq([st.renders, st.boxNew, st.oldGone, st.rowKept], [0, true, true, true], '⚠⚠ no full render: the box replaced by id, the row kept');
+    // RESTATED 2026-10-28 (P9 of the desk audit, SYN-12): a by-id repaint patches in place (_invPatch), so the element under the
+    // pointer is kept and brought up to date rather than replaced; what proves no full render is that the row (or the bar) is kept
+    // and the box reads the new state, below.
+      const st = await p.evaluate(() => ({ renders: window.__renders, boxKept: document.getElementById('inv-rev-cut') === window.__box,
+        live: !!window.__box && window.__box.isConnected, rowKept: document.getElementById('inv-row-cut') === window.__row }));
+      eq([st.renders, st.boxKept, st.live, st.rowKept], [0, true, true, true], '⚠⚠ no full render: the box patched in place, the row kept');
       const bx = await box('cut');
       eq(bx && [bx.checked, bx.disabled], [false, false], '⚠⚠ flagged now: its box unticked, a person\'s to tick');
       // Every reason (round three): the bequest, and the release caution a specific bequest with no bequest behind it raises.
@@ -451,9 +454,12 @@ const DAY = (at) => new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_Yo
       await p.evaluate(() => { window.__box = document.getElementById('inv-rev-sofa'); window.__wb = document.getElementById('inv-workbar'); });
       await press(WV, 'Waive, beside the sofa on the Values bar');
       eq((await line('sofa')).waived, true, 'fixture: the waiver recorded, with the reason typed');
-      const st = await p.evaluate(() => ({ renders: window.__renders, boxNew: !!document.getElementById('inv-rev-sofa') && document.getElementById('inv-rev-sofa') !== window.__box,
-        wbNew: !!document.getElementById('inv-workbar') && document.getElementById('inv-workbar') !== window.__wb }));
-      eq([st.renders, st.boxNew, st.wbNew], [0, true, true], '⚠⚠ no full render: the box and the work bar replaced by id');
+    // RESTATED 2026-10-28 (P9 of the desk audit, SYN-12): a by-id repaint patches in place (_invPatch), so the element under the
+    // pointer is kept and brought up to date rather than replaced; what proves no full render is that the row (or the bar) is kept
+    // and the box reads the new state, below.
+      const st = await p.evaluate(() => ({ renders: window.__renders, boxKept: document.getElementById('inv-rev-sofa') === window.__box && window.__box.isConnected,
+        wbKept: document.getElementById('inv-workbar') === window.__wb && window.__wb.isConnected }));
+      eq([st.renders, st.boxKept, st.wbKept], [0, true, true], '⚠⚠ no full render: the box and the work bar patched in place');
       const bx = await box('sofa');
       eq(bx && [bx.checked, bx.disabled, bx.ink, bx.title], [true, false, 'gray', STANDING_TIP], '⚠⚠ a waiver answers the appraisal: the sofa stands, grey');
       eq(await chip(), 4, 'Not reviewed 4');
@@ -594,10 +600,13 @@ const DAY = (at) => new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_Yo
       await p.evaluate(() => { window.__wb = document.getElementById('inv-workbar'); });
       await p.fill(RECIP, 'Goodwill Palm Beach'); await p.press(RECIP, 'Tab'); await p.waitForTimeout(900);
       eq((await line('cut')).ch, 'Goodwill Palm Beach', 'fixture: the charity typed onto the line');
+    // RESTATED 2026-10-28 (P9 of the desk audit, SYN-12): a by-id repaint patches in place (_invPatch), so the element under the
+    // pointer is kept and brought up to date rather than replaced; what proves no full render is that the row (or the bar) is kept
+    // and the box reads the new state, below.
       const st = await p.evaluate((sel) => ({ renders: window.__renders, oldGone: !!window.__read && !window.__read.isConnected,
         fresh: !!document.querySelector(sel) && document.querySelector(sel) !== window.__read,
-        wbNew: !!document.getElementById('inv-workbar') && document.getElementById('inv-workbar') !== window.__wb }), READ + J);
-      eq([st.renders, st.oldGone, st.fresh, st.wbNew], [0, true, true, true], '⚠⚠ no full render: the work bar replaced by id, its read line with it');
+        wbKept: document.getElementById('inv-workbar') === window.__wb && window.__wb.isConnected }), READ + J);
+      eq([st.renders, st.oldGone, st.fresh, st.wbKept], [0, true, true, true], '⚠⚠ no full render: the work bar patched in place, its read line redrawn in it');
       const rl2 = await readLine();
       eq(rl2 && [rl2.text, rl2.ink, rl2.press], ['List read by ' + ME + ', ' + day + ' · changed since · ✓ I’ve read the list', 'gray', '✓ I’ve read the list'],
         '⚠⚠ and it says changed since, with the press');

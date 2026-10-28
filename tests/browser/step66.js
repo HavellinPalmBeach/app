@@ -228,10 +228,15 @@ const EST = 6601, LIVING = 6603;
       await p.waitForTimeout(500);
       // ⚠ RESTATED 2026-10-22 (the desk on a phone): the bar's controls sit in a wrapper of their own now (display:contents on
       // a laptop, behind Actions on a phone), so the bar is the button's `.inv-bulk` ancestor, not its parent. The same bar text.
-      const bar = await p.evaluate(() => { const b = document.querySelector('button[onclick*="\'reviewed\',1"]'); return b ? b.closest('.inv-bulk').textContent.replace(/\s+/g, ' ') : ''; });
+      // ⚠ RESTATED 2026-10-28 (P9 of the desk audit, LIV-02): the selection clears after each bulk action, and the bar stays as one
+      // line saying what was done until OK, a pick or a filter change; so it is read there, and the two are picked again.
+      const doneBar = async () => p.evaluate(() => { const b = document.querySelector('.inv-bulk-done'); return b ? b.textContent.replace(/\s+/g, ' ') : ''; });
+      const bar = await doneBar();
       has(bar, 'Keep set on 2 items', '⚠⚠ the bar says Keep was set, never "2 items updated"');
+      has(bar, 'The selection is cleared.', '…and that the selection is cleared');
+      await pick('k1'); await pick('k2');
       await press('button[onclick="_invBulkApply(' + EST + ',\'reviewed\',1)"]', 'Mark reviewed');
-      const bar2 = await p.evaluate(() => { const b = document.querySelector('button[onclick*="\'reviewed\',1"]'); return b ? b.closest('.inv-bulk').textContent.replace(/\s+/g, ' ') : ''; });
+      const bar2 = await doneBar();
       has(bar2, '2 items marked reviewed.', '⚠⚠ and Mark reviewed says so');
       await p.evaluate(() => _invClearPicks()); await p.waitForTimeout(300);
       // The Authorized By record, on a line two co-representatives signed on different days (one name with a comma in it).

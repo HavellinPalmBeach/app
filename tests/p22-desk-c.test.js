@@ -374,8 +374,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     S._invPick.a = 1; S._invPick.b = 1;
     S._invBulkApply(8, 'disposition', 'Keep');
     has(S.__log.badges.map((b) => b.m).pop(), 'Keep set on 2 items', '⚠⚠ Keep is named, never "2 items updated"');
+    // RESTATED 2026-10-28 (P9 of the desk audit, LIV-02): the selection clears after each bulk action, so the two are picked again.
+    eq(Object.keys(S._invPick).length, 0, 'the selection is cleared after the sweep');
+    S._invPick.a = 1; S._invPick.b = 1;
     S._invBulkApply(8, 'disposition', 'Hold');
     has(S.__log.badges.map((b) => b.m).pop(), 'Hold set on 2 items', 'Hold too');
+    S._invPick.a = 1; S._invPick.b = 1;
     S._invBulkApply(8, 'reviewed', true);
     eq(S.__log.badges.map((b) => b.m).pop(), '2 items marked reviewed.', '⚠⚠ Mark reviewed says so');
   });
