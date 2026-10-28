@@ -69,7 +69,7 @@ const PRINT_FNS = ['_invDocPartyHead', 'invLineReviewed', 'invLineOpen', 'invIni
   'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep',
   '_maivSummaryNotice', 'maivFilingApplies', '_gate706', 'invIsMAIV', 'invMAIVCategory',
   'invMAIVDefaultCat',
-  'invReleaseBlocked', 'invFirearmClientTakes', 'invFirearmDispRefusal', 'invFirearmsDealerFirm', 'invFirearmsDealerFirms', '_vendorNameKey', 'vendorCats', 'invIsIntrinsic', 'invCatMeta', 'invNeedsAppraisal', 'invAppraisalThreshold',
+  'invReleaseBlocked', 'invFirearmClientTakes', 'invFirearmDispRefusal', 'invFirearmsDealerFirm', 'invFirearmsDealerFirms', '_vendorNameKey', 'vendorCats', 'invIsIntrinsic', 'invCatMeta', 'invNeedsAppraisal', 'invAppraisalChosen', 'invAppraisalThreshold',
   'gateDispute', '_gateYes', 'invAwaitingAppraisal', 'invAppraised', '_invHasValue', '_invHasAppraisal', '_jobAppraisers',
   'invWorkFlags', '_invNeedsValue', '_invDispOptions', 'fieldDispChips', '_invPanelCols',
   '_invPanelSection', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'estimateAppraiserNames', 'docScopeDef',

@@ -156,6 +156,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(attempt(() => C.invAwaitingAppraisal(ref(C), 7)).val, false, 'fixture: a living line not ticked ⚑ is not awaiting an appraisal');
     has(attempt(() => C._renderInvRow(C.jobs[0], ref(C))).val || '', 'Appraisal · ' + LABEL + ' · pending', '…and still reads pending once linked: the link is the source');
   }
+  {
+    // ⚠ P7's review: Appraisal chosen and no figure yet, nobody linked. On a living job (the flag there is the tick, so no ⚑ appraise)
+    // the row's grey chip says what it is waiting for, never "The appraisal's figure is on the line", and the record says what to do.
+    const C = desk(LIVING(), [LINE({ valSource: 'Appraisal', valuedBy: 'appraiser' })]);
+    const row = attempt(() => C._renderInvRow(C.jobs[0], ref(C))).val || '';
+    has(row, 'title="Appraisal chosen as the source: type the appraiser\u2019s figure when the report comes back"', '⚠ the row\'s chip: chosen, waiting for the figure');
+    lacks(row, 'title="The appraisal\u2019s figure is on the line"', '…never that the figure is on the line');
+    has(textOf(row), 'Appraisal (appraiser not named) · pending', '…reading pending');
+    has(textOf(attempt(() => C._renderInvPanel(C.jobs[0], ref(C))).val || ''), 'Valuation source Appraisal (appraiser not named) · pending — when the report comes back, type its figure on the line.',
+      '⚠ and its record says what to do when the report lands');
+    const W = desk(LIVING(), [LINE({ valSource: 'Appraisal', valuedBy: 'appraiser', apprWaived: true, apprWaiveReason: 'client' })]);
+    has(attempt(() => W._renderInvRow(W.jobs[0], ref(W))).val || '', 'the appraisal waived: no figure is coming from an appraiser', 'waived: the chip says no figure is coming');
+    lacks(textOf(attempt(() => W._renderInvPanel(W.jobs[0], ref(W))).val || ''), 'when the report comes back', '…and the record asks for none');
+  }
 
   // ═══ 2 · THE FIGURE TYPED IS THE APPRAISAL'S ═══
   group('2 · when the report comes back the person types the figure, and it is the appraisal\'s on every job (the real _invEdit)');
@@ -425,8 +439,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(fnsWhere(/valSource === 'Appraisal' && _invHasValue\(/), ['invAppraised'], '⚠⚠ "source Appraisal with a value" is asked in invAppraised alone');
     // Every comparison of a source with 'Appraisal' in live code is in one of the four places that set or name it, never a second "appraised".
     // RESTATED (P7): the ask before Appraisal is chosen over another's figure, and Agent Two's writer, which never fills a line waiting
-    // on its appraiser's figure, compare it too.
-    eq(fnsWhere(/valSource\s*===\s*'Appraisal'/), ['_avTakeValue', '_avWrite', '_invEdit', 'agentRevalue', 'invAppraisalSourceAsk', 'invAppraised'], 'the source is compared with Appraisal only where it is set or named');
+    // on its appraiser's figure, compare it too; and (P7's review) the one answer for Appraisal chosen with no figure yet, which keeps
+    // such a line on the guardrail, the worklist and the release caution.
+    eq(fnsWhere(/valSource\s*===\s*'Appraisal'/), ['_avTakeValue', '_avWrite', '_invEdit', 'agentRevalue', 'invAppraisalChosen', 'invAppraisalSourceAsk', 'invAppraised'], 'the source is compared with Appraisal only where it is set or named');
     const readers = callersOf('invAppraised');
     ['invAppraisalSourceText', 'invValBasisWord', 'printEstateInventoryReport', '_invSetAppraiser', 'removeAppraiser', '_invEdit', 'invAppraisalReportOwed']
       .forEach((f) => ok(readers.indexOf(f) >= 0, 'invAppraised is read by ' + f));

@@ -45,7 +45,7 @@
   },
   {
    "id": "VAL-02",
-   "fixed": "2026-10-27 (P7, its critical part: CLAUDE.md, Appraisal means an appraiser's figure; tests/p7-evidence.test.js, browser step 121)",
+   "fixed": "2026-10-27 (P7, its critical part: CLAUDE.md, Appraisal means an appraiser's figure; tests/p7-evidence.test.js, browser step 121; its review the same night: a line with Appraisal chosen and no figure stays on the guardrail, the worklist and the release caution, invAppraisalChosen)",
    "title": "Setting Valuation Source to 'Appraisal' turns Agent Two's guess into an appraisal on the court schedule",
    "kind": "accuracy",
    "severity": "fix-now",

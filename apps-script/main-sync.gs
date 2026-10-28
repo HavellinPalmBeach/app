@@ -5482,6 +5482,24 @@ function _avUrlKey(u) {
   return m[1].toLowerCase().replace(/^www\./, '') + m[2].replace(/\/+$/, '');
 }
 
+// ⚠ ONE ITEM'S PAGE, HOWEVER IT IS SPELLED (P7's review, 2026-10-27): the page a comparable cites, as the "one page counts once"
+// check compares it. _avUrlKey keeps the query, since a results page's query is the page, and the seen check must match the tool's
+// own URL exactly; but one eBay sale cited as /itm/123456789 and again with ?hash=item1c&var=0 is one sale, and was counted as two.
+// Host and path, the query and the fragment dropped, and an item's id read past its slug: a slug after a numeric id
+// (/listing/333/herend-plate, /lot/45/a-pair), a slug joined to one (/item/123456_harbour-scene) and eBay's /itm/<slug>/<id>; a slug
+// carrying a number of its own (/catalogue/2025/lot-12) is kept, so two lots are never read as one page.
+function _avPageKey(u) {
+  var k = _avUrlKey(u);
+  if (!k) return '';
+  var i = k.indexOf('/');
+  var host = i < 0 ? k : k.slice(0, i), p = i < 0 ? '' : k.slice(i);
+  p = p.replace(/[?#].*$/, '').replace(/\/+$/, '');
+  p = p.replace(/^\/itm\/[^\/]+\/(\d{6,})$/i, '/itm/$1')
+    .replace(/(\/\d{3,})[_-][a-z][^\/]*$/i, '$1')
+    .replace(/(\/\d+)\/[^\/\d]*[a-z][^\/\d]*$/i, '$1');
+  return host + p;
+}
+
 var AGENT_VALUE_CONF_DOWN = { high: 'medium', medium: 'low', low: 'low' };
 
 // The listings a research line counted, checked (AGENT_VALUE_SURVEY_MIN): a whole count, the three prices for one article in
@@ -5527,6 +5545,28 @@ function _avSalesNamed(text, bare) {
   }
   return most;
 }
+// ⚠⚠ AND ON A RESEARCHED LINE WITH NO SALE KEPT, A BASIS THAT SPEAKS OF A SALE AT ALL IS THE SERVER'S (P7's review, 2026-10-27): a
+// count was the only test, so "Christie's sold a comparable pair in 2024; Kodner another in 2025", "Similar pieces have sold at
+// auction for $700 to $900", "A matching set hammered at $720 at Bonhams" and "Similar plates sold at Replacements for $90 each"
+// (an asking price) all printed word for word under a general estimate. Whether a sentence speaks of a sale: any sale word (sold,
+// sale, auction, realized, hammer, fetched, brought, comparable, comps, results, went for, changed hands, achieved, a lot number, an
+// auction house by name) not said with "no", "not", "never", "without", "none", "zero" or "any" in front of it ("before I found any
+// sold comparables"); "for sale", an estate or garage sale and a price are read away first, as the count reads them. A going rate
+// ("what these sell for") is the general estimate's own words, and stands. A word list that errs toward the server's sentence.
+var AGENT_VALUE_SALE_WORD_RE = /\b(?:sold|sales?|auction(?:s|ed|eers?)?|realized|realised|realizations?|hammer(?:ed)?|fetch(?:ed|es)?|brought|comparables?|comps|results?|went\s+for|changed\s+hands|achieved|lot\s+\d+|christie'?s?|christie’s|sotheby'?s?|sotheby’s|bonhams|kodner|hindman|liveauctioneers|invaluable|worthpoint|heritage\s+auctions|doyle|freeman'?s|skinner)\b/g;
+var AGENT_VALUE_SALE_NEGATION_RE = /\b(?:no|not|never|without|none|zero|lacking|nor|any)\s+(?:[a-z'’]+\s+){0,3}$/;
+function _avClaimsSale(text) {
+  var t = ' ' + String(text || '').toLowerCase()
+    .replace(/\b(?:for|on|up for)\s+sale\b/g, ' ')
+    .replace(/\b(?:estate|garage|yard|tag|moving|rummage|charity|warehouse)\s+sales?\b/g, ' venue ')
+    .replace(/\$\s?[\d,]+(?:\.\d+)?/g, ' price ') + ' ';
+  var m;
+  AGENT_VALUE_SALE_WORD_RE.lastIndex = 0;
+  while ((m = AGENT_VALUE_SALE_WORD_RE.exec(t))) {
+    if (!AGENT_VALUE_SALE_NEGATION_RE.test(t.slice(Math.max(0, m.index - 60), m.index))) return true;
+  }
+  return false;
+}
 // The sentence the server writes in place of one that claimed more sales than it kept: the sales kept, by venue and date, or none.
 var AGENT_VALUE_NUM_WORDS = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six'];
 function _avKeptBasis(sold, survey, asking) {
@@ -5564,9 +5604,10 @@ function _avLineResult(v, mode, seen, qty) {
     var price = _avCents(c.price);
     // One item's own page with the price that page shows, or it is not a comparable (AGENT_VALUE_RESULTS_SEGMENTS, 2026-10-26b).
     // ⚠ AND ONE PAGE COUNTS ONCE (P7, GAP1-05): three "dealer listings" citing one Etsy page were three comparables.
-    if (!(isFinite(price) && price > 0) || _avResultsPage(c.url) || cited[_avUrlKey(c.url)]
+    // The page compared by host and path (_avPageKey, the review): a query or a slug never makes one sale two.
+    if (!(isFinite(price) && price > 0) || _avResultsPage(c.url) || cited[_avPageKey(c.url)]
         || AGENT_VALUE_NO_PRICE_RE.test(String(c.title || '') + ' ' + String(c.venue || ''))) { unfit++; return; }
-    cited[_avUrlKey(c.url)] = 1;
+    cited[_avPageKey(c.url)] = 1;
     kept.push({
       title: String(c.title || '').slice(0, 160),
       venue: String(c.venue || '').slice(0, 80),
@@ -5603,11 +5644,13 @@ function _avLineResult(v, mode, seen, qty) {
   }).slice(0, 4).map(function (n) { return { kind: n.kind, text: _avClip(n.text) }; });
   // ⚠⚠ THE BASIS NAMES NO SALE THE LINE DOES NOT KEEP (P7, ACC-01): a sentence that claims more sales than were kept, or a figure
   // whose every sale the model cited was left out, takes the server's own sentence (the sales kept, by venue and date, or "No sale
-  // the research could show", with the listings counted where a survey stands). Printed on the Estate Inventory Report beside the
-  // figure, so it says only what a person can check on the line's record.
+  // the research could show", with the listings counted where a survey stands), and so does a researched line with no sale kept
+  // whose sentence speaks of a sale at all (_avClaimsSale, the review). Printed on the Estate Inventory Report beside the figure, so
+  // it says only what a person can check on the line's record.
   var soldList = kept.filter(function (c) { return c.kind === 'sold'; });
   var basis = _avClip(v.basis), rewrote = false;
-  if (_avSalesNamed(basis, mode === 'comps') > soldList.length || (citedSold > 0 && !soldList.length)) {
+  if (_avSalesNamed(basis, mode === 'comps') > soldList.length || (citedSold > 0 && !soldList.length)
+      || (mode === 'comps' && !soldList.length && _avClaimsSale(basis))) {
     basis = _avKeptBasis(soldList, surveyed ? survey : null, kept.length - soldList.length);
     rewrote = true;
   }

@@ -636,7 +636,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     });
     has(fn('snapshotRefusal'), 'invColdRefusal(jobId)', 'Snapshot through snapshotRefusal');
     // Drive one paper and + Add line item on a cold device.
-    const P = sandbox({ fns: ['printEstateInventoryReport', 'invColdRefusal', '_invManifestUnread', 'addInventoryManualItem', 'invTotalFloor', '_invFloorTotalHtml', '_invOnProbateSchedule'], vars: ['INV_COLD_TXT'],
+    const P = sandbox({ fns: ['printEstateInventoryReport', 'invAppraisalChosen', 'invColdRefusal', '_invManifestUnread', 'addInventoryManualItem', 'invTotalFloor', '_invFloorTotalHtml', '_invOnProbateSchedule'], vars: ['INV_COLD_TXT'],
       stubs: { SHEETS_SYNC_URL: SYNC, _invCloudSeen: {}, jobs: [{ id: 7 }], invDocContractBlock: () => '', _setPhotoRef() { throw new Error('a line was minted'); },
         alert: (m) => { P.__said = m; }, window: { prompt: () => 'Cash on hand' } } });
     eq(P.printEstateInventoryReport(7, { asHtml: true }), { why: P.INV_COLD_TXT }, 'the report hands back the refusal');

@@ -26,7 +26,7 @@ const noComments = (s) => String(s)
 
 // The chain behind invAwaitingAppraisal is lifted for real rather than stubbed. Stubbing the
 // predicate would be testing the stub — the lesson this project paid for on `_cePhases`.
-const APPR_FNS = ['invAwaitingAppraisal', 'invAppraised', '_invHasValue', 'invNeedsAppraisal', 'invFiduciaryMode', 'isDecedentJob', '_invHasAppraisal',
+const APPR_FNS = ['invAwaitingAppraisal', 'invAppraised', '_invHasValue', 'invNeedsAppraisal', 'invAppraisalChosen', 'invFiduciaryMode', 'isDecedentJob', '_invHasAppraisal',
                   '_jobAppraisers', 'invAppraisalThreshold', 'gateDispute', '_gateYes',
                   'invIsIntrinsic', 'invCatMeta', '_invJob',
                   // P16: the documents name a firearm's dealer route, the worklist counts only what the

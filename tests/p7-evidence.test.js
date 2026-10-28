@@ -194,6 +194,27 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       .forEach(([t, n]) => eq(g._avSalesNamed(t, true), n, 'a sentence\'s sales: "' + t + '" names ' + n));
     eq([g._avSalesNamed('Recent auction sales of comparable scenes', true), g._avSalesNamed('Recent auction sales of comparable scenes', false), g._avSalesNamed('with no recent sales, a best reading', true)], [2, 0, 0],
       'a plural claim with no count reads as two at research depth, none on an ordinary lot, none said with "no"');
+    // ⚠⚠ P7's review: a researched line with no sale kept never prints a sentence that speaks of a sale, counted or not.
+    const NONE = 'No sale the research could show: a best estimate of what this kind of thing sells for.';
+    ["Christie's sold a comparable pair in 2024; Kodner another in 2025.", 'Similar pieces have sold at auction for $700 to $900.',
+     "Comparable Herend services realized $700 to $900 at Bonhams and Christie's.", 'Bonhams sold a similar eight-plate service in 2015.',
+     'Sold examples at Kodner and Leslie Hindman, 2024 to 2025.', 'A matching set hammered at $720 at Bonhams in 2015.',
+     'A close match went for $640 in 2025; adjusted for a chip.', 'No sale found; Christie\'s sold a similar pair in 2024.']
+      .forEach((b) => {
+        const r = g._avLineResult(VAL({ basis: b, comps: [] }), 'comps', {}, 1);
+        eq([r.source, r.basis, r.basisRewritten], ['General estimate', NONE, true], '⚠⚠ no sale kept, a sale spoken of: the server\'s sentence, never "' + b + '"');
+      });
+    const REPL = 'https://www.replacements.com/p/herend-plate-123';
+    const repl = g._avLineResult(VAL({ basis: 'Similar plates sold at Replacements for $90 each.', comps: [COMP({ venue: 'Replacements', url: REPL, price: 90, kind: 'asking' })] }), 'comps', seenOf([REPL]), 1);
+    eq([repl.source, repl.basis], ['General estimate', 'No sale the research could show: a best estimate, with 1 asking price on the record.'], '⚠ an asking price said to have sold: the server\'s sentence, naming the asking price');
+    ['No sold comparable was found; valued from the maker\'s retail price less wear.', 'Unmarked; the style suggests a 1970s reproduction, decorative value only.',
+     'With no recent sales to point to, a best reading of the decorative market.', 'The tools ran out before I found any sold comparables; a best reading.',
+     'Asking prices run well above what these sell for; a best reading of the going rate.']
+      .forEach((b) => eq(g._avLineResult(VAL({ basis: b, comps: [] }), 'comps', {}, 1).basis, b, 'a sentence claiming no sale stands as the model wrote it: "' + b + '"'));
+    eq(g._avLineResult(VAL({ basis: 'The going used rate for stainless flatware, from recent eBay sales.', source: 'General estimate' }), 'general', {}, 60).basis,
+      'The going used rate for stainless flatware, from recent eBay sales.', 'an ordinary lot\'s going rate is left alone: the rule is the research depth\'s');
+    eq([g._avClaimsSale('Typical estate sale prices for everyday dishes'), g._avClaimsSale('Twelve close listings for sale at $25 to $120'), g._avClaimsSale('Lot 45 at Kodner')],
+      [false, false, true], 'an estate sale and a listing for sale are no sale; a lot number is');
   }
 
   group('⚠⚠ S2 · Etsy\'s market, category, shop and search pages and the shop pages of 1stDibs and Chairish are results pages (GAP1-05)');
@@ -224,6 +245,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const ebay = 'https://www.ebay.com/itm/987654';
     const sold = g._avLineResult(VAL({ value: 75, basis: 'One sold comparable on eBay.', comps: [COMP({ venue: 'eBay', url: ebay, price: 70 })] }), 'comps', seenOf([ebay]), 1);
     eq([sold.comps[0].kind, sold.source, sold.basis], ['sold', 'Auction comps', 'One sold comparable on eBay.'], 'an eBay sale stays a sale');
+    // ⚠⚠ P7's review: one sale cited with and without a query string is one page.
+    const A = 'https://www.ebay.com/itm/123456789', B = 'https://www.ebay.com/itm/123456789?hash=item1c&var=0';
+    const twice = g._avLineResult(VAL({ value: 90, low: 60, high: 120, confidence: 'high', source: 'Online comps', basis: 'Two sold comparables on eBay, 2026.',
+      comps: [COMP({ venue: 'eBay', url: A, price: 90 }), COMP({ venue: 'eBay', url: B, price: 90 })] }), 'comps', seenOf([A, B]), 1);
+    eq([twice.comps.length, twice.unfit], [1, 1], '⚠⚠ one sale cited with and without its query: one kept, the other left out');
+    eq(twice.basis, 'One sale the research could show: eBay, 2025-11.', '…and the basis says one, never "Two sold comparables"');
+    [['https://www.etsy.com/listing/333/herend-plate', 'https://www.etsy.com/listing/333'], ['https://www.liveauctioneers.com/item/123456_harbour-scene', 'https://www.liveauctioneers.com/item/123456'],
+     ['https://www.ebay.com/itm/Herend-Rothschild-plate/123456789', 'https://www.ebay.com/itm/123456789'], ['https://www.bonhams.com/auction/28521/lot/45/a-pair-of-vases/', 'https://www.bonhams.com/auction/28521/lot/45#x']]
+      .forEach(([u, v]) => eq(g._avPageKey(u), g._avPageKey(v), 'one page: ' + u + ' and ' + v));
+    [['https://www.bonhams.com/auction/28521/lot/45', 'https://www.bonhams.com/auction/28521/lot/46'], ['https://www.kodner.com/catalogue/2025/lot-12', 'https://www.kodner.com/catalogue/2025/lot-13'],
+     ['https://www.ebay.com/sch/i.html?_nkw=herend', 'https://www.ebay.com/itm/1']]
+      .forEach(([u, v]) => ok(g._avPageKey(u) !== g._avPageKey(v), 'two pages: ' + u + ' and ' + v));
+    const strict = g._avLineResult(VAL({ basis: 'One sold comparable on eBay.', comps: [COMP({ venue: 'eBay', url: B, price: 90 })] }), 'comps', seenOf([A]), 1);
+    eq([strict.dropped, strict.comps.length], [1, 0], '⚠ the seen check still matches the tool\'s own URL exactly: a query the tool never returned is dropped');
   }
 
   group('⚠⚠ S4 · the three stored Ellison #78 comparables give none: the cabbage ware is a general estimate');
@@ -321,6 +356,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(textOf(court.html), 'appraisal (appraiser not named)', 'the Court Inventory prints it');
     const rep = attempt(() => C.printEstateInventoryReport(7, { asHtml: true })).val || {};
     has(textOf(rep.html), 'Appraisal (appraiser not named)', 'the Estate Inventory Report prints it');
+    // ⚠ P7's review: Appraisal chosen and no figure yet reads pending, never a bare "Appraisal", on the report's source column.
+    const P = rig(ESTATE(), [LINE({ fmv: '', valSource: 'Appraisal', valuedBy: 'appraiser' }), LINE({ stableId: 's2', itemNo: 41, fmv: '', valSource: 'Appraisal', valuedBy: 'appraiser', apprWaived: true, apprWaiveReason: 'counsel' })]);
+    eq(attempt(() => P.invAppraisalSourceText(ref(P), 7)).val, 'Appraisal (appraiser not named) · pending', '⚠ the namer: owed, nobody named');
+    eq(attempt(() => P.invAppraisalSourceText(ref(P, 's2'), 7)).val, 'Appraisal (appraiser not named) · waived', '…and waived, said so');
+    const prep = (attempt(() => P.printEstateInventoryReport(7, { asHtml: true })).val || {}).html || '';
+    has(textOf(prep), '— Appraisal (appraiser not named) · pending', '⚠⚠ the report\'s source column: pending, beside no figure');
+    lacks(prep.replace(/<td[^>]*>/g, '<td>'), '<td>Appraisal</td>', '…never a bare "Appraisal"');
   }
 
   group('⚠ A4 · Agent Two never fills a line waiting on its appraiser\'s figure');
@@ -330,6 +372,37 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(attempt(() => C._avWrite(7, 's1', { fmv: 3000, low: 2000, high: 4000, confidence: 'medium', source: 'Online comps', basis: 'x', comps: [], mode: 'comps' }, C.jobs[0], {})).val,
       false, '⚠ and the writer refuses it: the person\'s Appraisal stands');
     eq([ref(C).valSource, ref(C).fmv], ['Appraisal', ''], '…nothing written');
+  }
+
+  group('⚠⚠ A5 · Appraisal chosen over Agent Two\'s $9,000 sofa keeps it on the guardrail, the worklist and the release caution (P7\'s review)');
+  {
+    const SOFA = (o) => AGENT(Object.assign({ objectName: 'Camelback sofa, carved mahogany frame', valNameAt: 'Camelback sofa, carved mahogany frame', category: 'Furniture',
+      fmv: 9000, valLow: 6000, valHigh: 12000, valSource: 'Auction comps', disposition: 'Auction', channel: 'Kodner Galleries' }, o || {}));
+    const C = rig(ESTATE({ docLevel: 'formal' }), [SOFA()]);
+    const j = C.jobs[0];
+    eq([attempt(() => C.invNeedsAppraisal(ref(C), j)).val, attempt(() => C.invAwaitingAppraisal(ref(C), 7)).val], [true, true], 'fixture: $9,000, ranged to $12,000, routes on its value');
+    edit(C, 'valSource', 'Appraisal');
+    const r = ref(C);
+    eq([r.fmv, r.valSource, r.valuedBy, r.valHigh], ['', 'Appraisal', 'appraiser', undefined], 'fixture: OK took Agent Two\'s figure and its range off');
+    eq([attempt(() => C.invNeedsAppraisal(r, j)).val, attempt(() => C.invAwaitingAppraisal(r, 7)).val], [true, true], '⚠⚠ it still needs, and still awaits, the appraisal');
+    eq((attempt(() => C.invReleaseCautions(r, 7)).val || []).map((c) => c.key), ['needsAppraisal'], '⚠⚠ …and the release request still says it has not been appraised yet');
+    eq(attempt(() => C.invAppraisalSourceText(r, 7)).val, 'Appraisal (appraiser not named) · pending', '…its source reads pending');
+    const wl = textOf((attempt(() => C.printAppraisalWorklist(7, { asHtml: true })).val || {}).html);
+    has(wl, 'Camelback sofa, carved mahogany frame', '⚠⚠ the worklist still lists it');
+    lacks(wl, 'No individual item is currently flagged', '…never "nothing flagged"');
+    has(textOf((attempt(() => C.printCourtInventory(7, { asHtml: true })).val || {}).html), '1 item pending appraisal', '⚠ the Court Inventory\'s DRAFT names the appraisal pending');
+    eq(attempt(() => C.agentValueableRefs(7).length).val, 0, '…and Agent Two still leaves it to the appraiser');
+    edit(C, 'fmv', '$11,000');
+    eq([attempt(() => C.invAppraised(ref(C))).val, attempt(() => C.invAwaitingAppraisal(ref(C), 7)).val], [true, false], 'the appraiser\'s figure typed: appraised, no longer awaiting');
+    // A waiver answers it; a vehicle routes too (a person's choice, not the collector flag); a living job keeps the tick rule.
+    const W = rig(ESTATE(), [SOFA({ fmv: '', valSource: 'Appraisal', valuedBy: 'appraiser', valLow: undefined, valHigh: undefined, apprWaived: true, apprWaiveReason: 'counsel' })]);
+    eq(attempt(() => W.invAwaitingAppraisal(ref(W), 7)).val, false, 'waived: nothing awaits');
+    const V = rig(ESTATE(), [LINE({ category: 'Vehicles & Watercraft', objectName: 'Mercedes sedan', fmv: '', valSource: 'Appraisal', valuedBy: 'appraiser' })]);
+    eq(attempt(() => V.invNeedsAppraisal(ref(V), V.jobs[0])).val, true, 'a vehicle with Appraisal chosen and no figure needs it too');
+    const L = rig(ESTATE({ svc: 'downsizing_move', matterType: '' }), [SOFA({ fmv: '', valSource: 'Appraisal', valuedBy: 'appraiser', valLow: undefined, valHigh: undefined })]);
+    eq([attempt(() => L.invNeedsAppraisal(ref(L), L.jobs[0])).val, attempt(() => L.invAppraisalSourceText(ref(L), 7)).val], [false, 'Appraisal (appraiser not named) · pending'],
+      'a living job: the flag stays the tick, and its source still says pending');
+    eq(callersOf('invAppraisalChosen'), ['_invPanelAppraisalHtml', 'invAppraisalSourceText', 'invNeedsAppraisal', 'printEstateInventoryReport'], 'one answer, read by the rule, the namer, the record and the report');
   }
 
   // ═══════════════════════════════ D · THE §20.2031-6(b) SENTENCE (ACC-03) ═══════════════════════════════
@@ -354,7 +427,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const F = rig(ESTATE(), [ART(1, { disposition: '' }), ART(2), ART(3)]);
     const fs_ = attempt(() => F.maivStatement_(F.maivAggregate(F._photoRefs[7], F.jobs[0]))).val || '';
     has(fs_, 'Of these figures: 1 value not yet reviewed; 2 values as Agent Two left them; list not yet read by Havellin.', 'a flagged line\'s figure: not yet reviewed, beside those standing');
-    eq(callersOf('_avStampCounts').sort(), ['_avStampText', '_avUnreviewedStamp'], 'one count, read by the pill and the sentence');
+    // RESTATED (P7's review): the stamp's own question whether a figure is still nobody's look reads the same count.
+    eq(callersOf('_avStampCounts').sort(), ['_avStampText', '_avStampUnread', '_avUnreviewedStamp'], 'one count, read by the pill, the sentence and the unread question');
     // ⚠ The text and the pills say the same words, a flagged figure, figures standing unread, and the same once the list is read.
     const pills = (P, items) => (String(attempt(() => P._avUnreviewedStamp(items, { fc: P.invAcceptCtx(P.jobs[0], items) })).val || '').match(/<div[^>]*>([\s\S]*?)<\/div>/g) || [])
       .map((d) => textOf(d).trim()).join('; ');
@@ -377,6 +451,21 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const pw = textOf((attempt(() => P.printAppraisalWorklist(7, { asHtml: true })).val || {}).html);
     has(pw, 'so §20.2031-6(b) does not require an expert appraisal to be filed with the return. Re-check', 'figures a person has looked at: the conclusion as it always read');
     lacks(pw, 'Of these figures', '…with no stamp\'s words');
+    // ⚠ P7's review: once the list is read, the figures are a person's look, and the conclusion no longer says they are not.
+    const R = rig(ESTATE(), [ART(1, { fmv: 600, valHigh: 900 }), ART(2, { fmv: 700, valHigh: 1000 })]);
+    R.jobs[0].invRead = { at: Date.UTC(2026, 9, 26, 15), by: 'Anthony Graziano', seen: attempt(() => R.invListSeen(7)).val };
+    const rw = textOf((attempt(() => R.printAppraisalWorklist(7, { asHtml: true })).val || {}).html);
+    has(rw, 'Of these figures: 2 accepted as valued · list read by Anthony Graziano', 'fixture: the list read, and the sentence names its reader');
+    has(rw, 'so §20.2031-6(b) does not require an expert appraisal to be filed with the return. Re-check', '⚠⚠ the conclusion as it always read');
+    lacks(rw, 'not all yet looked at by a person', '…never that the figures are not all a person\'s');
+    eq([attempt(() => R.maivAggregate(R._photoRefs[7], R.jobs[0])).val.unread, attempt(() => C.maivAggregate(C._photoRefs[7], C.jobs[0])).val.unread], [false, true],
+      'the aggregate\'s unread: false once read, true before');
+    // …but a figure on a line the app flags is not yet reviewed whatever the read says, and the conclusion still says so.
+    const F = rig(ESTATE(), [ART(1, { fmv: 600, valHigh: 900, disposition: '' }), ART(2, { fmv: 700, valHigh: 1000 })]);
+    F.jobs[0].invRead = { at: Date.UTC(2026, 9, 26, 15), by: 'Anthony Graziano', seen: attempt(() => F.invListSeen(7)).val };
+    const fw = textOf((attempt(() => F.printAppraisalWorklist(7, { asHtml: true })).val || {}).html);
+    has(fw, 'Of these figures: 1 value not yet reviewed; 1 accepted as valued · list read by Anthony Graziano', 'fixture: one figure flagged, one standing, the list read');
+    has(fw, 'on figures not all yet looked at by a person (above).', '⚠ a figure not yet reviewed is still nobody\'s look, read or not');
   }
 
   // ═══════════════════════════════ F · THE FORM 706 AGGREGATE (GAP2-02, RT-05) ═══════════════════════════════
@@ -454,7 +543,19 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const C = rig(ESTATE(), rows);
     const rep = textOf((attempt(() => C.printEstateInventoryReport(7, { asHtml: true })).val || {}).html);
     has(rep, 'Probate estate, exempt property included, recorded so far (Fair Market Value) — not a complete total: $14,475', '⚠⚠ the probate estate, exempt included: a floor, $14,475');
-    has(rep, 'Outside the probate estate (Fair Market Value): $14,000', '…the property outside it: $14,000, complete');
+    // RESTATED (P7's review): the outside subtotal names the tracks it adds, and the exempt line listed with the carved-out property
+    // is said to be counted in the probate estate, so the subtotals agree with the blocks above them.
+    has(rep, 'Non-probate property, outside the probate estate (Fair Market Value): $14,000', '…the property outside it: $14,000, complete, named by its track');
+    has(rep, 'Exempt property is counted in the probate estate: it is listed above with the carved-out property and claimed under §732.402, not excluded from the estate (#31 Household chairs).',
+      '⚠ the exempt line listed with the carved-out property is said to be counted in the probate estate');
+    lacks(rep, 'Exempt, Non-probate property, outside', '…never "exempt" in the outside subtotal');
+    const X = rig(ESTATE(), [rows[0], rows[5]]);
+    const xr = textOf((attempt(() => X.printEstateInventoryReport(7, { asHtml: true })).val || {}).html);
+    has(xr, 'Total estimated fair market value: $11,200', 'only exempt property carved out: one total, no subtotals');
+    has(xr, 'Exempt property is counted in the probate estate: it is listed above with the carved-out property and claimed under §732.402, not excluded from the estate (#31 Household chairs).',
+      '…and the sentence still says the exempt line is counted in it');
+    const T0 = rig(ESTATE({ svc: 'cleanout', matterType: 'trust' }), [rows[0], rows[5]]);
+    lacks(textOf((attempt(() => T0.printEstateInventoryReport(7, { asHtml: true })).val || {}).html), 'Exempt property is counted', 'a trust-only matter carves nothing out, and says nothing of it');
     has(rep, 'Total recorded so far (Fair Market Value) — not a complete total: $28,475', '⚠⚠ and the whole: a floor, never "Total estimated fair market value: $28,475"');
     has(rep, '2 items are recorded without a value and are NOT included above, so this figure is a floor rather than a total: #20 Nightstand, #23 Copper cookware set.', '…naming the lines');
     lacks(rep, 'Total estimated fair market value', 'no complete total over a floor');

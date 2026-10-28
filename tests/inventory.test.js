@@ -11,7 +11,7 @@
 const { sandbox } = require('./harness');
 
 const INV_FNS = ['invAppraised',  'invDocContractBlock', 'docTierProduces',
-  'invCatMeta', 'invAppraiserFor', 'invIsIntrinsic', 'invNeedsAppraisal', 'invAppraisalInProgress', 'invFiduciaryMode', 'isDecedentJob',
+  'invCatMeta', 'invAppraiserFor', 'invIsIntrinsic', 'invNeedsAppraisal', 'invAppraisalChosen', 'invAppraisalInProgress', 'invFiduciaryMode', 'isDecedentJob',
   'invIsFirearm', 'invFirearmAuthorized', 'invReleaseBlocked', 'invFirearmClientTakes',
   '_jobInvRefs', '_invAssignItemNos', '_invItemNo', '_invTouch', 'mergeMediaItems', 'invMergeApprovals', '_invApprovalEntries', '_invApprovalSetAt',
   'mergeCustodyLogs', '_custodyEventId', 'invStickyValue', '_invHasVal',
@@ -407,7 +407,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const g = sandbox({
       fns: ['_renderAppraisalGuardrail', 'invLineAppraiser', '_invLinkedAppraiser', 'invAppraisalInProgress', '_invGuardrailItems', 'invAwaitingAppraisal', 'invAppraised', '_invHasValue', '_invHasAppraisal',
-            '_jobAppraisers', '_apprLabel', '_jobInvRefs', 'invNeedsAppraisal', 'invFiduciaryMode', 'isDecedentJob',
+            '_jobAppraisers', '_apprLabel', '_jobInvRefs', 'invNeedsAppraisal', 'invAppraisalChosen', 'invFiduciaryMode', 'isDecedentJob',
             '_invJob', 'invAppraisalThreshold', 'gateDispute', '_gateYes',
             'invIsIntrinsic', 'invCatMeta', 'invAppraiserFor', 'isFormalDoc',
             'resolveDocLevel', 'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', '_gate706', 'isDecedentJob', 'roundCents', 'fmt'],

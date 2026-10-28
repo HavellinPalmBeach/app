@@ -92,7 +92,7 @@ const SCH_FNS = ['invIsFirearm', '_invLineHolds', 'invConditionText', 'invAccept
   'docTierProduces', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'matterDef', 'matterTypeOf',
   'invProbateRows', 'invFiduciaryMode', 'isDecedentJob', '_invAssignItemNos', '_jobInvRefs', '_invTouch', 'savePhotoRefs',
   '_warnPhotoStoreFull', 'isFormalDoc', 'resolveDocLevel', 'docLevelFloor', 'gateDispute', '_gateYes', '_gate706',
-  '_invGuardrailItems', 'invAwaitingAppraisal', 'invAppraised', '_invJob', 'invNeedsAppraisal', 'invIsIntrinsic', 'invCatMeta',
+  '_invGuardrailItems', 'invAwaitingAppraisal', 'invAppraised', '_invJob', 'invNeedsAppraisal', 'invAppraisalChosen', 'invIsIntrinsic', 'invCatMeta',
   'invAppraisalThreshold', '_invHasAppraisal', '_jobAppraisers', 'resolveValBasis', 'estateValueDate', '_invMoney', '_invDocName',
   'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'estimateAppraiserNames',
   'docScopeDef', 'weArrangeAppraisals', 'roundCents', 'fmt', 'fmtDate2',

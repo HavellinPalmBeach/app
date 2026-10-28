@@ -1476,7 +1476,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.27 · 7:33pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.27 · 10:35pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -28386,6 +28386,13 @@ function invNeedsAppraisal(ref, job){
   // ⚠ THE `job &&` GUARD IS LOAD-BEARING: with no job the estate behaviour must survive, which
   // is also the safe direction — the same rule invAwaitingAppraisal states two functions down.
   if (job && !invFiduciaryMode(job)) return false;
+  // ⚠⚠ APPRAISAL CHOSEN, AND NO FIGURE YET, IS AN APPRAISAL OWED (P7's review, 2026-10-27): choosing Appraisal over Agent Two's
+  // $9,000 on a sofa takes that figure and its range off (_avTakeValue, VAL-02), and the value arms below then had nothing to read,
+  // so the line left the guardrail, the worklist and the release caution, and nothing would ever fill it (Agent Two leaves a line
+  // waiting on its appraiser alone). A person's choice of the source, so it routes whatever the category, a vehicle included, until
+  // the appraiser's figure lands or the appraisal is waived (invAwaitingAppraisal). Inside this rule, never a second writer of
+  // `needsAppr`.
+  if (invAppraisalChosen(ref)) return true;
   // ⚠⚠ ANY CATEGORY AT THE THRESHOLD (Anthony, 2026-10-14, asked on the pricing grid's open item: "Any category at
   // $3,000+"). Until then only the nine intrinsic categories routed on value, so a $9,000 sofa Agent Two valued reached
   // no appraiser and the Court Inventory never said it was waiting for one. Now a known value, or the top of the
@@ -28420,6 +28427,11 @@ function invNeedsAppraisal(ref, job){
 function invAppraised(ref) {
   return !!ref && ref.valSource === 'Appraisal' && _invHasValue(ref);
 }
+// Appraisal chosen as the source, and no figure on the line yet (P7's review): the state the record's OK leaves when Appraisal is
+// chosen over another's figure, owed the appraiser's figure. One answer, read by invNeedsAppraisal, the namer and the record.
+function invAppraisalChosen(ref) {
+  return !!ref && ref.valSource === 'Appraisal' && !_invHasValue(ref);
+}
 function invAppraisalInProgress(ref, jobId) {
   return !!ref && !invAppraised(ref) && _invHasAppraisal(jobId, ref);
 }
@@ -28447,6 +28459,9 @@ function invAppraisalSourceText(ref, jobId) {
   var who = invLineAppraiser(ref, jobId);
   if (invAppraised(ref)) return 'Appraisal' + (who ? ' · ' + who : ' (appraiser not named)');   // P7, VAL-02
   if (invAppraisalInProgress(ref, jobId)) return 'Appraisal' + (who ? ' · ' + who : '') + ' · pending';
+  // Appraisal chosen as the source with no figure yet and nobody linked (P7's review): the appraisal is owed, and says whose, or
+  // that nobody is named; waived, it says so, since no appraisal is coming.
+  if (invAppraisalChosen(ref)) return 'Appraisal' + (who ? ' · ' + who : ' (appraiser not named)') + (ref.apprWaived ? ' · waived' : ' · pending');
   return '';
 }
 // ⚠⚠ APPRAISAL MEANS AN APPRAISER'S FIGURE (P7, 2026-10-27; the desk audit's VAL-02: one select on the bulk bar made Agent Two's
@@ -28654,9 +28669,12 @@ function maivAggregate(items, job) {
   });
   total = roundCents(total); top = roundCents(top);
   var agents = refs.some(function(r){ return r.valuedBy === 'agent'; });
+  // `unread` (P7's review): some figure here nobody has looked at yet (_avStampUnread, the stamp's own rule). Once the list is read
+  // the stamp still names the reader, and the worklist no longer says the figures are not all a person's.
+  var fc = (job && agents) ? invAcceptCtx(job, items) : null;
   return { total: total, top: top, count: count, lines: lines, unvalued: unvalued, refs: refs,
            settled: unvalued === 0, over: top > MAIV_AGGREGATE_THRESHOLD,
-           stamp: (job && agents) ? _avStampText(refs, invAcceptCtx(job, items)) : '' };
+           stamp: fc ? _avStampText(refs, fc) : '', unread: fc ? _avStampUnread(refs, fc) : false };
 }
 // ⚠⚠ PAST THE AGGREGATE, EVERY ARTICLE IS OWED THE SWORN APPRAISAL (P7, 2026-10-27; RT-05, counsel to confirm the reading, bundle
 // D22): §20.2031-6(b) asks for the expert's appraisal of the articles of marked artistic or intrinsic value once they pass $3,000
@@ -32251,8 +32269,9 @@ function printEstateInventoryReport(jobId, opt) {
 
   function itemRow(r) {
     var q = parseInt(r.qty, 10);
-    // An appraisal names its appraiser beside the word (Q93): "Appraisal · <appraiser>", through the line's one namer.
-    var src = invAppraised(r) ? invAppraisalSourceText(r, jobId) : (r.valSource || '');
+    // An appraisal names its appraiser beside the word (Q93): "Appraisal · <appraiser>", through the line's one namer; a source of
+    // Appraisal with no figure yet reads "· pending", and "(appraiser not named)" where nobody is (P7's review), never a bare word.
+    var src = (invAppraised(r) || invAppraisalChosen(r)) ? invAppraisalSourceText(r, jobId) : (r.valSource || '');
     var note = r.valNote || '';
     return '<tr>'
       + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;width:52px;">' + _invPrintThumb(jobId, r, 44) + '</td>'
@@ -32342,11 +32361,21 @@ function printEstateInventoryReport(jobId, opt) {
   var _basisW = resolveValBasis(job);
   var _inProbate = _probateMatter ? all.filter(function(r){ return _invOnProbateSchedule(r, job); }) : all;
   var _outside = _probateMatter ? all.filter(function(r){ return !_invOnProbateSchedule(r, job); }) : [];
+  // ⚠ THE SUBTOTALS AGREE WITH THE BLOCKS ABOVE THEM (P7's review): the carved-out block lists exempt property beside the property
+  // outside the estate (its heading is DOC-02's, P14's), so the outside subtotal names the tracks it adds (never "exempt"), and
+  // where an exempt line is listed there a sentence says it is counted in the probate estate, as the Court Inventory claims it.
+  // Under the totals, whether or not the subtotals print (a probate matter whose only carved-out lines are exempt has none).
+  var _exListed = carved.filter(function(r){ return _invOnProbateSchedule(r, job); });
   var totalsHtml = (_outside.length
       ? _invFloorTotalHtml(invTotalFloor(_inProbate), _basisW, { what: 'Probate estate, exempt property included', note: false, size: 12, top: 12 })
-        + _invFloorTotalHtml(invTotalFloor(_outside), _basisW, { what: 'Outside the probate estate', note: false, size: 12, top: 2, rule: false })
+        + _invFloorTotalHtml(invTotalFloor(_outside), _basisW, { what: esc(_invExcludedTracks(_outside, job).replace(/ \/ /g, ', ')) + ' property, outside the probate estate',
+            note: false, size: 12, top: 2, rule: false })
       : '')
-    + _invFloorTotalHtml(invTotalFloor(all), _basisW, { label: 'Total estimated ' + esc(_basisW.toLowerCase()), top: _outside.length ? 6 : 12 });
+    + _invFloorTotalHtml(invTotalFloor(all), _basisW, { label: 'Total estimated ' + esc(_basisW.toLowerCase()), top: _outside.length ? 6 : 12 })
+    + (_exListed.length ? '<div class="inv-exempt-note" style="font-size:10.5px;color:#666;font-style:italic;margin-top:4px;text-align:right;">'
+        + 'Exempt property is counted in the probate estate: it is listed above with the carved-out property and claimed under '
+        + '§732.402, not excluded from the estate (' + esc(_exListed.slice(0, 6).map(function(r){ return '#' + (r.itemNo || '?') + ' ' + (r.objectName || 'unnamed'); }).join(', '))
+        + (_exListed.length > 6 ? ' and ' + (_exListed.length - 6) + ' more' : '') + ').</div>' : '');
 
   var html = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
     + _invDocHead(job, 'Estate Inventory &mdash; Asset Schedule')
@@ -37536,7 +37565,7 @@ function _maivWorklistBlock(job, items, maiv) {
     // above carries the stamp's words).
     tail = 'Below the ' + fmt(MAIV_AGGREGATE_THRESHOLD) + ' aggregate' + (maiv.top > maiv.total ? ', the top of each Agent Two range included' : '')
       + ', so §20.2031-6(b) does not require an expert appraisal to be filed with the return'
-      + (maiv.stamp ? ', on figures not all yet looked at by a person (above)' : '') + '. Re-check this as values are recorded.';
+      + (maiv.unread ? ', on figures not all yet looked at by a person (above)' : '') + '. Re-check this as values are recorded.';
   }
 
   return '<div style="margin-top:14px;border:1px solid ' + tone + ';border-radius:3px;padding:10px 12px;">'
@@ -41934,6 +41963,16 @@ function _avStampText(items, fc) {
   }
   return out.join('; ');
 }
+// Whether any figure the stamp counts is still nobody's look (P7's review): a value not yet reviewed, or values standing as Agent Two
+// left them with no current read of the list. The worklist's "on figures not all yet looked at by a person" asks it, so a list read
+// is never said to be unread.
+function _avStampUnread(items, fc) {
+  var c = _avStampCounts(items, fc);
+  if (c.n) return true;
+  if (!c.f) return false;
+  var rd = fc && fc.job ? invListRead(fc.job) : null;
+  return !(rd && rd.current);
+}
 function _avUnreviewedStamp(items, opts) {
   var fc = opts && opts.fc;
   var _c = _avStampCounts(items, fc), n = _c.n, f = _c.f;
@@ -42352,7 +42391,10 @@ function _renderInvRow(job, ref) {
   var _apSrc = invAppraisalSourceText(ref, jid);
   if (invAppraisalInProgress(ref, jid)) warn.push('<span class="inv-appr-src" title="An appraiser is linked: the appraisal in progress. When the report comes back, type its figure on the line; it is recorded as the appraisal\u2019s." style="color:var(--bronze);font-weight:700;">&#9873; ' + esc(_apSrc) + '</span>');
   else if (invAwaitingAppraisal(ref, jid)) warn.push('<span title="Flagged for a specialist appraisal \u2014 no appraisal figure on the line yet" style="color:var(--bronze);font-weight:700;">&#9873; appraise</span>');
-  else if (_apSrc) warn.push('<span class="inv-appr-src" title="The appraisal\u2019s figure is on the line" style="color:var(--gray-dk);">' + esc(_apSrc) + '</span>'
+  // A source of Appraisal with no figure (P7's review) is not the appraisal's figure on the line, and its title says what it is.
+  else if (_apSrc) warn.push('<span class="inv-appr-src" title="' + (invAppraised(ref) ? 'The appraisal\u2019s figure is on the line'
+      : ref.apprWaived ? 'Appraisal chosen as the source, and the appraisal waived: no figure is coming from an appraiser'
+      : 'Appraisal chosen as the source: type the appraiser\u2019s figure when the report comes back') + '" style="color:var(--gray-dk);">' + esc(_apSrc) + '</span>'
     + (invAppraisalReportOwed(ref, job) ? ' <span class="inv-appr-rpt" title="No report filed for this appraiser covers this item: File the report on the appraiser\u2019s row, under Values &amp; appraisals on Job Admin &amp; Inv" style="color:var(--bronze);font-weight:700;">report not filed</span>' : ''));
   // ⚠ A BEQUEST ON THE LIST NAMES ITS PERSON ON THE ROW (P19, call 7), and a matched line proposed to go elsewhere
   // carries the caution the release request prints, through invReleaseCautions (the one rule). A flag no bequest on
@@ -42673,7 +42715,8 @@ function _invPanelAppraisalHtml(job, ref) {
   return '<div class="inv-panel-appr" style="margin-bottom:10px;font-size:11px;line-height:1.5;">'
     + '<span style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;">Valuation source</span> '
     + '<strong>' + esc(t) + '</strong>'
-    + (invAppraisalInProgress(ref, job.id) ? ' <span style="color:var(--gray);">&mdash; when the report comes back, type its figure on the line.</span>' : '')
+    + ((invAppraisalInProgress(ref, job.id) || (invAppraisalChosen(ref) && !ref.apprWaived))
+        ? ' <span style="color:var(--gray);">&mdash; when the report comes back, type its figure on the line.</span>' : '')
     + (invAppraisalReportOwed(ref, job) ? ' <span style="color:var(--bronze);font-weight:700;">&middot; report not filed</span>' : '')
     + '</div>';
 }

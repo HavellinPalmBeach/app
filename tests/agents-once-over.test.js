@@ -125,7 +125,7 @@ const AV_FNS = ['agentValueMode', 'agentValueInternal', '_avHasFigure', 'agentVa
   '_getPhotoRef', '_setPhotoRef', '_jobInvRefs', '_invHasValue', 'roundCents', 'invIsIntrinsic', 'invCatMeta',
   'invFiduciaryMode', 'isDecedentJob', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep', 'estateValueDate',
   '_avdDate', '_ymdLocal', 'resolveValBasis', '_agNameKey', '_agDetailRefs', 'invLineCloseUps', '_invFileId', 'invAppraisalThreshold',
-  'gateDispute', '_gateYes', 'invNeedsAppraisal', 'fmt', '_invMoney', '_invNamed', '_invItemNo', '_andJoin',
+  'gateDispute', '_gateYes', 'invNeedsAppraisal', 'invAppraisalChosen', 'fmt', '_invMoney', '_invNamed', '_invItemNo', '_andJoin',
   'moneyToNumber', '_readAppsScriptJson', '_invJob', '_invRenderWhenIdle', '_invHasPhoto', 'agentValueLooks', '_avPhotoContext', '_invPhotoSource',
   '_invRoomName', 'agentListedOff', '_invDerivedRefs', '_invPhotoSiblings', '_invCondIsAgents', '_invAgentCondition', '_avSurveyOf', '_withDeviceKey', 'deviceKey', 'invFirearmSettle', 'invIsFirearm', 'invFirearmDispRefusal'];
 const AV_VARS = ['_avRun', 'AGENT_CONDITIONS', '_avForceComps', '_avAfter', '_avAutoAgain', 'AGENT_VALUE_BATCH', 'AGENT_VALUE_GENERAL_CEILING', 'AGENT_VALUE_WHOLE_FROM', 'AGENT_VALUE_MAX_COMPS',
@@ -759,7 +759,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             '_getPhotoRef', '_setPhotoRef', '_invJob', 'invFiduciaryMode', 'isDecedentJob', '_invStampLineReviewed', 'invLineUnsure', 'invLineReviewed', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invLineOpen', 'invAcceptCtx', '_agNameKey', 'agentValueInternal',
             'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep', 'agentNotices', 'agentNoticesOn', 'agentNoticeQuiet', '_jobInvRefs', '_invPhotoSiblings', '_invPhotoSource', '_invDerivedRefs',
             'agentValueNotices', '_avNoticeKinds', '_avNoticeLabel', 'agentValueStale', 'agentValueSpecialistWorth', 'agentValueAgain', '_avState', '_invNamed', '_invItemNo',
-            'invAppraisalThreshold', 'gateDispute', '_gateYes', 'fmt', 'roundCents', 'invNeedsAppraisal', 'invIsIntrinsic', 'invCatMeta', 'invAppraiserFor', '_anArticle', 'invFirearmSettle', 'invIsFirearm', 'invFirearmDispRefusal', '_invFirearmsSkippedText', 'invFirearmSettleText'],
+            'invAppraisalThreshold', 'gateDispute', '_gateYes', 'fmt', 'roundCents', 'invNeedsAppraisal', 'invAppraisalChosen', 'invIsIntrinsic', 'invCatMeta', 'invAppraiserFor', '_anArticle', 'invFirearmSettle', 'invIsFirearm', 'invFirearmDispRefusal', '_invFirearmsSkippedText', 'invFirearmSettleText'],
       vars: ['INVENTORY_COLUMNS', 'DECEDENT_SERVICES', 'AGENT_VALUE_OWN', 'AGENT_NOTICE_KINDS', '_avRun', '_avAfter', '_avForceComps', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS',
              'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'INV_TAXONOMY', 'INV_OPEN_HOLDS', 'INV_FIREARM_NEVER'],
       stubs: { jobs: [ESTATE()], _photoRefs: { 7: lines }, _invPicked: () => pick, _invTouch(r) { r.updatedAt = (r.updatedAt || 0) + 1; return r; },

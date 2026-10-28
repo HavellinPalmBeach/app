@@ -14,7 +14,7 @@ const { sandbox, domStub } = require('./harness');
 const FNS = [
   '_gateYes', '_gate706', 'gateDispute', 'docLevelFloor', 'docLevelFloorReason',
   'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep',
-  'resolveDocLevel', 'isFormalDoc', 'invAppraisalThreshold', 'isDecedentJob', 'invFiduciaryMode', 'invNeedsAppraisal', 'invIsIntrinsic', 'invCatMeta',
+  'resolveDocLevel', 'isFormalDoc', 'invAppraisalThreshold', 'isDecedentJob', 'invFiduciaryMode', 'invNeedsAppraisal', 'invAppraisalChosen', 'invIsIntrinsic', 'invCatMeta',
   'docStandardEffect', 'roundCents', 'fmt'
 ];
 const VARS = [

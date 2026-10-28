@@ -201,7 +201,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const FNS = ['_invDocPartyHead', 'invConditionText', '_invScheduleSection', 'invValBasisWord', 'invLineAppraiser', '_invLinkedAppraiser', '_jobAppraisers', '_apprLabel', 'invProbateRows', '_invTrackDefault', 'printCourtInventory', '_avUnreviewedStamp', 'agentValueUnreviewed', '_invAssignItemNos', '_jobInvRefs', '_invTouch',
                  'savePhotoRefs', 'isFormalDoc', 'resolveDocLevel', 'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'gateDispute',
                  '_gateYes', '_gate706', 'isDecedentJob', '_invGuardrailItems',
-                 'invAwaitingAppraisal', '_invJob', 'invNeedsAppraisal', 'invFiduciaryMode',
+                 'invAwaitingAppraisal', '_invJob', 'invNeedsAppraisal', 'invAppraisalChosen', 'invFiduciaryMode',
                  'invIsIntrinsic', 'invCatMeta', 'invAppraisalThreshold', '_invHasAppraisal', 'invAppraised',
                  '_invOnProbateSchedule', '_invTrack', 'resolveValBasis', 'estateValueDate',
                  '_invMoney', '_invExcludedTracks', '_invDocName', '_invHasValue', '_invIsExempt',

@@ -17,7 +17,7 @@ const FNS = ['scheduleSignLines', '_invDocPartyHead', 'invLineReviewed', 'invLin
   '_invPrintThumb', '_invProgressStamp', '_invReviewStats', '_invThumbFor', '_invThumbCache',
   '_invThumbKey', 'invFiduciaryMode', 'isDecedentJob', 'svcFamily', '_invGroupItems',
   '_invDispLabel', '_invIsExempt', '_invIsProbateAsset', '_invTrack', '_invHasAppraisal',
-  '_jobAppraisers', 'invAppraiserFor', 'resolveValBasis', 'estateValueDate', 'invNeedsAppraisal',
+  '_jobAppraisers', 'invAppraiserFor', 'resolveValBasis', 'estateValueDate', 'invNeedsAppraisal', 'invAppraisalChosen',
   'invAppraisalThreshold', 'invIsIntrinsic', 'invCatMeta', 'gateDispute', '_gateYes', '_gate706',
   '_invJob', 'invIsMAIV', 'invMAIVCategory', 'invMAIVDefaultCat', '_invGuardrailItems',
   '_invHasValue', '_invOnProbateSchedule', '_invExcludedTracks', 'isFormalDoc', 'resolveDocLevel',

@@ -1676,9 +1676,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(callersOf('invListSeen'), ['invListRead', 'invMarkListRead'], '⚠ the fingerprint: taken by the press, compared by the read');
     eq((L.match(/\bINV_READ_FIELDS\b/g) || []).length, 2, 'INV_READ_FIELDS: declared once, read by the fingerprint alone');
     // RESTATED (P7, 2026-10-27): the §20.2031-6(b) sentence carries the pill's words in text (_avStampText; p7-evidence.test.js holds
-    // the two equal), so it reads the list's read too.
-    eq(callersOf('invListRead'), ['_avAcceptedPill', '_avStampText', '_invListReadHtml', '_invProgressStamp', '_invReadKey', '_renderInvWorkbar', 'probatePackageGaps'],
-      '⚠ invListRead: the stamp, the pill and its words in text, the work bar\'s line, its key and its sentence, and the package\'s gaps');
+    // the two equal), so it reads the list's read too; and (P7's review) the worklist asks whether its figures are still nobody's look
+    // (_avStampUnread), so a list read is never said to be unread.
+    eq(callersOf('invListRead'), ['_avAcceptedPill', '_avStampText', '_avStampUnread', '_invListReadHtml', '_invProgressStamp', '_invReadKey', '_renderInvWorkbar', 'probatePackageGaps'],
+      '⚠ invListRead: the stamp, the pill and its words in text, whether the figures are still unread, the work bar\'s line, its key and its sentence, and the package\'s gaps');
     eq(callersOf('invListReadRefusal'), ['_invListReadHtml', '_invReadKey', 'invMarkListRead'], 'the refusal: the press, its line and its key');
     eq(callersOf('invListReadWords'), ['_avAcceptedPill', '_avStampText', '_invListReadHtml', '_invProgressStamp'], 'the read\'s words: the pill (and its words in text), the line and the stamp');
     eq(callersOf('invMarkListRead'), ['_invListReadHtml'], 'the press: the work bar\'s button alone');

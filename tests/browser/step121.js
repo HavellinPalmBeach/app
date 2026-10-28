@@ -9,6 +9,8 @@
 // button and the client through its picker. A: the still life's record, Valuation Source → Appraisal: the dialog names Agent
 // Two's estimate; Cancel leaves the line; OK takes the figure off (the row's Total box blank) and records the source; the
 // appraiser's figure typed on the row's Total box (Tab to leave it) is the appraisal, read "Appraisal (appraiser not named)".
+// A2 (P7's review): Agent Two's $9,000 sofa, ranged to $12,000, Furniture: Appraisal chosen in its record and OK; it stays on the
+// guardrail and the Values bar says the same, its row reads appraise and its record "Appraisal (appraiser not named) · pending".
 // B: two lines picked: the selection bar's Set valuation source… offers no Appraisal. C: More ▾ → Appraisal Worklist, in the
 // viewer: "already over the $3,000 aggregate whatever the remaining 1 is worth", the articles owed the sworn appraisal named and
 // marked in their packets, the class table counting the twelve goblets as twelve. D: the work bar's Estate Inventory PDF: the
@@ -112,7 +114,9 @@ const EST = 12101;
         item('m8', { itemNo: 8, objectName: 'Unsigned bronze', category: 'Art & Décor', fmv: '' }),
         item('n1', { itemNo: 20, objectName: 'Nightstand', fmv: '' }),
         item('n2', { itemNo: 23, objectName: 'Copper cookware set', category: 'General/Household', fmv: '' }),
-        item('car', desk({ itemNo: 30, objectName: 'Mercedes sedan', category: 'Vehicles & Watercraft', roomIdx: 1, fmv: 14000, assetTrack: 'Non-probate' }))];
+        item('car', desk({ itemNo: 30, objectName: 'Mercedes sedan', category: 'Vehicles & Watercraft', roomIdx: 1, fmv: 14000, assetTrack: 'Non-probate' })),
+        item('so', { itemNo: 41, objectName: 'Camelback sofa, carved mahogany frame', category: 'Furniture', fmv: 9000, valLow: 6000, valHigh: 12000,
+          valConf: 'low', valuedBy: 'agent', valSource: 'Auction comps', valNote: 'A comparable camelback sofa, 2025.', valAgentAt: T0, valNameAt: 'Camelback sofa, carved mahogany frame' })];
       savePhotoRefs(EST);
       saveJobs(); localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore));
       _logsState = 'ready';
@@ -145,6 +149,28 @@ const EST = 12101;
       has(await txt('#inv-row-sl'), 'Appraisal (appraiser not named)', 'and the row says nobody is named as its appraiser');
     });
 
+    // ── A2 ──
+    await section('A2. Appraisal chosen over Agent Two\'s $9,000 sofa: it stays on the guardrail, the Values bar and the row (P7\'s review)', async () => {
+      await p.evaluate(() => { _invOpen = {}; renderInventoryTab(); }); await p.waitForTimeout(500);
+      const guard = () => p.evaluate((id) => _invGuardrailItems(id).map((r) => r.stableId).sort(), EST);
+      const bar = () => txt('#desk-stat-values-' + EST);
+      const g0 = await guard(), b0 = await bar();
+      ok(g0.indexOf('so') >= 0, 'fixture: the sofa is on the guardrail, routed on its value (' + g0.join(',') + ')');
+      has(b0, 'need an appraisal', 'fixture: the Values bar counts it (' + b0 + ')');
+      await press('#inv-row-so button[title="Open the full record"]', 'the sofa\'s ▾');
+      const sel = '#inv-row-so select[onchange*="\'valSource\'"]';
+      said.length = 0; answer = true;
+      await p.selectOption(sel, 'Appraisal'); await p.waitForTimeout(900);
+      has(said.join(' | '), 'carries Agent Two’s estimate of $9,000, not an appraisal', 'the dialog names the estimate');
+      const off = await line('so');
+      eq([off.fmv, off.valSource, off.valHigh], ['', 'Appraisal', undefined], 'fixture: OK took the figure and its range off');
+      eq(await guard(), g0, '⚠⚠ the sofa stays on the guardrail');
+      eq(await bar(), b0, '⚠⚠ …and the Values bar says the same as before');
+      const row = await txt('#inv-row-so');
+      has(row, 'appraise', '⚠ its row reads appraise');
+      has(row, 'Appraisal (appraiser not named) · pending', '…and its record says whose figure it waits for');
+    });
+
     // ── B ──
     await section('B. two lines picked: Set valuation source… offers no Appraisal', async () => {
       await p.evaluate(() => { _invOpen = {}; renderInventoryTab(); }); await p.waitForTimeout(500);
@@ -173,6 +199,7 @@ const EST = 12101;
       const silver = await p.evaluate(() => { const tr = Array.from(document.querySelectorAll('#doc-viewer-body tr')).filter((r) => r.cells[0] && r.cells[0].textContent.trim() === 'Silverware')[0];
         return tr ? tr.cells[1].textContent.trim() : null; });
       eq(silver, '12', '⚠ the class table counts the twelve goblets as twelve articles');
+      has(body, 'Camelback sofa, carved mahogany frame', '⚠⚠ the sofa, Appraisal chosen and no figure yet, is still on the worklist');
       await close();
     });
 
@@ -182,9 +209,11 @@ const EST = 12101;
       ok(await viewerOpen(), 'the viewer is on screen');
       const body = await txt('#doc-viewer-body');
       has(body, 'Probate estate, exempt property included, recorded so far (Fair Market Value) — not a complete total: $13,680', '⚠⚠ the probate estate: a floor');
-      has(body, 'Outside the probate estate (Fair Market Value): $14,000', '…the property outside it, complete');
+      has(body, 'Non-probate property, outside the probate estate (Fair Market Value): $14,000', '…the property outside it, complete, named by its track');
+      has(body, 'Appraisal (appraiser not named) · pending', '⚠ the sofa\'s source column: pending, never a bare Appraisal');
       has(body, 'Total recorded so far (Fair Market Value) — not a complete total: $27,680', '⚠⚠ the whole: a floor, never a complete total');
-      has(body, '3 items are recorded without a value and are NOT included above, so this figure is a floor rather than a total: #8 Unsigned bronze, #20 Nightstand, #23 Copper cookware set.', '…naming the lines');
+      has(body, '4 items are recorded without a value and are NOT included above, so this figure is a floor rather than a total: #8 Unsigned bronze, #20 Nightstand, #23 Copper cookware set, #41 Camelback sofa, carved mahogany frame.',
+        '…naming the lines, the sofa waiting on its appraiser among them');
       lacks(body, 'Total estimated fair market value', 'no complete total over a floor');
       await close();
       await more('printCourtInventory');
