@@ -2958,10 +2958,13 @@ function groupO({ group, ok, eq, has, lacks }) {
   {
     const rows = [LINE('a', { disposition: 'Donate', channel: 'Goodwill' })];
     const seen = {}, failed = {}, timers = [];
+    const armed = () => timers.filter((t) => !t.cleared);
     let reads = 0, answer = 'fail', active = true;
     const D = desk(PROBATE({ invSnapshots: [{ ts: 1 }] }), {}, { refs: rows, roots: ['_invRefreshFromCloud'], stubs: {
       SHEETS_SYNC_URL: URL, _invCloudSeen: seen, _invCloudFailed: failed,
-      setTimeout: (f, ms) => { timers.push({ f, ms }); return timers.length; }, clearTimeout() {},
+      // RESTATED 2026-10-27 (P6's review): a timer cleared is not armed. Each read now arms a watchdog that its answer clears
+      // (INV_READ_WATCHDOG_MS, p6-two-devices.test.js H8's), so the timers counted here are the ones still armed.
+      setTimeout: (f, ms) => { timers.push({ f, ms }); return timers.length; }, clearTimeout: (id) => { if (timers[id - 1]) timers[id - 1].cleared = true; },
       refreshPhotoRefs: (id, cb) => { reads++; if (answer === 'fail') failed[id] = true; else { seen[id] = true; delete failed[id]; } cb(false); } } });
     const g = D.dom.getElementById;
     D.dom.getElementById = (id) => (id === 'panel-inventory' ? { classList: { contains: (c) => c === 'active' && active } } : g(id));
@@ -2978,32 +2981,32 @@ function groupO({ group, ok, eq, has, lacks }) {
     eq(s.partial.map((x) => x.open), [false, false, false, false], '⚠ and no bar opens by itself off it (Releases would, read)');
     eq(D.C.deskFoldState(7, D.job, 'releases', rows).bits[0].tone, 'amber', 'the unreachable sheet in amber');
     eq(s.partial, s.full, 'as a full render draws them');
-    eq(timers.map((t) => t.ms), [15000], '⚠⚠ and the desk asks again in 15 seconds');
+    eq(armed().map((t) => t.ms), [15000], '⚠⚠ and the desk asks again in 15 seconds');
     // Left the tab: the timer reads nothing, and arms nothing.
     active = false;
-    attempt(() => timers[0].f());
-    eq([reads, timers.length], [1, 1], 'the tab left: no read, no new timer');
+    attempt(() => armed()[0].f());
+    eq([reads, armed().length], [1, 1], 'the tab left: no read, no new timer');
     // Another client picked: nothing either.
     active = true;
     attempt(() => D.C._invRefreshFromCloud());
-    eq([reads, timers.length], [2, 2], 'fixture: read again, failed again, a timer armed');
+    eq([reads, armed().length], [2, 2], 'fixture: read again, failed again, a timer armed');
     D.dom.getElementById('inv-job').value = '8';
-    attempt(() => timers[1].f());
+    attempt(() => armed()[1].f());
     eq(reads, 2, 'another client on the desk: no read');
     D.dom.getElementById('inv-job').value = '7';
     attempt(() => D.C._invRefreshFromCloud());
-    eq(timers.length, 3, 'fixture: armed again');
+    eq(armed().length, 3, 'fixture: armed again');
     // The connection back: the next tick reads, and the bars read what was read.
     answer = 'ok';
     const before = heads(D.dom.html);
-    attempt(() => timers[2].f());
+    attempt(() => armed()[2].f());
     const after = heads(D.dom.html);
     eq(reads, 4, 'the tick read the sheet');
     eq(before[0].line.split(' · ')[0], UN, 'fixture: unreachable until then');
     eq([after[0].open, after[0].line], [true, '1 item needs written approval: send a request · no beneficiaries recorded'],
       '⚠⚠ read: the line, and Releases open by its rule');
     // RESTATED 2026-10-27 (P6): once a read has landed the 15 s retry stops, and what is armed is the minute's re-read of an open desk.
-    eq(timers.map((t) => t.ms), [15000, 15000, 15000, 60000], 'once a read has landed no retry is armed: the minute\'s re-read is (P6)');
+    eq(armed().map((t) => t.ms), [15000, 15000, 15000, 60000], 'once a read has landed no retry is armed: the minute\'s re-read is (P6)');
     has(fn('refreshPhotoRefs'), '_invCloudFailed[jobId] = true', 'the failure is recorded where the read is made');
   }
 

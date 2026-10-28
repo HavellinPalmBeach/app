@@ -22,7 +22,7 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 const { sandbox, source, fn, decl, domStub } = require('./harness');
-const { server, SP } = require('./sheet-rig');
+const { server, SP, mk } = require('./sheet-rig');
 
 const SRC = source();
 const ROOT = path.join(__dirname, '..');
@@ -124,9 +124,11 @@ const ROOTS = ['refreshPhotoRefs', '_invEnsureLoaded', 'loadPhotoRefs', 'savePho
   'queuedPostSync', '_flushOutbox', 'flushPendingWrites', 'retryPendingWrites', '_pendingChipCopy', '_pendingChangeWords', '_invResendOwed', 'invReadFirst',
   'invReadQuiet', 'agentNameShots', '_agSendNext', '_agFinish', '_agStateHtml', 'invBulkRemove', '_invBulkApply', '_syncFlushNow', '_syncOwedOnUnload',
   'invSheetChangeWords', '_invUnsentCount', '_invManifestLanded', '_invOwedRead', '_invTombstoneLine', '_invPicked', '_jobInvRefs', '_getPhotoRef',
-  'exportInventoryCSV'];
+  'exportInventoryCSV', '_invResendSoon', '_invManifestEvictable', '_invReclaimSpace'];
 
-function desk(name, srv, clock, persisted) {
+// `extra.roots`: more of the real code a group drives (the Record approval dialog, P6's review).
+function desk(name, srv, clock, persisted, extra) {
+  extra = extra || {};
   const net = [], badges = [], alerts = [], asks = [], idle = { n: 0 }, full = { n: 0 };
   const dev = { name, net, badges, alerts, asks, idle, full, offline: false, dropMedia: false, confirmAnswer: true };
   const fetchStub = (url, opts) => {
@@ -146,11 +148,18 @@ function desk(name, srv, clock, persisted) {
       String(url).split('?')[1].split('&').forEach((kv) => { const [k, v] = kv.split('='); q[k] = decodeURIComponent(v || ''); });
       net.push({ t: clock.t, m: 'GET', what: q.action });
       if (dev.readDown) return SP.reject(new TypeError('Failed to fetch'));
+      // A read held on the way (`holdReads`): answered by release(), as the sheet stands then; or never (`hangReads`).
+      if (dev.hangReads) return mk().promise;
+      if (dev.holdReads) {
+        const d = mk();
+        dev.held.push(() => { const t = srv.exec('GET', { parameter: q }); d.resolve({ text: () => SP.resolve(t), json: () => SP.resolve(JSON.parse(t)) }); });
+        return d.promise;
+      }
       text = srv.exec('GET', { parameter: q });
     }
     return SP.resolve({ text: () => SP.resolve(text), json: () => SP.resolve(JSON.parse(text)) });
   };
-  const ctx = lift(ROOTS, BOUNDARY, {
+  const ctx = lift(ROOTS.concat(extra.roots || []), BOUNDARY, {
     console: { log() {}, warn() {}, error() {} },
     Date: clock.Date, setTimeout: clock.setTimeout, clearTimeout: clock.clearTimeout,
     document: domStub({}),
@@ -171,8 +180,10 @@ function desk(name, srv, clock, persisted) {
     mustFindItems: () => [], deviceUser: () => name,
   });
   if (persisted) Object.keys(persisted).forEach((k) => ctx.localStorage.setItem(k, persisted[k]));
+  dev.held = [];
   Object.assign(dev, {
     ctx,
+    release() { const h = dev.held.splice(0); h.forEach((f) => f()); return h.length; },
     stored() { const o = {}; Object.keys(ctx.__store).forEach((k) => { o[k] = ctx.__store[k]; }); return o; },
     line(id) { return (ctx._photoRefs[J] || []).find((r) => r.stableId === id) || {}; },
     sent(what) { return net.filter((x) => x.what === what && !x.lost); },
@@ -396,11 +407,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const ctx = sandbox({
       fns: ['_invRefreshFromCloud', '_invRereadArm', '_invRereadTick', '_invDeskShows', '_invCloudRetryArm', 'invSheetChangeWords',
         '_invManifestUnread'],
-      vars: ['INV_DESK_REREAD_MS', 'INV_CLOUD_RETRY_MS', '_invReread', '_invCloudRetry'],
+      vars: ['INV_DESK_REREAD_MS', 'INV_CLOUD_RETRY_MS', '_invReread', '_invCloudRetry', 'INV_READ_WATCHDOG_MS'],
       stubs: {
         document: dom, Date: clock.Date, setTimeout: clock.setTimeout, clearTimeout: clock.clearTimeout,
         SHEETS_SYNC_URL: SYNC, _invCloudSeen: { [J]: true }, _invCloudFailed: {},
-        refreshPhotoRefs: (id, cb) => { log.reads++; const a = log.answer; cb(a.changed, a.ok, a.diff); },
+        refreshPhotoRefs: (id, cb) => { log.reads++; if (log.hang) return; const a = log.answer; cb(a.changed, a.ok, a.diff); },
         collectionLinesEnsure: () => 0, approvalEnvelopeApply: () => 0, approvalEnvelopeRefresh() {},
         _invRenderWhenIdle: () => { log.idle++; }, renderInventoryTab: () => { log.full++; },
         _deskFoldHeadsRepaint: () => { log.heads++; }, _invRefreshReleases() {}, _invReadLineRepaint() {}, _invColdRepaint() {},
@@ -539,7 +550,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(live(SRC), "window.addEventListener('pagehide', function () { _syncPageGoing = true; _syncFlushNow(); });", 'pagehide sends what waits');
     const vis = live(SRC).slice(live(SRC).indexOf("document.addEventListener('visibilitychange', function(){"));
     has(vis.slice(0, 900), 'if (document.hidden) { _syncPageGoing = true; _syncFlushNow(); return; }', 'a page hidden sends what waits');
-    has(vis.slice(0, 900), '_invRereadTick(jid)', 'and a page back in view reads the open desk at once');
+    has(vis.slice(0, 900), "_invRereadTick(jid, 'visible')", 'and a page back in view reads the open desk at once, as an arrival (DocuSign may be asked then)');
   });
   // ═══════════════════════════════════════════════════════════════════════
   guard('H · ⚠⚠ SYN-10: every desk paper, the CSV and Snapshot read the sheet first, as the sends do', () => {
@@ -602,7 +613,24 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     c.invReadFirst(J, 'The CSV', () => printed.push(5));
     c.invReadFirst(J, 'The CSV', () => printed.push(6));
     held(false, true, null);
-    eq(printed, [5], 'one read, one answer');
+    eq(printed, [5], 'the same press twice while its read is out is one: one read, one answer');
+    // ⚠⚠ Different presses made while one read is out each go once it lands, in the order pressed (P6's review: Set category
+    // then Set condition shared one label, and the second was dropped with no word).
+    printed.length = 0; let reads = 0;
+    c.refreshPhotoRefs = (id, cb) => { reads++; held = cb; };
+    c.invReadFirst(J, 'The change across the selection', () => printed.push('category'), { key: 'bulk|category|Furniture' });
+    c.invReadFirst(J, 'The change across the selection', () => printed.push('condition'), { key: 'bulk|condition|Good' });
+    c.invReadFirst(J, 'The CSV', () => printed.push('csv'));
+    c.invReadFirst(J, 'The change across the selection', () => printed.push('condition again'), { key: 'bulk|condition|Good' });
+    held(false, true, null);
+    eq([reads, printed], [1, ['category', 'condition', 'csv']], '⚠⚠ one read; the two sweeps and the CSV each go, in order, and the same sweep twice is one');
+    // A read that fails refuses every press waiting on it, in one sentence.
+    alerts.length = 0; printed.length = 0;
+    c.invReadFirst(J, 'Remove lines', () => printed.push('remove'));
+    c.invReadFirst(J, 'The CSV', () => printed.push('csv'));
+    held(false, false, null);
+    eq([printed, alerts], [[], ['Not done: Remove lines and The CSV read the inventory from the sheet first, so that nothing acts on a copy another device has moved past, and the sheet did not answer. Nothing was changed. Check the connection, then try again.']],
+      'a read that does not land refuses both, by name, in one sentence');
   });
 
   guard('H3 · ⚠⚠ the CSV printed on a stale device carries the other device\'s $275 (the audit\'s Court Inventory press did not)', () => {
@@ -635,12 +663,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The held workbook's read: once per client every 15 s, never one per edit, and drawn as the desk's own read draws it.
     const clock = clockOf();
     const dom = domStub({ 'inv-job': String(J) });
-    let reads = 0, deskReads = 0, renders = 0, idle = 0;
+    let reads = 0, deskReads = 0, renders = 0, idle = 0; const whys = [];
     const W = sandbox({ fns: ['_scheduleInventorySync', '_invSyncNow'], vars: ['_invSyncTimer', '_invSyncIds', '_invHeldReadAt', 'INV_CLOUD_RETRY_MS'], stubs: {
       SHEETS_SYNC_URL: SYNC, jobs: [Object.assign(JOB(), { driveFolder: 'https://drive.google.com/drive/folders/R' })], _invCloudSeen: {}, document: dom,
       Date: clock.Date, setTimeout: clock.setTimeout, clearTimeout: clock.clearTimeout,
       postSyncBadge() {}, buildMediaPayload: () => ({}), buildInventoryPayload: () => ({}), showSyncBadge() {}, _invOwedMark() {},
-      _invRefreshFromCloud: () => { deskReads++; }, refreshPhotoRefs: (id, cb) => { reads++; cb(true, true, null); },
+      _invRefreshFromCloud: (why) => { deskReads++; whys.push(why); }, refreshPhotoRefs: (id, cb) => { reads++; cb(true, true, null); },
       renderInventoryTab: () => { renders++; }, _invRenderWhenIdle: () => { idle++; },
     } });
     W._scheduleInventorySync(J); clock.run(2600);
@@ -650,6 +678,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     clock.run(15000);
     W._scheduleInventorySync(J); clock.run(2600);
     eq(deskReads, 2, 'and another once 15 s have passed');
+    eq(whys, ['held', 'held'], 'each asked as a read nobody pressed (\'held\'), so it never asks DocuSign (P6\'s review)');
     eq(renders, 0, '⚠⚠ and none of them redrew the tab by itself (it redrew whatever the read answered, under the next row being typed)');
     dom.getElementById('inv-job').value = '99';
     clock.run(16000);
@@ -833,5 +862,391 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fetch: () => SP.resolve({ json: () => SP.resolve({ ok: true, media: {} }) }), _withDeviceKey: (u) => u, console: { error() {}, log() {}, warn() {} } });
     R.refreshPhotoRefs(J, (c, ok) => { calls.push(ok); throw new Error('the act threw'); });
     eq(calls, [true], '⚠ answered once, as landed (a second answer said the sheet had not answered, over an act that had read it)');
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // P6's review (2026-10-27): what the first build left open, each driven as the review drove it.
+  guard('H7 · ⚠⚠ two different sweeps pressed while one read is out both go, in the order pressed (the second was dropped with no word)', () => {
+    const clock = clockOf(), srv = server('A');
+    seedSheet(srv, 6);
+    const B = desk('Ashley Jerome', srv, clock);
+    B.open();
+    B.pick(['s0', 's1', 's2']);
+    B.holdReads = true;
+    B.ctx._invBulkApply(J, 'category', 'Furniture');   // Set category… Furniture
+    B.ctx._invBulkApply(J, 'condition', 'Good');       // Set condition… Good, a second later, the first read still out
+    B.ctx._invBulkApply(J, 'condition', 'Good');       // and the same press again
+    B.holdReads = false;
+    eq(B.release(), 1, 'one read for the three presses');
+    clock.run(4000);
+    eq(['s0', 's1', 's2'].map((id) => [B.line(id).category, B.line(id).condition]), [['Furniture', 'Good'], ['Furniture', 'Good'], ['Furniture', 'Good']],
+      '⚠⚠ both sweeps are on the lines (the condition was lost: ["Furniture", null])');
+    eq(['s0', 's1', 's2'].map((id) => [sheetLine(srv, id).category, sheetLine(srv, id).condition]), [['Furniture', 'Good'], ['Furniture', 'Good'], ['Furniture', 'Good']],
+      'and on the sheet');
+    eq(B.alerts, [], 'nothing refused');
+  });
+
+  guard('H10 · two papers of one kind for two different parties, pressed while one read is out, each go (they shared one label)', () => {
+    let held = null, reads = 0; const ran = [];
+    const gets = [];
+    const c = lift(['printBeneficiaryReceipt', 'printDonationRecord', 'printApprovalRequest', 'printSnapshotComparison', 'agentRevalue', 'invReadFirst', 'invReadFirstRefusal', '_invReadOpt'], [], {
+      SHEETS_SYNC_URL: SYNC, _invCloudSeen: { [J]: true }, showSyncBadge() {}, alert() {}, _invEnsureLoaded() {}, _invRenderWhenIdle() {},
+      invSheetChangeWords: () => '', refreshPhotoRefs: (id, cb) => { reads++; held = cb; },
+      _invJob: () => JOB(), invColdRefusal: () => '', invFiduciaryMode: () => true, _invAssignItemNos: () => [], invReceiptGroups: () => [],
+      invRecipientName: (n) => { ran.push('receipt ' + n); return n; }, samePerson: () => false,
+      donationGroups: () => { ran.push('donation'); return []; },
+      jobs: [JOB()], invWrittenReleasePicked: () => { ran.push('request: the selection'); return []; }, _invAwaitingApproval: () => { ran.push('request: all'); return []; },
+      invWrittenReleaseNoneText: () => 'none', _snapLinesOf: (j, ts) => { ran.push('compare ' + ts); return null; }, _withSnapLines() {}, _snapPrevLive: () => null,
+      _avState: () => ({ running: false }), _getPhotoRef: (j, id) => { gets.push(id); return { stableId: id, deletedAt: 1 }; },
+    });
+    c._invJob = () => Object.assign(JOB(), { invSnapshots: [{ ts: 111, label: 'Filed' }, { ts: 222, label: 'Later' }] });
+    c.printBeneficiaryReceipt(J, 'Daniel Price');
+    c.printBeneficiaryReceipt(J, 'Nora Price');
+    c.printBeneficiaryReceipt(J, 'Nora Price');
+    c.printDonationRecord(J, 's1');
+    c.printDonationRecord(J, 's7');
+    c.printApprovalRequest(J, false);
+    c.printApprovalRequest(J, true);
+    c.printSnapshotComparison(J, 111, 'now');
+    c.printSnapshotComparison(J, 222, 'now');
+    c.agentRevalue(J, 's1');
+    c.agentRevalue(J, 's2');
+    eq([reads, ran, gets], [1, [], ['s1', 's2']], 'fixture: one read out, nothing built yet');
+    gets.length = 0;
+    held(false, true, null);
+    eq(ran, ['receipt Daniel Price', 'receipt Nora Price', 'donation', 'donation', 'request: all', 'request: the selection', 'compare 111', 'compare 222'],
+      '⚠ each person\'s receipt, each charity\'s record, the request for all and for the selection, and each snapshot\'s comparison goes once the read lands, the same one twice going once (the second of each was dropped)');
+    eq(gets, ['s1', 's1', 's2', 's2'], '⚠ and the record\'s Re-value on two lines each goes, keyed on its line (the second was dropped)');
+  });
+
+  guard('H8 · ⚠ a read that never answers lets go: the presses waiting on it are refused by name after 30 s, and the next press reads afresh', () => {
+    const clock = clockOf(), srv = server('A');
+    seedSheet(srv, 6);
+    const B = desk('Ashley Jerome', srv, clock);
+    B.open();
+    B.hangReads = true;   // a connected but dead link: the read never answers, and fetch has no timeout
+    B.pick(['s1']);
+    B.ctx.invBulkRemove(J);
+    B.ctx.exportInventoryCSV(J);
+    clock.run(29000);
+    eq(B.alerts, [], 'fixture: nothing said within the 30 s');
+    clock.run(2000);
+    eq(B.alerts, ['Not done: Remove lines and The CSV read the inventory from the sheet first, so that nothing acts on a copy another device has moved past, and the sheet did not answer. Nothing was changed. Check the connection, then try again.'],
+      '⚠⚠ both presses are refused by name (one toast, then every later press did nothing until the request died)');
+    eq(B.ctx.INV_READ_WATCHDOG_MS, 30000, 'after INV_READ_WATCHDOG_MS, 30 s');
+    B.hangReads = false;
+    const reads = B.sent('loadMedia').length;
+    B.ctx.invBulkRemove(J);
+    clock.run(6000);
+    eq(B.sent('loadMedia').length, reads + 1, '⚠ the signal back, the next press asks the sheet afresh (it waited on the dead read for good)');
+    eq(B.asks.length, 1, 'and goes on to its question');
+    ok(!!sheetLine(srv, 's1').deletedAt, 'and the line is removed');
+    // The gate lifted alone, on the clock: an answer that comes after the watchdog is drawn and acts on nothing.
+    let lateG = null, wentG = 0, drawnG = 0; const saidG = [];
+    const G = lift(['invReadFirst', 'invReadFirstRefusal'], [], { SHEETS_SYNC_URL: SYNC, _invCloudSeen: { [J]: true }, setTimeout: clock.setTimeout, clearTimeout: clock.clearTimeout,
+      showSyncBadge() {}, alert: (m) => saidG.push(String(m)), _invEnsureLoaded() {}, invSheetChangeWords: () => '',
+      refreshPhotoRefs: (id, cb) => { lateG = cb; }, _invRenderWhenIdle: () => { drawnG++; } });
+    G.invReadFirst(J, 'The CSV', () => { wentG++; });
+    clock.run(31000);
+    eq([saidG.length, wentG], [1, 0], 'fixture: the gate\'s read let go, refused by name');
+    lateG(true, true, null);
+    eq([wentG, drawnG, saidG.length], [0, 1, 1], '⚠ and its answer, coming after, is drawn and acts on nothing (the CSV would have downloaded after the refusal)');
+    // The agents' hand-off read lets go the same way: nothing follows, and the run's line says why.
+    let late = null, failed = 0, went = 0, drawn = 0;
+    const Q = lift(['invReadQuiet'], [], { SHEETS_SYNC_URL: SYNC, _invCloudSeen: { [J]: true }, setTimeout: clock.setTimeout, clearTimeout: clock.clearTimeout,
+      refreshPhotoRefs: (id, cb) => { late = cb; }, _invRenderWhenIdle: () => { drawn++; } });
+    Q.invReadQuiet(J, () => { went++; }, () => { failed++; });
+    clock.run(31000);
+    eq([failed, went], [1, 0], '⚠ the hand-off\'s read that never answers fails after 30 s: nothing follows');
+    late(true, true, null);
+    eq([failed, went, drawn], [1, 0, 1], 'and an answer after that is drawn and acts on nothing');
+    // The open desk's own read: a read that hangs no longer stops the minute's re-read for good.
+    const D = deskScreen();
+    D.log.hang = true;
+    D.ctx._invRefreshFromCloud();
+    D.clock.run(30000 + 60000 + 500);
+    eq(D.log.reads, 2, '⚠ a read that never answered: the desk reads again a minute after the watchdog (it was re-armed only in the answer)');
+    const U = deskScreen();
+    U.log.hang = true; U.ctx._invCloudSeen = {};
+    U.ctx._invRefreshFromCloud();
+    U.clock.run(30000 + 15500);
+    eq(U.log.reads, 2, 'and a desk that has not read the client asks again in 15 s');
+  });
+
+  guard('H9 · ⚠⚠ the minute\'s re-read never asks DocuSign: one status check an hour on a desk left open, as on arrival (Decided: never on a timer)', () => {
+    const clock = clockOf();
+    const dom = domStub({ 'inv-job': String(J) });
+    dom.getElementById('panel-inventory').classList.add('active');
+    dom.hidden = false;
+    const calls = [];
+    const job = Object.assign(JOB(), { docState: { approvalRequest: { sentAt: '2026-10-27T20:00:00Z', req: { envelope: { id: 'ENV1', signers: [{ recipientId: '1', name: 'Daniel Price' }] } } } } });
+    const C = sandbox({
+      fns: ['_invRefreshFromCloud', '_invRereadArm', '_invRereadTick', '_invDeskShows', '_invCloudRetryArm', 'invSheetChangeWords', '_invManifestUnread',
+        'approvalEnvelopeRefresh', 'approvalEnvelopeDue', 'approvalEnvelopeOut', 'approvalEnvelope', 'applyApprovalEnvelopeStatus', 'docStateBare'],
+      vars: ['INV_DESK_REREAD_MS', 'INV_CLOUD_RETRY_MS', '_invReread', '_invCloudRetry', 'INV_READ_WATCHDOG_MS', 'ESIGN_RECHECK_MINS', 'APPROVAL_REQ_KEY',
+        'APPROVAL_ENV_DONE', '_approvalEnvChecking', '_approvalEnvAskedAt'],
+      stubs: {
+        document: dom, Date: clock.Date, setTimeout: clock.setTimeout, clearTimeout: clock.clearTimeout,
+        SHEETS_SYNC_URL: SYNC, _invCloudSeen: { [J]: true }, _invCloudFailed: {}, jobs: [job],
+        refreshPhotoRefs: (id, cb) => cb(false, true, null), collectionLinesEnsure: () => 0, approvalEnvelopeApply: () => 0,
+        _invRenderWhenIdle() {}, renderInventoryTab() {}, _deskFoldHeadsRepaint() {}, _invRefreshReleases() {}, _invReadLineRepaint() {}, _invColdRepaint() {},
+        showSyncBadge() {}, _saveArrivalCheck() {}, _docNotice() {},
+        _appsScriptPost: (u, b, cb) => { calls.push({ t: clock.t, action: b.action }); cb(true, { ok: true, envelopeId: 'ENV1', status: 'sent', signers: [{ recipientId: '1', status: 'sent' }] }); },
+      },
+    });
+    C._invRefreshFromCloud();   // the desk opened on the client: an arrival
+    eq(calls.length, 1, 'fixture: the desk opened asks DocuSign once');
+    clock.run(3600 * 1000);
+    eq(calls.length, 1, '⚠⚠ an hour with the desk left open: no other status check (it asked at 20, 40 and 60 minutes)');
+    C._invRereadTick(J, 'visible');   // the page back in view is an arrival
+    eq(calls.length, 2, 'the page back in view, past the floor, asks again');
+    C._invRefreshFromCloud('retry'); C._invRefreshFromCloud('held');
+    clock.run(25 * 60 * 1000);
+    eq(calls.length, 2, 'and neither the 15 s retry nor a held workbook\'s read ever asks');
+    // The retry as its timer makes it: a desk whose read failed, asking again every 15 s for half an hour.
+    C._invCloudSeen = {}; C._invCloudFailed = { [J]: true };
+    C._invCloudRetryArm(J);
+    clock.run(30 * 60 * 1000);
+    eq(calls.length, 2, '⚠ the 15 s retry, run by its own timer for half an hour, never asks DocuSign');
+  });
+
+  guard('Q · ⚠⚠ the space reclaimer never drops the copy of a client this device still owes the sheet (the stranded edit was lost for good)', () => {
+    const clock = clockOf(), srv = server('A');
+    seedSheet(srv, 6);
+    const A1 = desk('Anthony Graziano', srv, clock);
+    A1.open();
+    A1.dropMedia = true;
+    A1.edit('s4', { objectName: 'Mahogany secretary desk', namedBy: 'desk' });
+    clock.run(4000);
+    eq(sheetLine(srv, 's4').objectName, '', 'fixture: the write was lost');
+    // The tab reloaded in the dead spot: the queue is empty. Before the start-up resend has run (2.5 s after load), and while its
+    // read is out, the owed mark is all that says the sheet lacks this client's lines.
+    const A2 = desk('Anthony Graziano', srv, clock, A1.stored());
+    A2.offline = true;
+    eq([Object.keys(A2.ctx._pendingWrites).length, A2.ctx._invUnsentCount(J)], [0, null], 'fixture: nothing queued, nothing learned of the sheet yet');
+    eq(A2.ctx._invManifestEvictable(String(J), 'other-job'), false, '⚠⚠ an owed client\'s copy is not one the sheet can hand back');
+    const freed = A2.ctx._invReclaimSpace('other-job', 2);
+    eq(freed.jobs, [], 'the reclaim\'s second tier leaves it');
+    ok(Object.prototype.hasOwnProperty.call(A2.stored(), 'hav_media_' + J), 'and the copy is still stored');
+    // The start-up read fails: still kept.
+    A2.ctx._invResendOwed();
+    clock.run(5000);
+    eq(A2.ctx._invManifestEvictable(String(J), 'other-job'), false, 'and once the start-up read has failed');
+    // The next start-up, the signal back: the edit reaches the sheet.
+    const A3 = desk('Anthony Graziano', srv, clock, A2.stored());
+    A3.ctx._invResendOwed();
+    clock.run(6000);
+    eq(sheetLine(srv, 's4').objectName, 'Mahogany secretary desk', '⚠⚠ the stranded edit reaches the sheet (it stayed "" for good)');
+    // Lines this session knows are not on the sheet keep the copy too, mark or no mark.
+    const B = desk('Ashley Jerome', srv, clock);
+    B.open();
+    B.dropMedia = true;
+    B.edit('s2', { objectName: 'Brass floor lamp', namedBy: 'desk' });
+    clock.run(4000);
+    B.ctx.localStorage.removeItem('hav_inv_owed');
+    vm.runInContext('_pendingWrites = {}; _invSyncTimer = {};', B.ctx);
+    eq(B.ctx._invUnsentCount(J), 1, 'fixture: one line this session knows is not on the sheet, nothing queued and no mark');
+    eq(B.ctx._invManifestEvictable(String(J), 'other-job'), false, 'and its copy is kept');
+  });
+
+  guard('E4 · ⚠⚠ after a reload with the sheet still down, the copy waits in the queue: the chip names it, the close is challenged, and it goes once the signal is back', () => {
+    const clock = clockOf(), srv = server('A');
+    seedSheet(srv, 6);
+    const A1 = desk('Anthony Graziano', srv, clock);
+    A1.open();
+    A1.dropMedia = true;
+    A1.edit('s4', { objectName: 'Mahogany secretary desk', namedBy: 'desk' });
+    A1.edit('s5', { fmv: '140' });
+    clock.run(4000);
+    const A2 = desk('Anthony Graziano', srv, clock, A1.stored());
+    A2.offline = true;
+    A2.ctx._invResendOwed();
+    clock.run(60000);
+    eq(Object.keys(A2.ctx._pendingWrites), ['main/saveMedia:' + J], '⚠⚠ the start-up read failed, so the copy waits in the retry queue (the queue was empty and nothing was ever sent)');
+    eq(A2.ctx._pendingChipCopy().head, '⚠ Inventory changes for 1 client not yet on the sheet — retrying…', '⚠ the chip names it (it read "⚠ 0 unsaved change")');
+    has(A2.ctx._pendingChipCopy().note, 'go again by themselves', 'and says it goes by itself');
+    ok(A2.ctx._syncOwedOnUnload(), '⚠ and the close is challenged (it was not)');
+    eq(A2.ctx._invResendSoon(), 0, 'a reconnect while the write waits in the queue asks nothing more (the queue sends it)');
+    // The signal comes back later in the session: the queue sends it.
+    A2.offline = false;
+    A2.ctx.retryPendingWrites();
+    clock.run(2000);
+    eq([sheetLine(srv, 's4').objectName, sheetLine(srv, 's5').fmv], ['Mahogany secretary desk', '140'], '⚠⚠ the lines reach the sheet');
+    ok(!JSON.parse(A2.stored().hav_inv_owed || '{}')[String(J)], 'and nothing is owed once it lands');
+    eq(Object.keys(A2.ctx._pendingWrites), [], 'and the chip goes');
+    // A mark standing with nothing waiting (the read that failed came back after a reconnect): asked again.
+    const A3 = desk('Anthony Graziano', srv, clock, { hav_inv_owed: JSON.stringify({ [String(J)]: 1 }), ['hav_media_' + J]: A1.stored()['hav_media_' + J] });
+    const r0 = A3.sent('loadMedia').length;
+    eq(A3.ctx._invResendSoon(), 1, 'a reconnect or the page back in view, a mark standing and nothing waiting: the client is asked again');
+    eq(A3.sent('loadMedia').length, r0 + 1, 'by a read of the sheet');
+  });
+
+  guard('E5 · the owed mark: a read that finds nothing owed takes it off with no write; a mark with no copy behind it is taken off and said', () => {
+    const clock = clockOf(), srv = server('A');
+    seedSheet(srv, 6);
+    const A = desk('Anthony Graziano', srv, clock);
+    A.open(); clock.run(4000);
+    A.ctx._invOwedMark(J, true);   // a mark from an earlier session whose write did land
+    ok(!!JSON.parse(A.stored().hav_inv_owed || '{}')[String(J)], 'fixture: the client is marked owed');
+    const posts = A.sent('saveMedia').length;
+    A.open(); clock.run(4000);
+    ok(!JSON.parse(A.stored().hav_inv_owed || '{}')[String(J)], '⚠ a read that finds the sheet holding every line takes the mark off');
+    eq(A.sent('saveMedia').length, posts, 'with no write');
+    // A mark whose copy is gone from the device: taken off, and said.
+    const B = desk('Anthony Graziano', srv, clock, { hav_inv_owed: JSON.stringify({ [String(J)]: 1 }) });
+    eq(B.ctx._invResendOwed(), 1, 'fixture: one client marked');
+    ok(!JSON.parse(B.stored().hav_inv_owed || '{}')[String(J)], 'the mark is taken off');
+    has(B.badges.join('\n'), 'Inventory changes for HVL-2610-A9700 were waiting to reach the sheet, but this device holds no copy of that inventory now, so nothing could be sent.',
+      '⚠ and said, by client (it was cleared in silence)');
+    eq(B.sent('loadMedia').length, 0, 'nothing read for it');
+    // One start-up read per client at a time: a reconnect while the first is still out asks nothing more.
+    const C = desk('Anthony Graziano', srv, clock, { hav_inv_owed: JSON.stringify({ [String(J)]: 1 }), ['hav_media_' + J]: A.stored()['hav_media_' + J] });
+    C.holdReads = true;
+    C.ctx._invResendOwed();
+    C.ctx._invResendSoon();
+    C.ctx._invResendOwed();
+    eq(C.sent('loadMedia').length, 1, '⚠ one read for the client while its start-up read is out (_invResending)');
+    C.holdReads = false; C.release(); clock.run(4000);
+    ok(!JSON.parse(C.stored().hav_inv_owed || '{}')[String(J)], 'and once it lands with nothing owed the mark comes off');
+  });
+
+  guard('G3 · ⚠ a page put down and picked up again sends its next write as ever, never with keepalive (browsers cap keepalive at 64 KB in flight)', () => {
+    const clock = clockOf(), srv = server('A');
+    seedSheet(srv, 6);
+    const A = desk('Anthony Graziano', srv, clock);
+    A.open();
+    const at = SRC.indexOf("window.addEventListener('beforeunload'");
+    const vis = SRC.indexOf("document.addEventListener('visibilitychange'", at);
+    const snippet = SRC.slice(at, SRC.indexOf('\n});\n', vis) + 5);
+    ok(at > 0 && vis > at && snippet.indexOf("'pageshow'") > 0 && snippet.indexOf("'online'") > 0, 'fixture: the listeners as registered');
+    const wh = {}, dh = {};
+    A.ctx.window = { addEventListener(ev, f) { wh[ev] = f; } };
+    const doc = A.ctx.document; doc.hidden = false; doc.addEventListener = (ev, f) => { dh[ev] = f; };
+    vm.runInContext(snippet, A.ctx, { filename: 'havellin.html (page listeners)' });
+    ok(typeof dh.visibilitychange === 'function' && typeof wh.pageshow === 'function', 'fixture: registered');
+    doc.hidden = true; dh.visibilitychange();
+    eq(A.ctx._syncPageGoing, true, 'fixture: a page hidden counts as going');
+    doc.hidden = false; dh.visibilitychange();
+    eq(A.ctx._syncPageGoing, false, 'and back in view it does not');
+    A.edit('s1', { objectName: 'Sofa, linen', namedBy: 'desk' }); clock.run(3000);
+    eq(A.sent('saveMedia').map((x) => x.keepalive), [false], '⚠ a write after the page came back goes without keepalive');
+    wh.pagehide();
+    eq(A.ctx._syncPageGoing, true, 'fixture: a page left counts as going');
+    wh.pageshow();
+    A.edit('s2', { objectName: 'Lamp, brass', namedBy: 'desk' }); clock.run(3000);
+    eq(A.sent('saveMedia').map((x) => x.keepalive), [false, false], '⚠ and after the page is shown again from the back-forward cache');
+    // The reconnect, and the page back in view, ask again for a client still owed.
+    A.ctx._invOwedMark(J, true);
+    vm.runInContext('_pendingWrites = {}; _invSyncTimer = {};', A.ctx);
+    const r0 = A.sent('loadMedia').length;
+    wh.online();
+    eq(A.sent('loadMedia').length, r0 + 1, 'a reconnect reads the sheet for a client still owed');
+    A.ctx._invOwedMark(J, true);
+    doc.hidden = true; dh.visibilitychange(); doc.hidden = false; dh.visibilitychange();
+    eq(A.sent('loadMedia').length, r0 + 2, 'and so does the page back in view');
+  });
+
+  guard('R · ⚠⚠ Record approval on the selection reads the sheet first, and a read under its open dialog never records a signature against terms the dialog did not show (EST-01)', () => {
+    const clock = clockOf(), srv = server('A');
+    seedSheet(srv, 6);
+    const A = desk('Anthony Graziano', srv, clock);
+    const B = desk('Ashley Jerome', srv, clock, null, { roots: ['invRecordApproval', 'invSaveApproval', 'closeInvApproval', 'invApprovalComplete'] });
+    A.open(); B.open();
+    const art = { namedBy: 'desk', category: 'Art & Décor', disposition: 'Auction', channel: 'Kodner Galleries', valSource: 'Dealer quote' };
+    A.edit('s3', Object.assign({ objectName: 'Oil on canvas, harbour scene, signed', fmv: '2400' }, art));
+    A.edit('s4', Object.assign({ objectName: 'Pair of Chinese export vases', fmv: '1800' }, art));
+    A.edit('s5', Object.assign({ objectName: 'Georgian silver tea service', fmv: '2200' }, art));
+    clock.run(3000);
+    B.open();
+    eq([B.line('s3').channel, B.line('s4').channel], ['Kodner Galleries', 'Kodner Galleries'], 'fixture: B holds both leaving to Kodner Galleries');
+    // A sends #5 to another auction house after B's last read.
+    A.edit('s4', { channel: 'Leslie Hindman Auctioneers' });
+    clock.run(3000);
+    B.pick(['s3', 's4']);
+    const reads = B.sent('loadMedia').length;
+    const opened = B.ctx.invRecordApproval(J);
+    ok(opened === true, 'fixture: the dialog opened (' + opened + ')');
+    eq(B.sent('loadMedia').length, reads + 1, '⚠⚠ the press read the sheet first (it was the one press on the selection bar that did not)');
+    const sel = B.ctx.document.getElementById('ia-body').innerHTML;
+    has(sel, 'Leslie Hindman Auctioneers', 'and the dialog lists the line as the sheet holds it');
+    // While the dialog is open, A retypes #4 as a $24,000 gift to a cousin and puts $100 on #5, and B's minute read lands under
+    // the dialog.
+    A.edit('s3', { disposition: 'Distribute', channel: 'Cousin Pete', fmv: '24000' });
+    A.edit('s4', { fmv: '1900' });
+    clock.run(3000);
+    B.open();
+    eq([B.line('s3').disposition, B.line('s3').channel], ['Distribute', 'Cousin Pete'], 'fixture: the read merged the gift in under the open dialog');
+    B.ctx.document.getElementById('ia-fid-0').checked = true;
+    B.ctx.document.getElementById('ia-date').value = B.ctx._todayStr();
+    B.ctx.invSaveApproval();
+    clock.run(3000);
+    ok(!String(B.line('s3').authBy || '').trim(), '⚠⚠ the gift is not recorded as approved (it took the signature given for the $2,400 consignment)');
+    eq(B.ctx.invApprovalComplete(B.line('s3'), B.ctx._invJob(J)), false, '⚠⚠ and is not cleared to leave');
+    ok(!String(sheetLine(srv, 's3').authBy || '').trim(), 'nor on the sheet');
+    has(B.ctx.document.getElementById('ia-body').innerHTML, 'Oil on canvas, harbour scene, signed, changed since this dialog opened', '⚠ and the dialog names it');
+    eq([B.line('s4').authBy, B.line('s4').authFor && B.line('s4').authFor.channel, B.line('s4').authFor && B.line('s4').authFor.fmv],
+      ['Daniel Price', 'Leslie Hindman Auctioneers', 1800], 'the line whose terms stand (a $100 rise is inside Ask 5) is recorded, pinned to what the dialog showed');
+    eq(sheetLine(srv, 's4').authBy, 'Daniel Price', 'and on the sheet');
+    // Every line moved: nothing recorded, and the dialog says to press Record approval again.
+    B.pick(['s5']);
+    ok(B.ctx.invRecordApproval(J) === true, 'fixture: a second dialog opened');
+    A.edit('s5', { channel: 'Doyle Auctioneers' }); clock.run(3000); B.open();
+    B.ctx.document.getElementById('ia-fid-0').checked = true;
+    B.ctx.document.getElementById('ia-date').value = B.ctx._todayStr();
+    eq(B.ctx.invSaveApproval(), false, 'a dialog whose every line moved records nothing');
+    has(B.ctx.document.getElementById('ia-fb').innerHTML, 'changed since this dialog opened. Close it and press Record approval again.', 'and names the press to make again');
+  });
+
+  guard('R2 · ⚠⚠ a sign-out records only the lines its signed sheet carries: a ticked line a read moved off the taker stops the filing, on both routes', () => {
+    const L1 = { stableId: 's1', objectName: 'Sofa', itemNo: 1 }, L2 = { stableId: 's2', objectName: 'Brass lamps', itemNo: 2 }, L3 = { stableId: 's3', objectName: 'Wool rug', itemNo: 3 };
+    // The person ticked #1 and #2 and left #3 unticked.
+    let g = { kind: 'pickup', taker: 'Kodner Galleries', lines: [L1, L2, L3], ready: [L1, L2, L3], done: [], waiting: [] };
+    const filed = [], fbs = [], pdfs = [];
+    const dom = domStub({});
+    const C = lift(['signoutFileFromPad', 'pickupFileFromDialog', '_signoutStill', '_signoutMovedRefusal', '_signoutBodyHtml'], [], {
+      _pickupCtx: { jobId: J, kind: 'pickup', key: 'k', vendor: 'Kodner Galleries', taker: 'Kodner Galleries' },
+      _invJob: () => JOB(), signoutGroupFor: () => g, _signoutTicked: () => ['s1', 's2'], signPadSigned: () => true, signPadDataUrl: () => 'data:',
+      SHEETS_SYNC_URL: SYNC, document: dom, showFB: (id, t, m) => fbs.push(String(m)),
+      signoutSheetHtml: (job, gg, lines) => lines.map((r) => r.stableId).join(','),
+      _signoutPdf: (job, t, html, cb) => { pdfs.push(html); cb({ name: 'x.pdf' }); },
+      fileSignedCopy: (jid, kind, meta) => { filed.push(meta); return true; },
+      _invStampBy: () => 'Ashley Jerome', _todayStr: () => '2026-10-27',
+      SIGNED_RECORD_KINDS: { pickup: { label: 'The vendor pickup list' } }, SIGNOUT_KINDS: { pickup: { title: 'Pickup' } },
+      _getPhotoRef: (j, id) => [L1, L2, L3].find((r) => r.stableId === id), _invNamed: (r) => '#' + r.itemNo + ' ' + r.objectName, _invItemNo: (r) => r.itemNo,
+    });
+    dom.getElementById('ip-signer').value = 'Joe Kodner';
+    g = Object.assign({}, g, { lines: [L1, L3], ready: [L1, L3] });   // a read under the open dialog moved #2 to another taker
+    C.signoutFileFromPad();
+    eq([filed.length, pdfs.length], [0, 0], '⚠⚠ nothing is filed (#2 was recorded as released to Kodner, with a custody event, though the signed PDF did not carry it)');
+    has(fbs.join('\n'), 'Not filed: #2 Brass lamps has changed since this dialog opened', 'and the line is named');
+    has(dom.getElementById('ip-body').innerHTML, 'data-sid="s1" checked', 'the lines are drawn again as they read now, the other tick kept');
+    has(dom.getElementById('ip-body').innerHTML, 'data-sid="s3"', 'the line left unticked still listed');
+    lacks(dom.getElementById('ip-body').innerHTML, 'data-sid="s3" checked', '⚠ and still unticked (drawn again, every ready line came back ticked)');
+    lacks(dom.getElementById('ip-body').innerHTML, 'data-sid="s2"', 'without the line moved off');
+    C.pickupFileFromDialog({ files: [{ name: 'sheet.jpg' }], value: 'x' });
+    eq(filed.length, 0, 'the photographed sheet\'s route stops the same way');
+    C._signoutTicked = () => ['s1'];
+    C.signoutFileFromPad();
+    eq([filed.map((m) => m.stableIds), pdfs], [[['s1']], ['s1']], 'ticked as the lines read now, it files what the sheet printed');
+  });
+
+  guard('R3 · ⚠⚠ a proceeds statement writes only the lot boxes a person changed, never a prefill a read has moved past', () => {
+    const lines = [{ stableId: 's1', label: 'inventory', disposition: 'Auction', channel: 'Kodner Galleries', gross: 250, fees: 60, itemNo: 1 },
+      { stableId: 's2', label: 'inventory', disposition: 'Auction', channel: 'Kodner Galleries', gross: 100, fees: 20, itemNo: 2 }];
+    const box = (cls, sid, was, v) => ({ className: cls, value: v, checked: true, getAttribute: (k) => ({ 'data-sid': sid, 'data-was': was })[k] });
+    // The dialog opened with #1's gross at $100 (another device has since typed $250, which a read merged in) and #2's at $100,
+    // which the person typed over with $120.
+    const els = { cb: [box('', 's1'), box('', 's2')], g: [box('ps-lot-g', 's1', '100', '100'), box('ps-lot-g', 's2', '100', '120')],
+      f: [box('ps-lot-f', 's1', '50', '50'), box('ps-lot-f', 's2', '20', '20')] };
+    const dom = domStub({ 'ps-job': String(J), 'ps-vendor': 'Kodner Galleries', 'ps-date': '2026-10-20', 'ps-gross': '370', 'ps-fees': '70', 'ps-net': '300' });
+    dom.__seed('ps-lines', { querySelectorAll: (q) => (q.indexOf('checkbox') >= 0 ? els.cb : q.indexOf('ps-lot-g') >= 0 ? els.g : els.f) });
+    const C = lift(['saveProceedsStatement'], [], {
+      document: dom, _invJob: () => JOB(), _jobInvRefs: () => lines, _setPhotoRef() {}, _invTouch: (r) => r, savePhotoRefs() {}, _scheduleInventorySync() {},
+      jobListPut: (job, list, rec) => rec, proceedsReconciliation: () => ({ statements: [] }), closeProceedsStatement() {}, showSyncBadge() {}, renderInventoryTab() {},
+      _actor: () => 'Anthony Graziano',
+    });
+    ok(C.saveProceedsStatement(), 'fixture: the statement saved');
+    eq([lines[0].gross, lines[0].fees], [250, 60], '⚠⚠ #1 keeps the $250 and $60 the read brought (the boxes\' stale $100 and $50 prefills were written over them)');
+    eq(lines[1].gross, 120, 'and #2 takes the $120 typed');
   });
 };

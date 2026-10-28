@@ -15,7 +15,13 @@
 //   E. SYN-06 and SYN-18: offline, two lines edited on B: the chip counts 2 inventory lines; the tab reloaded, the signal back:
 //      the app reads the sheet at start-up and sends them, the desk never opened. And an edit made one second before a reload
 //      reaches the sheet.
-//   F. A press whose read does not land refuses by name and changes nothing; overflow at 1440 and 390; zero page errors.
+//   G. P6's review, EST-01 again: B opens Record approval on two lines leaving for auction; A turns one into a $24,000 gift to a
+//      cousin and the minute's read lands under the open dialog; Save records the other, pinned to what the dialog showed, and
+//      leaves the gift unrecorded and named.
+//   H. P6's review: Set category, then Set condition a second later while the first one's read is still out: both apply.
+//   I. P6's review: a read that never answers lets go (the watchdog shortened for the step): the press is refused by name, and
+//      the next press reads afresh and goes.
+//   J. A press whose read does not land refuses by name and changes nothing; overflow at 1440 and 390; zero page errors.
 //
 //   NODE_PATH=/path/to/node_modules node tests/browser/step121.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
@@ -59,7 +65,9 @@ const VALUES = { 'Furniture': 350, 'General/Household': 40, 'Books & Media': 30,
         let body = {}; if (req.method() === 'POST') { try { body = JSON.parse(req.postData() || '{}'); } catch (e) {} }
         const action = body.action || body.type || ((/action=([A-Za-z]+)/.exec(req.url()) || [])[1]) || '';
         d.net.push({ action, n: action === 'agentIdentify' ? (body.shots || []).length : undefined });
-        if (action === 'loadMedia') { if (shared.readDown || d.readDown) return r.abort(); return json({ ok: true, success: true, media: J(shared.sheet) }); }
+        // A read that takes `delay` ms to answer (the sheet as it stood when asked), or that never answers (`hang`: a connected but dead link).
+        if (action === 'loadMedia') { if (shared.readDown || d.readDown) return r.abort(); if (d.hang) { d.hung = (d.hung || 0) + 1; return; }
+          const snap = J(shared.sheet); if (d.delay) await new Promise((res) => setTimeout(res, d.delay)); return json({ ok: true, success: true, media: snap }); }
         if (action === 'saveMedia') {
           if (shared.mediaDown || d.mediaDown) return r.abort();
           const pl = body.payload || {}; const k = String(pl.jobId);
@@ -235,7 +243,88 @@ const VALUES = { 'Furniture': 350, 'General/Household': 40, 'Books & Media': 30,
       eq(sheetLine('s20').objectName, 'Oak bookcase, five shelves', '⚠⚠ the edit reached the sheet (0 writes in 20 s before P6)');
     });
 
-    await section('F. a press whose read does not land refuses by name; no overflow; zero page errors', async () => {
+    await section('G. ⚠⚠ Record approval reads first, and a read landing under its open dialog never records a signature against terms it did not show', async () => {
+      await toDesk(B);
+      // Both lines named and leaving to auction at Kodner, no approval yet, put on the sheet from A and read by B.
+      await A.p.evaluate((ID) => {
+        [['s22', 'Oil on canvas, harbour scene, signed', '2400'], ['s23', 'Pair of Chinese export vases', '1800']].forEach(([id, nm, v]) => {
+          const r = _getPhotoRef(ID, id); Object.assign(r, { objectName: nm, namedBy: 'desk', category: 'Art & Décor', disposition: 'Auction', channel: 'Kodner Galleries',
+            fmv: v, valSource: 'Dealer quote', valuedBy: 'desk', reviewed: true }); _invTouch(r); });
+        savePhotoRefs(ID); _scheduleInventorySync(ID);
+      }, ID);
+      await A.p.waitForTimeout(3500);
+      eq([sheetLine('s22').channel, sheetLine('s23').channel], ['Kodner Galleries', 'Kodner Galleries'], 'fixture: both on the sheet, leaving to Kodner');
+      await B.p.evaluate(() => _invRefreshFromCloud()); await B.p.waitForTimeout(1500);
+      await B.p.evaluate(() => { _invPick = {}; renderInventoryTab(); }); await B.p.waitForTimeout(400);
+      await tick(B, ['s22', 's23']);
+      const rec = B.p.locator('.inv-bulk button:has-text("Record approval")').first();
+      ok(await rec.isVisible().catch(() => false), 'fixture: Record approval on the selection bar');
+      const loads0 = B.sent('loadMedia').length;
+      await rec.click(); await B.p.waitForTimeout(1500);
+      ok(B.sent('loadMedia').length > loads0, '⚠⚠ the press read the sheet first (the one press on the bar that did not)');
+      has(await txt(B.p, '#ia-body'), 'Oil on canvas, harbour scene, signed · Auction · Kodner Galleries', 'and the dialog lists the line as the sheet holds it');
+      // A, on the laptop, turns #23 into a $24,000 gift to a cousin; B's minute read lands while the dialog is open.
+      await A.p.evaluate((ID) => { const r = _getPhotoRef(ID, 's22'); r.disposition = 'Distribute'; r.channel = 'Cousin Pete'; r.fmv = '24000'; _invTouch(r); savePhotoRefs(ID); _scheduleInventorySync(ID); }, ID);
+      await A.p.waitForTimeout(3500);
+      await B.p.evaluate((ID) => { INV_DESK_REREAD_MS = 2000; _invRereadArm(ID); }, ID);
+      ok(await until(B.p, async () => (await B.p.evaluate((ID) => (_getPhotoRef(ID, 's22') || {}).channel, ID)) === 'Cousin Pete', 8000),
+        'fixture: the read merged the gift in under the open dialog');
+      await B.p.evaluate(() => { INV_DESK_REREAD_MS = 60000; });
+      has(await txt(B.p, '#ia-body'), 'Oil on canvas, harbour scene, signed · Auction · Kodner Galleries', 'fixture: the dialog still shows the auction');
+      await B.p.check('#ia-fid-0');
+      await B.p.fill('#ia-date', await B.p.evaluate(() => _todayStr()));
+      await B.p.click('#ia-save-btn'); await B.p.waitForTimeout(4000);
+      const L = await B.p.evaluate((ID) => ['s22', 's23'].map((id) => { const r = _getPhotoRef(ID, id);
+        return { by: String(r.authBy || ''), ch: r.authFor ? r.authFor.channel : '', fmv: r.authFor ? r.authFor.fmv : '', ok: invApprovalComplete(r, _invJob(ID)) }; }), ID);
+      eq([L[0].by, L[0].ok], ['', false], '⚠⚠ the gift is not recorded as approved, nor cleared to leave (it took the signature given for the $2,400 consignment)');
+      eq(String(sheetLine('s22').authBy || ''), '', 'nor on the sheet');
+      eq(L[1], { by: 'Daniel Price', ch: 'Kodner Galleries', fmv: 1800, ok: true }, 'the line whose terms stand is recorded, pinned to what the dialog showed');
+      eq(String(sheetLine('s23').authBy || ''), 'Daniel Price', 'and on the sheet');
+      has(await txt(B.p, '#ia-body'), 'changed since this dialog opened', '⚠ and the dialog names the line it left');
+      await B.p.evaluate(() => { if (typeof closeInvApproval === 'function') closeInvApproval(); });
+    });
+
+    await section('H. ⚠⚠ two sweeps on the selection bar, the second pressed while the first one\'s read is out: both apply', async () => {
+      await B.p.evaluate(() => { _invPick = {}; renderInventoryTab(); }); await B.p.waitForTimeout(400);
+      await tick(B, ['s16', 's17']);
+      // Neither already reads what the two sweeps set (the step's Agent Two grades every line Good, so the sweep sets Fair).
+      const before = await B.p.evaluate((ID) => ['s16', 's17'].map((id) => { const r = _getPhotoRef(ID, id) || {}; return [r.category || '', r.condition || '']; }), ID);
+      ok(before.every(([c, k]) => c !== 'Furniture' && k !== 'Fair'), 'fixture: neither line is Furniture or Fair yet (' + JSON.stringify(before) + ')');
+      B.delay = 3000; B.dialogs.length = 0;
+      const cat = await B.p.$('.inv-bulk select[onchange*="\'category\'"]');
+      const cond = await B.p.$('.inv-bulk select[onchange*="\'condition\'"]');
+      ok(!!cat && !!cond, 'fixture: Set category and Set condition on the selection bar');
+      if (cat && cond) {
+        await cat.selectOption('Furniture');
+        await B.p.waitForTimeout(1200);
+        await cond.selectOption('Fair');
+      }
+      await B.p.waitForTimeout(8000);
+      B.delay = 0;
+      const loc = await B.p.evaluate((ID) => ['s16', 's17'].map((id) => { const r = _getPhotoRef(ID, id) || {}; return [r.category || '', r.condition || '']; }), ID);
+      eq(loc, [['Furniture', 'Fair'], ['Furniture', 'Fair']], '⚠⚠ both sweeps are on the lines (the condition was dropped with no word)');
+      eq(['s16', 's17'].map((id) => [sheetLine(id).category, sheetLine(id).condition]), [['Furniture', 'Fair'], ['Furniture', 'Fair']], 'and on the sheet');
+      eq(B.dialogs, [], 'nothing refused');
+    });
+
+    await section('I. ⚠ a read that never answers lets go: the press is refused by name, and the next press reads afresh', async () => {
+      await B.p.evaluate(() => { INV_READ_WATCHDOG_MS = 4000; _invPick = {}; renderInventoryTab(); }); await B.p.waitForTimeout(400);
+      await tick(B, ['s13']);
+      B.hang = true; B.dialogs.length = 0;
+      await B.p.click('button:has-text("Remove lines")'); await B.p.waitForTimeout(2000);
+      eq(B.dialogs, [], 'fixture: nothing said while the read is out');
+      await B.p.waitForTimeout(3500);
+      has(B.dialogs.join('\n'), 'Not done: Remove lines reads the inventory from the sheet first, so that nothing acts on a copy another device has moved past, and the sheet did not answer.',
+        '⚠⚠ after the watchdog the press is refused by name (one toast, then every later press did nothing until the request died)');
+      B.hang = false; B.dialogs.length = 0;
+      const loads0 = B.sent('loadMedia').length;
+      await B.p.click('button:has-text("Remove lines")'); await B.p.waitForTimeout(4000);
+      ok(B.sent('loadMedia').length > loads0, '⚠ the signal back, the next press asks the sheet afresh');
+      ok(!!sheetLine('s13').deletedAt, 'and the line is removed');
+      await B.p.evaluate(() => { INV_READ_WATCHDOG_MS = 30000; });
+    });
+
+    await section('J. a press whose read does not land refuses by name; no overflow; zero page errors', async () => {
       await toDesk(B);
       B.readDown = true; B.dialogs.length = 0;
       const id0 = B.sent('agentIdentify').length;

@@ -257,6 +257,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         saveJobs: () => saves.push('jobs'), syncJobToSheets: () => saves.push('sync'), _dashRedraw() {},
         _docNotice: (t, m) => notices.push({ t, m: String(m) }), dashNotice: (t, m) => notices.push({ t, m: String(m) }),
         _dashSendState() {}, showSyncBadge: (m) => badges.push(String(m)),
+        // P6's read gate, as a read that landed with nothing moved (the gate itself is p6-two-devices.test.js's): since P6's
+        // review the selection bar's Record approval reads the sheet first too.
+        invReadFirst: () => false,
       }, o.stubs || {}));
     return { c, N, dom, notices, opened, hrefs, saves, badges, job: () => c.jobs[0], last: () => (notices[notices.length - 1] || {}),
              st: () => (c.jobs[0].docState || {}).approvalRequest, card: () => c._renderInvReleasesCard(c.jobs[0], c._jobInvRefs(7)) };
