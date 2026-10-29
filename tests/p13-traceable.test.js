@@ -96,8 +96,10 @@ const PAPER_FNS = ['invLineReviewed', 'invLineOpen', '_invDocPartyHead', 'invCon
   // P13's own: the print-only fetch, the links, the footer, the lots, the numbers not used.
   'invPhotosFirst', 'invPrintPhotoIds', 'invFetchPrintPhotos', '_invPrintPump', '_invPrintBatch', 'invPrintPhotoWords', '_invPhotosOpt',
   '_invPrintThumbSrc', '_invPrintThumb', '_invThumbCache', '_invThumbKey', '_invPaperPhotoUrl', '_invItemNoLinkHtml', 'invPaperPhotoSentence',
-  'invLotLineHtml', 'invLotWords', 'invLotMarkWords', 'invLotSplitState', 'invLotsUntestable', 'invLotArticleValue', 'maivFilingApplies', 'invUnitValue', 'invLineQty',
-  'invNumbersNotUsedHtml', 'invNumbersNotUsedText', 'invNumbersNotUsed', 'invRemovedWhyText', '_invRemovedRows', '_invTombstoneLine'];
+  'invLotLineHtml', 'invLotWords', 'invLotMarkWords', 'invGroupUncounted', 'invLotSplitState', 'invLotsUntestable', 'invLotArticleValue', 'maivFilingApplies', 'invUnitValue', 'invLineQty',
+  'invNumbersNotUsedHtml', 'invNumbersNotUsedText', 'invNumbersNotUsed', 'invRemovedWhyText', '_invRemovedRows', '_invTombstoneLine',
+  // P13's review: the group mark's record and its answer.
+  '_invPanelGroupHtml', 'invMarkOneArticle'];
 const PAPER_VARS = ['_agRun', '_avRun', '_arRun', '_avDupHeld', 'AGENT_NOTICE_KINDS',
   'INV_CONTRACT_DOCS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DECEDENT_SERVICES',
   'MATTER_TYPES', 'INV_ASSET_TRACKS', 'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD',
@@ -129,6 +131,56 @@ function papers(job, items, over) {
   c.print = (name, opt) => { const r = attempt(() => c[name](7, opt || { asHtml: true })); return r.ok ? (r.val && r.val.html) || '' : 'threw: ' + r.err; };
   c.thumbsAsked = () => calls.filter((x) => x.body.action === 'getThumbnails');
   return c;
+}
+
+// ─── P13's review (2026-10-28): a root's own call graph, for the acts too large to list by hand (the row's edit, the close-out filer) ───
+const { source: _source, decl: _decl } = require('./harness.js');
+const _SRCALL = _source();
+const _ALL_FNS = new Set((_SRCALL.match(/(^|\n)function\s+([A-Za-z0-9_$]+)\s*\(/g) || []).map((x) => x.replace(/^\n?function\s+/, '').replace(/\s*\($/, '')));
+const _ALL_VARS = new Set((_SRCALL.match(/(^|\n)var\s+([A-Za-z0-9_$]+)\s*=/g) || []).map((x) => x.replace(/^\n?var\s+/, '').replace(/\s*=$/, '')));
+const _codeOnly = (t) => t.split('\n').filter((l) => !l.trim().startsWith('//')).map((l) => l.replace(/\s\/\/\s.*$/, '')).join('\n')
+  .replace(/'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"/g, "''");
+function closureLift(roots, stop, stubs) {
+  const stopSet = new Set((stop || []).concat(Object.keys(stubs || {})));
+  const fns = new Set(), vars = new Set(), queue = roots.map((r) => ['f', r]);
+  while (queue.length) {
+    const [k, name] = queue.shift();
+    if (stopSet.has(name)) continue;
+    let body;
+    if (k === 'f') { if (fns.has(name)) continue; fns.add(name); try { body = _codeOnly(fn(name)); } catch (e) { continue; } }
+    else { if (vars.has(name)) continue; vars.add(name); try { body = _codeOnly(_decl(name)); } catch (e) { continue; } }
+    for (const m of body.matchAll(/\b([A-Za-z_$][\w$]*)\s*\(/g)) if (_ALL_FNS.has(m[1]) && !stopSet.has(m[1])) queue.push(['f', m[1]]);
+    for (const m of body.matchAll(/[(,]\s*([A-Za-z_$][\w$]*)\s*[,)]/g)) if (_ALL_FNS.has(m[1]) && !stopSet.has(m[1])) queue.push(['f', m[1]]);
+    for (const m of body.matchAll(/\b([A-Za-z_$][\w$]*)\b/g)) if (_ALL_VARS.has(m[1]) && !stopSet.has(m[1])) queue.push(['v', m[1]]);
+  }
+  return sandbox({ fns: [...fns], vars: [...vars], stubs: stubs || {} });
+}
+// The four lines of P8's Ellison plates: #73 dinner plates and #81 salad plates read first; #87 repeats #73, #88 repeats #81.
+const _T1 = 1760000000000, _T2 = _T1 + 7 * 60 * 1000;
+const PLATE = (id, n, name, crop, over) => Object.assign({ stableId: id, itemNo: n, label: 'inventory', roomIdx: 2, objectName: name, agentName: name,
+  namedBy: 'agent', agentConf: 'medium', category: 'General/Household', qty: 6, ts: 1000, filename: 'HVL-0007_Kitchen_INV_5.jpg',
+  driveFileId: 'FID_P', crop: crop, updatedAt: 500 }, id === 'p73' ? {} : { derivedFrom: 'p73' }, over || {});
+const PLATES = () => [
+  PLATE('p73', 73, 'Hand-painted tin-glazed earthenware dinner plates, yellow bird and blue flower', [0.46, 0.38, 1, 0.78], { agentAt: _T1, qty: 8 }),
+  PLATE('p81', 81, 'Hand-painted tin-glazed earthenware salad plates, matching', [0.03, 0.43, 0.45, 0.78], { agentAt: _T1 + 3, qty: 16 }),
+  PLATE('p87', 87, 'Hand-painted majolica dinner plates, yellow bird and blue flower design', [0.5, 0.4, 0.98, 0.8], { agentAt: _T2 }),
+  PLATE('p88', 88, 'Hand-painted majolica salad or dessert plates, matching', [0.05, 0.42, 0.44, 0.8], { agentAt: _T2 + 2 })];
+// A room-check line: each link with its own answer (dupPairs).
+const RCL = (id, no, name, others, over) => Object.assign({ stableId: id, itemNo: no, label: 'inventory', roomIdx: 2, objectName: name, agentName: name,
+  namedBy: 'agent', agentConf: 'medium', category: 'Art & Décor', qty: 1, ts: no, filename: 'F_' + id + '.jpg', driveFileId: 'FID_' + id, updatedAt: 500,
+  dupChkAt: 1, dupWith: others, dupPairs: Object.fromEntries(others.map((o) => [o, { conf: 'high', why: 'the same painting' }])) }, over || {});
+const DUP_FNS = ['agentDupCleared', 'agentNamedTwice', 'agentDuplicateGroups', '_arPair', '_arPairOpen', '_agDupEligible', '_arDupEligible', '_agNameKey',
+  'agentDropDuplicate', 'agentDupPartner', 'agentKeepFirstReading', '_invItemNo', '_getPhotoRef', '_setPhotoRef', '_jobInvRefs', '_invJob', '_invTombstoneLine',
+  '_invStampBy', 'deviceUser', 'savePhotoRefs', 'invNumbersNotUsedText', 'invNumbersNotUsed', 'invRemovedWhyText', '_invRemovedRows', '_agDupUnhandle', '_agDupHandle'];
+const DUP_VARS = ['AGENT_PASS_GAP_MS', 'AGENT_ROOM_CONF_RANK', 'AGENT_ROOM_CONF_WORDS', 'INV_REMOVED_WHY_WORDS'];
+function dupRig(rows) {
+  let clock = 1760100000000;
+  class D extends Date { static now() { return clock++; } }
+  return sandbox({ fns: DUP_FNS, vars: DUP_VARS, stubs: {
+    Date: D, jobs: [Object.assign({}, ESTATE, { matterType: 'trust', svc: 'cleanout', tc: 'Ashley Jerome' })], _photoRefs: { 7: rows },
+    estimateStore: ROOMS, _invTouch(r) { r.updatedAt = clock++; return r; }, _scheduleInventorySync() {}, renderInventoryTab() {}, showSyncBadge() {}, alert() {},
+    window: { confirm: () => true }, confirm: () => true, SHEETS_SYNC_URL: '', invReadFirst: () => false,
+    agentValueWaiting: () => ({}), _avDupReleased() {}, localStorage: { getItem: () => null, setItem() {}, removeItem() {} } } });
 }
 
 module.exports = function ({ group, ok, eq, has, lacks }) {
@@ -340,7 +392,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(nt, 'itemise it for the Form 706', 'and no mark: the cap governs a 706 schedule alone');
     eq(P.invLotsUntestable(P._photoRefs[7], P.jobs[0]).map((r) => r.stableId), ['u', 'd'], 'the untestable lots: the unvalued one and the group with no count');
     // The worklist's lot block: the group with no count is listed and the clearance is not said over it.
-    const W = sandbox({ fns: ['_lotSplitWorklistBlock', 'invLotsToSplit', 'invLotsUntestable', 'invLotSplitState', 'invLotArticleValue', 'maivFilingApplies', 'isDecedentJob',
+    const W = sandbox({ fns: ['invGroupUncounted', '_lotSplitWorklistBlock', 'invLotsToSplit', 'invLotsUntestable', 'invLotSplitState', 'invLotArticleValue', 'maivFilingApplies', 'isDecedentJob',
       '_gate706', '_gateYes', '_invItemNo', '_invMoney', 'fmt', 'roundCents'], vars: ['INV_LOT_ARTICLE_CAP', 'DECEDENT_SERVICES'] });
     const J = Object.assign({}, ESTATE, { gate706: 'yes' });
     const wb = text(W._lotSplitWorklistBlock(J, [LINE('c', 1, 'Copper cookware', 720, { qty: 8 }), LINE('d', 5, 'Sideboard drawer contents', 180, { agentGroup: true })]));
@@ -429,7 +481,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('J · the summary counts lines and articles (INV-20)');
   {
-    const S = sandbox({ fns: ['_renderInventorySummary', 'invLineQty', 'invFiduciaryMode', 'isDecedentJob', 'invProbateRows', 'matterDef', 'matterTypeOf', 'invStatesEstateValues',
+    const S = sandbox({ fns: ['invGroupUncounted', '_renderInventorySummary', 'invLineQty', 'invFiduciaryMode', 'isDecedentJob', 'invProbateRows', 'matterDef', 'matterTypeOf', 'invStatesEstateValues',
       'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep', 'roundCents', 'resolveValBasis'],
       vars: ['INV_CATEGORIES', 'INV_TAXONOMY', 'INV_DISPOSITIONS', 'DECEDENT_SERVICES', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
       stubs: { invNeedsAppraisal: () => false, _money: (v) => '$' + v, _invMoney: (v) => '$' + v, fmtDate2: (d) => d, _invValueAsOfHtml: () => '', _invDateTime: () => 'now',
@@ -455,5 +507,169 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(/contents: \{[^}]*photos: true/.test(SRC), '…the Contents Record');
     ['printContentsList', 'printEstateInventoryReport', 'printApprovalRequest', 'printContentsRecord', 'printAsFoundRecord']
       .forEach((f) => has(live(fn(f)), 'invPhotosFirst(jobId, ', f + ' gathers its own photographs first'));
+  }
+
+  // ═══════════════════════════════ P13'S REVIEW (2026-10-28) ═══════════════════════════════
+  group('L · ⚠⚠ Remove under Possible duplicates names the line the group\'s own evidence pairs it with, never the lowest number (the review\'s must-fix)');
+  {
+    const words = (R) => R.invNumbersNotUsedText(7).replace(/\. A number is never given.*$/, '');
+    let R = dupRig(PLATES());
+    const g = R.agentDuplicateGroups(7)[0] || { repeats: [] };
+    eq(g.repeats.map((p) => p.line.itemNo + '>' + p.of.itemNo), ['87>73', '88>81'], 'fixture: the group\'s own evidence, #87 repeats #73 and #88 repeats #81');
+    R.agentDropDuplicate(7, 'p88');
+    eq(R._getPhotoRef(7, 'p88').removedOf, 'p81', '⚠⚠ Remove on #88, a repeat: recorded as a duplicate of #81, the line it repeats');
+    eq(words(R), 'Numbers not used: #88 a duplicate of #81', '…and the footnote on the schedules says so (it said "#88 a duplicate of #73")');
+    R = dupRig(PLATES());
+    R.agentDropDuplicate(7, 'p73');
+    eq(words(R), 'Numbers not used: #73 a duplicate of #87', '⚠⚠ Remove on #73, an original a later reading repeats: a duplicate of #87 (it said "of #81", dinner plates of salad plates)');
+    R = dupRig(PLATES());
+    R.agentDropDuplicate(7, 'p81');
+    eq(words(R), 'Numbers not used: #81 a duplicate of #88', 'Remove on #81: the line repeating it, #88');
+    // A room-check chain: #1~#2 and #2~#3 linked, #1 and #3 never.
+    R = dupRig([RCL('a', 1, 'Harbour painting', ['b']), RCL('b', 2, 'Seascape oil', ['a', 'c']), RCL('c', 3, 'Framed seascape', ['b'])]);
+    R.agentDropDuplicate(7, 'c');
+    eq(words(R), 'Numbers not used: #3 a duplicate of #2', '⚠⚠ a chain: #3 is a duplicate of #2, the line the room check paired it with, never #1');
+    // The surest link where a line has two.
+    const two = [RCL('a', 1, 'Harbour painting', ['c']), RCL('b', 2, 'Seascape oil', ['c']), RCL('c', 3, 'Framed seascape', ['a', 'b'])];
+    two[2].dupPairs = { a: { conf: 'low', why: 'similar frame' }, b: { conf: 'high', why: 'the same painting' } };
+    two[0].dupPairs = { c: { conf: 'low', why: 'similar frame' } };
+    R = dupRig(two);
+    R.agentDropDuplicate(7, 'c');
+    eq(words(R), 'Numbers not used: #3 a duplicate of #2', 'two links: the surer one names the partner');
+    // Same name: two lines, the other one; three, nobody (no single partner), and the paper says "a duplicate".
+    const same = (n) => Array.from({ length: n }, (_, i) => Object.assign(RCL('s' + i, 10 + i, 'Brass candlestick', []), { dupWith: undefined, dupPairs: undefined, dupChkAt: undefined, category: 'General/Household' }));
+    R = dupRig(same(2));
+    R.agentDropDuplicate(7, 's1');
+    eq(words(R), 'Numbers not used: #11 a duplicate of #10', 'a same-name pair: the other line');
+    R = dupRig(same(3));
+    R.agentDropDuplicate(7, 's2');
+    eq([R._getPhotoRef(7, 's2').removedWhy, R._getPhotoRef(7, 's2').removedOf], ['dup', undefined], '⚠ three of one name: recorded as a duplicate, naming nobody');
+    eq(words(R), 'Numbers not used: #12 a duplicate', '…and the footnote says "a duplicate"');
+    // A group joined by a name and a room-check link: the line joined by its name alone names its namesake, never the third line.
+    const mix = [Object.assign(RCL('n1', 21, 'Brass candlestick', []), { dupWith: undefined, dupPairs: undefined, dupChkAt: undefined, category: 'General/Household' }),
+      Object.assign(RCL('n2', 22, 'Brass candlestick', ['n3']), { category: 'General/Household' }), Object.assign(RCL('n3', 23, 'Pewter candlestick', ['n2']), { category: 'General/Household' })];
+    R = dupRig(mix);
+    eq((R.agentDuplicateGroups(7)[0] || { rows: [] }).rows.map((r) => r.itemNo), [21, 22, 23], 'fixture: one group of three, by name and by the room check');
+    R.agentDropDuplicate(7, 'n1');
+    eq(words(R), 'Numbers not used: #21 a duplicate of #22', 'the line joined by its name: a duplicate of its namesake');
+    // The rule itself, DOM-free, on the group as agentDuplicateGroups hands it.
+    const P = dupRig(PLATES()), G0 = P.agentDuplicateGroups(7)[0];
+    eq(['p73', 'p81', 'p87', 'p88'].map((id) => P.agentDupPartner(G0, id)), ['p87', 'p88', 'p73', 'p81'], 'agentDupPartner: each line\'s partner off the group');
+    eq(P.agentDupPartner(null, 'p73'), '', 'no group: nobody');
+    // Keep the first reading still records each repeat against its own original.
+    const K = dupRig(PLATES());
+    K.agentKeepFirstReading(7, K._agDupHandle(K.agentDuplicateGroups(7)[0].key), {});
+    eq(words(K), 'Numbers not used: #87 a duplicate of #73; #88 a duplicate of #81', 'Keep the first reading: each repeat a duplicate of the line it repeats');
+  }
+
+  group('M · ⚠ Agent One\'s group mark is shown in the line\'s record and a person\'s answer settles it: One article, or a count typed in Qty');
+  {
+    // The review's line: a drawer itemised, the line left renamed "Brass candlestick", $500, count 1, on a Form 706 estate.
+    const P = papers({ gate706: 'yes', tc: 'Ashley Jerome' }, [LINE('bc', 8, 'Brass candlestick', 500, { agentGroup: true, category: 'General/Household' }), LINE('s', 9, 'Walnut sideboard', 900)]);
+    const bc = () => P._getPhotoRef(7, 'bc');
+    eq([{ agentGroup: true }, { agentGroup: true, qty: 1 }, { agentGroup: true, qty: 6 }, { agentGroup: true, groupBy: 'desk' }, { qty: 1 }, null].map((r) => P.invGroupUncounted(r)),
+      [true, true, false, false, false, false], 'invGroupUncounted: a marked line with no count and no person\'s answer');
+    eq(P.invLotSplitState(bc(), P.jobs[0]), 'nocount', 'fixture: it reads as a group with no count');
+    const rec = text(P._invPanelGroupHtml(P.jobs[0], bc()));
+    has(rec, 'A group with no count. Agent One read this line as more than one article, and no count is recorded.', '⚠ the line\'s record shows the mark');
+    has(P._invPanelGroupHtml(P.jobs[0], bc()), "invMarkOneArticle(7,'bc')", '…with One article');
+    eq(P._invPanelGroupHtml(P.jobs[0], P._getPhotoRef(7, 's')), '', 'a line with no mark shows nothing');
+    eq(P.invMarkOneArticle(7, 'bc'), true, 'One article pressed');
+    eq([bc().groupBy, bc().groupWho], ['desk', 'Ashley Jerome'], '⚠⚠ recorded as a person\'s answer, with who');
+    eq(P.invLotSplitState(bc(), P.jobs[0]), '', '⚠⚠ and the lot rule reads it: one article, nothing to test');
+    lacks(text(P.print('printCourtInventory')), 'Brass candlestick ⚠ grouped, untested', '⚠⚠ the Court Inventory no longer prints "grouped, untested" over it');
+    has(text(P._invPanelGroupHtml(P.jobs[0], bc())), 'it was recorded as one article by Ashley Jerome', 'the record says who answered');
+    eq(P.invMarkOneArticle(7, 'bc'), false, 'a second press does nothing');
+    has(live(fn('savePhotoRefs')), 'groupBy:r.groupBy', 'the answer is on the manifest\'s save list');
+    has(live(fn('_renderInvPanel')), '_invPanelGroupHtml(job, ref)', 'the record draws it');
+    // The worklist: the remedy nothing read is gone, and its clearance comes back once the line is answered.
+    const W = sandbox({ fns: ['invGroupUncounted', '_lotSplitWorklistBlock', 'invLotsToSplit', 'invLotsUntestable', 'invLotSplitState', 'invLotArticleValue', 'maivFilingApplies', 'isDecedentJob',
+      '_gate706', '_gateYes', '_invItemNo', '_invMoney', 'fmt', 'roundCents'], vars: ['INV_LOT_ARTICLE_CAP', 'DECEDENT_SERVICES'] });
+    const J = Object.assign({}, ESTATE, { gate706: 'yes' });
+    const wb = text(W._lotSplitWorklistBlock(J, [LINE('c', 1, 'Copper cookware', 720, { qty: 8 }), LINE('d', 5, 'Sideboard drawer contents', 180, { agentGroup: true })]));
+    has(wb, 'so the cap cannot be tested on it: record the count, itemise it, or record that it is a single article.', 'the worklist names only remedies the app records');
+    lacks(wb, 'properly grouped', '⚠ never "record on the line why it is properly grouped", which nothing read');
+    has(text(W._lotSplitWorklistBlock(J, [LINE('c', 1, 'Copper cookware', 720, { qty: 8 }), LINE('d', 5, 'Sideboard drawer contents', 180, { agentGroup: true, groupBy: 'desk' })])),
+      'permits them to stand as groups', '⚠ answered, the clearance is printed again');
+    has(text(W._lotSplitWorklistBlock(J, [LINE('c', 1, 'Copper cookware', 720, { qty: 8 }), LINE('d', 5, 'Sideboard drawer contents', 180, { agentGroup: true, groupBy: 'desk' })])),
+      '1 line on this manifest groups more than one article', '…and a line recorded as one article is no grouped lot');
+    // A count typed in Qty, through the row's own edit.
+    const doc = domStub({});
+    const E = closureLift(['_invEdit'], ['renderInventoryTab', '_renderInvRow', '_renderInvWorkbar', '_renderInvBulk', 'agentValueAfterRename', '_avNoticesHtml', '_invRefreshAgentNotices',
+      '_invRefreshSummary', '_invRefreshGuardrail', '_invRefreshFlagStrip', '_invRefreshRecords', '_invRefreshReleases', '_invReviewRepaint', '_invReadLineRepaint', 'savePhotoRefs',
+      'invFillPlanChannel', '_deskFoldHeadsRepaint', '_deskNowRepaint', '_invSplitRepaint'], {
+      document: doc, jobs: [Object.assign({}, ESTATE, { gate706: 'yes', tc: 'Ashley Jerome' })], _photoRefs: { 7: [LINE('sd', 6, 'Sideboard drawer contents: candles, napkin rings', 180, { agentGroup: true, category: 'General/Household' })] },
+      estimateStore: ROOMS, vendorDirectory: [], _invTouch(r) { r.updatedAt = (r.updatedAt || 0) + 1; return r; }, savePhotoRefs() {}, renderInventoryTab() {}, _renderInvRow: () => '<div></div>',
+      _renderInvWorkbar: () => '<div></div>', _renderInvBulk: () => '<div></div>', agentValueAfterRename() {}, _avNoticesHtml: () => '', _invRefreshAgentNotices() {}, _invRefreshSummary() {},
+      _invRefreshGuardrail() {}, _invRefreshFlagStrip() {}, _invRefreshRecords() {}, _invRefreshReleases() {}, _invReviewRepaint() {}, _invReadLineRepaint() {},
+      invFillPlanChannel: () => false, _deskFoldHeadsRepaint() {}, _deskNowRepaint() {}, _invSplitRepaint() {}, showSyncBadge() {}, alert() {}, window: { confirm: () => true }, localStorage: { getItem: () => null, setItem() {} } });
+    const ed = attempt(() => E._invEdit(7, 'sd', 'qty', { value: '1', type: 'number' }));
+    ok(ed.ok, 'the row\'s edit ran' + (ed.ok ? '' : ': ' + ed.err));
+    const sd = E._getPhotoRef(7, 'sd') || {};
+    eq([sd.groupBy, sd.groupWho], ['desk', 'Ashley Jerome'], '⚠⚠ a count typed in Qty on a marked line is a person\'s answer (one, here)');
+    eq(P.invLotSplitState(sd, P.jobs[0]), '', '…so the lot rule no longer reads it as a group with no count');
+  }
+
+  group('N · ⚠ the summary counts a group with no count apart, and says so (the review: "Total Articles 3" over a drawer)');
+  {
+    const S = sandbox({ fns: ['invGroupUncounted', '_renderInventorySummary', 'invLineQty', 'invFiduciaryMode', 'isDecedentJob', 'invProbateRows', 'matterDef', 'matterTypeOf', 'invStatesEstateValues',
+      'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep', 'roundCents', 'resolveValBasis'],
+      vars: ['INV_CATEGORIES', 'INV_TAXONOMY', 'INV_DISPOSITIONS', 'DECEDENT_SERVICES', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
+      stubs: { invNeedsAppraisal: () => false, _money: (v) => '$' + v, _invMoney: (v) => '$' + v, fmtDate2: (d) => d, _invValueAsOfHtml: () => '', _invDateTime: () => 'now',
+        maivAggregate: () => ({ count: 0, total: 0, settled: true }), inventoryNetLabel: () => 'Net to Estate', _maivSummaryNotice: () => '' } });
+    const G1 = { category: 'General/Household', agentGroup: true };
+    const run = (rows) => { const a = attempt(() => text(S._renderInventorySummary(ESTATE, rows))); return a.ok ? a.val : 'threw: ' + a.err; };
+    const t = run([LINE('d', 1, 'Sideboard drawer contents: candles, napkin rings, corkscrews, coasters', 180, G1), LINE('k', 2, 'Kitchen drawer of utensils', 40, G1), LINE('s', 3, 'Sideboard', 900)]);
+    has(t, 'Total Lines 3', 'three lines');
+    has(t, 'Total Articles 1, plus 2 grouped lines not counted', '⚠⚠ the two groups with no count are counted apart and named');
+    has(t, 'General/Household 2 0 + 2 grouped', 'the category table says the same');
+    has(t, 'Total 3 1 + 2 grouped', '…and its total');
+    const t2 = run([LINE('d', 1, 'Sideboard drawer', 180, Object.assign({ qty: 5, groupBy: 'desk' }, G1)), LINE('s', 2, 'Sideboard', 900)]);
+    has(t2, 'Total Articles 6', 'a group whose count was recorded counts its count');
+    lacks(t2, 'grouped', 'and nothing is said apart');
+  }
+
+  group('O · ⚠ the package, the request\'s send and the close-out filer tell the sender how many photographs could not be drawn, and a notice saying so is not "ok"');
+  {
+    const pkg = live(fn('sendProbatePackage'));
+    has(pkg, "var _photoSaid = (typeof invPrintPhotoWords === 'function') ? invPrintPhotoWords(jobId, _jobInvRefs(jobId)) : '';", 'the package reads what its pages could not draw, as they are built');
+    has(pkg, "if (_photoSaid) bits.push('On the pages: ' + _photoSaid);", '…says it in the notice');
+    has(pkg, '!unfiled.length && !_photoSaid &&', '…and a notice saying it is not clean');
+    const req = live(fn('sendApprovalRequest')), es = live(fn('approvalRequestSendEsign'));
+    has(req, "r.photoSaid = (typeof invPrintPhotoWords === 'function') ? invPrintPhotoWords(jobId, items || []) : '';", 'the request reads what its page could not draw');
+    has(req, "if (r.photoSaid) bits.push('On the request: ' + r.photoSaid);", '…says it on the email route');
+    has(es, "if (r.photoSaid) bits.push('On the request: ' + r.photoSaid);", '…and on the DocuSign route');
+    has(es, "_docNotice(filedUrl && !r.photoSaid ? 'ok' : 'warn'", '…where a page with undrawn photographs is not "ok"');
+    // The close-out filer, driven: the Contents Record filed with every batch failed, then with every photograph drawn.
+    const LIV = { id: 7, hvlId: 'HVL-0007', name: 'Margaret Hale', svc: 'downsizing_move', addr: '9 Dunbar Rd', city: 'Palm Beach', docTier: 'contents', tc: 'Ashley Jerome',
+      driveFolder: 'https://drive.google.com/drive/folders/ROOT7', docState: {}, at: {} };
+    const filer = (thumbs) => {
+      const out = { badges: [], notices: [] };
+      const c = closureLift(['fileContentsRecord'], ['refreshPhotoRefs', 'resolveSubfolderId', 'uploadHtmlToDrive', 'saveJobs', 'syncJobToSheets', 'showSyncBadge', '_docNotice',
+        '_ledgerCardRepaint', '_invEnsureLoaded', 'invFetchPrintPhotos', '_printDocument', '_repaintIncidents'], {
+        jobs: [JSON.parse(JSON.stringify(LIV))], estimateStore: ROOMS, jobPlanStore: {}, _photoRefs: { 7: [LINE('a', 1, 'Sofa', 400, { disposition: 'Keep' }), LINE('b', 2, 'Lamp', 40, { disposition: 'Keep' })] },
+        SHEETS_SYNC_URL: 'https://script.example/exec', _invCloudSeen: { 7: true }, document: domStub({}), vendorDirectory: [], setTimeout: () => 0, clearTimeout() {},
+        refreshPhotoRefs: (id, cb) => cb(false, true), resolveSubfolderId: (j, sub, cb) => cb('INV7'), _invEnsureLoaded() {},
+        invFetchPrintPhotos: (id, ids, done) => { if (thumbs) { c._invPrintThumbs[7] = {}; ids.forEach((x) => { c._invPrintThumbs[7][x] = 'data:image/jpeg;base64,AA'; }); } done({ got: thumbs ? ids.length : 0, failed: thumbs ? 0 : ids.length }); },
+        uploadHtmlToDrive: (f, name, html, cb) => cb(true, 'https://drive.google.com/file/d/up1/view', { fileId: 'up1' }),
+        saveJobs() {}, syncJobToSheets() {}, _ledgerCardRepaint() {}, _repaintIncidents() {},
+        showSyncBadge: (m, warn) => out.badges.push({ m: String(m), warn: !!warn }), _docNotice: (t, m) => out.notices.push({ t, m: String(m) }) });
+      out.c = c;
+      return out;
+    };
+    const F1 = filer(false);
+    const r1 = attempt(() => F1.c.fileContentsRecord(7, { auto: true }));
+    ok(r1.ok, 'the close files the Contents Record' + (r1.ok ? '' : ': ' + r1.err));
+    const b1 = F1.badges[F1.badges.length - 1] || {};
+    eq([b1.warn, /Contents Record filed to Drive: 2 photographs could not be drawn from Drive, so their lines link to the photograph in Drive instead\./.test(b1.m || '')], [true, true],
+      '⚠⚠ every batch failed: the badge says how many could not be drawn, in amber, never ✓ (' + (b1.m || '') + ')');
+    const F2 = filer(false);
+    attempt(() => F2.c.fileContentsRecord(7, {}));
+    const n2 = F2.notices[F2.notices.length - 1] || {};
+    eq([n2.t, /2 photographs could not be drawn from Drive/.test(n2.m || '')], ['warn', true], 'from the card: the notice says it, as a warning');
+    const F3 = filer(true);
+    attempt(() => F3.c.fileContentsRecord(7, { auto: true }));
+    const b3 = F3.badges[F3.badges.length - 1] || {};
+    eq([b3.warn, b3.m], [false, 'Contents Record filed to Drive ✓'], 'every photograph drawn: ✓, as before');
   }
 };

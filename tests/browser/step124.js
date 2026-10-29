@@ -14,7 +14,11 @@
 // link to its file, no "re-open this tab", the drafted footer, and localStorage untouched by it. D (print media): More ▾ → Court
 // Inventory → Print / Save PDF: what printed, laid out on a Letter page in print media, carries Item # and Room on every table with
 // one set of column widths, the shotguns told apart by number and room, "(8 × $90)", the Form 706 mark and "grouped, untested", the
-// Numbers not used footnote, and no horizontal overflow. E: 1440 and 390 px, no horizontal overflow; zero page errors.
+// Numbers not used footnote, and no horizontal overflow. F (P13's review, 2026-10-28): P8's Ellison plates read twice and a
+// "Brass candlestick" left marked as a group; Remove under Possible duplicates on #88 and #73 names #81 and #87 (never #73, the
+// lowest number), the candlestick's record shows the mark and One article answers it, the drawer's count typed in its row's Qty box
+// answers its mark, the summary then counts no group apart, and the Court Inventory says "grouped, untested" of neither.
+// E: 1440 and 390 px, no horizontal overflow; zero page errors.
 //
 //   NODE_PATH=/path/to/node_modules node tests/browser/step124.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
@@ -171,7 +175,8 @@ const MISSING = 'f-b7';
       await p.waitForTimeout(500);
       const s = await p.evaluate(() => { const el = document.getElementById('inv-summary'); return el ? el.innerText.replace(/\s+/g, ' ') : ''; });
       has(s, 'Total Lines ' + LIVE, 'the summary counts the lines');
-      has(s, 'Total Articles ' + (BOOKS + 12 + 8 + 1 + 1 + 6 + 2), '⚠ and the articles they hold');
+      // RESTATED (P13's review, 2026-10-28): the sideboard drawer Agent One marked as a group with no count is counted apart.
+      has(s, 'Total Articles ' + (BOOKS + 12 + 8 + 1 + 6 + 2) + ', plus 1 grouped line not counted', '⚠ and the articles they hold, the group with no count apart');
       await press('#desk-hd-history-' + EST, 'the Removed items & snapshots bar');
       const h = await txt('#desk-body-history-' + EST);
       has(h, 'a duplicate of #3', 'Removed items says #4 was a duplicate of #3');
@@ -254,6 +259,66 @@ const MISSING = 'f-b7';
       await p.setViewportSize({ width: 1440, height: 1000 });
       await p.waitForTimeout(600);
       if (await viewerOpen()) await close();
+    });
+
+    // ── F (P13's review, 2026-10-28) ──
+    await section('F. ⚠⚠ the review: Remove under Possible duplicates names the line it duplicates; a group with no count is answered by a count typed or One article', async () => {
+      // P8's Ellison plates, one photograph read twice (#73 dinner and #81 salad plates first; #87 and #88 the later reading), and a
+      // line a drawer was itemised down to, left marked as a group: "Brass candlestick", $500.
+      sheet = await p.evaluate(([EST, T0]) => {
+        const A1 = T0 + 3600000, A2 = A1 + 7 * 60000;
+        const ph = { label: 'inventory', roomIdx: 2, status: 'uploaded', ts: T0 + 50, filename: 'HVL_' + EST + '_INV_pl.jpg', driveFileId: 'f-pl',
+          driveFileUrl: 'https://drive.google.com/file/d/f-pl/view', category: 'General/Household', disposition: 'Keep', namedBy: 'agent', agentConf: 'medium',
+          valuedBy: 'desk', valSource: 'Dealer quote', fmv: 120 };
+        const L = (id, no, name, at, crop, o) => Object.assign({ stableId: id, itemNo: no, objectName: name, agentName: name, agentAt: at, updatedAt: at, crop: crop },
+          ph, id === 'pl73' ? {} : { derivedFrom: 'pl73' }, o || {});
+        _photoRefs[EST].push(
+          L('pl73', 73, 'Hand-painted tin-glazed earthenware dinner plates, yellow bird and blue flower', A1, [0.46, 0.38, 1, 0.78], { qty: 8 }),
+          L('pl81', 81, 'Hand-painted tin-glazed earthenware salad plates, matching', A1 + 3, [0.03, 0.43, 0.45, 0.78], { qty: 6 }),
+          L('pl87', 87, 'Hand-painted majolica dinner plates, yellow bird and blue flower design', A2, [0.5, 0.4, 0.98, 0.8], { qty: 6 }),
+          L('pl88', 88, 'Hand-painted majolica salad or dessert plates, matching', A2 + 2, [0.05, 0.42, 0.44, 0.8], { qty: 6 }),
+          { stableId: 'bc', itemNo: 8, label: 'inventory', roomIdx: 0, status: 'uploaded', category: 'General/Household', disposition: 'Keep', objectName: 'Brass candlestick',
+            agentGroup: true, fmv: 500, ts: T0, updatedAt: T0, filename: 'HVL_' + EST + '_INV_bc.jpg', driveFileId: 'f-bc', driveFileUrl: 'https://drive.google.com/file/d/f-bc/view',
+            namedBy: 'desk', reviewed: true, valuedBy: 'desk', valSource: 'Dealer quote' });
+        savePhotoRefs(EST);
+        const out = {}; out[EST] = { items: JSON.parse(localStorage.getItem('hav_media_' + EST) || '[]') }; return out;
+      }, [EST, T0]);
+      await p.click('.nb[onclick*="\'jobs\'"]').catch(() => {}); await p.waitForTimeout(600);
+      await toDesk();
+      await settle();
+      const grp = '.inv-dup-group';
+      ok(await vis(grp), 'Possible duplicates shows the photograph read twice');
+      // Remove on #88, a repeat of #81, then on #73, the original #87 repeats.
+      await press(grp + ' button[onclick="agentDropDuplicate(' + EST + ',\'pl88\')"]', 'Remove on #88');
+      await press(grp + ' button[onclick="agentDropDuplicate(' + EST + ',\'pl73\')"]', 'Remove on #73');
+      if (!(await vis('#desk-body-history-' + EST))) await press('#desk-hd-history-' + EST, 'the Removed items & snapshots bar');
+      const h = await txt('#desk-body-history-' + EST);
+      has(h, 'a duplicate of #81', '⚠⚠ Removed items: #88 a duplicate of #81, the line it repeats');
+      has(h, 'a duplicate of #87', '⚠⚠ …and #73 a duplicate of #87, the later line that repeats it');
+      lacks(h, 'a duplicate of #73', '⚠⚠ never "#88 a duplicate of #73" (the lowest number)');
+      const foot = await p.evaluate((id) => invNumbersNotUsedText(id), EST);
+      has(foot, '#73 a duplicate of #87; #88 a duplicate of #81', 'and the papers\' footnote says the same');
+      // The candlestick's record: the mark, and One article.
+      const tog = 'button[onclick="_invToggleOpen(\'bc\')"]';
+      if (!(await vis('#inv-grp-bc'))) await press(tog, 'the candlestick\'s ▾');
+      has(await txt('#inv-grp-bc'), 'A group with no count. Agent One read this line as more than one article, and no count is recorded.', '⚠ the record shows Agent One\'s mark');
+      await press('#inv-grp-bc button', 'One article');
+      const bc = await p.evaluate((id) => { const r = (_photoRefs[id] || []).filter((x) => x.stableId === 'bc')[0] || {}; return [r.groupBy, r.groupWho]; }, EST);
+      eq(bc, ['desk', 'Ashley Jerome'], '⚠⚠ One article recorded as a person\'s answer, with who');
+      if (!(await vis('#inv-grp-bc'))) await press(tog, 'the candlestick\'s ▾ again');
+      has(await txt('#inv-grp-bc'), 'it was recorded as one article by Ashley Jerome', 'the record says who answered');
+      // The sideboard drawer: its count typed in the row's own Qty box.
+      const qty = '#inv-row-sd input.inv-qty';
+      ok(await vis(qty), 'the drawer\'s Qty box is on screen');
+      await p.fill(qty, '5'); await p.keyboard.press('Tab'); await p.waitForTimeout(900);
+      const sd = await p.evaluate((id) => { const r = (_photoRefs[id] || []).filter((x) => x.stableId === 'sd')[0] || {}; return [r.qty, r.groupBy]; }, EST);
+      eq(sd, ['5', 'desk'], '⚠⚠ the count typed in Qty answers the mark');
+      const s = await p.evaluate(() => { const el = document.getElementById('inv-summary'); return el ? el.innerText.replace(/\s+/g, ' ') : ''; });
+      lacks(s, 'grouped line', '⚠ the summary counts no group apart now');
+      has(s, 'Total Articles ' + (BOOKS + 12 + 8 + 1 + 6 + 2 + 5 + 1 + 6 + 6), 'and counts the drawer\'s five, the candlestick and the plates left');
+      const court = await p.evaluate((id) => { const r = printCourtInventory(id, { asHtml: true }); return r && r.html ? r.html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ') : ''; }, EST);
+      lacks(court, 'grouped, untested', '⚠⚠ and the Court Inventory says "grouped, untested" of neither');
+      ok((await overflow()) <= 0, 'no horizontal overflow with the record open (' + (await overflow()) + ')');
     });
 
     // ── E ──

@@ -62,7 +62,7 @@ const PRINT_FNS = ['_invDocPartyHead', 'invLineReviewed', 'invLineOpen', 'invIni
   '_invCautionBadges', 'invReleaseCautions', '_invTouch', 'savePhotoRefs', '_warnPhotoStoreFull',
   '_invProgressBar', 'invIsFirearm', 'invTransportBlocked', 'invFirearmAuthorized',
   '_invCautionNotices', '_invPicked', '_invAwaitingApproval', 'invWrittenReleaseNeeded',
-  '_renderInventorySummary', '_maivWorklistBlock', '_invDateTime', 'maivStatement_', '_avdDate',
+  'invGroupUncounted', '_renderInventorySummary', '_maivWorklistBlock', '_invDateTime', 'maivStatement_', '_avdDate',
   // 2026-10-22: the summary states the basis and the value date as text; their controls head the desk's Values bar.
   'invStatesEstateValues', '_invValueAsOfHtml', '_renderValueSettings',
   'invProbateRows', 'matterDef', 'matterTypeOf',

@@ -111,6 +111,13 @@ function net(opts) {
         if (o.failUpload && o.failUpload.test(body.filename)) return sp(res({ ok: false, error: 'Drive is unavailable' }));
         return sp(res({ ok: true, fileUrl: 'https://drive.google.com/file/d/up' + n + '/view', fileId: 'up' + n }));
       }
+      // The pages' photographs (P13): every one Drive holds, as the deployment answers; `thumbs: false` a photo service that fails.
+      if (body.action === 'getThumbnails') {
+        if (o.thumbs === false) return sp(res({ ok: false, error: 'the photo service did not answer' }));
+        const thumbs = {};
+        (body.fileIds || []).forEach((id) => { thumbs[id] = 'data:image/jpeg;base64,AAAA'; });
+        return sp(res({ ok: true, thumbs, missing: [] }));
+      }
       if (body.action === 'getSubfolders') {
         // A job folder's subfolders, as Drive lists them (o.subfolders), for a job whose record lacks one.
         return sp(res({ ok: true, subfolders: o.subfolders || null }));
@@ -696,6 +703,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(r.N.log.posts, ['getThumbnails', 'shareFolder', 'shareFolder', 'shareFolder', 'shareFolder', 'uploadHtml', 'uploadHtml', 'uploadHtml', 'uploadHtml', 'uploadHtml', 'htmlToPdf', 'htmlToPdf', 'htmlToPdf', 'htmlToPdf'],
        'one Apps Script call after another, the photographs first');
     ok(r.N.log.gets.some((u) => /action=loadMedia&jobId=7/.test(u)), '⚠ the inventory is read from the sheet first, never assumed empty');
+  });
+
+  // P13's review (2026-10-28): the package's notice said nothing when its pages' photographs could not be drawn, so the PDFs went to
+  // counsel with "photo" in every cell under a green notice.
+  G('11 · the package says how many photographs its pages could not draw, and a notice saying so is never green (P13\'s review)', () => {
+    const good = pkgRig();
+    good.c.sendProbatePackage(7);
+    lacks((good.notices[good.notices.length - 1] || {}).m || '', 'could not be drawn', 'every photograph drawn: nothing said of them');
+    const bad = pkgRig({ net: { thumbs: false } });
+    bad.c.sendProbatePackage(7);
+    const n = bad.notices[bad.notices.length - 1] || {};
+    eq(n.t, 'warn', '⚠⚠ the photo service failed: amber');
+    ok(/On the pages: \d+ photographs? could not be drawn from Drive, so (its line links|their lines link) to the photograph in Drive instead\./.test(n.m || ''), '⚠⚠ and the notice says how many (' + String(n.m || '').slice(-200) + ')');
+    eq(bad.N.log.drafts.length, 1, 'the draft is made all the same (a flag, never a refusal)');
   });
 
   G('11 · documents with gaps go out as working copies — a floor, DRAFT, never FINAL — and the record states what was recorded', () => {

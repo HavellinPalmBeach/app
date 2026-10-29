@@ -9,7 +9,7 @@ const { sandbox, source, domStub } = require('./harness.js');
 const FNS = ['scheduleSignLines', '_invDocPartyHead', 'invLineReviewed', 'invLineOpen', 'invConditionText', '_invScheduleSection', 'invValBasisWord', '_invTrackDefault', 
   'invDocContractBlock', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep',
   'printEstateInventoryReport', 'jobOnProbateTrack', 'printCourtInventory', '_avUnreviewedStamp', 'printContentsList', 'contentsList',
-  'printContentsRecord', '_invHasPhoto', 'photoShareLive', 'photoSharesOf', 'printApprovalRequest', '_lotSplitWorklistBlock', 'invLotSplitState', 'invLotArticleValue', 'invLotSplitSentence', 'invLotsToSplit', 'invLotsUntestable', 'printAppraisalWorklist', 'printDispositionLedger',
+  'printContentsRecord', '_invHasPhoto', 'photoShareLive', 'photoSharesOf', 'printApprovalRequest', 'invGroupUncounted', '_lotSplitWorklistBlock', 'invLotSplitState', 'invLotArticleValue', 'invLotSplitSentence', 'invLotsToSplit', 'invLotsUntestable', 'printAppraisalWorklist', 'printDispositionLedger',
   'agentShotGroups', 'agentNameableRefs', '_agState', '_agStateHtml', '_agNoticesHtml', 'agentNotices',
   '_clFlags', '_renderInvWorkbar', 'invColdWords', '_arCheckButtonHtml', '_arState', 'agentRoomsToCheck', '_arCheckable', '_arStateHtml', '_avValueButtonHtml', 'agentValueWaiting', 'agentValueableRefs', '_avHasFigure', '_avStateHtml', '_avState', '_avNoticesHtml', 'agentValueNotices', '_avNoticeKinds', '_avNoticeLabel', 'agentValueInternal', 'agentValueUnreviewed', 'agentValueStale', 'agentValueSpecialistWorth', 'invPrimaryDoc', '_invProgressBar', 'invWorkFlags', '_invNeedsValue',
   '_invAssignItemNos', '_jobInvRefs', '_invItemNo', '_invRoomName', '_planRooms', '_invFileId',

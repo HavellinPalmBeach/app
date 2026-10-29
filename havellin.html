@@ -1476,7 +1476,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.28 · 4:33pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.28 · 5:50pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -18370,6 +18370,9 @@ function sendProbatePackage(jobId) {
     // photograph this session holds none of is fetched (invFetchPrintPhotos, memory only) before a page is built; the watchdog
     // waits for it, each batch having its own.
     var _pkgBuild = function () {
+      // What could not be drawn is said to the sender, as the printers' toast says it (P13's review, 2026-10-28: every batch could
+      // time out and the PDFs went to counsel with "photo" in every cell under an 'ok' notice). Read as the pages are built.
+      var _photoSaid = (typeof invPrintPhotoWords === 'function') ? invPrintPhotoWords(jobId, _jobInvRefs(jobId)) : '';
       var owed = probatePackageDocs(job);
       var pages = [], left = [];
       owed.forEach(function (k) {
@@ -18435,7 +18438,8 @@ function sendProbatePackage(jobId) {
                   });
                 });
                 if (unfiled.length) bits.push('Not filed to Drive: the ' + _andJoin(unfiled.map(function (d) { return d.title; })) + '.');
-                var clean = gmail && atts.length === pages.length && !left.length && !unfiled.length && folders.every(function (f) { return f.shared && !f.notShared.length; });
+                if (_photoSaid) bits.push('On the pages: ' + _photoSaid);
+                var clean = gmail && atts.length === pages.length && !left.length && !unfiled.length && !_photoSaid && folders.every(function (f) { return f.shared && !f.notShared.length; });
                 _docNotice(clean ? 'ok' : 'warn', bits.join(' '), jobId);
                 if (draftUrl) { try { window.open(draftUrl, '_blank'); } catch (e) {} }
                 showSyncBadge(gmail ? 'Gmail draft created ✓' : 'Email opened ✓');
@@ -28383,7 +28387,7 @@ function savePhotoRefs(jobId) {
                deletedBy:r.deletedBy, driveTrashed:r.driveTrashed,
                // ⚠ P13 (2026-10-28): why a line was taken off (the papers' Numbers not used) and the line it went into or repeats,
                // and Agent One's mark that a line holds more than one article (the §20.2031-6(a) test of a group with no count).
-               removedWhy:r.removedWhy, removedOf:r.removedOf, agentGroup:r.agentGroup,
+               removedWhy:r.removedWhy, removedOf:r.removedOf, agentGroup:r.agentGroup, groupBy:r.groupBy, groupWho:r.groupWho,
                // ⚠ P22: the person left in Channel / Recipient after the line came off Distribute, the item a detail
                // shot was binned with, and the merge's stamps on the signers (a hand edit, each name Record approval added).
                channelLeftover:r.channelLeftover, deletedWith:r.deletedWith, authBySetAt:r.authBySetAt, authAdds:r.authAdds,
@@ -29138,6 +29142,12 @@ function invLotArticleValue(ref) {
   return v / q;
 }
 
+// ⚠ A GROUP WITH NO COUNT RECORDED (P13's review, 2026-10-28): Agent One read the line as more than one article (`agentGroup`), no
+// count above one is on it, and no person has answered (`groupBy: 'desk'`, written by a count typed in Qty or the record's One
+// article). The one test, read by the lot rule below, the worklist's grouped lots, the summary's articles and the record. DOM-free.
+function invGroupUncounted(ref) {
+  return !!ref && ref.agentGroup === true && ref.groupBy !== 'desk' && !(parseInt(ref.qty, 10) > 1);
+}
 // '' | 'over' | 'unvalued'. THREE answers rather than two, for the reason the aggregate in
 // (b) keeps `settled`: an unvalued lot has not passed the test, it has not been GIVEN one,
 // and reporting it as clear is the failure this whole area exists to prevent.
@@ -29146,12 +29156,15 @@ function invLotArticleValue(ref) {
 // lines counted above one, so the worklist printed its clearance over a $180 sideboard drawer of candles, napkin rings and corkscrews
 // never tested. Agent One marks a line holding more than one article (`agentGroup`, the `2026-10-28b` backend); at a count of one
 // over $100, or with no value, the cap cannot be tested on it. Under $100 nothing in it can be over the cap.
+// ⚠ AND A PERSON ANSWERS IT (P13's review, 2026-10-28): the mark could be cleared by nothing, so a line renamed "Brass candlestick"
+// after its drawer was itemised printed "grouped, untested" on the Court Inventory for good. A count typed in Qty, or the record's
+// One article, records the answer (`groupBy: 'desk'`, invGroupUncounted), and the count then decides as on any line.
 function invLotSplitState(ref, job) {
   if (!maivFilingApplies(job)) return '';        // the one gate — do not duplicate it upstream
   var q = parseInt(ref && ref.qty, 10);
   var v = parseFloat(ref && ref.fmv);
   if (!(q > 1)) {                                // a single article is never "grouped"…
-    if (!(ref && ref.agentGroup === true)) return '';
+    if (!invGroupUncounted(ref)) return '';
     return (isNaN(v) || v > INV_LOT_ARTICLE_CAP) ? 'nocount' : '';   // …but a group with no count is
   }
   if (isNaN(v)) return 'unvalued';
@@ -30446,17 +30459,20 @@ function _invCellRead(ref, col, job, displaySeq) {
 }
 
 function _renderInventorySummary(job, items) {
-  var catAgg = {}; INV_CATEGORIES.forEach(function(c){ catAgg[c] = {fmv:0, count:0, articles:0}; });
+  var catAgg = {}; INV_CATEGORIES.forEach(function(c){ catAgg[c] = {fmv:0, count:0, articles:0, grouped:0}; });
   var dispAgg = {}; INV_DISPOSITIONS.forEach(function(d){ dispAgg[d] = 0; });
-  var totalFMV = 0, awaiting = 0, nDisp = 0, nBequest = 0, nExempt = 0, gross = 0, fees = 0, nAppr = 0, articles = 0;
+  var totalFMV = 0, awaiting = 0, nDisp = 0, nBequest = 0, nExempt = 0, gross = 0, fees = 0, nAppr = 0, articles = 0, grouped = 0;
   items.forEach(function(r){
     var cat = (r.category && catAgg[r.category]) ? r.category : 'General/Household';
-    if (!catAgg[cat]) catAgg[cat] = {fmv:0, count:0, articles:0};
+    if (!catAgg[cat]) catAgg[cat] = {fmv:0, count:0, articles:0, grouped:0};
     catAgg[cat].count++;
     // ⚠ LINES AND ARTICLES, BOTH (P13 of the desk audit, 2026-10-28; INV-20): "Total Items 50" counted lines while the schedules
     // printed "(6 items, valued as a lot)", so "items" meant lines in one place and articles in the other, and a reader comparing
     // the house to the list had no article count. A line's count is invLineQty (a line with none is one, as the papers print it).
-    catAgg[cat].articles += invLineQty(r); articles += invLineQty(r);
+    // ⚠ A GROUP WITH NO COUNT IS COUNTED APART (P13's review): a sideboard drawer of candles, napkin rings and coasters is more than
+    // one article, so counting it as one understated the figure with nothing said. Not in Articles; named beside it.
+    if (invGroupUncounted(r)) { catAgg[cat].grouped++; grouped++; }
+    else { catAgg[cat].articles += invLineQty(r); articles += invLineQty(r); }
     // ⚠ MONEY IS SUMMED TO THE CENT (P22): each figure and every sum through roundCents, as the Disposition Ledger sums
     // the same lines (dispositionLedger); `+=` on raw floats drifted, and fmt only rounded what it printed.
     var f = parseFloat(r.fmv);
@@ -30518,7 +30534,7 @@ function _renderInventorySummary(job, items) {
   var maiv = maivAggregate(items, _fid ? job : null);
   var totals = '<div>'
     + hdrRow('Total Lines', String(items.length))
-    + hdrRow('Total Articles', String(articles))
+    + hdrRow('Total Articles', String(articles) + (grouped ? ', plus ' + grouped + ' grouped line' + (grouped === 1 ? '' : 's') + ' not counted' : ''))
     // ⚠ "Items Awaiting Valuation" reads every row on a living job forever, because nobody is
     // entering values — a count that cannot go down trains people to stop reading the block.
     // ⚠⚠ AND THE SAME IS TRUE AT THE `contents` TIER, BY CONTRACT rather than by habit: the
@@ -30542,14 +30558,16 @@ function _renderInventorySummary(job, items) {
   // living job since 2026-09-21; this table did not, so the family's own workbook counted while
   // the screen beside it priced the same rows at $0. One predicate now drives both.
   var _catMoney = _sv;
+  // The grouped lines beside the articles, as the totals say them: "1 + 2 grouped".
+  var _grpCell = function (n) { return n ? ' <span class="inv-sum-grouped" style="font-weight:400;color:#8a6d3b;">+ ' + n + ' grouped</span>' : ''; };
   var catRows = INV_CATEGORIES.map(function(c){
-    return '<tr><td>' + esc(c) + '</td><td style="text-align:right;">' + (catAgg[c].count || 0) + '</td><td style="text-align:right;">' + (catAgg[c].articles || 0) + '</td>'
+    return '<tr><td>' + esc(c) + '</td><td style="text-align:right;">' + (catAgg[c].count || 0) + '</td><td style="text-align:right;">' + (catAgg[c].articles || 0) + _grpCell(catAgg[c].grouped) + '</td>'
       + (_catMoney ? '<td style="text-align:right;">' + (_money(catAgg[c].fmv) || '$0') + '</td>' : '') + '</tr>';
   }).join('');
   var catTable = '<table class="vtbl" style="font-size:11px;"><thead><tr><th>' + (_catMoney ? 'FMV by Category' : 'Items by Category') + '</th><th style="text-align:right;">Lines</th><th style="text-align:right;">Articles</th>'
     + (_catMoney ? '<th style="text-align:right;">FMV</th>' : '') + '</tr></thead><tbody>'
     + catRows
-    + '<tr style="font-weight:700;"><td>Total</td><td style="text-align:right;">' + items.length + '</td><td style="text-align:right;">' + articles + '</td>'
+    + '<tr style="font-weight:700;"><td>Total</td><td style="text-align:right;">' + items.length + '</td><td style="text-align:right;">' + articles + _grpCell(grouped) + '</td>'
     + (_catMoney ? '<td style="text-align:right;">' + (_money(totalFMV) || '$0') + '</td>' : '') + '</tr></tbody></table>';
   var dispRows = INV_DISPOSITIONS.map(function(d){
     return '<tr><td>' + esc(d) + '</td><td style="text-align:right;">' + (dispAgg[d] || 0) + '</td></tr>';
@@ -30919,6 +30937,8 @@ function _invEdit(jobId, stableId, key, el) {
   } else {
     ref[key] = (el.type === 'checkbox') ? el.checked : el.value;
     if (key === 'qty') _figMoved = _invQtyCarriesValue(ref, _unitWas, _qWas);   // the count carries Each across
+    // A count typed on a line Agent One read as a group is a person's answer to it (P13's review): its count, one included.
+    if (key === 'qty' && ref.agentGroup === true) { ref.groupBy = 'desk'; ref.groupWho = (typeof _invStampBy === 'function' && _invStampBy(_invJob(jobId))) || ''; }
   }
   // ⚠⚠ A CHANGE TO AN APPROVED LINE THAT ITS APPROVAL DOES NOT COVER ASKS ONCE (P5; EST-01, REL-01, SYN-03): where it goes, who
   // takes it, or its value past Ask 5's rule (a count that carries Each across moves it too). OK writes it: the approval stays on
@@ -30989,6 +31009,11 @@ function _invEdit(jobId, stableId, key, el) {
     if (netEl) netEl.textContent = _invNetDisplay(ref);
   }
   if (_figMoved || key === 'qty') _invPaintFigures(ref);
+  // And the record's group mark, by id, once a count answers it (the box is on the row, so nothing typed is under it).
+  if (key === 'qty' && ref.agentGroup === true && typeof _invPanelGroupHtml === 'function') {   // (typeof: a pinned sandbox lifts _invEdit alone)
+    var _gEl = document.getElementById('inv-grp-' + stableId), _gJob = _invJob(jobId);
+    if (_gEl && _gJob) _gEl.outerHTML = _invPanelGroupHtml(_gJob, ref) || '<div id="inv-grp-' + esc(stableId) + '"></div>';
+  }
   // ⚠ A FIGURE THAT STOPPED BEING THE AGENT'S REDRAWS ITS ROW (P23), so its badge and Accept go with it; and a name
   // edited under an agent's figure repaints the work bar's notices, where *made for an earlier name* is read first.
   // And a line the appraisal's figure has just landed on (Q93): its "Appraisal · … · pending" becomes the appraisal it records.
@@ -35099,6 +35124,8 @@ function sendApprovalRequest(jobId, selectedOnly, via) {
     // fetched (invFetchPrintPhotos, memory only), and the page built again with them, before it is filed or made into a PDF.
     var _reqSend = function (r) {
       var items = r.items, asked = r.asked.length, ratify = r.ratify.length;
+      // The photographs the page could not draw, said to the sender on either route (P13's review, 2026-10-28), read as it was built.
+      r.photoSaid = (typeof invPrintPhotoWords === 'function') ? invPrintPhotoWords(jobId, items || []) : '';
       // The lines in the order the paper prints them (the lines asked for, grouped by destination, then those for
       // ratification), so Record the signed request lists them as the signed copy reads (2026-10-23, G7's review).
       var paperIds = r.asked.concat(r.ratify).map(function (x) { return String(x.stableId); });
@@ -35141,7 +35168,8 @@ function sendApprovalRequest(jobId, selectedOnly, via) {
               if (r.held && r.held.length) bits.push((r.held.length === 1 ? '1 item waits' : r.held.length + ' items wait') + ' for somebody to be named to take '
                 + (r.held.length === 1 ? 'it' : 'them') + ' and ' + (r.held.length === 1 ? 'is' : 'are') + ' not on it.');
               if (leftOut) bits.push(leftOut);
-              _docNotice(gmail && b64 && filedUrl && !rcpt.noEmail.length ? 'ok' : 'warn', bits.join(' '), jobId);
+              if (r.photoSaid) bits.push('On the request: ' + r.photoSaid);
+              _docNotice(gmail && b64 && filedUrl && !rcpt.noEmail.length && !r.photoSaid ? 'ok' : 'warn', bits.join(' '), jobId);
               if (draftUrl) { try { window.open(draftUrl, '_blank'); } catch (e) {} }
               showSyncBadge(gmail ? 'Gmail draft created ✓' : 'Email opened ✓');
               _invRefreshReleases(jobId);
@@ -35317,7 +35345,8 @@ function approvalRequestSendEsign(job, r, b64, perr, filedUrl, paperIds, rcpt, s
     if (!filedUrl) bits.push('Not filed to Drive: the unsigned request.');
     if (r.held && r.held.length) bits.push((r.held.length === 1 ? '1 item waits' : r.held.length + ' items wait') + ' for somebody to be named to take '
       + (r.held.length === 1 ? 'it' : 'them') + ' and ' + (r.held.length === 1 ? 'is' : 'are') + ' not on it.');
-    _docNotice(filedUrl ? 'ok' : 'warn', bits.join(' '), jobId);
+    if (r.photoSaid) bits.push('On the request: ' + r.photoSaid);
+    _docNotice(filedUrl && !r.photoSaid ? 'ok' : 'warn', bits.join(' '), jobId);
     showSyncBadge('Sent through DocuSign ✓');
     _invRefreshReleases(jobId);
   });
@@ -37694,6 +37723,9 @@ function _fileCloseoutPaper(jobId, opt, P) {
   var go = function () {
     var page = P.build(jobId);
     if (!page || !page.html) { if (!release()) return; say('err', 'The ' + P.name + ' could not be built on this device, so it was not filed.'); return; }
+    // A paper with photographs says what it could not draw, read as it was built (P13's review, 2026-10-28): the badge said ✓ over a
+    // Contents Record filed with "photo" in every cell when every batch had timed out.
+    var photoSaid = (P.photos && typeof invPrintPhotoWords === 'function') ? invPrintPhotoWords(jobId, _jobInvRefs(jobId)) : '';
     var title = P.title;
     resolveSubfolderId(job, P.folder || PHOTO_SUBFOLDER, function (folderId) {
       var target = folderId || _jobRootFolderId(job);
@@ -37716,8 +37748,8 @@ function _fileCloseoutPaper(jobId, opt, P) {
         j2.updatedAt = Date.now();
         saveJobs();
         syncJobToSheets(j2);
-        if (auto) showSyncBadge('' + P.name + ' filed to Drive ✓');
-        else say('ok', '' + P.name + ' filed to the client’s ' + (P.folder || PHOTO_SUBFOLDER) + ' folder in Drive.');
+        if (auto) showSyncBadge('' + P.name + ' filed to Drive' + (photoSaid ? ': ' + photoSaid : ' ✓'), !!photoSaid);
+        else say(photoSaid ? 'warn' : 'ok', '' + P.name + ' filed to the client’s ' + (P.folder || PHOTO_SUBFOLDER) + ' folder in Drive.' + (photoSaid ? ' ' + photoSaid : ''));
         _ledgerCardRepaint(jobId);
         if (typeof _repaintIncidents === 'function') _repaintIncidents(jobId);
       });
@@ -38354,7 +38386,7 @@ function _lotSplitWorklistBlock(job, items) {
   if (!maivFilingApplies(job)) return '';
   // A group Agent One marked as holding more than one article is a lot whatever its count (P13, INV-09): at a count of one over
   // $100 the cap cannot be tested on it (invLotSplitState 'nocount'), and the clearance below is never said over it.
-  var lots = (items || []).filter(function(r){ return parseInt(r.qty, 10) > 1 || r.agentGroup === true; });
+  var lots = (items || []).filter(function(r){ return parseInt(r.qty, 10) > 1 || invGroupUncounted(r); });
   if (!lots.length) return '';
   var over = invLotsToSplit(lots, job);
   var untested = invLotsUntestable(lots, job);
@@ -38363,7 +38395,7 @@ function _lotSplitWorklistBlock(job, items) {
   var noCount = untested.filter(function (r) { return invLotSplitState(r, job) === 'nocount'; });
   var noCountTxt = noCount.length ? noCount.length + ' grouped line' + (noCount.length > 1 ? 's hold' : ' holds') + ' more than one article with no count '
     + 'recorded, so the cap cannot be tested on ' + (noCount.length > 1 ? 'them' : 'it') + ': record the count, itemise '
-    + (noCount.length > 1 ? 'them' : 'it') + ', or record on the line why ' + (noCount.length > 1 ? 'they are' : 'it is') + ' properly grouped. ' : '';
+    + (noCount.length > 1 ? 'them' : 'it') + ', or record that ' + (noCount.length > 1 ? 'each is a single article' : 'it is a single article') + '. ' : '';
   var tone = (over.length || untested.length) ? '#8a6d3b' : '#999';
 
   var rows = over.concat(untested).map(function(r){
@@ -41924,6 +41956,40 @@ function _agDupIndex(jobId, all) {
 function _agDupHandle(key) { try { return btoa(unescape(encodeURIComponent(key))); } catch(e) { return ''; } }
 function _agDupUnhandle(h) { try { return decodeURIComponent(escape(atob(h))); } catch(e) { return ''; } }
 
+// ⚠⚠ WHICH LINE A REMOVED DUPLICATE DUPLICATES, read off the group's own evidence (P13's review, 2026-10-28). Remove recorded the
+// group's lowest-numbered other line, so on a photograph read twice (#73 dinner plates and #81 salad plates read first; #87
+// repeats #73, #88 repeats #81) Remove on #88 printed "#88 a duplicate of #73", and Remove on #73 "#73 a duplicate of #81", dinner
+// plates of salad plates, in the Numbers not used footnote of the schedules the representative adopts. In order: the line it
+// repeats (a photograph read twice, the group's `repeats`); the line repeating it; the surest of its open room-check links (the
+// group's `pairs`: a chain #1~#2~#3 names #2 for #3, never #1, which the check never paired with it); the one other line of its
+// name; the other line of a group of two. Else '' and the paper says "a duplicate", naming nobody. DOM-free.
+function agentDupPartner(g, stableId) {
+  if (!g || !stableId) return '';
+  var id = function (r) { return (r && r.stableId) || ''; };
+  var reps = g.repeats || [], rows = g.rows || [];
+  var rep = reps.filter(function (p) { return id(p.line) === stableId; })[0];
+  if (rep && id(rep.of)) return id(rep.of);
+  var by = reps.filter(function (p) { return id(p.of) === stableId; })[0];
+  if (by && id(by.line)) return id(by.line);
+  var best = null;
+  (g.pairs || []).forEach(function (p) {
+    if (id(p.a) !== stableId && id(p.b) !== stableId) return;
+    if (!best || (AGENT_ROOM_CONF_RANK[p.conf] || 0) > (AGENT_ROOM_CONF_RANK[best.conf] || 0)) best = p;
+  });
+  if (best) return id(best.a) === stableId ? id(best.b) : id(best.a);
+  var me = rows.filter(function (r) { return id(r) === stableId; })[0];
+  if (me && _agDupEligible(me)) {
+    var key = _agNameKey(me.agentName || me.valNameFrom || me.objectName);
+    var same = rows.filter(function (r) {
+      return id(r) !== stableId && _agDupEligible(r) && String(r.roomIdx) === String(me.roomIdx)
+        && _agNameKey(r.agentName || r.valNameFrom || r.objectName) === key && !agentDupCleared(me, r);
+    });
+    if (same.length === 1) return id(same[0]);
+  }
+  var others = rows.filter(function (r) { return id(r) !== stableId; });
+  return others.length === 1 ? id(others[0]) : '';
+}
+
 function agentDropDuplicate(jobId, stableId) {
   var ref = _getPhotoRef(jobId, stableId);
   if (!ref) return;
@@ -41934,12 +42000,11 @@ function agentDropDuplicate(jobId, stableId) {
   // seen it yet", so a splice is undone by the next merge.
   // ⚠ AND NEVER `discardShot`, which TRASHES the photograph in Drive. The frame is real
   // evidence of the room whatever the desk decides about the LINE.
-  // The desk's one removal writer (P16): tombstoned, stamped with who, saved; recorded as a duplicate of the group's other line,
-  // the lowest numbered (P13), so the papers' Numbers not used says what it was.
+  // The desk's one removal writer (P16): tombstoned, stamped with who, saved; recorded as a duplicate of the line the group's own
+  // evidence pairs it with (agentDupPartner; P13's review: the lowest-numbered other line named the wrong one), so the papers'
+  // Numbers not used says what it was, or "a duplicate" where no one line is its partner.
   var _grp = agentDuplicateGroups(jobId).filter(function (g) { return g.rows.some(function (r) { return r.stableId === stableId; }); })[0];
-  var _other = _grp ? _grp.rows.filter(function (r) { return r.stableId !== stableId; })
-    .sort(function (a, b) { return (parseInt(a.itemNo, 10) || Infinity) - (parseInt(b.itemNo, 10) || Infinity); })[0] : null;
-  _invTombstoneLine(jobId, ref, { why: 'dup', of: _other ? _other.stableId : '' });
+  _invTombstoneLine(jobId, ref, { why: 'dup', of: agentDupPartner(_grp, stableId) });
   renderInventoryTab();
   _scheduleInventorySync(jobId);
   _avDupReleased(jobId, waiting);
@@ -44167,6 +44232,7 @@ function _renderInvPanel(job, ref) {
     + _invPanelCautionHtml(job, ref)
     + _invPanelLeftoverHtml(job, ref)
     + _invPanelAppraisalHtml(job, ref)
+    + _invPanelGroupHtml(job, ref)
     + _collPanelHtml(job, ref)
     + fieldHtml + _avPanelHtml(job, ref) + secs + '</div>';
 }
@@ -44183,6 +44249,37 @@ function _invPanelCautionHtml(job, ref) {
   }).join('');
 }
 
+// ⚠ AGENT ONE'S GROUP MARK, IN THE LINE'S RECORD, WITH A PERSON'S ANSWER (P13's review, 2026-10-28): the mark was read by the lot
+// rule and the worklist and shown nowhere, and nothing a person did could settle it. Uncounted (invGroupUncounted), the record says
+// so and offers One article; a count typed in Qty answers it too. Answered, it says who recorded the count. '' with no mark.
+function _invPanelGroupHtml(job, ref) {
+  if (!ref || ref.agentGroup !== true) return '';
+  var id = ' id="inv-grp-' + esc(ref.stableId) + '"';
+  if (invGroupUncounted(ref)) {
+    return '<div class="inv-panel-group"' + id + ' style="margin-bottom:10px;font-size:11px;line-height:1.5;color:#8a5a1e;">&#9888; '
+      + '<strong>A group with no count.</strong> Agent One read this line as more than one article, and no count is recorded. '
+      + 'Type the count in Qty, or put each thing on its own line with Another item in this photo; if it is one article, press One article. '
+      + '<button class="btn-s" style="margin-left:4px;" onclick="invMarkOneArticle(' + job.id + ',\'' + ref.stableId + '\')">One article</button></div>';
+  }
+  if (ref.groupBy !== 'desk') return '';
+  var q = parseInt(ref.qty, 10) > 1;
+  return '<div class="inv-panel-group"' + id + ' style="margin-bottom:10px;font-size:11px;line-height:1.5;color:var(--gray);">'
+    + 'Agent One read this line as more than one article; ' + (q ? 'its count was recorded' : 'it was recorded as one article')
+    + (ref.groupWho ? ' by ' + esc(ref.groupWho) : '') + '.</div>';
+}
+// The record's One article: a person's answer that the line Agent One read as a group is a single article (P13's review). A press,
+// so it redraws the tab; refused where the line is no longer an uncounted group (a count typed meanwhile, another device).
+function invMarkOneArticle(jobId, stableId) {
+  var ref = _getPhotoRef(jobId, stableId);
+  if (!ref || ref.deletedAt || !invGroupUncounted(ref)) { renderInventoryTab(); return false; }
+  ref.groupBy = 'desk';
+  ref.groupWho = _invStampBy(_invJob(jobId)) || '';
+  _setPhotoRef(jobId, _invTouch(ref));
+  savePhotoRefs(jobId);
+  renderInventoryTab();
+  _scheduleInventorySync(jobId);
+  return true;
+}
 // ⚠ THE APPRAISER AS THE SOURCE, IN THE LINE'S RECORD, ON EVERY JOB (Q93): a living record has no Valuation Source box, so this is
 // where its record says whose figure it is waiting for, or carries. Through the one namer, invAppraisalSourceText.
 function _invPanelAppraisalHtml(job, ref) {

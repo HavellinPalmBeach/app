@@ -19,7 +19,7 @@ const FNS = [
   // §20.2031-6(a) — built 2026-09-22, lifted rather than stubbed: the whole point is that
   // (a) and (b) read ONE gate, and a stub of `maivFilingApplies` is exactly what would let them
   // come apart on the one document that states both.
-  'invLotArticleValue', 'invLotSplitState', 'invLotSplitSentence', 'invLotsToSplit',
+  'invLotArticleValue', 'invGroupUncounted', 'invLotSplitState', 'invLotSplitSentence', 'invLotsToSplit',
   'invLotsUntestable', '_lotSplitWorklistBlock', '_invItemNo', 'esc',
   '_invMoney', 'savePhotoRefs', '_warnPhotoStoreFull', '_vehicleLineName', 'roundCents', 'fmt'
 , 'invLineQty', 'maivOwedLines', 'maivOwedText', 'invAppraised', '_invHasValue'];
@@ -400,7 +400,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const ctx2 = sandbox({
       fns: ['invWorkFlags', 'invFiduciaryMode', 'maivFilingApplies', '_gate706', 'isDecedentJob',
-            'invLotSplitState', '_invNeedsValue', 'invNeedsAppraisal', 'invAppraisalChosen', 'invIsFirearm',
+            'invGroupUncounted', 'invLotSplitState', '_invNeedsValue', 'invNeedsAppraisal', 'invAppraisalChosen', 'invIsFirearm',
             'invReleaseBlocked', 'invCatMeta', 'invIsIntrinsic', 'invAppraisalThreshold',
             'gateDispute', '_gateYes', '_invHasAppraisal', '_invJob', 'invIsMAIV', 'invMAIVDefaultCat',
             'invFirearmAuthorized', 'invFirearmClientTakes'],
@@ -439,7 +439,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const c = sandbox({
       fns: ['collectionLinesEnsure', '_collLinesOf', 'collectionLineId', '_collDispToInv', '_collDispNeedsAppr',
             '_guessCategory', '_numOrBlank', '_invJob', '_pushInvLine', '_setPhotoRef',
-            'invLotSplitState', 'invLotsToSplit', 'maivFilingApplies', '_gate706', 'isDecedentJob', 'invFirearmSettle', 'invIsFirearm', 'invFirearmDispRefusal', 'invFiduciaryMode'],
+            'invGroupUncounted', 'invLotSplitState', 'invLotsToSplit', 'maivFilingApplies', '_gate706', 'isDecedentJob', 'invFirearmSettle', 'invIsFirearm', 'invFirearmDispRefusal', 'invFiduciaryMode'],
       vars: ['COLL_LINE_WEAK_STAMP', 'INV_DEFAULT_CATEGORY', 'INV_LOT_ARTICLE_CAP', 'DECEDENT_SERVICES', 'INV_FIREARM_NEVER'],
       stubs: {
         jobs: [{ id: 1, svc: 'cleanout' }], isJobWon: () => true, SHEETS_SYNC_URL: '', _invCloudSeen: {},

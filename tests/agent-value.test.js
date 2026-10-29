@@ -883,7 +883,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const rowRig = (row, job) => sandbox({
       fns: ['invLineReviewed', 'invLineOpen', '_renderInvRow', 'invApprovalPrevWords', 'invApprovalMoved', '_invRowPhotoHtml', '_invRowHasWho', 'invOutForAppraisal', 'invPlanChannel', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', 'invAppraisalSourceText', 'invAppraisalChosen', 'invLineAppraiser', '_invLinkedAppraiser', 'invAppraised', 'invAppraisalInProgress', '_invHasAppraisal', '_invPhotoOpenHtml', 'agentValueAgain', '_avState',
             '_avHasFigure', '_invHasValue', '_avSummary', 'fmt', 'roundCents', 'agentValueInternal', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep',
-            'invAppraisalThreshold', 'gateDispute', '_gateYes', '_agNameKey', '_invRowDomId', '_invRecipientInput', '_renderInvPanel', 'invCloseUpRefusal', '_invCloseUpsHtml', '_invCloseUpTileHtml', '_agRecordNoticesHtml', '_avPanelHtml', '_invMoney', '_invDetailRefs', '_invPanelAppraisalHtml',
+            'invAppraisalThreshold', 'gateDispute', '_gateYes', '_agNameKey', '_invRowDomId', '_invRecipientInput', '_renderInvPanel', '_invPanelGroupHtml', 'invGroupUncounted', 'invCloseUpRefusal', '_invCloseUpsHtml', '_invCloseUpTileHtml', '_agRecordNoticesHtml', '_avPanelHtml', '_invMoney', '_invDetailRefs', '_invPanelAppraisalHtml',
             '_invPhotoSiblings', '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef', '_invNamed', '_invItemNo',
             'invDealerRouteOffered', 'invDealerRoute', 'invDealerRouteText', '_invFirearmPanelHtml',
             'invBequestFor', 'jobListEntries', 'invApprovalGap', 'invReceiptOwed', '_invBenListAttr',
