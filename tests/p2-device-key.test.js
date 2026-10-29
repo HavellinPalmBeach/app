@@ -405,7 +405,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const toJobs = calls.filter((a) => /SHEETS_SYNC_URL|^url$|_withDeviceKey/.test(a));
     eq(toJobs.filter((a) => a.indexOf('_withDeviceKey(') !== 0), [], '⚠⚠ no fetch reaches the jobs backend except through _withDeviceKey');
     // 27 since the merge with P1 (2026-10-27): P1's snapshot store added a GET reader, loadSnapshotLines, written before the key.
-    eq(toJobs.length, 27, 'and there are 27 of them (every GET reader, P1\'s loadSnapshots among them, every POST, postSyncTo and _appsScriptPost)');
+    // 28 since P15's review (2026-10-28): the appraiser's packet asks for the photographs it carries (_apprPacketThumbs).
+    eq(toJobs.length, 28, 'and there are 28 of them (every GET reader, P1\'s loadSnapshots among them, every POST, postSyncTo, _appsScriptPost and the worklist\'s photographs)');
     const others = calls.filter((a) => toJobs.indexOf(a) < 0);
     ok(others.every((a) => /googleapis\.com|VENDOR_SYNC_URL|REFERRAL_SYNC_URL|^url$/.test(a) || a === ''), 'every other fetch goes to Gmail, Google sign-in or a directory backend (' + others.length + ')');
     lacks(LIVE.replace(/function _withDeviceKey[\s\S]*?\n}\n/, ''), "'deviceKey=", 'the parameter is spelled in one place');

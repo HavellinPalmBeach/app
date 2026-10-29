@@ -109,7 +109,7 @@ const CTXP = { estate: true, basis: 'Fair Market Value', valuationDate: '2026-06
 const AV_FNS = ['_avValueButtonHtml', 'agentValueWaiting', 'agentDuplicateGroups', '_arPair', '_arPairOpen', 'agentDupCleared', 'agentNamedTwice', '_agDupEligible', 'agentValueMode', 'agentValueInternal', '_avHasFigure', 'agentValueableRefs', 'agentValueUnreviewed',
   'agentValueStale', 'agentValueSpecialistWorth', '_avValDate', '_avContext', '_avItemPayload', 'agentValueGradesCondition', '_avComp', '_avWrite', '_invCondIsAgents', '_invAgentCondition', 'agentValueWhole',
   '_avNoteFailure', 'agentValueApply', '_avTakeValue', '_avStampReviewed', '_invStampBy', 'deviceUser', 'agentValueRun', 'agentRevalue', '_avStart',
-  '_avSendNext', '_avFinish', '_avRepaint', '_avStateHtml', '_avState', 'agentValueUseSale',
+  '_avSendNext', '_avFinish', '_avRepaint', '_avStateHtml', '_avState', 'agentValueUseSale', 'invUnitValue',
   'agentValueNotices', '_avNoticeKinds', '_avNoticeLabel', '_avRename', '_avNoticesHtml', '_deskShowBtnHtml', '_avSummary', '_avRowBadges', '_avPanelHtml',
   'invValBasisWord', '_avUnreviewedStamp', 'invAppraised', 'invLineAppraiser', '_invLinkedAppraiser', '_jobAppraisers', '_apprLabel', '_invHasAppraisal',
   // the real rules they read, never stubs of them
@@ -787,8 +787,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     R.ctx.agentValueUseSale(7, 's1');
     has(R.alerts[0], 'its title, its price and its link', 'refused by name, everything missing at once');
     eq(R.ctx._getPhotoRef(7, 's1').valComps.length, 1, 'and nothing written');
+    // A sale of the whole set of eight, said so on the form (P15's review: on a line of several the price is one piece's unless it says all).
     Object.assign(seed, { 'av-wp-title-s1': 'Herend Rothschild Bird, 8 dinner plates', 'av-wp-price-s1': '$725.50',
-      'av-wp-date-s1': '2026-02-01', 'av-wp-url-s1': 'https://www.worthpoint.com/worthopedia/herend-123' });
+      'av-wp-date-s1': '2026-02-01', 'av-wp-url-s1': 'https://www.worthpoint.com/worthopedia/herend-123', 'av-wp-per-s1': 'all' });
     R.ctx.agentValueUseSale(7, 's1');
     const r = R.ctx._getPhotoRef(7, 's1');
     eq(r.valComps[0], { title: 'Herend Rothschild Bird, 8 dinner plates', venue: 'WorthPoint', saleDate: '2026-02-01', price: 725.5,
@@ -796,7 +797,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(r.valSource, 'WorthPoint comps', 'the source names it');
     eq(r.valReviewed, true, 'and the value is reviewed');
     eq(r.fmv, 640, 'the figure is the person\'s to change, not the paste\'s');
-    Object.assign(seed, { 'av-wp-title-n': 'x', 'av-wp-price-n': '120', 'av-wp-url-n': 'https://www.worthpoint.com/w/1' });
+    Object.assign(seed, { 'av-wp-title-n': 'x', 'av-wp-price-n': '120', 'av-wp-url-n': 'https://www.worthpoint.com/w/1', 'av-wp-per-n': 'all' });
     R.ctx.agentValueUseSale(7, 'n');
     const n = R.ctx._getPhotoRef(7, 'n');
     eq([n.fmv, n.valuedBy, n.valSource], [120, 'desk', 'WorthPoint comps'], 'a line with no figure takes the sale\'s price as a person\'s value');

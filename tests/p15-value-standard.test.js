@@ -15,6 +15,12 @@
 //   O · an overdue report on the Values bar, and no stale "Expected back";
 //   C · an appraisal in progress said on the request and the sign-out;
 //   K · Ask 14: a WorthPoint sale more than 15% from the line's figure asks once.
+//   P15's review (2026-10-28), each red on its revert: G · a figure is recorded at the standard its request asked for, and the
+//       basis and the §2032 date are not changed while the agents are at work; S4 · the Replacement Value prompt says what a like
+//       one costs throughout; S5 · on Replacement Value the prices kept are the basis's evidence, and "a best estimate" is never
+//       written over a medium or high figure; K2 · Ask 14 weighs a sale on a line of several against one article's figure, and a
+//       recorded $0 is a figure; W3 · Send worklist's watchdog; W4 · the appraiser's packet carries its photographs, never a
+//       link into Havellin's Drive; V3 · on a client's own home Send to a specialist is the decision.
 //
 // Every path through the real code: the server's functions lifted off main-sync.gs, the app's off havellin.html by their real call
 // tree (p7-evidence.test.js's closure), the handlers driven as a person presses them.
@@ -134,6 +140,27 @@ const ADVISED = (o) => AGENT(Object.assign({ valNotices: [{ kind: 'appraiser', t
 const CARLA = { id: 501, name: 'Carla Mendes', firm: 'Mendes Fine Art', credential: 'ISA', independent: true, effectiveDate: '2026-04-02', dueDate: '2026-10-20', email: 'carla@mendesart.com' };
 const ref = (C, id) => C._photoRefs[7].filter((r) => r.stableId === (id || 's1'))[0];
 
+// P15's review: the run itself (_avSendNext) over the same rig, with its request held until the test answers it. The fetch's chain is
+// the run's own shape, fetch(..).then(_readAppsScriptJson).then(answer).catch(..): `held.answer(d)` lands the server's answer.
+let _clRun = null;
+function rigRun(job, rows, o) {
+  o = o || {};
+  _clRun = _clRun || closure(ROOTS.concat(['_avSendNext', 'invValStandardBusy', '_apprPacketThumbs']), STOP.concat(['fetch', '_avFinish', '_avRepaint', '_readAppsScriptJson', '_withDeviceKey']));
+  const saveCl = _cl; _cl = _clRun;
+  const held = { bodies: [], answers: [] };
+  const C = rig(job, rows, o);
+  _cl = saveCl;
+  C.fetch = (u, opt) => {
+    held.bodies.push(JSON.parse(opt.body));
+    const h = {};
+    held.answers.push(h);
+    return { then() { return { then(f) { h.answer = f; return { catch(c) { h.fail = c; } }; } }; } };
+  };
+  C._readAppsScriptJson = (x) => x; C._withDeviceKey = (u) => u; C._avRepaint = () => {}; C._avFinish = (id) => { C._avState(id).running = false; };
+  C.held = held;
+  return C;
+}
+
 module.exports = function ({ group, ok, eq, has, lacks }) {
 
   // ═══════════════════════════════ S · THE SERVER ═══════════════════════════════
@@ -187,6 +214,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const app = sandbox({ fns: [], vars: ['BACKEND_MIN_VERSION', 'AGENT_VALUE_PREMIUMS'] });
     eq(app.BACKEND_MIN_VERSION, '2026-10-28b', 'the app asks for it');
     eq(JSON.stringify(app.AGENT_VALUE_PREMIUMS), JSON.stringify(g.AGENT_VALUE_PREMIUMS), 'one list of premium answers on both sides');
+    // P15's review: the banner names the Replacement Value gap too, until 2026-10-28b is live.
+    has(sandbox({ vars: ['BACKEND_FEATURE_COST'] }).BACKEND_FEATURE_COST.version, 'ends a Replacement Value line resting on asking prices as a general estimate',
+      'the out-of-date banner names what stays wrong on Replacement Value');
   }
 
   // ═══════════════════════════════ B · THE BASIS ═══════════════════════════════
@@ -345,7 +375,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(C._avPanelHtml(C.jobs[0], ref(C)), '>Send to a specialist</button>', '…in the line\'s record');
     has(C._avNoticesHtml(C.jobs[0], C._photoRefs[7]), '>Send to a specialist</button>', '…and on the notes above the rows');
     eq(C.agentValueAddToAppraisal(7, 's1'), true, 'pressed');
-    eq([ref(C).needsAppr, C.invNeedsAppraisal(ref(C), C.jobs[0]), chip.test(ref(C), C.jobs[0])], [true, true, true], '…going to a specialist, by the tick it writes');
+    // P15's review: the press is the decision (V3), never the appraisal tick, which on living work held it on the guardrail for good.
+    eq([ref(C).toSpecialist, C.agentValueAdvised(ref(C), C.jobs[0]), chip.test(ref(C), C.jobs[0])], [true, false, true], '…going to a specialist, decided, under To a specialist');
     // The app's own worth-a-specialist off the range, until decided (a tick took it off).
     const W = rig(LIVING(), [AGENT({ valHigh: 4500, valNotices: [] })]);
     W._photoRefs[7][0].valReviewed = true;
@@ -465,6 +496,252 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq([near.said.length, ref(near).fmv, ref(near).valSource], [0, 4200, 'WorthPoint comps'], 'within 15%: no question, the sale supports the figure as before');
   }
 
+  // ═══════════════════════════════ P15'S REVIEW ═══════════════════════════════
+  group('⚠⚠ G1 · a figure is recorded at the basis and the date its request asked for, whatever changed while it was out');
+  {
+    const RES = { fmv: 4200, low: 3000, high: 5500, confidence: 'medium', source: 'Auction comps', basis: 'Two sold comparables at auction.', comps: [], mode: 'comps' };
+    const C = rigRun(ESTATE({ svc: 'cleanout', matterType: 'neither', gate706: 'no' }), [LINE({ fmv: '', valuedBy: '', namedBy: 'agent', reviewed: false })]);
+    C._avState(7).running = true;
+    C._avSendNext(7, C.jobs[0], ['s1'], {});
+    eq((C.held.bodies[0] || {}).context && C.held.bodies[0].context.basis, 'Fair Market Value', 'the request goes at Fair Market Value');
+    // The basis changes while it is out: here the handler refuses; on another device it is merged in, so the job moves anyway.
+    const no = attempt(() => C.setValBasis(7, 'Liquidation Value'));
+    eq([no.ok, no.val, C.jobs[0].valBasis], [true, false, undefined], '⚠ while Agent Two is valuing, the basis is not changed');
+    has(C.said[C.said.length - 1], 'Agent Two is valuing lines on this job: change the basis once it has finished. Nothing was changed.', '…by name');
+    C.jobs[0].valBasis = 'Liquidation Value';   // another device's change, merged in
+    const h = C.held.answers[0] || {};
+    attempt(() => h.answer({ ok: true, results: { s1: RES }, failed: {} }));
+    const r = ref(C);
+    eq([r.fmv, r.valBasis], [4200, 'Fair Market Value'], '⚠⚠ the figure is recorded at the basis it was researched at, never the one that landed meanwhile');
+    eq(C.invValueStandardMoved(r, C.jobs[0]), 'basis', '…so it is named as made at another basis');
+    eq(C.invValueStandardStale(C.jobs[0]).length, 1, '…and the Valuation card lists it for Re-value');
+
+    const D = rigRun(ESTATE(), [LINE({ fmv: '', valuedBy: '', namedBy: 'agent', reviewed: false })]);
+    D._avState(7).running = true;
+    D._avSendNext(7, D.jobs[0], ['s1'], {});
+    eq(D.held.bodies[0] && D.held.bodies[0].context.valuationDate, '2026-04-02', 'a request sent as of the date of death');
+    eq(D.setEstateAVD(7, true, '2026-10-28'), false, '⚠ the §2032 date is not elected while Agent Two is valuing');
+    has(D.said[D.said.length - 1], 'change the valuation date once it has finished', '…by name');
+    D.jobs[0].avd = true;   // elected on another device, merged in
+    attempt(() => (D.held.answers[0] || {}).answer({ ok: true, results: { s1: RES }, failed: {} }));
+    eq(ref(D).valDate, '2026-04-02', '⚠⚠ the figure keeps the date it was valued as of');
+    eq(D.invValueStandardMoved(ref(D), D.jobs[0]), 'date', '…and is named as made as of another date');
+    // Agent One or the room check at work: Agent Two follows by itself, so the basis waits for them too.
+    const A = rig(ESTATE(), [AGENT()]);
+    A._agRun = { 7: { running: true } };
+    eq(A.setValBasis(7, 'Liquidation Value'), false, 'while Agent One names, the basis waits');
+    has(A.said[A.said.length - 1], 'The agents are at work on this list, and Agent Two values it next: change the basis once they have finished.', '…saying why');
+    A._agRun = {};
+    eq(A.setValBasis(7, 'Liquidation Value'), true, 'once nothing runs, it asks as before');
+    // A refresh replaces `jobs` (never only mutates it): the run's next request reads the client as it stands, not the copy it began on.
+    const F = rigRun(ESTATE({ svc: 'cleanout', matterType: 'neither', gate706: 'no', valBasis: 'Replacement Value' }), [LINE({ fmv: '', valuedBy: '', namedBy: 'agent', reviewed: false })]);
+    F._avSendNext(7, Object.assign({}, F.jobs[0], { valBasis: 'Fair Market Value' }), ['s1'], {});
+    eq(F.held.bodies[0] && F.held.bodies[0].context.basis, 'Replacement Value', '⚠ a run carried on with an old copy of the client sends the basis it has now');
+  }
+
+  group('⚠⚠ S4 · on Replacement Value the prompt says what a like one costs, from the opening to the confidence');
+  {
+    const rv = g._avSystem({ estate: true, basis: 'Replacement Value', valuationDate: '2026-04-02', categories: [], conditions: [] });
+    lacks(rv, 'fetches second-hand', '⚠⚠ never "value it at what that brand fetches second-hand"');
+    lacks(rv, 'Search for SOLD results', '⚠⚠ never "Search for SOLD results"');
+    lacks(rv, 'Things sell for less than they are listed at', '⚠ never the listings-are-a-ceiling sentence');
+    lacks(rv, 'show the sales that figure rests on', '…nor "the sales that figure rests on"');
+    has(rv, 'is replaced at what the same piece costs new from the brand or a retailer where it is still made', 'a branded piece is replaced at what the same piece costs');
+    has(rv, 'Search for what the same thing, or one of like kind and quality, costs to buy today', 'research looks for what a like one costs today');
+    has(rv, 'They are what a like one costs: value the line at about the middle price, never above it', 'listings are what a like one costs, never above their middle (the server\'s survey rule)');
+    has(rv, 'high confidence = several close prices for like items agree', 'confidence is read off prices for like items');
+    has(rv, 'Search for what it costs to replace each kind of lot in the batch with like ones', 'an ordinary lot is priced at what replacing it costs');
+    lacks(rv, '$40 to $60 for the lot', '…without the second-hand example');
+    has(rv, 'The basis names only the prices you list in comps', 'the basis names the prices it lists');
+    has(rv, 'If a research line has no price for a like item and no such survey', 'and a line with no price at all is a best reading, low');
+    const tool = g._avTool('comps', [], [], 'Replacement Value').input_schema.properties.values.items.properties;
+    has(tool.comps.description, 'The prices you relied on', 'the tool asks for the prices relied on');
+    has(tool.basis.description, 'The retail price of the same model new', '…and its basis examples are a like one\'s price');
+    const fmv = g._avSystem({ estate: true, basis: 'Fair Market Value', valuationDate: '2026-04-02', categories: [], conditions: [] });
+    has(fmv, 'value it at what that brand fetches second-hand, never at the price its own site or a retailer asks', 'Fair Market Value keeps its words');
+    has(fmv, 'Search for SOLD results', '…and its SOLD results');
+    has(fmv, 'Things sell for less than they are listed at', '…and its ceiling');
+  }
+
+  group('⚠⚠ S5 · on Replacement Value the prices kept are the evidence; "a best estimate" never over a medium or high figure');
+  {
+    const U1 = 'https://rh.com/catalog/product/product.jsp?productId=prod123', U2 = 'https://www.1stdibs.com/furniture/mirrors/id-f_1234/';
+    const ask = [{ title: 'RH Venetian mirror, new', venue: 'Restoration Hardware', saleDate: '', price: 1495, url: U1, kind: 'asking', premium: 'none' },
+                 { title: 'Venetian mirror', venue: '1stDibs', saleDate: '', price: 1650, url: U2, kind: 'sold', premium: 'none' }];
+    ['The retail price of the same model new, and one comparable dealer listing.', 'Two comparables: the retail price new and a dealer’s asking price.'].forEach((b) => {
+      const r = g._avLineResult(VAL({ value: 1500, low: 1400, high: 1700, confidence: 'high', source: 'Online comps', basis: b, comps: ask }), 'comps', seenOf([U1, U2]), 1, 'Replacement Value');
+      eq([r.basis, r.basisRewritten, r.confidence], [b, false, 'high'], '⚠⚠ a sentence naming the asking prices kept stands on Replacement Value: "' + b + '"');
+    });
+    const over = g._avLineResult(VAL({ value: 1500, low: 1400, high: 1700, confidence: 'high', source: 'Online comps', basis: 'Four comparables from dealers.', comps: ask }), 'comps', seenOf([U1, U2]), 1, 'Replacement Value');
+    eq(over.basis, 'Two asking prices for a like item the research could show: Restoration Hardware; 1stDibs.', '⚠ one naming more than were kept is the server\'s, naming the prices kept');
+    const onFmv = g._avLineResult(VAL({ value: 1500, confidence: 'high', source: 'Online comps', basis: 'Two comparables: the retail price new and a dealer’s asking price.', comps: ask }), 'comps', seenOf([U1, U2]), 1, 'Fair Market Value');
+    eq([onFmv.basisRewritten, onFmv.source], [true, 'General estimate'], 'on Fair Market Value the same answer is still no sale (P7 unchanged)');
+    const gen = g._avLineResult(VAL({ confidence: 'high', source: 'General estimate', basis: 'Three similar sets sold on eBay for about $40.' }), 'general', {}, 60);
+    eq([gen.confidence, gen.basis], ['high', 'No sale the research could show: the going rate for this kind of thing.'], '⚠⚠ an ordinary lot kept at high confidence is never called "a best estimate"');
+    const low = g._avLineResult(VAL({ confidence: 'low', source: 'General estimate', basis: 'Three similar sets sold on eBay for about $40.' }), 'general', {}, 60);
+    eq(low.basis, 'No sale the research could show: a best estimate of what this kind of thing sells for.', '…one kept at low still is');
+    const none = g._avLineResult(VAL({ value: 900, confidence: 'medium', source: 'Online comps', basis: 'Two sold comparables from dealers.', comps: [] }), 'comps', {}, 1, 'Replacement Value');
+    eq([none.confidence, none.basis], ['low', 'No price for a like item the research could show: a best estimate of what a like one costs.'], 'on Replacement Value with nothing kept: said in its own words');
+    const SVU = 'https://www.ebay.com/sch/i.html?_nkw=venetian+mirror';
+    const sv = g._avLineResult(VAL({ value: 40, low: 30, high: 60, confidence: 'medium', source: 'Online comps', basis: 'Two sold comparables on eBay.', comps: [], survey: { count: 12, low: 25, median: 48, high: 120, url: SVU } }), 'comps', seenOf([SVU]), 1, 'Replacement Value');
+    eq(sv.basis, '12 close listings of a like item were counted, the middle asking price $48 each.', '…and a survey there is what a like one costs, never "no sale"');
+    const EB = 'https://www.ebay.com/itm/77777';
+    const genAsk = g._avLineResult(VAL({ confidence: 'high', source: 'General estimate', basis: 'Two similar sets sold on eBay.', comps: [{ title: 'Set', venue: 'Replacements', saleDate: '', price: 40, url: 'https://www.replacements.com/p/x-1', kind: 'sold', premium: 'none' }] }),
+      'general', seenOf(['https://www.replacements.com/p/x-1']), 60);
+    eq(genAsk.basis, 'No sale the research could show: the going rate, with 1 asking price on the record.', '⚠ kept at high with an asking price: "the going rate", never "a best estimate"');
+  }
+
+  group('⚠⚠ K2 · Ask 14 on a line of several weighs one article; a recorded $0 is a figure (P15\'s review)');
+  {
+    const dom = (price) => domStub({ 'av-wp-title-s1': { value: 'Herend plate, Rothschild Bird' }, 'av-wp-price-s1': { value: String(price) }, 'av-wp-url-s1': { value: 'https://www.worthpoint.com/worthopedia/1' },
+      'av-wp-date-s1': { value: '2026-03-02' }, 'av-wp-venue-s1': { value: 'WorthPoint' } });
+    const plates = () => AGENT({ objectName: 'Herend Rothschild Bird dinner plates', qty: 8, fmv: 720, valLow: 560, valHigh: 880, reviewed: false, namedBy: 'agent' });
+    const near = rig(ESTATE(), [plates()], { dom: dom(90) });
+    near.agentValueUseSale(7, 's1');
+    eq([near.said.length, ref(near).fmv, ref(near).valSource], [0, 720, 'WorthPoint comps'], '⚠⚠ one plate sold at $90 against eight at $90 each: it supports the figure, no question');
+    eq([ref(near).valComps[0].price, ref(near).valComps[0].each], [90, true], '…filed as one piece\'s price');
+    has(near._avPanelHtml(near.jobs[0], plates()), '>Price is for</div><select id="av-wp-per-s1" style="font-size:11px;padding:3px 6px;"><option value="each">one piece</option><option value="all">all 8</option></select>',
+      'the form asks what the price is for on a line of several, one piece as it opens');
+    lacks(near._avPanelHtml(near.jobs[0], AGENT()), 'Price is for', '…and only the price on a line of one');
+    // The sale of the whole set, said so on the form: weighed against the whole line, as on a line of one.
+    const set = rig(ESTATE(), [plates()], { dom: domStub({ 'av-wp-title-s1': { value: 'Herend Rothschild Bird, 8 dinner plates' }, 'av-wp-price-s1': { value: '700' },
+      'av-wp-url-s1': { value: 'https://www.worthpoint.com/worthopedia/8' }, 'av-wp-per-s1': { value: 'all' } }) });
+    set.agentValueUseSale(7, 's1');
+    eq([set.said.length, ref(set).fmv, ref(set).valComps[0].each], [0, 720, undefined], '⚠ the set of eight sold at $700 against $720: it supports the figure, filed as the set\'s price');
+    const far = rig(ESTATE(), [plates()], { dom: dom(150) });
+    eq(far.agentValueUseSale(7, 's1'), 'used', 'a plate sold at $150 against $90 each: asked, OK');
+    has(far.said[0], 'The WorthPoint sale is $150 each and #40 Herend Rothschild Bird dinner plates is valued at $90 each ($720 for all 8): 67% apart.', '⚠ the question weighs one article');
+    has(far.said[0], 'OK uses the sale: $150 each becomes the value, $1,200 for all 8, with the sale as its basis.', '…and says what OK makes the line');
+    eq([ref(far).fmv, ref(far).unitVal, ref(far).valNote], [1200, 150, 'WorthPoint sale, 2026-03-02: $150 each.'], '⚠⚠ Each takes the sale and the total is it times the count');
+    eq(far.invUnitValue(ref(far)), 150, '…Each × Qty = Total');
+    has(far._avPanelHtml(far.jobs[0], Object.assign({}, ref(far), { valuedBy: 'agent' })), '$150 each &middot;', 'the record lists the sale as one piece\'s price');
+    const unval = rig(ESTATE(), [AGENT({ objectName: 'Herend Rothschild Bird dinner plates', qty: 8, fmv: '', valLow: '', valHigh: '', valFailed: 'could not tell', reviewed: false, namedBy: 'agent' })], { dom: dom(90) });
+    unval.agentValueUseSale(7, 's1');
+    eq([ref(unval).fmv, ref(unval).unitVal, ref(unval).valuedBy], [720, 90, 'desk'], '⚠ a set with no figure takes the sale as Each, the total that times the count');
+    const zero = rig(ESTATE(), [AGENT({ fmv: 0, valLow: 0, valHigh: 0, reviewed: false, namedBy: 'agent' })], { answer: false, dom: dom(1100) });
+    eq(zero.agentValueUseSale(7, 's1'), 'filed', '⚠⚠ a $1,100 sale on a line valued at $0: asked; Cancel files it only');
+    has(zero.said[0], 'is valued at $0.', '…naming the $0');
+    eq([ref(zero).fmv, ref(zero).valSource, !!ref(zero).valReviewed], [0, 'Auction comps', false], '…the $0, its source and its review untouched');
+  }
+
+  group('⚠⚠ W3 · Send worklist lets go of the send lock when an answer never comes');
+  {
+    const C = rig(ESTATE({ appraisers: [Object.assign({}, CARLA)] }), [AGENT({ apprId: 501, apprDoc: 'Carla Mendes' })]);
+    const timers = [];
+    C.setTimeout = (f, ms) => { timers.push({ f, ms }); return timers.length; };
+    let late = null;
+    C.refreshPhotoRefs = (id, cb) => { late = cb; };   // the read never answers (a fetch has no timeout)
+    eq(C.sendAppraisalWorklist(7, 501), true, 'pressed');
+    eq([timers.length, timers[0] && timers[0].ms], [1, 90000], '⚠⚠ a watchdog is armed, as the release request\'s is');
+    attempt(() => timers[0].f());
+    eq(C._docBusy, null, '⚠⚠ past it the app-wide send lock is let go');
+    has(C.notices.map((n) => n[1]).join(' | '), 'The worklist took too long to build. A draft may already have been created', '…and the notice says to check the drafts');
+    let asked = 0;
+    C.resolveSubfolderId = (j, n, cb) => { asked++; cb('FOLDER'); };
+    attempt(() => late(false, true));
+    eq([asked, C.drafts.length], [0, 0], 'a read that answers late goes no further: nothing filed, nothing drafted');
+    // Each later step answering after the watchdog stops there too: the filing's folder, the filing, the PDF, the draft.
+    ['resolveSubfolderId', 'uploadHtmlToDrive', 'docPdfBase64', 'gmailCreateDraft'].forEach((step) => {
+      const L = rig(ESTATE({ appraisers: [Object.assign({}, CARLA)] }), [AGENT({ apprId: 501, apprDoc: 'Carla Mendes' })]);
+      const t = [];
+      L.setTimeout = (f) => { t.push(f); return t.length; };
+      let held = null;
+      const real = L[step];
+      L[step] = function () { const a = Array.prototype.slice.call(arguments); held = () => real.apply(null, a); };
+      const calls = [];
+      ['resolveSubfolderId', 'uploadHtmlToDrive', 'docPdfBase64', 'gmailCreateDraft'].filter((x) => x !== step).forEach((x) => {
+        const f = L[x]; L[x] = function () { calls.push(x); return f.apply(null, arguments); };
+      });
+      L.sendAppraisalWorklist(7, 501);
+      const before = calls.length;
+      attempt(() => t[0]());
+      attempt(() => held && held());
+      // (A late Gmail answer means the draft exists, as the watchdog's notice says: it is never recorded or opened.)
+      eq([calls.length - before, L.drafts.length, !!L.jobs[0].appraisers[0].worklist, L.notices.some((n) => /Worklist drafted/.test(n[1]))],
+        [0, step === 'gmailCreateDraft' ? 1 : 0, false, false], '⚠ ' + step + ' answering after the watchdog: nothing more is done or recorded');
+    });
+    // …and the photographs the packet asks for, answering after it.
+    const T = rigRun(ESTATE({ appraisers: [Object.assign({}, CARLA)] }), [AGENT({ apprId: 501, apprDoc: 'Carla Mendes', driveFileId: 'F1' })]);
+    T._invThumbs = { 7: {} };
+    const tt = [];
+    T.setTimeout = (f) => { tt.push(f); return tt.length; };
+    let folders = 0;
+    T.resolveSubfolderId = (j, n, cb) => { folders++; cb('FOLDER'); };
+    T.sendAppraisalWorklist(7, 501);
+    attempt(() => tt[0]());
+    attempt(() => T.held.answers[0].answer({ ok: true, thumbs: { F1: 'data:image/jpeg;base64,QUJD' }, missing: [] }));
+    eq([folders, T.drafts.length], [0, 0], '⚠ the photographs answering after the watchdog: nothing is filed or drafted');
+  }
+
+  group('⚠⚠ W4 · the appraiser\'s packet carries its photographs, never a link into Havellin\'s Drive');
+  {
+    const row = () => AGENT({ apprId: 501, apprDoc: 'Carla Mendes', driveFileId: 'F1', driveFileUrl: 'https://drive.google.com/file/d/F1/view' });
+    const C = rigRun(ESTATE({ appraisers: [Object.assign({}, CARLA)] }), [row()]);
+    C._invThumbs = { 7: { F1: 'data:image/jpeg;base64,QUJD' } };
+    const one = C.printAppraisalWorklist(7, { asHtml: true, apprId: 501 });
+    has(one.html, '<img src="data:image/jpeg;base64,QUJD"', '⚠⚠ the photograph itself is in the packet');
+    lacks(one.html, 'drive.google.com', '⚠⚠ and no link into Havellin\'s Drive');
+    has(C.printAppraisalWorklist(7, { asHtml: true }).html, 'href="https://drive.google.com/file/d/F1/view"', 'the whole worklist, Havellin\'s and counsel\'s, keeps its link');
+    C.sendAppraisalWorklist(7, 501);
+    const d = JSON.parse(C.drafts[0] || '{}');
+    has(d.text, 'each with its item number, room, condition and photograph.', 'the email says the photographs are in it');
+    lacks(d.text, 'a link to its photograph', '…never that it links them');
+    // A photograph this device has none of is fetched for the packet; one the server cannot give is named.
+    const M = rigRun(ESTATE({ appraisers: [Object.assign({}, CARLA)] }), [row()]);
+    M._invThumbs = { 7: {} };
+    M.sendAppraisalWorklist(7, 501);
+    eq(M.held.bodies.map((b) => [b.action, (b.fileIds || []).join()]), [['getThumbnails', 'F1']], 'the packet asks the server for the photograph it lacks');
+    attempt(() => M.held.answers[0].answer({ ok: true, thumbs: {}, missing: ['F1'] }));
+    const md = JSON.parse(M.drafts[0] || '{}');
+    has(md.text, 'The photograph of #40 Bronze figure of a dancer could not be attached', '⚠ one the server could not give is named in the email');
+    has(M.notices.map((n) => n[1]).join(' | '), 'The photograph of #40 Bronze figure of a dancer could not be attached', '…and in the notice');
+    // No PDF: nothing drafted, since the appraiser cannot open the filed copy either.
+    const N = rig(ESTATE({ appraisers: [Object.assign({}, CARLA)] }), [row()]);
+    N._invThumbs = { 7: { F1: 'data:image/jpeg;base64,QUJD' } };
+    N.docPdfBase64 = (spec, html, cb) => cb('', 'timeout');
+    N.sendAppraisalWorklist(7, 501);
+    eq(N.drafts.length, 0, '⚠ no PDF: nothing is drafted');
+    const G = rig(ESTATE({ appraisers: [Object.assign({}, CARLA)] }), [row()]);
+    G._invThumbs = { 7: { F1: 'data:image/jpeg;base64,QUJD' } };
+    const opened = [];
+    G.window.open = (u) => { opened.push(String(u)); };
+    G.gmailCreateDraft = (mime, cb) => cb(false, { error: 'token expired' });
+    G.sendAppraisalWorklist(7, 501);
+    eq([opened.filter((u) => /^mailto:/.test(u)).length, !!G.jobs[0].appraisers[0].worklist], [0, false], '⚠ the draft fails: no plain email linking the filed copy, nothing recorded');
+    has(G.notices.map((n) => n[1]).join(' | '), 'A plain email cannot carry the PDF, so nothing was sent', '…and the notice says so');
+    eq(G._docBusy, null, '…and the send lock is let go');
+    has(N.notices.map((n) => n[1]).join(' | '), 'the appraiser cannot open a copy in Havellin’s Drive, so nothing was drafted', '…and the notice says why');
+  }
+
+  group('⚠⚠ V3 · on a client\'s own home Send to a specialist is the decision: off the guardrail, under To a specialist');
+  {
+    const C = rig(LIVING({ appraisers: [Object.assign({}, CARLA)] }), [AGENT({ disposition: 'Sell', channel: 'Kodner Galleries', valNotices: [{ kind: 'specialist', text: 'It should sell through a specialist auction house.' }] })]);
+    const chip = () => C.invWorkFlags(C.jobs[0]).filter((f) => f.key === 'appr')[0];
+    const bar = () => C.deskFoldState(7, C.jobs[0], 'values', C._photoRefs[7], '2026-10-28');
+    eq([C._invGuardrailItems(7).length, bar().openByDefault], [1, true], 'advised, undecided: on the guardrail, the bar open');
+    eq(C.agentValueAddToAppraisal(7, 's1'), true, 'Send to a specialist');
+    const r = ref(C);
+    eq([r.toSpecialist, r.toSpecialistBy, r.needsAppr], [true, 'Ashley Jerome', undefined], '⚠⚠ recorded as going to a specialist, with who, never as needing an appraisal');
+    eq(C._invGuardrailItems(7).length, 0, '⚠⚠ off the guardrail');
+    eq([bar().openByDefault, bar().bits[0].text], [false, '✓ nothing needs an appraisal'], '⚠⚠ the Values bar no longer opens for it');
+    eq(chip().test(r, C.jobs[0]), true, '…and it is counted under To a specialist');
+    ok(C.invLineHold(r, C.invAcceptCtx(C.jobs[0])) !== 'appraisal', '…no longer held as waiting on an appraisal');
+    has(textOf(C._invPanelAppraisalHtml(C.jobs[0], r)), 'Going to a specialist off Agent Two’s advice: recorded by Ashley Jerome', 'its record says who sent it');
+    eq(C.agentValueAddToAppraisal(7, 's1'), false, 'a second press changes nothing');
+    has(C.badges[C.badges.length - 1], 'is going to a specialist already', '…and says so');
+    const R = rig(LIVING(), [AGENT({ valHigh: 4500, valNotices: [] })]);
+    R.agentValueAddToAppraisal(7, 's1');
+    ok(R.invLineHold(ref(R), R.invAcceptCtx(R.jobs[0])) !== 'appraisal', '⚠ the range\'s worth-a-specialist is answered by the press too');
+    const store = {};
+    const W = sandbox({ fns: ['savePhotoRefs'], stubs: { localStorage: { setItem: (k, v) => { store[k] = v; } }, _warnPhotoStoreFull() {},
+      _invReclaimSpace: () => ({ bytes: 0, jobs: [], thumbs: 0 }), _invNoteReclaim() {}, _photoRefs: { 7: [Object.assign({}, r)] } } });
+    W.savePhotoRefs(7);
+    ok(Object.values(store).some((v) => String(v).indexOf('"toSpecialist":true,"toSpecialistBy":"Ashley Jerome"') >= 0), '⚠ the decision survives the save (the whitelist drops a key it does not list)');
+    const E = rig(ESTATE(), [ADVISED()]);
+    E.agentValueAddToAppraisal(7, 's1');
+    eq([ref(E).needsAppr, ref(E).toSpecialist, E._invGuardrailItems(7).length], [true, undefined, 1], 'an estate\'s Add to appraisal list is unchanged: on the list until appraised or waived');
+  }
+
   // ═══════════════════════════════ R · THE READERS COUNTED ═══════════════════════════════
   group('R1 · one rule each, read where it applies');
   {
@@ -474,6 +751,6 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(body('invNeedsAppraisal'), 'agentValueAdvice(ref, job)', 'the appraisal rule reads the advice');
     has(body('_apprGroupList'), 'invAppraisalInProgress(r, jobId)', 'the worklist reads the link');
     eq((SRC.match(/job\.avd \? 'the alternate valuation date'/g) || []).length, 0, '⚠ no paper carries its own copy of the date\'s words any more');
-    has(body('_avWrite'), 'ref.valBasis = resolveValBasis(job)', 'the writer records the basis');
+    has(body('_avWrite'), 'ref.valBasis = (_asked && _asked.basis) || resolveValBasis(job)', 'the writer records the basis its request asked for (P15\'s review), else the job\'s');
   }
 };

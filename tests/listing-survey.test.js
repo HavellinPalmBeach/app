@@ -299,6 +299,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq((live.match(/_avSurveyOf\(/g) || []).length, 3, 'the app\'s check: its definition, the writer and the record');
     const gsLive = liveLines(GS);
     eq((gsLive.match(/_avSurvey\(/g) || []).length, 2, 'the server\'s: its definition and _avLineResult');
-    eq((gsLive.match(/AGENT_VALUE_SURVEY_MIN/g) || []).length, 4, 'the constant: declared, the rule, the prompt\'s rule and the confidence scale');
+    // Six since P15's review (2026-10-28): the prompt's rule and the confidence scale each in Replacement Value's words and in the other bases'.
+    eq((gsLive.match(/AGENT_VALUE_SURVEY_MIN/g) || []).length, 6, 'the constant: declared, the rule, and the prompt\'s rule and the confidence scale, each in Replacement Value\'s words and the other bases\'');
   }
 };

@@ -925,10 +925,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(code(fn('invNeedsAppraisal')), 'agentValueAdvice(ref, job)', '…the appraisal rule reads the advice, never the tick');
     has(t, 'Add to appraisal list (on a client’s own home, Send to a specialist) records your decision.', 'as the page says: the press');
     has(code(fn('agentValueAdviceVerb')), "'Send to a specialist' : 'Add to appraisal list'", '…the press, by the job');
+    // P15's review (2026-10-28): on a client's own home the press is the decision, and the item leaves the guardrail.
+    has(t, 'On a client’s own home it then leaves here, under To a specialist.', 'as the page says: Send to a specialist takes it off');
+    has(code(fn('agentValueAdvised')), '!ref.toSpecialist', '…the advice is decided once it is sent to a specialist');
+    has(code(fn('agentValueAddToAppraisal')), 'ref.toSpecialist = true', '…which the living press records');
     has(t, 'the ▾ record keeps who and when, and offers Undo waiver', 'as the page says: Waive\'s record and Undo waiver');
     has(code(fn('_invPanelAppraisalHtml')), '>Undo waiver</button>', '…in the record');
     has(code(fn('waiveAppraisal')), 'ref.apprWaivedBy = _invStampBy(job)', '…who waived it');
-    has(t, 'Send worklist on an appraiser’s row drafts their items to them, photos linked. A report past its due date says so on the bar.', 'as the page says: Send worklist, an overdue report');
+    has(t, 'Send worklist on an appraiser’s row drafts their items to them, each with its photo. A report past its due date says so on the bar.', 'as the page says: Send worklist, an overdue report');
+    has(code(fn('printAppraisalWorklist')), '_apprPacketPhotoHtml(jobId, r, noPhoto)', '…the photograph itself in their packet (P15\'s review), never a link into Havellin\'s Drive');
     has(code(fn('_apprWorklistCellHtml')), '>Send worklist (', '…on the appraiser\'s row');
     has(code(fn('deskFoldState')), 'apprReportOverdue(job, a, today || _todayStr(), all)', '…and the bar reads the overdue report');
     const co = code(fn('renderCloseoutBody'));

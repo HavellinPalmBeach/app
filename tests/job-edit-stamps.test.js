@@ -144,6 +144,8 @@ const DEVICE_FNS = ['saveJobs', 'syncJobToSheets', 'syncToSheets', '_jobTouch', 
   'unfilledPlannedPS', 'plannedPSCount', 'isCrewPlaceholder', 'samePerson', 'canonPersonName', 'isJobWon', 'jobLogEntries',
   'setVendorRating', 'setVendorRatingNote', '_ratingJob', '_writeVendorScore', 'computeVendorAvg',
   'draftReviewRequest', 'markReviewRequestSent', 'setValBasis', 'setEstateAVD',
+  // P15's review (2026-10-28): neither while the agents are at work on the list.
+  'invValStandardBusy', '_invValStandardBusyText',
   // P15 (2026-10-28): both ask first and read the job's standard (counsel only, the §2032 date only on a 706 estate once it has passed).
   'resolveValBasis', 'invValBasisLocked', 'invFiduciaryMode', 'isDecedentJob', 'jobOnProbateTrack', '_gate706', 'matterDef', 'matterTypeOf',
   '_invStandardCounts', '_jobInvRefs', '_invHasValue', 'invValueStandardMoved', 'invStatesEstateValues', 'invLineValueDate', 'estateAvdOffered',

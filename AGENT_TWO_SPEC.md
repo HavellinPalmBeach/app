@@ -652,3 +652,20 @@ and browser step 69.
   comparable's premium prints in the record (`AGENT_VALUE_PREMIUM_WORDS`). `BACKEND_MIN_VERSION` `2026-10-28b`.
   `tests/p15-value-standard.test.js`, browser step 130. Counsel and an appraiser to confirm the standard by class
   (bundle D23).
+- **Its review, the same day (2026-10-28, still `2026-10-28b`).** A figure is recorded at the standard its request asked for:
+  `_avSendNext` keeps the basis and each line's date it sent (`asked`) and `_avWrite` writes those, never the job's as the answer
+  lands, so a basis changed or the §2032 date elected while a run was out (here, or on another device and merged in) finds the
+  figure moved (`invValueStandardMoved`) and listed for Re-value; and neither control changes while the agents are at work on
+  the list (`invValStandardBusy`, read by `setValBasis` and `setEstateAVD`, as Re-value refuses). On Replacement Value every
+  sentence of `_avSystem` that spoke of a sale says what a like one costs (a branded piece at what the same piece costs new,
+  never what it fetches second-hand; research looks for the price of the same or a like item, never SOLD results; listings
+  are what a like one costs, valued at about their middle and never above it, the survey rule unchanged), and `_avTool`'s
+  `comps` and `basis` say *prices*. `_avLineResult` holds a Replacement Value sentence to every price kept, sold or asking
+  (`evidence`), so one naming the retail price and a dealer's listing stands, and a rewrite names them (`_avKeptBasis(…, {rv,
+  kept, sure})`: *Two asking prices for a like item the research could show: Restoration Hardware; 1stDibs.*); and no rewrite
+  calls a figure kept at medium or high *a best estimate* (*No sale the research could show: the going rate for this kind of
+  thing.*). App: *Use a WorthPoint sale* on a line of several articles asks what the price is for (*Price is for* one piece, as it
+  opens, or all of them) and weighs the sale against that (one piece's against `invUnitValue`; OK writes Each, the total that
+  times the count), and a recorded $0 is a figure the sale
+  is weighed against. On a client's own home **Send to a specialist** records `toSpecialist` (with who and when), not
+  `needsAppr`: the advice is decided, the line leaves the guardrail and counts under *To a specialist*.

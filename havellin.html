@@ -1476,7 +1476,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.28 · 3:21pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.28 · 6:26pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6504,7 +6504,8 @@ var BACKEND_NEEDS_TYPES = ['saveMedia', 'saveInventory', 'job', 'saveAllJobs', '
 // premium for art, antiques, silver and jewelry; the resale market for branded furniture, decor and electronics), names the market
 // in its basis sentence, says whether a comparable's price includes the buyer's premium, values each basis on its own terms, and
 // values a line that left inside the §2032 six months as of the day it left. An older deployment values every basis as Fair Market
-// Value at second-hand prices, says "not retail" of branded furniture, and mixes hammer and all-in auction prices with no word.
+// Value at second-hand prices, says "not retail" of branded furniture, mixes hammer and all-in auction prices with no word, and ends a
+// Replacement Value line resting on asking prices as a general estimate (P15's review: every Replacement Value sentence of the prompt).
 var BACKEND_MIN_VERSION = '2026-10-28b';
 var _backendVersion = null;
 // The actions the deployment says it has (2026-10-26c), once the version probe answers; null until then. A route the app
@@ -6579,7 +6580,7 @@ var BACKEND_FEATURE_COST = {
   saveSnapshot:  'no inventory Snapshot can be taken (the deployment has nowhere to keep its lines)',
   // One line for any deployment older than BACKEND_MIN_VERSION, so it names the newest gap first and says
   // which vintage the older one belongs to (the banner's title prints the version that answered).
-  version:       'Agent Two values every basis as fair market value at second-hand prices, says \u201cnot retail\u201d of branded furniture, mixes hammer and all-in auction prices with no word, and values an item sold inside the \u00a72032 six months as of the alternate date; on a deployment older than 2026-10-28, two devices saving at the same moment can lose one device\u2019s change on the sheet though both were told it saved, and an inventory or estimate store can become unreadable, refusing every save until it is restored from version history; on a deployment older than 2026-10-27e, a figure Agent Two researched can carry a basis sentence citing sales nobody could find (\u201cFour sold comparables at Christie\u2019s and Kodner\u201d under a general estimate) on the Estate Inventory Report, and an Etsy, 1stDibs, Chairish, Ruby Lane or Replacements asking price can stand as a sale behind \u201conline comps\u201d; on a deployment older than 2026-10-27d, a release approval recorded on one device can lose, on the sheet, the record of where the item was going, who was taking it and its value when it was signed, so another device reads the approval as covering the item wherever it goes now, and two devices\u2019 signatures given for different destinations can be counted as one approval; on a deployment older than 2026-10-27c, anyone who holds the Apps Script URL can read every client and inventory, share a client\u2019s folders with any address, trash any file and send a release request through DocuSign to anybody, with no device key asked for; on a deployment older than 2026-10-27b, a client too large for a sheet cell cuts the Jobs tab off at that client, possibly with no error shown, every client below it then reads as deleted (this device keeps its copy of them), and the next estimate, plan, hours or inventory save sweeps their records off the sheet; on a deployment older than 2026-10-27, an item Agent Two researched and found no sale for stays marked unsure, and its paper reads general estimate, however many close listings it counted; on a deployment older than 2026-10-26b, a search page, or a sale whose price was not shown, can stand as a sold comparable, so a researched figure resting on one prints \u201cauction comps\u201d; a long note from Agent Two stops mid-sentence; and neither agent grades an item\u2019s condition; on a deployment older than 2026-10-26, the agents never move to a newer model by themselves (Agent One still runs on the older Opus 5), Agent Two never looks at the photograph of an item whose name is a guess or fixes a wrong category, a figure with no sale behind it prints as \u201cauction comps\u201d, and one slow request can mark a whole batch \u201cnot valued\u201d or lose a batch of names; on a deployment older than 2026-10-25b, a name you type or review on the desk (a wooden mirror retyped as Restoration Hardware) can come back from Agent Two as the generic thing and be valued as that, and a brand the crew says at the camera is not put into the name; on a deployment older than 2026-10-25, Agent Two flags a name it disagrees with (\u201cName may be wrong\u201d) instead of correcting it, puts a note on nearly every item it values (no condition recorded, a rough count, a search that ran short), and Agent One files everyday dishes as collectibles; on a deployment older than 2026-10-24, a blank line added to a photograph already named (Another item in this photo) makes Agent One read the whole photograph again, so every object in it goes on the list a second time, and its names carry a count (\u201capprox. 7 in stack\u201d) that the Qty box contradicts once corrected; on a deployment older than 2026-10-19b, a client\u2019s inventory reset in the Apps Script editor (resetInventoryConfirm) is undone by the first device that saves a line from before it, unless every device reloads first; on a deployment older than 2026-10-16, an incident reported on one device, or a key or fob received there while another device records a handoff, can be dropped when the sheet merges the job (the Incidents and Keys & access cards\u2019 lists are not yet merged entry by entry); on a deployment older than 2026-10-06, two devices\u2019 release signers are not merged and the client\u2019s workbook rounds its money; on a deployment older than 2026-10-05, a co-executor or co-trustee is not put on the DocuSign envelope beside the client, so they sign a printed copy of the agreement and the page they signed has to be filed from the timeline; on a deployment older than 2026-10-03, a co-trustee, a beneficiary, a signed copy filed to Drive, a find on site or a proceeds statement added on one device can be dropped by another device saving an older copy of the job, and the client\u2019s inventory workbook heads a trust\u2019s net proceeds \u201cNet to Estate\u201d; on a deployment older than 2026-10-01, File signed copy adds a second copy of the signed agreement to the client\u2019s Agreement folder instead of replacing the one there; on a deployment older than 2026-09-30b, a payment voided or marked cleared on one device can come back as it was from another device that changed the same payment before reloading, and count again; a firearm\u2019s serial, recipient or dealer route, recorded on one device, can be dropped from the sheet by another device\u2019s older copy of the item, until the first device next saves the inventory; and on a deployment older than 2026-09-30, two people editing different parts of one job (a vendor quote here, the team there) can also undo each other\u2019s work, a damaged store tab is emptied by the next save instead of refused, and Agent One can stop mid-answer on a busy photograph',
+  version:       'Agent Two values every basis as fair market value at second-hand prices, says \u201cnot retail\u201d of branded furniture, mixes hammer and all-in auction prices with no word, ends a Replacement Value line resting on asking prices as a general estimate, and values an item sold inside the \u00a72032 six months as of the alternate date; on a deployment older than 2026-10-28, two devices saving at the same moment can lose one device\u2019s change on the sheet though both were told it saved, and an inventory or estimate store can become unreadable, refusing every save until it is restored from version history; on a deployment older than 2026-10-27e, a figure Agent Two researched can carry a basis sentence citing sales nobody could find (\u201cFour sold comparables at Christie\u2019s and Kodner\u201d under a general estimate) on the Estate Inventory Report, and an Etsy, 1stDibs, Chairish, Ruby Lane or Replacements asking price can stand as a sale behind \u201conline comps\u201d; on a deployment older than 2026-10-27d, a release approval recorded on one device can lose, on the sheet, the record of where the item was going, who was taking it and its value when it was signed, so another device reads the approval as covering the item wherever it goes now, and two devices\u2019 signatures given for different destinations can be counted as one approval; on a deployment older than 2026-10-27c, anyone who holds the Apps Script URL can read every client and inventory, share a client\u2019s folders with any address, trash any file and send a release request through DocuSign to anybody, with no device key asked for; on a deployment older than 2026-10-27b, a client too large for a sheet cell cuts the Jobs tab off at that client, possibly with no error shown, every client below it then reads as deleted (this device keeps its copy of them), and the next estimate, plan, hours or inventory save sweeps their records off the sheet; on a deployment older than 2026-10-27, an item Agent Two researched and found no sale for stays marked unsure, and its paper reads general estimate, however many close listings it counted; on a deployment older than 2026-10-26b, a search page, or a sale whose price was not shown, can stand as a sold comparable, so a researched figure resting on one prints \u201cauction comps\u201d; a long note from Agent Two stops mid-sentence; and neither agent grades an item\u2019s condition; on a deployment older than 2026-10-26, the agents never move to a newer model by themselves (Agent One still runs on the older Opus 5), Agent Two never looks at the photograph of an item whose name is a guess or fixes a wrong category, a figure with no sale behind it prints as \u201cauction comps\u201d, and one slow request can mark a whole batch \u201cnot valued\u201d or lose a batch of names; on a deployment older than 2026-10-25b, a name you type or review on the desk (a wooden mirror retyped as Restoration Hardware) can come back from Agent Two as the generic thing and be valued as that, and a brand the crew says at the camera is not put into the name; on a deployment older than 2026-10-25, Agent Two flags a name it disagrees with (\u201cName may be wrong\u201d) instead of correcting it, puts a note on nearly every item it values (no condition recorded, a rough count, a search that ran short), and Agent One files everyday dishes as collectibles; on a deployment older than 2026-10-24, a blank line added to a photograph already named (Another item in this photo) makes Agent One read the whole photograph again, so every object in it goes on the list a second time, and its names carry a count (\u201capprox. 7 in stack\u201d) that the Qty box contradicts once corrected; on a deployment older than 2026-10-19b, a client\u2019s inventory reset in the Apps Script editor (resetInventoryConfirm) is undone by the first device that saves a line from before it, unless every device reloads first; on a deployment older than 2026-10-16, an incident reported on one device, or a key or fob received there while another device records a handoff, can be dropped when the sheet merges the job (the Incidents and Keys & access cards\u2019 lists are not yet merged entry by entry); on a deployment older than 2026-10-06, two devices\u2019 release signers are not merged and the client\u2019s workbook rounds its money; on a deployment older than 2026-10-05, a co-executor or co-trustee is not put on the DocuSign envelope beside the client, so they sign a printed copy of the agreement and the page they signed has to be filed from the timeline; on a deployment older than 2026-10-03, a co-trustee, a beneficiary, a signed copy filed to Drive, a find on site or a proceeds statement added on one device can be dropped by another device saving an older copy of the job, and the client\u2019s inventory workbook heads a trust\u2019s net proceeds \u201cNet to Estate\u201d; on a deployment older than 2026-10-01, File signed copy adds a second copy of the signed agreement to the client\u2019s Agreement folder instead of replacing the one there; on a deployment older than 2026-09-30b, a payment voided or marked cleared on one device can come back as it was from another device that changed the same payment before reloading, and count again; a firearm\u2019s serial, recipient or dealer route, recorded on one device, can be dropped from the sheet by another device\u2019s older copy of the item, until the first device next saves the inventory; and on a deployment older than 2026-09-30, two people editing different parts of one job (a vendor quote here, the team there) can also undo each other\u2019s work, a damaged store tab is emptied by the next save instead of refused, and Agent One can stop mid-answer on a busy photograph',
   preVersion:    'it predates the version check itself (2026-09-09), so client PDFs, photographs, DocuSign, Stripe and Agent One may all be missing as well'
 };
 
@@ -28361,6 +28362,7 @@ function savePhotoRefs(jobId) {
                // ⚠ P15 (2026-10-28): the basis Agent Two valued the line at; who added it to the appraisal list off Agent Two's
                // advice, and when; who waived its appraisal, when, and each waiver and undo as it happened.
                valBasis:r.valBasis, needsApprBy:r.needsApprBy, needsApprAt:r.needsApprAt,
+               toSpecialist:r.toSpecialist, toSpecialistBy:r.toSpecialistBy, toSpecialistAt:r.toSpecialistAt,   // Send to a specialist, living (P15's review)
                apprWaivedBy:r.apprWaivedBy, apprWaivedAt:r.apprWaivedAt, apprWaiveLog:r.apprWaiveLog,
                // ⚠ THE ROOM CHECK'S FIELDS (P24): the lines a room's photographs say are this one thing, and for each of them how
                // sure and why (`dupPairs`, the pair's own answer since P8's review), and when the room was last read together.
@@ -29275,12 +29277,29 @@ function _invStandardCounts(job, would) {
   });
   return { agent: agent, theirs: theirs };
 }
+// ⚠ NEVER WHILE THE AGENTS ARE AT WORK ON THE LIST (P15's review, 2026-10-28): a request out was researched at the standard it was
+// sent with, and Agent One and the room check hand on to Agent Two by themselves, so a change made mid-run leaves figures in flight
+// made at the old one. The writer records what each request asked for (_avSendNext), so nothing is mislabelled either way; this
+// spares the person a Re-value of what was in flight. '' when nothing runs; else the sentence the refusal opens with. As Re-value
+// refuses (agentValueRevalueStandard), and as the list's read waits (invListReadRefusal).
+function invValStandardBusy(jobId) {
+  var at = function(m) { return !!(m && m[jobId] && m[jobId].running); };
+  if (at(typeof _avRun !== 'undefined' ? _avRun : null)) return 'Agent Two is valuing lines on this job';
+  if (at(typeof _agRun !== 'undefined' ? _agRun : null) || at(typeof _arRun !== 'undefined' ? _arRun : null))
+    return 'The agents are at work on this list, and Agent Two values it next';
+  return '';
+}
+function _invValStandardBusyText(busy, what) {
+  return busy + ': change ' + what + ' once ' + (/^Agent Two/.test(busy) ? 'it has' : 'they have') + ' finished. Nothing was changed.';
+}
 function setValBasis(jobId, v) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return false;
   var old = resolveValBasis(job);
   var putBack = function() { var sel = document.getElementById('inv-valbasis-' + jobId); if (sel) sel.value = old; return false; };
   if (!v || v === old) return putBack();
+  var _busy = invValStandardBusy(jobId);
+  if (_busy) { alert(_invValStandardBusyText(_busy, 'the basis')); return putBack(); }
   // ⚠ ASKED FIRST, ONE QUESTION (P15): what the change leaves on the old basis, and where Fair Market Value is the law's standard,
   // that the new basis is counsel's to choose. Cancel puts the select back; nothing is written.
   var locked = invValBasisLocked(job);
@@ -29435,6 +29454,8 @@ function setEstateAVD(jobId, on, today) {
   var putBack = function() { var el = document.getElementById('inv-avd-' + jobId); if (el) el.checked = !!job.avd; return false; };
   on = !!on;
   if (on === !!job.avd) return putBack();
+  var _busy = invValStandardBusy(jobId);
+  if (_busy) { alert(_invValStandardBusyText(_busy, 'the valuation date')); return putBack(); }
   var off = estateAvdOffered(job, today || _todayStr());
   // Refused by name where it cannot be elected (the tick is not drawn there either: belt-and-braces, asked where it is written).
   if (on && !off.show) { alert('The §2032 alternate valuation date is elected on a Form 706, and this estate is not recorded as filing one. '
@@ -38459,6 +38480,7 @@ function printAppraisalWorklist(jobId, opt) {
   var names = _gl.map(function(g) { return g.label; });
   var _engaged = {};
   _gl.forEach(function(g) { if (g.apprId != null) _engaged[g.label] = 1; });
+  var _oneAppr = !!(opt && opt.apprId != null), noPhoto = [];
   var dod = job.deathDate ? ' (' + esc(fmtDate2(job.deathDate)) + ')' : '';
   var html = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
     + '<h2 style="font-family:\'Cormorant Garamond\',serif;margin-bottom:4px;">Appraisal Worklist</h2>'
@@ -38502,7 +38524,10 @@ function printAppraisalWorklist(jobId, opt) {
           // routed, which is the whole point of appraise not being a disposition.
           + '<td style="padding:3px 6px;border-bottom:1px solid #eee;">' + esc(r.disposition || 'Not yet decided') + '</td>'
           + '<td style="padding:3px 6px;border-bottom:1px solid #eee;">' + esc(invConditionText(r)) + '</td>'
-          + '<td style="padding:3px 6px;border-bottom:1px solid #eee;">' + (r.driveFileUrl ? '<a href="' + esc(r.driveFileUrl) + '">photo</a>' : '—') + '</td>'
+          // The appraiser's own packet carries the photograph itself (P15's review: a link into Havellin's Drive opens nothing for
+          // them); the whole worklist, Havellin's and counsel's (the package shares the folders), keeps the link.
+          + '<td style="padding:3px 6px;border-bottom:1px solid #eee;">' + (_oneAppr ? _apprPacketPhotoHtml(jobId, r, noPhoto)
+              : (r.driveFileUrl ? '<a href="' + esc(r.driveFileUrl) + '">photo</a>' : '—')) + '</td>'
           + '</tr>';
       }).join('');
       html += '<div style="margin-bottom:18px;">'
@@ -38581,7 +38606,7 @@ function printAppraisalWorklist(jobId, opt) {
   }
   html += '</div>';
   // The probate package asks for the page itself (`opt.asHtml`, P17) — see printCourtInventory.
-  if (opt && opt.asHtml) return { html: html, title: _invDocName(job, 'Appraisal Worklist') };
+  if (opt && opt.asHtml) return { html: html, title: _invDocName(job, 'Appraisal Worklist'), noPhoto: noPhoto };
   _printDocument(html, _invDocName(job, 'Appraisal Worklist'), { view: true, job: job, label: 'Appraisal Worklist' });   // on screen first (2026-10-26)
 }
 
@@ -39694,6 +39719,11 @@ function _apprWorklistCellHtml(job, a) {
     + (w && w.at ? '<div class="appr-wl-sent" style="font-size:10px;color:var(--gray);margin-bottom:4px;">Worklist ' + (w.provider === 'mailto' ? 'opened as an email' : 'drafted')
       + ' ' + esc(fmtDate2(_ymdLocal(new Date(Number(w.at))))) + (w.n ? ' (' + w.n + ' item' + (w.n === 1 ? '' : 's') + ')' : '') + '</div>' : '');
 }
+// ⚠ ONE SEND AT A TIME, APP-WIDE, WITH A WATCHDOG (P15's review, 2026-10-28): `_docBusy` was let go only inside the answers of the
+// sheet's read, the filing, the PDF and the draft, so one that never answered (a fetch has no timeout) left every document send on the
+// app refusing *Another document is being prepared* until a reload. As the release request's (sendApprovalRequest): past the watchdog
+// the lock goes, the notice says a draft may already exist, and an answer that comes late does nothing.
+var APPR_WORKLIST_WATCHDOG_MS = 90000;   // the sheet read, the photographs, a filing, a PDF and the draft, one after another
 function sendAppraisalWorklist(jobId, apprId) {
   var job = _invJob(jobId);
   var a = _jobAppraisers(jobId).filter(function (x) { return String(x.id) === String(apprId); })[0];
@@ -39701,50 +39731,66 @@ function sendAppraisalWorklist(jobId, apprId) {
   if (!SHEETS_SYNC_URL) { _docNotice('warn', 'This device has no Apps Script URL set, so the worklist cannot be made into a PDF. Settings > Sync.', jobId); return false; }
   if (_docBusy) { _docNotice('warn', 'Another document is being prepared — give it a moment.', jobId); return false; }
   _docBusy = { jobId: jobId, docKey: 'apprWorklist' };
-  var done = function () { _docBusy = null; if (typeof deskFoldOpen === 'function') deskFoldOpen(jobId, 'values'); };
+  var openBar = function () { if (typeof deskFoldOpen === 'function') deskFoldOpen(jobId, 'values'); };
+  var over = false;
+  var watchdog = setTimeout(function () {
+    if (over) return;
+    over = true; _docBusy = null;
+    openBar();
+    _docNotice('warn', 'The worklist took too long to build. A draft may already have been created — check your Gmail drafts before pressing Send worklist again.', jobId);
+  }, APPR_WORKLIST_WATCHDOG_MS);
+  var done = function () { over = true; clearTimeout(watchdog); _docBusy = null; openBar(); };
   _invEnsureLoaded(jobId);
   // The sheet first, as every desk send reads it (P6): the packet is the lines as the sheet holds them.
   refreshPhotoRefs(jobId, function (_changed, ok) {
+    if (over) return;
     if (ok === false || !_invCloudSeen[jobId]) { done(); _docNotice('warn', 'The inventory could not be read from the sheet, so the worklist was not sent. Check the connection, then press Send worklist again.', jobId); return; }
     var lines = _apprWorklistLines(job, a);
     if (!lines.length) { done(); _docNotice('warn', 'Nothing linked to ' + a.name + ' is still waiting on an appraisal, so there is no worklist to send.', jobId); return; }
-    var r = printAppraisalWorklist(jobId, { asHtml: true, apprId: a.id, read: true });
-    if (!r || !r.html) { done(); _docNotice('warn', (r && r.why) || 'The worklist could not be built.', jobId); return; }
-    var title = r.title + ' – ' + a.name;
-    resolveSubfolderId(job, PHOTO_SUBFOLDER, function (folderId) {
-      uploadHtmlToDrive(folderId || _jobRootFolderId(job), _invDocDriveName(job, 'Appraisal Worklist – ' + a.name), _exportDoc(title, r.html, ''), function (fok, furl) {
-        var filedUrl = fok ? String(furl || '') : '';
-        docPdfBase64({ cfg: { label: 'Appraisal Worklist', pdfCss: '' }, job: job }, r.html, function (b64, perr) {
-          if (!b64 && !filedUrl) { done(); _docNotice('err', 'The worklist could be neither made into a PDF (' + (perr || 'no answer from the server') + ') nor filed to Drive, so there is nothing to send. Press Send worklist again.', jobId); return; }
-          var to = String(a.email || '').trim(), cc = DEPT_EMAILS.agreements;
-          var subject = apprWorklistSubject(job);
-          var text = apprWorklistEmailText(job, a, lines.length, !!b64, b64 ? '' : filedUrl);
-          var record = function (provider) {
-            // When it was drafted is `at`: the client documents' draft stamp has a name of its own, read only by the draft rules.
-            a.worklist = { at: Date.now(), provider: provider, by: _invStampBy(job), n: lines.length, filedUrl: filedUrl };
-            _jobTouch(job, 'appraisers', a.id);
-            saveJobs();
-            if (typeof syncJobToSheets === 'function') syncJobToSheets(job);
-            done();
-            var paint = document.getElementById('inv-guardrail');
-            if (typeof renderInventoryTab === 'function') renderInventoryTab(); else if (paint) _invRefreshGuardrail(jobId);
-          };
-          gmailCreateDraft(buildMimeMessage({ to: to, cc: cc, subject: subject, text: text,
-              html: '<div style="font:14px/1.6 -apple-system,Segoe UI,Arial,sans-serif;color:#2b2622;">' + escLines(text) + '</div>',
-              attachments: b64 ? [{ name: title + '.pdf', base64: b64 }] : [] }), function (gok, d) {
-            if (gok) {
-              record('gmail');
-              _docNotice(to && b64 ? 'ok' : 'warn', 'Worklist drafted in ' + (_gmailUserEmail || 'your Havellin mailbox') + ' for ' + (to || 'nobody yet')
-                + ', copied to ' + cc + ', with ' + lines.length + ' item' + (lines.length === 1 ? '' : 's') + (b64 ? ' attached' : ' linked from Drive (the PDF could not be built)') + '. '
+    // ⚠⚠ THE PACKET CARRIES ITS PHOTOGRAPHS, NEVER A LINK INTO HAVELLIN'S DRIVE (P15's review): the email said each item came "with a
+    // link to its photograph", and every link was a file on Havellin's Drive the appraiser cannot open (a permission wall on every
+    // item; the estate package shares its folders with counsel, this shares nothing). The photograph is the image itself, fetched for
+    // the packet where this device has none (_apprPacketThumbs); one that could not be had is named on the page, in the email and in
+    // the notice.
+    _apprPacketThumbs(jobId, lines, function () {
+      if (over) return;
+      var r = printAppraisalWorklist(jobId, { asHtml: true, apprId: a.id, read: true });
+      if (!r || !r.html) { done(); _docNotice('warn', (r && r.why) || 'The worklist could not be built.', jobId); return; }
+      var noPhoto = r.noPhoto || [];
+      var title = r.title + ' – ' + a.name;
+      resolveSubfolderId(job, PHOTO_SUBFOLDER, function (folderId) {
+        if (over) return;
+        uploadHtmlToDrive(folderId || _jobRootFolderId(job), _invDocDriveName(job, 'Appraisal Worklist – ' + a.name), _exportDoc(title, r.html, ''), function (fok, furl) {
+          if (over) return;
+          var filedUrl = fok ? String(furl || '') : '';
+          docPdfBase64({ cfg: { label: 'Appraisal Worklist', pdfCss: '' }, job: job }, r.html, function (b64, perr) {
+            if (over) return;
+            // ⚠ THE PDF OR NOTHING (P15's review): a link to the filed copy is a file on Havellin's Drive, which the appraiser cannot
+            // open, so neither the draft nor a plain email goes without the attachment.
+            if (!b64) { done(); _docNotice('err', 'The worklist could not be made into a PDF (' + (perr || 'no answer from the server') + '), and the appraiser cannot open a copy in Havellin’s Drive, so nothing was drafted. '
+              + (filedUrl ? 'It is filed in Estate Inventory. ' : '') + 'Press Send worklist again.', jobId); return; }
+            var to = String(a.email || '').trim(), cc = DEPT_EMAILS.agreements;
+            var subject = apprWorklistSubject(job);
+            var text = apprWorklistEmailText(job, a, lines.length, noPhoto);
+            var missed = noPhoto.length ? ' The photograph of ' + _apprNoPhotoWords(noPhoto) + ' could not be attached: it is named in the email.' : '';
+            gmailCreateDraft(buildMimeMessage({ to: to, cc: cc, subject: subject, text: text,
+                html: '<div style="font:14px/1.6 -apple-system,Segoe UI,Arial,sans-serif;color:#2b2622;">' + escLines(text) + '</div>',
+                attachments: [{ name: title + '.pdf', base64: b64 }] }), function (gok, d) {
+              if (over) return;
+              if (!gok) { done(); _docNotice('err', 'Could not create the draft (' + ((d && d.error) || 'unknown') + '). A plain email cannot carry the PDF, so nothing was sent. Press Send worklist again.', jobId); return; }
+              // When it was drafted is `at`: the client documents' draft stamp has a name of its own, read only by the draft rules.
+              a.worklist = { at: Date.now(), provider: 'gmail', by: _invStampBy(job), n: lines.length, filedUrl: filedUrl };
+              _jobTouch(job, 'appraisers', a.id);
+              saveJobs();
+              if (typeof syncJobToSheets === 'function') syncJobToSheets(job);
+              done();
+              var paint = document.getElementById('inv-guardrail');
+              if (typeof renderInventoryTab === 'function') renderInventoryTab(); else if (paint) _invRefreshGuardrail(jobId);
+              _docNotice(to && !noPhoto.length ? 'ok' : 'warn', 'Worklist drafted in ' + (_gmailUserEmail || 'your Havellin mailbox') + ' for ' + (to || 'nobody yet')
+                + ', copied to ' + cc + ', with ' + lines.length + ' item' + (lines.length === 1 ? '' : 's') + ' and their photographs attached.' + missed + ' '
                 + (to ? '' : a.name + ' has no email on the roster: type their address in the draft. ') + 'Read it and send it.', jobId);
               try { window.open(gmailDraftUrl(d.messageId || d.draftId), '_blank'); } catch (e) {}
-              return;
-            }
-            if (!filedUrl) { done(); _docNotice('err', 'Could not create the draft (' + ((d && d.error) || 'unknown') + '), and the worklist is not in Drive, so a plain email would carry nothing. Press Send worklist again.', jobId); return; }
-            try { window.open('mailto:' + encodeURIComponent(to) + '?cc=' + encodeURIComponent(cc) + '&subject=' + encodeURIComponent(subject)
-              + '&body=' + encodeURIComponent(apprWorklistEmailText(job, a, lines.length, false, filedUrl)), '_blank'); } catch (e2) {}
-            record('mailto');
-            _docNotice('warn', 'Gmail draft failed (' + ((d && d.error) || 'unknown') + '): opened a plain email with the filed worklist linked. Check the From address, then send it.', jobId);
+            });
           });
         });
       });
@@ -39752,19 +39798,56 @@ function sendAppraisalWorklist(jobId, apprId) {
   });
   return true;
 }
-// The worklist's email (P15), in plain words: what it is, how many items, as of when, and where the photographs are. Drafted, for
-// Anthony to read (a vendor reads it).
+// The photographs the appraiser's packet carries (P15's review): each line's own, fetched from the server for any this device has no
+// copy of (getThumbnails, the desk's own source, never drive.google.com in the browser), into the desk's thumbnail cache. What does
+// not come back goes without: `cb` is answered once, whatever the server says, and the page names each line with none.
+function _apprPacketThumbs(jobId, lines, cb) {
+  var called = false, answer = function () { if (!called) { called = true; cb(); } };
+  var cache = _invThumbCache(jobId), gone = {}, ids = [], rounds = 0;
+  (lines || []).forEach(function (r) { var id = _invFileId(r); if (id && !cache[id] && ids.indexOf(id) < 0) ids.push(id); });
+  (function next() {
+    var want = ids.filter(function (id) { return !cache[id] && !gone[id]; }).slice(0, INV_THUMB_BATCH);
+    if (!want.length || !SHEETS_SYNC_URL || rounds++ > 5) { if (rounds > 1) _invSaveThumbCache(jobId); answer(); return; }
+    fetch(_withDeviceKey(SHEETS_SYNC_URL), { method: 'POST', mode: 'cors', redirect: 'follow', headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'getThumbnails', fileIds: want }) })
+      .then(_readAppsScriptJson)
+      .then(function (d) {
+        if (!d || !d.ok) { answer(); return; }
+        var got = 0;
+        Object.keys(d.thumbs || {}).forEach(function (id) { cache[id] = d.thumbs[id]; got++; });
+        (d.missing || []).forEach(function (id) { gone[id] = 1; });
+        if (!got && !(d.missing || []).length) { _invSaveThumbCache(jobId); answer(); return; }
+        next();
+      })
+      .catch(function () { answer(); });
+  })();
+}
+// The photograph inside the appraiser's packet: the image, or "not attached" where this device has none (counted into `miss`).
+function _apprPacketPhotoHtml(jobId, r, miss) {
+  var id = _invFileId(r), src = id ? (_invThumbCache(jobId)[id] || '') : '';
+  if (src) return '<img src="' + esc(src) + '" style="width:72px;height:72px;object-fit:cover;border:1px solid #ddd;border-radius:3px;" alt="">';
+  if (id && miss) miss.push(r);
+  return '<span style="color:#888;">' + (id ? 'not attached' : 'none') + '</span>';
+}
+function _apprNoPhotoWords(refs) {
+  return _andJoin(refs.slice(0, 6).map(function (r) { return '#' + (_invItemNo(r) || '?') + ' ' + (r.objectName || 'unnamed'); }))
+    + (refs.length > 6 ? ' and ' + (refs.length - 6) + ' more' : '');
+}
+// The worklist's email (P15), in plain words: what it is, how many items, as of when, and that their photographs are in it. Drafted,
+// for Anthony to read (a vendor reads it). `noPhoto`, the lines whose photograph could not be attached, named (P15's review).
 function _apprWorklistWhere(job) { return String((job && job.addr) || '').split(',')[0].trim() || String((job && job.name) || '').trim() || 'the property'; }
 function apprWorklistSubject(job) { return 'Havellin Palm Beach — Appraisal Worklist for ' + _apprWorklistWhere(job); }
-function apprWorklistEmailText(job, a, n, attached, link) {
+function apprWorklistEmailText(job, a, n, noPhoto) {
   var asOf = invFiduciaryMode(job) && estateValueDate(job) ? ' Please value each as of ' + fmtDate2(estateValueDate(job)) + ', ' + (estateAvdOn(job) ? 'the alternate valuation date' : 'the date of death') + '.' : '';
   var first = String(a.name || '').trim().split(/\s+/)[0] || '';
+  var miss = noPhoto || [];
   return 'Hello' + (first ? ' ' + first : '') + ',\n\n'
-    + (attached ? 'Attached is' : 'Here is') + ' the appraisal worklist for ' + _apprWorklistWhere(job) + ': the ' + n + ' item' + (n === 1 ? '' : 's') + ' we have asked you to appraise, '
-    + 'each with its item number, room, condition and a link to its photograph.' + asOf
-    + (link ? '\n\nThe worklist: ' + link : '')
+    + 'Attached is the appraisal worklist for ' + _apprWorklistWhere(job) + ': the ' + n + ' item' + (n === 1 ? '' : 's') + ' we have asked you to appraise, '
+    + 'each with its item number, room, condition and photograph.' + asOf
+    + (miss.length ? '\n\nThe photograph of ' + _apprNoPhotoWords(miss) + ' could not be attached.' : '')
     + '\n\nPlease quote each item by its number in your report.\n\nThank you,\nHavellin Palm Beach';
 }
+// Each appraiser's report cell, repainted by id (an appraisal figure typed on a row, through _invRefreshGuardrail): never the
 // roster whole, whose add form may hold what somebody is typing.
 function _apprReportsRepaint(jobId) {
   var job = _invJob(jobId);
@@ -40492,7 +40575,9 @@ var INV_WORK_FLAGS = [
   {key:'lotsplit',  label:'Lots to split',   fid:true, when:function(job){ return maivFilingApplies(job); },
    test:function(r, job){ return invLotSplitState(r, job) === 'over'; }},
   // Agent Two's advice nobody has decided counts here too (P15, agentValueAdvised): on living work, where the rule stays the tick.
-  {key:'appr',      label:'Needs appraiser',  test:function(r, job){ return invNeedsAppraisal(r, job) || (r.valuedBy === 'agent' && agentValueAdvised(r, job)); },
+  // On a client's own home, a line Send to a specialist recorded (`toSpecialist`, P15's review) is counted here too, and nowhere else.
+  {key:'appr',      label:'Needs appraiser',  test:function(r, job){ return invNeedsAppraisal(r, job) || (r.valuedBy === 'agent' && agentValueAdvised(r, job))
+                                                                  || (!!r.toSpecialist && !!job && !invFiduciaryMode(job)); },
    livingLabel:'To a specialist'},
   // ⚠ THE COUNT ANTHONY'S DECISION TURNS ON: what is leaving the property with nobody recorded
   // as taking it. "Keep us on track and honest with what goes to donation, appraisers, auction
@@ -40679,7 +40764,8 @@ function _invLineHolds(ref, fc, every, only) {
   // A figure made at another basis or as of another date than the estate's now (P15, invValueStandardMoved): Re-value answers it.
   if (ask('standard') && agent && typeof invValueStandardMoved === 'function' && invValueStandardMoved(ref, job) && held('standard')) return out;
   if (ask('guess') && agent && ref.namedBy === 'agent' && (ref.agentConf || 'low') === 'low' && (ref.valConf || 'low') === 'low' && held('guess')) return out;
-  if (ask('appraisal') && !appraised() && !ref.apprWaived && (ref.needsAppr || ref.apprId || invNeedsAppraisal(ref, job) || agentValueSpecialistWorth(ref, job)
+  // A living line a person sent to a specialist (`toSpecialist`, P15's review) has had its decision: the range's notice holds it no more.
+  if (ask('appraisal') && !appraised() && !ref.apprWaived && (ref.needsAppr || ref.apprId || invNeedsAppraisal(ref, job) || (agentValueSpecialistWorth(ref, job) && !ref.toSpecialist)
       || (typeof agentValueAdvised === 'function' && agentValueAdvised(ref, job))) && held('appraisal')) return out;
   if (ask('bequest') && ref.flagBequest && held('bequest')) return out;
   if (ask('disputed') && ref.flagDisputed && held('disputed')) return out;
@@ -42495,30 +42581,36 @@ function agentValueAdvice(ref, job) {
 // *To a specialist* and sits on the guardrail with **Send to a specialist** until it is decided.
 function agentValueAdvised(ref, job) {
   if (!agentValueAdvice(ref, job)) return false;
-  return !ref.needsAppr && !ref.apprId && !ref.apprWaived && !invAppraised(ref);
+  return !ref.needsAppr && !ref.toSpecialist && !ref.apprId && !ref.apprWaived && !invAppraised(ref);
 }
 // The press's words: **Add to appraisal list** on an estate, **Send to a specialist** on a client's own home (P15).
 function agentValueAdviceVerb(job) { return job && !invFiduciaryMode(job) ? 'Send to a specialist' : 'Add to appraisal list'; }
-// The press (P15): the advice taken as a person's decision. Writes `needsAppr` (the Needs Appraisal flag, the line's own) with who and
-// when (`_invStampBy`), never anything Agent Two owns; Agent Two itself writes none of this (the rule since P23). A press on a line
-// already listed, linked, appraised or waived changes nothing and says so.
+// The press (P15): the advice taken as a person's decision. On an estate it writes `needsAppr` (the Needs Appraisal flag, the line's
+// own) with who and when (`_invStampBy`), and the line stays on the appraisal list until its appraisal lands or is waived. Never anything
+// Agent Two owns; Agent Two itself writes none of this (the rule since P23). A press on a line already decided changes nothing and says so.
+// ⚠⚠ ON A CLIENT'S OWN HOME THE PRESS IS THE DECISION (P15's review, 2026-10-28): it wrote `needsAppr`, which on living work means the
+// line goes to a specialist and keeps it on the guardrail as *needs an appraisal (no appraiser linked)* until an appraisal figure lands
+// or Waive, and nothing appraises a thing sold through a specialist auction house, so the press changed nothing anybody could see and
+// the Values bar opened for it for good. Living, it records `toSpecialist` (with who and when): the advice is decided, the line leaves
+// the guardrail and is counted under *To a specialist* (invWorkFlags), and its record says who sent it. The Needs Appraisal tick a person
+// sets by hand is unchanged.
 function agentValueAddToAppraisal(jobId, stableId) {
   var job = _invJob(jobId), ref = _getPhotoRef(jobId, stableId);
   if (!job || !ref || ref.deletedAt) return false;
-  var verb = agentValueAdviceVerb(job);
-  if (ref.needsAppr || ref.apprId || ref.apprWaived || invAppraised(ref)) {
-    showSyncBadge(_invNamed(ref) + (ref.apprWaived ? ': its appraisal is waived (Undo waiver in its record)' : ' is on the appraisal list already') + '. Nothing was changed.');
+  var living = !invFiduciaryMode(job);
+  if (ref.needsAppr || ref.toSpecialist || ref.apprId || ref.apprWaived || invAppraised(ref)) {
+    showSyncBadge(_invNamed(ref) + (ref.apprWaived ? ': its appraisal is waived (Undo waiver in its record)'
+      : ref.toSpecialist ? ' is going to a specialist already' : ' is on the appraisal list already') + '. Nothing was changed.');
     return false;
   }
-  ref.needsAppr = true;
-  ref.needsApprBy = _invStampBy(job);
-  ref.needsApprAt = Date.now();
+  if (living) { ref.toSpecialist = true; ref.toSpecialistBy = _invStampBy(job); ref.toSpecialistAt = Date.now(); }
+  else { ref.needsAppr = true; ref.needsApprBy = _invStampBy(job); ref.needsApprAt = Date.now(); }
   _setPhotoRef(jobId, _invTouch(ref));
   savePhotoRefs(jobId);
   _scheduleInventorySync(jobId);
   renderInventoryTab();
-  showSyncBadge((verb === 'Send to a specialist' ? 'Going to a specialist: ' : 'On the appraisal list: ') + _invNamed(ref)
-    + '. Link an appraiser on its row under ' + DESK_FOLDS.values.title + ', or Waive.');
+  showSyncBadge(living ? 'Going to a specialist: ' + _invNamed(ref) + '. It is under To a specialist on the work bar.'
+    : 'On the appraisal list: ' + _invNamed(ref) + '. Link an appraiser on its row under ' + DESK_FOLDS.values.title + ', or Waive.');
   return true;
 }
 
@@ -42618,6 +42710,8 @@ function _avComp(c) {
     url: String((c && c.url) || '').slice(0, 400), kind: (c && c.kind === 'sold') ? 'sold' : 'asking',
     by: (c && c.by === 'desk') ? 'desk' : 'agent'
   };
+  // A sale pasted at the desk on a line of several articles as one piece's price (P15's review: *Price is for* one piece on its form).
+  if (c && c.each === true && out.by === 'desk') out.each = true;
   // Whether an auction price includes the buyer's premium (P15, ACC-12; the backend 2026-10-28 sends it): kept only off the list, and
   // only where said (a sale pasted at the desk carries none).
   if (c && typeof AGENT_VALUE_PREMIUMS !== 'undefined' && AGENT_VALUE_PREMIUMS.indexOf(c.premium) >= 0) out.premium = c.premium;   // guarded for a sandbox that lifts the writer alone
@@ -42702,8 +42796,11 @@ function _avWrite(jobId, stableId, res, job, opts) {
   } else {
     ref.fmv = fmv;
     delete ref.unitVal;   // the agent's figure is the whole line's: Each is read off it (Each × Qty = Total, 2026-10-25b)
-    ref.valDate = _avValDate(job, ref);
-    ref.valBasis = resolveValBasis(job);   // the basis it was valued at (P15): a change afterwards names this figure, never restates it
+    // What the request asked for (`opts.asked`, _avSendNext; P15's review), else the job's now: the basis and the date it valued at
+    // (P15), so a change afterwards, or one made while the request was out, names this figure and never restates it.
+    var _asked = opts && opts.asked;
+    ref.valDate = (_asked && typeof _asked.valDate === 'string') ? _asked.valDate : _avValDate(job, ref);
+    ref.valBasis = (_asked && _asked.basis) || resolveValBasis(job);
     // An unknown source is the depth's own word (2026-10-26): a general lot never prints a comps claim it did not make.
     ref.valSource = AGENT_VALUE_SOURCES.indexOf(res.source) >= 0 ? res.source : (res.mode === 'comps' ? 'Online comps' : 'General estimate');
     ref.valNote = String(res.basis || '').slice(0, 300);
@@ -43093,9 +43190,18 @@ function _avStart(jobId, job, ids, opts) {
 // out; the next call carries whatever is still owed. A call that answers nothing ends the run, named.
 function _avSendNext(jobId, job, queue, opts) {
   var st = _avState(jobId);
+  // The client as it stands now: a refresh replaces `jobs` (never only mutates it), and a run carried on with the copy it started on.
+  job = (typeof _invJob === 'function' && _invJob(jobId)) || job;
   queue = queue.filter(function(id) { var r = _getPhotoRef(jobId, id); return r && !r.deletedAt; });
   if (!queue.length) { _avFinish(jobId); return; }
   var items = queue.slice(0, AGENT_VALUE_BATCH).map(function(id) { return _avItemPayload(jobId, _getPhotoRef(jobId, id)); });
+  // ⚠⚠ A FIGURE IS RECORDED AT THE STANDARD ITS REQUEST ASKED FOR (P15's review, 2026-10-28): the basis and the date went with the
+  // request as the job read when it was sent, and the writer stamped the job's as the answer landed, so a basis changed or the §2032
+  // date elected while a run was out (on this device, or on another and merged in) recorded a fair-market figure as Liquidation
+  // Value, or a date-of-death figure as of the alternate date, and nothing listed it for Re-value. Each line's own, kept with the
+  // request (`asked`) and handed to the writer, so a change made meanwhile finds the figure moved (invValueStandardMoved).
+  var ctx = _avContext(job), asked = {};
+  items.forEach(function(it) { asked[it.stableId] = { basis: ctx.basis, valDate: String(it.valueDate || ctx.valuationDate || '') }; });
   // What the run still holds (`ids`) and what is in the request now out (`out`), for agentValueAgain and a close-up landing
   // meanwhile (2026-10-26, on review: `_avForceComps`, never cleared, had answered for lines no run carried).
   st.ids = {}; queue.forEach(function(id) { st.ids[id] = 1; });
@@ -43103,7 +43209,7 @@ function _avSendNext(jobId, job, queue, opts) {
   fetch(_withDeviceKey(SHEETS_SYNC_URL), {
     method: 'POST', mode: 'cors', redirect: 'follow',
     headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify({ action: 'agentValue', jobId: jobId, context: _avContext(job), items: items })
+    body: JSON.stringify({ action: 'agentValue', jobId: jobId, context: ctx, items: items })
   })
     .then(_readAppsScriptJson)
     .then(function(d) {
@@ -43121,7 +43227,7 @@ function _avSendNext(jobId, job, queue, opts) {
       Object.keys(d.results || {}).forEach(function(id) {
         if (!sent[id] || answered[id]) return;
         answered[id] = 1;
-        var out = agentValueApply(jobId, id, d.results[id], job, opts);
+        var out = agentValueApply(jobId, id, d.results[id], job, Object.assign({}, opts, { asked: asked[id] }));
         if (out === 'research') { again.push(id); st.researched++; }
         else if (out === 'valued') st.valued++;
         else st.skipped++;
@@ -43255,34 +43361,49 @@ function agentValueUseSale(jobId, stableId) {
   if (!(price > 0)) miss.push('its price');
   if (!/^https?:\/\/\S+$/i.test(url)) miss.push('its link');
   if (miss.length) { alert('Add ' + _andJoin(miss) + ' from the WorthPoint record first. Nothing was changed.'); return; }
-  var comp = _avComp({ title: title, venue: get('venue') || 'WorthPoint', saleDate: get('date'), price: price, url: url, kind: 'sold', by: 'desk' });
+  // ⚠⚠ ON A LINE OF SEVERAL ARTICLES THE FORM SAYS WHAT THE SALE IS FOR (P15's review, 2026-10-28): *Price is for* one piece (as it
+  // opens) or all of them, and the sale is weighed against the figure of what it is for: one article's (invUnitValue) or the whole
+  // line's. It was always weighed against the whole line's, so one Herend plate sold at $90 read as 88% from eight valued at $720 ($90
+  // each), and OK priced all eight at $90. Used as one piece's, Each takes the sale and the total is it times the count (Each × Qty =
+  // Total, 2026-10-25b); as all of them, the sale is the total, as on a line of one.
+  var q = invLineQty(ref), each = q > 1 && get('per') !== 'all';
+  var comp = _avComp({ title: title, venue: get('venue') || 'WorthPoint', saleDate: get('date'), price: price, url: url, kind: 'sold', by: 'desk', each: each });
   var internal = agentValueInternal(job);
+  var total = each ? roundCents(comp.price * q) : comp.price;
+  var saleWords = fmt(comp.price) + (each ? ' each' : '');
   // ⚠⚠ A SALE FAR FROM THE LINE'S FIGURE ASKS ONCE (Anthony, 2026-10-28, Ask 14; the desk audit's ACC-04: a $1,100 sale pasted on a bronze
   // Agent Two valued at $4,200 relabelled the $4,200 "WorthPoint comps" and reviewed the line, so the paper said WorthPoint supported a
   // figure the sale contradicts). More than INV_WP_SALE_APART (15%) apart, OK uses the sale as the value (the desk's figure, its basis
   // the sale) and Cancel keeps the figure and files the sale with the comparables only: the figure, its source and its owner untouched,
   // and the line's review left as it was. Within 15%, or a line with no figure, as before. Never on a tier where counsel values (no figure
   // is written there).
-  var _fig = parseFloat(ref.fmv), _apart = (!internal && !isNaN(_fig) && _fig > 0) ? Math.abs(comp.price - _fig) / _fig : 0;
+  // ⚠ A RECORDED $0 IS A FIGURE (P15's review; _invHasValue: blank is "not valued", zero is "worthless"): a sale above it is apart, and
+  // was taken as supporting it, relabelling $0 "WorthPoint comps" with no question.
+  var _has = !internal && _invHasValue(ref);
+  var _fig = _has ? (each ? invUnitValue(ref) : parseFloat(ref.fmv)) : NaN;
+  var _apart = (!_has || isNaN(_fig)) ? 0 : _fig > 0 ? Math.abs(comp.price - _fig) / _fig : (comp.price > 0 ? Infinity : 0);
   if (_apart > INV_WP_SALE_APART) {
-    var _q = invLineQty(ref);
-    if (!window.confirm('The WorthPoint sale is ' + fmt(comp.price) + ' and ' + _invNamed(ref) + ' is valued at ' + fmt(_fig) + ': '
-        + Math.round(_apart * 100) + '% apart.\n\nOK uses the sale: ' + fmt(comp.price) + ' becomes the value of the whole line' + (_q > 1 ? ' (all ' + _q + ')' : '')
-        + ', with the sale as its basis.\n\nCancel keeps ' + fmt(_fig) + ' as it is and files the sale with the comparables only.')) {
+    var _line = parseFloat(ref.fmv);
+    if (!window.confirm('The WorthPoint sale is ' + saleWords + ' and ' + _invNamed(ref) + ' is valued at '
+        + (each ? fmt(_fig) + ' each (' + fmt(_line) + ' for all ' + q + ')' : fmt(_fig))
+        + (_fig > 0 ? ': ' + Math.round(_apart * 100) + '% apart.' : '.')
+        + '\n\nOK uses the sale: ' + (each ? saleWords + ' becomes the value, ' + fmt(total) + ' for all ' + q : fmt(comp.price) + ' becomes the value of the whole line')
+        + ', with the sale as its basis.\n\nCancel keeps ' + fmt(_line) + ' as it is and files the sale with the comparables only.')) {
       ref.valComps = [comp].concat(ref.valComps || []).slice(0, AGENT_VALUE_MAX_COMPS);
       _setPhotoRef(jobId, _invTouch(ref));
       savePhotoRefs(jobId);
       _scheduleInventorySync(jobId);
       renderInventoryTab();
-      showSyncBadge('Sale filed with the comparables: ' + _invNamed(ref) + ' keeps ' + fmt(_fig) + '.');
+      showSyncBadge('Sale filed with the comparables: ' + _invNamed(ref) + ' keeps ' + fmt(_line) + '.');
       return 'filed';
     }
     ref.valComps = [comp].concat(ref.valComps || []).slice(0, AGENT_VALUE_MAX_COMPS);
-    ref.fmv = comp.price; delete ref.unitVal; delete ref.valLow; delete ref.valHigh;
+    ref.fmv = total; delete ref.valLow; delete ref.valHigh;
+    if (each) ref.unitVal = comp.price; else delete ref.unitVal;
     ref.valDate = _avValDate(job, ref);
     _avTakeValue(ref, 'sale', job);   // the desk's figure now, never the appraisal's (Q93)
     ref.valSource = 'WorthPoint comps';
-    ref.valNote = 'WorthPoint sale' + (comp.saleDate ? ', ' + comp.saleDate : '') + ': ' + fmt(comp.price) + '.';
+    ref.valNote = 'WorthPoint sale' + (comp.saleDate ? ', ' + comp.saleDate : '') + ': ' + saleWords + '.';
     _invStampLineReviewed(ref, job);
     _setPhotoRef(jobId, _invTouch(ref));
     savePhotoRefs(jobId);
@@ -43292,7 +43413,8 @@ function agentValueUseSale(jobId, stableId) {
   }
   ref.valComps = [comp].concat(ref.valComps || []).slice(0, AGENT_VALUE_MAX_COMPS);
   if (!_avHasFigure(ref) && !internal) {
-    ref.fmv = comp.price;
+    ref.fmv = total;
+    if (each) ref.unitVal = comp.price;
     ref.valDate = _avValDate(job, ref);
     _avTakeValue(ref, 'sale', job);   // the desk's comparable, never the appraisal's (Q93)
   }
@@ -43502,7 +43624,7 @@ function _avPanelHtml(job, ref) {
     body += '<div style="margin-top:6px;font-size:10.5px;">' + comps.map(function(c) {
       return '<div style="padding:2px 0;border-top:0.5px solid var(--border);">'
         + '<span style="color:' + (c.kind === 'sold' ? 'var(--ok-tx)' : 'var(--gray)') + ';font-weight:700;">' + (c.kind === 'sold' ? 'SOLD' : 'ASKING') + '</span> '
-        + (c.price !== '' ? esc(fmt(c.price)) + ' &middot; ' : '')
+        + (c.price !== '' ? esc(fmt(c.price)) + (c.each ? ' each' : '') + ' &middot; ' : '')
         + (/^https?:\/\//i.test(c.url) ? '<a href="' + esc(c.url) + '" target="_blank" rel="noopener">' + esc(c.title || c.url) + '</a>' : esc(c.title || ''))
         + (c.venue ? ' &middot; ' + esc(c.venue) : '') + (c.saleDate ? ' &middot; ' + esc(c.saleDate) : '')
         + ((typeof AGENT_VALUE_PREMIUM_WORDS !== 'undefined' && AGENT_VALUE_PREMIUM_WORDS[c.premium]) ? ' &middot; <span class="av-premium" style="color:var(--gray);">' + esc(AGENT_VALUE_PREMIUM_WORDS[c.premium]) + '</span>' : '')
@@ -43523,6 +43645,9 @@ function _avPanelHtml(job, ref) {
           return '<div style="min-width:0;"><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin-bottom:1px;">' + p.split(':')[1] + '</div>'
             + '<input id="av-wp-' + k + '-' + esc(sid) + '" type="' + (k === 'date' ? 'date' : 'text') + '" style="font-size:11px;padding:3px 6px;"></div>';
         }).join('')
+      // On a line of several articles, what the sale's price is for (P15's review): one piece, as it opens, or all of them.
+      + (invLineQty(ref) > 1 ? '<div style="min-width:0;"><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin-bottom:1px;">Price is for</div>'
+          + '<select id="av-wp-per-' + esc(sid) + '" style="font-size:11px;padding:3px 6px;"><option value="each">one piece</option><option value="all">all ' + invLineQty(ref) + '</option></select></div>' : '')
       + '</div><button class="btn-s" style="margin-top:5px;" onclick="agentValueUseSale(' + jid + ',\'' + sid + '\')">Use this sale</button></details>';
   }
   return '<div style="margin-bottom:10px;">' + head + body + acts + '</div>';
@@ -44330,7 +44455,10 @@ function _invPanelAppraisalHtml(job, ref) {
       + '<span style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;">Appraisal</span> ' + esc(invApprWaiverText(ref))
       + ' <button class="btn-s" onclick="undoWaiveAppraisal(' + job.id + ',\'' + ref.stableId + '\')">Undo waiver</button></div>' : '';
   var added = (ref.needsAppr && ref.needsApprBy) ? '<div class="inv-panel-apprby" style="margin-bottom:10px;font-size:10.5px;color:var(--gray);">On the appraisal list off Agent Two&rsquo;s advice: added by '
-      + esc(ref.needsApprBy) + (ref.needsApprAt ? ' on ' + esc(fmtDate2(_ymdLocal(new Date(Number(ref.needsApprAt))))) : '') + '.</div>' : '';
+      + esc(ref.needsApprBy) + (ref.needsApprAt ? ' on ' + esc(fmtDate2(_ymdLocal(new Date(Number(ref.needsApprAt))))) : '') + '.</div>'
+    // On a client's own home, Send to a specialist (P15's review): the decision, with who and when.
+    : (ref.toSpecialist && ref.toSpecialistBy) ? '<div class="inv-panel-spec" style="margin-bottom:10px;font-size:10.5px;color:var(--gray);">Going to a specialist off Agent Two&rsquo;s advice: recorded by '
+      + esc(ref.toSpecialistBy) + (ref.toSpecialistAt ? ' on ' + esc(fmtDate2(_ymdLocal(new Date(Number(ref.toSpecialistAt))))) : '') + '.</div>' : '';
   if (!t) return waived + added;
   return '<div class="inv-panel-appr" style="margin-bottom:10px;font-size:11px;line-height:1.5;">'
     + '<span style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;">Valuation source</span> '

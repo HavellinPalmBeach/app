@@ -177,7 +177,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const gen = g._avLineResult(VAL({ basis: 'The going used rate for everyday stainless flatware.', source: 'General estimate' }), 'general', {}, 60);
     eq(gen.basis, 'The going used rate for everyday stainless flatware.', 'an ordinary lot\'s going-rate sentence, citing no sale, is left alone');
     const genCount = g._avLineResult(VAL({ basis: 'Three similar sets sold on eBay for about $40.', source: 'General estimate' }), 'general', {}, 60);
-    eq(genCount.basis, 'No sale the research could show: a best estimate of what this kind of thing sells for.', '…but an ordinary lot naming sales it did not list is the server\'s sentence too');
+    // P15's review (2026-10-28): kept at medium, an ordinary lot's going rate is reasonably known, so the server's sentence never calls it
+    // "a best estimate" (p15-value-standard S5 holds the low arm).
+    eq(genCount.basis, 'No sale the research could show: the going rate for this kind of thing.', '…but an ordinary lot naming sales it did not list is the server\'s sentence too');
     // A survey stands: the sentence says what the figure rests on.
     const SURVEY_URL = 'https://www.ebay.com/sch/i.html?_nkw=desert+rose+plate';
     const sv = g._avLineResult(VAL({ value: 30, low: 20, high: 45, basis: 'Two sold comparables on eBay; valued below the listings.', comps: [COMP({ url: 'https://made.up/x' })],
