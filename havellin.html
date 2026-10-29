@@ -1476,7 +1476,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.28 · 5:33pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.28 · 7:08pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -17984,6 +17984,10 @@ function probatePackageGaps(jobId) {
   if (docTierProduces(job, 'values')) {
     var nov = live.filter(function (r) { return r.fmv === undefined || r.fmv === null || r.fmv === ''; }).length;
     if (nov) out.push(nov + ' line' + (nov === 1 ? '' : 's') + ' with no value');
+    // On Formal, a value with no basis stated (P10's review): the Court Inventory or the Trust Schedule inside prints DRAFT for it
+    // (invBasisDraft, the schedules' own words), as for an open double count below. Guarded for a sandbox that lifts this alone.
+    var _nob = typeof invBasisDraft === 'function' ? invBasisDraft(job, live) : null;
+    if (_nob) out.push(_nob.why);
   }
   // An open possible duplicate (P8's review, 2026-10-27): the Court Inventory or the Trust Schedule inside prints DRAFT for it,
   // and the question that makes an interim copy deliberate said nothing of it (invDoubleCounts, the schedules' own words).
@@ -30861,7 +30865,8 @@ function _invEdit(jobId, stableId, key, el) {
   else if (key === 'valSource' && ref.valSource === 'Appraisal') _avTakeValue(ref, 'appraisal', _invJob(jobId));
   // ⚠ ONE BASIS PER FIGURE (P10; Anthony, 2026-10-28, Ask 8): a source chosen in the record is the basis, so the reason picked on the
   // row goes; and a figure typed on the desk asks its reason, the row's picker opening by itself (a person's own figure only, never
-  // the appraisal's, and only where a paper prints it). _avTakeValue has already taken the earlier figure's reason off.
+  // the appraisal's, and only where a paper prints its basis: never where counsel values). _avTakeValue has already taken the
+  // earlier figure's reason off.
   if (key === 'valSource') ['valWhy', 'valWhyBy', 'valWhyAt', 'valWhyUrl'].forEach(function(k) { delete ref[k]; });   // the reason's fields (INV_VAL_WHY)
   var _whyAsk = (key === 'fmv' || key === 'unitVal') && ref.valuedBy === 'desk' && _invHasValue(ref)
     && typeof _invWhyOpen !== 'undefined' && !agentValueInternal(_invJob(jobId));
@@ -34108,6 +34113,14 @@ var INV_RELEASE_CAUTIONS = [
     desk: 'The client may sell their own things unappraised, so it is not refused: the Contents Record the client signs at the close names it on the line '
         + '(and the release approval request, where the line needs the client\u2019s written approval too).',
     head: 'Property flagged for appraisal and proposed for sale with no value recorded',
+    // The heading over the lines it names (P10's review): it said "with no value recorded" over a line carrying Agent Two's $1,200,
+    // on the paper the client initials. Read by _invCautionNotices with the lines; `head` stays the words where none carries a figure.
+    headFor: function(rs){
+      var est = (rs || []).filter(function(r){ return _invHasValue(r); }).length;
+      if (!est) return 'Property flagged for appraisal and proposed for sale with no value recorded';
+      return est === rs.length ? 'Property flagged for appraisal and proposed for sale with only Havellin\u2019s estimate on record'
+        : 'Property flagged for appraisal and proposed for sale with no value recorded, or with only Havellin\u2019s estimate on record';
+    },
     body: 'These lines were flagged in the house as worth a specialist\u2019s look, and each is proposed for sale with no value '
         + 'recorded yet, or with only Havellin\u2019s estimate on record. Selling before an appraisal is your decision, and a dealer\u2019s offer is often the market test, but '
         + 'you would then have no independent record of what the piece was worth. <strong>Initialling a line below confirms '
@@ -34192,7 +34205,8 @@ function _invCautionNotices(items, jobId) {
     var named = hit.map(function(r){ return esc(_invNamed(r)) + (c.note ? ' (' + esc(c.note(r, jobId)) + ')' : ''); }).join(' &middot; ');
     return '<div style="border:1px solid ' + c.tone + ';border-left-width:4px;border-radius:3px;'
       + 'padding:8px 10px;margin-bottom:10px;font-size:11px;line-height:1.55;color:#3c3228;">'
-      + '<div style="font-weight:700;color:' + c.tone + ';margin-bottom:3px;">&#9888; ' + esc(c.head) + '</div>'
+      // A caution whose heading follows its lines (`headFor`, the living ⚑ one's: P10's review) is asked with them.
+      + '<div style="font-weight:700;color:' + c.tone + ';margin-bottom:3px;">&#9888; ' + esc(c.headFor ? c.headFor(hit, jobId) : c.head) + '</div>'
       + '<div style="font-weight:700;margin-bottom:3px;">' + named + '</div>'
       + (typeof c.body === 'function' ? c.body(jobId) : c.body) + '</div>';
   }).join('');
@@ -34292,6 +34306,10 @@ function printApprovalRequest(jobId, selectedOnly, opt) {
   // Desk* says papers print IN PROGRESS until every flagged item is checked. The job's facts the review rule reads (invAcceptCtx), the
   // same for both copies (the email PDF and the DocuSign copy are this one printer). Guarded for a sandbox that lifts it alone.
   var _ac = typeof invAcceptCtx === 'function' ? invAcceptCtx(job) : null;
+  // ⚠ NO BASIS UNDER A VALUE WHERE COUNSEL VALUES (P10's review): there the desk asks no reason and gathers no No basis (nothing
+  // values the property but counsel), so a basis cell here could only ever say *basis not stated* with no press behind it. The
+  // values themselves still print on this paper on the Contents and None tiers until VAL-03 (P7's remainder) takes them off it.
+  var _basisOn = !(typeof agentValueInternal === 'function' && agentValueInternal(job));
   var rowOf = function(r) {
     var q = parseInt(r.qty, 10);
     var gone = ratify.indexOf(r) >= 0;
@@ -34308,7 +34326,7 @@ function printApprovalRequest(jobId, selectedOnly, opt) {
       // Each value with its basis under it (P10, DOC-15): the footer says the values are not appraisals unless one is noted against
       // the line, and no line noted one. A figure typed on the desk carries its reason (Ask 8).
       + (showVal ? '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;text-align:right;">' + _invMoney(r.fmv)
-        + (typeof _invBasisCellHtml === 'function' && _invHasValue(r) ? '<div class="inv-req-basis" style="color:#888;font-size:9.5px;">' + _invBasisCellHtml(r, jobId, true) + '</div>' : '')
+        + (_basisOn && typeof _invBasisCellHtml === 'function' && _invHasValue(r) ? '<div class="inv-req-basis" style="color:#888;font-size:9.5px;">' + _invBasisCellHtml(r, jobId, true) + '</div>' : '')
         + '</td>' : '')
       + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;">' + esc(r.disposition ? invDispDocWord(r.disposition) : '—')
         + (r.channel ? '<div style="color:#888;font-size:10px;">' + esc(r.channel) + '</div>' : '')
@@ -36794,7 +36812,8 @@ function _invScheduleSection(title, list, fc) {
       // magnitude on a court filing. Say which it is on the row and in the header.
       var _q = parseInt(r.qty, 10);
       return '<tr><td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(r.objectName || '—') + (_q > 1 ? ' <span style="color:#888;">(' + _q.toLocaleString() + ' items, valued as a lot)</span>' : '')
-          + (fc && typeof _invHoldMarkHtml === 'function' ? _invHoldMarkHtml(r, fc) : '') + '</td>'
+          // Only what is about the figure or the item (INV_HOLD_SCHEDULE_KEYS, P10's review): this page is adopted above a signature.
+          + (fc && typeof _invHoldMarkHtml === 'function' ? _invHoldMarkHtml(r, fc, typeof INV_HOLD_SCHEDULE_KEYS !== 'undefined' ? INV_HOLD_SCHEDULE_KEYS : null) : '') + '</td>'
         + '<td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(invConditionText(r)) + '</td>'
         // ⚠ THE BASIS ON EACH LINE (P23, Anthony's answer to the spec's §12.3): what the figure rests on, in the reader's words.
         // A line with no basis reads *basis not stated* in amber, as the Estate Inventory Report prints it (2026-10-13 *not stated* in
@@ -37027,6 +37046,8 @@ function printCourtInventory(jobId, opt) {
   if (_mtOff) _draftWhy.push('this estate is not being administered through probate');
   if (_mtOff) _draftFix.push('no final copy of THIS schedule will follow — a probate inventory is the wrong instrument for this estate');
   var draft = _draftWhy.length > 0;
+  // ⚠ PRINTED ESCAPED (P10's review): since invBasisDraft a reason names its lines (#3 and the name a person typed or Agent One
+  // read), so the pill escapes it as every record's field is escaped; the block under the table escapes its own join.
   var status = draft ? 'DRAFT — ' + _draftWhy.join(' \u00b7 ') : 'FINAL';
   var basis = resolveValBasis(job);
   var vdate = estateValueDate(job);
@@ -37062,7 +37083,7 @@ function printCourtInventory(jobId, opt) {
     + (job.probateCase ? ' &middot; Case ' + esc(job.probateCase) + ((typeof jobProbateCourt === 'function' && jobProbateCourt(job)) ? ', ' + esc(jobProbateCourt(job)) : '') : '') + '</div>'
     + '<div style="font-size:11px;color:#666;margin-bottom:2px;">' + esc([job.addr, job.city ? job.city + ', FL' : ''].filter(Boolean).join(', ')) + '</div>'
     + '<div style="font-size:11px;color:#666;margin-bottom:2px;">Basis: <strong>' + esc(basis) + '</strong> as of ' + esc(vlabel) + ' (' + esc(vdateStr) + ') &middot; Prepared by Havellin Palm Beach, LLC &middot; ' + new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) + '</div>'
-    + '<div style="display:inline-block;font-size:11px;font-weight:700;color:#fff;background:' + (draft ? '#A32D2D' : '#357a50') + ';border-radius:3px;padding:1px 8px;margin-bottom:12px;">' + status + '</div>'
+    + '<div style="display:inline-block;font-size:11px;font-weight:700;color:#fff;background:' + (draft ? '#A32D2D' : '#357a50') + ';border-radius:3px;padding:1px 8px;margin-bottom:12px;">' + esc(status) + '</div>'
     // Agent Two's figures nobody has accepted, counted beside the status and never holding it back (P23).
     + _avUnreviewedStamp(onSched, { fc: invAcceptCtx(job) })
     // ⚠ ABOVE THE TABLE, NOT UNDER IT. A reader works down this page and takes the schedule as
@@ -37180,6 +37201,7 @@ function printTrustSchedule(jobId, opt) {
     _draftFix.push('no final copy of THIS schedule will follow — the estate’s own inventory is the right instrument for it');
   }
   var draft = _draftWhy.length > 0;
+  // Printed escaped, as the probate schedule's pill (P10's review): a reason can name a line.
   var status = draft ? 'DRAFT — ' + _draftWhy.join(' · ') : 'FINAL';
   var basis = resolveValBasis(job);
   var vdate = estateValueDate(job);
@@ -37196,7 +37218,7 @@ function printTrustSchedule(jobId, opt) {
     + '<div style="font-size:11px;color:#666;margin-bottom:2px;">' + esc([job.addr, job.city ? job.city + ', FL' : ''].filter(Boolean).join(', ')) + '</div>'
     + '<div style="font-size:11px;color:#666;margin-bottom:2px;">Basis: <strong>' + esc(basis) + '</strong> as of ' + esc(vlabel) + ' (' + esc(vdateStr) + ') &middot; Prepared by Havellin Palm Beach, LLC &middot; ' + new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) + '</div>'
     + '<div style="font-size:11px;color:#666;margin-bottom:8px;">Prepared for the successor trustee&rsquo;s use in administering the trust under chapter 736, Florida Statutes.</div>'
-    + '<div style="display:inline-block;font-size:11px;font-weight:700;color:#fff;background:' + (draft ? '#A32D2D' : '#357a50') + ';border-radius:3px;padding:1px 8px;margin-bottom:12px;">' + status + '</div>'
+    + '<div style="display:inline-block;font-size:11px;font-weight:700;color:#fff;background:' + (draft ? '#A32D2D' : '#357a50') + ';border-radius:3px;padding:1px 8px;margin-bottom:12px;">' + esc(status) + '</div>'
     + _avUnreviewedStamp(onSched, { fc: invAcceptCtx(job) })
     // ⚠ ABOVE THE TABLE. A reader works down this page and takes the schedule as what it says it
     // is; a caveat under the total has arrived after they read it. Same placement rule the
@@ -39321,6 +39343,10 @@ function _invSetAppraiser(jobId, stableId, apprId) {
       if (!window.confirm('Keep the appraisal on ' + _item + '?\n\nIts figure is recorded as ' + (_was ? _was + '\u2019s appraisal' : 'an appraisal')
           + '. OK keeps it, with the appraiser named. Cancel takes the appraisal off: the figure stays on the line as the desk\u2019s estimate, with no source.')) {
         delete ref.valSource; ref.valuedBy = 'desk';
+        // With no source and no reason (P10's review): the desk's estimate as the dialog says, reading Havellin estimate (staff) under
+        // $500 and basis not stated from it. ⚠ Belt-and-braces since the review: the appraisal arm of _avTakeValue already takes the
+        // reason off as the appraiser's figure lands, so only a line the first P10 build wrote carries one here.
+        ['valWhy', 'valWhyBy', 'valWhyAt', 'valWhyUrl'].forEach(function(k) { delete ref[k]; });
       }
     }
   }
@@ -40190,7 +40216,8 @@ var INV_WORK_FLAGS = [
   // fid: a living job enters no values, so this would count every row on the job forever.
   {key:'noval',     label:'No value yet',    fid:true, test:function(r){ return _invNeedsValue(r); }},
   // A figure no paper can give a basis for (Anthony, 2026-10-28, Ask 8): one typed on the desk at $500 or more with no reason picked,
-  // or any figure with no source. Where a paper prints the figure; never where counsel values (no document prints it).
+  // or any figure with no source. Where a paper prints the figure's basis; never where counsel values (there the release request
+  // still prints a typed figure until VAL-03, but with no basis under it, so nothing is left to give one for; P10's review).
   {key:'nobasis',   label:'No basis',        when:function(job){ return !agentValueInternal(job); },
    test:function(r, job){ return invBasisMissing(r, job.id); }},
   // ⚠ CONDITIONAL, NOT MERELY `fid` — §20.2031-6(a) governs a Form 706 schedule, so on an
@@ -40416,13 +40443,19 @@ var INV_OPEN_HOLDS = { noname: 1, duplicate: 1 };
 // mark of its own (Q106): the stamp speaks for it. The desk's words with its instructions taken off (`INV_HOLD_PAPER_WORDS`).
 var INV_HOLD_PAPER_WORDS = { dispute: 'a disputed estate', noname: 'no name yet', nodest: 'no destination yet',
   duplicate: 'a possible duplicate' };
-function invHoldPaperText(ref, fc) {
+// ⚠ ON THE TWO SCHEDULES, ONLY WHAT IS ABOUT THE FIGURE OR WHAT THE ITEM IS (P10's review, 2026-10-28; for Anthony to confirm): a
+// FINAL Court Inventory or Trust Schedule is adopted above a signature, and "Needs a look: a firearm or ammunition; on Hold" or "a
+// specific bequest; a release caution" are the desk's workflow, not a doubt about the schedule's line (the release request, the
+// Report, the Donation Record and the desk keep every reason). Read by _invScheduleSection through `keys`.
+var INV_HOLD_SCHEDULE_KEYS = { guess: 1, stale: 1, unowned: 1, note: 1, valnote: 1, photonote: 1, duplicate: 1, noname: 1 };
+function invHoldPaperText(ref, fc, keys) {
   if (!ref || !fc || !fc.job || invLineReviewed(ref, fc)) return '';
-  var w = _invLineHolds(ref, fc, true).map(function(k) { return INV_HOLD_PAPER_WORDS[k] || INV_HOLD_WORDS[k]; }).filter(Boolean);
+  var w = _invLineHolds(ref, fc, true).filter(function(k) { return !keys || !!keys[k]; })
+    .map(function(k) { return INV_HOLD_PAPER_WORDS[k] || INV_HOLD_WORDS[k]; }).filter(Boolean);
   return w.length ? 'Needs a look: ' + w.join('; ') : '';
 }
-function _invHoldMarkHtml(ref, fc) {
-  var t = invHoldPaperText(ref, fc);
+function _invHoldMarkHtml(ref, fc, keys) {
+  var t = invHoldPaperText(ref, fc, keys);
   return t ? '<div class="inv-hold-mark" style="font-size:9.5px;color:#8a5a1e;margin-top:2px;">' + esc(t) + '</div>' : '';
 }
 function invLineOpen(ref, fc) {
@@ -42461,6 +42494,10 @@ function _avTakeValue(ref, how, job) {
     ref.valSource = 'Appraisal';
     if (wasAgent) delete ref.valNote;
     AGENT_VALUE_OWN.forEach(function(k) { delete ref[k]; });
+    // ⚠ AND A REASON PICKED FOR THE DESK'S FIGURE GOES WITH IT (P10's review, 2026-10-28): the figure is the appraiser's now, and the
+    // reason (the going rate, a sale's link) described the concierge's; kept, it printed under the appraiser's figure, with the
+    // picker's name, once the appraisal was taken off (_invSetAppraiser's Cancel). The reason's four fields, as the typed arm names them.
+    ['valWhy', 'valWhyBy', 'valWhyAt', 'valWhyUrl'].forEach(function(k) { delete ref[k]; });
     if (job && figure) { var _apDate = _invAppraisalDate(job, ref, !wasAppraisal, wasAgent); if (_apDate) ref.valDate = _apDate; }
     return;
   }
@@ -42924,7 +42961,9 @@ function agentValueUseSale(jobId, stableId) {
     ref.valDate = _avValDate(job);
     _avTakeValue(ref, 'sale', job);   // the desk's comparable, never the appraisal's (Q93)
   }
-  if (!internal) ref.valSource = 'WorthPoint comps';
+  // A source set is the basis, so a reason picked on the row goes (P10's review; Ask 8: one basis per figure, as the record's and the
+  // selection bar's Set valuation source do).
+  if (!internal) { ref.valSource = 'WorthPoint comps'; ['valWhy', 'valWhyBy', 'valWhyAt', 'valWhyUrl'].forEach(function(k) { delete ref[k]; }); }
   // A sale a person found and pasted is their look at the line (2026-10-25b, the one look): the line is reviewed with it.
   _invStampLineReviewed(ref, job);
   _setPhotoRef(jobId, _invTouch(ref));
@@ -43640,8 +43679,12 @@ function _invRevBoxHtml(jid, ref, fc) {
 // itself (_invEdit sets _invWhyOpen, session only, never saved); one press records the reason and who pressed (invPickValueWhy), and
 // "Not now" leaves the figure as Havellin's estimate under $500, or with no basis at $500 or more, which this line then says in amber
 // with the press that reopens it (the No basis chip gathers those). Nothing here asks for a tick: the typed figure is already the
-// person's look (Q105). Drawn only where a paper prints the figure (never where counsel values, agentValueInternal). The host is on
+// person's look (Q105). Drawn only where a paper prints the figure's basis (never where counsel values, agentValueInternal: the
+// release request is the one paper that prints a figure there, until VAL-03, and it prints no basis under it; P10's review). The host is on
 // every row, empty where there is nothing to say, so a figure typed repaints it by id (_invWhyRepaint) and the box keeps its focus.
+// ⚠ ITS BUTTONS ARE OUT OF THE TAB ORDER (tabindex -1; P10's review, browser step 107): the host sits under the name, so Tab from the
+// name landed on the picker's first button rather than the row's next box, and a button holds nothing for _invRenderWhenIdle, so a
+// run's tail redrew the desk under somebody working down the row. A tap or a click reaches them; Tab goes name, Qty, Each, Total.
 var _invWhyOpen = {};
 function _invWhyHtml(jid, ref, job) {
   var sid = ref.stableId, inner = '';
@@ -43649,13 +43692,13 @@ function _invWhyHtml(jid, ref, job) {
   if (desk && _invWhyOpen[sid]) {
     inner = '<span style="font-size:10px;color:var(--gray-dk);font-weight:700;">Why ' + esc(_invMoney(ref.fmv)) + '?</span> '
       + Object.keys(INV_VAL_WHY).map(function(k) {
-          return '<button class="btn-s inv-why-pick" style="font-size:10px;padding:1px 7px;" onclick="invPickValueWhy(' + jid + ',\'' + sid + '\',\'' + k + '\')">'
+          return '<button class="btn-s inv-why-pick" tabindex="-1" style="font-size:10px;padding:1px 7px;" onclick="invPickValueWhy(' + jid + ',\'' + sid + '\',\'' + k + '\')">'
             + esc(INV_VAL_WHY[k].btn) + '</button>';
         }).join(' ')
-      + ' <button class="btn-s inv-why-skip" style="font-size:10px;padding:1px 7px;color:var(--gray);" onclick="invWhyClose(' + jid + ',\'' + sid + '\')" '
+      + ' <button class="btn-s inv-why-skip" tabindex="-1" style="font-size:10px;padding:1px 7px;color:var(--gray);" onclick="invWhyClose(' + jid + ',\'' + sid + '\')" '
       + 'title="' + esc(parseFloat(ref.fmv) < INV_DESK_BASIS_MIN ? 'It prints as Havellin estimate (staff)' : 'It prints as basis not stated, in amber, until a reason is picked') + '">Not now</button>';
   } else if (desk && !invValBasisWord(ref, jid)) {
-    inner = '<button class="inv-why-open" style="font-size:10px;color:#8a5a1e;font-weight:700;background:none;border:none;padding:0;cursor:pointer;" '
+    inner = '<button class="inv-why-open" tabindex="-1" style="font-size:10px;color:#8a5a1e;font-weight:700;background:none;border:none;padding:0;cursor:pointer;" '
       + 'onclick="invWhyOpen(' + jid + ',\'' + sid + '\')" title="A figure of $500 or more typed on the desk prints basis not stated until a reason is picked">basis not stated &#9662;</button>';
   } else if (_invHasValue(ref) && !(job && agentValueInternal(job)) && !invValBasisWord(ref, jid)) {
     inner = '<span style="font-size:10px;color:#8a5a1e;font-weight:700;" title="No valuation source on this figure: open the line (&#9662;) and choose one, or type the figure on the row and pick its reason">basis not stated</span>';

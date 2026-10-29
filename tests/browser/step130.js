@@ -17,6 +17,14 @@
 //      verbal opinion: the Court Inventory FINAL (still Formal, nothing else holding it), the basis printed beside the figure.
 //   F: the Donations card's Print Donation Record: the stamp over Goodwill's lines.
 //   G: the living client: the Contents Record carries FLAGGED FOR APPRAISAL, ONLY HAVELLIN'S ESTIMATE ($1,200) ON RECORD.
+//   P10's review (2026-10-28):
+//   I: a line named with markup (a name typed, or read off a photograph) and a firearm on Hold: More ▾ Court Inventory, DRAFT, its
+//      pill naming the line as text (nothing runs); the schedule marks neither the firearm nor Hold, the Estate Inventory PDF does;
+//      the dashboard's 📧 Send probate package asks, naming the line with no basis among the gaps; declined, nothing drafted.
+//   J: the cookware's record: an appraiser linked, $5,200 typed (the appraisal's), then unlinked with Cancel: the reason picked in A
+//      is gone and the row and the record say basis not stated.
+//   K: a contents-tier estate's request prints its typed $650 with no basis under it; the living request's notice is headed
+//      "… with only Havellin's estimate on record" over Agent Two's figure.
 //   H: at 1440 and 390 px no horizontal overflow; zero page errors.
 //
 //   NODE_PATH=/path/to/node_modules node tests/browser/step130.js [/abs/path/to/havellin.html]
@@ -30,7 +38,7 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
 const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n + ']');
 const SYNC = 'https://script.google.com/macros/s/STEP130/exec';
 const T0 = Date.parse('2026-10-10T15:00:00Z');
-const EST = 13001, LIV = 13002;
+const EST = 13001, LIV = 13002, CON = 13003;
 
 (async () => {
   try {
@@ -38,13 +46,14 @@ const EST = 13001, LIV = 13002;
     const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 }, timezoneId: 'America/New_York' });
     await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
     let sheet = {};
-    const posts = [];
+    const posts = [], mediaPosts = [];
     await ctx.route(SYNC + '**', async (r) => {
       const req = r.request();
       const json = (o) => r.fulfill({ status: 200, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(o) });
       if (req.method() === 'POST') {
         let body = {}; try { body = JSON.parse(req.postData() || '{}'); } catch (e) {}
         posts.push(body.action || body.type || '');
+        if (body.type === 'saveMedia') mediaPosts.push(body);
         if (body.action === 'uploadHtml') return json({ ok: true, fileUrl: 'https://drive.google.com/file/d/up/view', fileId: 'up' });
         if (body.action === 'htmlToPdf') return json({ ok: true, base64: Buffer.from('%PDF-1.4 ' + 'x'.repeat(200)).toString('base64') });
         if (body.action === 'getSubfolders') return json({ ok: true, subfolders: null });
@@ -116,7 +125,8 @@ const EST = 13001, LIV = 13002;
     });
     const close = () => press('#doc-viewer-modal button[onclick="closeDocViewer()"]', 'Close the viewer');
     const more = async (f, id) => { if (!(await vis('#inv-more button[onclick="' + f + '(' + id + ')"]'))) await press('#inv-more > summary', 'More ▾'); };
-    const syncSheet = () => p.evaluate((ids) => { const o = {}; ids.forEach((id) => { o[id] = { items: JSON.parse(localStorage.getItem('hav_media_' + id) || '[]') }; }); return o; }, [EST, LIV]).then((o) => { sheet = o; });
+    const syncSheet = () => p.evaluate((ids) => { const o = {}; ids.forEach((id) => { o[id] = { items: JSON.parse(localStorage.getItem('hav_media_' + id) || '[]') }; }); return o; }, [EST, LIV, CON]).then((o) => { sheet = o; });
+    const until = async (f, ms) => { const t = Date.now(); while (Date.now() - t < (ms || 4000)) { if (await f()) return true; await p.waitForTimeout(200); } return false; };
     const typeIn = async (sel, v, what) => {
       const n = await p.locator(sel).count();
       ok(n === 1 && await vis(sel), what + ' — on screen (' + n + ')');
@@ -124,7 +134,7 @@ const EST = 13001, LIV = 13002;
     };
 
     // ── Seed ──
-    await p.evaluate(([EST, LIV, T0]) => {
+    await p.evaluate(([EST, LIV, T0, CON]) => {
       const job = (id, o) => Object.assign({ id: id, addr: '12 Ocean Blvd', city: 'Palm Beach', zip: '33480', status: 'active', won: true, wonAt: '2026-09-25', approved: true,
         tc: 'Ashley Jerome', created: '2026-09-20', start: '2026-10-06', activatedOn: '2026-10-05', agrApproved: true, agrSent: true, agrSigned: true, docState: {}, at: {}, appraisers: [],
         driveFolder: 'https://drive.google.com/drive/folders/ROOT' + id, driveSubfolders: { 'Estate Inventory': 'INV' + id, 'As-Found Record': 'AF' + id, 'Signed Records': 'SR' + id },
@@ -133,10 +143,14 @@ const EST = 13001, LIV = 13002;
         executorEmail: 'ruth@example.com', deathDate: '2026-04-02', executorAuth: 'received', probateAttyName: 'Ann Lowe', probateAttyEmail: 'ann@lowe.law',
         probateCase: '50-2026-CP-004321', docTier: 'values', gate706: 'yes' }));
       jobs.unshift(job(LIV, { hvlId: 'HVL-2610-P10L', name: 'Margaret Hale', fname: 'Margaret', email: 'meg@example.com', svc: 'downsizing_move' }));
+      jobs.unshift(job(CON, { hvlId: 'HVL-2610-P10C', name: 'Edith Crane', svc: 'probate', matterType: 'probate', executor: 'Paul Crane', executorRole: 'Personal Representative',
+        executorEmail: 'paul@example.com', deathDate: '2026-04-02', executorAuth: 'received', probateAttyName: 'Ann Lowe', probateAttyEmail: 'ann@lowe.law',
+        probateCase: '50-2026-CP-004322', docTier: 'contents', gate706: 'no' }));
       const est = (id, svc) => ({ approved: true, submitted: true, approvedBy: 'Anthony Graziano', savedAt: T0,
         estimate: { jobId: id, svc: svc, havellinTotal: 40000, fixedPrice: true, fixedAmount: 40000, fixedLines: true, totTC: 100, totPS: 150, tcRate: 150, psRate: 100,
           days: 8, vendors: [], prepItems: [], pkgCost: 0, rooms: [{ idx: 0, name: 'Study', st: 'in', vol: 3, cplx: 3 }] } });
-      estimateStore[EST] = est(EST, 'probate'); estimateStore[LIV] = est(LIV, 'downsizing_move');
+      estimateStore[EST] = est(EST, 'probate'); estimateStore[LIV] = est(LIV, 'downsizing_move'); estimateStore[CON] = est(CON, 'probate');
+      jobPlanStore[CON] = { rooms: { 0: { status: 'locked' } }, tasks: {}, at: {} };
       jobPlanStore[EST] = { rooms: { 0: { status: 'locked' } }, tasks: {}, at: {} };
       jobPlanStore[LIV] = { rooms: { 0: { status: 'locked' } }, tasks: {}, at: {} };
       const item = (id, o) => Object.assign({ stableId: id, label: 'inventory', roomIdx: 0, status: 'uploaded', category: 'Furniture', ts: T0, updatedAt: T0,
@@ -152,26 +166,43 @@ const EST = 13001, LIV = 13002;
           disposition: 'Donate', channel: 'Goodwill Palm Beach' })];
       _photoRefs[LIV] = [
         item('l1', { itemNo: 1, objectName: 'Oil painting, harbour scene', category: 'Art & Décor', needsAppr: true, fmv: 1200, valLow: 900, valHigh: 1600, valConf: 'high',
-          valuedBy: 'agent', valSource: 'Online comps', valAgentAt: T0, valNameAt: 'Oil painting, harbour scene', disposition: 'Sell', channel: 'Kodner Galleries' })];
-      savePhotoRefs(EST); savePhotoRefs(LIV);
+          valuedBy: 'agent', valSource: 'Online comps', valAgentAt: T0, valNameAt: 'Oil painting, harbour scene', disposition: 'Sell', channel: 'Kodner Galleries' }),
+        // ⚑ for sale to someone who works with Havellin: on a client's own home that needs the client's written approval, so it is on the request.
+        item('l2', { itemNo: 2, objectName: 'Silver tea service', category: 'Silver', needsAppr: true, fmv: 800, valLow: 600, valHigh: 1000, valConf: 'high',
+          valuedBy: 'agent', valSource: 'Online comps', valAgentAt: T0, valNameAt: 'Silver tea service', disposition: 'Sell', channel: 'Ashley Jerome' })];
+      _photoRefs[CON] = [item('c1', { itemNo: 1, objectName: 'Mahogany secretary desk', fmv: 650, valuedBy: 'desk', disposition: 'Donate', channel: 'Goodwill Palm Beach' })];
+      savePhotoRefs(EST); savePhotoRefs(LIV); savePhotoRefs(CON);
       saveJobs(); localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore));
       _logsState = 'ready';
-    }, [EST, LIV, T0]);
+    }, [EST, LIV, T0, CON]);
     await syncSheet();
 
     // ── A ──
     await section('A. a figure typed on the row: the agent\'s range comes off and the one-tap reason opens; one press records it', async () => {
       await toDesk(EST);
       ok(await vis('#inv-row-d2'), 'the cookware\'s row');
+      const m0 = mediaPosts.length;
       await typeIn('#inv-fmv-d2', '300', 'the cookware\'s Total box');
       const l = await line(EST, 'd2');
       eq([l.fmv, l.valuedBy, l.valLow, l.valHigh, l.valSource], [300, 'desk', undefined, undefined, undefined], '⚠⚠ the desk\'s figure, Agent Two\'s range and source gone (VAL-07)');
       const why = await txt('#inv-why-d2');
       has(why, 'Why $300?', 'the reason opened by itself under the row');
       ['A sale’s link', 'Havellin’s own sale', 'The going rate', 'A condition adjustment', 'An appraiser’s verbal opinion', 'Not now'].forEach((w) => has(why, w, 'offered: ' + w));
+      // Tab from the name goes to the row's next box, never into the picker (P10's review: a button holds nothing, so a run's tail
+      // redrew the desk under somebody working down the row; browser step 107).
+      await p.click('#inv-row-d2 .inv-name textarea'); await p.keyboard.press('Tab'); await p.waitForTimeout(200);
+      eq(await p.evaluate(() => { const a = document.activeElement; return a ? [a.tagName, !!(a.closest && a.closest('#inv-row-d2'))] : null; }), ['INPUT', true],
+        '⚠ Tab from the name lands in the row\'s next box, not on a reason');
+      // The figure's own write goes first (its 2.5 s debounce), so the write the pick makes is told apart from it (P10's review).
+      ok(await until(async () => mediaPosts.length > m0, 9000), 'fixture: the typed figure\'s own inventory write has gone');
+      await p.waitForTimeout(400);
+      const n0 = mediaPosts.length;
       await press('#inv-why-d2 button[onclick*="\'rate\'"]', 'The going rate');
       const r = await line(EST, 'd2');
       eq([r.valWhy, r.valWhyBy], ['rate', 'Ashley Jerome'], '⚠⚠ recorded, with the device\'s user');
+      // P10's review: the pick schedules the inventory write, and the write the sheet receives carries the reason.
+      const carried = () => mediaPosts.slice(n0).some((b) => ((b.payload || {}).items || []).some((x) => x.stableId === 'd2' && x.valWhy === 'rate'));
+      ok(await until(async () => carried(), 6000), '⚠⚠ the pick makes an inventory write of its own, and the sheet receives the reason with it');
       eq(await txt('#inv-why-d2'), '', 'and the row says nothing more');
       eq(await val('#inv-fmv-d2'), '$300', 'the figure stays as typed');
       // A desk figure typed again: the row is not redrawn, so the reason is painted under it by id, and the old one comes off.
@@ -265,6 +296,7 @@ const EST = 13001, LIV = 13002;
       await press('#inv-why-d3 .inv-why-open', 'the Rolex\'s basis not stated ▾');
       await press('#inv-why-d3 button[onclick*="\'verbal\'"]', 'An appraiser’s verbal opinion');
       eq((await line(EST, 'd3')).valWhy, 'verbal', 'recorded');
+      has(await txt('#inventory-content button[onclick="setInvFlag(\'nobasis\')"]'), 'No basis 0', '⚠ and the work bar\'s No basis drops to 0 at once (P10\'s review)');
       await press('#inv-row-d3 button[title="Open the full record"]', 'the Rolex\'s ▾');
       has(await txt('#inv-whyrec-d3'), 'Valuation basis an appraiser’s verbal opinion · Ashley Jerome Change the reason', 'its record shows the basis, with the press to change it');
       await press('#inv-row-d3 button[title="Open the full record"]', 'the Rolex\'s ▴');
@@ -302,6 +334,95 @@ const EST = 13001, LIV = 13002;
       let t = await viewerOpen() ? await viewerText() : (await p.evaluate(() => (window.__prints || []).slice(-1)[0] || '')).replace(/<[^>]+>/g, ' ');
       has(t, 'FLAGGED FOR APPRAISAL, ONLY HAVELLIN’S ESTIMATE ($1,200) ON RECORD', '⚠⚠ the badge stays, saying what is on record');
       if (await viewerOpen()) await close();
+    });
+
+    // ── I ── (P10's review)
+    await section('I. a name carrying markup and a firearm on Hold: the DRAFT pill shows the name as text; the schedule marks neither; the package asks', async () => {
+      await p.evaluate(([EST, T0]) => {
+        const item = (id, o) => Object.assign({ stableId: id, label: 'inventory', roomIdx: 0, status: 'uploaded', category: 'Furniture', ts: T0, updatedAt: Date.now(),
+          filename: 'HVL_' + id + '_INV_.jpg', driveFileId: 'f-' + id, namedBy: 'desk', agentConf: 'high', qty: 1, condition: 'Good' }, o);
+        _photoRefs[EST].push(item('d6', { itemNo: 6, objectName: 'Watch <img src=x onerror="(window.top||window).__xss=1"> & box', category: 'Jewelry & Watches', fmv: 4500, valuedBy: 'desk',
+          apprWaived: true, apprWaiveReason: 'sold to a dealer', disposition: 'Consign', channel: 'Kodner Galleries' }));
+        _photoRefs[EST].push(item('d7', { itemNo: 7, objectName: 'Remington 870 pump shotgun', category: 'Firearms', serial: 'RM-1', fmv: 400, valConf: 'high', valuedBy: 'agent',
+          valSource: 'General estimate', valAgentAt: T0, valNameAt: 'Remington 870 pump shotgun', namedBy: 'agent', disposition: 'Hold' }));
+        savePhotoRefs(EST);
+      }, [EST, T0]);
+      await syncSheet();
+      await toDesk(EST);
+      await more('printCourtInventory', EST);
+      await press('#inv-more button[onclick="printCourtInventory(' + EST + ')"]', 'Court Inventory');
+      ok(await viewerOpen(), 'it opens in the viewer');
+      await p.waitForTimeout(500);
+      eq(await p.evaluate(() => window.__xss || (window.top && window.top.__xss) || 0), 0, '⚠⚠ nothing a name brought in runs on the page (must-fix)');
+      const t = await viewerText();
+      has(t, 'DRAFT — 1 valued line with no basis stated (#6 Watch <img src=x onerror="(window.top||window).__xss=1"> & box)', 'the pill names the line, as text');
+      ok(await p.evaluate(() => { const o = document.getElementById('doc-viewer-modal'); const f = o && o.querySelector('iframe'); const d = f && f.contentDocument;
+        return !Array.from((d || document).querySelectorAll('img[onerror]')).length && !Array.from(document.querySelectorAll('#doc-viewer-modal img[onerror]')).length; }), 'and no image element with an onerror in it');
+      has(t, 'Remington 870 pump shotgun', 'fixture: the firearm on the schedule');
+      lacks(t, 'Needs a look: a firearm', '⚠⚠ the schedule marks no firearm (it is adopted above a signature; should-fix)');
+      lacks(t, 'on Hold', 'nor Hold');
+      await close();
+      await press('#inv-workbar button[onclick="printEstateInventoryReport(' + EST + ')"]', 'Estate Inventory PDF');
+      has(await viewerText(), 'Needs a look: a firearm or ammunition; on Hold', 'the Estate Inventory PDF keeps every reason');
+      await close();
+      // The estate package's question names the line with no basis (should-fix).
+      await p.evaluate((id) => goToClientDashboard(id), EST); await p.waitForTimeout(800);
+      const pkg = 'button[onclick*="sendProbatePackage(' + EST + ')"]';
+      ok(await p.locator(pkg).count() === 1, 'fixture: the dashboard offers 📧 Send probate package');
+      const drafts = await p.evaluate(() => window.__drafts.length);
+      answer = false; said.length = 0;
+      await press(pkg, '📧 Send probate package (declined)');
+      ok(await until(async () => said.some((x) => /^confirm:/.test(x)), 6000), 'it asks before drafting');
+      has(said.filter((x) => /^confirm:/.test(x))[0] || '', '1 valued line with no basis stated (#6 Watch', '⚠⚠ naming the line with no basis among the gaps');
+      answer = true;
+      eq(await p.evaluate(() => window.__drafts.length), drafts, 'declined: nothing drafted');
+    });
+
+    // ── J ── (P10's review)
+    await section('J. an appraisal typed on a linked line, then taken off with Cancel: the reason picked for the desk\'s figure is gone', async () => {
+      await p.evaluate((id) => { const j = jobs.find((x) => x.id === id); j.appraisers = [{ id: 'ap1', name: 'Carla Mendes', firm: 'Mendes Appraisal', credential: 'ASA' }]; saveJobs(); }, EST);
+      await toDesk(EST);
+      eq((await line(EST, 'd2')).valWhy, 'rate', 'fixture: the cookware carries The going rate from A');
+      await press('#inv-row-d2 button[title="Open the full record"]', 'the cookware\'s ▾');
+      const sel = 'select[onchange^="_invSetAppraiser(' + EST + ',\'d2\'"]';
+      ok(await vis(sel), 'its record\'s appraiser picker');
+      await p.selectOption(sel, 'ap1'); await p.waitForTimeout(900);
+      eq((await line(EST, 'd2')).apprId, 'ap1', 'Carla Mendes linked');
+      await typeIn('#inv-fmv-d2', '5200', 'the cookware\'s Total box: the appraiser\'s figure');
+      let l = await line(EST, 'd2');
+      eq([l.valuedBy, l.valSource, l.valWhy], ['appraiser', 'Appraisal', undefined], '⚠⚠ the appraisal\'s figure, and the desk\'s reason gone with the desk\'s figure (must-fix)');
+      if (!(await vis(sel))) await press('#inv-row-d2 button[title="Open the full record"]', 'the cookware\'s ▾ again');
+      answer = false; said.length = 0;
+      await p.selectOption(sel, ''); await p.waitForTimeout(900);
+      answer = true;
+      has(said.join(' '), 'Cancel takes the appraisal off', 'unlinking asked whether to keep the appraisal; Cancel pressed');
+      l = await line(EST, 'd2');
+      eq([l.valuedBy, l.valSource, l.fmv, l.valWhy], ['desk', undefined, 5200, undefined], 'Cancel: the desk\'s figure, no source, no reason');
+      has(await txt('#inv-why-d2'), 'basis not stated', '⚠⚠ the row says it has no basis (never the going rate under the appraiser\'s figure)');
+      if (!(await vis('#inv-whyrec-d2'))) await press('#inv-row-d2 button[title="Open the full record"]', 'the cookware\'s ▾ again');
+      has(await txt('#inv-whyrec-d2'), 'Valuation basis basis not stated Why this figure?', 'and so does its record');
+    });
+
+    // ── K ── (P10's review)
+    await section('K. where counsel values, no basis under a value; the living request\'s notice headed by what is on its lines', async () => {
+      await syncSheet();
+      await toDesk(CON);
+      await press('#inv-workbar button[onclick="printApprovalRequest(' + CON + ')"]', 'the contents-tier estate\'s Approval Request');
+      let t = await viewerText();
+      has(t, 'Mahogany secretary desk', 'fixture: the request');
+      has(t, '$650', 'fixture: the typed figure still prints there (VAL-03 is P7\'s remainder)');
+      lacks(t, 'basis not stated', '⚠⚠ but no basis under it: the desk asks none where counsel values (should-fix)');
+      ok(!(await p.evaluate(() => !!document.querySelector('#doc-viewer-modal .inv-req-basis') || !!(document.querySelector('#doc-viewer-modal iframe') && document.querySelector('#doc-viewer-modal iframe').contentDocument && document.querySelector('#doc-viewer-modal iframe').contentDocument.querySelector('.inv-req-basis')))), 'no basis cell at all');
+      await close();
+      await toDesk(LIV);
+      const btn = '#inv-workbar button[onclick="printApprovalRequest(' + LIV + ')"]';
+      if (!(await vis(btn))) await press('#inv-more > summary', 'More ▾');
+      await press(btn, 'the living client\'s Approval Request');
+      t = await viewerText();
+      has(t, 'Property flagged for appraisal and proposed for sale with only Havellin’s estimate on record', '⚠⚠ the notice\'s heading says what is on its line (should-fix)');
+      lacks(t, 'proposed for sale with no value recorded #2', 'never "no value recorded" over Agent Two\'s $800');
+      has(t, 'FLAGGED FOR APPRAISAL, ONLY HAVELLIN’S ESTIMATE ($800) ON RECORD', 'the line\'s badge the same');
+      await close();
     });
 
     // ── H ──

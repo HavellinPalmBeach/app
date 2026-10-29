@@ -15,6 +15,10 @@
 //   H · Send request and Send through DocuSign ask once, and Cancel opens the lines.
 //   I · The Evening Desk's sentence held to the request.
 //   J · the reason rides the save list, the list's read and the export.
+//   K · P10's review (2026-10-28): the DRAFT pill escapes a name; an appraiser's figure carries no reason picked for the desk's, through
+//       a Cancel that takes the appraisal off, nor does a WorthPoint sale's source; the living caution's heading follows its lines;
+//       no basis under a value where counsel values; the package names a value with no basis on Formal; the schedules mark only
+//       what is about the figure or the item; and the five changes a sweep could undo with every check passing.
 // Driven through the real functions (closure lifts), with only the boundaries stubbed by name.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -474,6 +478,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(noComments(fn('_avTakeValue')), "['valLow', 'valHigh', " + FOUR + ']', 'a figure typed takes the range and the reason off');
     has(noComments(fn('_invEdit')), "if (key === 'valSource') [" + FOUR + ']', 'a source chosen in the record takes the reason off');
     has(noComments(fn('_invBulkApply')), "if (key === 'valSource') [" + FOUR + ']', 'and across a selection');
+    // P10's review: the appraisal's figure, the Cancel that takes an appraisal off, and a WorthPoint sale's source name the same four.
+    eq(noComments(fn('_avTakeValue')).split('[' + FOUR + ']').length - 1, 1, 'the appraisal arm names the four on their own (the typed arm with the range)');
+    has(noComments(fn('_invSetAppraiser')), '[' + FOUR + ']', 'the Cancel that takes the appraisal off');
+    has(noComments(fn('agentValueUseSale')), "ref.valSource = 'WorthPoint comps'; [" + FOUR + ']', 'and a WorthPoint sale\'s source');
     const saved = noComments(fn('savePhotoRefs'));
     ['valWhy:r.valWhy', 'valWhyBy:r.valWhyBy', 'valWhyAt:r.valWhyAt', 'valWhyUrl:r.valWhyUrl'].forEach((k) => has(saved, k, 'the manifest keeps ' + k.split(':')[0]));
     const P = papers();
@@ -485,5 +493,146 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(P.c._invExportValue(P.ref('d'), cols, P.job()), 'the going rate · Ashley Jerome', 'the CSV and the workbook carry the reason');
     eq(P.c._invExportValue(P.ref('b'), cols, P.job()), 'the going rate · Ashley Jerome'.replace('the going rate', 'Havellin’s own sale'), 'picked or changed');
     eq(P.c._invExportValue(P.ref('e'), cols, P.job()), 'General estimate', 'and any other source as recorded');
+  });
+  // ═══════════════════════════════════════════════════════════════════════
+  G('K · P10\'s review: what the first build left open', () => {
+    // ── 1 · the DRAFT pill names a line, so it is escaped (must-fix): a name a person typed or Agent One read is text on the page.
+    const BAD = 'Rolex <img src=x onerror="alert(1)"> & box';
+    const bad = () => [ROW('c', { itemNo: 3, objectName: BAD, category: 'Jewelry & Watches', fmv: 4800, valuedBy: 'desk', disposition: 'Consign', channel: 'Kodner Galleries', apprWaived: true })];
+    const X = papers({ job: ESTATE({ docLevel: 'formal' }), rows: bad() });
+    const ci = (X.c.printCourtInventory(7, { asHtml: true }) || {}).html || '';
+    ok(ci.length > 200, 'fixture: the Court Inventory builds');
+    lacks(ci, '<img src=x', '⚠⚠ the Court Inventory carries no markup a name brought in');
+    has(ci, 'DRAFT — 1 valued line with no basis stated (#3 Rolex &lt;img src=x onerror=&quot;alert(1)&quot;&gt; &amp; box)', 'its pill names the line, escaped');
+    has(ci, 'because 1 valued line with no basis stated (#3 Rolex &lt;img src=x onerror=&quot;alert(1)&quot;&gt; &amp; box)', 'the block under the table, escaped once');
+    lacks(ci, '&amp;amp;', 'and never twice');
+    const XT = papers({ job: ESTATE({ docLevel: 'formal', matterType: 'trust', svc: 'cleanout', probateCase: '', executorRole: 'Trustee' }), rows: bad().map((x) => Object.assign(x, { assetTrack: 'Trust' })) });
+    const ts = (XT.c.printTrustSchedule(7, { asHtml: true }) || {}).html || '';
+    ok(ts.length > 200, 'fixture: the Trust Schedule builds');
+    lacks(ts, '<img src=x', '⚠⚠ the Trust Schedule the same');
+    has(ts, 'DRAFT — 1 valued line with no basis stated (#3 Rolex &lt;img', 'its pill escaped');
+    lacks(ts, '&amp;amp;', 'and never twice');
+
+    // ── 2 · a reason picked for the desk's figure never rides the appraiser's (must-fix), through the real edit, link and Cancel.
+    const dlg = { answer: true, asked: [] };
+    const win = { open() {}, location: {}, confirm: (m) => { dlg.asked.push(String(m)); return dlg.answer; }, prompt: () => 'https://www.liveauctioneers.com/item/1' };
+    const AP = [{ id: 'ap1', name: 'Carla Mendes', firm: 'Mendes Appraisal', credential: 'ASA' }];
+    const L = papers({ job: ESTATE({ appraisers: AP }), roots: ['_invSetAppraiser', 'agentValueUseSale'],
+      stubs: { window: win, confirm: win.confirm, deviceUser: () => 'Ashley Jerome' } });
+    const box = (v) => ({ value: v, type: 'text' });
+    L.c._invEdit(7, 'b', 'fmv', box('$900'));
+    ok(L.c.invPickValueWhy(7, 'b', 'rate'), 'fixture: $900 typed, The going rate picked');
+    L.c._invSetAppraiser(7, 'b', 'ap1');
+    L.c._invEdit(7, 'b', 'fmv', box('$5,200'));
+    const b = L.ref('b');
+    eq([b.valuedBy, b.valSource, b.fmv], ['appraiser', 'Appraisal', 5200], 'fixture: the figure typed on the linked line is the appraisal\'s (Q93)');
+    eq([b.valWhy, b.valWhyBy, b.valWhyAt], [undefined, undefined, undefined], '⚠⚠ and the reason picked for the desk\'s $900 went with it');
+    dlg.answer = false;   // Cancel: "takes the appraisal off: the figure stays on the line as the desk's estimate, with no source"
+    L.c._invSetAppraiser(7, 'b', '');
+    has(dlg.asked.join(' '), 'Cancel takes the appraisal off', 'fixture: unlinking asked whether to keep the appraisal');
+    eq([b.valuedBy, b.valSource, b.fmv, b.valWhy], ['desk', undefined, 5200, undefined], 'Cancel: the desk\'s figure, no source, no reason');
+    eq(L.c.invValBasisWord(b, 7), '', '⚠⚠ so it has no basis: nobody gave a reason for $5,200');
+    has(text(L.req().html), '$5,200 basis not stated', 'and the request says so, never "the going rate · Ashley Jerome"');
+    // Belt-and-braces: a line the first P10 build wrote, its appraiser's figure still carrying the desk's reason; the Cancel takes it off.
+    dlg.answer = false;
+    Object.assign(L.ref('d'), { fmv: 5200, valuedBy: 'appraiser', valSource: 'Appraisal', apprId: 'ap1', apprDoc: 'Carla Mendes · Mendes Appraisal (ASA)' });
+    ok(L.ref('d').valWhy === 'rate', 'fixture: the bookcase\'s appraisal carries a reason, as the first build left it');
+    L.c._invSetAppraiser(7, 'd', '');
+    eq([L.ref('d').valuedBy, L.ref('d').valWhy, L.ref('d').valWhyBy], ['desk', undefined, undefined], '⚠ the Cancel takes it off too');
+    // A WorthPoint sale names its source, and the reason picked on the row goes (one basis per figure).
+    dlg.answer = true;
+    L.c._invEdit(7, 'c', 'fmv', box('$4,800'));
+    L.c.invPickValueWhy(7, 'c', 'rate');
+    L.c.document.__seed('av-wp-title-c', 'Rolex Datejust 16234, 1998'); L.c.document.__seed('av-wp-price-c', '$4,650');
+    L.c.document.__seed('av-wp-url-c', 'https://www.worthpoint.com/worthopedia/rolex-datejust-16234'); L.c.document.__seed('av-wp-venue-c', 'eBay');
+    L.c.agentValueUseSale(7, 'c');
+    eq([L.ref('c').valSource, L.ref('c').valWhy, L.ref('c').fmv], ['WorthPoint comps', undefined, 4800], '⚠ a WorthPoint sale used: its source is the basis, the reason gone');
+    eq(L.c.invValBasisWord(L.ref('c'), 7), 'WorthPoint comps', 'and the papers print the sale');
+
+    // ── 3 · the living ⚑ caution's heading follows its lines (should-fix): it said "no value recorded" over Agent Two's $1,200.
+    const flag = (id, o) => ROW(id, Object.assign({ objectName: 'Oil painting, harbour scene', category: 'Art & Décor', needsAppr: true, disposition: 'Sell', channel: 'Ashley Jerome' }, o));
+    const est = { fmv: 1200, valuedBy: 'agent', valSource: 'Online comps', valConf: 'high', valNameAt: 'Oil painting, harbour scene' };
+    const H1 = papers({ job: LIVING(), rows: [flag('l', Object.assign({ itemNo: 3 }, est))] });
+    const h1 = text((H1.req() || {}).html);
+    has(h1, 'Property flagged for appraisal and proposed for sale with only Havellin’s estimate on record #3 Oil painting, harbour scene', '⚠⚠ the request\'s heading over a line carrying Agent Two\'s figure');
+    lacks(h1, 'proposed for sale with no value recorded #3', 'never "no value recorded" over it');
+    const H2 = papers({ job: LIVING(), rows: [flag('l', Object.assign({ itemNo: 3 }, est)), flag('m', { itemNo: 4, objectName: 'Silver tea service', fmv: '' })] });
+    has(text((H2.req() || {}).html), 'Property flagged for appraisal and proposed for sale with no value recorded, or with only Havellin’s estimate on record', 'one with a figure, one with none: both said');
+    const H3 = papers({ job: LIVING(), rows: [flag('m', { itemNo: 4, objectName: 'Silver tea service', fmv: '' })] });
+    has(text((H3.req() || {}).html), 'Property flagged for appraisal and proposed for sale with no value recorded #4', 'none with a figure: the heading as it always read');
+
+    // ── 4 · where counsel values, no basis under a value (should-fix): the desk asks no reason there, so the cell could only say none.
+    const C = papers({ job: ESTATE({ docTier: 'contents' }) });
+    C.c._invEdit(7, 'b', 'fmv', box('$650'));
+    const creq = C.req();
+    has(text(creq.html), '$650', 'fixture: the request still prints the typed figure on the contents tier (VAL-03 is P7\'s remainder)');
+    lacks(creq.html, 'inv-req-basis', '⚠⚠ and no basis under any value there');
+    lacks(text(creq.html), 'basis not stated', 'never a "basis not stated" with no press behind it');
+    has(text(papers().req().html), '$4,800 basis not stated', 'the values tier keeps its basis line');
+
+    // ── 5 · the package's question names a value with no basis on Formal (should-fix): the Court Inventory inside prints DRAFT for it.
+    const K5 = papers({ roots: ['probatePackageGaps'] });
+    has(K5.c.probatePackageGaps(7).join(' | '), '1 valued line with no basis stated (#3 Rolex Datejust)', '⚠⚠ the package asks about the Rolex\'s missing basis');
+    K5.ref('c').valWhy = 'verbal'; K5.ref('c').valWhyBy = 'Anthony Graziano';
+    lacks(K5.c.probatePackageGaps(7).join(' | '), 'with no basis stated', 'a reason picked: nothing to ask about it');
+    const K5s = papers({ job: ESTATE({ docLevel: '', gate706: 'no' }), roots: ['probatePackageGaps'] });
+    lacks(K5s.c.probatePackageGaps(7).join(' | '), 'with no basis stated', 'on Standard the schedule stays FINAL, so the package asks nothing of it');
+    eq(K5.c.probatePackageGaps.toString().indexOf('invBasisDraft(job, live)') > 0, true, 'the package reads the schedules\' one rule');
+
+    // ── 6 · the schedules mark only what is about the figure or the item (should-fix): never a firearm, Hold, a bequest or a caution.
+    const S = papers({ job: ESTATE({ docLevel: '', gate706: 'no' }), rows: [
+      ROW('a', { itemNo: 1, objectName: 'Walnut dresser', agentConf: 'low', fmv: 450, valuedBy: 'agent', valSource: 'General estimate', valConf: 'low', valNameAt: 'Walnut dresser', disposition: 'Sell', channel: 'Kodner Galleries' }),
+      ROW('g', { itemNo: 2, objectName: 'Remington 870 pump shotgun', category: 'Firearms', serial: 'A123', fmv: 400, valuedBy: 'agent', valSource: 'General estimate', valConf: 'high', valNameAt: 'Remington 870 pump shotgun', disposition: 'Hold' }),
+      ROW('k', { itemNo: 3, objectName: 'Cameo brooch', category: 'Jewelry & Watches', fmv: 300, valuedBy: 'agent', valSource: 'General estimate', valConf: 'high', valNameAt: 'Cameo brooch', flagBequest: true, disposition: 'Distribute', channel: 'Nora Hale' })] });
+    const sci = text((S.c.printCourtInventory(7, { asHtml: true }) || {}).html);
+    has(sci, 'FINAL', 'fixture: a FINAL Court Inventory, adopted above a signature');
+    has(sci, 'Walnut dresser Needs a look: both agents were guessing', 'a guess at the figure is still marked');
+    lacks(sci, 'Needs a look: a firearm', '⚠⚠ a firearm on Hold is the desk\'s workflow, not marked on the schedule');
+    lacks(sci, 'on Hold', 'nor Hold');
+    lacks(sci, 'a specific bequest', '⚠⚠ nor a bequest');
+    lacks(sci, 'a release caution', 'nor a release caution');
+    has(text(S.req().html), 'Cameo brooch Jewelry & Watches · Study', 'fixture: the brooch is on the request');
+    has(text(S.req().html), 'Needs a look: a specific bequest; a release caution', 'the request keeps every reason');
+    has(text(S.c.printEstateInventoryReport(7, { asHtml: true }).html), 'Needs a look: a firearm or ammunition; on Hold', 'and so does the Report');
+    eq(Object.keys(S.c.INV_HOLD_SCHEDULE_KEYS || {}).sort(), ['duplicate', 'guess', 'noname', 'note', 'photonote', 'stale', 'unowned', 'valnote'], 'the schedules\' reasons, by name');
+
+    // ── 7 · what a sweep could undo with every check passing (should-fix).
+    // A reason picked schedules the inventory write, and the write carries it (buildMediaPayload reads the live lines as it goes).
+    const syncs = [];
+    const W = papers({ roots: ['buildMediaPayload', '_invRefreshFlagStrip'], stubs: { _scheduleInventorySync: (j) => syncs.push(j), deviceUser: () => 'Ashley Jerome' } });
+    W.c.document.__seed('inv-flagstrip', { innerHTML: 'stale' });
+    W.c.document.getElementById('inv-flagstrip').innerHTML = W.c._renderInvFlagStrip(W.job(), W.c._photoRefs[7]);
+    has(text(W.c.document.getElementById('inv-flagstrip').innerHTML), 'No basis 1', 'fixture: the work bar\'s No basis counts the Rolex');
+    ok(W.c.invPickValueWhy(7, 'c', 'own'), 'Havellin\'s own sale, picked for the Rolex');
+    eq(syncs, [7], '⚠⚠ the pick schedules the inventory write');
+    eq((W.c.buildMediaPayload(7).items.filter((r) => r.stableId === 'c')[0] || {}).valWhy, 'own', 'and the write carries the reason');
+    has(text(W.c.document.getElementById('inv-flagstrip').innerHTML), 'No basis 0', '⚠⚠ the No basis count drops at once');
+    // A request with no value column, and a Donation Record of lines with no figure, say what they carry: names, not values.
+    const NV = papers({ job: LIVING(), rows: [ROW('g', { itemNo: 1, objectName: 'Remington 870 pump shotgun', category: 'Firearms', fmv: '', valuedBy: '', namedBy: 'agent', disposition: 'Sell', channel: 'Palm Beach Guns', serial: 'A123' })] });
+    const nv = text((NV.req() || {}).html);
+    has(nv, 'IN PROGRESS', 'fixture: a living request of a firearm with no figure, stamped');
+    has(nv, 'Dispositions on unreviewed lines may still change.', '⚠⚠ no value column: its caveat speaks of dispositions alone');
+    lacks(nv, 'Values and dispositions on unreviewed lines', 'never of values it does not print');
+    const ND = papers({ rows: [ROW('n', { itemNo: 1, objectName: 'Box of linens', fmv: '', valuedBy: '', agentConf: 'low', disposition: 'Donate', channel: 'Goodwill' })] });
+    const nd = text(((ND.c.printDonationRecord(7, 'n', { asHtml: true })) || {}).html);
+    has(nd, 'IN PROGRESS', 'fixture: a Donation Record with no figure, stamped');
+    has(nd, 'Dispositions on unreviewed lines may still change.', '⚠⚠ the Donation Record the same');
+    lacks(nd, 'Values and dispositions on unreviewed lines', 'never of values');
+    // Cancel opens every flagged line's group, not only the first's (deskShowLine opens that one).
+    const O = sendRig({ answer: false });
+    O.c._invFold = { Sell: 1, Consign: 1, Donate: 1 };
+    O.c.sendApprovalRequest(7);
+    eq(Object.keys(O.c._invFold).sort(), ['Donate'], '⚠⚠ Cancel unfolds the groups of #1 (Sell) and #3 (Consign), leaving the rest as they were');
+
+    // ── 8 · the picker's buttons are out of the tab order (found by browser step 107 on review): Tab from the name goes to the
+    // row's next box, never a button, which holds nothing for _invRenderWhenIdle, so a run's tail redrew under somebody working.
+    const T = papers();
+    T.c._invEdit(7, 'b', 'fmv', box('$300'));
+    const picker = T.c._invWhyHtml(7, T.ref('b'), T.job());
+    eq((picker.match(/<button[^>]*>/g) || []).length, 6, 'fixture: the open picker has its six buttons');
+    eq((picker.match(/<button[^>]*tabindex="-1"[^>]*>/g) || []).length, 6, '⚠⚠ every one out of the tab order');
+    T.c._invEdit(7, 'b', 'fmv', box('$650')); T.c.invWhyClose(7, 'b');
+    const cue = T.c._invWhyHtml(7, T.ref('b'), T.job());
+    ok(/<button class="inv-why-open" tabindex="-1"/.test(cue), '⚠ and so is the row\'s "basis not stated ▾" press');
   });
 };
