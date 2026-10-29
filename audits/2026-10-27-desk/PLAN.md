@@ -733,6 +733,7 @@ Publish that rate only as section (a) step 10 allows.
   - an engagement term in both forms (RT-02): what Havellin's values are, the intended users, no reliance by anyone else, the AI assistance, an optional route through counsel on a contested matter, and the consent to de-identified internal use (RT-12).
 
 **P18. Two devices: the merge itself.** Fix now · L, two sessions · both .gs files redeployed. It can follow Phase 3 if "one person per client on the desk" holds.
+- ⏸ **Deferred 28 October (Anthony):** *"one person per client right now is fine. We're not going to have multiple people working on the desk at night. We can fix that later … There's only three of us in the business."* The rule stays in the guides; P18 is built when the desk needs more than one person on a client at once.
 - Session 1: per-field clocks on what a person owns, in both merges, held equal by a test. That covers name, category, count, Each and Total, source, basis, date, condition, destination, review, Not duplicates and removal.
   - A removal beats a later edit, except **Restore**, and a deliberate clear is a clock too.
   - Agent writes carry the time of their request, skip any field a person changed since, and never move the line's clock (CLAUDE.md's own rule).

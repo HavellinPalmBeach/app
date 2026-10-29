@@ -6,6 +6,9 @@ Not loaded into sessions. `CLAUDE.md` holds the current rules; this file is the 
 
 ## Entries
 
+### 2026-10-29b · P18 deferred; one person per client on the desk stays (docs only)
+Asked what the full two-device merge (P18) is and whether to build it next, Anthony, the evening of 2026-10-28: *"one person per client right now is fine. We're not going to have multiple people working on the desk at night. We can fix that later … There's only three of us in the business. Over time, I can see that being important, but right now it's just not."* The rule stays as it is in the playbook and *The Evening Desk*; `CLAUDE.md` says it holds and P18 waits; the plan marks P18 deferred. No code change, no restamp; the five suites that read `CLAUDE.md` or this file were run alone: 814 passed, 0 failed.
+
 ### 2026-10-29 · `2026-10-28` live; no more insurance reminders (docs only)
 Anthony, 2026-10-29: he pasted `main-sync.gs` and made a New version, so `2026-10-28` (the cell-cap fix, 2026-10-28b and c) is live and nothing is owed on the Apps Script. On the insurance figures: *"Stop bothering me, okay? … I will get it … when they get back to me. I'm obviously going to put it in here"*; he has asked two other insurers as well. `CLAUDE.md`'s rule to remind him at the start of every session is replaced by one never to remind him. No code change, no restamp; the five suites that read `CLAUDE.md` or this file were run alone: 814 passed, 0 failed.
 
