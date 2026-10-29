@@ -716,7 +716,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const bulk = code(fn('_renderInvBulk'));
     has(bulk, "menu('disposition', 'Set disposition…'", 'Set disposition…');
     has(bulk, '>Remove lines</button>', 'Remove lines');
-    has(t, 'Remove lines takes them off the list and keeps the photos; Set disposition… gives them all one destination, such as Donate, guns aside.', 'as the page says');
+    has(t, 'Remove lines takes them off the list and keeps the photos in Drive; Set disposition… gives them all one destination, such as Donate, guns aside.', 'as the page says');
     // The Needs you counts and the earlier days.
     has(code(fn('setInvFlag')), "if (_invFilter.flag) _invFilter.when = 'all';", 'a Needs you count covers every day: pressing one shows every day');
     has(code(fn('_renderInvFlagStrip')), '>Needs you</span>', 'the Needs you row');

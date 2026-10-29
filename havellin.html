@@ -1479,7 +1479,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.28 · 12:53pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.28 · 5:26pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -31107,8 +31107,9 @@ function _invTombstoneLine(jobId, ref, opts) {
 // back). The bulk bar's **Remove lines** is `invRemoveLine`'s rule across the selection, through the desk's one
 // removal writer: each line a stamped tombstone (who, when) that wins the merge, its number spent for good,
 // Removed items giving it back. IT REMOVES THE LINES AND NEVER A PHOTOGRAPH: the room's bin is the only image
-// delete, and it takes a photograph's lines with it; here the file stays in Drive and in the room's strip, which
-// is what a re-shoot of the room wants left alone. Only a live inventory line can be picked (`_invPicked` reads
+// delete, and it takes a photograph's lines with it; here the file stays in Drive, which is what a re-shoot of the room
+// wants left alone. (The room's strip on the Job Plan draws a photograph's own line, so a removed one leaves it: P9's review
+// found the confirm saying it stayed there.) Only a live inventory line can be picked (`_invPicked` reads
 // `_jobInvRefs`: inventory lines, no collection document, no tombstone), which is `invRemoveLine`'s own guard. The
 // confirm names the first eight lines rather than a bare count: "212 lines" invites a yes; "#3 Tesla key card ·
 // #15 Scotch tape dispensers …" is the work about to go.
@@ -31126,7 +31127,7 @@ function invBulkRemove(jobId, read) {
   var shown = lines.slice(0, 8).map(function(r){ return '  \u00b7 #' + _invItemNo(r) + ' ' + (r.objectName || '(unnamed)'); });
   var msg = 'Remove ' + lines.length + ' line' + (lines.length > 1 ? 's' : '') + ' from the inventory?\n\n'
     + shown.join('\n') + (lines.length > shown.length ? '\n  \u00b7 and ' + (lines.length - shown.length) + ' more' : '')
-    + '\n\nTheir numbers are never given to anything else. No photograph is deleted: each stays in Google Drive and in its room, '
+    + '\n\nTheir numbers are never given to anything else. No photograph is deleted: each stays in Google Drive, '
     + 'and a line that shares one keeps it.'
     + '\n\nRemoved items, under Removed items & snapshots on Job Admin & Inv, gives them back.'
     + (_gone ? '\n\nThe sheet was read first: ' + invReadGoneText(_gone) : '');
@@ -31147,8 +31148,8 @@ function invBulkRemove(jobId, read) {
 // line and a confirm (or a chip, Select all, Remove lines and a confirm that also took whatever else was selected, LIV-02). Meanwhile
 // each kept *Not reviewed* counting and every paper at IN PROGRESS with a blank numbered row. **Remove the N with nothing to list**,
 // on the work bar while there are some, takes every such line off through the desk's one removal writer (`_invTombstoneLine`, the
-// manifest saved once): each a stamped tombstone, its number spent, the photograph kept in Drive and in its room as the record of what
-// was there, Removed items giving it back. The sheet is read first (P6's gate, invReadFirst), so a line named or removed on another
+// manifest saved once): each a stamped tombstone, its number spent, the photograph kept in Google Drive as the record of what was
+// there (never in the room's strip, which draws live lines: P9's review), Removed items giving the line back. The sheet is read first (P6's gate, invReadFirst), so a line named or removed on another
 // device meanwhile is left alone; one confirm names the lines by number and room (they have no names) and, flagged, never refused,
 // any that carries something the field said over it (a note, a destination, ⚑ Appraise). Never a photograph Agent One could not
 // read (invLineUnread): that one waits for a close-up or a name.
@@ -31158,8 +31159,8 @@ function _invNothingLineHtml(job, all) {
   return '<div id="inv-nothing-' + job.id + '" class="inv-nothing" style="font-size:10.5px;color:var(--gray);margin-top:7px;">'
     + 'Agent One found nothing to list in ' + n + ' photograph' + (n === 1 ? '' : 's') + ' &middot; '
     + '<button class="btn-s" onclick="invRemoveNothingToList(' + job.id + ')" style="font-size:10px;" '
-    + 'title="Take those lines off the inventory. The photographs stay in Google Drive and in their rooms, and Removed items, under Removed items &amp; snapshots on Job Admin &amp; Inv, gives the lines back.">'
-    + 'Remove the ' + n + ' with nothing to list</button> <span>(the photographs stay)</span></div>';
+    + 'title="Take those lines off the inventory. The photographs stay in Google Drive, and Removed items, under Removed items &amp; snapshots on Job Admin &amp; Inv, gives the lines back.">'
+    + 'Remove the ' + n + ' with nothing to list</button> <span>(the photographs stay in Google Drive)</span></div>';
 }
 // What the field said over a line, for the confirm: its note, a destination chosen, ⚑. '' where nothing.
 function _invFieldSaidText(r) {
@@ -31187,7 +31188,7 @@ function invRemoveNothingToList(jobId, read) {
   var said = lines.filter(function(r) { return !!_invFieldSaidText(r); });
   var msg = 'Remove the ' + n + ' line' + (n === 1 ? '' : 's') + ' Agent One found nothing to list in?\n\n'
     + shown.join('\n') + (n > shown.length ? '\n  · and ' + (n - shown.length) + ' more' : '')
-    + '\n\nNo photograph is deleted: each stays in Google Drive and in its room, as the record of what was there. Their numbers are never given to anything else.'
+    + '\n\nNo photograph is deleted: each stays in Google Drive, as the record of what was there. Their numbers are never given to anything else.'
     + '\n\nRemoved items, under Removed items & snapshots on Job Admin & Inv, gives them back.'
     + (said.length ? '\n\n⚠ ' + said.length + ' of them carr' + (said.length === 1 ? 'ies' : 'y') + ' something said in the field: '
         + said.slice(0, 6).map(function(r) { return where(r) + ': ' + _invFieldSaidText(r); }).join('; ')
@@ -31196,7 +31197,7 @@ function invRemoveNothingToList(jobId, read) {
   if (!window.confirm(msg)) return false;
   lines.forEach(function(r) { _invTombstoneLine(jobId, r, { defer: true }); delete _invPick[r.stableId]; });
   savePhotoRefs(jobId);
-  showSyncBadge(n + ' line' + (n === 1 ? '' : 's') + ' with nothing to list removed, the photographs kept — Removed items, under Removed items & snapshots on Job Admin & Inv, gives them back'
+  showSyncBadge(n + ' line' + (n === 1 ? '' : 's') + ' with nothing to list removed, the photographs kept in Google Drive — Removed items, under Removed items & snapshots on Job Admin & Inv, gives them back'
     + (_gone ? '. ' + invReadGoneText(_gone) : ''), false);
   if (_invFilter.flag === 'nothing') _invFilter.flag = '';   // the pile is empty: the list it filtered is the whole list again
   renderInventoryTab();
@@ -40673,12 +40674,17 @@ function _invTogglePick(stableId, el) {
 // ⚠ NEVER A PHOTOGRAPH AGENT ONE FOUND NOTHING IN (P9, 2026-10-28; EST-09): Select all then Donate put a blank line on the trustees'
 // request (*8 — · Dining Room 1 — Donate Goodwill Palm Beach*) and counted it among the items donated. They are left out, except
 // under their own chip, where Select all picks the pile on screen. A tick on the row still picks one.
+// ⚠ NOR ANY LINE WITH NO NAME (P9's review, 2026-10-28): the frame too dark to read, and a photograph never read, were still picked,
+// and Select all, Donate, Select all, Set recipient put *15 — General/Household · Living Room 1 — Donate Goodwill Palm Beach* on the
+// trustee's request again. A line with no name is picked by its own tick, or by Select all under Unnamed shots or Nothing to list,
+// where picking them is the point (Remove lines over a drawer's photographs).
 function _invPickGroup(jobId, key, on) {
   var job = _invJob(jobId);
+  var namesOnly = _invFilter.flag !== 'unnamed' && _invFilter.flag !== 'nothing';
   _invAssignItemNos(jobId).forEach(function(r){
     if ((r.disposition || '') !== key) return;
     if (!_invMatchesFilter(r, job)) return;
-    if (on && invLineNothingToList(r) && _invFilter.flag !== 'nothing') return;
+    if (on && namesOnly && !String(r.objectName || '').trim()) return;
     if (on) _invPick[r.stableId] = 1; else delete _invPick[r.stableId];
   });
   renderInventoryTab();
@@ -41173,13 +41179,15 @@ function agentApplyResult(jobId, group, result) {
   // too important to be lost on a reload.
   // ⚠ ADDED TO, NEVER REPLACED (2026-10-26): a photograph named a second time (a blank line from Another item in this photo) raised
   // only what the second reading saw, and replacing the notes took the first reading's Firearm or Must find off the line.
+  var fresh = notices;   // the notes this answer adds: a second reading often raises the first one's Firearm or Must find again
   if (notices.length) {
     var src = _getPhotoRef(jobId, group.srcId);
     if (src) {
       var had = src.agentNotices || [];
-      src.agentNotices = had.concat(notices.filter(function(n) {
+      fresh = notices.filter(function(n) {
         return !had.some(function(o) { return o.kind === n.kind && _agNameKey(o.text) === _agNameKey(n.text); });
-      }));
+      });
+      src.agentNotices = had.concat(fresh);
       _setPhotoRef(jobId, _invTouch(src));
     }
   }
@@ -41195,14 +41203,21 @@ function agentApplyResult(jobId, group, result) {
     // sends a frame too dark or blurred to name to a kind "other" note and never guesses at an object it cannot see, so its answer
     // is no objects and *too dark to tell what is on the shelf: photograph it again*. Stamped 'none', the row read *nothing to list*
     // and advised Remove line, and the note went with the line. Stamped 'unread', the row reads *could not be read: <the note>* with
-    // + Close-up beside it (invLineUnread), and no press sweeps it away. Any note counts: a Firearm or a Must find raised over a
-    // frame with nothing listed must never leave the list with a one-press removal.
-    var _unread = notices.length > 0;
+    // + Close-up beside it (invLineUnread), and no press sweeps it away. Any note counts on the photograph's own line: a Firearm or
+    // a Must find raised over a frame with nothing listed must never leave the list with a one-press removal.
+    // ⚠ BUT ONLY A NEW NOTE ON A LINE SPLIT OFF IT (P9's review, 2026-10-28): the blank line of **Another item in this photo** on the
+    // gun cabinet came back empty with the first reading's Firearm note raised again, and read *could not be read* for good (Name
+    // shots never sends it again, and a close-up on a split line goes to nobody). The note was already on the photograph's line, so
+    // the answer means *nothing else in it*: the split line is nothing to list.
+    var _unreadOwn = notices.length > 0, _unreadSplit = fresh.length > 0, _anyUnread = false;
     group.rows.forEach(function(id) {
       var only = _getPhotoRef(jobId, id);
-      if (only && !String(only.objectName || '').trim()) { only.agentAt = Date.now(); only.agentConf = _unread ? 'unread' : 'none'; _setPhotoRef(jobId, _invTouch(only)); }
+      if (!only || String(only.objectName || '').trim()) return;
+      var un = (id === group.srcId && !only.derivedFrom) ? _unreadOwn : _unreadSplit;
+      if (un) _anyUnread = true;
+      only.agentAt = Date.now(); only.agentConf = un ? 'unread' : 'none'; _setPhotoRef(jobId, _invTouch(only));
     });
-    if (_unread) st.unread = (st.unread || 0) + 1; else st.empty++;
+    if (_anyUnread) st.unread = (st.unread || 0) + 1; else st.empty++;
     return;
   }
 
@@ -42968,7 +42983,7 @@ function _avFinish(jobId) {
 // and renderInventoryTab rewrites the tab with innerHTML (CLAUDE.md's trap: a redraw destroys the form under someone typing).
 // The redraw waits until the person leaves the box, and asks again then, so moving to the next box keeps waiting.
 var _invRenderOwed = false;
-function _invRenderWhenIdle() {
+function _invRenderWhenIdle(inPlace) {
   var el = document.activeElement, panel = document.getElementById('panel-inventory');
   var tag = el ? String(el.tagName || '').toLowerCase() : '';
   // Only a box a person types into, or a picker, holds the redraw. A file chooser keeps the focus once the file is picked, so a
@@ -42976,14 +42991,18 @@ function _invRenderWhenIdle() {
   // holds nothing that a redraw could lose (found by browser step 99, building P6).
   var kind = tag === 'input' ? String(el.type || '').toLowerCase() : '';
   if (!panel || !el || !panel.contains(el) || (tag !== 'input' && tag !== 'textarea' && tag !== 'select')
-      || /^(file|checkbox|radio|button|submit|reset|image|range|color|hidden)$/.test(kind)) { renderInventoryTab(); return; }
+      || /^(file|checkbox|radio|button|submit|reset|image|range|color|hidden)$/.test(kind)) { renderInventoryTab(inPlace ? { morph: true } : undefined); return; }
   _invRenderOwed = true;   // read by invMarkListRead; renderInventoryTab clears it
   if (el._invRenderHeld) return;
   el._invRenderHeld = true;
   el.addEventListener('focusout', function done() {
     el.removeEventListener('focusout', done);
     el._invRenderHeld = false;
-    setTimeout(_invRenderWhenIdle, 0);   // after the box's own change has been written (change fires before focusout)
+    // After the box's own change has been written (change fires before focusout). ⚠ IN PLACE, AND NEVER INSIDE THE PRESS (P9's
+    // review): the box is left by the mousedown of the next press, and this redraw replaced the chip under the pointer before the
+    // mouseup (typing in the search, then Not reviewed: the first press lost). renderInventoryTab waits for a press to end
+    // (_invPressHolds), and the owed redraw patches the tab rather than rewriting it.
+    setTimeout(function () { _invRenderWhenIdle(true); }, 0);
   });
 }
 
@@ -43842,10 +43861,15 @@ function _renderInvRow(job, ref) {
   }
   // ⚠ A PHOTOGRAPH AGENT ONE COULD NOT READ SAYS WHY, AND OFFERS THE REMEDY (P9, AGT-02): its note in bronze (a frame too dark to
   // name), and + Close-up on the row while the record is shut (the record carries its own: no control twice). Never Remove advice.
+  // ⚠ A LINE SPLIT OFF A PHOTOGRAPH IS OFFERED NO + Close-up FOR IT (P9's review): Agent One reads a photograph's own close-ups only,
+  // so one added to the split line would change nothing. Its words say to type the name.
   if (invLineUnread(ref)) {
-    var _unN = agentUnreadNote(jid, ref);
-    warn.push('<span class="inv-unread-shot" title="Agent One could not tell what is in this photograph and left a note instead of a name. Add a close-up (Name shots then reads the photograph again with it), or type the name." style="color:var(--bronze);font-weight:700;">could not be read' + (_unN ? ': ' + esc(_unN) : '') + '</span>'
-      + (open || invCloseUpRefusal(ref) ? '' : ' ' + _invCloseUpAddHtml(jid, ref)));
+    var _unN = agentUnreadNote(jid, ref), _unSplit = !!ref.derivedFrom;
+    warn.push('<span class="inv-unread-shot" title="' + (_unSplit
+        ? 'Agent One could not tell what else is in this photograph and left a note instead of a name. Type the name, or Remove line in its record if nothing else is there.'
+        : 'Agent One could not tell what is in this photograph and left a note instead of a name. Add a close-up (Name shots then reads the photograph again with it), or type the name.')
+      + '" style="color:var(--bronze);font-weight:700;">could not be read' + (_unN ? ': ' + esc(_unN) : '') + '</span>'
+      + (open || _unSplit || invCloseUpRefusal(ref) ? '' : ' ' + _invCloseUpAddHtml(jid, ref)));
   }
   // ⚠ AGENT TWO'S ROW BADGES (P23): made for an earlier name, internal, worth a specialist, or not valued and why.
   _avRowBadges(job, ref).forEach(function(b){ warn.push(b); });
@@ -44156,7 +44180,7 @@ function _renderInvGroupHead(job, g) {
         + g.items.length + ' item' + (g.items.length > 1 ? 's' : '')
         + (g.fmv ? ' &middot; ' + _money(g.fmv) : '') + '</span></div>'
       + _invProgressBar(st, 90)
-      + '<button class="btn-s" onclick="_invPickGroup(' + job.id + ',\'' + esc(g.key) + '\',true)" style="font-size:10px;">Select all</button>'
+      + '<button class="btn-s" onclick="_invPickGroup(' + job.id + ',\'' + esc(g.key) + '\',true)" style="font-size:10px;" title="Pick every line in this group on screen that has a name. A line with no name yet is left out: tick its own box, or pick them under Unnamed shots.">Select all</button>'
     + '</div>';
 }
 function _renderInvRoomHead(g, rm) {
@@ -44338,13 +44362,25 @@ function _invApplyWhenDefault(jobId, all) {
 // under the pointer was replaced before the mouseup, so the press did nothing (typing a Total and pressing *No value yet*, *Estate
 // Inventory PDF* or *✓ I've read the list*, the first press lost, every time). And the search box was rewritten 250 ms after each
 // key, so on the iPad the keyboard closed and only the first letter stayed. `_invPatch(el, html, inner)` puts the new markup on
-// screen by changing only what differs: an element at the same place, with the same tag and the same id, is kept and its attributes,
-// text and state brought up to date; anything else is replaced. So a button keeps being the button the person is pressing, a box
-// keeps its focus and its keyboard, and what it shows is what the markup says (a focused box keeps what is typed in it). `inner`
-// patches the element's children (an innerHTML repaint), else the element itself (an outerHTML one). Where the page cannot parse a
-// <template> (the tests' DOM stub) it assigns as before, so a repaint reads the same either way.
+// screen by changing only what differs: an element that is the same control (`_invMorphKey`: its tag, its id, a `data-k`, and what
+// pressing it does, below) is kept and its attributes, text and state brought up to date; anything else is replaced. So a button
+// keeps being the button the person is pressing, a box keeps its focus and its keyboard, and what it shows is what the markup says
+// (a focused box keeps what is typed in it). `inner` patches the element's children (an innerHTML repaint), else the element itself
+// (an outerHTML one). Where the page cannot parse a <template> (the tests' DOM stub) it assigns as before, so a repaint reads the
+// same either way.
+// ⚠⚠ NEVER BY PLACE ALONE (P9's review, 2026-10-28): the first build kept an element at the same place with the same tag and id, and
+// the work bar's buttons, the chips and the notes' Show the item buttons have no id. A repaint that took a control away before the
+// one being pressed (the last figure typed, so *Value 1 line* went) shifted every later button onto its neighbour's action and label
+// between the mousedown and the mouseup: the Estate Inventory PDF pressed ran the CSV, Approval Request opened + Add line item's
+// prompt, and Show the item on #o2's note showed #o3. A control is now matched by what pressing it does (its onclick, onchange,
+// oninput, for and href), searched for among the siblings still ahead, so one taken away or added beside it never moves it; an
+// element with no action of its own and no id is matched by the first action inside it, so a note's block stays its note's. A
+// control whose own action changed is replaced: at worst a press is lost, never sent somewhere else.
 function _invPatch(el, html, inner) {
   if (!el) return false;
+  // During a press on the desk the repaint waits for the click, and is drawn then (_invPressHolds, _invPressLater).
+  if (typeof _invPressHolds === 'function' && _invPressHolds(el)) { _invPressLater(el, html, inner); return true; }
+  el._invPatchSeq = (el._invPatchSeq || 0) + 1;   // a repaint drawn now supersedes one held for this element
   html = String(html == null ? '' : html);
   var tpl = null;
   try { tpl = (typeof document !== 'undefined' && document.createElement) ? document.createElement('template') : null; } catch (e) { tpl = null; }
@@ -44379,20 +44415,125 @@ function _invMorphNode(a, b) {
     if (want !== null && a.value !== want) a.value = want;
   }
 }
-function _invMorphKids(a, b) {
-  var ak = Array.prototype.slice.call(a.childNodes), bk = Array.prototype.slice.call(b.childNodes), i;
-  for (i = 0; i < bk.length; i++) {
-    var x = ak[i], y = bk[i];
-    if (!x) { a.appendChild(y); continue; }
-    var same = x.nodeType === y.nodeType && (x.nodeType !== 1 || (x.tagName === y.tagName && (x.id || '') === (y.id || '')));
-    if (!same) { a.replaceChild(y, x); continue; }
-    if (x.nodeType !== 1) { if (x.nodeValue !== y.nodeValue) x.nodeValue = y.nodeValue; continue; }
-    _invMorphNode(x, y);
+// What makes two elements the same control (P9's review): the tag, the id, a `data-k`, and what pressing it does. An element with no
+// id, no data-k and no action of its own (a note's block, a chip's wrapper) takes the first action inside it. A text node is matched
+// by place among the text around it.
+function _invMorphAct(n) {
+  var acts = ['onclick', 'onchange', 'oninput', 'for', 'href'], out = '';
+  for (var i = 0; i < acts.length; i++) { var v = n.getAttribute(acts[i]); if (v != null) out += '|' + acts[i] + '=' + v; }
+  return out;
+}
+function _invMorphKey(n) {
+  if (!n || n.nodeType !== 1) return '#' + (n ? n.nodeType : 0);
+  var id = n.id || '', k = n.getAttribute('data-k') || '', act = _invMorphAct(n);
+  if (!id && !k && !act && n.querySelector) {
+    var d = null;
+    try { d = n.querySelector('[onclick],[onchange],[oninput],[for],[href]'); } catch (e) { d = null; }
+    if (d) act = '>' + d.tagName + _invMorphAct(d);
   }
-  for (i = ak.length - 1; i >= bk.length; i--) a.removeChild(ak[i]);
+  return n.tagName + '#' + id + '~' + k + act;
+}
+function _invMorphKids(a, b) {
+  var ak = Array.prototype.slice.call(a.childNodes), bk = Array.prototype.slice.call(b.childNodes), i, t;
+  var keys = ak.map(_invMorphKey), at = 0;
+  for (i = 0; i < bk.length; i++) {
+    var y = bk[i], ky = _invMorphKey(y);
+    if (y.nodeType !== 1) {
+      // Text in its place: the next old node, where it is text too; else the new text goes in before it.
+      if (at < ak.length && ak[at].nodeType === y.nodeType) { if (ak[at].nodeValue !== y.nodeValue) ak[at].nodeValue = y.nodeValue; at++; }
+      else a.insertBefore(y, at < ak.length ? ak[at] : null);
+      continue;
+    }
+    // The same control among the old siblings still ahead: what lies before it is gone from the markup (or comes back new later).
+    var m = -1;
+    for (t = at; t < ak.length; t++) if (keys[t] === ky) { m = t; break; }
+    if (m < 0) { a.insertBefore(y, at < ak.length ? ak[at] : null); continue; }
+    for (t = at; t < m; t++) a.removeChild(ak[t]);
+    _invMorphNode(ak[m], y);
+    at = m + 1;
+  }
+  for (t = ak.length - 1; t >= at; t--) a.removeChild(ak[t]);
+}
+
+// ⚠⚠ NOTHING THE DESK DRAWS MOVES UNDER A PRESS (P9's review, 2026-10-28). A box's change fires on the mousedown that leaves it, so
+// whatever the edit repaints is drawn between the mousedown and the mouseup of the next press. Kept in place by `_invPatch`, the
+// control pressed still moved: typing the last missing figure took *Value 1 line* off the work bar, every button after it slid
+// left, the mouseup landed on the CSV, and the click went to neither. And a redraw held while a box had the focus (the minute's read,
+// an agent's end: _invRenderWhenIdle) fired on that box's focusout, inside the next press, and replaced the chip under the pointer
+// (typing in the search, then pressing Not reviewed: the first press lost). So from a mousedown (the main button) to its mouseup a
+// repaint on the desk is held: `_invPatch` draws nothing inside #inventory-content and renderInventoryTab nothing at all, and once
+// the click has run (the mouseup and the click are one task, so a timer of 0 after the mouseup runs after it) what was held is
+// drawn (`_invPressFlush`): each held repaint by id, in order, unless that element was repainted since (`_invPatchSeq`: the click's
+// own repaint of the Reviewed box is newer than the one the name's change asked for) or the tab was drawn since (`_invPressEpoch`);
+// a whole redraw asked for during the press (`_invPressRedraw`) is drawn instead, in place (renderInventoryTab({morph: true})), and
+// covers the rest. Held repaints are drawn as asked, never turned into a whole redraw: that would apply the filters, and a line named
+// under Unnamed shots would leave the view as the next box is pressed. Every write happens at once; only the drawing waits. A release the page never hears (an alert
+// in between, the window left) is caught by the next mousemove with no button down, a select's own change, the window losing the
+// focus, or INV_PRESS_MAX_MS. Only the desk: nothing else on the page asks.
+var INV_PRESS_MAX_MS = 3000;
+var _invPressDown = false;
+var _invPressRedraw = false;
+var _invPressTimer = null;
+var _invPressTracked = false;
+var _invPressQ = [];
+var _invPressEpoch = 0;
+function _invPressStart() {
+  _invPressDown = true;
+  if (_invPressTimer) clearTimeout(_invPressTimer);
+  _invPressTimer = setTimeout(_invPressEnd, INV_PRESS_MAX_MS);
+}
+function _invPressEnd() {
+  if (_invPressTimer) { clearTimeout(_invPressTimer); _invPressTimer = null; }
+  if (!_invPressDown) return;
+  _invPressDown = false;
+  setTimeout(_invPressFlush, 0);   // after the click
+}
+function _invPressFlush() {
+  if (_invPressDown) return;
+  var q = _invPressQ;
+  _invPressQ = [];
+  if (_invPressRedraw) { renderInventoryTab({ morph: true }); return; }   // the whole tab, which covers every held repaint
+  q.forEach(function (x) {
+    try {
+      if (x.fn) { x.fn(); return; }
+      if (x.epoch === _invPressEpoch && x.el._invPatchSeq === x.seq) _invPatch(x.el, x.html, x.inner);
+    } catch (e) {}
+  });
+}
+// True while a press is under way and the repaint is the desk's (`el` inside #inventory-content; no `el`: the whole tab).
+function _invPressHolds(el) {
+  if (!_invPressDown) return false;
+  if (el) {
+    var host = (typeof document !== 'undefined' && document.getElementById) ? document.getElementById('inventory-content') : null;
+    if (!host || typeof host.contains !== 'function' || !host.contains(el)) return false;
+  }
+  return true;
+}
+// A repaint by id held for the click (from _invPatch), or one worked out when it is drawn (`fn`, once per `key`).
+function _invPressLater(el, html, inner) {
+  el._invPatchSeq = (el._invPatchSeq || 0) + 1;
+  _invPressQ.push({ el: el, html: html, inner: inner, seq: el._invPatchSeq, epoch: _invPressEpoch });
+}
+function _invPressFn(key, fn) {
+  if (_invPressQ.some(function (x) { return x.key === key; })) return;
+  _invPressQ.push({ key: key, fn: fn });
+}
+_invPressTrack();   // installed as the page loads (a statement, so the tests' lifts never run it)
+function _invPressTrack() {
+  if (_invPressTracked || typeof document === 'undefined' || !document.addEventListener) return;
+  _invPressTracked = true;
+  document.addEventListener('mousedown', function (e) { if (!e || !e.button) _invPressStart(); }, true);
+  document.addEventListener('mouseup', function () { _invPressEnd(); }, true);
+  document.addEventListener('mousemove', function (e) { if (_invPressDown && e && !e.buttons) _invPressEnd(); }, true);
+  document.addEventListener('change', function (e) { if (e && e.target && e.target.tagName === 'SELECT') _invPressEnd(); }, true);
+  if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('blur', function () { _invPressEnd(); });
 }
 
 function renderInventoryTab(opt) {
+  // A redraw asked for during a press waits for the click, and is drawn then, in place (_invPressHolds, P9's review).
+  if (typeof _invPressHolds === 'function' && _invPressHolds()) { _invPressRedraw = true; return; }
+  _invPressRedraw = false;
+  _invPressEpoch++;   // a repaint held before this draw is drawn by it
   var sel = document.getElementById('inv-job');
   var jobId = sel ? parseInt(sel.value) || 0 : 0;
   var cont = document.getElementById('inventory-content');
@@ -52924,6 +53065,8 @@ function _deskCloseoutShown(jobId, job) {
 // on the tab is touched, and nothing at all unless the desk shows this client.
 function _deskFoldHeadsRepaint(jobId) {
   if (typeof document === 'undefined' || !document || !document.getElementById) return false;
+  // Worked out and drawn once the press has landed (P9's review).
+  if (typeof _invPressHolds === 'function' && _invPressHolds()) { _invPressFn('heads:' + jobId, function () { _deskFoldHeadsRepaint(jobId); }); return false; }
   var sel = document.getElementById('inv-job');
   if (!sel || (parseInt(sel.value) || 0) !== jobId) return false;
   // The top of the tab first, Home Prep's too: the Urgent strip and Job Admin's count and lines (2026-10-22).

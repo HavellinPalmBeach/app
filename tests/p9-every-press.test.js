@@ -111,6 +111,21 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const SH = attempt(() => { const h = lift(['_agStateHtml'], [], { _agRun: { 7: { running: false, total: 3, done: 3, named: 0, split: 0, empty: 1, unread: 2,
       failed: 0, skipped: 0, again: 0, failures: {}, error: '' } }, jobs: [JOB()], _photoRefs: { 7: [] } }); return text(h._agStateHtml(7)); });
     has(SH.ok ? SH.val : SH.err, '2 not named: Agent One left a note instead', '⚠ the naming line counts the photographs Agent One left a note on');
+    // ⚠⚠ P9's review: a line split off a photograph (Another item in this photo) is unread only for a NEW note. The gun cabinet's blank
+    // line came back empty with the first reading's Firearm note again, and read *could not be read* for good.
+    const R = mk();
+    R._jobInvRefs = (j) => R._photoRefs[j].filter((r) => !r.deletedAt);
+    const GUN = 'Long guns visible behind the glass door';
+    R._photoRefs[7] = [LINE('g', { objectName: 'Oak gun cabinet, glazed door', agentNotices: [{ kind: 'firearm', text: GUN }] }),
+      LINE('s1', { objectName: '', derivedFrom: 'g' }), LINE('s2', { objectName: '', derivedFrom: 'g' }),
+      LINE('o', { objectName: '', agentNotices: [{ kind: 'other', text: DARK }] })];
+    R.agentApplyResult(7, { srcId: 'g', rows: ['s1'] }, { objects: [], notices: [{ kind: 'firearm', text: GUN }] });
+    eq(R._getPhotoRef(7, 's1').agentConf, 'none', '⚠⚠ the split line, answered with the photograph\'s own note again: nothing else in it, nothing to list');
+    eq(R._getPhotoRef(7, 'g').agentNotices.length, 1, 'and the note is not added twice');
+    R.agentApplyResult(7, { srcId: 'g', rows: ['s2'] }, { objects: [], notices: [{ kind: 'other', text: 'Something at the back too dark to make out' }] });
+    eq(R._getPhotoRef(7, 's2').agentConf, 'unread', '⚠ a note the photograph did not have yet: the split line could not be read');
+    R.agentApplyResult(7, { srcId: 'o', rows: ['o'] }, { objects: [], notices: [{ kind: 'other', text: DARK }] });
+    eq(R._getPhotoRef(7, 'o').agentConf, 'unread', '⚠ the photograph\'s own line read again (after a close-up) with the same note: still could not be read');
   });
 
   // ═══ C. THE ONE PRESS ═══
@@ -149,7 +164,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(q, 'Remove the 2 lines Agent One found nothing to list in?', 'one question');
     has(q, '#13 (Dining Room)', 'naming each by number and room');
     has(q, '#14 (Kitchen)', 'both');
-    has(q, 'No photograph is deleted', 'saying the photographs stay');
+    has(q, 'No photograph is deleted: each stays in Google Drive, as the record of what was there.', 'saying where the photographs stay');
+    lacks(q, 'in its room', '⚠⚠ and never in its room: the room\'s strip draws a photograph\'s own line, so a removed one leaves it (P9\'s review)');
+    lacks(s._invNothingLineHtml(JOB(), s._photoRefs[7]), 'in their rooms', '⚠ nor the press\'s title');
+    lacks(noComments(fn('invBulkRemove')), 'in its room', '⚠ nor Remove lines\' question, which said it first');
+    has(noComments(fn('invBulkRemove')), 'No photograph is deleted: each stays in Google Drive, ', 'which says Google Drive');
+    has(text(s._invNothingLineHtml(JOB(), s._photoRefs[7])), '(the photographs stay in Google Drive)', 'which says Google Drive');
     has(q, '#14 (Kitchen): note “all of this to charity”', '⚠ flagging, not refusing, a line the field said something over');
     ok(!s._getPhotoRef(7, 'n13').deletedAt, 'Cancel changes nothing');
     answer = true;
@@ -161,7 +181,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(saved, 1, 'the manifest is saved once');
     eq(Object.keys(s._invPick), ['m'], 'a removed line leaves the selection; the rest of it stays');
     eq(s._invFilter.flag, '', 'the pile emptied: its chip lets the list go');
-    has(badges[badges.length - 1], '2 lines with nothing to list removed, the photographs kept', 'the toast says what was done');
+    has(badges[badges.length - 1], '2 lines with nothing to list removed, the photographs kept in Google Drive', 'the toast says what was done, and where the photographs are');
     // A line named on another device meanwhile is left alone.
     const t = mk();
     t.invReadFirst = (j, what, go) => { t._getPhotoRef(7, 'n13').objectName = 'Cutlery tray'; t._getPhotoRef(7, 'n14').deletedAt = 5;
@@ -242,16 +262,23 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   });
 
   // ═══ F. SELECT ALL ═══
-  G('F · Select all skips a photograph Agent One found nothing in, except under its own chip', () => {
+  G('F · Select all picks only lines with a name, except under Unnamed shots and Nothing to list', () => {
     const s = lift(['_invPickGroup'], ['renderInventoryTab', '_invMatchesFilter'], {
-      jobs: [JOB()], _photoRefs: { 7: [LINE('a', { disposition: '' }), NOTHING('n'), UNREAD('d')] }, renderInventoryTab() {},
+      jobs: [JOB()], _photoRefs: { 7: [LINE('a', { disposition: '' }), NOTHING('n'), UNREAD('d'), LINE('b', { objectName: '  ' })] }, renderInventoryTab() {},
       _invMatchesFilter: () => true, _invFilter: { when: 'all', room: '', q: '', flag: '' }, _invPick: {},
     });
     s._invPickGroup(7, '', true);
-    eq(Object.keys(s._invPick).sort(), ['a', 'd'], '⚠⚠ Select all picks the line and the too-dark frame, never the empty photograph (EST-09)');
+    eq(Object.keys(s._invPick).sort(), ['a'], '⚠⚠ Select all picks the named line: never the empty photograph (EST-09), nor the too-dark frame or a photograph never read (P9\'s review: Donate, then Set recipient, put #15 on the trustee\'s request)');
     s._invPick = {}; s._invFilter.flag = 'nothing';
     s._invPickGroup(7, '', true);
     ok(!!s._invPick.n, 'under the Nothing to list chip, Select all picks the pile on screen');
+    s._invPick = {}; s._invFilter.flag = 'unnamed';
+    s._invPickGroup(7, '', true);
+    ok(!!s._invPick.d && !!s._invPick.b, 'under Unnamed shots, Select all picks the lines waiting for a name (Remove lines over a drawer\'s photographs)');
+    s._invPick = { a: 1, d: 1 }; s._invFilter.flag = '';
+    s._invPickGroup(7, '', false);
+    eq(Object.keys(s._invPick), [], 'and unpicking takes every line of the group off, named or not');
+    has(fn('_renderInvGroupHead'), 'A line with no name yet is left out', 'the button says so');
   });
 
   // ═══ G. A FILTER CHANGED CLEARS THE SELECTION ═══
@@ -409,6 +436,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         appendChild(c) { this.childNodes.push(c); c.parentNode = this; return c; },
         removeChild(c) { this.childNodes = this.childNodes.filter((x) => x !== c); return c; },
         replaceChild(n, o) { const i = this.childNodes.indexOf(o); this.childNodes[i] = n; n.parentNode = this; return o; },
+        insertBefore(n, ref) { const i = ref ? this.childNodes.indexOf(ref) : -1; if (i < 0) this.childNodes.push(n); else this.childNodes.splice(i, 0, n); n.parentNode = this; return n; },
+        querySelector() { let hit = null; const walk = (n) => (n.childNodes || []).some((c) => { if (c.nodeType !== 1) return false;
+          if (['onclick', 'onchange', 'oninput', 'for', 'href'].some((k) => c.hasAttribute(k))) { hit = c; return true; } return walk(c); }); walk(this); return hit; },
         querySelectorAll(sel) { const out = []; const walk = (n) => (n.childNodes || []).forEach((c) => { if (c.nodeType === 1 && c.tagName.toLowerCase() === sel) out.push(c); walk(c); }); walk(this); return out; },
         get textContent() { return this.childNodes.map((c) => (c.nodeType === 3 ? c.nodeValue : c.textContent)).join(''); } };
       Object.keys(attrs || {}).forEach((k) => el.setAttribute(k, attrs[k]));
@@ -416,7 +446,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       return el;
     };
     const tx = (v) => ({ nodeType: 3, nodeValue: v });
-    const s = sandbox({ fns: ['_invPatch', '_invMorphNode', '_invMorphKids'], stubs: { document: { get activeElement() { return active; } } } });
+    const s = sandbox({ fns: ['_invPatch', '_invMorphNode', '_invMorphKids', '_invMorphKey', '_invMorphAct'], stubs: { document: { get activeElement() { return active; } } } });
     const btn = mk('BUTTON', { class: 'btn-s', onclick: "setInvFlag('noval')" }, [tx('No value yet '), mk('STRONG', {}, [tx('3')])]);
     const box = mk('INPUT', { type: 'text', id: 'inv-fmv-a', value: '$350' }); box.value = '50';
     const a = mk('DIV', { id: 'inv-flagstrip' }, [btn, box, mk('SPAN', { id: 'x' }, [tx('old')])]);
@@ -436,10 +466,39 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     s._invMorphKids(c, mk('DIV', {}, [mk('INPUT', { type: 'checkbox', disabled: '' }), mk('INPUT', { type: 'text', value: 'y' })]));
     eq([c.childNodes[0].checked, c.childNodes[0].disabled, c.childNodes[1].value, c.childNodes.length], [false, true, 'y', 2],
       'a tick, a shut box and a value follow the markup where nobody is in the box; what the markup lacks goes');
+    // ⚠⚠ NEVER BY PLACE ALONE (P9's review, 2026-10-28): a repaint that takes a control away before the one pressed. The first build kept
+    // the element at each place and gave it the next one's action: the Estate Inventory PDF pressed ran the CSV.
+    const val = mk('BUTTON', { class: 'btn-s', onclick: 'agentValueRun(7)' }, [tx('Value 1 line')]);
+    const pdf = mk('BUTTON', { class: 'btn-s', onclick: 'printEstateInventoryReport(7)' }, [tx('Estate Inventory PDF')]);
+    const csv = mk('BUTTON', { class: 'btn-s', onclick: 'exportInventoryCSV(7)' }, [tx('CSV')]);
+    const bar = mk('DIV', {}, [val, tx(' '), pdf, tx(' '), csv]);
+    s._invMorphKids(bar, mk('DIV', {}, [mk('BUTTON', { class: 'btn-s', onclick: 'printEstateInventoryReport(7)' }, [tx('Estate Inventory PDF')]), tx(' '),
+      mk('BUTTON', { class: 'btn-s', onclick: 'exportInventoryCSV(7)' }, [tx('CSV')])]));
+    const kids = bar.childNodes.filter((n) => n.nodeType === 1);
+    ok(kids[0] === pdf && kids[1] === csv, '⚠⚠ Value 1 line goes, and the Estate Inventory PDF and the CSV are the same buttons as before');
+    eq(kids.map((k) => [k.getAttribute('onclick'), k.textContent]), [['printEstateInventoryReport(7)', 'Estate Inventory PDF'], ['exportInventoryCSV(7)', 'CSV']],
+      '⚠⚠ each still does what it did: no button takes its neighbour\'s action or label');
+    eq([val.getAttribute('onclick'), val.textContent], ['agentValueRun(7)', 'Value 1 line'], 'the button taken away was taken away, never re-pointed');
+    // One added before it: kept too.
+    s._invMorphKids(bar, mk('DIV', {}, [mk('BUTTON', { class: 'btn-s', onclick: 'agentRoomCheckRun(7)' }, [tx('Check 2 rooms')]), tx(' '),
+      mk('BUTTON', { class: 'btn-s', onclick: 'printEstateInventoryReport(7)' }, [tx('Estate Inventory PDF')])]));
+    ok(bar.childNodes.filter((n) => n.nodeType === 1)[1] === pdf, '⚠ and a button added before it leaves it where it is');
+    // A note's block has no id and no action of its own: it is matched by the action inside it (the notes' Show the item).
+    const note = (id) => mk('DIV', { class: 'ag-note' }, [mk('SPAN', {}, [tx('Look at the papers in ' + id)]), mk('BUTTON', { class: 'desk-show', onclick: "deskShowLine(7,'" + id + "')" }, [tx('Show the item')])]);
+    const n1 = note('o1'), n2 = note('o2'), n3 = note('o3'), list = mk('DIV', { id: 'inv-agent-notices' }, [n1, n2, n3]);
+    const show2 = n2.childNodes[1];
+    s._invMorphKids(list, mk('DIV', {}, [note('o2'), note('o3')]));
+    ok(list.childNodes[0] === n2 && n2.childNodes[1] === show2, '⚠⚠ the first note quietened: the second note, and its Show the item, are the same elements');
+    eq(show2.getAttribute('onclick'), "deskShowLine(7,'o2')", '⚠⚠ and Show the item on #o2 still shows #o2 (it showed #o3)');
+    // A control whose own action changed is replaced: at worst a press is lost, never sent somewhere else.
+    const was = mk('BUTTON', { onclick: 'a()' }, [tx('A')]), box2 = mk('DIV', {}, [was]);
+    s._invMorphKids(box2, mk('DIV', {}, [mk('BUTTON', { onclick: 'b()' }, [tx('B')])]));
+    ok(box2.childNodes[0] !== was && was.getAttribute('onclick') === 'a()', '⚠ a button whose action changed is a new button; the old one is never re-pointed');
+    eq(s._invMorphKey(mk('INPUT', { id: 'inv-fmv-a', onchange: "_invEdit(7,'a','fmv',this)" })), "INPUT#inv-fmv-a~|onchange=_invEdit(7,'a','fmv',this)", 'the key: tag, id, data-k and the action');
     // _invPatch itself, where the page can parse markup (a <template>): it morphs, never assigns (the sweep's R24: the morph
     // functions alone passed with _invPatch assigning every time). The template's parse is the hand-built tree for that markup.
     const TREES = {};
-    const P = sandbox({ fns: ['_invPatch', '_invMorphNode', '_invMorphKids'], stubs: { document: { get activeElement() { return active; },
+    const P = sandbox({ fns: ['_invPatch', '_invMorphNode', '_invMorphKids', '_invMorphKey', '_invMorphAct'], stubs: { document: { get activeElement() { return active; },
       createElement: () => { const t = { content: { childNodes: [] } }; Object.defineProperty(t, 'innerHTML', { set(h) { t.content = mk('FRAG', {}, TREES[h] ? TREES[h]() : []); } }); return t; } } } });
     const btn2 = mk('BUTTON', { class: 'btn-s' }, [tx('Estate Inventory PDF')]);
     const wb = mk('DIV', { id: 'inv-workbar' }, [btn2, mk('SPAN', {}, [tx('3 of 9 reviewed')])]);
@@ -490,7 +549,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══ N. THE ROW'S WORDS ═══
   G('N · a too-dark frame says why on its row, with + Close-up; an empty photograph says nothing to list', () => {
     const s = lift(['_renderInvRow'], ['_invInput', '_invThumbHTML', 'custodyEvents', '_invPanelCols', '_renderInvPanel'], {
-      jobs: [JOB()], _photoRefs: { 7: [UNREAD('d', { itemNo: 15 }), NOTHING('n', { itemNo: 13 })] },
+      jobs: [JOB()], _photoRefs: { 7: [UNREAD('d', { itemNo: 15 }), NOTHING('n', { itemNo: 13 }), UNREAD('sp', { itemNo: 16, derivedFrom: 'd', agentNotices: [] })] },
       _invInput: () => '', _invThumbHTML: () => '<div></div>', custodyEvents: () => [], _invPanelCols: () => [], _renderInvPanel: () => '',
       estimateStore: { 7: { estimate: { rooms: ROOMS } } }, _invFilter: { when: 'all', room: '', q: '', flag: '' }, _invHeld: {},
     });
@@ -504,6 +563,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(n.ok ? n.val : '', 'Remove the N with nothing to list, on the Inventory Review bar', 'its title names the one press');
     s._invOpen = { d: 1 };
     eq(count(s._renderInvRow(JOB(), s._getPhotoRef(7, 'd')), "invAddCloseUp(7,'d',this)"), 0, 'with its record open, the record\'s + Close-up is the one (no control twice)');
+    // ⚠ P9's review: a line split off a photograph is offered no + Close-up for it (Agent One reads the photograph's own close-ups).
+    const sp = attempt(() => s._renderInvRow(JOB(), s._getPhotoRef(7, 'sp')));
+    has(text(sp.ok ? sp.val : sp.err), 'could not be read: ' + DARK, 'a split line Agent One could not read says why, with the photograph\'s note');
+    eq(count(sp.ok ? sp.val : '', 'invAddCloseUp('), 0, '⚠⚠ and offers no + Close-up, which would change nothing');
+    has(sp.ok ? sp.val : '', 'Type the name, or Remove line in its record if nothing else is there.', 'its words say what settles it');
   });
 
   // ═══ O. A CLOSE-UP LANDS ON A FRAME AGENT ONE COULD NOT READ ═══
@@ -538,6 +602,111 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(asked[0], 'Agent One noted on it: ' + DARK, '⚠ the confirm names the note (AGT-02)');
   });
 
+  // ═══ R. NOTHING THE DESK DRAWS MOVES UNDER A PRESS (P9's review) ═══
+  G('R · from a mousedown to its click the desk draws nothing; then what was held is drawn, as it was asked for', () => {
+    const listeners = {}, timers = [], drawn = [];
+    const inDesk = { id: 'inv-workbar', innerHTML: 'old', outerHTML: 'old' }, elsewhere = { id: 'plan-x', innerHTML: 'old', outerHTML: 'old' };
+    const host = { contains: (el) => el === inDesk };
+    const doc = { getElementById: (id) => (id === 'inventory-content' ? host : null),
+      addEventListener: (t, f) => { (listeners[t] = listeners[t] || []).push(f); } };
+    const fire = (t, e) => (listeners[t] || []).forEach((f) => f(e || {}));
+    const S = sandbox({ fns: ['_invPressStart', '_invPressEnd', '_invPressFlush', '_invPressHolds', '_invPressTrack', '_invPatch', '_invPressLater', '_invPressFn'],
+      vars: ['INV_PRESS_MAX_MS', '_invPressDown', '_invPressRedraw', '_invPressTimer', '_invPressTracked', '_invPressQ', '_invPressEpoch'],
+      stubs: { document: doc, window: { addEventListener: (t, f) => { (listeners['w:' + t] = listeners['w:' + t] || []).push(f); } },
+        setTimeout: (f, ms) => { timers.push({ f, ms }); return timers.length; }, clearTimeout() {}, renderInventoryTab: (o) => drawn.push(o) } });
+    S._invPressTrack(); S._invPressTrack();
+    eq((listeners.mousedown || []).length, 1, 'the tracker is installed once');
+    S._invPatch(inDesk, '<div id="inv-workbar">new</div>');
+    eq(inDesk.outerHTML, '<div id="inv-workbar">new</div>', 'with no press, a repaint is drawn at once');
+    inDesk.outerHTML = 'old';
+    fire('mousedown', { button: 0 });
+    ok(S._invPressDown === true, 'a mousedown with the main button starts a press');
+    eq(timers[timers.length - 1].ms, S.INV_PRESS_MAX_MS, 'and arms the watchdog for a release the page never hears');
+    S._invPatch(inDesk, '<div id="inv-workbar">new</div>');
+    eq(inDesk.outerHTML, 'old', '⚠⚠ during the press a repaint on the desk draws nothing (the button pressed stays where it was)');
+    eq([S._invPressQ.length, S._invPressRedraw], [1, false], 'it is held, as it was asked for, and no whole redraw is owed');
+    S._invPatch(elsewhere, 'new');
+    eq(elsewhere.outerHTML, 'new', 'a repaint off the desk is never held');
+    fire('mouseup', {});
+    ok(S._invPressDown === false, 'the mouseup ends the press');
+    eq(inDesk.outerHTML, 'old', '⚠ nothing is drawn before the click (the click runs in the mouseup\'s task)');
+    const after = timers.filter((t) => t.ms === 0);
+    eq(after.length, 1, 'the held repaint is a timer of 0 after the mouseup, so after the click');
+    after.forEach((t) => t.f());
+    eq(inDesk.outerHTML, '<div id="inv-workbar">new</div>', '⚠⚠ then the held repaint is drawn');
+    eq(drawn, [], '⚠⚠ and never turned into a whole redraw (which would apply the filters: a line named under Unnamed shots would leave the view)');
+    // A repaint the click itself made since is newer: the held one is not drawn over it (the name typed, then the Reviewed box ticked).
+    const rb = { id: 'inv-rev-a', outerHTML: 'unticked' };
+    host.contains = (el) => el === inDesk || el === rb;
+    fire('mousedown', { button: 0 });
+    S._invPatch(rb, 'unticked, as the name left it');
+    fire('mouseup', {});
+    S._invPatch(rb, 'ticked, by the click');
+    timers.filter((t) => t.ms === 0).slice(-1).forEach((t) => t.f());
+    eq(rb.outerHTML, 'ticked, by the click', '⚠⚠ a repaint the click made since wins: the held one is dropped');
+    // The tab drawn since: the held repaint is dropped too (that draw covers it).
+    fire('mousedown', { button: 0 });
+    S._invPatch(rb, 'held');
+    S._invPressEpoch++;
+    fire('mouseup', {});
+    timers.filter((t) => t.ms === 0).slice(-1).forEach((t) => t.f());
+    eq(rb.outerHTML, 'ticked, by the click', 'a repaint held before the tab was drawn is dropped');
+    // A whole redraw asked for during the press: drawn instead, in place, and it covers every held repaint.
+    fire('mousedown', { button: 0 });
+    S._invPatch(rb, 'held again'); S._invPressRedraw = true;
+    fire('mouseup', {});
+    timers.filter((t) => t.ms === 0).slice(-1).forEach((t) => t.f());
+    eq([drawn, rb.outerHTML], [[{ morph: true }], 'ticked, by the click'], '⚠⚠ a whole redraw owed is drawn once, in place, and the held repaint with it');
+    // Releases the page never heard: a mousemove with no button down, a select's own change, the window losing the focus.
+    fire('mousedown', { button: 0 }); fire('mousemove', { buttons: 1 });
+    ok(S._invPressDown === true, 'a mousemove with the button still down is the same press');
+    fire('mousemove', { buttons: 0 });
+    ok(S._invPressDown === false, 'a mousemove with no button down ends it');
+    fire('mousedown', { button: 0 }); fire('change', { target: { tagName: 'INPUT' } });
+    ok(S._invPressDown === true, '⚠ a box\'s change on the way out (the very case) does not end it');
+    fire('change', { target: { tagName: 'SELECT' } });
+    ok(S._invPressDown === false, 'a select\'s change (its list closed) does');
+    fire('mousedown', { button: 2 });
+    ok(S._invPressDown === false, 'a right click is no press');
+    fire('mousedown', { button: 0 }); fire('w:blur', {});
+    ok(S._invPressDown === false, 'the window losing the focus ends it');
+    // renderInventoryTab waits for the press, and is drawn then.
+    const RT = sandbox({ fns: ['renderInventoryTab', '_invPressHolds'], vars: ['_invPressDown', '_invPressRedraw', '_invPressEpoch'],
+      stubs: { document: { getElementById: () => { throw new Error('drawn during the press'); } } } });
+    RT._invPressDown = true;
+    const r = attempt(() => RT.renderInventoryTab());
+    ok(r.ok, '⚠⚠ renderInventoryTab asked for during a press draws nothing' + (r.ok ? '' : ': ' + r.err));
+    ok(RT._invPressRedraw === true, 'and leaves the desk owed its redraw');
+    const RT2 = sandbox({ fns: ['renderInventoryTab', '_invPressHolds'], vars: ['_invPressDown', '_invPressRedraw', '_invPressEpoch'],
+      stubs: { document: { getElementById: () => null } } });
+    RT2._invPressRedraw = true;
+    const ep = RT2._invPressEpoch;
+    RT2.renderInventoryTab();
+    eq([RT2._invPressEpoch, RT2._invPressRedraw], [ep + 1, false], '⚠ a draw of the tab moves the epoch (so a repaint held before it is dropped) and settles a whole redraw owed');
+    // The bars' lines, repainted by id after a card's repaint, wait too (they are drawn with the desk once the press lands).
+    let asked = 0;
+    const FH = sandbox({ fns: ['_deskFoldHeadsRepaint', '_invPressHolds', '_invPressFn', '_invPressFlush'], vars: ['_invPressDown', '_invPressRedraw', '_invPressQ'],
+      stubs: { document: { getElementById: () => { asked++; return null; } } } });
+    FH._invPressDown = true;
+    eq([FH._deskFoldHeadsRepaint(7), FH._deskFoldHeadsRepaint(7), asked, FH._invPressQ.length], [false, false, 0, 1], '⚠ during a press the bars\' lines are not repainted: held, once');
+    FH._invPressDown = false; FH._invPressFlush();
+    eq([asked > 0, FH._invPressQ.length], [true, 0], 'and worked out and drawn once the press has landed');
+    // _invRenderWhenIdle: the redraw held for a box is drawn in place once the box is left (the press then holds it, above).
+    let lis = null; const box = { tagName: 'INPUT', type: 'search', addEventListener: (t, f) => { lis = f; }, removeEventListener() {} }, chip = { tagName: 'BUTTON' };
+    const panel = { contains: () => true };
+    const idleDoc = { activeElement: box, getElementById: (id) => (id === 'panel-inventory' ? panel : null) };
+    const idleT = [], idleDrawn = [];
+    const W = sandbox({ fns: ['_invRenderWhenIdle'], vars: ['_invRenderOwed'], stubs: { document: idleDoc, renderInventoryTab: (o) => idleDrawn.push(o === undefined ? 'whole' : o),
+      setTimeout: (f) => { idleT.push(f); return 0; } } });
+    W._invRenderWhenIdle();
+    eq(idleDrawn, [], 'fixture: held while the search box has the focus');
+    idleDoc.activeElement = chip; lis(); idleT.splice(0).forEach((f) => f());
+    eq(idleDrawn, [{ morph: true }], '⚠⚠ the box left by the next press: the owed redraw patches the tab in place (it rewrote it under the chip)');
+    W._invRenderWhenIdle();
+    eq(idleDrawn[1], 'whole', 'a redraw asked for with nobody in a box is the whole tab, as before');
+    has(SRC, "\n_invPressTrack();", 'the page installs the tracker as it loads');
+  });
+
   // ═══ Q. THE PAGES SAY IT, EACH SENTENCE HELD TO THE CODE ═══
   G('Q · The Evening Desk, the manual and the playbook say what the desk now does', () => {
     const fs = require('fs'), path = require('path');
@@ -547,7 +716,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       .replace(/&#(\d+);/g, (m, n) => String.fromCodePoint(+n)).replace(/&([a-z]+);/g, (m, n) => (NAMED[n] != null ? NAMED[n] : m))
       .replace(/\s+/g, ' ').replace(/\s+([,.;:)])/g, '$1').trim();
     const desk = page(read('evening-desk-guide.html'));
-    has(desk, 'A photo with nothing worth listing goes under Nothing to list: Remove the N with nothing to list takes them all off, photos kept. One too dark to read says why: add a close-up.',
+    has(desk, 'A photo with nothing worth listing goes under Nothing to list: Remove the N with nothing to list takes them all off, photos kept in Drive. One too dark to read says why: add a close-up.',
       'The Evening Desk says the pile, the press and the too-dark frame');
     has(desk, 'The ticks clear after each press.', 'and that the selection clears');
     // Each held to the code it describes.

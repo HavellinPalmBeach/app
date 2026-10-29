@@ -510,7 +510,7 @@ function groupB({ group, ok, eq, has, lacks }) {
     has(r, "'<div id=\"inv-records\" data-job=\"' + esc(String(jobId)) + '\">' + _renderLedgerCards(job, all) + '</div>'", 'the close-out papers\' host, exactly (p19-ledger)');
     ok(r.indexOf('_agDupHtml(jobId, all)') > -1 && r.indexOf('_agDupHtml(jobId, all)') < r.indexOf('+ body'), 'Possible duplicates before the rows (agent-inventory)');
     const raw = SRC.slice(SRC.indexOf('function renderInventoryTab('));
-    has(raw.slice(0, 900), '_invEnsureLoaded(jobId)', 'the render hydrates first (loading)');
+    has(raw.slice(0, 1300), '_invEnsureLoaded(jobId)', 'the render hydrates first (loading; 1,300 since P9\'s review, the press hold opening the render)');
     eq((r.match(/_invApplyWhenDefault\(jobId, all\)/g) || []).length, 1, 'one once-per-client filter default (p15-followups)');
     ok(r.indexOf('collectionLinesEnsure(jobId)') < r.indexOf('_invAssignItemNos(jobId)'), 'collections before the numbering (room-check)');
     ok(r.indexOf('_renderInventoryImportPanel(jobId)') > r.indexOf('_renderInvWorkbar(job, all)') && r.indexOf('_renderInventoryImportPanel(jobId)') < r.indexOf('+ body'),

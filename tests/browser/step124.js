@@ -16,9 +16,9 @@
 //      reads *could not be read: Too dark …* with + Close-up, and never *nothing to list*.
 //   B. Under Not reviewed, two presses on the first row's Reviewed box 150 ms apart, then two on the next row's 600 ms apart:
 //      exactly two lines ticked, each row held in place, greyed, its box shut, with Undo; Undo gives the line back unticked.
-//   C. Select all on Not yet decided picks the six lines and #15, never #13 or #14; Mark reviewed (after the sheet's read)
-//      ticks the six, leaves #15 alone and names it; the too-dark note is still on the list above the rows; the selection is
-//      cleared and the bar says so until OK.
+//   C. Select all on Not yet decided picks the six lines, never #13, #14 or #15 (no line with no name: P9's review); #15 ticked by
+//      its own box; Mark reviewed (after the sheet's read) ticks the six, leaves #15 alone and names it; the too-dark note is still
+//      on the list above the rows; the selection is cleared and the bar says so until OK.
 //   D. The search: *harbor* typed at 400 ms and at 80 ms a key keeps every letter, the box keeps the focus, the list filters.
 //   E. A Total typed over Agent Two's figure, then Tab: the focus is on Where it goes and the figure is the desk's; an Each
 //      typed on another agent figure, then Where it goes clicked: the focus is on that select.
@@ -32,6 +32,12 @@
 //      as tombstones with their photographs kept; the chip and the press gone; the Estate Inventory PDF prints no blank row;
 //      Removed items gives one back.
 //   J. The package's question counts the desk's gaps: the photograph not yet named, the lines with no disposition and no value.
+//   K. (P9's review) Presses at a person's speed (down, 100 ms, up) straight after an edit that adds or takes away the control
+//      beside the one pressed, or with a redraw owed: the last missing figure typed while *Value 1 line* shows, then the Estate
+//      Inventory PDF: the PDF, never the CSV; a name typed that quiets #o1's note, then Show the item on #o2's: #o2; the search
+//      typed with a redraw owed, then Not reviewed: it filters; a Total typed with a redraw owed, then No value yet: it filters.
+//      And the gun cabinet's blank line from + Another item in this photo, answered with the Firearm note again, reads nothing to
+//      list with no + Close-up.
 //   At 1440 and 390 px no horizontal overflow; zero page errors throughout.
 //
 //   NODE_PATH=/path/to/node_modules node tests/browser/step124.js [/abs/path/to/havellin.html]
@@ -214,7 +220,10 @@ const DARK = 'Too dark to tell what is on the shelf: photograph it again';
       await press('#inv-grph- button[onclick*="_invPickGroup"]', 'Select all on Not yet decided');
       const pk = await picks();
       ok(pk.indexOf('n13') < 0 && pk.indexOf('n14') < 0, '⚠⚠ Select all never picks a photograph Agent One found nothing in');
-      ok(pk.indexOf('d15') >= 0 && pk.indexOf('u7') >= 0, 'it picks the too-dark frame and the undecided lines');
+      ok(pk.indexOf('d15') < 0, '⚠⚠ nor the too-dark frame, nor any line with no name (P9\'s review: it reached the trustee\'s request)');
+      ok(pk.indexOf('u7') >= 0 && pk.indexOf('u12') >= 0, 'it picks the undecided lines');
+      await p.click('#inv-row-d15 input[onchange*="_invTogglePick"]'); await p.waitForTimeout(700);
+      ok((await picks()).indexOf('d15') >= 0, 'fixture: #15 picked by its own box');
       const r0 = net.reads, n0 = said.length;
       await press('#inv-bulk-' + J + ' button:has-text("Mark reviewed")', 'Mark reviewed');
       ok(net.reads > r0, 'the sheet is read first');
@@ -352,6 +361,82 @@ const DARK = 'Too dark to tell what is on the shelf: photograph it again';
       ok(g.some((x) => /^1 photograph not yet named$/.test(x)), '⚠⚠ the photograph not yet named: ' + JSON.stringify(g));
       ok(g.some((x) => /photograph Agent One found nothing in, not yet taken off the list/.test(x)), '⚠ the one given back, nothing to list');
       ok(g.some((x) => /lines? with no disposition/.test(x)), 'the lines with no disposition');
+    });
+
+    // ── K ─────────────────────────────────────────────────────────────────────────────────────
+    // A press at a person's speed: the pointer down, 100 ms, then up, so whatever the edit repaints lands between the two.
+    const humanPress = async (sel) => {
+      // To the middle of the screen, clear of the sticky header (scrollIntoViewIfNeeded left a chip under it).
+      await p.evaluate((q) => { const el = document.querySelector(q); if (el) el.scrollIntoView({ block: 'center' }); }, sel); await p.waitForTimeout(250);
+      const bx = await p.locator(sel).first().boundingBox();
+      const x = bx.x + bx.width / 2, y = bx.y + bx.height / 2;
+      ok(await p.evaluate(([q, x, y]) => { const el = document.querySelector(q), at = document.elementFromPoint(x, y); return !!el && !!at && (at === el || el.contains(at)); }, [sel, x, y]),
+        'fixture: the pointer is over ' + sel + ' before the press');
+      await p.mouse.move(x, y); await p.mouse.down(); await p.waitForTimeout(100); await p.mouse.up(); await p.waitForTimeout(900);
+    };
+    await section('K. (P9\'s review) a press lands on the control pressed, whatever the edit adds or takes away beside it', async () => {
+      await p.evaluate((j) => {
+        const T = Date.now() - 86400000;
+        const base = (sid, o) => Object.assign({ stableId: sid, label: 'inventory', collId: null, roomIdx: 3, status: 'uploaded', ts: T, updatedAt: T,
+          filename: 'HVL-2610-P9_F' + sid + '.jpg', driveFileId: 'F' + sid, driveFileUrl: 'https://drive.google.com/file/d/F' + sid + '/view', category: 'General/Household', qty: 1 }, o);
+        _photoRefs[j].push(base('v18', { objectName: 'Pine blanket chest', namedBy: 'desk', disposition: 'Auction', channel: 'Kodner Galleries', condition: 'Good', category: 'Furniture' }));
+        ['o1', 'o2', 'o3'].forEach((id, k) => _photoRefs[j].push(base(id, { objectName: 'Box of papers ' + (k + 1), agentName: 'Box of papers ' + (k + 1), namedBy: 'agent',
+          agentConf: 'medium', agentAt: T, disposition: 'Keep', fmv: 10, valuedBy: 'desk', valSource: 'Estimate', valDate: '2026-08-14', condition: 'Good',
+          agentNotices: [{ kind: 'other', text: 'Look at the papers in box ' + (k + 1) + ': they may include a will' }] })));
+        _photoRefs[j].push(base('g20', { objectName: 'Oak gun cabinet, glazed door', agentName: 'Oak gun cabinet, glazed door', namedBy: 'agent', agentConf: 'high', agentAt: T,
+          category: 'Furniture', disposition: 'Auction', channel: 'Kodner Galleries', fmv: 400, valuedBy: 'desk', valSource: 'Estimate', valDate: '2026-08-14', condition: 'Good',
+          agentNotices: [{ kind: 'firearm', text: 'Long guns visible behind the glass door' }] }));
+        _invAssignItemNos(j); savePhotoRefs(j); renderInventoryTab();
+        window.__ran = [];
+        window.__orig = { pdf: window.printEstateInventoryReport, csv: window.exportInventoryCSV, show: window.deskShowLine };
+        window.printEstateInventoryReport = function () { window.__ran.push('pdf'); };
+        window.exportInventoryCSV = function () { window.__ran.push('csv'); };
+        window.deskShowLine = function (jj, sid) { window.__ran.push('show:' + sid); };
+      }, J);
+      await p.waitForTimeout(600);
+      // 1. The last missing figure, then the Estate Inventory PDF.
+      ok(await vis('#inv-workbar button[onclick="agentValueRun(' + J + ')"]'), 'fixture: Value 1 line shows before the Estate Inventory PDF');
+      await p.click('#inv-fmv-v18'); await p.fill('#inv-fmv-v18', '125');
+      await humanPress('#inv-workbar button[onclick="printEstateInventoryReport(' + J + ')"]');
+      eq(await p.evaluate(() => window.__ran.splice(0)), ['pdf'], '⚠⚠ the last figure typed, then the Estate Inventory PDF: the PDF, never the CSV beside it');
+      eq((await line('v18')).fmv, 125, 'fixture: the figure was written');
+      eq(await p.locator('#inv-workbar button[onclick="agentValueRun(' + J + ')"]').count(), 0, 'and Value 1 line has gone, once the press was done');
+      // 2. A name that quiets #o1's note, then Show the item on #o2's.
+      const shows = () => p.evaluate(() => [...document.querySelectorAll('#inv-agent-notices button.desk-show')].map((b) => (b.getAttribute('onclick') || '').replace(/^.*,'|'\).*$/g, '')));
+      const before = await shows();
+      ok(before.indexOf('o1') >= 0 && before.indexOf('o2') >= 0 && before.indexOf('o3') >= 0, 'fixture: the three notes on the list: ' + JSON.stringify(before));
+      await p.click('#inv-row-o1 .inv-name textarea'); await p.keyboard.press('End'); await p.keyboard.type(' (deeds)');
+      await humanPress('#inv-agent-notices button.desk-show[onclick*="\'o2\'"]');
+      eq(await p.evaluate(() => window.__ran.splice(0)), ['show:o2'], '⚠⚠ #o1\'s note quietened under the press: Show the item on #o2\'s shows #o2 (it showed #o3)');
+      ok((await shows()).indexOf('o1') < 0, 'and #o1\'s note has gone, once the press was done');
+      // 3. The search typed with a redraw owed, then Not reviewed.
+      await p.click('#inv-q'); await p.keyboard.type('bo', { delay: 120 }); await p.waitForTimeout(700);
+      eq(await p.evaluate(() => { _invRenderWhenIdle(); return [document.activeElement && document.activeElement.id, _invRenderOwed]; }), ['inv-q', true], 'fixture: a redraw owed while the search has the focus');
+      await humanPress('#inv-flagstrip button[onclick="setInvFlag(\'unreviewed\')"]');
+      eq(await p.evaluate(() => _invFilter.flag), 'unreviewed', '⚠⚠ the redraw owed on leaving the box no longer swallows the press: Not reviewed filters on the first press');
+      await press('#panel-inventory button[onclick="invClearFilters()"]', 'Clear filters');
+      // 4. A Total typed with a redraw owed, then No value yet.
+      await p.click('#inv-fmv-u9'); await p.fill('#inv-fmv-u9', '210');
+      await p.evaluate(() => _invRenderWhenIdle());
+      await humanPress('#inv-flagstrip button[onclick="setInvFlag(\'noval\')"]');
+      eq(await p.evaluate(() => _invFilter.flag), 'noval', '⚠⚠ a Total typed with a redraw owed, then No value yet: it filters on the first press');
+      eq((await line('u9')).fmv, 210, 'fixture: the Total was written');
+      await press('#panel-inventory button[onclick="invClearFilters()"]', 'Clear filters');
+      // 5. The gun cabinet's blank line, answered with the Firearm note again.
+      const r = await p.evaluate((j) => {
+        const made = invSplitItemN(j, 'g20', 1);
+        if (typeof made === 'string') return { err: made };
+        const sid = made[0].stableId;
+        agentApplyResult(j, { srcId: 'g20', rows: [sid] }, { objects: [], notices: [{ kind: 'firearm', text: 'Long guns visible behind the glass door' }] });
+        renderInventoryTab();
+        const ref = _photoRefs[j].find((x) => x.stableId === sid), row = document.getElementById(_invRowDomId(sid));
+        return { conf: ref.agentConf, row: row ? row.querySelector('.inv-row-sub').textContent.replace(/\s+/g, ' ').trim() : '', cu: !!(row && row.querySelector('label.inv-cu-add')) };
+      }, J);
+      eq(r.conf, 'none', '⚠⚠ the blank line split off the gun cabinet, answered with its Firearm note again: nothing else in it');
+      has(r.row, 'nothing to list', 'its row says nothing to list');
+      lacks(r.row, 'could not be read', '⚠ never could not be read');
+      ok(!r.cu, 'and offers no + Close-up');
+      await p.evaluate(() => { window.printEstateInventoryReport = window.__orig.pdf; window.exportInventoryCSV = window.__orig.csv; window.deskShowLine = window.__orig.show; });
     });
 
     eq(await overflow(), 0, 'no horizontal overflow at 1440');

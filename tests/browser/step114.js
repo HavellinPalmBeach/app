@@ -603,10 +603,13 @@ const DAY = (at) => new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_Yo
     // RESTATED 2026-10-28 (P9 of the desk audit, SYN-12): a by-id repaint patches in place (_invPatch), so the element under the
     // pointer is kept and brought up to date rather than replaced; what proves no full render is that the row (or the bar) is kept
     // and the box reads the new state, below.
-      const st = await p.evaluate((sel) => ({ renders: window.__renders, oldGone: !!window.__read && !window.__read.isConnected,
-        fresh: !!document.querySelector(sel) && document.querySelector(sel) !== window.__read,
+    // RESTATED again the same day (P9's review): the morph now matches an element by its id and what it does, never by its place, so
+    // the read line (its own id) is kept and brought up to date like the bar; it was replaced only because a sentence drawn before it
+    // shifted it. What proves no full render is the bar kept and the line inside it; rl2 below reads its new state.
+      const st = await p.evaluate((sel) => ({ renders: window.__renders,
+        inBar: !!document.querySelector(sel) && !!window.__wb && window.__wb.contains(document.querySelector(sel)),
         wbKept: document.getElementById('inv-workbar') === window.__wb && window.__wb.isConnected }), READ + J);
-      eq([st.renders, st.oldGone, st.fresh, st.wbKept], [0, true, true, true], '⚠⚠ no full render: the work bar patched in place, its read line redrawn in it');
+      eq([st.renders, st.inBar, st.wbKept], [0, true, true], '⚠⚠ no full render: the work bar patched in place, its read line in it');
       const rl2 = await readLine();
       eq(rl2 && [rl2.text, rl2.ink, rl2.press], ['List read by ' + ME + ', ' + day + ' · changed since · ✓ I’ve read the list', 'gray', '✓ I’ve read the list'],
         '⚠⚠ and it says changed since, with the press');
