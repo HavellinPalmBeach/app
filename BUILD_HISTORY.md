@@ -6,6 +6,9 @@ Not loaded into sessions. `CLAUDE.md` holds the current rules; this file is the 
 
 ## Entries
 
+### 2026-10-29 · `2026-10-28` live; no more insurance reminders (docs only)
+Anthony, 2026-10-29: he pasted `main-sync.gs` and made a New version, so `2026-10-28` (the cell-cap fix, 2026-10-28b and c) is live and nothing is owed on the Apps Script. On the insurance figures: *"Stop bothering me, okay? … I will get it … when they get back to me. I'm obviously going to put it in here"*; he has asked two other insurers as well. `CLAUDE.md`'s rule to remind him at the start of every session is replaced by one never to remind him. No code change, no restamp; the five suites that read `CLAUDE.md` or this file were run alone: 814 passed, 0 failed.
+
 ### 2026-10-28d · The 2026-10-27e visit done and the device key on (docs only)
 Anthony, the morning of 2026-10-28: both files pasted from `main` and a New version made, the three editor runs (the probe, `testAgentValue()`, `suggestDeviceKey()`), then the key typed on every device and `HAVELLIN_DEVICE_KEY` set in Script Properties last (*"key is in. apps script done"*). `CLAUDE.md`'s Open work bullet for that visit now records it as done, with `testAgentValue()`'s answers (55 s, Fable 5.1, the Herend plates' basis rewritten by the server and their three shop prices kept as asking: P7's server half working live), and the desk audit's line no longer says its server halves are owed. The only redeploy owed is `2026-10-28` (2026-10-28b and c). No code change, no restamp; the five suites that read `CLAUDE.md` or this file were run alone: 814 passed, 0 failed (doc-file 128, p16-screens-text 379, p22-desk-c 105, p22-group-b 97, p22-loose-ends-a 105).
 
