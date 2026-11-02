@@ -233,6 +233,7 @@
   },
   {
    "id": "VAL-13",
+   "fixed": "2026-10-28 (P13: Item # and Room on both schedules, sorted by number within each category, and a lot's per-article figure, \"(8 × $90)\"; tests/p13-traceable.test.js, browser step 129)",
    "title": "The Court Inventory and Trust Schedule carry no item numbers",
    "kind": "accuracy",
    "severity": "medium",
@@ -506,6 +507,7 @@
   },
   {
    "id": "VAL-29",
+   "fixed": "2026-10-28 (P13: a lot prints \"(8 × $90)\", or \"8 articles, averaging $10.71\" where the figure does not divide to the cent, with the Form 706 mark on its line; tests/p13-traceable.test.js, browser step 129)",
    "title": "Schedules say 'valued as a lot' and hide the per-article value the lot rule needs",
    "kind": "inconsistency",
    "severity": "low",

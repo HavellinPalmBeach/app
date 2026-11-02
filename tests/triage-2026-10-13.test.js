@@ -192,7 +192,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   G('T5 · the schedule table prints *not stated* for a line with no basis, as the report does', () => {
     const s = lift(['_invScheduleSection'], [], {});
     const rows = (list) => s._invScheduleSection('Furniture', list).html;
-    const none = rows([{ objectName: 'Sideboard', qty: 1, fmv: 1200, valSource: '' }]);
+    // The line carries its number (P13, 2026-10-28: the schedules lead with Item #, and a line on a schedule always has one).
+    const none = rows([{ objectName: 'Sideboard', itemNo: 1, qty: 1, fmv: 1200, valSource: '' }]);
     has(none, '<span style="color:#A32D2D;">not stated</span>', '⚠⚠ a valued line with no basis reads not stated, in red');
     lacks(text(none), '—', 'never a dash');
     const named = rows([{ objectName: 'Sideboard', qty: 1, fmv: 1200, valSource: 'Appraisal' }]);

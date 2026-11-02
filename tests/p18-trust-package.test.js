@@ -102,6 +102,13 @@ function net(opts) {
         return sp(res({ ok: true, fileUrl: 'https://drive.google.com/file/d/up' + n + '/view', fileId: 'up' + n }));
       }
       if (body.action === 'getSubfolders') return sp(res({ ok: true, subfolders: null }));
+      // The pages' photographs (P13), as the deployment answers: every one Drive holds. RESTATED in P13's review (2026-10-28): the
+      // package now says, never green, how many photographs its pages could not draw, and this fixture answered none.
+      if (body.action === 'getThumbnails') {
+        const thumbs = {};
+        (body.fileIds || []).forEach((id) => { thumbs[id] = 'data:image/jpeg;base64,AAAA'; });
+        return sp(res({ ok: true, thumbs, missing: [] }));
+      }
       if (body.action === 'htmlToPdf') {
         log.pdfs.push(body.html);
         return sp(res({ ok: true, base64: Buffer.from('%PDF-1.4 ' + 'x'.repeat(150) + ' #' + log.pdfs.length).toString('base64') }));

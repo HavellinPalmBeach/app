@@ -20,7 +20,7 @@ const FNS = ['invLineReviewed', 'invLineOpen', '_invDocPartyHead', 'invCondition
   'invNeedsAppraisal', 'invAppraisalChosen', 'invIsIntrinsic', 'invCatMeta', 'invAppraisalThreshold',
   '_invHasAppraisal', '_jobAppraisers', 'resolveValBasis', 'estateValueDate', '_invMoney',
   '_invDocName', '_invItemNo', '_invGroupItems', 'invIsFirearm', '_invDispLabel', '_invRoomName', '_planRooms',
-  '_invPrintThumb', '_invThumbFor', '_invThumbCache', '_invThumbKey', '_invProgressStamp',
+  '_invPrintThumb', '_invPrintThumbSrc', '_invPaperPhotoUrl', '_invThumbFor', '_invThumbCache', '_invThumbKey', '_invProgressStamp',
   'agentShotGroups', 'agentNameableRefs', '_agState', '_agStateHtml', '_agNoticesHtml', 'agentNotices',
   '_invReviewStats', '_invDocHead', 'invAppraiserFor', '_renderInvWorkbar', '_invNothingLineHtml', 'invLineNothingToList', 'invColdWords', '_invManifestUnread', '_invAwaitingApproval', 'invWrittenReleaseNeeded', '_arCheckButtonHtml', '_arState', 'agentRoomsToCheck', '_arCheckable', '_arStateHtml', '_avValueButtonHtml', 'agentValueWaiting', 'agentValueableRefs', '_avHasFigure', '_avStateHtml', '_avState', '_avNoticesHtml', 'agentValueNotices', '_avNoticeKinds', '_avNoticeLabel', 'agentValueInternal', 'agentValueUnreviewed', 'agentValueStale', 'agentValueSpecialistWorth', 'invPrimaryDoc', '_invProgressBar',
   '_agrProbateCompliance', '_agrComplianceHeading', '_agrComplianceLead', '_agrApprover',
@@ -376,7 +376,8 @@ module.exports = ({ group, ok, eq, has, lacks }) => {
     // A second renderer beside this one is the drift this project records more often than
     // anything else: the two schedules state the same thing about the same objects and must not
     // come to disagree about whether a quantity is a lot or a unit price.
-    eq((src.match(/items, valued as a lot/g) || []).length, 1, 'and exactly one place says the value covers the lot');
+    // RESTATED (P13, 2026-10-28; VAL-29): the lot's words are one helper now, "(8 × $90)".
+    eq((src.match(/function invLotWords\(/g) || []).length, 1, 'and exactly one place says what a lot\'s value covers');
   }
 
   // ───────────────────────────────────────────────────────────────────────────

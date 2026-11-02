@@ -438,7 +438,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const s = sandbox({
       fns: APPR_FNS.concat(['_invDocPartyHead', 'invOwnInitial', 'invInitialGroupKey', '_invDocName', 'printApprovalRequest', 'invApprovalMoved', 'invApprovalPrevWords', 'approvalRequestTerms', '_approvalHash', 'approvalLineDestKey', 'invApprovalTermsOf', '_approvalLineOpen', 'invReleaseRecipientNamed', 'invDispDocWord', 'invReleaseCautions', '_invCautionBadges',
                             '_invCautionNotices', '_invNamed', '_invItemNo', '_invAwaitingApproval', 'invWrittenReleaseNeeded',
-                            '_jobInvRefs', '_invAssignItemNos', '_invTouch', '_invPrintThumb',
+                            '_jobInvRefs', '_invAssignItemNos', '_invTouch', '_invPrintThumb', '_invPrintThumbSrc', '_invPaperPhotoUrl',
                             '_invFileId', '_invRoomName', '_invMoney', 'invIsFirearm',
                             '_invDocHead', 'resolveValBasis', 'estateValueDate', '_invPicked',
                             '_invMatchesFilter', '_invFilterHides', '_setPhotoRef', 'savePhotoRefs',
@@ -486,7 +486,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const s = sandbox({
       fns: APPR_FNS.concat(['_invDocPartyHead', 'invOwnInitial', 'invInitialGroupKey', '_invDocName', 'printApprovalRequest', 'invApprovalMoved', 'invApprovalPrevWords', 'approvalRequestTerms', '_approvalHash', 'approvalLineDestKey', 'invApprovalTermsOf', '_approvalLineOpen', 'invReleaseRecipientNamed', 'invDispDocWord', 'invReleaseCautions', '_invCautionBadges',
                             '_invCautionNotices', '_invNamed', '_invItemNo', '_invAwaitingApproval', 'invWrittenReleaseNeeded',
-                            '_jobInvRefs', '_invAssignItemNos', '_invTouch', '_invPrintThumb',
+                            '_jobInvRefs', '_invAssignItemNos', '_invTouch', '_invPrintThumb', '_invPrintThumbSrc', '_invPaperPhotoUrl',
                             '_invFileId', '_invRoomName', '_invMoney', 'invIsFirearm',
                             '_invDocHead', 'resolveValBasis', 'estateValueDate', '_invPicked',
                             '_invMatchesFilter', '_invFilterHides', '_setPhotoRef', 'savePhotoRefs',
@@ -549,7 +549,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
            fmv: '', disposition: '', condition: 'Good' }),
     ];
     const s = sandbox({
-      fns: APPR_FNS.concat(['invOutForAppraisal', 'signedRecordsOf', 'jobListEntries', '_invDocPartyHead', 'invConditionText', '_lotSplitWorklistBlock', 'invLotSplitState', 'invLotArticleValue', 'invLotSplitSentence', 'invLotsToSplit', 'invLotsUntestable', '_invDocName', 'printAppraisalWorklist', 'invAppraisalInProgress', 'invLineAppraiser', '_invLinkedAppraiser', '_jobAppraisers', '_apprLabel', 'guideLinkHtml', 'jobOnProbateTrack', '_apprTransport', 'invTransportBlocked', 'invTransportReason', '_apprGroups', '_apprWithheld', '_apprNFA',
+      fns: APPR_FNS.concat(['invOutForAppraisal', 'signedRecordsOf', 'jobListEntries', '_invDocPartyHead', 'invConditionText', 'invGroupUncounted', '_lotSplitWorklistBlock', 'invLotSplitState', 'invLotArticleValue', 'invLotSplitSentence', 'invLotsToSplit', 'invLotsUntestable', '_invDocName', 'printAppraisalWorklist', 'invAppraisalInProgress', 'invLineAppraiser', '_invLinkedAppraiser', '_jobAppraisers', '_apprLabel', 'guideLinkHtml', 'jobOnProbateTrack', '_apprTransport', 'invTransportBlocked', 'invTransportReason', '_apprGroups', '_apprWithheld', '_apprNFA',
                             '_apprEstimateFlags', 'collectionsAwaitingPhoto', '_invHasPhoto', '_collLinesOf', 'collectionLineId', '_invJob', '_jobInvRefs', '_invAssignItemNos', '_invTouch',
                             '_invItemNo', '_invRoomName', '_invMoney', 'invIsFirearm',
                             'invFirearmAuthorized', 'invReleaseBlocked', 'invAppraiserFor',
@@ -578,7 +578,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠ the empty state no longer names an action the app does not offer');
   {
     const s = sandbox({
-      fns: APPR_FNS.concat(['_invDocPartyHead', 'invAppraisalInProgress', 'invLineAppraiser', '_invLinkedAppraiser', '_jobAppraisers', '_apprLabel', '_lotSplitWorklistBlock', 'invLotSplitState', 'invLotArticleValue', 'invLotSplitSentence', 'invLotsToSplit', 'invLotsUntestable', '_invDocName', 'printAppraisalWorklist', 'guideLinkHtml', '_apprTransport', 'invTransportBlocked', 'invTransportReason', '_apprGroups', '_apprWithheld', '_apprNFA',
+      fns: APPR_FNS.concat(['_invDocPartyHead', 'invAppraisalInProgress', 'invLineAppraiser', '_invLinkedAppraiser', '_jobAppraisers', '_apprLabel', 'invGroupUncounted', '_lotSplitWorklistBlock', 'invLotSplitState', 'invLotArticleValue', 'invLotSplitSentence', 'invLotsToSplit', 'invLotsUntestable', '_invDocName', 'printAppraisalWorklist', 'guideLinkHtml', '_apprTransport', 'invTransportBlocked', 'invTransportReason', '_apprGroups', '_apprWithheld', '_apprNFA',
                             '_apprEstimateFlags', 'collectionsAwaitingPhoto', '_invHasPhoto', '_collLinesOf', 'collectionLineId', '_invJob', '_jobInvRefs', '_invAssignItemNos', '_invTouch',
                             '_invItemNo', '_invRoomName', '_invMoney', 'invIsFirearm',
                             'invFirearmAuthorized', 'invReleaseBlocked', 'invAppraiserFor',

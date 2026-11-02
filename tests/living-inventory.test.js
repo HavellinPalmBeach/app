@@ -56,13 +56,13 @@ const PRINT_FNS = ['_invDocPartyHead', 'invLineReviewed', 'invLineOpen', 'invIni
   'printContentsRecord', 'contentsRecordSignoff', 'dispositionRecord', 'printApprovalRequest', 'invDispDocWord', 'printCourtInventory', 'jobOnProbateTrack', '_avUnreviewedStamp',
   'agentShotGroups', 'agentNameableRefs', '_agState', '_agStateHtml', '_agNoticesHtml', 'agentNotices',
   'printDispositionLedger', 'referralFeeVendorsNote', 'vendorPaysReferral', '_vendorByName', '_vendorNameKey', '_andJoin', '_renderInvWorkbar', '_invNothingLineHtml', 'invLineNothingToList', 'invColdWords', '_arCheckButtonHtml', '_arState', 'agentRoomsToCheck', '_arCheckable', '_arStateHtml', '_avValueButtonHtml', 'agentValueWaiting', 'agentValueableRefs', '_avHasFigure', '_invHasValue', '_avStateHtml', '_avState', '_avNoticesHtml', 'agentValueNotices', '_avNoticeKinds', '_avNoticeLabel', 'agentValueInternal', 'agentValueUnreviewed', 'agentValueStale', 'agentValueSpecialistWorth', 'invPrimaryDoc', '_invReviewStats', '_invProgressStamp',
-  '_invDocName', '_invDocHead', '_invPrintThumb', '_invRecipient', '_jobDestLabel',
+  '_invDocName', '_invDocHead', '_invPrintThumb', '_invPrintThumbSrc', '_invPaperPhotoUrl', '_invRecipient', '_jobDestLabel',
   '_jobHasDestination', 'invFiduciaryMode', 'isDecedentJob', '_invJob', '_jobInvRefs',
   '_invAssignItemNos', '_invItemNo', '_invNamed', '_invRoomName', '_invDispLabel',
   '_invCautionBadges', 'invReleaseCautions', '_invTouch', 'savePhotoRefs', '_warnPhotoStoreFull',
   '_invProgressBar', 'invIsFirearm', 'invTransportBlocked', 'invFirearmAuthorized',
   '_invCautionNotices', '_invPicked', '_invAwaitingApproval', 'invWrittenReleaseNeeded',
-  '_renderInventorySummary', '_maivWorklistBlock', '_invDateTime', 'maivStatement_', '_avdDate',
+  'invGroupUncounted', '_renderInventorySummary', '_maivWorklistBlock', '_invDateTime', 'maivStatement_', '_avdDate',
   // 2026-10-22: the summary states the basis and the value date as text; their controls head the desk's Values bar.
   'invStatesEstateValues', '_invValueAsOfHtml', '_renderValueSettings',
   'invProbateRows', 'matterDef', 'matterTypeOf',
@@ -438,7 +438,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(Eh, 'Specific Bequests', 'and a will term on an estate');
     // The footer's whole subject is what counsel files instead; it has no living counterpart.
     lacks(L, 'court inventory', '⚠ and the §733.604 footer simply goes rather than being reworded');
-    has(L, 'Total Items', 'while the record itself is on both');
+    // RESTATED (P13, INV-20): the summary counts lines and articles, both; "Total Items" counted lines.
+    has(L, 'Total Lines', 'while the record itself is on both');
+    has(L, 'Total Articles', 'and the articles the lines hold');
   }
 
   group('⚠ THE MAIV AGGREGATE NEVER REACHES A LIVING JOB');

@@ -73,7 +73,7 @@ function rig(over) {
   const ctx = sandbox({
     fns: ['_invDocPartyHead', '_invJob', 'asFoundRecord', '_planRooms', '_slotRefs', '_roomFoundAttest', '_roomFoundDone',
           '_afTime', '_afDate', '_asFoundRows', 'printAsFoundRecord', '_invDocName',
-          '_invDocHead', '_invPrintThumb', 'resolveValBasis', 'estateValueDate', '_avdDate',
+          '_invDocHead', '_invPrintThumb', '_invPrintThumbSrc', '_invPaperPhotoUrl', 'resolveValBasis', 'estateValueDate', '_avdDate',
           'buildInventoryPayload', '_invAssignItemNos', '_jobInvRefs', '_invTouch',
           'invFiduciaryMode', 'isDecedentJob', 'invProbateRows', 'matterDef', 'matterTypeOf',
           // ⚠ AXIS 3 (`statesValues`) RIDES THE SAME PAYLOAD. Lifted rather than stubbed for

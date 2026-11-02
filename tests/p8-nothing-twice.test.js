@@ -31,7 +31,7 @@ const val = (r, dflt) => (r && r.ok ? r.val : (dflt === undefined ? 'threw: ' + 
 
 // ─── The desk's side: the grouper, the presses, the room check's writer, what Agent Two waits on ───
 const DESK_FNS = ['agentDupCleared', 'agentNamedTwice', 'agentDuplicateGroups', '_arPair', '_arPairOpen', '_agDupEligible', '_arDupEligible', '_agNameKey',
-  '_agDupIndex', '_agDupHtml', '_agDupHandle', '_agDupUnhandle', 'agentDropDuplicate', 'agentNotDuplicate', 'agentKeepFirstReading',
+  '_agDupIndex', '_agDupHtml', '_agDupHandle', '_agDupUnhandle', 'agentDropDuplicate', 'agentDupPartner', 'agentNotDuplicate', 'agentKeepFirstReading',
   '_invItemNo', '_invRoomName', '_getPhotoRef', '_setPhotoRef', '_jobInvRefs', '_invJob', '_invTombstoneLine', '_invStampBy', 'deviceUser',
   'savePhotoRefs', '_arWrite', '_arStateHtml', '_arState', 'agentValueWaiting', '_avDupReleased', 'agentValueAuto', 'agentValueRun',
   '_avValueButtonHtml', 'agentValueableRefs', '_avHasFigure', '_invHasValue', '_invHasPhoto', '_avState', '_arLineWhy',
@@ -114,7 +114,7 @@ const PAPER_FNS = ['invLineReviewed', 'invLineOpen', '_invDocPartyHead', 'invCon
   'invIsMAIV', 'invMAIVDefaultCat', 'invAcceptCtx', '_invAcceptCtxOf', 'invListRead', 'agentNoticesOn',
   'agentValueUnreviewed', 'agentValueInternal', 'agentValueStale', 'agentValueSpecialistWorth', '_avHasFigure', 'agentNoticeQuiet',
   'agentDupCleared', 'agentNamedTwice', 'agentDuplicateGroups', '_arPair', '_arPairOpen', '_agDupEligible', '_arDupEligible', '_agNameKey', 'invDoubleCounts', 'invDoubleCountUnits',
-  'agentNotDuplicate', 'agentDropDuplicate', '_agDupHandle', '_agDupUnhandle', '_getPhotoRef', '_setPhotoRef', '_invTombstoneLine', '_invStampBy',
+  'agentNotDuplicate', 'agentDropDuplicate', 'agentDupPartner', '_agDupHandle', '_agDupUnhandle', '_getPhotoRef', '_setPhotoRef', '_invTombstoneLine', '_invStampBy',
   'deviceUser', 'agentValueWaiting', '_avDupReleased',
   'invAppraisalChosen', '_avStampCounts', 'invTotalFloor', '_invFloorTotalHtml'];   // P7's floor and source rules, which the printers read since the merge
 const PAPER_VARS = ['_agRun', '_avRun', '_arRun', '_avDupHeld', 'AGENT_NOTICE_KINDS',

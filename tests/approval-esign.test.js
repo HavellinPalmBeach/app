@@ -93,6 +93,15 @@ function net(opts) {
         return sp(res({ ok: true, fileUrl: 'https://drive.google.com/file/d/up' + n + '/view', fileId: 'up' + n }));
       }
       if (body.action === 'getSubfolders') return sp(res({ ok: true, subfolders: null }));
+      // The page's photographs (P13), as the deployment answers: every one Drive holds; `thumbs: false` a photo service that fails.
+      // ADDED in P13's review (2026-10-28): the DocuSign send now says, never green, how many its page could not draw, and this
+      // fixture answered none.
+      if (body.action === 'getThumbnails') {
+        if (o.thumbs === false) return sp(res({ ok: false, error: 'the photo service did not answer' }));
+        const thumbs = {};
+        (body.fileIds || []).forEach((id) => { thumbs[id] = 'data:image/jpeg;base64,AAAA'; });
+        return sp(res({ ok: true, thumbs, missing: [] }));
+      }
       if (body.action === 'esignSendRequest') {
         log.esign.push(body);
         if (o.esignHold) return o.esignHold.p;
@@ -375,6 +384,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(text(ok2.card()), 'Goes through DocuSign to Thomas Ellison and Catherine Ellison-Reyes, each initialling and signing on screen, ann@lowe.law and agreements@havellinpalmbeach.com copied once everyone has signed; or as a PDF by email (Send request), to sign by hand.', 'saying where each goes');
     ok2.c.sendApprovalRequest(7);
     has(ok2.c.approvalRequestEsignRefusal(ok2.job()), 'A request drafted in Gmail waits', 'a Gmail draft waiting: refused');
+  });
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // P13's review (2026-10-28): the send's notice said nothing when the page's photographs could not be drawn, so the DocuSign copy
+  // reached the trustees with "photo" in every cell under a green notice.
+  G('P13 review · the DocuSign send says how many photographs its page could not draw, and is not green then', () => {
+    const good = dsRig();
+    ok(good.c.sendApprovalRequestEsign(7), 'sent, every photograph served');
+    eq([good.last().t, /could not be drawn/.test(good.last().m || '')], ['ok', false], 'every photograph drawn: green, and nothing said of them');
+    const bad = dsRig({ net: { thumbs: false } });
+    ok(bad.c.sendApprovalRequestEsign(7), 'sent, the photo service failing');
+    eq(bad.last().t, 'warn', '⚠⚠ the photo service failed: amber');
+    has(bad.last().m, 'On the request: 3 photographs could not be drawn from Drive, so their lines link to the photograph in Drive instead.', '⚠⚠ and the notice says how many');
+    eq(bad.N.log.posts.filter((p) => p === 'esignSendRequest').length, 1, 'the envelope goes all the same (a flag, never a refusal)');
   });
 
   // ═══════════════════════════════════════════════════════════════════════

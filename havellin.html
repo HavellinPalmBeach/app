@@ -6512,7 +6512,10 @@ var BACKEND_NEEDS_TYPES = ['saveMedia', 'saveInventory', 'job', 'saveAllJobs', '
 // = + - @ or ', and a hard delete is locked and recorded first. This build relies on an ok meaning the write is on the sheet
 // (_invManifestLanded, _snapLanded, the release of a held write): on an older deployment two devices saving at the same moment
 // can lose one device's change though both were told it saved, and a store cut at an = turns unreadable.
-var BACKEND_MIN_VERSION = '2026-10-28';
+// 2026-11-02b (P13 of the desk audit), carrying 2026-11-02: Agent One says whether a line holds more than one article (`group`, kept
+// as `agentGroup`), so a mixed group named at a count of one is tested against §20.2031-6(a) (invLotSplitState 'nocount'). An older
+// deployment sends no mark, so such a line reads as one article and the worklist's lot block passes over it untested.
+var BACKEND_MIN_VERSION = '2026-11-02b';
 var _backendVersion = null;
 // The actions the deployment says it has (2026-10-26c), once the version probe answers; null until then. A route the app
 // offers only on a deployment that has it reads this (backendHas): the release request's DocuSign send.
@@ -6586,7 +6589,7 @@ var BACKEND_FEATURE_COST = {
   saveSnapshot:  'no inventory Snapshot can be taken (the deployment has nowhere to keep its lines)',
   // One line for any deployment older than BACKEND_MIN_VERSION, so it names the newest gap first and says
   // which vintage the older one belongs to (the banner's title prints the version that answered).
-  version:       'on a deployment older than 2026-10-28, two devices saving at the same moment can lose one device\u2019s change on the sheet though both were told it saved, and an inventory or estimate store can become unreadable, refusing every save until it is restored from version history; on a deployment older than 2026-10-27e, a figure Agent Two researched can carry a basis sentence citing sales nobody could find (\u201cFour sold comparables at Christie\u2019s and Kodner\u201d under a general estimate) on the Estate Inventory Report, and an Etsy, 1stDibs, Chairish, Ruby Lane or Replacements asking price can stand as a sale behind \u201conline comps\u201d; on a deployment older than 2026-10-27d, a release approval recorded on one device can lose, on the sheet, the record of where the item was going, who was taking it and its value when it was signed, so another device reads the approval as covering the item wherever it goes now, and two devices\u2019 signatures given for different destinations can be counted as one approval; on a deployment older than 2026-10-27c, anyone who holds the Apps Script URL can read every client and inventory, share a client\u2019s folders with any address, trash any file and send a release request through DocuSign to anybody, with no device key asked for; on a deployment older than 2026-10-27b, a client too large for a sheet cell cuts the Jobs tab off at that client, possibly with no error shown, every client below it then reads as deleted (this device keeps its copy of them), and the next estimate, plan, hours or inventory save sweeps their records off the sheet; on a deployment older than 2026-10-27, an item Agent Two researched and found no sale for stays marked unsure, and its paper reads general estimate, however many close listings it counted; on a deployment older than 2026-10-26b, a search page, or a sale whose price was not shown, can stand as a sold comparable, so a researched figure resting on one prints \u201cauction comps\u201d; a long note from Agent Two stops mid-sentence; and neither agent grades an item\u2019s condition; on a deployment older than 2026-10-26, the agents never move to a newer model by themselves (Agent One still runs on the older Opus 5), Agent Two never looks at the photograph of an item whose name is a guess or fixes a wrong category, a figure with no sale behind it prints as \u201cauction comps\u201d, and one slow request can mark a whole batch \u201cnot valued\u201d or lose a batch of names; on a deployment older than 2026-10-25b, a name you type or review on the desk (a wooden mirror retyped as Restoration Hardware) can come back from Agent Two as the generic thing and be valued as that, and a brand the crew says at the camera is not put into the name; on a deployment older than 2026-10-25, Agent Two flags a name it disagrees with (\u201cName may be wrong\u201d) instead of correcting it, puts a note on nearly every item it values (no condition recorded, a rough count, a search that ran short), and Agent One files everyday dishes as collectibles; on a deployment older than 2026-10-24, a blank line added to a photograph already named (Another item in this photo) makes Agent One read the whole photograph again, so every object in it goes on the list a second time, and its names carry a count (\u201capprox. 7 in stack\u201d) that the Qty box contradicts once corrected; on a deployment older than 2026-10-19b, a client\u2019s inventory reset in the Apps Script editor (resetInventoryConfirm) is undone by the first device that saves a line from before it, unless every device reloads first; on a deployment older than 2026-10-16, an incident reported on one device, or a key or fob received there while another device records a handoff, can be dropped when the sheet merges the job (the Incidents and Keys & access cards\u2019 lists are not yet merged entry by entry); on a deployment older than 2026-10-06, two devices\u2019 release signers are not merged and the client\u2019s workbook rounds its money; on a deployment older than 2026-10-05, a co-executor or co-trustee is not put on the DocuSign envelope beside the client, so they sign a printed copy of the agreement and the page they signed has to be filed from the timeline; on a deployment older than 2026-10-03, a co-trustee, a beneficiary, a signed copy filed to Drive, a find on site or a proceeds statement added on one device can be dropped by another device saving an older copy of the job, and the client\u2019s inventory workbook heads a trust\u2019s net proceeds \u201cNet to Estate\u201d; on a deployment older than 2026-10-01, File signed copy adds a second copy of the signed agreement to the client\u2019s Agreement folder instead of replacing the one there; on a deployment older than 2026-09-30b, a payment voided or marked cleared on one device can come back as it was from another device that changed the same payment before reloading, and count again; a firearm\u2019s serial, recipient or dealer route, recorded on one device, can be dropped from the sheet by another device\u2019s older copy of the item, until the first device next saves the inventory; and on a deployment older than 2026-09-30, two people editing different parts of one job (a vendor quote here, the team there) can also undo each other\u2019s work, a damaged store tab is emptied by the next save instead of refused, and Agent One can stop mid-answer on a busy photograph',
+  version:       'on a deployment older than 2026-11-02b, a drawer, box or shelf of things Agent One names as one line on a Form 706 estate is not marked as a group, so its line reads as one article and the $100-an-article lot test passes over it untested; on a deployment older than 2026-10-28, two devices saving at the same moment can lose one device\u2019s change on the sheet though both were told it saved, and an inventory or estimate store can become unreadable, refusing every save until it is restored from version history; on a deployment older than 2026-10-27e, a figure Agent Two researched can carry a basis sentence citing sales nobody could find (\u201cFour sold comparables at Christie\u2019s and Kodner\u201d under a general estimate) on the Estate Inventory Report, and an Etsy, 1stDibs, Chairish, Ruby Lane or Replacements asking price can stand as a sale behind \u201conline comps\u201d; on a deployment older than 2026-10-27d, a release approval recorded on one device can lose, on the sheet, the record of where the item was going, who was taking it and its value when it was signed, so another device reads the approval as covering the item wherever it goes now, and two devices\u2019 signatures given for different destinations can be counted as one approval; on a deployment older than 2026-10-27c, anyone who holds the Apps Script URL can read every client and inventory, share a client\u2019s folders with any address, trash any file and send a release request through DocuSign to anybody, with no device key asked for; on a deployment older than 2026-10-27b, a client too large for a sheet cell cuts the Jobs tab off at that client, possibly with no error shown, every client below it then reads as deleted (this device keeps its copy of them), and the next estimate, plan, hours or inventory save sweeps their records off the sheet; on a deployment older than 2026-10-27, an item Agent Two researched and found no sale for stays marked unsure, and its paper reads general estimate, however many close listings it counted; on a deployment older than 2026-10-26b, a search page, or a sale whose price was not shown, can stand as a sold comparable, so a researched figure resting on one prints \u201cauction comps\u201d; a long note from Agent Two stops mid-sentence; and neither agent grades an item\u2019s condition; on a deployment older than 2026-10-26, the agents never move to a newer model by themselves (Agent One still runs on the older Opus 5), Agent Two never looks at the photograph of an item whose name is a guess or fixes a wrong category, a figure with no sale behind it prints as \u201cauction comps\u201d, and one slow request can mark a whole batch \u201cnot valued\u201d or lose a batch of names; on a deployment older than 2026-10-25b, a name you type or review on the desk (a wooden mirror retyped as Restoration Hardware) can come back from Agent Two as the generic thing and be valued as that, and a brand the crew says at the camera is not put into the name; on a deployment older than 2026-10-25, Agent Two flags a name it disagrees with (\u201cName may be wrong\u201d) instead of correcting it, puts a note on nearly every item it values (no condition recorded, a rough count, a search that ran short), and Agent One files everyday dishes as collectibles; on a deployment older than 2026-10-24, a blank line added to a photograph already named (Another item in this photo) makes Agent One read the whole photograph again, so every object in it goes on the list a second time, and its names carry a count (\u201capprox. 7 in stack\u201d) that the Qty box contradicts once corrected; on a deployment older than 2026-10-19b, a client\u2019s inventory reset in the Apps Script editor (resetInventoryConfirm) is undone by the first device that saves a line from before it, unless every device reloads first; on a deployment older than 2026-10-16, an incident reported on one device, or a key or fob received there while another device records a handoff, can be dropped when the sheet merges the job (the Incidents and Keys & access cards\u2019 lists are not yet merged entry by entry); on a deployment older than 2026-10-06, two devices\u2019 release signers are not merged and the client\u2019s workbook rounds its money; on a deployment older than 2026-10-05, a co-executor or co-trustee is not put on the DocuSign envelope beside the client, so they sign a printed copy of the agreement and the page they signed has to be filed from the timeline; on a deployment older than 2026-10-03, a co-trustee, a beneficiary, a signed copy filed to Drive, a find on site or a proceeds statement added on one device can be dropped by another device saving an older copy of the job, and the client\u2019s inventory workbook heads a trust\u2019s net proceeds \u201cNet to Estate\u201d; on a deployment older than 2026-10-01, File signed copy adds a second copy of the signed agreement to the client\u2019s Agreement folder instead of replacing the one there; on a deployment older than 2026-09-30b, a payment voided or marked cleared on one device can come back as it was from another device that changed the same payment before reloading, and count again; a firearm\u2019s serial, recipient or dealer route, recorded on one device, can be dropped from the sheet by another device\u2019s older copy of the item, until the first device next saves the inventory; and on a deployment older than 2026-09-30, two people editing different parts of one job (a vendor quote here, the team there) can also undo each other\u2019s work, a damaged store tab is emptied by the next save instead of refused, and Agent One can stop mid-answer on a busy photograph',
   preVersion:    'it predates the version check itself (2026-09-09), so client PDFs, photographs, DocuSign, Stripe and Agent One may all be missing as well'
 };
 
@@ -17936,6 +17939,11 @@ function probatePackageDocs(job) {
   out.push('worklist');
   return out;
 }
+// Whether any page the package owes draws the lines' photographs (P13's review, 2026-10-28): the Estate Inventory Report
+// ('schedule') and the Contents List ('contents'). The rest link an item's number to its photograph and draw none. DOM-free.
+function probatePackageDrawsPhotos(owed) {
+  return (owed || []).some(function (k) { return k === 'schedule' || k === 'contents'; });
+}
 // One document's page, from its own printer: {html, title} or {why}.
 function probatePackagePage(jobId, key) {
   var o = { asHtml: true };
@@ -18374,11 +18382,12 @@ function sendProbatePackage(jobId) {
   var W = estatePackageRoute(job);
   _docBusy = { jobId: jobId, docKey: PROBATE_PKG_KEY };
   var over = false;
-  var watchdog = setTimeout(function () {
+  var onWatchdog = function () {
     if (over) return;
     over = true; _docBusy = null;
     _docNotice('warn', 'The ' + W.name + ' took too long to build. A draft may already have been created — check your Gmail drafts before pressing Send again.', jobId);
-  }, PROBATE_PKG_WATCHDOG_MS);
+  };
+  var watchdog = setTimeout(onWatchdog, PROBATE_PKG_WATCHDOG_MS);
   var finish = function () { over = true; clearTimeout(watchdog); _docBusy = null; };
   var step = function (label) { if (!over) _dashSendState(PROBATE_PKG_KEY, label); };
   var rcpt = probatePackageRecipients(job);
@@ -18400,91 +18409,114 @@ function sendProbatePackage(jobId) {
     if (gaps.length && !confirm('The inventory is still being built: ' + _andJoin(gaps) + '.\n\nThe ' + W.name + ' would go to ' + rcpt.to + ' now with those gaps marked on its pages. Send it anyway?')) {
       finish(); _docNotice('warn', 'Not sent. Finish the inventory, then press ' + W.send + ' again.', jobId); return;
     }
-    var owed = probatePackageDocs(job);
-    var pages = [], left = [];
-    owed.forEach(function (k) {
-      var r = probatePackagePage(jobId, k);
-      if (r.html) pages.push({ key: k, title: PROBATE_PKG_TITLES[k], html: r.html, name: r.title + '.pdf' });
-      else left.push({ title: PROBATE_PKG_TITLES[k], why: r.why || '' });
-    });
-    var record = { key: 'record', title: PROBATE_PKG_RECORD_TITLE, html: probatePackageRecordHtml(jobId) };
-    var shareTo = pkgShareEmails(rcpt);
-    step('Sharing the photograph folders with ' + _andJoin(shareTo) + '…');
-    _pkgShareFolders(job, shareTo, function (folders) {
-      // Recorded as it lands, whatever happens to the draft after it: the access is real either way (P22).
-      shareTo.forEach(function (e) {
-        var n = folders.filter(function (f) { return f.sharedWith.indexOf(e) >= 0; }).length;
-        if (n) recordPhotoShare(job, e, 'package', n);
+    // ⚠ THE PAGES' PHOTOGRAPHS FIRST (P13 of the desk audit, 2026-10-28; DOC-03): the package built its PDFs off whatever this
+    // device's capped cache held, so counsel's Estate Inventory Report carried 110 photographs for 300 lines. Every inventory line's
+    // photograph this session holds none of is fetched (invFetchPrintPhotos, memory only) before a page is built; the watchdog
+    // waits for it, each batch having its own.
+    // ⚠ ONLY WHERE A PAGE DRAWS THEM (P13's review, 2026-10-28): the Estate Inventory Report and the Contents List draw a line's
+    // photograph; the Court Inventory, the Trust Schedule, the ledger and the worklist link its number and draw none. A package of
+    // those alone (tier none) fetched every photograph and, with the photo service down, told the sender they could not be drawn.
+    var _pkgPhotos = (typeof probatePackageDrawsPhotos === 'function') ? probatePackageDrawsPhotos(probatePackageDocs(job)) : true;
+    var _pkgBuild = function () {
+      // What could not be drawn is said to the sender, as the printers' toast says it (P13's review, 2026-10-28: every batch could
+      // time out and the PDFs went to counsel with "photo" in every cell under an 'ok' notice). Read as the pages are built.
+      var _photoSaid = (_pkgPhotos && typeof invPrintPhotoWords === 'function') ? invPrintPhotoWords(jobId, _jobInvRefs(jobId)) : '';
+      var owed = probatePackageDocs(job);
+      var pages = [], left = [];
+      owed.forEach(function (k) {
+        var r = probatePackagePage(jobId, k);
+        if (r.html) pages.push({ key: k, title: PROBATE_PKG_TITLES[k], html: r.html, name: r.title + '.pdf' });
+        else left.push({ title: PROBATE_PKG_TITLES[k], why: r.why || '' });
       });
-      if (over) return;
-      step('Filing the documents to Drive…');
-      resolveSubfolderId(job, PHOTO_SUBFOLDER, function (folderId) {
-        _pkgFileAll(job, folderId || _jobRootFolderId(job), [record].concat(pages), function (filed) {
-          if (over) return;
-          step('Building the PDFs…');
-          _pkgPdfAll(job, pages, function (atts, pdfFails) {
+      var record = { key: 'record', title: PROBATE_PKG_RECORD_TITLE, html: probatePackageRecordHtml(jobId) };
+      var shareTo = pkgShareEmails(rcpt);
+      step('Sharing the photograph folders with ' + _andJoin(shareTo) + '…');
+      _pkgShareFolders(job, shareTo, function (folders) {
+        // Recorded as it lands, whatever happens to the draft after it: the access is real either way (P22).
+        shareTo.forEach(function (e) {
+          var n = folders.filter(function (f) { return f.sharedWith.indexOf(e) >= 0; }).length;
+          if (n) recordPhotoShare(job, e, 'package', n);
+        });
+        if (over) return;
+        step('Filing the documents to Drive…');
+        resolveSubfolderId(job, PHOTO_SUBFOLDER, function (folderId) {
+          _pkgFileAll(job, folderId || _jobRootFolderId(job), [record].concat(pages), function (filed) {
             if (over) return;
-            step('Creating the draft…');
-            var unfiled = [record].concat(pages).filter(function (d) { return !filed[d.key] || !filed[d.key].ok; });
-            var drive = function (withPages) {
-              var out = [];
-              // A page that is not attached is linked from Drive instead, where it was filed.
-              pages.forEach(function (pg) {
-                var a = atts.some(function (x) { return x.key === pg.key; });
-                if ((withPages || !a) && filed[pg.key] && filed[pg.key].ok) out.push({ label: pg.title, url: filed[pg.key].url });
-              });
-              probatePackageReports(job).forEach(function (r) { out.push({ label: r.title + ' — ' + r.name, url: r.url }); });
-              folders.forEach(function (f) { if (f.shared) out.push({ label: f.label, url: f.url }); });
-              if (filed.record && filed.record.ok) out.push({ label: 'Release approvals and chain of custody', url: filed.record.url });
-              return out;
-            };
-            var ctx = { job: job, asOf: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-                        scope: probatePackageScopeLine(job), attached: atts, inDrive: drive(false),
-                        unshared: folders.filter(function (f) { return !f.shared; }).map(function (f) { return f.label; }) };
-            var mime = buildMimeMessage({ to: rcpt.to, cc: rcpt.cc.join(', '), subject: probatePackageSubject(job),
-              text: buildProbatePackageEmailText(ctx), html: buildProbatePackageEmailHtml(ctx),
-              attachments: atts.map(function (a) { return { name: a.name, base64: a.base64 }; }) });
-            var tail = function (provider, draftUrl, lead) {
+            step('Building the PDFs…');
+            _pkgPdfAll(job, pages, function (atts, pdfFails) {
               if (over) return;
-              finish();
-              var gmail = provider === 'gmail';
-              var pkg = { owed: owed, docs: gmail ? atts.map(function (a) { return a.key; }) : [], to: rcpt.to, cc: rcpt.cc };
-              docRecordSent({ job: job, key: PROBATE_PKG_KEY }, { provider: provider, draftUrl: draftUrl || '',
-                pdfOk: gmail && atts.length === pages.length && !!pages.length, pkg: pkg });
-              var bits = [lead + (gmail ? 'Draft created in ' + (_gmailUserEmail || 'your Havellin mailbox') : 'Email opened')
-                + ' for ' + rcpt.to + ', copied to ' + rcpt.cc.join(' and ')
-                + (gmail ? (atts.length ? ', with the ' + _andJoin(atts.map(function (a) { return a.title; })) + ' attached' : ', with nothing attached')
-                         : ' — a plain email carries NO attachment, so the documents are linked from Drive in its body')
-                + '. Read it, send it, then tap “I’ve sent it”.'];
-              left.forEach(function (d) { bits.push('Not in the package: the ' + d.title + ' — ' + d.why); });
-              if (gmail) pdfFails.forEach(function (d) { bits.push('The ' + d.title + ' could not be made into a PDF, so it is linked from Drive instead of attached — ' + d.why); });
-              folders.forEach(function (f) {
-                if (!f.shared) bits.push('The ' + f.label + ' folder could not be shared with ' + rcpt.to + ' (' + f.error + '), so the draft says it is not yet shared: share it from Job Admin & Inv (Share w/ Counsel) when it can be.');
-                f.notShared.forEach(function (x) {
-                  bits.push('The ' + f.label + ' folder could not be shared with ' + x.email + ', who is copied (' + x.error + '): share it from Job Admin & Inv (Share w/ Counsel), or the links will refuse them.');
+              step('Creating the draft…');
+              var unfiled = [record].concat(pages).filter(function (d) { return !filed[d.key] || !filed[d.key].ok; });
+              var drive = function (withPages) {
+                var out = [];
+                // A page that is not attached is linked from Drive instead, where it was filed.
+                pages.forEach(function (pg) {
+                  var a = atts.some(function (x) { return x.key === pg.key; });
+                  if ((withPages || !a) && filed[pg.key] && filed[pg.key].ok) out.push({ label: pg.title, url: filed[pg.key].url });
                 });
-              });
-              if (unfiled.length) bits.push('Not filed to Drive: the ' + _andJoin(unfiled.map(function (d) { return d.title; })) + '.');
-              var clean = gmail && atts.length === pages.length && !left.length && !unfiled.length && folders.every(function (f) { return f.shared && !f.notShared.length; });
-              _docNotice(clean ? 'ok' : 'warn', bits.join(' '), jobId);
-              if (draftUrl) { try { window.open(draftUrl, '_blank'); } catch (e) {} }
-              showSyncBadge(gmail ? 'Gmail draft created ✓' : 'Email opened ✓');
-            };
-            gmailCreateDraft(mime, function (ok, d) {
-              if (over) return;
-              if (ok) { tail('gmail', gmailDraftUrl(d.messageId || d.draftId), ''); return; }
-              // ⚠ A FAILED DRAFT FALLS BACK TO A PLAIN EMAIL, the rule every client document follows (docSend), and is
-              // recorded as what it is: an email opened, with the documents linked from Drive since it can carry none.
-              var plain = { job: job, asOf: ctx.asOf, scope: ctx.scope, attached: [], inDrive: drive(true), unshared: ctx.unshared };
-              DOC_SEND_PROVIDERS.mailto.send({ cfg: { mailto: function () { return probatePackageMailto(plain, rcpt); } } }, null, function (ok2) {
-                if (!ok2) { finish(); _docNotice('err', 'Could not create the draft — ' + ((d && d.error) || 'unknown') + '.', jobId); return; }
-                tail('mailto', '', 'Gmail draft failed — ' + ((d && d.error) || 'unknown') + '. ');
+                probatePackageReports(job).forEach(function (r) { out.push({ label: r.title + ' — ' + r.name, url: r.url }); });
+                folders.forEach(function (f) { if (f.shared) out.push({ label: f.label, url: f.url }); });
+                if (filed.record && filed.record.ok) out.push({ label: 'Release approvals and chain of custody', url: filed.record.url });
+                return out;
+              };
+              var ctx = { job: job, asOf: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+                          scope: probatePackageScopeLine(job), attached: atts, inDrive: drive(false),
+                          unshared: folders.filter(function (f) { return !f.shared; }).map(function (f) { return f.label; }) };
+              var mime = buildMimeMessage({ to: rcpt.to, cc: rcpt.cc.join(', '), subject: probatePackageSubject(job),
+                text: buildProbatePackageEmailText(ctx), html: buildProbatePackageEmailHtml(ctx),
+                attachments: atts.map(function (a) { return { name: a.name, base64: a.base64 }; }) });
+              var tail = function (provider, draftUrl, lead) {
+                if (over) return;
+                finish();
+                var gmail = provider === 'gmail';
+                var pkg = { owed: owed, docs: gmail ? atts.map(function (a) { return a.key; }) : [], to: rcpt.to, cc: rcpt.cc };
+                docRecordSent({ job: job, key: PROBATE_PKG_KEY }, { provider: provider, draftUrl: draftUrl || '',
+                  pdfOk: gmail && atts.length === pages.length && !!pages.length, pkg: pkg });
+                var bits = [lead + (gmail ? 'Draft created in ' + (_gmailUserEmail || 'your Havellin mailbox') : 'Email opened')
+                  + ' for ' + rcpt.to + ', copied to ' + rcpt.cc.join(' and ')
+                  + (gmail ? (atts.length ? ', with the ' + _andJoin(atts.map(function (a) { return a.title; })) + ' attached' : ', with nothing attached')
+                           : ' — a plain email carries NO attachment, so the documents are linked from Drive in its body')
+                  + '. Read it, send it, then tap “I’ve sent it”.'];
+                left.forEach(function (d) { bits.push('Not in the package: the ' + d.title + ' — ' + d.why); });
+                if (gmail) pdfFails.forEach(function (d) { bits.push('The ' + d.title + ' could not be made into a PDF, so it is linked from Drive instead of attached — ' + d.why); });
+                folders.forEach(function (f) {
+                  if (!f.shared) bits.push('The ' + f.label + ' folder could not be shared with ' + rcpt.to + ' (' + f.error + '), so the draft says it is not yet shared: share it from Job Admin & Inv (Share w/ Counsel) when it can be.');
+                  f.notShared.forEach(function (x) {
+                    bits.push('The ' + f.label + ' folder could not be shared with ' + x.email + ', who is copied (' + x.error + '): share it from Job Admin & Inv (Share w/ Counsel), or the links will refuse them.');
+                  });
+                });
+                if (unfiled.length) bits.push('Not filed to Drive: the ' + _andJoin(unfiled.map(function (d) { return d.title; })) + '.');
+                if (_photoSaid) bits.push('On the pages: ' + _photoSaid);
+                var clean = gmail && atts.length === pages.length && !left.length && !unfiled.length && !_photoSaid && folders.every(function (f) { return f.shared && !f.notShared.length; });
+                _docNotice(clean ? 'ok' : 'warn', bits.join(' '), jobId);
+                if (draftUrl) { try { window.open(draftUrl, '_blank'); } catch (e) {} }
+                showSyncBadge(gmail ? 'Gmail draft created ✓' : 'Email opened ✓');
+              };
+              gmailCreateDraft(mime, function (ok, d) {
+                if (over) return;
+                if (ok) { tail('gmail', gmailDraftUrl(d.messageId || d.draftId), ''); return; }
+                // ⚠ A FAILED DRAFT FALLS BACK TO A PLAIN EMAIL, the rule every client document follows (docSend), and is
+                // recorded as what it is: an email opened, with the documents linked from Drive since it can carry none.
+                var plain = { job: job, asOf: ctx.asOf, scope: ctx.scope, attached: [], inDrive: drive(true), unshared: ctx.unshared };
+                DOC_SEND_PROVIDERS.mailto.send({ cfg: { mailto: function () { return probatePackageMailto(plain, rcpt); } } }, null, function (ok2) {
+                  if (!ok2) { finish(); _docNotice('err', 'Could not create the draft — ' + ((d && d.error) || 'unknown') + '.', jobId); return; }
+                  tail('mailto', '', 'Gmail draft failed — ' + ((d && d.error) || 'unknown') + '. ');
+                });
               });
             });
           });
         });
       });
-    });
+    };
+    var _pkgIds = (_pkgPhotos && typeof invPrintPhotoIds === 'function') ? invPrintPhotoIds(jobId, _jobInvRefs(jobId)) : [];
+    if (!_pkgIds.length) { _pkgBuild(); return; }
+    step('Gathering ' + _pkgIds.length + ' photograph' + (_pkgIds.length === 1 ? '' : 's') + ' from Drive…');
+    clearTimeout(watchdog);
+    invFetchPrintPhotos(jobId, _pkgIds, function () {
+      if (over) return;
+      watchdog = setTimeout(onWatchdog, PROBATE_PKG_WATCHDOG_MS);
+      _pkgBuild();
+    }, 'the ' + W.name);
   });
   return true;
 }
@@ -28407,6 +28439,9 @@ function savePhotoRefs(jobId) {
                // saying *photo in the Drive bin* and read like a line whose photograph was intact.
                viaDealer:r.viaDealer, viaDealerBy:r.viaDealerBy, viaDealerAt:r.viaDealerAt,
                deletedBy:r.deletedBy, driveTrashed:r.driveTrashed,
+               // ⚠ P13 (2026-10-28): why a line was taken off (the papers' Numbers not used) and the line it went into or repeats,
+               // and Agent One's mark that a line holds more than one article (the §20.2031-6(a) test of a group with no count).
+               removedWhy:r.removedWhy, removedOf:r.removedOf, agentGroup:r.agentGroup, groupBy:r.groupBy, groupWho:r.groupWho,
                // ⚠ P22: the person left in Channel / Recipient after the line came off Distribute, the item a detail
                // shot was binned with, and the merge's stamps on the signers (a hand edit, each name Record approval added).
                channelLeftover:r.channelLeftover, deletedWith:r.deletedWith, authBySetAt:r.authBySetAt, authAdds:r.authAdds,
@@ -28595,6 +28630,8 @@ function discardShot(jobId, stableId) {
     // detail shot somebody binned on its own.
     // A close-up of a line split off this photograph is taken with THAT line, so restoring the line gives it back.
     if (r !== ref && r.label === 'detail') r.deletedWith = r.groupId || ref.stableId;
+    // An inventory line goes with its photograph, and says so under the papers' Numbers not used (P13).
+    if (r.label === 'inventory') { r.removedWhy = 'photo'; delete r.removedOf; }
     // ⚠ SO THE UNDO BUFFER CAN TELL THE TRUTH. Restore gives the ROW back — name, value,
     // disposition, custody — and it cannot give the photograph back, because that is in
     // Google's own bin. Stamped here rather than in the Drive callback: an async write back
@@ -29159,16 +29196,59 @@ function invLotArticleValue(ref) {
   return v / q;
 }
 
+// ⚠ A GROUP WITH NO COUNT RECORDED (P13's review, 2026-10-28): Agent One read the line as more than one article (`agentGroup`), no
+// count above one is on it, and no person has answered (`groupBy: 'desk'`, written by a count typed in Qty or the record's One
+// article). The one test, read by the lot rule below, the worklist's grouped lots, the summary's articles and the record. DOM-free.
+function invGroupUncounted(ref) {
+  return !!ref && ref.agentGroup === true && ref.groupBy !== 'desk' && !(parseInt(ref.qty, 10) > 1);
+}
 // '' | 'over' | 'unvalued'. THREE answers rather than two, for the reason the aggregate in
 // (b) keeps `settled`: an unvalued lot has not passed the test, it has not been GIVEN one,
 // and reporting it as clear is the failure this whole area exists to prevent.
+// ⚠⚠ AND A FOURTH, 'nocount' (P13 of the desk audit, 2026-10-28; INV-09): a group recorded as one line with no count (Agent One's
+// rule since 2026-10-26: "a mixed group one line of qty 1": a drawer, box or shelf of things) escaped the test, which asked only
+// lines counted above one, so the worklist printed its clearance over a $180 sideboard drawer of candles, napkin rings and corkscrews
+// never tested. Agent One marks a line holding more than one article (`agentGroup`, the `2026-11-02b` backend); at a count of one
+// over $100, or with no value, the cap cannot be tested on it. Under $100 nothing in it can be over the cap.
+// ⚠ AND A PERSON ANSWERS IT (P13's review, 2026-10-28): the mark could be cleared by nothing, so a line renamed "Brass candlestick"
+// after its drawer was itemised printed "grouped, untested" on the Court Inventory for good. A count typed in Qty, or the record's
+// One article, records the answer (`groupBy: 'desk'`, invGroupUncounted), and the count then decides as on any line.
 function invLotSplitState(ref, job) {
   if (!maivFilingApplies(job)) return '';        // the one gate — do not duplicate it upstream
   var q = parseInt(ref && ref.qty, 10);
-  if (!(q > 1)) return '';                       // a single article is never "grouped"
   var v = parseFloat(ref && ref.fmv);
+  if (!(q > 1)) {                                // a single article is never "grouped"…
+    if (!invGroupUncounted(ref)) return '';
+    return (isNaN(v) || v > INV_LOT_ARTICLE_CAP) ? 'nocount' : '';   // …but a group with no count is
+  }
   if (isNaN(v)) return 'unvalued';
   return (v / q) > INV_LOT_ARTICLE_CAP ? 'over' : '';
+}
+// ⚠⚠ A LOT SAYS WHAT EACH ARTICLE IS WORTH, ON ITS LINE (P13, 2026-10-28; VAL-29, DOC-25). The schedules printed "(12 items,
+// valued as a lot) … $1,800", hiding the per-article figure the §20.2031-6(a) cap is about, and the over-cap mark lived on the
+// worklist alone, so the schedule counsel works from looked compliant. A line counted above one now reads "8 × $90" (Each × Qty,
+// the row's own arithmetic, invUnitValue), "7 articles, averaging $10.71" where Each times the count does not make the total to the
+// cent, "8 articles" with no value; and on a Form 706 estate a lot over the cap, or one the cap cannot be tested on, is marked on
+// its line (invLotMarkWords). One helper for the Court Inventory, the Trust Schedule and the Estate Inventory Report. DOM-free.
+function invLotWords(ref) {
+  var q = parseInt(ref && ref.qty, 10);
+  if (!(q > 1)) return '';
+  var n = q.toLocaleString();
+  if (!_invHasValue(ref)) return n + ' articles';
+  var u = roundCents(invUnitValue(ref));
+  if (roundCents(u * q) === roundCents(parseFloat(ref.fmv))) return n + ' × ' + _invMoney(u);
+  return n + ' articles, averaging ' + _invMoney(u);
+}
+function invLotMarkWords(ref, job) {
+  var st = invLotSplitState(ref, job);
+  if (st === 'over') return 'averages ' + _invMoney(invLotArticleValue(ref)) + ' an article: itemise it for the Form 706';
+  if (st === 'unvalued' || st === 'nocount') return 'grouped, untested';
+  return '';
+}
+function invLotLineHtml(ref, job) {
+  var w = invLotWords(ref), m = invLotMarkWords(ref, job);
+  return (w ? ' <span class="inv-lot" style="color:#888;">(' + esc(w) + ')</span>' : '')
+    + (m ? '<div class="inv-lot-mark" style="font-size:9.5px;font-weight:700;color:' + (invLotSplitState(ref, job) === 'over' ? '#A32D2D' : '#8a6d3b') + ';">&#9888; ' + esc(m) + '</div>' : '');
 }
 
 // One sentence, read by the desk and the worklist, so the two cannot state the arithmetic
@@ -29183,8 +29263,9 @@ function invLotSplitSentence(ref) {
 function invLotsToSplit(items, job) {
   return (items || []).filter(function(r){ return invLotSplitState(r, job) === 'over'; });
 }
+// The lots the cap cannot be tested on: a count with no value, or (P13) a group recorded with no count.
 function invLotsUntestable(items, job) {
-  return (items || []).filter(function(r){ return invLotSplitState(r, job) === 'unvalued'; });
+  return (items || []).filter(function(r){ var s = invLotSplitState(r, job); return s === 'unvalued' || s === 'nocount'; });
 }
 
 function _invRefs(jobId, roomIdx) {
@@ -29519,18 +29600,25 @@ function _invThumbCache(jobId) {
 // an uncapped photo cache does not merely fail to save itself, it starves the one write
 // that must never fail. Evict oldest-first until it fits; thumbnails are refetchable and
 // the record is not.
+// ⚠⚠ ONLY THE STORED COPY IS TRIMMED, NEVER THE SESSION'S (P13 of the desk audit, 2026-10-28; ROW-02): this deleted from
+// `_invThumbs[jobId]` itself, the in-memory cache every row paints from, and `_invThumbTried` never asks for an id twice, so on a
+// 300-line house the first full redraw (one Reviewed tick) left 142 of 300 rows with a photograph and the rest the category glyph
+// for the rest of the session. The copy written to localStorage is the newest entries that fit the budget, worked out in one pass
+// (one JSON.stringify per entry: re-stringifying the whole cache after each delete was quadratic once the session holds a house).
 var INV_THUMB_CACHE_MAX = 2000000;
 function _invSaveThumbCache(jobId) {
   var cache = _invThumbs[jobId] || {};
-  var json = JSON.stringify(cache);
-  if (json.length > INV_THUMB_CACHE_MAX) {
-    // String keys keep insertion order, so the front of this list is the oldest fetch.
-    var keys = Object.keys(cache);
-    while (keys.length && json.length > INV_THUMB_CACHE_MAX) {
-      delete cache[keys.shift()];
-      json = JSON.stringify(cache);
-    }
+  // String keys keep insertion order, so the end of this list is the newest fetch: kept first, back to the budget.
+  var keys = Object.keys(cache), keep = [], size = 2;
+  for (var i = keys.length - 1; i >= 0; i--) {
+    var add = JSON.stringify(keys[i]).length + JSON.stringify(cache[keys[i]]).length + 2;
+    if (size + add > INV_THUMB_CACHE_MAX) break;
+    size += add;
+    keep.push(keys[i]);
   }
+  var stored = {};
+  keep.reverse().forEach(function (k) { stored[k] = cache[k]; });
+  var json = JSON.stringify(stored);
   try { localStorage.setItem(_invThumbKey(jobId), json); }
   catch (e) {
     // Still no room. Drop the persisted copy outright rather than leaving a stale half of
@@ -29601,6 +29689,15 @@ function _invEnsureThumbs(jobId) {
       }
       var cache = _invThumbCache(jobId), got = 0;
       Object.keys(d.thumbs || {}).forEach(function(id){ cache[id] = d.thumbs[id]; got++; });
+      // ⚠ AN ID THE SERVER NEVER REACHED IS ASKED AGAIN (P13, 2026-10-28): getDriveThumbnails stops at its size budget and says the
+      // app asks again for the rest, but every id was marked tried before the request, so a batch cut short at its budget left
+      // the rest as glyphs for the session. Only an id Drive answered it cannot serve (`missing`) stays tried, and only while the
+      // batch brought something back (a batch that answered nothing at all is not asked again in a loop).
+      if (got) {
+        var _miss = {};
+        (d.missing || []).forEach(function (m) { _miss[m] = 1; });
+        ids.forEach(function (id) { if (!cache[id] && !_miss[id]) delete _invThumbTried[id]; });
+      }
       _invSaveThumbCache(jobId);
       delete _invThumbFailed[jobId];
       if (got) _invPaintThumbs(jobId);
@@ -30426,13 +30523,20 @@ function _invCellRead(ref, col, job, displaySeq) {
 }
 
 function _renderInventorySummary(job, items) {
-  var catAgg = {}; INV_CATEGORIES.forEach(function(c){ catAgg[c] = {fmv:0, count:0}; });
+  var catAgg = {}; INV_CATEGORIES.forEach(function(c){ catAgg[c] = {fmv:0, count:0, articles:0, grouped:0}; });
   var dispAgg = {}; INV_DISPOSITIONS.forEach(function(d){ dispAgg[d] = 0; });
-  var totalFMV = 0, awaiting = 0, nDisp = 0, nBequest = 0, nExempt = 0, gross = 0, fees = 0, nAppr = 0;
+  var totalFMV = 0, awaiting = 0, nDisp = 0, nBequest = 0, nExempt = 0, gross = 0, fees = 0, nAppr = 0, articles = 0, grouped = 0;
   items.forEach(function(r){
     var cat = (r.category && catAgg[r.category]) ? r.category : 'General/Household';
-    if (!catAgg[cat]) catAgg[cat] = {fmv:0, count:0};
+    if (!catAgg[cat]) catAgg[cat] = {fmv:0, count:0, articles:0, grouped:0};
     catAgg[cat].count++;
+    // ⚠ LINES AND ARTICLES, BOTH (P13 of the desk audit, 2026-10-28; INV-20): "Total Items 50" counted lines while the schedules
+    // printed "(6 items, valued as a lot)", so "items" meant lines in one place and articles in the other, and a reader comparing
+    // the house to the list had no article count. A line's count is invLineQty (a line with none is one, as the papers print it).
+    // ⚠ A GROUP WITH NO COUNT IS COUNTED APART (P13's review): a sideboard drawer of candles, napkin rings and coasters is more than
+    // one article, so counting it as one understated the figure with nothing said. Not in Articles; named beside it.
+    if (invGroupUncounted(r)) { catAgg[cat].grouped++; grouped++; }
+    else { catAgg[cat].articles += invLineQty(r); articles += invLineQty(r); }
     // ⚠ MONEY IS SUMMED TO THE CENT (P22): each figure and every sum through roundCents, as the Disposition Ledger sums
     // the same lines (dispositionLedger); `+=` on raw floats drifted, and fmt only rounded what it printed.
     var f = parseFloat(r.fmv);
@@ -30493,7 +30597,8 @@ function _renderInventorySummary(job, items) {
     + '</div>';
   var maiv = maivAggregate(items, _fid ? job : null);
   var totals = '<div>'
-    + hdrRow('Total Items', String(items.length))
+    + hdrRow('Total Lines', String(items.length))
+    + hdrRow('Total Articles', String(articles) + (grouped ? ', plus ' + grouped + ' grouped line' + (grouped === 1 ? '' : 's') + ' not counted' : ''))
     // ⚠ "Items Awaiting Valuation" reads every row on a living job forever, because nobody is
     // entering values — a count that cannot go down trains people to stop reading the block.
     // ⚠⚠ AND THE SAME IS TRUE AT THE `contents` TIER, BY CONTRACT rather than by habit: the
@@ -30517,14 +30622,16 @@ function _renderInventorySummary(job, items) {
   // living job since 2026-09-21; this table did not, so the family's own workbook counted while
   // the screen beside it priced the same rows at $0. One predicate now drives both.
   var _catMoney = _sv;
+  // The grouped lines beside the articles, as the totals say them: "1 + 2 grouped".
+  var _grpCell = function (n) { return n ? ' <span class="inv-sum-grouped" style="font-weight:400;color:#8a6d3b;">+ ' + n + ' grouped</span>' : ''; };
   var catRows = INV_CATEGORIES.map(function(c){
-    return '<tr><td>' + esc(c) + '</td><td style="text-align:right;">' + (catAgg[c].count || 0) + '</td>'
+    return '<tr><td>' + esc(c) + '</td><td style="text-align:right;">' + (catAgg[c].count || 0) + '</td><td style="text-align:right;">' + (catAgg[c].articles || 0) + _grpCell(catAgg[c].grouped) + '</td>'
       + (_catMoney ? '<td style="text-align:right;">' + (_money(catAgg[c].fmv) || '$0') + '</td>' : '') + '</tr>';
   }).join('');
-  var catTable = '<table class="vtbl" style="font-size:11px;"><thead><tr><th>' + (_catMoney ? 'FMV by Category' : 'Items by Category') + '</th><th style="text-align:right;">Count</th>'
+  var catTable = '<table class="vtbl" style="font-size:11px;"><thead><tr><th>' + (_catMoney ? 'FMV by Category' : 'Items by Category') + '</th><th style="text-align:right;">Lines</th><th style="text-align:right;">Articles</th>'
     + (_catMoney ? '<th style="text-align:right;">FMV</th>' : '') + '</tr></thead><tbody>'
     + catRows
-    + '<tr style="font-weight:700;"><td>Total</td><td style="text-align:right;">' + items.length + '</td>'
+    + '<tr style="font-weight:700;"><td>Total</td><td style="text-align:right;">' + items.length + '</td><td style="text-align:right;">' + articles + _grpCell(grouped) + '</td>'
     + (_catMoney ? '<td style="text-align:right;">' + (_money(totalFMV) || '$0') + '</td>' : '') + '</tr></tbody></table>';
   var dispRows = INV_DISPOSITIONS.map(function(d){
     return '<tr><td>' + esc(d) + '</td><td style="text-align:right;">' + (dispAgg[d] || 0) + '</td></tr>';
@@ -30622,6 +30729,15 @@ function _invInputStyle(ctrl, key) {
 // count changed carries Each across and moves the total, and the agent's range with it. An appraisal's figure is the report's
 // and is never moved by a count.
 function invLineQty(ref) { var q = parseInt(ref && ref.qty, 10); return q > 1 ? q : 1; }
+// ⚠ A COUNT LEFT IN A NAME IS HINTED ON THE ROW (P13 of the desk audit, 2026-10-28; INV-18): Agent One's rule since the 2026-10-24
+// backend is that a name carries no count (how many is Qty's alone), but a name that does ("Set of 8 mahogany dining chairs",
+// "Pair of Staffordshire spaniels") was caught only by the probes' log line (main-sync.gs's AGENT_COUNT_IN_NAME_RE), and once Qty was
+// corrected to 6 the Court Inventory read "Set of 8 … (6 articles)". The row says *count in the name* in bronze, a hint and never a
+// block. Narrower than the server's log warning on purpose: "box of", "lot of" and "group of" with no number are how Agent One's own
+// rules name a container line ("Box of holiday ornaments") and say no count; a number after them, "pair", "set of 8", "30 pieces",
+// "approx. 7", "service for 12" or "(8)" do. Held to the server's examples by a test.
+var INV_COUNT_IN_NAME_RE = /\bpairs? of\b|,\s*(?:a )?pair\b|\b(?:set|stack|box|lot|group|case|bundle) of (?:\d+|a dozen|dozens|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|twenty)\b|\b\d+\s*(?:pieces|pcs|pc\b|in (?:a )?stack|total)|\bapprox(?:\.|imately)?\s*\d+|\b(?:service|settings?|place settings?) for (?:\d+|eight|ten|twelve)\b|\(\s*\d+\s*\)|\b(?:a )?dozen\b/i;
+function invNameCarriesCount(ref) { return !!(ref && INV_COUNT_IN_NAME_RE.test(String(ref.objectName || ''))); }
 // ⚠ A TYPED EACH COUNTS ONLY WHILE IT STILL MAKES THE TOTAL: a count or a total written anywhere but the row's own edit (Agent
 // One's qty on a later naming, a merge from another device) leaves `unitVal` behind, and Each is then read off the total.
 function invUnitValue(ref) {
@@ -30885,6 +31001,8 @@ function _invEdit(jobId, stableId, key, el) {
   } else {
     ref[key] = (el.type === 'checkbox') ? el.checked : el.value;
     if (key === 'qty') _figMoved = _invQtyCarriesValue(ref, _unitWas, _qWas);   // the count carries Each across
+    // A count typed on a line Agent One read as a group is a person's answer to it (P13's review): its count, one included.
+    if (key === 'qty' && ref.agentGroup === true) { ref.groupBy = 'desk'; ref.groupWho = (typeof _invStampBy === 'function' && _invStampBy(_invJob(jobId))) || ''; }
   }
   // ⚠⚠ A CHANGE TO AN APPROVED LINE THAT ITS APPROVAL DOES NOT COVER ASKS ONCE (P5; EST-01, REL-01, SYN-03): where it goes, who
   // takes it, or its value past Ask 5's rule (a count that carries Each across moves it too). OK writes it: the approval stays on
@@ -30955,6 +31073,11 @@ function _invEdit(jobId, stableId, key, el) {
     if (netEl) netEl.textContent = _invNetDisplay(ref);
   }
   if (_figMoved || key === 'qty') _invPaintFigures(ref);
+  // And the record's group mark, by id, once a count answers it (the box is on the row, so nothing typed is under it).
+  if (key === 'qty' && ref.agentGroup === true && typeof _invPanelGroupHtml === 'function') {   // (typeof: a pinned sandbox lifts _invEdit alone)
+    var _gEl = document.getElementById('inv-grp-' + stableId), _gJob = _invJob(jobId);
+    if (_gEl && _gJob) _gEl.outerHTML = _invPanelGroupHtml(_gJob, ref) || '<div id="inv-grp-' + esc(stableId) + '"></div>';
+  }
   // ⚠ A FIGURE THAT STOPPED BEING THE AGENT'S REDRAWS ITS ROW (P23), so its badge and Accept go with it; and a name
   // edited under an agent's figure repaints the work bar's notices, where *made for an earlier name* is read first.
   // And a line the appraisal's figure has just landed on (Q93): its "Appraisal · … · pending" becomes the appraisal it records.
@@ -31109,9 +31232,20 @@ function invRemoveLine(jobId, stableId) {
 // The one writer of a desk removal: tombstoned, stamped with who, touched so it wins the merge.
 // Tombstone rather than splice: absence is indistinguishable from "the other device has not seen it
 // yet", so a splice is undone by the next merge.
+// ⚠ A REMOVAL CARRIES ITS REASON (P13 of the desk audit, 2026-10-28; INV-16): the tombstone recorded who and when, so the papers' item
+// numbers had gaps nothing explained, and an inventory with silent gaps reads as one with things taken off it. The reason is the one
+// the press already knows, never a new question (thorough, never cumbersome): `opts.why` from the press (`dup` Remove under Possible
+// duplicates, `repeat` Keep the first reading, `joined` Use that line, each with `opts.of`, the line it went into or repeats), else
+// what the line was when Remove line or Remove lines took it (`empty` a photograph Agent One found nothing in, `blank` never named,
+// `desk` anything else). `removedWhy` and `removedOf`, on the manifest's save list; Restore takes both off. The papers' footnote,
+// invNumbersNotUsedHtml, reads them.
 function _invTombstoneLine(jobId, ref, opts) {
   ref.deletedAt = Date.now();
   ref.deletedBy = _invStampBy(_invJob(jobId));
+  var _why = (opts && opts.why) || (ref.agentConf === 'none' && !String(ref.objectName || '').trim() ? 'empty'
+    : !String(ref.objectName || '').trim() ? 'blank' : 'desk');
+  ref.removedWhy = _why;
+  if (opts && opts.of) ref.removedOf = String(opts.of); else delete ref.removedOf;
   _invTouch(ref);
   _setPhotoRef(jobId, ref);
   // A sweep (`invBulkRemove`) tombstones its lines one by one and saves the manifest once: `savePhotoRefs`
@@ -32400,18 +32534,174 @@ function _invDocHead(job, title, extra) {
     + new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) + '</div>';
 }
 
+// ⚠⚠ EVERY PAPER FETCHES ITS OWN LINES' PHOTOGRAPHS BEFORE IT PRINTS (P13 of the desk audit, 2026-10-28; EST-06, DOC-03). The
+// papers drew only what this device's thumbnail cache held, and that cache is capped for localStorage's sake (INV_THUMB_CACHE_MAX),
+// so a 300-line house printed 110 to 149 photographs and told counsel "190 items have no photograph available on this device …
+// re-open this tab with a connection to include them": words for the person at the desk, in a remedy the cap made impossible, sent to
+// a reader who has no tab. Each paper now asks the Apps Script for exactly its own lines' photographs that this session holds none of,
+// uncapped, into a map kept in memory for printing alone (`_invPrintThumbs`: never written to localStorage, never the desk's cache or
+// its budget), and prints once they are in. A line whose photograph still cannot be drawn links to its file instead, and the person
+// printing is told how many by the toast (invPrintPhotoWords), never the reader. The papers a send or a filing builds (`asHtml`)
+// are fetched for by their caller first: the estate package, the release request's send, the Contents Record filed at the close.
+var _invPrintThumbs  = {};   // jobId -> { fileId: dataUri }, fetched for the papers. Memory only: never written to localStorage.
+var _invPrintNoThumb = {};   // fileId -> 1: Drive answered it has no thumbnail it can serve, so no paper asks for it again this session.
+var _invPrintFetch   = {};   // jobId -> the fetch out for the papers, with every press waiting on it. Session only.
+var INV_PRINT_PHOTO_PARALLEL = 3;          // batches out at once, each INV_THUMB_BATCH ids (the server's THUMB_MAX_IDS)
+var INV_PRINT_PHOTO_WATCHDOG_MS = 90000;   // a batch that never answers lets go (fetch has no timeout); the paper prints without it
+// The thumbnail a paper draws for a line: the print map's, else the desk's session cache.
+function _invPrintThumbSrc(jobId, ref) {
+  var id = _invFileId(ref);
+  if (!id) return '';
+  var map = (typeof _invPrintThumbs !== 'undefined' && _invPrintThumbs[jobId]) || {};   // a sandbox that lifts a printer alone holds none
+  return map[id] || _invThumbCache(jobId)[id] || '';
+}
+// The file ids a page's lines carry that this session holds no thumbnail of, each once (Drive's own refusals left out). DOM-free.
+function invPrintPhotoIds(jobId, refs) {
+  var out = [], seen = {};
+  (refs || []).forEach(function (r) {
+    var id = _invFileId(r);
+    if (!id || seen[id] || _invPrintNoThumb[id] || _invPrintThumbSrc(jobId, r)) return;
+    seen[id] = 1;
+    out.push(id);
+  });
+  return out;
+}
+// What the person printing is told once the fetch is done: how many lines on the page carry a photograph that could not be drawn
+// (Drive could not serve it, or the fetch failed), and that each is linked instead. '' where every one is drawn.
+function invPrintPhotoWords(jobId, refs) {
+  var n = 0, seen = {};
+  (refs || []).forEach(function (r) {
+    var id = _invFileId(r);
+    if (!id || seen[id] || _invPrintThumbSrc(jobId, r)) return;
+    seen[id] = 1;
+    n++;
+  });
+  return n ? n + ' photograph' + (n === 1 ? '' : 's') + ' could not be drawn from Drive, so ' + (n === 1 ? 'its line links' : 'their lines link')
+    + ' to the photograph in Drive instead.' : '';
+}
+// Fetch `ids` into the print map, INV_THUMB_BATCH at a time and INV_PRINT_PHOTO_PARALLEL at once; `done({got, failed, error})` once
+// every batch has answered or let go. A press made while a fetch is out joins it: its ids are added, and it is answered with the rest.
+// `what` names the paper in the progress toast.
+function invFetchPrintPhotos(jobId, ids, done, what) {
+  var F = _invPrintFetch[jobId];
+  if (!F) F = _invPrintFetch[jobId] = { queue: [], asked: {}, waiters: [], out: 0, got: 0, failed: 0, error: '', total: 0, what: what || 'the paper' };
+  (ids || []).forEach(function (id) { if (!F.asked[id]) { F.asked[id] = 1; F.queue.push(id); F.total++; } });
+  if (done) F.waiters.push(done);
+  _invPrintPump(jobId, F);
+}
+function _invPrintPump(jobId, F) {
+  if (_invPrintFetch[jobId] !== F) return;
+  if (!F.queue.length && !F.out) {
+    delete _invPrintFetch[jobId];
+    var res = { got: F.got, failed: F.failed, error: F.error };
+    F.waiters.forEach(function (w) { try { w(res); } catch (e) { if (typeof console !== 'undefined') console.warn('[Photos] a paper waiting on its photographs threw', e); } });
+    return;
+  }
+  while (F.queue.length && F.out < INV_PRINT_PHOTO_PARALLEL) _invPrintBatch(jobId, F, F.queue.splice(0, INV_THUMB_BATCH));
+}
+function _invPrintBatch(jobId, F, batch) {
+  F.out++;
+  var over = false, timer = null;
+  var store = function (thumbs, missing) {
+    var map = _invPrintThumbs[jobId] = _invPrintThumbs[jobId] || {}, got = 0;
+    Object.keys(thumbs || {}).forEach(function (id) { if (!map[id]) got++; map[id] = thumbs[id]; });
+    (missing || []).forEach(function (id) { _invPrintNoThumb[id] = 1; });
+    return got;
+  };
+  var end = function (d, err) {
+    if (over) { if (d && d.ok) store(d.thumbs, d.missing); return; }   // an answer after the watchdog is kept for the next paper
+    over = true;
+    if (timer != null && typeof clearTimeout === 'function') clearTimeout(timer);
+    F.out--;
+    if (err || !d || !d.ok) {
+      F.failed += batch.length;
+      F.error = F.error || err || (d && d.error) || 'the photo service did not answer';
+    } else {
+      var got = store(d.thumbs, d.missing);
+      F.got += got;
+      var miss = {};
+      (d.missing || []).forEach(function (m) { miss[m] = 1; });
+      // The server stops at its size budget and says to ask again for the rest: asked again while each batch brings something back.
+      var left = batch.filter(function (id) { return !(_invPrintThumbs[jobId] || {})[id] && !miss[id]; });
+      if (left.length && got) Array.prototype.push.apply(F.queue, left);
+      else F.failed += left.length;
+    }
+    if (F.total > INV_THUMB_BATCH && typeof showSyncBadge === 'function') {
+      showSyncBadge('Gathering photographs from Drive for ' + F.what + '… ' + Math.min(F.got, F.total) + ' of ' + F.total);
+    }
+    _invPrintPump(jobId, F);
+  };
+  if (typeof setTimeout === 'function') timer = setTimeout(function () { timer = null; end(null, 'the photo service took too long to answer'); }, INV_PRINT_PHOTO_WATCHDOG_MS);
+  fetch(_withDeviceKey(SHEETS_SYNC_URL), {
+    method: 'POST', mode: 'cors', redirect: 'follow',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ action: 'getThumbnails', fileIds: batch })
+  })
+    .then(_readAppsScriptJson)
+    .then(function (d) { end(d, ''); })
+    .catch(function (e) { end(null, (e && e.message) || 'the photo service could not be reached'); });
+}
+// The read gate's twin for the photographs (invReadFirst): answers true when it has started a fetch for the page's own lines (the
+// caller stops; `go` runs once every photograph has answered), false when the caller goes on now: no Apps Script URL, nothing
+// missing, `opt.photos` (fetched already), or `opt.asHtml` (a page for a send or a filing, whose caller fetches first itself).
+function invPhotosFirst(jobId, refs, what, go, opt) {
+  opt = opt || {};
+  if (opt.photos || opt.asHtml) return false;
+  if (!(typeof SHEETS_SYNC_URL !== 'undefined' && SHEETS_SYNC_URL)) return false;
+  var ids = invPrintPhotoIds(jobId, refs);
+  if (!ids.length) return false;
+  var paper = String(what || 'the paper').replace(/^The /, 'the ');
+  showSyncBadge('Gathering ' + ids.length + ' photograph' + (ids.length === 1 ? '' : 's') + ' from Drive for ' + paper + '…');
+  invFetchPrintPhotos(jobId, ids, function () {
+    var said = invPrintPhotoWords(jobId, refs);
+    if (said) showSyncBadge(said, true);
+    go();
+  }, paper);
+  return true;
+}
+// The options a paper is called again with once its photographs are in.
+function _invPhotosOpt(opt) { var o = {}; for (var k in (opt || {})) if (Object.prototype.hasOwnProperty.call(opt, k)) o[k] = opt[k]; o.photos = true; return o; }
+
+// ⚠ EACH LINE LINKS TO ITS PHOTOGRAPH IN DRIVE (P13, 2026-10-28; DOC-06, INV-10): the papers closed "Photographs are
+// reference-numbered to the line items above" while no line carried a link and the files are named by room and shot count, never
+// by item number, so a reader in the shared folder could not find #7 in it. The line's file, as the desk's row opens it
+// (_invRowPhotoHtml): the stored link, else the file id's page. '' for a line with no file (typed, or never uploaded).
+function _invPaperPhotoUrl(ref) {
+  var url = String((ref && ref.driveFileUrl) || '');
+  if (/^https?:\/\//i.test(url)) return url;
+  var id = _invFileId(ref);
+  return id ? 'https://drive.google.com/file/d/' + encodeURIComponent(id) + '/view' : '';
+}
+// The line's item number on a paper, a link to its photograph where it has one.
+function _invItemNoLinkHtml(ref) {
+  var n = esc(_invItemNo(ref)), url = _invPaperPhotoUrl(ref);
+  return (url && n !== '—') ? '<a class="inv-no-link" href="' + esc(url) + '" style="color:inherit;">' + n + '</a>' : n;
+}
+// The footer's sentence on the photographs, drafted 2026-10-28 for Anthony (P13; it replaced "Photographs are reference-numbered to
+// the line items above and retained for seven years"), said only where a line on the page links to its photograph. Plain text.
+var INV_PAPER_PHOTO_TXT = 'Where an item has a photograph, its number links to it in Drive; the photographs are retained for seven years.';
+function invPaperPhotoSentence(list) {
+  return (list || []).some(function (r) { return !!_invPaperPhotoUrl(r); }) ? INV_PAPER_PHOTO_TXT : '';
+}
+
 // Printed documents DO inline the image — there is no second pass to paint them in, and
 // a print target with empty boxes is the failure this whole path exists to avoid.
+// ⚠ IT LINKS TO THE FILE, AND SAYS IN WORDS WHAT IS NOT DRAWN (P13, 2026-10-28): the photograph opens its file in Drive; a line whose
+// photograph could not be drawn reads "photo" and links to it (the category glyph read as a broken page, EST-06); a typed line reads
+// "no photo", and one photographed but never uploaded "not in Drive" (the papers' gap blocks count those).
 function _invPrintThumb(jobId, ref, px) {
-  var id = _invFileId(ref);
-  var src = id ? (_invThumbCache(jobId)[id] || '') : '';
+  var src = _invPrintThumbSrc(jobId, ref);
+  var url = _invPaperPhotoUrl(ref);
   var box = 'width:' + px + 'px;height:' + px + 'px;border:1px solid #ddd;border-radius:3px;'
     + 'object-fit:cover;background:#f6f3ec;';
-  if (!src) {
-    return '<div style="' + box + 'display:inline-flex;align-items:center;justify-content:center;font-size:' + Math.round(px*0.4) + 'px;">'
-      + (INV_CAT_GLYPH[ref.category] || '\u{1F4E6}') + '</div>';
+  if (src) {
+    var img = '<img src="' + src + '" style="' + box + '" alt="">';
+    return url ? '<a class="inv-paper-photo" href="' + esc(url) + '" style="display:inline-block;">' + img + '</a>' : img;
   }
-  return '<img src="' + src + '" style="' + box + '" alt="">';
+  var cell = box + 'display:inline-flex;align-items:center;justify-content:center;text-align:center;line-height:1.15;box-sizing:border-box;'
+    + 'font-size:' + Math.max(8, Math.round(px * 0.21)) + 'px;';
+  if (url) return '<a class="inv-paper-photo inv-paper-nothumb" href="' + esc(url) + '" style="' + cell + 'color:#8a6d3b;">photo</a>';
+  return '<div class="inv-paper-nophoto" style="' + cell + 'color:#999;">' + (ref && ref.manual ? 'no photo' : 'not in Drive') + '</div>';
 }
 
 // ── THE CONTRACT DECIDES WHICH DOCUMENTS ARE OURS TO ISSUE (2026-09-21) ───────────
@@ -32612,6 +32902,9 @@ function printContentsList(jobId, opt) {
     alert('Nothing has been photographed or listed on this job yet, so there is no contents list to produce.');
     return;
   }
+  // Its own lines' photographs first (P13): fetched for this page, never capped, never stored on the device.
+  if (typeof invPhotosFirst === 'function' && invPhotosFirst(jobId, rec.items, 'The Contents List', function () { printContentsList(jobId, _invPhotosOpt(opt)); }, opt)) return;
+  var noLink = typeof _invItemNoLinkHtml === 'function' ? _invItemNoLinkHtml : function (r) { return esc(_invItemNo(r)); };
   var fid = invFiduciaryMode(job);
   var weValue = docTierProduces(job, 'values');
 
@@ -32657,7 +32950,7 @@ function printContentsList(jobId, opt) {
     }).join('');
     return '<tr>'
       + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;width:52px;">' + _invPrintThumb(jobId, r, 44) + '</td>'
-      + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;width:34px;font-weight:700;color:#666;">' + esc(_invItemNo(r)) + '</td>'
+      + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;width:34px;font-weight:700;color:#666;">' + noLink(r) + '</td>'
       + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;">'
         + '<strong>' + esc(r.objectName || '—') + '</strong>'
         + (r.category ? '<div style="color:#888;font-size:10px;">' + esc(r.category) + '</div>' : '')
@@ -32699,27 +32992,20 @@ function printContentsList(jobId, opt) {
         ? 'Estimated values are stated separately on the Estate Inventory — Asset Schedule, which is the valued version of this list.'
         : 'Valuation of the property and the court filing are the responsibility of the Client and the estate attorney, who receive this list for that purpose. Havellin has not valued anything on it and states no opinion of value.');
 
-  // ⚠ A ROW WITH NO FILE ON DRIVE IS ALREADY IN THE GAP BLOCK, and the advice below —
-  // re-open with a connection — cannot work for a photograph that was never uploaded. So
-  // this counts only the rows whose file EXISTS and whose thumbnail this device has not
-  // fetched, which is the one case the advice fixes.
-  var noThumb = rec.items.filter(function(r){
-    return !r.manual && _invFileId(r) && !_invThumbFor(jobId, r);
-  }).length;
-
+  // ⚠ NO "RE-OPEN THIS TAB" (P13, 2026-10-28; DOC-03): the page fetched its own photographs before it was built (invPhotosFirst),
+  // a line whose photograph could not be drawn links to it, and the person printing was told how many. A row with no file on Drive
+  // is in the gap block above.
   var html = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
     + head
     + _invProgressStamp(rec.items, { noValues: true, fc: invAcceptCtx(job) })
     + gapBlock
     + exBlock
     + body
-    + (noThumb ? '<div style="font-size:10px;color:#8a6d3b;font-style:italic;margin-top:10px;">'
-        + noThumb + ' item' + (noThumb > 1 ? 's have' : ' has') + ' no photograph available on this device. '
-        + 'The photographs are filed in the estate’s Drive folder; re-open this tab with a connection to include them.</div>' : '')
+    + (typeof invNumbersNotUsedHtml === 'function' ? invNumbersNotUsedHtml(jobId) : '')
     + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">'
       + 'Every item above was photographed in the room it is listed under, and that room is its '
-      + 'recorded location. Tangible personal property only. ' + whoValues + ' '
-      + 'Photographs are reference-numbered to the line items above and retained for seven years.'
+      + 'recorded location. Tangible personal property only. ' + whoValues
+      + (typeof invPaperPhotoSentence === 'function' && invPaperPhotoSentence(rec.items) ? ' ' + esc(invPaperPhotoSentence(rec.items)) : '')
     + '</div></div>';
   // The probate package asks for the page itself (`opt.asHtml`, P17) — see printCourtInventory.
   if (opt && opt.asHtml) return { html: html, title: _invDocName(job, 'Contents List') };
@@ -32746,6 +33032,10 @@ function printEstateInventoryReport(jobId, opt) {
   if (_blocked) { if (opt && opt.asHtml) return { why: _blocked }; alert(_blocked); return; }
   var all = _invAssignItemNos(jobId);
   if (!all.length) { if (opt && opt.asHtml) return { why: 'There is nothing in the inventory to report yet.' }; alert('There is nothing in the inventory to report yet.'); return; }
+  // Its own lines' photographs first (P13): fetched for this page, never capped, never stored on the device.
+  if (typeof invPhotosFirst === 'function' && invPhotosFirst(jobId, all, 'The Estate Inventory PDF', function () { printEstateInventoryReport(jobId, _invPhotosOpt(opt)); }, opt)) return;
+  var noLink = typeof _invItemNoLinkHtml === 'function' ? _invItemNoLinkHtml : function (r) { return esc(_invItemNo(r)); };
+  var lotHtml = typeof invLotLineHtml === 'function' ? invLotLineHtml : function () { return ''; };
 
   // Carved out, not omitted: exempt, homestead and non-probate property is reported in
   // its own schedule so a reader can see both that it exists and that it sits outside
@@ -32784,9 +33074,10 @@ function printEstateInventoryReport(jobId, opt) {
     var note = r.valNote || '';
     return '<tr>'
       + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;width:52px;">' + _invPrintThumb(jobId, r, 44) + '</td>'
-      + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;width:34px;font-weight:700;color:#666;">' + esc(_invItemNo(r)) + '</td>'
+      + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;width:34px;font-weight:700;color:#666;">' + noLink(r) + '</td>'
       + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;">'
         + '<strong>' + esc(r.objectName || '—') + '</strong>'
+        + lotHtml(r, job)   // a lot's count and each article's figure, and on a Form 706 estate its §20.2031-6(a) mark (P13)
         + '<div style="color:#888;font-size:10px;">' + esc(r.category || '') + '</div>'
         + (note ? '<div style="color:#888;font-size:10px;font-style:italic;">' + esc(note) + '</div>' : '')
       + '</td>'
@@ -32856,9 +33147,10 @@ function printEstateInventoryReport(jobId, opt) {
   // never reached Drive is a PERMANENT gap in the record; a row whose thumbnail this device
   // has not fetched is a network fact that fixes itself. This function never read
   // `_invFileId`, so it reported the first as the second — telling counsel to reconnect for a
-  // photograph that does not exist, on the one sentence that reports either. The advice below
-  // is scoped to the rows it can actually fix, and the lost ones are named as what they are.
-  var noPhoto = all.filter(function(r){ return !r.manual && _invFileId(r) && !_invThumbFor(jobId, r); }).length;
+  // photograph that does not exist, on the one sentence that reports either. The lost ones are named as what they are.
+  // ⚠ AND THE SECOND IS NO LONGER THE READER'S (P13, 2026-10-28; DOC-03): the page fetched its own photographs before it was built
+  // (invPhotosFirst), a line whose photograph could not be drawn links to it, and the person printing was told how many. The
+  // "re-open this tab with a connection" sentence is gone.
   var noFile  = all.filter(function(r){ return !r.manual && !_invFileId(r); }).length;
   // ⚠⚠ A FLOOR IS A FLOOR, AND ON A PROBATE MATTER THE ESTATE IS ADDED UP APART (P7, 2026-10-27; DOC-01, VAL-27): the total read
   // "Total estimated fair market value: $28,475" with three lines unvalued, the $14,000 car outside probate added in, beside the
@@ -32904,9 +33196,7 @@ function printEstateInventoryReport(jobId, opt) {
     + (noFile ? '<div style="font-size:10px;color:#8a6d3b;font-style:italic;margin-top:10px;">'
         + noFile + ' item' + (noFile > 1 ? 's were' : ' was') + ' photographed and the image did not reach the '
         + 'estate&rsquo;s Drive folder. Those photographs are not held anywhere and the line is listed without one.</div>' : '')
-    + (noPhoto ? '<div style="font-size:10px;color:#8a6d3b;font-style:italic;margin-top:10px;">'
-        + noPhoto + ' item' + (noPhoto > 1 ? 's have' : ' has') + ' no photograph available on this device. '
-        + 'The photographs are filed in the estate&rsquo;s Drive folder; re-open this tab with a connection to include them.</div>' : '')
+    + (typeof invNumbersNotUsedHtml === 'function' ? invNumbersNotUsedHtml(jobId) : '')
     // ⚠ WHO REPORTS THE REST FOLLOWS THE MATTER (2026-10-08, the job-flow audit): this page goes in the trust package too,
     // and named "the personal representative's filing" to a trustee's attorney. The probate track keeps its words; a
     // trust-only matter takes the Trust Schedule's own (the trustee, under the instrument); anything else names counsel.
@@ -32915,7 +33205,8 @@ function printEstateInventoryReport(jobId, opt) {
       + (jobOnProbateTrack(job) ? 'reported separately in the personal representative&rsquo;s filing, prepared with counsel.'
         : (matterDef(job) && matterDef(job).trust) ? 'administered under the trust instrument and are reported separately by the trustee.'
         : 'reported separately, with counsel.')
-      + ' Photographs are reference-numbered to the line items above and retained for seven years.</div>'
+      // The photographs' sentence says only what the page does (P13): drafted for Anthony, said where a line links to its photograph.
+      + (typeof invPaperPhotoSentence === 'function' && invPaperPhotoSentence(all) ? ' ' + esc(invPaperPhotoSentence(all)) : '') + '</div>'
     + '</div>';
   // The probate package asks for the page itself (`opt.asHtml`, P17) — see printCourtInventory.
   if (opt && opt.asHtml) return { html: html, title: _invDocName(job, 'Estate Inventory') };
@@ -34363,6 +34654,9 @@ function printApprovalRequest(jobId, selectedOnly, opt) {
     alert(_noOne);
     return;
   }
+  // Its own lines' photographs first (P13): fetched for this page, never capped, never stored on the device (the send fetches first itself).
+  if (typeof invPhotosFirst === 'function' && invPhotosFirst(jobId, items, 'The release approval request', function () { printApprovalRequest(jobId, selectedOnly, _invPhotosOpt(opt)); }, opt)) return;
+  var noLink = typeof _invItemNoLinkHtml === 'function' ? _invItemNoLinkHtml : function (r) { return esc(_invItemNo(r)); };
   var _fid = invFiduciaryMode(job);
   // ⚠⚠ EVERY FIDUCIARY SIGNS (P19, call 4): the request addresses every one of them, prints a signature line for each,
   // and says that all of them must sign where there is more than one.
@@ -34397,7 +34691,7 @@ function printApprovalRequest(jobId, selectedOnly, opt) {
     var gap = invApprovalGap(r, job);
     return '<tr>'
       + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;width:52px;">' + _invPrintThumb(jobId, r, 44) + '</td>'
-      + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;font-weight:700;color:#666;">' + esc(_invItemNo(r)) + '</td>'
+      + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;font-weight:700;color:#666;">' + noLink(r) + '</td>'
       + '<td style="padding:4px 6px;border-bottom:1px solid #eee;vertical-align:top;"><strong>' + esc(r.objectName || '—') + '</strong>'
         + '<div style="color:#888;font-size:10px;">' + esc(r.category || '') + ' &middot; ' + esc(_invRoomName(jobId, r.roomIdx)) + '</div>'
         + _invCautionBadges(r, jobId) + '</td>'
@@ -34944,13 +35238,14 @@ function sendApprovalRequest(jobId, selectedOnly, via) {
   if (_docBusy) { openBar(); _docNotice('warn', 'Another document is being prepared — give it a moment.', jobId); return false; }
   _docBusy = { jobId: jobId, docKey: APPROVAL_REQ_KEY };
   var over = false;
-  var watchdog = setTimeout(function () {
+  var onWatchdog = function () {
     if (over) return;
     over = true; _docBusy = null;
     openBar();
     _docNotice('warn', ds ? 'DocuSign is taking a while to answer. The envelope may still go out: check DocuSign before pressing Send through DocuSign again (an answer that comes late is recorded).'
       : 'The approval request took too long to build. A draft may already have been created — check your Gmail drafts before pressing Send request again.', jobId);
-  }, APPROVAL_REQ_WATCHDOG_MS);
+  };
+  var watchdog = setTimeout(onWatchdog, APPROVAL_REQ_WATCHDOG_MS);
   var finish = function () { over = true; clearTimeout(watchdog); _docBusy = null; openBar(); };
   var step = function (label) { if (!over) _dashSendState(APPROVAL_REQ_KEY, label); };
   var rcpt = approvalRequestRecipients(job);
@@ -34967,73 +35262,92 @@ function sendApprovalRequest(jobId, selectedOnly, via) {
     // The paper as the printer builds it, over the lines as the sheet now holds them.
     var r = printApprovalRequest(jobId, selectedOnly, { asHtml: true, esign: ds });
     if (!r || !r.html) { finish(); _docNotice('warn', (r && r.why) || 'The request could not be built.', jobId); return; }
-    var items = r.items, asked = r.asked.length, ratify = r.ratify.length;
-    // The lines in the order the paper prints them (the lines asked for, grouped by destination, then those for
-    // ratification), so Record the signed request lists them as the signed copy reads (2026-10-23, G7's review).
-    var paperIds = r.asked.concat(r.ratify).map(function (x) { return String(x.stableId); });
-    step('Filing the request to Drive…');
-    resolveSubfolderId(job, PHOTO_SUBFOLDER, function (folderId) {
-      if (over) return;
-      uploadHtmlToDrive(folderId || _jobRootFolderId(job), approvalRequestDriveName(job), _exportDoc(r.title + ' – ' + (job.hvlId || ''), r.html, ''), function (fok, furl) {
+    // ⚠ ITS LINES' PHOTOGRAPHS FIRST (P13 of the desk audit, 2026-10-28; DOC-03, EST-06): the paper the fiduciaries initial carried
+    // what this device's capped cache held and a category glyph for the rest. Each line's photograph this session holds none of is
+    // fetched (invFetchPrintPhotos, memory only), and the page built again with them, before it is filed or made into a PDF.
+    var _reqSend = function (r) {
+      var items = r.items, asked = r.asked.length, ratify = r.ratify.length;
+      // The photographs the page could not draw, said to the sender on either route (P13's review, 2026-10-28), read as it was built.
+      r.photoSaid = (typeof invPrintPhotoWords === 'function') ? invPrintPhotoWords(jobId, items || []) : '';
+      // The lines in the order the paper prints them (the lines asked for, grouped by destination, then those for
+      // ratification), so Record the signed request lists them as the signed copy reads (2026-10-23, G7's review).
+      var paperIds = r.asked.concat(r.ratify).map(function (x) { return String(x.stableId); });
+      step('Filing the request to Drive…');
+      resolveSubfolderId(job, PHOTO_SUBFOLDER, function (folderId) {
         if (over) return;
-        var filedUrl = fok ? String(furl || '') : '';
-        step('Building the PDF…');
-        docPdfBase64({ cfg: { label: APPROVAL_REQ_TITLE, pdfCss: '' }, job: job }, r.html, function (b64, perr) {
+        uploadHtmlToDrive(folderId || _jobRootFolderId(job), approvalRequestDriveName(job), _exportDoc(r.title + ' – ' + (job.hvlId || ''), r.html, ''), function (fok, furl) {
           if (over) return;
-          if (!b64 && !filedUrl) {
-            finish();
-            _docNotice('err', 'The request could be neither made into a PDF (' + (perr || 'no answer from the server') + ') nor filed to Drive, so there is nothing to send. Check the connection and the Apps Script, then press Send request again; Approval Request still prints it.', jobId);
-            return;
-          }
-          if (ds) { approvalRequestSendEsign(job, r, b64, perr, filedUrl, paperIds, rcpt, step, finish, function () { return over; }); return; }
-          step('Creating the draft…');
-          var asOf = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-          var ctx = { job: job, rcpt: rcpt, asOf: asOf, asked: asked, ratify: ratify, noEmail: rcpt.noEmail, viaCounsel: rcpt.viaCounsel,
-                      attached: !!b64, link: b64 ? '' : filedUrl };
-          var tail = function (provider, draftUrl, lead) {
+          var filedUrl = fok ? String(furl || '') : '';
+          step('Building the PDF…');
+          docPdfBase64({ cfg: { label: APPROVAL_REQ_TITLE, pdfCss: '' }, job: job }, r.html, function (b64, perr) {
             if (over) return;
-            finish();
-            var gmail = provider === 'gmail';
-            docRecordSent({ job: job, key: APPROVAL_REQ_KEY }, { provider: provider, draftUrl: draftUrl || '', pdfOk: gmail && !!b64,
-              req: { to: rcpt.to, cc: rcpt.cc, noEmail: rcpt.noEmail, viaCounsel: !!rcpt.viaCounsel,
-                     stableIds: paperIds, asked: asked, ratify: ratify, filedUrl: filedUrl,
-                     sig: approvalRequestSig(r.asked.concat(r.ratify)), terms: r.terms } });
-            var bits = [lead + (gmail ? 'Draft created in ' + (_gmailUserEmail || 'your Havellin mailbox') : 'Email opened') + ' for ' + _andJoin(rcpt.to)
-              + (rcpt.cc.length ? ', copied to ' + _andJoin(rcpt.cc) : '')
-              + (gmail && b64 ? ', with the ' + APPROVAL_REQ_TITLE + ' attached (' + items.length + ' line' + (items.length === 1 ? '' : 's') + ')'
-                              : ', with the request linked from Drive' + (gmail ? '' : ' (a plain email carries no attachment)'))
-              + '. Read it, send it, then tap “I’ve sent it” on the Releases & signed papers card.'];
-            if (rcpt.viaCounsel) bits.push('No fiduciary has an email on file, so it is addressed to the estate attorney; ' + _andJoin(rcpt.noEmail) + ' sign through counsel or on the printed copy.');
-            else if (rcpt.noEmail.length) bits.push(_andJoin(rcpt.noEmail) + ' ' + (rcpt.noEmail.length > 1 ? 'have' : 'has') + ' no email on file: print the request for them to sign (Approval Request).');
-            if (gmail && !b64) bits.push('The PDF could not be built (' + (perr || 'no answer from the server') + '), so the draft links the filed copy instead of attaching it.');
-            if (!filedUrl) bits.push('Not filed to Drive: the request.');
-            if (r.held && r.held.length) bits.push((r.held.length === 1 ? '1 item waits' : r.held.length + ' items wait') + ' for somebody to be named to take '
-              + (r.held.length === 1 ? 'it' : 'them') + ' and ' + (r.held.length === 1 ? 'is' : 'are') + ' not on it.');
-            if (leftOut) bits.push(leftOut);
-            _docNotice(gmail && b64 && filedUrl && !rcpt.noEmail.length ? 'ok' : 'warn', bits.join(' '), jobId);
-            if (draftUrl) { try { window.open(draftUrl, '_blank'); } catch (e) {} }
-            showSyncBadge(gmail ? 'Gmail draft created ✓' : 'Email opened ✓');
-            _invRefreshReleases(jobId);
-          };
-          var mime = buildMimeMessage({ to: rcpt.to.join(', '), cc: rcpt.cc.join(', '), subject: approvalRequestSubject(job),
-            text: buildApprovalRequestEmailText(ctx), html: buildApprovalRequestEmailHtml(ctx),
-            attachments: b64 ? [{ name: r.title + '.pdf', base64: b64 }] : [] });
-          gmailCreateDraft(mime, function (ok, d) {
-            if (over) return;
-            if (ok) { tail('gmail', gmailDraftUrl(d.messageId || d.draftId), ''); return; }
-            // A failed draft falls back to a plain email, the rule every client document follows (docSend), recorded as
-            // what it is: an email opened, with the filed copy linked since it can carry no attachment.
-            if (!filedUrl) { finish(); _docNotice('err', 'Could not create the draft — ' + ((d && d.error) || 'unknown') + ' — and the request is not in Drive, so a plain email would carry nothing. Press Send request again.', jobId); return; }
-            var plain = {}; Object.keys(ctx).forEach(function (k) { plain[k] = ctx[k]; });
-            plain.attached = false; plain.link = filedUrl;
-            DOC_SEND_PROVIDERS.mailto.send({ cfg: { mailto: function () { return approvalRequestMailto(plain); } } }, null, function (ok2) {
-              if (!ok2) { finish(); _docNotice('err', 'Could not create the draft — ' + ((d && d.error) || 'unknown') + '.', jobId); return; }
-              tail('mailto', '', 'Gmail draft failed — ' + ((d && d.error) || 'unknown') + '. ');
+            if (!b64 && !filedUrl) {
+              finish();
+              _docNotice('err', 'The request could be neither made into a PDF (' + (perr || 'no answer from the server') + ') nor filed to Drive, so there is nothing to send. Check the connection and the Apps Script, then press Send request again; Approval Request still prints it.', jobId);
+              return;
+            }
+            if (ds) { approvalRequestSendEsign(job, r, b64, perr, filedUrl, paperIds, rcpt, step, finish, function () { return over; }); return; }
+            step('Creating the draft…');
+            var asOf = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            var ctx = { job: job, rcpt: rcpt, asOf: asOf, asked: asked, ratify: ratify, noEmail: rcpt.noEmail, viaCounsel: rcpt.viaCounsel,
+                        attached: !!b64, link: b64 ? '' : filedUrl };
+            var tail = function (provider, draftUrl, lead) {
+              if (over) return;
+              finish();
+              var gmail = provider === 'gmail';
+              docRecordSent({ job: job, key: APPROVAL_REQ_KEY }, { provider: provider, draftUrl: draftUrl || '', pdfOk: gmail && !!b64,
+                req: { to: rcpt.to, cc: rcpt.cc, noEmail: rcpt.noEmail, viaCounsel: !!rcpt.viaCounsel,
+                       stableIds: paperIds, asked: asked, ratify: ratify, filedUrl: filedUrl,
+                       sig: approvalRequestSig(r.asked.concat(r.ratify)), terms: r.terms } });
+              var bits = [lead + (gmail ? 'Draft created in ' + (_gmailUserEmail || 'your Havellin mailbox') : 'Email opened') + ' for ' + _andJoin(rcpt.to)
+                + (rcpt.cc.length ? ', copied to ' + _andJoin(rcpt.cc) : '')
+                + (gmail && b64 ? ', with the ' + APPROVAL_REQ_TITLE + ' attached (' + items.length + ' line' + (items.length === 1 ? '' : 's') + ')'
+                                : ', with the request linked from Drive' + (gmail ? '' : ' (a plain email carries no attachment)'))
+                + '. Read it, send it, then tap “I’ve sent it” on the Releases & signed papers card.'];
+              if (rcpt.viaCounsel) bits.push('No fiduciary has an email on file, so it is addressed to the estate attorney; ' + _andJoin(rcpt.noEmail) + ' sign through counsel or on the printed copy.');
+              else if (rcpt.noEmail.length) bits.push(_andJoin(rcpt.noEmail) + ' ' + (rcpt.noEmail.length > 1 ? 'have' : 'has') + ' no email on file: print the request for them to sign (Approval Request).');
+              if (gmail && !b64) bits.push('The PDF could not be built (' + (perr || 'no answer from the server') + '), so the draft links the filed copy instead of attaching it.');
+              if (!filedUrl) bits.push('Not filed to Drive: the request.');
+              if (r.held && r.held.length) bits.push((r.held.length === 1 ? '1 item waits' : r.held.length + ' items wait') + ' for somebody to be named to take '
+                + (r.held.length === 1 ? 'it' : 'them') + ' and ' + (r.held.length === 1 ? 'is' : 'are') + ' not on it.');
+              if (leftOut) bits.push(leftOut);
+              if (r.photoSaid) bits.push('On the request: ' + r.photoSaid);
+              _docNotice(gmail && b64 && filedUrl && !rcpt.noEmail.length && !r.photoSaid ? 'ok' : 'warn', bits.join(' '), jobId);
+              if (draftUrl) { try { window.open(draftUrl, '_blank'); } catch (e) {} }
+              showSyncBadge(gmail ? 'Gmail draft created ✓' : 'Email opened ✓');
+              _invRefreshReleases(jobId);
+            };
+            var mime = buildMimeMessage({ to: rcpt.to.join(', '), cc: rcpt.cc.join(', '), subject: approvalRequestSubject(job),
+              text: buildApprovalRequestEmailText(ctx), html: buildApprovalRequestEmailHtml(ctx),
+              attachments: b64 ? [{ name: r.title + '.pdf', base64: b64 }] : [] });
+            gmailCreateDraft(mime, function (ok, d) {
+              if (over) return;
+              if (ok) { tail('gmail', gmailDraftUrl(d.messageId || d.draftId), ''); return; }
+              // A failed draft falls back to a plain email, the rule every client document follows (docSend), recorded as
+              // what it is: an email opened, with the filed copy linked since it can carry no attachment.
+              if (!filedUrl) { finish(); _docNotice('err', 'Could not create the draft — ' + ((d && d.error) || 'unknown') + ' — and the request is not in Drive, so a plain email would carry nothing. Press Send request again.', jobId); return; }
+              var plain = {}; Object.keys(ctx).forEach(function (k) { plain[k] = ctx[k]; });
+              plain.attached = false; plain.link = filedUrl;
+              DOC_SEND_PROVIDERS.mailto.send({ cfg: { mailto: function () { return approvalRequestMailto(plain); } } }, null, function (ok2) {
+                if (!ok2) { finish(); _docNotice('err', 'Could not create the draft — ' + ((d && d.error) || 'unknown') + '.', jobId); return; }
+                tail('mailto', '', 'Gmail draft failed — ' + ((d && d.error) || 'unknown') + '. ');
+              });
             });
           });
         });
       });
-    });
+    };
+    var _reqIds = (typeof invPrintPhotoIds === 'function') ? invPrintPhotoIds(jobId, r.items || []) : [];
+    if (!_reqIds.length) { _reqSend(r); return; }
+    step('Gathering ' + _reqIds.length + ' photograph' + (_reqIds.length === 1 ? '' : 's') + ' from Drive…');
+    clearTimeout(watchdog);
+    invFetchPrintPhotos(jobId, _reqIds, function () {
+      if (over) return;
+      watchdog = setTimeout(onWatchdog, APPROVAL_REQ_WATCHDOG_MS);
+      var r2 = printApprovalRequest(jobId, selectedOnly, { asHtml: true, esign: ds });
+      if (!r2 || !r2.html) { finish(); _docNotice('warn', (r2 && r2.why) || 'The request could not be built.', jobId); return; }
+      _reqSend(r2);
+    }, 'the release approval request');
   });
   return true;
 }
@@ -35174,7 +35488,8 @@ function approvalRequestSendEsign(job, r, b64, perr, filedUrl, paperIds, rcpt, s
     if (!filedUrl) bits.push('Not filed to Drive: the unsigned request.');
     if (r.held && r.held.length) bits.push((r.held.length === 1 ? '1 item waits' : r.held.length + ' items wait') + ' for somebody to be named to take '
       + (r.held.length === 1 ? 'it' : 'them') + ' and ' + (r.held.length === 1 ? 'is' : 'are') + ' not on it.');
-    _docNotice(filedUrl ? 'ok' : 'warn', bits.join(' '), jobId);
+    if (r.photoSaid) bits.push('On the request: ' + r.photoSaid);
+    _docNotice(filedUrl && !r.photoSaid ? 'ok' : 'warn', bits.join(' '), jobId);
     showSyncBadge('Sent through DocuSign ✓');
     _invRefreshReleases(jobId);
   });
@@ -36809,30 +37124,52 @@ function _invFloorTotalHtml(fl, basis, o) {
 // thing about the same objects and must not come to disagree about how a row reads, what a
 // subtotal counts, or whether a quantity is a lot or a unit price. It was a closure inside
 // `printCourtInventory` and carried no closure state, so extracting it changes nothing.
-function _invScheduleSection(title, list) {
+// ⚠⚠ EVERY LINE TRACEABLE TO ITS NUMBER AND ITS PHOTOGRAPH (P13 of the desk audit, 2026-10-28; ACC-20, DOC-05, VAL-13, INV-10): the
+// two schedules printed Description · Condition · Basis · FMV and nothing else, so the instrument the representative adopts could not
+// be tied to the photograph, the appraisal, the release request, a receipt or the ledger (every one of which cites the item number),
+// two "Remington 870 pump shotgun · $500" rows could not be told from a double count, and the columns moved from one category's table
+// to the next (auto layout). Each row now leads with its item number, a link to its photograph in Drive, and names its room; every
+// table has one set of column widths (table-layout:fixed, its `colSet`); rows run by item number within each category. `job` names
+// the rooms; a caller that hands in none (a sandbox) prints no room.
+function _invScheduleSection(title, list, job) {
   if (!list.length) return { html: '', total: 0 };
+  // One set of column widths for every table on both schedules (fixed layout).
+  var colSet = [['Item #', '8%'], ['Description', '38%'], ['Room', '14%'], ['Condition', '12%'], ['Basis', '14%'], ['FMV (total)', '14%']];
   var total = 0;
   var byCat = {};
+  var noLink = typeof _invItemNoLinkHtml === 'function' ? _invItemNoLinkHtml : function (r) { return esc(_invItemNo(r)); };
+  var lotOf = typeof invLotLineHtml === 'function' ? function (r) { return invLotLineHtml(r, job); }
+    // FMV IS THE LINE TOTAL, NOT A UNIT PRICE — that is how every accumulator in the
+    // app reads it. On a document a reader can take "Coin Collection (qty 10,000)"
+    // beside "$500,000" either way, and the two readings differ by four orders of
+    // magnitude on a court filing. Say which it is on the row and in the header (since P13 as "(8 × $90)", invLotWords).
+    : function (r) { var _q = parseInt(r.qty, 10); return _q > 1 ? ' <span style="color:#888;">(' + _q.toLocaleString() + ' articles)</span>' : ''; };
+  var _byNo = function (a, b) {
+    var x = parseInt(a.itemNo, 10), y = parseInt(b.itemNo, 10);
+    return (x > 0 ? x : Infinity) - (y > 0 ? y : Infinity) || String(a.stableId || '').localeCompare(String(b.stableId || ''));
+  };
+  var td = 'padding:2px 6px;border-bottom:1px solid #eee;vertical-align:top;overflow-wrap:anywhere;';
+  var cols = '<colgroup>' + colSet.map(function (c) { return '<col style="width:' + c[1] + ';">'; }).join('') + '</colgroup>';
+  var head = '<thead><tr style="color:#888;text-align:left;">' + colSet.map(function (c, i) {
+    return '<th style="padding:2px 6px;' + (i === colSet.length - 1 ? 'text-align:right;' : '') + '">' + c[0] + '</th>';
+  }).join('') + '</tr></thead>';
   list.forEach(function(r){ var c = r.category || 'General/Household'; (byCat[c] = byCat[c] || []).push(r); });
   var h = '<div style="font-family:\'Cormorant Garamond\',serif;font-size:15px;color:#3c3228;border-bottom:1px solid #bbb;margin:16px 0 4px;">' + esc(title) + '</div>';
   Object.keys(byCat).sort().forEach(function(cat){
     var sub = 0;
-    var rows = byCat[cat].map(function(r){ var n = parseFloat(r.fmv); if (!isNaN(n)) sub += n;
-      // FMV IS THE LINE TOTAL, NOT A UNIT PRICE — that is how every accumulator in the
-      // app reads it. On a document a reader can take "Coin Collection (qty 10,000)"
-      // beside "$500,000" either way, and the two readings differ by four orders of
-      // magnitude on a court filing. Say which it is on the row and in the header.
-      var _q = parseInt(r.qty, 10);
-      return '<tr><td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(r.objectName || '—') + (_q > 1 ? ' <span style="color:#888;">(' + _q.toLocaleString() + ' items, valued as a lot)</span>' : '') + '</td>'
-        + '<td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(invConditionText(r)) + '</td>'
+    var rows = byCat[cat].slice().sort(_byNo).map(function(r){ var n = parseFloat(r.fmv); if (!isNaN(n)) sub += n;
+      return '<tr><td style="' + td + 'font-weight:700;color:#666;">' + noLink(r) + '</td>'
+        + '<td style="' + td + '">' + esc(r.objectName || '—') + lotOf(r) + '</td>'
+        + '<td style="' + td + '">' + ((job && typeof _invRoomName === 'function') ? esc(_invRoomName(job.id, r.roomIdx)) : '') + '</td>'
+        + '<td style="' + td + '">' + esc(invConditionText(r)) + '</td>'
         // ⚠ THE BASIS ON EACH LINE (P23, Anthony's answer to the spec's §12.3): what the figure rests on, in the reader's words.
         // A line with no basis reads *not stated*, as the Estate Inventory Report prints it (2026-10-13; it printed a dash).
-        + '<td style="padding:2px 6px;border-bottom:1px solid #eee;">' + (invValBasisWord(r) ? esc(invValBasisWord(r)) : '<span style="color:#A32D2D;">not stated</span>') + '</td>'
-        + '<td style="padding:2px 6px;border-bottom:1px solid #eee;text-align:right;">' + _invMoney(r.fmv) + '</td></tr>'; }).join('');
+        + '<td style="' + td + '">' + (invValBasisWord(r) ? esc(invValBasisWord(r)) : '<span style="color:#A32D2D;">not stated</span>') + '</td>'
+        + '<td style="' + td + 'text-align:right;">' + _invMoney(r.fmv) + '</td></tr>'; }).join('');
     total += sub;
     h += '<div style="font-size:11px;font-weight:700;color:#555;margin:7px 0 1px;">' + esc(cat) + '</div>'
-      + '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="color:#888;text-align:left;"><th style="padding:2px 6px;">Description</th><th style="padding:2px 6px;">Condition</th><th style="padding:2px 6px;">Basis</th><th style="padding:2px 6px;text-align:right;">FMV (total)</th></tr></thead><tbody>' + rows + '</tbody>'
-      + '<tfoot><tr><td colspan="3" style="padding:2px 6px;text-align:right;font-weight:600;">' + esc(cat) + ' subtotal</td><td style="padding:2px 6px;text-align:right;font-weight:600;">' + _invMoney(sub) + '</td></tr></tfoot></table>';
+      + '<table class="inv-sched" style="width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed;">' + cols + head + '<tbody>' + rows + '</tbody>'
+      + '<tfoot><tr><td colspan="' + (colSet.length - 1) + '" style="padding:2px 6px;text-align:right;font-weight:600;">' + esc(cat) + ' subtotal</td><td style="padding:2px 6px;text-align:right;font-weight:600;">' + _invMoney(sub) + '</td></tr></tfoot></table>';
   });
   return { html: h, total: total };
 }
@@ -37067,8 +37404,8 @@ function printCourtInventory(jobId, opt) {
   // exempt property was folded silently into "Total tangible personal property" and
   // there was no exempt figure anywhere on the document — which is the one number a
   // reader needs in order to test the §732.402 claim at all.
-  var estateSec = section('Tangible Personal Property', items.filter(function(r){ return _invOnProbateSchedule(r, job) && !_invIsExempt(r, job); }));
-  var exemptSec = section('Exempt Property (Fla. Stat. §732.402)', items.filter(function(r){ return _invOnProbateSchedule(r, job) && _invIsExempt(r, job); }));
+  var estateSec = section('Tangible Personal Property', items.filter(function(r){ return _invOnProbateSchedule(r, job) && !_invIsExempt(r, job); }), job);
+  var exemptSec = section('Exempt Property (Fla. Stat. §732.402)', items.filter(function(r){ return _invOnProbateSchedule(r, job) && _invIsExempt(r, job); }), job);
   var exemptTotal = exemptSec.total;
   var overCap = exemptTotal > EXEMPT_CAP_732_402;
   var body = estateSec.html
@@ -37109,7 +37446,10 @@ function printCourtInventory(jobId, opt) {
     + _invFloorTotalHtml(invTotalFloor(onSched), basis, { label: 'Total tangible personal property (' + esc(basis) + ')' })
     + (_dbl ? '<div class="inv-dbl-note" style="font-size:10.5px;color:#A32D2D;font-style:italic;margin-top:4px;text-align:right;">' + esc(_dbl.note) + '</div>' : '')
     + (excluded.length ? '<div style="font-size:10px;color:#8a6d3b;font-style:italic;margin-top:8px;">' + excluded.length + ' item' + (excluded.length > 1 ? 's' : '') + ' tagged ' + _invExcludedTracks(excluded, job) + ' ' + (excluded.length > 1 ? 'are' : 'is') + ' excluded from this probate schedule. Exempt property is not excluded &mdash; it is listed above and claimed under &sect;732.402.</div>' : '')
-    + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">This schedule covers tangible personal property only. Real property, financial accounts, securities, and business interests are reported separately in the personal representative&rsquo;s §733.604 filing, prepared with counsel. Values are estimated ' + esc(basis.toLowerCase()) + ' as of ' + esc(vlabel) + '.</div>'
+    + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">This schedule covers tangible personal property only. Real property, financial accounts, securities, and business interests are reported separately in the personal representative&rsquo;s §733.604 filing, prepared with counsel. Values are estimated ' + esc(basis.toLowerCase()) + ' as of ' + esc(vlabel) + '.'
+      // The photographs' sentence (P13): the item number links to the photograph, said where a line on it does.
+      + (typeof invPaperPhotoSentence === 'function' && invPaperPhotoSentence(onSched) ? ' ' + esc(invPaperPhotoSentence(onSched)) : '') + '</div>'
+    + (typeof invNumbersNotUsedHtml === 'function' ? invNumbersNotUsedHtml(jobId) : '')
     + (draft
         ? '<div style="margin-top:18px;font-size:11px;border:1px solid #A32D2D;border-radius:4px;padding:10px 12px;color:#7a2020;"><strong>This schedule is not ready to be adopted.</strong> It is issued as a working draft because ' + esc(_draftWhy.join(' and ')) + '. A signature block is withheld deliberately &mdash; ' + esc(_draftFix.join('; ')) + '.</div>'
         // ⚠ ONE LINE PER PERSONAL REPRESENTATIVE once a co-representative is recorded (P19, scheduleSigners); the one
@@ -37205,7 +37545,7 @@ function printTrustSchedule(jobId, opt) {
   var vdate = estateValueDate(job);
   var vdateStr = vdate ? fmtDate2(vdate) : '—';
   var vlabel = job.avd ? 'the alternate valuation date' : 'date of death';
-  var sec = _invScheduleSection('Tangible Personal Property Held in Trust', onSched);
+  var sec = _invScheduleSection('Tangible Personal Property Held in Trust', onSched, job);
   var html = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
     + '<h2 style="font-family:\'Cormorant Garamond\',serif;margin-bottom:2px;">Schedule of Tangible Personal Property Held in Trust</h2>'
     + '<div style="font-size:12px;margin-bottom:2px;"><strong>' + _invDocPartyHead(job) + '</strong>' + (job.hvlId ? ' &middot; ' + esc(job.hvlId) : '') + '</div>'
@@ -37245,7 +37585,9 @@ function printTrustSchedule(jobId, opt) {
     // the estate's; homestead and non-probate property passes to heirs and named beneficiaries
     // outside both. A reader holding one schedule must not read the other as covering the rest.
     + (excluded.length ? '<div style="font-size:10px;color:#8a6d3b;font-style:italic;margin-top:8px;">' + excluded.length + ' item' + (excluded.length > 1 ? 's' : '') + ' tagged ' + _invExcludedTracks(excluded, job) + ' ' + (excluded.length > 1 ? 'are' : 'is') + ' excluded from this schedule. Probate and exempt property is reported on the estate&rsquo;s &sect;733.604 inventory; homestead and non-probate property passes outside both and is reported on neither.</div>' : '')
-    + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">This schedule covers tangible personal property only. Real property, accounts, securities and business interests are administered under the trust instrument and are reported separately by the trustee. Values are estimated ' + esc(basis.toLowerCase()) + ' as of ' + esc(vlabel) + '.</div>'
+    + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">This schedule covers tangible personal property only. Real property, accounts, securities and business interests are administered under the trust instrument and are reported separately by the trustee. Values are estimated ' + esc(basis.toLowerCase()) + ' as of ' + esc(vlabel) + '.'
+      + (typeof invPaperPhotoSentence === 'function' && invPaperPhotoSentence(onSched) ? ' ' + esc(invPaperPhotoSentence(onSched)) : '') + '</div>'   // P13
+    + (typeof invNumbersNotUsedHtml === 'function' ? invNumbersNotUsedHtml(jobId) : '')
     + '<div style="margin-top:14px;font-size:10.5px;border:1px solid #c8bda8;border-radius:4px;padding:10px 12px;color:#5a5046;line-height:1.6;">'
       + '<strong>This schedule supports the trustee&rsquo;s accounting. It is not itself one.</strong> '
       + 'It states the tangible personal property held by the trust and its fair market value as of ' + esc(vlabel) + ' &mdash; the carrying value at which property received from a decedent enters the trust&rsquo;s records, and the figure a first accounting under Florida Statute &sect;736.08135 opens with. '
@@ -37383,6 +37725,7 @@ function printDispositionLedger(jobId, opt) {
   if (!L.items.length) { if (opt && opt.asHtml) return { why: 'There is nothing in the inventory to record yet.' }; alert('There is nothing in the inventory to record yet.'); return; }
   var holder = L.holder;
   var td = 'padding:2px 5px;border-bottom:1px solid #eee;vertical-align:top;';
+  var noLink = typeof _invItemNoLinkHtml === 'function' ? _invItemNoLinkHtml : function (r) { return esc(_invItemNo(r)); };   // to its photograph (P13)
   var rows = L.rows.map(function(r){
     var g = parseFloat(r.gross), f = parseFloat(r.fees);
     var hasNet = !isNaN(g) || !isNaN(f);
@@ -37394,7 +37737,7 @@ function printDispositionLedger(jobId, opt) {
     // by nobody. Warning on the request and going quiet on the account is the four-verbs-one-out-
     // of-step shape this file records more often than anything else.
     return '<tr>'
-      + '<td style="' + td + 'font-weight:700;color:#666;white-space:nowrap;">' + esc(_invItemNo(r)) + '</td>'
+      + '<td style="' + td + 'font-weight:700;color:#666;white-space:nowrap;">' + noLink(r) + '</td>'
       + '<td style="' + td + '">' + esc(r.objectName || '—') + _invCautionBadges(r, jobId) + '</td>'
       + '<td style="' + td + '">' + esc(invDispDocWord(r.disposition)) + '</td>'
       + '<td style="' + td + '">' + esc(_invRecipient(job, r) || '—') + '</td>'
@@ -37484,6 +37827,7 @@ function printDispositionLedger(jobId, opt) {
       + esc(holder) + '. Havellin charges no commission on sales, consignments or auction results, and Havellin&rsquo;s own service fees are billed separately and do not appear here. '
       + referralFeeVendorsNote(job, L.rows)   // Q62: the selling vendors that pay Havellin a referral fee, by name
       + 'This ledger records where each item went and what it brought; it does not state what anything is worth.</div>'
+    + (typeof invNumbersNotUsedHtml === 'function' ? invNumbersNotUsedHtml(jobId) : '')   // the gaps in its numbers, explained (P13)
     + ((typeof accessCustodyRecordHtml === 'function') ? accessCustodyRecordHtml(job) : '')   // the keys (2026-10-16), before the sign-off
     + signoff
     + '</div>';
@@ -37524,6 +37868,9 @@ function _fileCloseoutPaper(jobId, opt, P) {
   var go = function () {
     var page = P.build(jobId);
     if (!page || !page.html) { if (!release()) return; say('err', 'The ' + P.name + ' could not be built on this device, so it was not filed.'); return; }
+    // A paper with photographs says what it could not draw, read as it was built (P13's review, 2026-10-28): the badge said ✓ over a
+    // Contents Record filed with "photo" in every cell when every batch had timed out.
+    var photoSaid = (P.photos && typeof invPrintPhotoWords === 'function') ? invPrintPhotoWords(jobId, _jobInvRefs(jobId)) : '';
     var title = P.title;
     resolveSubfolderId(job, P.folder || PHOTO_SUBFOLDER, function (folderId) {
       var target = folderId || _jobRootFolderId(job);
@@ -37546,8 +37893,8 @@ function _fileCloseoutPaper(jobId, opt, P) {
         j2.updatedAt = Date.now();
         saveJobs();
         syncJobToSheets(j2);
-        if (auto) showSyncBadge('' + P.name + ' filed to Drive ✓');
-        else say('ok', '' + P.name + ' filed to the client’s ' + (P.folder || PHOTO_SUBFOLDER) + ' folder in Drive.');
+        if (auto) showSyncBadge('' + P.name + ' filed to Drive' + (photoSaid ? ': ' + photoSaid : ' ✓'), !!photoSaid);
+        else say(photoSaid ? 'warn' : 'ok', '' + P.name + ' filed to the client’s ' + (P.folder || PHOTO_SUBFOLDER) + ' folder in Drive.' + (photoSaid ? ' ' + photoSaid : ''));
         _ledgerCardRepaint(jobId);
         if (typeof _repaintIncidents === 'function') _repaintIncidents(jobId);
       });
@@ -37567,6 +37914,10 @@ function _fileCloseoutPaper(jobId, opt, P) {
       return;
     }
     if (P.applies && !P.applies(job, _jobInvRefs(jobId))) { release(); return; }
+    // A paper that prints its lines' photographs (P13: the Contents Record) fetches them first, memory only; the filing's watchdog
+    // covers the wait, each batch having its own.
+    var _ids = (P.photos && typeof invPrintPhotoIds === 'function') ? invPrintPhotoIds(jobId, _jobInvRefs(jobId)) : [];
+    if (_ids.length) { invFetchPrintPhotos(jobId, _ids, function () { go(); }, 'the ' + P.name); return; }
     go();
   });
   return true;
@@ -37583,7 +37934,7 @@ var CLOSEOUT_PAPERS = {
             build: function (jobId) { return printDispositionLedger(jobId, { asHtml: true }); } },
   // `jobOnly`: whether the paper applies is known from the job alone, so an estate's close never reads the sheet for it.
   contents: { name: 'Contents Record', word: 'record', card: 'Contents Record card', key: CONTENTS_DOC_KEY, flight: _contentsFiling,
-              title: 'Contents Record', jobOnly: true, applies: function (job) { return !invFiduciaryMode(job); },
+              title: 'Contents Record', jobOnly: true, photos: true, applies: function (job) { return !invFiduciaryMode(job); },
               build: function (jobId) { return printContentsRecord(jobId, { asHtml: true }); } },
   // The Incident Record (P26, 2026-10-16): every service, filed where the job has an incident the client may read, into the
   // Incident Reports folder beside the photographs; it reads the job alone (`noInventory`), so a prep close files it too.
@@ -38178,20 +38529,28 @@ function _renderContentsCard(job, all) {
 // reader unable to tell a checked estate from an unchecked one.
 function _lotSplitWorklistBlock(job, items) {
   if (!maivFilingApplies(job)) return '';
-  var lots = (items || []).filter(function(r){ return parseInt(r.qty, 10) > 1; });
+  // A group Agent One marked as holding more than one article is a lot whatever its count (P13, INV-09): at a count of one over
+  // $100 the cap cannot be tested on it (invLotSplitState 'nocount'), and the clearance below is never said over it.
+  var lots = (items || []).filter(function(r){ return parseInt(r.qty, 10) > 1 || invGroupUncounted(r); });
   if (!lots.length) return '';
   var over = invLotsToSplit(lots, job);
   var untested = invLotsUntestable(lots, job);
+  // Untested for want of a value, or (P13) a group recorded with no count, each said in its own words.
+  var noVal = untested.filter(function (r) { return invLotSplitState(r, job) === 'unvalued'; });
+  var noCount = untested.filter(function (r) { return invLotSplitState(r, job) === 'nocount'; });
+  var noCountTxt = noCount.length ? noCount.length + ' grouped line' + (noCount.length > 1 ? 's hold' : ' holds') + ' more than one article with no count '
+    + 'recorded, so the cap cannot be tested on ' + (noCount.length > 1 ? 'them' : 'it') + ': record the count, itemise '
+    + (noCount.length > 1 ? 'them' : 'it') + ', or record that ' + (noCount.length > 1 ? 'each is a single article' : 'it is a single article') + '. ' : '';
   var tone = (over.length || untested.length) ? '#8a6d3b' : '#999';
 
   var rows = over.concat(untested).map(function(r){
     var st = invLotSplitState(r, job);
     return '<tr><td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(_invItemNo(r) ? '#' + _invItemNo(r) : '—') + '</td>'
       + '<td style="padding:2px 6px;border-bottom:1px solid #eee;">' + esc(r.objectName || '—') + '</td>'
-      + '<td style="padding:2px 6px;border-bottom:1px solid #eee;text-align:right;">' + (parseInt(r.qty, 10) || 0).toLocaleString() + '</td>'
+      + '<td style="padding:2px 6px;border-bottom:1px solid #eee;text-align:right;">' + (st === 'nocount' ? '<span style="color:#888;">not counted</span>' : (parseInt(r.qty, 10) || 0).toLocaleString()) + '</td>'
       + '<td style="padding:2px 6px;border-bottom:1px solid #eee;text-align:right;">' + _invMoney(r.fmv) + '</td>'
       + '<td style="padding:2px 6px;border-bottom:1px solid #eee;text-align:right;">'
-      + (st === 'unvalued' ? '<span style="color:#888;">not testable</span>' : '<strong>' + _invMoney(invLotArticleValue(r)) + '</strong>') + '</td></tr>';
+      + ((st === 'unvalued' || st === 'nocount') ? '<span style="color:#888;">not testable</span>' : '<strong>' + _invMoney(invLotArticleValue(r)) + '</strong>') + '</td></tr>';
   }).join('');
 
   var tail;
@@ -38202,16 +38561,17 @@ function _lotSplitWorklistBlock(job, items) {
       + fmt(INV_LOT_ARTICLE_CAP) + '. Split '
       + (over.length > 1 ? 'these lots' : 'this lot') + ' into named articles before the return is prepared, or record on the line why it is properly grouped.';
   } else if (untested.length) {
-    tail = 'Every grouped lot on this estate carries a value except ' + untested.length + ', so the cap cannot be tested '
-      + 'on ' + (untested.length > 1 ? 'those' : 'that one') + ' yet. An untested lot is not a lot inside the cap.';
+    tail = (noVal.length ? 'Every grouped lot on this estate carries a value except ' + noVal.length + ', so the cap cannot be tested '
+      + 'on ' + (noVal.length > 1 ? 'those' : 'that one') + ' yet. ' : '') + noCountTxt + 'An untested lot is not a lot inside the cap.';
   } else {
     tail = 'Every grouped lot averages below ' + fmt(INV_LOT_ARTICLE_CAP) + ' an article, so §20.2031-6(a) '
       + 'permits them to stand as groups on the return schedule. Re-check this as values and quantities change.';
   }
-  if (untested.length && over.length) {
-    tail += ' A further ' + untested.length + ' lot' + (untested.length > 1 ? 's carry' : ' carries') + ' no value, so the cap cannot be tested on '
-      + (untested.length > 1 ? 'them' : 'it') + ' at all.';
+  if (noVal.length && over.length) {
+    tail += ' A further ' + noVal.length + ' lot' + (noVal.length > 1 ? 's carry' : ' carries') + ' no value, so the cap cannot be tested on '
+      + (noVal.length > 1 ? 'them' : 'it') + ' at all.';
   }
+  if (noCount.length && over.length) tail += ' ' + noCountTxt.trim();
 
   return '<div style="margin-top:14px;border:1px solid ' + tone + ';border-radius:3px;padding:10px 12px;">'
     + '<div style="font-size:12px;font-weight:700;color:' + tone + ';margin-bottom:2px;">'
@@ -38533,6 +38893,9 @@ function printContentsRecord(jobId, opt) {
   if (_cold) { if (asHtml) return { why: _cold }; alert(_cold); return; }
   if (typeof invReadFirst === 'function' && invReadFirst(jobId, 'The Contents Record', function () { printContentsRecord(jobId, _invReadOpt(opt)); }, opt)) return;   // P6
   if (!asHtml && !document.getElementById('print-target')) return;
+  // Its own lines' photographs first (P13): fetched for this page, never capped, never stored on the device.
+  if (typeof invPhotosFirst === 'function' && invPhotosFirst(jobId, rec.items, 'The Contents Record', function () { printContentsRecord(jobId, _invPhotosOpt(opt)); }, opt)) return;
+  var noLink = typeof _invItemNoLinkHtml === 'function' ? _invItemNoLinkHtml : function (r) { return esc(_invItemNo(r) || '—'); };
   var fid = invFiduciaryMode(job);
 
   // ⚠ _invDocHead adds "Prepared by Havellin Palm Beach, LLC · <date>" itself; this passed it too, so the header printed
@@ -38570,7 +38933,7 @@ function printContentsRecord(jobId, opt) {
       var net = money ? ((parseFloat(r.gross) || 0) - (parseFloat(r.fees) || 0)) : null;
       return '<tr>'
         + '<td style="padding:3px 5px;border-bottom:1px solid #eee;width:44px;">' + _invPrintThumb(jobId, r, 34) + '</td>'
-        + '<td style="padding:3px 5px;border-bottom:1px solid #eee;white-space:nowrap;">' + esc(_invItemNo(r) || '—') + '</td>'
+        + '<td style="padding:3px 5px;border-bottom:1px solid #eee;white-space:nowrap;">' + noLink(r) + '</td>'
         + '<td style="padding:3px 5px;border-bottom:1px solid #eee;">' + esc(r.objectName || '—')
           + _invCautionBadges(r, jobId) + '</td>'
         + '<td style="padding:3px 5px;border-bottom:1px solid #eee;">' + esc(_invRoomName(jobId, r.roomIdx)) + '</td>'
@@ -38610,7 +38973,9 @@ function printContentsRecord(jobId, opt) {
     + referralFeeVendorsNote(job, rec.items)   // Q62
     + 'Blank means nothing has been received. This record does not state what anything is worth.'
     + (!shared ? '' : unshot ? ' The photographs are in the Drive folder shared with you.' : ' Photographs of every item are in the Drive folder shared with you.')
+    + (typeof invPaperPhotoSentence === 'function' && invPaperPhotoSentence(rec.items) ? ' ' + esc(invPaperPhotoSentence(rec.items)) : '')   // P13
     + '</div>'
+    + (typeof invNumbersNotUsedHtml === 'function' ? invNumbersNotUsedHtml(jobId) : '')   // the gaps in its numbers, explained (P13)
     + ((typeof accessCustodyRecordHtml === 'function') ? accessCustodyRecordHtml(job) : '')   // the keys (2026-10-16), before the sign-off
     + contentsRecordSignoff(job, rec)
     + '</div>';
@@ -38717,7 +39082,7 @@ function _afDate(ms) {
   return new Date(ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
-function printAsFoundRecord(jobId, read) {
+function printAsFoundRecord(jobId, read, photos) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
   var _cold = typeof invColdRefusal === 'function' ? invColdRefusal(jobId) : '';   // 2026-10-27, P1: a cold desk refuses
@@ -38726,6 +39091,10 @@ function printAsFoundRecord(jobId, read) {
   var rec = asFoundRecord(jobId);
   if (!rec.rooms.length) { alert('This job has no rooms priced on its estimate, so there is nothing to index.'); return; }
   if (!rec.total) { alert('No as-found photographs have been taken on this job yet.'); return; }
+  // Its own photographs first (P13): fetched for this page, never capped, never stored on the device.
+  var _shots = [];
+  rec.shotRooms.forEach(function (r) { _shots = _shots.concat(r.shots || []); });
+  if (typeof invPhotosFirst === 'function' && invPhotosFirst(jobId, _shots, 'The As-Found Record', function () { printAsFoundRecord(jobId, read || true, true); }, { photos: !!photos })) return;
 
   var html = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
     + _invDocHead(job, 'As-Found Record',
@@ -39069,7 +39438,7 @@ function collectionUseLine(jobId, collLineId, lineId) {
   // The walkthrough's rough figure is not carried onto the photographed line (2026-10-26, collectionLineWithPhoto): Agent Two values it.
   if (!_avHasFigure(line) && String(coll.fmv == null ? '' : coll.fmv).trim() !== '' && (coll.valuedBy || coll.valSource)) line.fmv = coll.fmv;
   _setPhotoRef(jobId, _invTouch(line));
-  _invTombstoneLine(jobId, coll);
+  _invTombstoneLine(jobId, coll, { why: 'joined', of: line.stableId });   // P13: Numbers not used names the line it joined
   savePhotoRefs(jobId);
   renderInventoryTab();
   _scheduleInventorySync(jobId);
@@ -40038,6 +40407,60 @@ function _invRemovedRows(jobId) {
     .filter(function(r){ return r.label === 'inventory' && !r.collId && r.deletedAt; })
     .sort(function(a, b){ return (b.deletedAt || 0) - (a.deletedAt || 0); });
 }
+// ⚠⚠ NUMBERS NOT USED (P13 of the desk audit, 2026-10-28; INV-16): an item number is issued once and never given to another line
+// (_invAssignItemNos), so every line taken off the list leaves a gap in the numbers on every paper, and the Estate Inventory Report,
+// the ledger and the schedules said nothing of #23 between #22 and #24. Each gap is named with why the line came off, in the words of
+// the press that took it (`removedWhy`, `removedOf`, written by _invTombstoneLine and the room's bin): a number another line holds
+// now (a restore, a collision) is not a gap. One list, read by the footnote on the Estate Inventory Report, the Court Inventory, the
+// Trust Schedule, the Disposition Ledger, the Contents List and the Contents Record. DOM-free.
+var INV_REMOVED_WHY_WORDS = {
+  empty:  ['nothing to list in its photograph'],
+  blank:  ['a blank line, never named'],
+  desk:   ['taken off the list at the desk'],
+  dup:    ['a duplicate of #N', 'a duplicate'],
+  repeat: ['a duplicate of #N', 'a duplicate'],   // Keep the first reading: the later reading of a photograph read twice
+  joined: ['joined to #N', 'joined to another line'],
+  photo:  ['its photograph was deleted']
+};
+function invRemovedWhyText(ref, jobId) {
+  var w = INV_REMOVED_WHY_WORDS[ref && ref.removedWhy] || ['taken off the list'];
+  if (w[0].indexOf('#N') < 0) return w[0];
+  var o = ref.removedOf ? _getPhotoRef(jobId, ref.removedOf) : null;
+  var n = o ? _invItemNo(o) : '—';
+  return n !== '—' ? w[0].replace('#N', '#' + n) : w[1];
+}
+function invNumbersNotUsed(jobId) {
+  var live = {}, seen = {}, out = [];
+  _jobInvRefs(jobId).forEach(function (r) { var n = parseInt(r.itemNo, 10); if (n > 0) live[n] = 1; });
+  _invRemovedRows(jobId).forEach(function (r) {
+    var n = parseInt(r.itemNo, 10);
+    if (!(n > 0) || live[n] || seen[n]) return;
+    seen[n] = 1;
+    out.push({ no: n, why: invRemovedWhyText(r, jobId) });
+  });
+  return out.sort(function (a, b) { return a.no - b.no; });
+}
+// The footnote's words, drafted 2026-10-28 for Anthony: runs of numbers with one reason read "#40 to #50" (two, "#40 and #41").
+function invNumbersNotUsedText(jobId) {
+  var gaps = invNumbersNotUsed(jobId), runs = [];
+  gaps.forEach(function (g) {
+    var last = runs[runs.length - 1];
+    if (last && last.to === g.no - 1 && last.why === g.why) { last.to = g.no; last.n++; }
+    else runs.push({ from: g.no, to: g.no, why: g.why, n: 1 });
+  });
+  if (!runs.length) return '';
+  var shown = runs.slice(0, 30), more = 0;
+  runs.slice(30).forEach(function (r) { more += r.n; });
+  return 'Numbers not used: ' + shown.map(function (r) {
+      return (r.n === 1 ? '#' + r.from : '#' + r.from + (r.n === 2 ? ' and #' : ' to #') + r.to) + ' ' + r.why;
+    }).join('; ')
+    + (more ? '; and ' + more + ' more' : '')
+    + '. A number is never given to another item, so each line taken off the list leaves its number unused.';
+}
+function invNumbersNotUsedHtml(jobId) {
+  var t = invNumbersNotUsedText(jobId);
+  return t ? '<div class="inv-numbers-unused" style="font-size:10px;color:#666;font-style:italic;margin-top:10px;line-height:1.5;">' + esc(t) + '</div>' : '';
+}
 // The detail shots tombstoned with this item by the room's bin (P22), read by Restore and Removed items.
 function invDetailsRemovedWith(jobId, ref) {
   if (!ref || !ref.deletedAt) return [];
@@ -40068,6 +40491,8 @@ function restoreInventoryItem(jobId, stableId) {
   var _withIt = invDetailsRemovedWith(jobId, ref);
   delete ref.deletedAt;
   delete ref.deletedBy;      // the removal's own stamp goes with it (P16)
+  delete ref.removedWhy;     // and its reason (P13)
+  delete ref.removedOf;
   _invTouch(ref);            // newer than the tombstone, so the undelete wins the merge
   _setPhotoRef(jobId, ref);
   _withIt.forEach(function(d){
@@ -40104,6 +40529,8 @@ function _renderRemovedRows(jobId) {
       + (r.deletedAt ? ' · removed ' + esc(fmtDate2(_ymdLocal(new Date(r.deletedAt)))) : '')
       // Who removed it, where the removal recorded one (the desk's Remove line and duplicate Remove, P16).
       + (r.deletedBy ? ' by ' + esc(r.deletedBy) : '')
+      // And why, as the papers' Numbers not used says it (P13).
+      + (r.removedWhy ? ' · ' + esc(invRemovedWhyText(r, jobId)) : '')
       + (r.driveTrashed ? ' · <span style="color:var(--bronze);" title="Restore gives the row back. The photograph is in Google Drive\u2019s bin, which holds it for 30 days.">photo in the Drive bin</span>' : '')
       + (dn ? ' · ' + dn + ' detail shot' + (dn > 1 ? 's' : '') + ' removed with it' : '')
       + '</span>'
@@ -40118,7 +40545,8 @@ function _renderRemovedRows(jobId) {
     // binned in the field has its photograph trashed in Drive as well, on purpose — so the
     // claim now holds for the ROW, and the row says where the image went.
     + '<div style="font-size:10.5px;color:var(--gray);margin-bottom:6px;">This is the undo buffer, not a second inventory. '
-    + 'Nothing here is counted, valued or printed anywhere. Restore returns the row under its original item number, '
+    // ⚠ Its number is printed (P13): the papers' Numbers not used names each one with why it came off.
+    + 'Nothing here is counted or valued; the papers list its number under Numbers not used, with why it came off. Restore returns the row under its original item number, '
     + 'or the next free one if that number has since been taken. A row marked <em>photo in the Drive bin</em> was '
     + 'deleted in the field: the row comes back, the photograph has to be restored from Google Drive\u2019s own bin, '
     + 'which holds it for 30 days. Any other row was removed as a line and kept its photograph, so Restore gives both back. '
@@ -41175,6 +41603,11 @@ function _agWrite(jobId, stableId, obj, pass) {
   ref.category   = (INV_CATEGORIES.indexOf(obj.category) >= 0) ? obj.category : INV_DEFAULT_CATEGORY;
   var q = parseInt(obj.qty, 10);
   if (q > 1) ref.qty = q;          // a lot. qty 1 is the default and writing it says nothing
+  // Whether the line holds more than one article, as Agent One read it (P13, the 2026-11-02b backend): a mixed group recorded at a
+  // count of one is tested against §20.2031-6(a) as a group with no count (invLotSplitState). Written only where the answer says;
+  // an older deployment's answer carries no `group`, and the line keeps what it had.
+  if (obj.group === true) ref.agentGroup = true;
+  else if (obj.group === false) delete ref.agentGroup;
   ref.namedBy    = 'agent';
   // ⚠ ONE STAMP FOR ONE ANSWER (2026-10-25): every line one photograph's answer writes carries the same `agentAt`, and how
   // many lines that request was told were listed already (`agentListed`; none on a first naming). That is how
@@ -41839,6 +42272,40 @@ function _agDupIndex(jobId, all) {
 function _agDupHandle(key) { try { return btoa(unescape(encodeURIComponent(key))); } catch(e) { return ''; } }
 function _agDupUnhandle(h) { try { return decodeURIComponent(escape(atob(h))); } catch(e) { return ''; } }
 
+// ⚠⚠ WHICH LINE A REMOVED DUPLICATE DUPLICATES, read off the group's own evidence (P13's review, 2026-10-28). Remove recorded the
+// group's lowest-numbered other line, so on a photograph read twice (#73 dinner plates and #81 salad plates read first; #87
+// repeats #73, #88 repeats #81) Remove on #88 printed "#88 a duplicate of #73", and Remove on #73 "#73 a duplicate of #81", dinner
+// plates of salad plates, in the Numbers not used footnote of the schedules the representative adopts. In order: the line it
+// repeats (a photograph read twice, the group's `repeats`); the line repeating it; the surest of its open room-check links (the
+// group's `pairs`: a chain #1~#2~#3 names #2 for #3, never #1, which the check never paired with it); the one other line of its
+// name; the other line of a group of two. Else '' and the paper says "a duplicate", naming nobody. DOM-free.
+function agentDupPartner(g, stableId) {
+  if (!g || !stableId) return '';
+  var id = function (r) { return (r && r.stableId) || ''; };
+  var reps = g.repeats || [], rows = g.rows || [];
+  var rep = reps.filter(function (p) { return id(p.line) === stableId; })[0];
+  if (rep && id(rep.of)) return id(rep.of);
+  var by = reps.filter(function (p) { return id(p.of) === stableId; })[0];
+  if (by && id(by.line)) return id(by.line);
+  var best = null;
+  (g.pairs || []).forEach(function (p) {
+    if (id(p.a) !== stableId && id(p.b) !== stableId) return;
+    if (!best || (AGENT_ROOM_CONF_RANK[p.conf] || 0) > (AGENT_ROOM_CONF_RANK[best.conf] || 0)) best = p;
+  });
+  if (best) return id(best.a) === stableId ? id(best.b) : id(best.a);
+  var me = rows.filter(function (r) { return id(r) === stableId; })[0];
+  if (me && _agDupEligible(me)) {
+    var key = _agNameKey(me.agentName || me.valNameFrom || me.objectName);
+    var same = rows.filter(function (r) {
+      return id(r) !== stableId && _agDupEligible(r) && String(r.roomIdx) === String(me.roomIdx)
+        && _agNameKey(r.agentName || r.valNameFrom || r.objectName) === key && !agentDupCleared(me, r);
+    });
+    if (same.length === 1) return id(same[0]);
+  }
+  var others = rows.filter(function (r) { return id(r) !== stableId; });
+  return others.length === 1 ? id(others[0]) : '';
+}
+
 function agentDropDuplicate(jobId, stableId) {
   var ref = _getPhotoRef(jobId, stableId);
   if (!ref) return;
@@ -41849,8 +42316,11 @@ function agentDropDuplicate(jobId, stableId) {
   // seen it yet", so a splice is undone by the next merge.
   // ⚠ AND NEVER `discardShot`, which TRASHES the photograph in Drive. The frame is real
   // evidence of the room whatever the desk decides about the LINE.
-  // The desk's one removal writer (P16): tombstoned, stamped with who, saved.
-  _invTombstoneLine(jobId, ref);
+  // The desk's one removal writer (P16): tombstoned, stamped with who, saved; recorded as a duplicate of the line the group's own
+  // evidence pairs it with (agentDupPartner; P13's review: the lowest-numbered other line named the wrong one), so the papers'
+  // Numbers not used says what it was, or "a duplicate" where no one line is its partner.
+  var _grp = agentDuplicateGroups(jobId).filter(function (g) { return g.rows.some(function (r) { return r.stableId === stableId; }); })[0];
+  _invTombstoneLine(jobId, ref, { why: 'dup', of: agentDupPartner(_grp, stableId) });
   renderInventoryTab();
   _scheduleInventorySync(jobId);
   _avDupReleased(jobId, waiting);
@@ -41917,7 +42387,7 @@ function agentKeepFirstReading(jobId, handle, read) {
     + '\n\nNo photograph is deleted. Anything recorded on a removed line goes with it, and Removed items, under Removed items & snapshots on Job Admin & Inv, gives a line back.';
   if (!window.confirm(msg)) return false;
   var waiting = agentValueWaiting(jobId);   // a line Agent Two waited on may be released by this, as by Remove
-  reps.forEach(function(p) { _invTombstoneLine(jobId, p.line, { defer: true }); });
+  reps.forEach(function(p) { _invTombstoneLine(jobId, p.line, { defer: true, why: 'repeat', of: p.of.stableId }); });   // P13: the reason
   savePhotoRefs(jobId);
   showSyncBadge(reps.length + ' repeated line' + (reps.length > 1 ? 's' : '') + ' removed: ' + reps.map(function(p) { return '#' + _invItemNo(p.line); }).join(', ')
     + ' — Removed items, under Removed items & snapshots on Job Admin & Inv, gives ' + (reps.length > 1 ? 'them' : 'it') + ' back', false);
@@ -43936,6 +44406,11 @@ function _renderInvRow(job, ref) {
       + '" style="color:var(--bronze);font-weight:700;">could not be read' + (_unN ? ': ' + esc(_unN) : '') + '</span>'
       + (open || _unSplit || invCloseUpRefusal(ref) ? '' : ' ' + _invCloseUpAddHtml(jid, ref)));
   }
+  // A count left in the name (P13, INV-18): how many is Qty's alone, so the papers cannot say eight in the name and six in the count.
+  if (typeof invNameCarriesCount === 'function' && invNameCarriesCount(ref)) {   // guarded for a sandbox that lifts the row alone
+    warn.push('<span class="inv-count-name" title="' + esc('The name says how many. The count goes in Qty alone (it reads ' + invLineQty(ref)
+      + ' here), so the papers cannot print one number in the name and another in the count: take it out of the name.') + '" style="color:var(--bronze);">count in the name</span>');
+  }
   // ⚠ AGENT TWO'S ROW BADGES (P23): made for an earlier name, internal, worth a specialist, or not valued and why.
   _avRowBadges(job, ref).forEach(function(b){ warn.push(b); });
   // ⚠ THE CHIP IS THE HALF THAT TRAVELS. The block above the rows holds the decision, because
@@ -44148,6 +44623,7 @@ function _renderInvPanel(job, ref) {
     + _invPanelCautionHtml(job, ref)
     + _invPanelLeftoverHtml(job, ref)
     + _invPanelAppraisalHtml(job, ref)
+    + _invPanelGroupHtml(job, ref)
     + _collPanelHtml(job, ref)
     + fieldHtml + _avPanelHtml(job, ref) + secs + '</div>';
 }
@@ -44164,6 +44640,37 @@ function _invPanelCautionHtml(job, ref) {
   }).join('');
 }
 
+// ⚠ AGENT ONE'S GROUP MARK, IN THE LINE'S RECORD, WITH A PERSON'S ANSWER (P13's review, 2026-10-28): the mark was read by the lot
+// rule and the worklist and shown nowhere, and nothing a person did could settle it. Uncounted (invGroupUncounted), the record says
+// so and offers One article; a count typed in Qty answers it too. Answered, it says who recorded the count. '' with no mark.
+function _invPanelGroupHtml(job, ref) {
+  if (!ref || ref.agentGroup !== true) return '';
+  var id = ' id="inv-grp-' + esc(ref.stableId) + '"';
+  if (invGroupUncounted(ref)) {
+    return '<div class="inv-panel-group"' + id + ' style="margin-bottom:10px;font-size:11px;line-height:1.5;color:#8a5a1e;">&#9888; '
+      + '<strong>A group with no count.</strong> Agent One read this line as more than one article, and no count is recorded. '
+      + 'Type the count in Qty, or put each thing on its own line with Another item in this photo; if it is one article, press One article. '
+      + '<button class="btn-s" style="margin-left:4px;" onclick="invMarkOneArticle(' + job.id + ',\'' + ref.stableId + '\')">One article</button></div>';
+  }
+  if (ref.groupBy !== 'desk') return '';
+  var q = parseInt(ref.qty, 10) > 1;
+  return '<div class="inv-panel-group"' + id + ' style="margin-bottom:10px;font-size:11px;line-height:1.5;color:var(--gray);">'
+    + 'Agent One read this line as more than one article; ' + (q ? 'its count was recorded' : 'it was recorded as one article')
+    + (ref.groupWho ? ' by ' + esc(ref.groupWho) : '') + '.</div>';
+}
+// The record's One article: a person's answer that the line Agent One read as a group is a single article (P13's review). A press,
+// so it redraws the tab; refused where the line is no longer an uncounted group (a count typed meanwhile, another device).
+function invMarkOneArticle(jobId, stableId) {
+  var ref = _getPhotoRef(jobId, stableId);
+  if (!ref || ref.deletedAt || !invGroupUncounted(ref)) { renderInventoryTab(); return false; }
+  ref.groupBy = 'desk';
+  ref.groupWho = _invStampBy(_invJob(jobId)) || '';
+  _setPhotoRef(jobId, _invTouch(ref));
+  savePhotoRefs(jobId);
+  renderInventoryTab();
+  _scheduleInventorySync(jobId);
+  return true;
+}
 // ⚠ THE APPRAISER AS THE SOURCE, IN THE LINE'S RECORD, ON EVERY JOB (Q93): a living record has no Valuation Source box, so this is
 // where its record says whose figure it is waiting for, or carries. Through the one namer, invAppraisalSourceText.
 function _invPanelAppraisalHtml(job, ref) {

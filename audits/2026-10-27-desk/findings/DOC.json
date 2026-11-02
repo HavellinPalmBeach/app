@@ -62,6 +62,7 @@
   },
   {
    "id": "DOC-03",
+   "fixed": "2026-10-28 (P13: the printers and the sends fetch their own lines' photographs into a print-only map, never localStorage, with \"Gathering N photographs\" on the toast and the count told to the person printing; \"re-open this tab\" is gone; tests/p13-traceable.test.js, browser step 129)",
    "title": "On a full house only about 110 lines get a photograph on any paper, and the page tells counsel to 're-open this tab'",
    "kind": "defect",
    "severity": "high",
@@ -96,6 +97,7 @@
   },
   {
    "id": "DOC-05",
+   "fixed": "2026-10-28 in part (P13: Item # and Room columns, one set of column widths with table-layout:fixed, rows by number, each number a link to its photograph; tests/p13-traceable.test.js, browser step 129). Not built: a per-line marker for an unreviewed agent figure or a pending appraisal.",
    "title": "The valued schedules give no item number, room or photograph per line, so a reader cannot cross-reference or tell two like items apart",
    "kind": "accuracy",
    "severity": "high",
@@ -113,6 +115,7 @@
   },
   {
    "id": "DOC-06",
+   "fixed": "2026-10-28 (P13: each photograph and item number links to its Drive file on the Report, the Contents List, the Contents Record, both schedules, the request and the ledger, and the footer says only that: \"Where an item has a photograph, its number links to it in Drive; the photographs are retained for seven years.\", drafted for Anthony; tests/p13-traceable.test.js, browser step 129)",
    "title": "'Photographs are reference-numbered to the line items above' is false: file names carry room and sequence, and no line links to its file",
    "kind": "accuracy",
    "severity": "high",
@@ -436,6 +439,7 @@
   },
   {
    "id": "DOC-25",
+   "fixed": "2026-10-28 (P13: on a Form 706 estate the Report and both schedules mark a lot over $100 an article on its line, \"averages $150 an article: itemise it for the Form 706\", and an untested one \"grouped, untested\"; counsel bundle D23; tests/p13-traceable.test.js, browser step 129)",
    "title": "Grouped lots over $100 an article on a Form 706 estate are flagged only on the worklist, not on the schedule line",
    "kind": "accuracy",
    "severity": "medium",

@@ -94,6 +94,13 @@ function net(opts) {
         return sp(res({ ok: true, fileUrl: 'https://drive.google.com/file/d/up' + n + '/view', fileId: 'up' + n }));
       }
       if (body.action === 'getSubfolders') return sp(res({ ok: true, subfolders: null }));
+      // The page's photographs (P13): every one Drive holds, as the deployment answers; `thumbs: false` a photo service that fails.
+      if (body.action === 'getThumbnails') {
+        if (o.thumbs === false) return sp(res({ ok: false, error: 'the photo service did not answer' }));
+        const thumbs = {};
+        (body.fileIds || []).forEach((id) => { thumbs[id] = 'data:image/jpeg;base64,AAAA'; });
+        return sp(res({ ok: true, thumbs, missing: [] }));
+      }
       if (body.action === 'htmlToPdf') {
         log.pdfs.push(body.html);
         if (o.pdfFail) return sp(res({ ok: false, error: 'The PDF conversion failed.' }));
@@ -907,6 +914,21 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   });
 
   // ═══════════════════════════════════════════════════════════════════════
+  // P13's review (2026-10-28): the send's notice said nothing when its page's photographs could not be drawn, so the PDF reached
+  // the fiduciaries with "photo" in every cell under a green notice.
+  G('P13 review · the send tells the sender how many photographs its page could not draw, and a notice saying so is not green', () => {
+    const job = () => ESTATE({ coFiduciaries: [{ id: 'c1', name: 'Dana Hale', role: 'Co-Personal Representative', email: 'dana@hale.example', phone: '' }] });
+    const good = rig({ job: job(), net: { thumbs: true } });
+    good.c.sendApprovalRequest(7);
+    eq(good.last().t, 'ok', 'every photograph drawn, every fiduciary emailed: green');
+    lacks(good.last().m, 'could not be drawn', 'and nothing said of the photographs');
+    const bad = rig({ job: job(), net: { thumbs: false } });
+    bad.c.sendApprovalRequest(7);
+    eq(bad.last().t, 'warn', '⚠⚠ the photo service failed: amber');
+    has(bad.last().m, 'On the request: 2 photographs could not be drawn from Drive, so their lines link to the photograph in Drive instead.', '⚠⚠ and the notice says how many');
+    ok(!!(bad.st() && bad.st().draftedAt), 'the draft is made all the same (a flag, never a refusal)');
+  });
+
   G('F · the documents say so', () => {
     const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
     ['manual.html', 'MANUAL.md', 'concierge-guide.html', 'CONCIERGE_GUIDE.md'].forEach((f) => {
