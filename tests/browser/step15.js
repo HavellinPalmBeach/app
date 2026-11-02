@@ -182,7 +182,8 @@ const APP = process.env.APP || 'file:///home/user/app/havellin.html';
   acceptNext = false;
   eq(dlg.filter(m => /Cannot close the job yet/.test(m)).length, 0, 'with every used vendor rated, closing raises no ratings refusal');
   // ⚠ RESTATED 2026-09-29 (audit P10 low): on Home Prep the question names the SECOND payment, as every other surface does.
-  ok(dlg.length === 1 && /Close this job now\?/.test(dlg[0]) && /No second payment is recorded/.test(dlg[0]),
+  // RESTATED (P12's review, 2026-10-28): the question names the client, "Close <name>'s job now?".
+  ok(dlg.length === 1 && /^Close .+ job now\?/.test(dlg[0]) && /No second payment is recorded/.test(dlg[0]),
      'the one question left is the early close, because no second payment is recorded');
   eq(await p.evaluate(() => jobs.find(j => j.id === 901).status), 'closed', 'and the job closes');
 

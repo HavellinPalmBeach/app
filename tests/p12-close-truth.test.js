@@ -15,6 +15,9 @@
 //   E  Each signer in their own role; a schedule still DRAFT says so on the Closing bar.
 //   F  The Contents Record: Hold has no destination yet, "left" only for what left, its sign-off's words, its no-values stamp.
 //   G  The package's Release Approvals record lists what the ledger lists.
+//   R  P12's review (2026-10-28): Close job reads first on every press, names the client, is never asked over another client and
+//      says a failed read; the ledger's signers and Ask 13's sentence in a capacity (the schedules' card too); "the final record"
+//      never under the page's own "not yet complete"; the package's record carries the ledger's second sentence.
 // Driven through the real functions, lifted with their call graph from the source; only the boundaries are stubbed.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -268,11 +271,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     f.c.activateOrCycle(7);
     (f.log.reads[0] || { failed() {} }).failed();
     has(f.log.asked[0] || '', 'The inventory has not been read from the sheet on this device yet', '⚠ a read that fails is said in the question, never a refusal');
-    // Read already: straight to the question; a Home Prep has no inventory to read.
+    // RESTATED (P12's review, 2026-10-28): read already, it reads again (a copy read in the morning answered the evening's close);
+    // group R holds the rest of the review.
     const w = rig(ESTATE(), LINES());
     w.c.jobCloseBlockers = () => [];
     w.c.activateOrCycle(7);
-    eq([w.log.reads.length, w.log.asked.length], [0, 1], 'read already: no read, the question at once');
+    eq([w.log.reads.length, w.log.asked.length], [1, 0], 'read already: it reads again first, and asks nothing yet');
+    (w.log.reads[0] || { go() {} }).go(null);
+    eq(w.log.asked.length, 1, '…then the question');
   });
 
   // ── C ────────────────────────────────────────────────────────────────────
@@ -304,16 +310,19 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       '⚠⚠ Ask 13: the ratification sentence above the sign-off');
     ok(t.indexOf('By signing below') < t.indexOf('Sign-off'), '…above the sign-off');
     // Every line checked, nothing standing: the final record.
+    // RESTATED (P12's review, 2026-10-28): "the final record" also needs the page's own gap block empty, and a sold line on no proceeds
+    // statement is a gap there, so the sale's statement is recorded (STMT, agreeing with the line).
     const all = [ROW('a', { itemNo: 1, objectName: 'Sargent portrait', disposition: 'Auction', channel: 'Kodner Galleries', gross: 1000, fees: 250, dispDate: '2026-10-18', authBy: BOTH, approvalDate: '2026-10-15' }),
       ROW('h', { itemNo: 8, objectName: 'Family Bible', disposition: 'Keep' })];
-    const fin = rig(ESTATE({ docTier: 'contents' }), all);
+    const STMT = () => [{ id: 'ps1', vendor: 'Kodner Galleries', statementDate: '2026-10-20', lines: [{ stableId: 'a', itemNo: 1 }], gross: 1000, fees: 250, netPaid: 750 }];
+    const fin = rig(ESTATE({ docTier: 'contents', proceedsStatements: STMT() }), all);
     const ft = text(fin.c.printDispositionLedger(7, { asHtml: true }).html);
     has(ft, 'REVIEWED', 'fixture: every line checked');
     has(ft, 'Reviewed and approved as the final record of the disposition of the property listed above.', 'REVIEWED: the final record');
     lacks(ft, 'ratifies', 'nothing left early: no ratification sentence');
     // A line standing as the agents left it: the final record only once the list is read (current).
     const stand = all.concat([ROW('s', { itemNo: 9, objectName: 'Wicker chair', disposition: 'Keep', fmv: 40, valuedBy: 'agent', valConf: 'high', valSource: 'General estimate', namedBy: 'agent' })]);
-    const sr = rig(ESTATE({ docTier: 'contents' }), stand);
+    const sr = rig(ESTATE({ docTier: 'contents', proceedsStatements: STMT() }), stand);
     has(text(sr.c.printDispositionLedger(7, { asHtml: true }).html), 'as the record to date', 'a line standing, the list unread: the record to date');
     sr.job.invRead = { at: T0, by: 'Anthony Graziano', seen: sr.c.invListSeen(7) };
     has(text(sr.c.printDispositionLedger(7, { asHtml: true }).html), 'as the final record', '…read since it last changed: the final record');
@@ -386,24 +395,28 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ── E ────────────────────────────────────────────────────────────────────
   G('E · each signer prints in their own role (DOC-13)', () => {
     const r = rig(ESTATE(), []);
+    // RESTATED (P12's review, 2026-10-28): the lines take the paper's kind ('court', 'trustee') and read its words off one answer,
+    // scheduleSignerCapacity, which the signed schedules' card reads too.
     const h = text(r.c.scheduleSignLines([{ name: 'Daniel Price', role: 'Successor Trustee' }, { name: 'Ruth Price', role: 'Co-Trustee' }, { name: 'Ann Lee', role: '' },
-      { name: 'Bo Lee', role: 'Other' }], 'Received for the trust&rsquo;s records by', 'Successor Trustee'));
+      { name: 'Bo Lee', role: 'Other' }], 'Received for the trust&rsquo;s records by', 'trustee'));
     has(h, 'Ruth Price · Co-Trustee', '⚠⚠ a Co-Trustee signs as a Co-Trustee, never "Successor Trustee"');
     has(h, 'Daniel Price · Successor Trustee', 'the successor trustee as recorded');
     has(h, 'Ann Lee · Successor Trustee', 'no role recorded: the paper\'s word');
     has(h, 'Bo Lee · Successor Trustee', '"Other" names no capacity: the paper\'s word');
     const h2 = text(r.c.scheduleSignLines([{ name: 'Ruth Adler', role: 'Family Member' }, { name: 'Paul Adler', role: 'Co-Personal Representative' }, { name: 'Tess Lee', role: 'Trustee' }],
-      'Reviewed and adopted by', 'Personal Representative / authorized fiduciary'));
+      'Reviewed and adopted by', 'court'));
     has(h2, 'Ruth Adler · Personal Representative / authorized fiduciary', '⚠ a role that is no capacity on the paper (Family Member): the paper\'s word');
     has(h2, 'Paul Adler · Co-Personal Representative', 'a co-personal representative adopts the Court Inventory as one');
     has(h2, 'Tess Lee · Personal Representative / authorized fiduciary', '⚠ a trustee\'s role is no capacity on the Court Inventory');
-    has(text(r.c.scheduleSignLines([{ name: 'Ann Lee', role: 'Personal Representative' }], 'Received for the trust&rsquo;s records by', 'Successor Trustee')),
+    has(text(r.c.scheduleSignLines([{ name: 'Ann Lee', role: 'Personal Representative' }], 'Received for the trust&rsquo;s records by', 'trustee')),
       'Ann Lee · Successor Trustee', '…nor a personal representative\'s on the Trust Schedule');
     eq(r.c.fiduciaryCapacity({ role: 'Co-Personal Representative' }, 'x'), 'Co-Personal Representative', 'fiduciaryCapacity: the recorded role');
     eq(r.c.ledgerSigners(ESTATE()).map((x) => x.role), ['Personal Representative', 'Co-Personal Representative'], 'the ledger\'s signers through the same rule');
-    // "Other" names no capacity on the ledger either: the matter's approver (it printed "Nora Ashworth, Other" under her line).
+    // "Other" names no capacity on the ledger either (it printed "Nora Ashworth, Other" under her line).
+    // RESTATED (P12's review, 2026-10-28): she signs as the matter's co-representative, never as the "Personal Representative" (the
+    // matter's approver, the representative's capacity: DOC-13's mix-up again).
     const oth = r.c.ledgerSigners(ESTATE({ coFiduciaries: [{ id: 'c1', name: 'Nora Ashworth', role: 'Other' }] })).map((x) => x.role);
-    eq(oth[1], r.c._agrApprover(ESTATE()), '⚠ a co-representative recorded as Other signs the ledger as the matter\'s approver');
+    eq(oth[1], 'Co-Personal Representative', '⚠ a co-representative recorded as Other signs the ledger as the matter\'s co-representative');
     ok(oth[1] !== 'Other', '…never as "Other"');
   });
 
@@ -494,5 +507,170 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(t, '2 Pair of brass table lamps Donate Goodwill Palm Beach ratification owed', '…and listed, reading as the ledger does');
     has(t, 'Tabriz rug Consign Palm Consign signed so far by Thomas Ashworth (Oct 21, 2026); still to sign: Nora Ashworth', 'a partial approval in the ledger\'s words');
     lacks(t, 'Not complete: no approval recorded from', 'the old sub-line is gone (one wording)');
+  });
+
+  // ── R · P12's review (2026-10-28) ─────────────────────────────────────────
+  G('R1 · Close job reads first on every press, names the client, and is never asked over another client', () => {
+    // On screen: the band host is this client's until the test moves it.
+    const on = { jobId: 7 };
+    const r = rig(ESTATE(), LINES());
+    r.c.jobCloseBlockers = () => [];
+    r.c._jobBandHost = () => on.jobId ? { kind: 'admin', jobId: on.jobId, fb: 'jband-fb-admin' } : null;
+    r.c.activateOrCycle(7);
+    eq([r.log.reads.length, r.log.asked.length], [1, 0], '⚠⚠ read already on this device: it reads the sheet again before it asks');
+    r.c.activateOrCycle(7);
+    eq(r.log.reads.length, 1, 'a second press while the read is out does not read again');
+    eq(r.log.badges.filter((b) => /Reading the inventory from the sheet first/.test(b)).length, 2, '⚠ …but says the toast again (it did nothing)');
+    (r.log.reads[0] || { go() {} }).go(null);
+    eq(r.log.asked.length, 1, 'the read lands on the same client: the question');
+    ok(/^Close Margaret Ashworth's job now\?/.test(r.log.asked[0] || ''), '⚠⚠ the question names the client: ' + JSON.stringify((r.log.asked[0] || '').slice(0, 40)));
+    eq(r.job.status, 'closed', 'OK closes it');
+    // Pressed on this client, another on screen when the read lands: not asked, not closed, and the toast says so.
+    const m = rig(ESTATE(), LINES());
+    m.c.jobCloseBlockers = () => [];
+    m.c._jobBandHost = () => on.jobId ? { kind: 'admin', jobId: on.jobId, fb: 'jband-fb-admin' } : null;
+    on.jobId = 7;
+    m.c.activateOrCycle(7);
+    on.jobId = 13002;
+    (m.log.reads[0] || { go() {} }).go(null);
+    eq([m.log.asked.length, m.job.status], [0, 'active'], '⚠⚠ another client on screen when the read lands: nothing asked, nothing closed');
+    has(m.log.badges.join(' | '), 'Close job was not asked: another screen is showing now. Open Margaret Ashworth and press Close job again.', '…and the toast says so');
+    m.c.activateOrCycle(7);
+    eq(m.log.reads.length, 2, 'the next press reads again (the first one let go)');
+    // No band anywhere when pressed (a call from elsewhere): asked, with the name.
+    const n = rig(ESTATE(), LINES());
+    n.c.jobCloseBlockers = () => [];
+    n.c._jobBandHost = () => null;
+    n.c.activateOrCycle(7);
+    (n.log.reads[0] || { go() {} }).go(null);
+    eq(n.log.asked.length, 1, 'pressed with no band showing: asked once the read lands');
+    // A Home Prep has no inventory: no read. A re-open (closed → active) is not a close: no read.
+    const prep = rig(ESTATE({ svc: 'prep', matterType: '', executor: '', coFiduciaries: [] }), []);
+    prep.c.jobCloseBlockers = () => [];
+    prep.c.activateOrCycle(7);
+    eq(prep.log.reads.length, 0, 'Home Prep: nothing to read');
+  });
+
+  G('R1 · a read that did not land is said in the question: this device\'s copy', () => {
+    const r = rig(ESTATE({ payments: ESTATE().payments }), [ROW('h', { itemNo: 8, objectName: 'Family Bible', disposition: 'Keep' })],
+      { signedRecords: undefined });
+    r.job.signedRecords = [{ id: 's1', kind: 'ledger', ref: 'ledger', signedBy: BOTH, filedAt: T0 }];
+    r.job.docTier = 'contents';
+    r.c.jobCloseBlockers = () => [];
+    eq(r.c.closeOpenWorkFlag(r.job), '', 'fixture: nothing open on this device\'s copy, the midpoint paid');
+    r.c.activateOrCycle(7);
+    (r.log.reads[0] || { failed() {} }).failed();
+    eq(r.log.asked.length, 1, '⚠⚠ the sheet did not answer: the question is asked though nothing else is open');
+    has(r.log.asked[0] || '', 'The sheet did not answer just now, so what is open on the inventory is read off this device’s copy, which may be behind.',
+      '…and says the list is this device\'s copy');
+    // It lands: nothing to ask, nothing said.
+    const ok2 = rig(ESTATE(), [ROW('h', { itemNo: 8, objectName: 'Family Bible', disposition: 'Keep' })]);
+    ok2.job.signedRecords = [{ id: 's1', kind: 'ledger', ref: 'ledger', signedBy: BOTH, filedAt: T0 }];
+    ok2.job.docTier = 'contents';
+    ok2.c.jobCloseBlockers = () => [];
+    ok2.c.activateOrCycle(7);
+    (ok2.log.reads[0] || { go() {} }).go(null);
+    eq([ok2.log.asked.length, ok2.job.status], [0, 'closed'], 'the read lands, nothing open: closed with nothing asked');
+    // Never read on this device, and the read fails: the list's own unread entry says it; no copy sentence (there is no copy).
+    const cold = rig(ESTATE(), LINES(), { _invCloudSeen: {} });
+    cold.c.jobCloseBlockers = () => [];
+    cold.c.activateOrCycle(7);
+    (cold.log.reads[0] || { failed() {} }).failed();
+    has(cold.log.asked[0] || '', 'The inventory has not been read from the sheet on this device yet', 'never read: the list says so');
+    lacks(cold.log.asked[0] || '', 'this device’s copy, which may be behind', '…and claims no copy');
+    // Every other caller of the transition asks as before (no `how`).
+    const plain = rig(ESTATE(), LINES());
+    plain.c.jobCloseBlockers = () => [];
+    plain.c.applyJobTransition(plain.job);
+    lacks(plain.log.asked[0] || '', 'did not answer', 'applyJobTransition alone: no copy sentence');
+  });
+
+  G('R2 · the ledger\'s signers and Ask 13\'s sentence in a capacity, never a relationship or a profession', () => {
+    const sentence = (job) => { const t = text(rig(job, LINES({ undecided: false })).c.printDispositionLedger(7, { asHtml: true }).html); const i = t.indexOf('By signing below'); return i < 0 ? '' : t.slice(i, i + 70); };
+    const sigLine = (job) => { const t = text(rig(job, LINES({ undecided: false })).c.printDispositionLedger(7, { asHtml: true }).html); const i = t.indexOf('Signature:'); return i < 0 ? '' : t.slice(i, i + 110); };
+    ['Family Member', 'Estate Attorney', 'Other', '', 'Guardian ad litem'].forEach((role) => {
+      const j = ESTATE({ coFiduciaries: [], executorRole: role });
+      has(sentence(j), 'By signing below, the Personal Representative also ratifies', '⚠⚠ recorded as "' + role + '": the sentence names the capacity');
+      has(sigLine(j), 'Thomas Ashworth, Personal Representative', '…and so does the signature line');
+    });
+    lacks(sentence(ESTATE({ coFiduciaries: [], executorRole: 'Family Member' })), 'Family Member', '⚠ never "the Family Member also ratifies"');
+    has(sentence(ESTATE({ coFiduciaries: [], executorRole: 'Executor' })), 'the Executor also ratifies', 'a role that is a capacity prints as recorded');
+    has(sentence(ESTATE({ coFiduciaries: [], executorRole: 'Family Member', matterType: 'trust' })), 'the successor trustee also ratifies', 'a trust: the matter\'s approver');
+    has(sentence(ESTATE({ coFiduciaries: [], executorRole: 'Trustee', matterType: 'trust' })), 'the Trustee also ratifies', 'a trustee\'s role as recorded');
+    // The gap sentence reads the same signer.
+    const g = text(rig(ESTATE({ coFiduciaries: [], executorRole: 'Family Member' }), LINES({ undecided: false })).c.printDispositionLedger(7, { asHtml: true }).html);
+    has(g, 'do not yet have the written approval of the Personal Representative:', '…and the gap above the table');
+    // A co-representative recorded with no capacity signs as the matter's co-representative.
+    const co = (mt) => rig(ESTATE({ matterType: mt, coFiduciaries: [{ id: 'c1', name: 'Nora Ashworth', role: 'Other' }] }), []).c.ledgerSigners(ESTATE({ matterType: mt, coFiduciaries: [{ id: 'c1', name: 'Nora Ashworth', role: 'Other' }] })).map((x) => x.role);
+    eq(co('probate')[1], 'Co-Personal Representative', '⚠ probate: Co-Personal Representative');
+    eq(co('trust')[1], 'Co-Trustee', 'trust: Co-Trustee');
+    eq(co('both')[1], 'Co-Personal Representative or Co-Trustee', 'both: either');
+    eq(co('neither')[1], 'Co-Representative', 'neither a court nor a trust: Co-Representative');
+    eq(co('')[1], 'Co-Personal Representative', 'unanswered: read as probate');
+    eq(rig(ESTATE(), []).c.ledgerSigners(ESTATE({ coFiduciaries: [{ id: 'c1', name: 'Nora Ashworth', role: 'Co-Trustee' }] })).map((x) => x.role)[1], 'Co-Trustee', 'a co-trustee as recorded');
+    // One pair of role patterns, read by the ledger and the schedules.
+    eq(callers('ledgerSignerRole'), ['ledgerSigners'], 'the ledger\'s role: one answer');
+    eq(callers('scheduleSignerCapacity').sort(), ['scheduleSignLines', 'signedScheduleRows'], 'the schedules\' role: one answer, the lines and the card');
+  });
+
+  G('R2 · the schedules: a co-representative with no capacity, on the page and on the card', () => {
+    const r = rig(ESTATE(), []);
+    const ci = text(r.c.scheduleSignLines([{ name: 'Thomas Ashworth', role: 'Family Member', primary: true }, { name: 'Nora Ashworth', role: 'Other', primary: false }], 'Reviewed and adopted by', 'court'));
+    has(ci, 'Thomas Ashworth · Personal Representative / authorized fiduciary', 'the representative: the paper\'s word');
+    has(ci, 'Nora Ashworth · Co-Personal Representative', '⚠⚠ the co-representative recorded as Other adopts it as a Co-Personal Representative');
+    const ts = text(r.c.scheduleSignLines([{ name: 'Ruth Gale', role: 'Family Member', primary: true }, { name: 'Ann Gale', role: '', primary: false }], 'Received for the trust&rsquo;s records by', 'trustee'));
+    has(ts, 'Ruth Gale · Successor Trustee', 'the trust\'s representative: Successor Trustee');
+    has(ts, 'Ann Gale · Co-Trustee', '…and her co-trustee: Co-Trustee');
+    // The card names each signer as the paper prints them, never the raw role recorded.
+    const job = ESTATE({ executorRole: 'Family Member', coFiduciaries: [{ id: 'c1', name: 'Nora Ashworth', role: 'Other' }],
+      signedRecords: [{ id: 's1', kind: 'schedule', ref: 'Court Inventory', signedBy: 'Thomas Ashworth', filedAt: T0, label: 'Adopted Court Inventory' }] });
+    const cr = rig(job, LINES());
+    const card = text(cr.c._renderSignedSchedulesCard(job, cr.rows));
+    has(card, 'Thomas Ashworth, Personal Representative / authorized fiduciary', '⚠ the card: the representative in the paper\'s capacity');
+    has(card, 'Nora Ashworth, Co-Personal Representative', '…the co-representative as one');
+    lacks(card, 'Family Member', '…never the raw role recorded');
+  });
+
+  G('R3 · "the final record" never under the page\'s own "not yet complete"', () => {
+    // REVIEWED (every line desk-named and decided, the contents tier), and still: a line leaving with no approval, a sale with no proceeds.
+    const rows = [
+      ROW('a', { itemNo: 1, objectName: 'Sargent portrait', disposition: 'Auction', channel: 'Kodner Galleries', dispDate: '2026-10-18', authBy: BOTH, approvalDate: '2026-10-15' }),
+      ROW('b', { itemNo: 2, objectName: 'Oak bookcase', disposition: 'Donate', channel: 'Goodwill Palm Beach' }),
+      ROW('h', { itemNo: 8, objectName: 'Family Bible', disposition: 'Keep' }),
+    ];
+    const r = rig(ESTATE({ docTier: 'contents' }), rows);
+    const t = text(r.c.printDispositionLedger(7, { asHtml: true }).html);
+    has(t, 'REVIEWED', 'fixture: the stamp reads REVIEWED');
+    has(t, 'This ledger is not yet complete.', 'fixture: …and the page says it is not complete');
+    has(t, 'Reviewed and approved as the record to date of the disposition of the property listed above.', '⚠⚠ the record to date, under its own gaps');
+    lacks(t, 'as the final record of the disposition', '…never the final record');
+    // The gaps closed (approved, proceeds in): the final record.
+    const done = [
+      ROW('a', { itemNo: 1, objectName: 'Sargent portrait', disposition: 'Auction', channel: 'Kodner Galleries', gross: 1000, fees: 250, dispDate: '2026-10-18', authBy: BOTH, approvalDate: '2026-10-15' }),
+      ROW('h', { itemNo: 8, objectName: 'Family Bible', disposition: 'Keep' }),
+    ];
+    const d = rig(ESTATE({ docTier: 'contents', proceedsStatements: [{ id: 'ps1', vendor: 'Kodner Galleries', statementDate: '2026-10-20',
+      lines: [{ stableId: 'a', itemNo: 1 }], gross: 1000, fees: 250, netPaid: 750 }] }), done);
+    const dt = text(d.c.printDispositionLedger(7, { asHtml: true }).html);
+    if (dt.indexOf('not yet complete') < 0) has(dt, 'Reviewed and approved as the final record of the disposition', 'no gaps, REVIEWED: the final record');
+    else ok(false, 'fixture: the closed ledger still lists a gap: ' + dt.slice(dt.indexOf('not yet complete'), dt.indexOf('not yet complete') + 200));
+    // The Contents Record the same: REVIEWED, every line decided, one waiting for a taker.
+    const lr = rig(LIVING(), [ROW('l4', { itemNo: 4, objectName: 'Armchair', disposition: 'Keep' }), ROW('l5', { itemNo: 5, objectName: 'Bookcase', disposition: 'Donate', channel: '' })]);
+    const lt = text(lr.c.printContentsRecord(7, { asHtml: true }).html);
+    has(lt, 'This record is not yet complete.', 'fixture: the Contents Record lists a gap (a line waiting for a taker)');
+    has(lt, 'Reviewed and accepted as the record to date of what stayed and what left the property', '⚠⚠ the Contents Record: the record to date under its own gaps');
+    const lf = rig(LIVING(), [ROW('l4', { itemNo: 4, objectName: 'Armchair', disposition: 'Keep' })]);
+    has(text(lf.c.printContentsRecord(7, { asHtml: true }).html), 'Reviewed and accepted as the final record of what stayed and what left the property', 'no gaps: the final record');
+  });
+
+  G('R4 · the package\'s record carries the ledger\'s second sentence, naming the same lines', () => {
+    const r = rig(ESTATE(), LINES());
+    const rec = text(r.c.probatePackageRecordHtml(7));
+    has(rec, '3 items leaving the property do not yet have the written approval of each of Thomas Ashworth and Nora Ashworth: #4 Tabriz rug, #5 Remington 870 shotgun, #6 Oak bookcase.',
+      '⚠⚠ the lines short of a complete approval, named as the ledger names them');
+    const led = text(r.c.printDispositionLedger(7, { asHtml: true }).html);
+    has(led, 'do not yet have the written approval of every signer below: #4 Tabriz rug, #5 Remington 870 shotgun, #6 Oak bookcase.', '…the ledger\'s own words, over its signature lines');
+    const one = rig(ESTATE({ coFiduciaries: [], executorRole: 'Family Member' }), LINES());
+    has(text(one.c.probatePackageRecordHtml(7)), 'do not yet have the written approval of the Personal Representative:', 'one representative: by capacity');
   });
 };

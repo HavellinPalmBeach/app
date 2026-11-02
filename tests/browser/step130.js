@@ -23,6 +23,10 @@
 //      no destination and withholding the sign-off; Close job's question says the same.
 //   F. A device that has not read the inventory: Close job reads it first (the toast), then asks, naming the lines it read.
 //   G. The Job Plan's Close-out card carries the same Before you close.
+//   I. P12's review (2026-10-28): Close job reads the sheet again though the desk has read it, and the question names the client;
+//      a second press while a slow read is out reads nothing more; the picker moved to the Hale desk while it was out, nothing is
+//      asked or closed and the toast says so; a read the sheet fails is said as this device's copy; with the representative
+//      recorded as Family Member and Nora as Other, the ledger card and the printed signature lines name them in a capacity.
 //   At 1440 and 390 px no horizontal overflow; zero page errors throughout.
 //
 //   NODE_PATH=/path/to/node_modules node tests/browser/step130.js [/abs/path/to/havellin.html]
@@ -43,6 +47,7 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
     const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 }, timezoneId: 'America/New_York' });
     const net = { reads: 0, uploads: [] };
     let sheet = {};
+    let slow = 0, failRead = false;   // section I: a read the sheet answers late, or not at all
     await ctx.route(SYNC + '**', async (r) => {
       const req = r.request();
       const json = (o) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(o) });
@@ -52,7 +57,12 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
         if (body.action === 'getSubfolders') return json({ ok: true, subfolders: null });
         return json({ ok: true });
       }
-      if (/action=loadMedia/.test(req.url())) { net.reads++; return json({ ok: true, media: sheet }); }
+      if (/action=loadMedia/.test(req.url())) {
+        net.reads++;
+        if (slow) await new Promise((res) => setTimeout(res, slow));
+        if (failRead) return r.fulfill({ status: 500, contentType: 'text/plain', body: 'Service unavailable' });
+        return json({ ok: true, media: sheet });
+      }
       if (/action=getSubfolders/.test(req.url())) return json({ ok: true, subfolders: null });
       return json({ ok: true });
     });
@@ -271,6 +281,60 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
       const t = await txt('#close-ready-plan-' + A);
       has(t, 'Before you close', 'step 5 on the plan');
       has(t, 'a ratification is owed (#2)', '…with the same entries');
+    });
+
+    await section('I. P12\'s review: Close job reads on every press, names the client, is never asked over another client, says a failed read', async () => {
+      await toDesk(A);
+      const toast = () => txt('#sync-status');
+      // 1. The desk has read the sheet: Close job reads it again, then asks, by name.
+      let before = net.reads;
+      answer = false; said.length = 0;
+      await p.locator('#panel-inventory button:has-text("Close job")').first().click();
+      await p.waitForTimeout(1800);
+      ok(net.reads > before, '⚠⚠ read already on this device: Close job reads the sheet again (' + (net.reads - before) + ')');
+      eq(said.length, 1, 'then one question');
+      ok(/^Close Margaret Ashworth's job now\?/.test(said[0] || ''), '⚠⚠ the question names the client: ' + JSON.stringify((said[0] || '').slice(0, 40)));
+      // 2. A slow read; a second press; the picker moved to the Hale desk before it lands.
+      slow = 3500; said.length = 0; before = net.reads;
+      await p.locator('#panel-inventory button:has-text("Close job")').first().click();
+      await p.waitForTimeout(300);
+      await p.evaluate(() => { const el = document.getElementById('sync-status'); if (el) el.textContent = ''; });
+      await p.locator('#panel-inventory button:has-text("Close job")').first().click();
+      await p.waitForTimeout(200);
+      has(await toast(), 'Reading the inventory from the sheet first', '⚠ a second press while it reads says the toast again');
+      await p.selectOption('#inv-job', String(H));
+      await p.waitForTimeout(slow + 2500);
+      eq(said.length, 0, '⚠⚠ the Hale desk on screen when the read lands: nothing asked');
+      eq(await p.evaluate((A) => jobs.find((j) => j.id === A).status, A), 'active', '…and Ashworth not closed');
+      has(await toast(), 'Close job was not asked: another screen is showing now. Open Margaret Ashworth and press Close job again.', '…and the toast says so');
+      eq(net.reads - before >= 1, true, 'the read went');
+      slow = 0;
+      // 3. The sheet does not answer: the question says the list is this device's copy.
+      await toDesk(A);
+      failRead = true; said.length = 0;
+      await p.locator('#panel-inventory button:has-text("Close job")').first().click();
+      await p.waitForTimeout(2500);
+      failRead = false;
+      has(said[0] || '', 'The sheet did not answer just now, so what is open on the inventory is read off this device’s copy, which may be behind.', '⚠⚠ a read that failed is said in the question');
+      eq(await p.evaluate((A) => jobs.find((j) => j.id === A).status, A), 'active', 'Cancel keeps it open');
+      answer = true;
+      // 4. The representative recorded as Family Member, Nora as Other: the ledger names them in a capacity, on the card and the page.
+      await p.evaluate((A) => { const j = jobs.find((x) => x.id === A); j.executorRole = 'Family Member';
+        (j.coFiduciaries || []).forEach((c) => { c.role = 'Other'; }); saveJobs(); renderInventoryTab(); }, A);
+      await p.waitForTimeout(900);
+      const card = await txt('#inv-ledger-card');
+      has(card, 'Thomas Ashworth, Personal Representative', '⚠⚠ the card: the representative in a capacity');
+      has(card, 'Nora Ashworth, Co-Personal Representative', '…Nora, recorded as Other, as a co-representative');
+      lacks(card, 'Family Member', '…never the raw role recorded');
+      await press('#inv-ledger-card button:has-text("Print")', 'Print, on the ledger card');
+      const html = await p.evaluate(() => window.__prints[window.__prints.length - 1] || '');
+      const t = String(html).replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;|&#\d+;/g, (m) => ({ '&amp;': '&', '&rsquo;': '’', '&mdash;': '—', '&nbsp;': ' ' }[m] || m)).replace(/\s+/g, ' ');
+      has(t, 'Thomas Ashworth, Personal Representative', 'the signature line in a capacity');
+      has(t, 'Nora Ashworth, Co-Personal Representative', '…and hers');
+      lacks(t, 'Family Member', 'no relationship printed as a capacity');
+      await p.evaluate((A) => { const j = jobs.find((x) => x.id === A); j.executorRole = 'Personal Representative';
+        (j.coFiduciaries || []).forEach((c) => { c.role = 'Co-Personal Representative'; }); saveJobs(); renderInventoryTab(); }, A);
+      await p.waitForTimeout(600);
     });
 
     await section('H. widths and errors', async () => {

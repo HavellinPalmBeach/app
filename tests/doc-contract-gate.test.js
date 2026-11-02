@@ -31,7 +31,7 @@ const FNS = ['scheduleSignLines', '_invDocPartyHead', 'invLineReviewed', 'invLin
   '_importableFromEstimate', '_importedSourceSet', 'photoSubfolder', 'roundCents', 'fmt',
   'scheduleSigners', 'jobFiduciaries', 'jobListEntries',
   // P19: the Disposition Ledger's own card on the desk, where the ledger moved from the More menu.
-  '_renderLedgerCards', '_renderContentsCard', 'ledgerApplies', '_renderLedgerCard', 'signedCopySignersHtml', '_andJoin', '_renderProceedsCard', '_renderDonationsCard', 'dispositionLedger', '_approvalLineOpen', 'invRatificationOwed', 'ledgerSignedCopies', 'ledgerSignState', 'signedCopySignState', 'signedByNames', 'ledgerSigners', 'fiduciaryCapacity', 'samePerson', 'canonPersonName',
+  '_renderLedgerCards', '_renderContentsCard', 'ledgerApplies', '_renderLedgerCard', 'signedCopySignersHtml', '_andJoin', '_renderProceedsCard', '_renderDonationsCard', 'dispositionLedger', '_approvalLineOpen', 'invRatificationOwed', 'ledgerSignedCopies', 'ledgerSignState', 'signedCopySignState', 'signedByNames', 'ledgerSigners', 'fiduciaryCapacity', 'ledgerSignerRole', 'scheduleSignerCapacity', 'samePerson', 'canonPersonName',
   'signedCopyControlHtml', '_localDateOf', 'signedRecordLinksHtml', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsReconciliation',
   'signedRecordsOf', '_reconFlagText', '_ledgerNames', 'donationGroups', 'estateProceedsHolder', '_invRecipient',
   '_ymdLocal', 'invDonationReceipted', '_jobDestLabel', 'photoSharesLine', 'photoSharesOf',
@@ -49,7 +49,7 @@ const VARS = ['PERSON_NAME_ALIASES',
   '_invOpen', '_invPick', 'INVENTORY_COLUMNS', 'INV_PANEL_SECTIONS', 'DOC_SCOPES',
   'INV_VAL_SOURCES', 'EXEMPT_CAP_732_402', 'AS_FOUND_SUBFOLDER', 'PHOTO_SUBFOLDER',
   'LEDGER_DOC_KEY', 'LEDGER_SIGNED_REF', 'SIGNED_RECORD_KINDS', 'INV_SALE_DISPOSITIONS', '_signedCopyKeys', '_signedCopySpecs'
-, '_agDupSetJob', 'INV_OPEN_HOLDS', 'INV_ACCEPT_AMMO_RE'];
+, '_agDupSetJob', 'INV_OPEN_HOLDS', 'INV_ACCEPT_AMMO_RE', 'FIDUCIARY_PR_ROLE_RE', 'FIDUCIARY_TRUSTEE_ROLE_RE', 'SCHEDULE_CAPACITY'];
 
 const ESTATE = (over) => Object.assign({
   id: 7, name: 'Butler Estate', hvlId: 'HVL-0007', svc: 'probate', addr: '69 Beach Blvd',

@@ -502,7 +502,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const anyRole = sched('trust', JOB('trust', { executorRole: 'Family Member', coFiduciaries: [{ id: 'c1', name: 'Daniel Adler', role: '' }] }), items());
     eq(count(anyRole, 'Received for the trust&rsquo;s records by'), 2, '⚠ trust-only: the representative and a co-trustee recorded with no trustee role both receive it');
     has(anyRole, 'Ruth Adler &middot; Successor Trustee', 'each as a successor trustee (Family Member is no capacity on this paper: its own word)');
-    has(anyRole, 'Daniel Adler &middot; Successor Trustee', '…and a co-trustee with no role recorded likewise');
+    // RESTATED (P12's review, 2026-10-28): a co-trustee with no role recorded receives it as a Co-Trustee, never as the successor
+    // trustee (scheduleSignerCapacity: the paper's word for a co-representative).
+    has(anyRole, 'Daniel Adler &middot; Co-Trustee', '…and a co-trustee with no role recorded as a Co-Trustee');
     // Both: only those whose recorded role names a trustee receive the trust's schedule.
     const bothItems = () => [IT('i1', { assetTrack: 'Trust' })];
     const mixed = sched('trust', JOB('both', { executorRole: 'Personal Representative', coFiduciaries: [{ id: 'c1', name: 'Tess Trustee', role: 'Trustee' }] }), bothItems());

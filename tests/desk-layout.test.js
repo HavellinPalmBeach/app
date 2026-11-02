@@ -2149,7 +2149,9 @@ function groupJ({ group, ok, eq, has, lacks }) {
     // it is not unread, which is the same answer asked.
     // P12 (2026-10-28): Close job reads the inventory first where this device has not (activateOrCycle), and the close's list says an
     // unread inventory as one (closeReadiness).
-    eq(callersOf('_invManifestUnread'), ['_apprFormIsOpen', '_invCloudRetryArm', '_invRefreshFromCloud', 'activateOrCycle', 'closeReadiness', 'deskFoldState', 'invColdRefusal', 'invColdWords', 'invListReadRefusal', 'invSheetStaleWords'],
+    // RESTATED (P12's review, 2026-10-28): Close job reads first on every press, so activateOrCycle no longer asks; the question does
+    // (applyJobTransition), to say a failed read's list is this device's copy only where there is one.
+    eq(callersOf('_invManifestUnread'), ['_apprFormIsOpen', '_invCloudRetryArm', '_invRefreshFromCloud', 'applyJobTransition', 'closeReadiness', 'deskFoldState', 'invColdRefusal', 'invColdWords', 'invListReadRefusal', 'invSheetStaleWords'],
       '⚠ an unread manifest: one answer, read by the bars, the form, the read that asks the sheet again, the list read\'s refusal and the cold desk\'s');
     eq(callersOf('_bqFormIsOpen'), ['_renderInvBequestCard'], 'the bequests card\'s two forms: the same');
     eq(callersOf('_invBqClear'), ['invSaveBeneficiary', 'invSaveBequest', 'invToggleBqForm'], 'the boxes a save and Cancel clear: one list (INV_BQ_FORM_FIELDS)');

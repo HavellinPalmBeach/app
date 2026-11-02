@@ -385,6 +385,12 @@ property, and where each item went."*, then *"… as the final record of …"* (
 A signature on a page still IN PROGRESS is therefore an approval of the record to date. See D23 for the ratification
 sentence the ledger now carries above it.
 
+**Changed again the same day (P12's review; built as recommended, for Anthony to confirm).** *"… as the final record …"* also
+needs the page's own *This ledger is not yet complete* block (the Contents Record's *This record is not yet complete*) to
+list nothing: a ledger stamped REVIEWED with an item still leaving without every written approval, or a sale with no
+proceeds recorded, signs off *"as the record to date"* under that block, where it had read *"the final record"*. The words
+themselves are unchanged.
+
 ### A14. The client estimate (Exhibit A) on a trust or a Neither matter ⚠ NEW 2026-10-03 · PRIORITY 2
 
 **What changed.** *Before We Start* asked every estate for *"a certified copy of the Letters of Administration or
@@ -1522,13 +1528,24 @@ such a line read *Authorized by —*. Since 2026-10-28:
    house that some have signed reads *"signed so far by …; still to sign: …"*.
 2. **The gap is named above the table:** *"1 item left the property before its written approval was complete (ratification
    owed): #2 Pair of brass table lamps."*, and *"3 items leaving the property do not yet have the written approval of every
-   signer below: …"*. The estate package's *Release Approvals and Chain of Custody* record lists the same lines in the same
-   words.
+   signer below: …"*. The estate package's *Release Approvals and Chain of Custody* record carries the same two sentences,
+   naming the same lines, the second naming the fiduciaries where the ledger says *every signer below* (*"3 items leaving
+   the property do not yet have the written approval of each of Thomas Ashworth and Nora Ashworth: …"*; corrected
+   the same day, P12's review: until then it carried the ratification sentence alone, though this item said it listed both).
+   Its table lists each line with an approval recorded or a ratification owed, in the ledger's *Authorized by* words.
 3. **A sentence above the sign-off**, printed only where a line owes a ratification, and naming every such item by number:
    - several fiduciaries: *"By signing below, each signer also ratifies the release of the item marked ratification owed
      above (#2), which left the property before every signer's written approval was recorded."* (*"the 3 items"* for more);
    - one: *"By signing below, the Personal Representative also ratifies the release of the item marked ratification owed
-     above (#2), which left the property before their written approval was recorded."* (the role as recorded).
+     above (#2), which left the property before their written approval was recorded."* The signer is named by capacity, as
+     on their signature line below it (since 2026-10-28, P12's review: it named the role as recorded, so a representative
+     recorded as *Family Member* or *Estate Attorney* read *"the Family Member also ratifies"*): a personal representative's
+     or a trustee's role as recorded (*the Executor*, *the Trustee*), otherwise the matter's approver (*the Personal
+     Representative*, *the successor trustee*, *the Personal Representative or successor trustee* on a pour-over, *the
+     Client* where there is neither a court nor a trust). Each signature line under the sign-off follows the same rule, and
+     a co-representative with no such role recorded signs as *Co-Personal Representative*, *Co-Trustee*, either on a
+     pour-over, or *Co-Representative*; the Court Inventory's and the Trust Schedule's signature lines likewise (*Co-Personal
+     Representative*, *Co-Trustee*), where she had signed in the representative's capacity.
 
 No separate envelope or send is added for it: the next release request already carries such lines for ratification, and the
 ledger, signed at close, is the backstop. The app does **not** yet treat a fiduciary's signature on the ledger as their

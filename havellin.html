@@ -1476,7 +1476,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.28 · 4:18pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.28 · 8:51pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -18077,6 +18077,10 @@ function probatePackageRecordHtml(jobId) {
     return String(a.approvalDate || '').localeCompare(String(b.approvalDate || '')) || byNo(a, b);
   });
   var _rat = items.filter(function (r) { return invRatificationOwed(r, job); }).sort(byNo);
+  // ⚠ AND THE LINES LEAVING WITH NO COMPLETE APPROVAL YET, IN THE LEDGER'S SENTENCE (P12's review, 2026-10-28: counsel bundle D23 said
+  // this record lists the ledger's lines in the ledger's words, and it carried only the ratification sentence). The ledger's rule
+  // (dispositionLedger's `incomplete`); the table still lists each line with an approval recorded or a ratification owed.
+  var _inc = items.filter(function (r) { return _approvalLineOpen(r, job) && !invRatificationOwed(r, job); }).sort(byNo);
   var held = items.filter(function (r) { return custodyEvents(r).length; }).sort(byNo);
   var head = function (t) {
     return '<div style="font-family:\'Cormorant Garamond\',serif;font-size:15px;color:#3c3228;border-bottom:1px solid #bbb;margin:16px 0 4px;">' + t + '</div>';
@@ -18120,6 +18124,8 @@ function probatePackageRecordHtml(jobId) {
     + '<div style="font-size:10.5px;color:#666;margin-bottom:4px;">Who signed the written release approval for each item, and the date it was signed, as recorded from the signed approval returned to Havellin.</div>'
     + (_rat.length ? '<div style="font-size:10.5px;color:#8a6d3b;margin-bottom:4px;"><strong>' + _rat.length + ' item' + (_rat.length === 1 ? '' : 's')
         + ' left the property before ' + (_rat.length === 1 ? 'its' : 'their') + ' written approval was complete</strong> (ratification owed): ' + esc(_ledgerNames(_rat)) + '.</div>' : '')
+    + (_inc.length ? '<div style="font-size:10.5px;color:#8a6d3b;margin-bottom:4px;"><strong>' + _inc.length + (_inc.length === 1 ? ' item leaving the property does' : ' items leaving the property do')
+        + ' not yet have the written approval of ' + esc(_ledgerApproverWords(job, ledgerSigners(job), true)) + '</strong>: ' + esc(_ledgerNames(_inc)) + '.</div>' : '')
     + apprTable
     + head('Chain of custody')
     + custTable
@@ -25070,7 +25076,9 @@ function _closeReadyRepaint(jobId, now) {
     if (el.innerHTML !== html) el.innerHTML = html;
   });
 }
-function applyJobTransition(j) {
+// `how` (P12's review): what Close job's read of the inventory came to, from activateOrCycle; `how.failed` where the sheet did not
+// answer, and the question then says its list is this device's copy. Absent (every other caller): asked as before.
+function applyJobTransition(j, how) {
   var next = JOB_TRANSITIONS[j.status];
   if (!next) {
     alert('This job is ' + (j.status === 'lost' ? 'marked Lost' : 'closed with the deposit retained')
@@ -25108,8 +25116,17 @@ function applyJobTransition(j) {
     // Contents Record's signatures among it, each with its count and first item numbers. It said "finish the rooms and name the
     // recipients" whatever was open (NEW-04). A sandbox that lifts this transition without the list still hears the ledger.
     var _openWork = j.deliveredOn ? '' : (typeof closeOpenWorkFlag === 'function' ? closeOpenWorkFlag(j) : ledgerCloseFlag(j));
-    if ((_noMid || _openWork)
-        && !confirm('Close this job now?\n\n'
+    // ⚠ A READ THAT DID NOT LAND IS SAID (P12's review, 2026-10-28): Close job reads the inventory first on every press, and where
+    // the sheet did not answer, the list below is this device's copy, which another device may have moved past; the question is
+    // asked for it even with nothing else to ask. A device that has never read the inventory says so in the list itself (unread).
+    var _copy = (how && how.failed && !(typeof _invManifestUnread === 'function' && _invManifestUnread(j.id)))
+      ? 'The sheet did not answer just now, so what is open on the inventory is read off this device’s copy, which may be behind.\n\n' : '';
+    // ⚠ AND IT NAMES THE CLIENT, by the name the client list shows (P12's review): the read can take seconds, and the question
+    // arrived over another client's screen as "Close this job now?", naming nobody.
+    var _who = String(j.name || '').trim();
+    if ((_noMid || _openWork || _copy)
+        && !confirm('Close ' + (_who ? _who + '\'s' : 'this') + ' job now?\n\n'
+          + _copy
           + (_noMid ? 'No ' + _mwc.noun + ' payment is recorded. That is fine: the final invoice bills everything not yet '
           + 'paid, the ' + _mwc.noun + '\'s share included, against the payments actually received.\n\n' : '')
           + (_openWork ? 'Still open:\n' + _openWork + '\nClosing does not change any of these: finish them, or close now.\n\n' : '')
@@ -25165,24 +25182,48 @@ function applyJobTransition(j) {
 }
 
 var _closeReading = {};   // never saved: a Close job waiting on its quiet read of the inventory (P12)
+var CLOSE_READING_TXT = 'Reading the inventory from the sheet first…';
+// Whether the screen showing a job's band right now is this client's (_jobBandHost: the Job Plan, the desk or the dashboard).
+function _closeOnScreen(jobId) {
+  var h = typeof _jobBandHost === 'function' ? _jobBandHost() : null;
+  return !!(h && h.jobId === jobId);
+}
 function activateOrCycle(jobId, read) {
   var j = jobs.find(function(x){ return x.id===jobId; });
   if (!j) return;
   // ⚠ CLOSE JOB READS THE INVENTORY FIRST, QUIETLY (2026-10-28, P12): its question names what the lines leave open, and the
-  // dashboard's band is pressed on a device that may never have opened the desk for this client. The read is asked only where
-  // this device has not read the client's inventory; whether it lands or not the question follows (a failed read is said in it,
-  // closeReadiness's `unread`), so it adds no refusal. One read per client at a time; the toast says why nothing opened yet.
-  if (!read && typeof invReadQuiet === 'function' && typeof _invManifestUnread === 'function'
-      && j.status === 'active' && !j.deliveredOn && j.svc !== 'prep' && _invManifestUnread(jobId)) {
-    if (_closeReading[jobId]) return;
+  // dashboard's band is pressed on a device that may never have opened the desk for this client. Whether the read lands or not
+  // the question follows (a failed read is said in it), so it adds no refusal. One read per client at a time; the toast says why
+  // nothing opened yet.
+  // ⚠⚠ ON EVERY PRESS, AND NEVER OVER ANOTHER CLIENT (P12's review, 2026-10-28). It read only where this device had never read the
+  // client's inventory, so a copy read in the morning answered the close in the evening, and a failed read was not said. Now every
+  // Close job on a job with an inventory reads first (`read` is what came of it: {failed} where the sheet did not answer, and the
+  // question says the list is this device's copy). The read can take seconds (INV_READ_WATCHDOG_MS at most), and the question
+  // arrived over another client's desk and named nobody, so OK closed a job not on screen: it names the client now, and where the
+  // press was made on this client's screen and another is showing when the read lands, it is not asked at all, and the toast
+  // says so. A second press while the read is out says the toast again (it did nothing).
+  if (!read && typeof invReadQuiet === 'function' && typeof SHEETS_SYNC_URL !== 'undefined' && SHEETS_SYNC_URL
+      && j.status === 'active' && !j.deliveredOn && j.svc !== 'prep') {
+    if (_closeReading[jobId]) { showSyncBadge(CLOSE_READING_TXT); return; }
     _closeReading[jobId] = true;
-    showSyncBadge('Reading the inventory from the sheet first…');
-    var again = function () { delete _closeReading[jobId]; activateOrCycle(jobId, true); };
+    var _here = _closeOnScreen(jobId);
+    showSyncBadge(CLOSE_READING_TXT);
+    var again = function (failed) {
+      return function () {
+        delete _closeReading[jobId];
+        if (_here && !_closeOnScreen(jobId)) {
+          var nm = String(j.name || '').trim() || 'the client';
+          showSyncBadge('Close job was not asked: another screen is showing now. Open ' + nm + ' and press Close job again.');
+          return;
+        }
+        activateOrCycle(jobId, { failed: failed });
+      };
+    };
     if (typeof _invEnsureLoaded === 'function') _invEnsureLoaded(jobId);
-    invReadQuiet(jobId, again, again);
+    invReadQuiet(jobId, again(false), again(true));
     return;
   }
-  if (!applyJobTransition(j)) return;
+  if (!applyJobTransition(j, read && typeof read === 'object' ? read : null)) return;
   j.updatedAt = Date.now(); saveJobs(); syncJobToSheets(j);
   // ⚠ THE DISPOSITION LEDGER GOES TO DRIVE AS THE JOB CLOSES (P19). `closed` after a transition can only mean it just
   // closed (closed → active is the Re-open). It runs in the background and reports through the sync badge, the way an
@@ -36922,18 +36963,32 @@ function scheduleSigners(job, kind) {
 // The named signature lines: the act ("Reviewed and adopted by"), a line and a date, and under it who signs and in what
 // capacity. Each line kept whole on a printed page.
 // ⚠ EACH IN THEIR OWN ROLE (2026-10-28, P12; DOC-13): a Co-Trustee printed as "Successor Trustee" and a co-representative as the
-// representative. `capacity` (HTML) is the paper's word where a signer's role is not recorded (fiduciaryCapacity).
-function scheduleSignLines(signers, act, capacity) {
+// representative. The paper's word stands where a signer's role is not recorded, or is no capacity on it (fiduciaryCapacity).
+// ⚠ AND A CO-REPRESENTATIVE WITH NO SUCH ROLE SIGNS AS ONE (P12's review, 2026-10-28): recorded as Other, she adopted the Court
+// Inventory as "Personal Representative / authorized fiduciary", the representative's capacity, and the signed schedules' card
+// named each signer by the raw role recorded ("Ruth Gale, Family Member"). One answer per signer and paper, read by the signature
+// lines and the card: the role recorded where it is a capacity on this paper, else the paper's word for the representative or for
+// a co-representative.
+var SCHEDULE_CAPACITY = {
+  court:   { word: 'Personal Representative / authorized fiduciary', co: 'Co-Personal Representative' },
+  trustee: { word: 'Successor Trustee', co: 'Co-Trustee' }
+};
+function scheduleSignerCapacity(f, kind) {
+  var C = SCHEDULE_CAPACITY[kind] || SCHEDULE_CAPACITY.court;
+  var fits = kind === 'trustee' ? FIDUCIARY_TRUSTEE_ROLE_RE : FIDUCIARY_PR_ROLE_RE;
+  var role = fiduciaryCapacity(f, '');
+  if (role && fits.test(role)) return role;
+  return (f && f.primary === false) ? C.co : C.word;
+}
+// `kind` the paper: 'court' (the Court Inventory) or 'trustee' (the Trust Schedule), invDocContractBlock's names.
+function scheduleSignLines(signers, act, kind) {
   // ⚠ EACH SIGNER IN THEIR OWN ROLE WHERE IT IS A CAPACITY FOR THIS PAPER (2026-10-28, P12, DOC-13: a Co-Trustee received the Trust
   // Schedule as "Successor Trustee"). A trustee's role on the Trust Schedule, a personal representative's (an executor's, an
   // administrator's, a curator's) on the Court Inventory; none, Other, or a role that is no capacity here (Family Member, Estate
-  // Attorney) signs in the paper's own word.
-  var fits = /trustee/i.test(capacity) ? /trustee/i : /personal representative|executor|administrator|curator/i;
+  // Attorney) signs in the paper's own word (scheduleSignerCapacity).
   return signers.map(function (f, i) {
-    var role = fiduciaryCapacity(f, '');
-    if (role && !fits.test(role)) role = '';
     return '<div style="margin-top:' + (i ? '14px' : '18px') + ';font-size:11px;break-inside:avoid;page-break-inside:avoid;">' + act
-      + ': __________________________________ &nbsp; Date: ____________<br><span style="color:#888;">' + esc(f.name) + ' &middot; ' + (role ? esc(role) : capacity) + '</span></div>';
+      + ': __________________________________ &nbsp; Date: ____________<br><span style="color:#888;">' + esc(f.name) + ' &middot; ' + esc(scheduleSignerCapacity(f, kind)) + '</span></div>';
   }).join('');
 }
 
@@ -37245,7 +37300,7 @@ function printCourtInventory(jobId, opt) {
         // ⚠ The recorded representative is named alone too (2026-10-10, the core-jobs run): the FINAL schedule's adoption
         // line was blank beside a ledger that named them.
         : scheduleSigners(job, 'court').length >= 1
-        ? scheduleSignLines(scheduleSigners(job, 'court'), 'Reviewed and adopted by', 'Personal Representative / authorized fiduciary')
+        ? scheduleSignLines(scheduleSigners(job, 'court'), 'Reviewed and adopted by', 'court')
         : '<div style="margin-top:18px;font-size:11px;">Reviewed and adopted by: __________________________________ &nbsp; Date: ____________<br><span style="color:#888;">Personal Representative / authorized fiduciary</span></div>')
     + '</div>';
   // ⚠ THE PROBATE PACKAGE ASKS FOR THE PAGE ITSELF (`opt.asHtml`, 2026-10-01, P17), so what counsel receives is byte for
@@ -37357,7 +37412,7 @@ function printTrustSchedule(jobId, opt) {
         // signature line is the same class of claim the $0 FINAL was.
         // ⚠ ONE LINE PER TRUSTEE once a co-trustee is recorded (P19, scheduleSigners); the one blank line otherwise.
         : scheduleSigners(job, 'trustee').length >= 1   // the one recorded trustee is named too (2026-10-10)
-        ? scheduleSignLines(scheduleSigners(job, 'trustee'), 'Received for the trust&rsquo;s records by', 'Successor Trustee')
+        ? scheduleSignLines(scheduleSigners(job, 'trustee'), 'Received for the trust&rsquo;s records by', 'trustee')
         : '<div style="margin-top:18px;font-size:11px;">Received for the trust&rsquo;s records by: __________________________________ &nbsp; Date: ____________<br><span style="color:#888;">Successor Trustee</span></div>')
     + '</div>';
   // The probate package asks for the page itself (`opt.asHtml`, P17) — see printCourtInventory.
@@ -37450,7 +37505,7 @@ function ledgerSigners(job) {
   if (!invFiduciaryMode(job)) return [];   // the family signs the Contents Record (P25, Q51)
   var f = jobFiduciaries(job);
   if (!f.length) return [{ name: '', role: _agrApprover(job) }];
-  return f.map(function (x) { return { name: x.name, role: fiduciaryCapacity(x, _agrApprover(job)) }; });
+  return f.map(function (x) { return { name: x.name, role: ledgerSignerRole(job, x) }; });
 }
 // ⚠ EACH SIGNER PRINTS IN THEIR OWN ROLE (2026-10-28, P12; DOC-13: a Co-Trustee signed the Trust Schedule as "Successor Trustee").
 // The role recorded on the representative or the co-representative's row, else the paper's own word for the signer; "Other"
@@ -37458,6 +37513,25 @@ function ledgerSigners(job) {
 function fiduciaryCapacity(f, fallback) {
   var r = String((f && f.role) || '').trim();
   return (r && r !== 'Other') ? r : (fallback || '');
+}
+// The roles that are a capacity to sign for an estate's property: a personal representative's (an executor's, an administrator's,
+// a curator's), and a trustee's. One pair, read by the schedules (each paper its own) and the ledger (either).
+var FIDUCIARY_PR_ROLE_RE = /personal representative|executor|administrator|curator/i;
+var FIDUCIARY_TRUSTEE_ROLE_RE = /trustee/i;
+// ⚠⚠ THE LEDGER'S SIGNER IN A CAPACITY, NEVER A RELATIONSHIP OR A PROFESSION (P12's review, 2026-10-28): a representative recorded as
+// Family Member or Estate Attorney (both on EXECUTOR_ROLES) signed the ledger as one, and Ask 13's sentence above the sign-off read
+// "the Family Member also ratifies …"; a co-representative recorded as Other signed as the "Personal Representative". A recorded
+// role that is a capacity (above) prints as recorded; otherwise the representative signs as the matter's approver (_agrApprover:
+// the words the agreement names that person by), and a co-representative as the matter's co-representative (Co-Personal
+// Representative, Co-Trustee, both on a pour-over, Co-Representative where there is neither a court nor a trust).
+function ledgerSignerRole(job, f) {
+  var r = fiduciaryCapacity(f, '');
+  if (r && (FIDUCIARY_PR_ROLE_RE.test(r) || FIDUCIARY_TRUSTEE_ROLE_RE.test(r))) return r;
+  if (!f || f.primary !== false) return _agrApprover(job);
+  var d = matterDef(job);
+  if (!d || (d.onProbate && !d.trust)) return 'Co-Personal Representative';
+  if (d.onProbate && d.trust) return 'Co-Personal Representative or Co-Trustee';
+  return d.trust ? 'Co-Trustee' : 'Co-Representative';
 }
 // ⚠⚠ WHO SIGNED A FILED COPY (2026-10-28, P12; EST-13: one signature turned "Disposition Ledger signed" green on a two-fiduciary
 // estate, and the record could not say whose). A copy's signers ride its record's `signedBy` ('; ' between names), set by the
@@ -37523,10 +37597,13 @@ function invAuthorityText(ref, job) {
 }
 // Whom a leaving line's written approval comes from, as the ledger's gap lines say it: every signer below where two or more sign,
 // the one signer by their role, the client on living work.
-function _ledgerApproverWords(job, signers) {
+// `byName` (P12's review): the package's record, which carries no signature lines, names them ("each of Thomas Ashworth and Nora
+// Ashworth") where the ledger says "every signer below".
+function _ledgerApproverWords(job, signers, byName) {
   if (!invFiduciaryMode(job)) return 'the client';
   var named = (signers || []).filter(function (x) { return x.name; });
-  return named.length > 1 ? 'every signer below' : 'the ' + (((signers || [])[0] || {}).role || _agrApprover(job));
+  if (named.length > 1) return byName ? 'each of ' + _andJoin(named.map(function (x) { return x.name; })) : 'every signer below';
+  return 'the ' + (((signers || [])[0] || {}).role || _agrApprover(job));
 }
 // A short list of lines for a gap sentence: "#3 Lamp, #7 Chair and 4 more".
 function _ledgerNames(list, max) {
@@ -37638,7 +37715,10 @@ function printDispositionLedger(jobId, opt) {
   // ⚠⚠ ITS WORDS FIT THE PAGE'S STATE (2026-10-28, P12; Anthony, Ask 12: "approved as the record to date" while the stamp above reads
   // IN PROGRESS, "the final record" only once every flagged line is checked and the list read, invStampReviewed. DOC-27: a family
   // was asked to sign "the final record" on a page that said it was a working copy).
-  var _final = invStampReviewed(L.items, { namesOnly: true, fc: _fc });
+  // ⚠⚠ AND NEVER UNDER ITS OWN "NOT YET COMPLETE" (P12's review, 2026-10-28, put to Anthony as Ask 12's follow-up; built as
+  // recommended): a REVIEWED stamp with a line leaving unapproved, or a sale with no proceeds, signed off as "the final record"
+  // under the block above that said the ledger was not yet complete. "The final record" only where that block is empty too.
+  var _final = !gaps.length && invStampReviewed(L.items, { namesOnly: true, fc: _fc });
   // ⚠⚠ AND THE SIGNATURE RATIFIES WHAT LEFT EARLY (2026-10-28, P12; Anthony, Ask 13: print the gap, and the representatives'
   // signature on the ledger at close ratifies it, a sentence above the sign-off; drafted, not reviewed: counsel bundle D23). It
   // names every such item by number, never "and N more": a ratification covers what it names.
@@ -38359,7 +38439,8 @@ function signedScheduleRows(job, all, full) {
   out.forEach(function (x) {
     x.filed = signedRecordsOf(job, 'schedule', x.ref);
     x.draft = full ? scheduleDraftState(job, x.kind, all).why : [];
-    var who = full ? scheduleSigners(job, x.kind) : [];
+    // Each signer in the capacity the paper prints them in (scheduleSignerCapacity; P12's review: the raw role recorded).
+    var who = full ? scheduleSigners(job, x.kind).map(function (f) { return { name: f.name, role: scheduleSignerCapacity(f, x.kind) }; }) : [];
     x.signs = full ? signedCopySignState(x.filed, who.length ? who : [{ name: '', role: '' }]) : null;
   });
   return out;
@@ -38799,8 +38880,6 @@ function printContentsRecord(jobId, opt) {
   var unshot = rec.items.filter(function(r){ return !_invHasPhoto(r); }).length;
   var shared = !fid && photoShareLive(job).length > 0;
   var _fc = invAcceptCtx(job);
-  // The sign-off's words follow the stamp's state (Ask 12, invStampReviewed): handed to contentsRecordSignoff on the record.
-  rec.final = invStampReviewed(rec.items, { namesOnly: true, fc: _fc });
 
   // ⚠ THE GAP BLOCK GOES ABOVE THE INDEX, the As-Found Record's rule and the release-cautions
   // rule: a reader works down this page, so a caveat printed under the list has arrived after
@@ -38817,6 +38896,9 @@ function printContentsRecord(jobId, opt) {
   if (rec.waitTaker) gaps.push('<strong>' + rec.waitTaker + '</strong> item'
     + (rec.waitTaker === 1 ? ' waits' : 's wait') + ' for somebody to be named to take ' + (rec.waitTaker === 1 ? 'it' : 'them'));
   if (unshot) gaps.push('<strong>' + unshot + '</strong> item' + (unshot === 1 ? '' : 's') + ' listed with no photograph');
+  // The sign-off's words follow the stamp's state (Ask 12, invStampReviewed), and never "the final record" under this page's own
+  // "not yet complete" (P12's review, 2026-10-28, as the ledger): handed to contentsRecordSignoff on the record.
+  rec.final = !gaps.length && invStampReviewed(rec.items, { namesOnly: true, fc: _fc });
   var gapBlock = gaps.length
     ? '<div style="border:1px solid #8a6d3b;border-radius:3px;padding:9px 12px;margin-bottom:12px;font-size:11px;color:#3c3228;line-height:1.55;">'
       + '<strong style="color:#8a6d3b;">This record is not yet complete.</strong><ul style="margin:5px 0 0 16px;padding:0;">'
@@ -38882,8 +38964,9 @@ function printContentsRecord(jobId, opt) {
 // sign-off), and on living work only: an estate signs its Disposition Ledger. DOM-free markup; '' on an estate or with
 // nothing recorded.
 // ⚠ ITS WORDS FIT THE PAGE'S STATE (2026-10-28, P12; Anthony, Ask 12): "the record to date" while the stamp above reads IN PROGRESS,
-// "the final record" once every flagged line is checked and the list read (`rec.final`, invStampReviewed; DOC-27, LIV-03). And a
-// line on Hold has no destination yet, so the sign-off waits for it as for an undecided one (LIV-11).
+// "the final record" once every flagged line is checked and the list read (`rec.final`, invStampReviewed; DOC-27, LIV-03), and the
+// page's own gap block is empty (P12's review). And a line on Hold has no destination yet, so the sign-off waits for it as for an
+// undecided one (LIV-11).
 function contentsRecordSignoff(job, rec) {
   if (!job || invFiduciaryMode(job) || !rec || !rec.total) return '';
   var open = (rec.undecided || 0) + (rec.held || 0);

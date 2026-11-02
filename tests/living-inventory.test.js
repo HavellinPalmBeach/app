@@ -79,7 +79,7 @@ const PRINT_FNS = ['_invDocPartyHead', 'invLineReviewed', 'invLineOpen', 'invIni
   'invBequestElsewhere', 'invBequestFor', 'jobListEntries', 'invApprovalComplete', 'invApprovalMoved', 'invApprovalPrevWords', 'invApprovalSetAside', 'invApprovalMovedText',
   'invApprovalGap', 'jobFiduciaries', '_andJoin', 'invPropertyNoun', 'estateProceedsHolder', 'inventoryNetLabel', 'invRepresentativeTitle',
   // P19: the Disposition Ledger's card on the desk, on living work as on an estate.
-  '_renderLedgerCards', '_renderContentsCard', 'ledgerApplies', '_renderLedgerCard', 'signedCopySignersHtml', '_renderProceedsCard', '_renderDonationsCard', 'dispositionLedger', '_approvalLineOpen', 'ledgerSignedCopies', 'ledgerSignState', 'signedCopySignState', 'signedByNames', 'ledgerSigners', 'fiduciaryCapacity',
+  '_renderLedgerCards', '_renderContentsCard', 'ledgerApplies', '_renderLedgerCard', 'signedCopySignersHtml', '_renderProceedsCard', '_renderDonationsCard', 'dispositionLedger', '_approvalLineOpen', 'ledgerSignedCopies', 'ledgerSignState', 'signedCopySignState', 'signedByNames', 'ledgerSigners', 'fiduciaryCapacity', 'ledgerSignerRole', 'scheduleSignerCapacity',
   'signedCopyControlHtml', '_localDateOf', 'signedRecordLinksHtml', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsReconciliation',
   'signedRecordsOf', '_reconFlagText', '_ledgerNames', 'donationGroups', '_ymdLocal', 'invDonationReceipted',
   // P20: a living client's line going to one of ours is flagged, and who signed prints readably.
@@ -100,7 +100,7 @@ const PRINT_VARS = ['INV_LINE_INITIAL_MIN', 'INV_DISP_DOC_WORDS', 'CONTENTS_SIGN
   'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DOC_SCOPES', 'AS_FOUND_SUBFOLDER', 'PHOTO_SUBFOLDER',
   'LEDGER_DOC_KEY', 'LEDGER_SIGNED_REF', 'SIGNED_RECORD_KINDS', 'INV_SALE_DISPOSITIONS', '_signedCopyKeys', '_signedCopySpecs', 'INV_NET_LABELS',
   // P20 vars: the names the living client's staff caution reads.
-  'PERSON_NAME_ALIASES', '_agDupSetJob', 'INV_OPEN_HOLDS', 'INV_ACCEPT_AMMO_RE',
+  'PERSON_NAME_ALIASES', '_agDupSetJob', 'INV_OPEN_HOLDS', 'INV_ACCEPT_AMMO_RE', 'FIDUCIARY_PR_ROLE_RE', 'FIDUCIARY_TRUSTEE_ROLE_RE', 'SCHEDULE_CAPACITY',
   // 2026-10-26: what a living client's request refuses with (only a firearm, or someone who works with Havellin, needs it).
   'INV_LIVING_RELEASE_TXT'];
 
