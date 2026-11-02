@@ -94,7 +94,7 @@ const PAPER_FNS = ['invLineReviewed', 'invLineOpen', '_invDocPartyHead', 'invCon
   '_getPhotoRef', '_setPhotoRef', '_invStampBy', 'deviceUser',
   'invAppraisalChosen', '_avStampCounts', 'invTotalFloor', '_invFloorTotalHtml',
   // P13's own: the print-only fetch, the links, the footer, the lots, the numbers not used.
-  'invPhotosFirst', 'invPrintPhotoIds', 'invFetchPrintPhotos', '_invPrintPump', '_invPrintBatch', 'invPrintPhotoWords', '_invPhotosOpt',
+  'invInventoryWord', 'invTrustOnlyMatter', 'invDriveFolderWords', 'invPhotosFirst', 'invPrintPhotoIds', 'invFetchPrintPhotos', '_invPrintPump', '_invPrintBatch', 'invPrintPhotoWords', '_invPhotosOpt',
   '_invPrintThumbSrc', '_invPrintThumb', '_invThumbCache', '_invThumbKey', '_invPaperPhotoUrl', '_invItemNoLinkHtml', 'invPaperPhotoSentence',
   'invLotLineHtml', 'invLotWords', 'invLotMarkWords', 'invGroupUncounted', 'invLotSplitState', 'invLotsUntestable', 'invLotArticleValue', 'maivFilingApplies', 'invUnitValue', 'invLineQty',
   'invNumbersNotUsedHtml', 'invNumbersNotUsedText', 'invNumbersNotUsed', 'invRemovedWhyText', '_invRemovedRows', '_invTombstoneLine',
@@ -592,7 +592,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(text(W._lotSplitWorklistBlock(J, [LINE('c', 1, 'Copper cookware', 720, { qty: 8 }), LINE('d', 5, 'Sideboard drawer contents', 180, { agentGroup: true, groupBy: 'desk' })])),
       'permits them to stand as groups', '⚠ answered, the clearance is printed again');
     has(text(W._lotSplitWorklistBlock(J, [LINE('c', 1, 'Copper cookware', 720, { qty: 8 }), LINE('d', 5, 'Sideboard drawer contents', 180, { agentGroup: true, groupBy: 'desk' })])),
-      '1 line on this manifest groups more than one article', '…and a line recorded as one article is no grouped lot');
+      '1 grouped lot lists more than one article', '…and a line recorded as one article is no grouped lot');
     // A count typed in Qty, through the row's own edit.
     const doc = domStub({});
     const E = closureLift(['_invEdit'], ['renderInventoryTab', '_renderInvRow', '_renderInvWorkbar', '_renderInvBulk', 'agentValueAfterRename', '_avNoticesHtml', '_invRefreshAgentNotices',
