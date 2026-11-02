@@ -104,6 +104,9 @@ function net(opts) {
     if (u.indexOf(SYNC) === 0) {
       log.gets.push(u);
       if (/action=loadMedia/.test(u)) return sp(res(o.media ? { ok: true, media: o.media } : { ok: false, error: 'offline' }));
+      // RESTATED 2026-11-02 (the release request's envelope as its own record): an estate's send reads the client from the sheet
+      // first (approvalRecordFromSheet). The sheet's copy is the rig's own (o.sheetJobs, set by the rig), so the read moves nothing.
+      if (/action=loadJobs/.test(u)) return sp(res(o.sheetJobs ? { ok: true, jobs: o.sheetJobs() } : { ok: false, error: 'offline' }));
       return sp(res({ ok: false }));
     }
     if (u === 'https://www.googleapis.com/oauth2/v3/userinfo') return sp(res({ email: BOX }));
@@ -116,7 +119,7 @@ function net(opts) {
     }
     return sr(new TypeError('Failed to fetch ' + u));
   };
-  return { fetch, log };
+  return { fetch, log, opts: o };
 }
 function mimeParts(mime) {
   const mix = (/boundary="(MIX-[^"]+)"/.exec(mime) || [])[1];
@@ -206,6 +209,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         _docNotice: (t, m) => notices.push({ t, m: String(m) }), dashNotice: (t, m) => notices.push({ t, m: String(m) }),
         _dashSendState() {}, showSyncBadge: (m) => badges.push(String(m)),
       }, o.stubs || {}));
+    N.opts.sheetJobs = () => JSON.parse(JSON.stringify(c.jobs));
     return { c, N, dom, notices, opened, hrefs, saves, badges, job: () => c.jobs[0], last: () => (notices[notices.length - 1] || {}),
              st: () => (c.jobs[0].docState || {}).approvalRequest, card: () => c._renderInvReleasesCard(c.jobs[0], c._jobInvRefs(7)) };
   }
@@ -278,6 +282,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(r.c.sendApprovalRequest(7), true, 'it starts');
     eq(r.c._docBusy, null, 'and has finished (one send at a time, released)');
     eq(r.N.log.gets.filter((u) => /loadMedia/.test(u)).length, 1, 'the manifest was read from the sheet first');
+    // 2026-11-02 (the release request's envelope as its own record): on an estate the client is read from the sheet before it.
+    const _gj = r.N.log.gets.findIndex((u) => /action=loadJobs/.test(u)), _gm = r.N.log.gets.findIndex((u) => /action=loadMedia/.test(u));
+    ok(_gj >= 0 && _gj < _gm && r.N.log.gets.filter((u) => /action=loadJobs/.test(u)).length === 1, '⚠ and the client once, before it, on an estate');
     // Filed, under a DATED name, into the Estate Inventory folder.
     eq(r.N.log.uploads.length, 1, 'one filing');
     eq(r.N.log.uploads[0].filename, 'HVL-0007 - Havellin Release Approval Request - Oct 17 2026.html', '⚠ dated: each round is its own paper');
@@ -431,6 +438,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       ROW('b', { itemNo: 2, objectName: 'Desk', fmv: '', valSource: '', disposition: 'Keep' }),
       ROW('e', { itemNo: 3, objectName: 'Sofa', fmv: '', valSource: '', disposition: 'Donate', channel: 'Habitat ReStore' }) ] });
     eq(liv.c.sendApprovalRequest(7), true, 'a living client’s request goes too');
+    eq(liv.N.log.gets.filter((u) => /action=loadJobs/.test(u)).length, 0, 'living work holds no envelope, so the client is not read first (2026-11-02)');
     const lm = liv.N.log.drafts[0];
     eq(headerOf(lm, 'To'), 'meg@ellis.example', 'to the client');
     eq(headerOf(lm, 'Cc'), AGREEMENTS, 'agreements@');

@@ -704,6 +704,9 @@ function run({ group, ok, eq, has, lacks }) {
       discardApprovalRequestDraft: 'the request draft let go, kept as discarded',
       // A line on a waiting request draft changed after it (2026-10-26): its touch is compared with the draft's stamp, to flag it.
       approvalRequestChanged: 'what changed on a waiting request draft since it was made',
+      // An envelope a roll-back displaced (2026-11-02, found on review): one sent after the request on record was drafted is still
+      // drawn on the card; the stamp dates the request, never says there is a draft to send.
+      approvalEnvelopeDisplaced: 'whether an envelope was sent after the request on record was drafted',
     };
     const names = [...new Set([...src.matchAll(/(^|\n)function\s+([A-Za-z_$][\w$]*)\s*\(/g)].map((m) => m[2]))];
     const readers = names.filter((n) => { let b; try { b = fn(n); } catch (e) { return false; } return /draftedAt/.test(live(b)); });

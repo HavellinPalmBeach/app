@@ -818,7 +818,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // RESTATED 2026-10-27 (P5, REL-02): each ticked except a line changed since the request went (approvalRequestMovedIds).
     has(dlg, 'id="ia-line-\' + i + \'"\' + (ch ? \'\' : \' checked\')', 'each ticked, except one changed since');
     // RESTATED 2026-10-27 (P5, found on review): the request opened from, else the last one that went (the bulk bar's selection).
-    has(dlg, 'var _lastReq = fromReq ? (opt.req || null) : approvalRequestLastSent(', '…read off what the request carried');
+    // RESTATED 2026-11-02 (the envelope as its own record): read through approvalReqView, so a request that went through DocuSign
+    // reads the lines its envelope carried.
+    has(dlg, 'var _lastReq = fromReq ? (opt.req || null) : approvalReqView(job, approvalRequestLastSent(', '…read off what the request carried');
     has(dlg, 'approvalRequestMovedIds(job, _lastReq, ', '…line by line');
     eq(sandbox({ vars: ['INV_REQ_UNTICK_TXT'] }).INV_REQ_UNTICK_TXT, 'Untick any line the signed copy struck out.', 'the dialog says to untick what the signed copy struck out');
     has(dlg, 'Date of the signed approval', 'the date on the paper');

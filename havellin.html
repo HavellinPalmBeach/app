@@ -34682,14 +34682,21 @@ function approvalRequestState(job, refs) {
   // it unticked. Kept among `open`, which the press lists.
   var moved = req ? approvalRequestMovedIds(job, req, refs || []) : [];
   // `unnamed`: waiting, never carried, and nobody named to take it, so not asked for until somebody is (2026-10-26).
-  var open = [], fresh = [], unnamed = [], changed = [];
+  // `onEnvelope` (found on review, 2026-11-02): waiting, not on this request, and out for signature on another envelope (one a
+  // roll-back displaced): asked for already, so never counted among the lines a fresh request is owed for.
+  var onOut = {}, own = String((req && req.envelopeId) || '');
+  approvalEnvelopesOut(job).forEach(function (e) {
+    if (String(e.id) !== own) (Array.isArray(e.stableIds) ? e.stableIds : []).forEach(function (id) { onOut[String(id)] = 1; });
+  });
+  var open = [], fresh = [], unnamed = [], changed = [], onEnvelope = [];
   (refs || []).forEach(function (r) {
     if (!_approvalLineOpen(r, job)) return;
     if (ids && ids.indexOf(String(r.stableId)) >= 0) { open.push(r); if (moved.indexOf(String(r.stableId)) >= 0) changed.push(r); }
+    else if (onOut[String(r.stableId)]) onEnvelope.push(r);
     else if (_approvalLineRequestable(r, job)) fresh.push(r);
     else unnamed.push(r);
   });
-  return { st: st, req: req, carried: ids ? ids.length : 0, open: open, fresh: fresh, unnamed: unnamed, changed: changed };
+  return { st: st, req: req, carried: ids ? ids.length : 0, open: open, fresh: fresh, unnamed: unnamed, changed: changed, onEnvelope: onEnvelope };
 }
 function approvalRequestSubject(job) {
   var street = String((job && job.addr) || '').split(',')[0].trim();
@@ -34817,39 +34824,63 @@ function sendApprovalRequest(jobId, selectedOnly, via) {
   }
   if (_docBusy) { openBar(); _docNotice('warn', 'Another document is being prepared — give it a moment.', jobId); return false; }
   _docBusy = { jobId: jobId, docKey: APPROVAL_REQ_KEY };
-  var over = false;
-  var watchdog = setTimeout(function () {
-    if (over) return;
-    over = true; _docBusy = null;
-    openBar();
-    _docNotice('warn', ds ? 'DocuSign is taking a while to answer. The envelope may still go out: check DocuSign before pressing Send through DocuSign again (an answer that comes late is recorded).'
-      : 'The approval request took too long to build. A draft may already have been created — check your Gmail drafts before pressing Send request again.', jobId);
-  }, APPROVAL_REQ_WATCHDOG_MS);
-  var finish = function () { over = true; clearTimeout(watchdog); _docBusy = null; openBar(); };
-  var step = function (label) { if (!over) _dashSendState(APPROVAL_REQ_KEY, label); };
-  var rcpt = approvalRequestRecipients(job);
-
-  step('Reading the client and the inventory…');
+  var again = ds ? 'Send through DocuSign' : 'Send request';   // the button pressed, named in every refusal that asks for it again
   // ⚠⚠ ON AN ESTATE THE CLIENT IS READ FROM THE SHEET FIRST (2026-11-02): the request's record and every envelope, so a device holding
   // an older copy never sends past an envelope another device put out since (approvalRecordFromSheet). Then the send's own refusals
   // are asked again over what the sheet holds, and a refusal redraws the card, which then shows the other device's envelope. Living
   // work has no envelope and skips it.
-  var readClient = function (cb) { if (invFiduciaryMode(job)) approvalRecordFromSheet(jobId, cb); else cb(true); };
-  readClient(function (cok) {
+  var readsClient = invFiduciaryMode(job), reading = readsClient;
+  // Why that read failed, in the words that fit its cause (found on review: every cause was told to check the connection, a
+  // device the Apps Script turns away for its key included). Nothing has been posted at that point, whatever the cause.
+  var readFail = function (kind, why) {
+    var w = String(why || '').trim();
+    if (w && !/[.!?]$/.test(w)) w += '.';
+    return 'The client could not be read from the sheet, so the request could go out past one another device has already sent. '
+      + (kind === 'said' ? w + ' Then press ' + again + ' again.'
+        : kind === 'server' ? 'The Apps Script answered: ' + w + ' Press ' + again + ' again; if it answers the same, check the Apps Script.'
+        : kind === 'missing' ? 'The sheet does not hold this client: press ' + again + ' again once the chip at the foot has cleared, and reload the app if it still says so.'
+        : (kind === 'late' ? 'The sheet did not answer in time, and nothing was sent. ' : '') + 'Check the connection, then press ' + again + ' again.');
+  };
+  var over = false, watchdog = null;
+  // ⚠ THE SEND'S OWN CLOCK IS FOR THE MANIFEST READ, THE FILING, THE PDF AND THE DRAFT OR THE ENVELOPE (found on review): it starts
+  // again once the client's read has answered, a read with its own limit, so the read never eats into it. Should it run out while
+  // the client is still being read, nothing has been posted, and it says that rather than that a draft or an envelope may exist.
+  var arm = function () {
+    clearTimeout(watchdog);
+    watchdog = setTimeout(function () {
+      if (over) return;
+      over = true; _docBusy = null;
+      openBar();
+      _docNotice('warn', reading ? readFail('late')
+        : ds ? 'DocuSign is taking a while to answer. The envelope may still go out: check DocuSign before pressing Send through DocuSign again (an answer that comes late is recorded).'
+        : 'The approval request took too long to build. A draft may already have been created — check your Gmail drafts before pressing Send request again.', jobId);
+    }, APPROVAL_REQ_WATCHDOG_MS);
+  };
+  arm();
+  var finish = function () { over = true; clearTimeout(watchdog); _docBusy = null; openBar(); };
+  var step = function (label) { if (!over) _dashSendState(APPROVAL_REQ_KEY, label); };
+  var rcpt = approvalRequestRecipients(job);
+
+  step(readsClient ? 'Reading the client and the inventory…' : 'Reading the inventory…');
+  var readClient = function (cb) { if (readsClient) approvalRecordFromSheet(jobId, cb); else cb(true); };
+  readClient(function (cok, cwhy, ckind) {
     if (over) return;
     if (!cok) {
       finish();
-      _docNotice('warn', 'The client could not be read from the sheet, so the request could go out past one another device has already sent. Check the connection, then press Send request again.', jobId);
+      _docNotice('warn', readFail(ckind, cwhy), jobId);
       return;
     }
-    var again = approvalRequestSendBlocker(job) || (ds ? approvalRequestEsignRefusal(job) : '');
-    if (again) { finish(); _docNotice('warn', again, jobId); _invRefreshReleases(jobId); return; }
+    if (reading) { reading = false; arm(); }
+    // Asked of the client as the device now holds it (a refresh that landed meanwhile may have put the sheet's copy in its place).
+    var cur = _invJob(jobId) || job;
+    var blk = approvalRequestSendBlocker(cur) || (ds ? approvalRequestEsignRefusal(cur) : '');
+    if (blk) { finish(); _docNotice('warn', blk, jobId); _invRefreshReleases(jobId); return; }
     _invEnsureLoaded(jobId);
     refreshPhotoRefs(jobId, function (_changed, ok) {
       if (over) return;
       if (ok === false || !_invCloudSeen[jobId]) {   // this read (P6)
         finish();
-        _docNotice('warn', 'The inventory could not be read from the sheet, so the request could ask for lines another device has already had approved. Check the connection, then press Send request again.', jobId);
+        _docNotice('warn', 'The inventory could not be read from the sheet, so the request could ask for lines another device has already had approved. Check the connection, then press ' + again + ' again.', jobId);
         return;
       }
       // The paper as the printer builds it, over the lines as the sheet now holds them.
@@ -34870,7 +34901,7 @@ function sendApprovalRequest(jobId, selectedOnly, via) {
             if (over) return;
             if (!b64 && !filedUrl) {
               finish();
-              _docNotice('err', 'The request could be neither made into a PDF (' + (perr || 'no answer from the server') + ') nor filed to Drive, so there is nothing to send. Check the connection and the Apps Script, then press Send request again; Approval Request still prints it.', jobId);
+              _docNotice('err', 'The request could be neither made into a PDF (' + (perr || 'no answer from the server') + ') nor filed to Drive, so there is nothing to send. Check the connection and the Apps Script, then press ' + again + ' again; Approval Request still prints it.', jobId);
               return;
             }
             if (ds) { approvalRequestSendEsign(job, r, b64, perr, filedUrl, paperIds, rcpt, step, finish, function () { return over; }); return; }
@@ -34882,7 +34913,9 @@ function sendApprovalRequest(jobId, selectedOnly, via) {
               if (over) return;
               finish();
               var gmail = provider === 'gmail';
-              docRecordSent({ job: job, key: APPROVAL_REQ_KEY }, { provider: provider, draftUrl: draftUrl || '', pdfOk: gmail && !!b64,
+              // On the client as this device now holds it: a refresh of the list may have replaced the copy the press began with
+              // (found on review, 2026-11-02; approvalRequestSendEsign says why).
+              docRecordSent({ job: _invJob(jobId) || job, key: APPROVAL_REQ_KEY }, { provider: provider, draftUrl: draftUrl || '', pdfOk: gmail && !!b64,
                 req: { to: rcpt.to, cc: rcpt.cc, noEmail: rcpt.noEmail, viaCounsel: !!rcpt.viaCounsel,
                        stableIds: paperIds, asked: asked, ratify: ratify, filedUrl: filedUrl,
                        sig: approvalRequestSig(r.asked.concat(r.ratify)), terms: r.terms } });
@@ -35037,15 +35070,28 @@ function approvalEnvelopeBlocking(job) {
   }
   return held;
 }
-// The envelopes the card and the dashboard draw: the request's own, then any other that holds requests back or that was signed under
-// another email and is not filed, each once. Normally one envelope or none; another is one a stale device's send displaced.
+// The envelopes the card and the dashboard draw: the request's own, then any other that holds requests back, that was signed under
+// another email and is not filed, or that a roll-back displaced, each once. Normally one envelope or none.
 function approvalEnvelopesShown(job, S) {
   var own = approvalEnvelopeForReq(job, S && S.req), out = own ? [own] : [];
   approvalEnvelopes(job).forEach(function (e) {
     if (own && String(e.id) === String(own.id)) return;
-    if (_approvalEnvelopeHold(job, e) || (e.status === 'completed' && e.mismatch && e.mismatch.length && !approvalEnvelopeFiledUrl(job, e))) out.push(e);
+    if (_approvalEnvelopeHold(job, e) || (e.status === 'completed' && e.mismatch && e.mismatch.length && !approvalEnvelopeFiledUrl(job, e))
+        || approvalEnvelopeDisplaced(e, S && S.st)) out.push(e);
   });
   return out;
+}
+// ⚠ AN ENVELOPE A ROLL-BACK DISPLACED, WHATEVER BECAME OF IT (found on review, 2026-11-02): one sent after the request on record was
+// drafted can only stand beside it because a device holding an older copy put an older request back (I've sent it or Discard draft
+// on the morning's draft). Once it was declined or voided, or signed with lines it left unrecorded and then filed, it held nothing
+// back, so it was drawn nowhere: a fiduciary's objection was recorded on it and said on no screen, and the Releases bar never turned
+// red. It is drawn until a request drafted after it is the one on record, the way a fresh request puts every earlier envelope away.
+// `st` is the request's record: its draft's day, else the day it went (Discard draft keeps no draft day); with neither, no request
+// stands in front of it. DOM-free.
+function approvalEnvelopeDisplaced(e, st) {
+  if (!e || !e.id) return false;
+  var ref = st ? Date.parse(st.draftedAt || st.sentAt || '') : NaN, sent = Date.parse(e.sentAt || '');
+  return isNaN(ref) || (!isNaN(sent) && sent > ref);
 }
 // ⚠⚠ A REQUEST AS ITS READERS SEE IT: one that went through DocuSign carries only its envelope's id, and the lines and terms it
 // carried are the envelope's. A shallow copy, never written back; no lines and no terms where this device holds no such envelope.
@@ -35061,22 +35107,41 @@ function approvalReqView(job, req) {
 // ⚠⚠ THE CLIENT READ FROM THE SHEET BEFORE AN ESTATE'S REQUEST GOES (2026-11-02), by either route: a device holding the morning's
 // copy would otherwise send past an envelope another device put out since, and its lines would go twice. The jobs list is asked for
 // directly, never through refreshJobsFromCloud, which stands down while this device owes the sheet a write (the one moment it
-// matters most); only the request's record and the envelopes are taken from it (approvalRecordAdopt). cb(true), or cb(false, why)
-// where the read failed, the answer was not a list of clients (a refusal for the device key among them) or the list lacks this one.
+// matters most); only the request's record and the envelopes are taken from it (approvalRecordAdopt). cb(true), or cb(false, why,
+// kind), the kind saying which words the send's refusal needs (found on review: every cause read as the connection's):
+//   'said'    why is the whole sentence (the Apps Script's own refusal for the device key, which the banner states too; no URL);
+//   'server'  the Apps Script answered something else, its words in why;
+//   'missing' the sheet's list of clients lacks this one (deleted on another device, or not yet saved from this one);
+//   'late'    no answer within INV_READ_WATCHDOG_MS, as the inventory's read (found on review: a read that connected and never
+//             answered held the send until its own watchdog, which then said an envelope or a draft might exist when nothing had
+//             been posted); an answer after that is dropped, since the press was refused and the next press reads again;
+//   ''        the read failed (the connection), why the browser's words.
 function approvalRecordFromSheet(jobId, cb) {
-  var res = { ok: false, why: 'no Apps Script URL is set (Settings)' };
-  if (!SHEETS_SYNC_URL) { cb(false, res.why); return; }
+  var done = false, timer = null;
+  var answer = function (ok, why, kind) { if (done) return; done = true; if (timer) clearTimeout(timer); cb(ok, why || '', kind || ''); };
+  if (!SHEETS_SYNC_URL) { answer(false, 'No Apps Script URL is set (Settings).', 'said'); return; }
+  if (typeof setTimeout === 'function' && typeof INV_READ_WATCHDOG_MS !== 'undefined') {
+    timer = setTimeout(function () { timer = null; answer(false, 'the sheet did not answer in time', 'late'); }, INV_READ_WATCHDOG_MS);
+  }
+  var res = { ok: false, why: '', kind: '' };
   fetch(_withDeviceKey(SHEETS_SYNC_URL + '?action=loadJobs'))
     .then(function (r) { return r.json(); })
     .then(function (data) {
-      if (!(data && Array.isArray(data.jobs) && !data.error)) { res.why = (data && data.error) ? String(data.error) : 'the sheet sent no list of clients'; return; }
+      if (done) return;   // the read let go: nothing is taken from a late answer
+      if (!(data && Array.isArray(data.jobs) && !data.error)) {
+        // A refusal for the key said as one, the banner and Settings included, as every read of the jobs backend does (P2).
+        var key = (data && data.error && typeof _noteDeviceKeyRefusal === 'function') ? _noteDeviceKeyRefusal(data.error) : '';
+        res = (data && data.error) ? { ok: false, why: String(data.error), kind: key ? 'said' : 'server' }
+          : { ok: false, why: 'no list of clients', kind: 'server' };
+        return;
+      }
       var sheetJob = data.jobs.filter(function (j) { return j && String(j.id) === String(jobId); })[0], job = _invJob(jobId);
-      if (!sheetJob || !job) { res.why = 'the sheet does not hold this client'; return; }
+      if (!sheetJob || !job) { res = { ok: false, why: 'the sheet does not hold this client', kind: 'missing' }; return; }
       approvalRecordAdopt(job, sheetJob);
-      res = { ok: true, why: '' };
+      res = { ok: true, why: '', kind: '' };
     })
-    .catch(function (e) { res = { ok: false, why: String((e && e.message) || e || 'the read failed') }; })
-    .then(function () { cb(res.ok, res.why); });
+    .catch(function (e) { res = { ok: false, why: String((e && e.message) || e || 'the read failed'), kind: '' }; })
+    .then(function () { answer(res.ok, res.why, res.kind); });
 }
 // ⚠⚠ THE SHEET'S COPY OF THE REQUEST AND OF EVERY ENVELOPE, TAKEN BY THE SHEET'S OWN RULE (2026-11-02): for the request's key and
 // every envelope's key on either side, what main-sync.gs's merge (_mergeJobKeyed) would keep with the sheet's copy as the one it
@@ -35085,38 +35150,66 @@ function approvalRecordFromSheet(jobId, cb) {
 // (a test holds the two equal). Where the sheet's wins, a copy of it is taken and the key's stamp raised to the higher of the two;
 // a key goes only on the sheet's stamped removal. Nothing else on the client moves, its clock included: the save is bare
 // (_saveArrivalCheck), as an arrival check's, since nothing was decided here. DOM-free; nothing is posted. Answers whether anything moved.
+// ⚠ AND THE SIGNED COPIES' RECORDS (found on review, 2026-11-02): each envelope's `esr_<id>_<day>` entries on `signedRecords`, by the
+// same rule entry by entry (the sheet merges that list by id on `signedRecords:<id>`). Two devices that applied and filed one
+// envelope both stamp its key, so the sheet's key can hold no filed link while the filing's records sit on the sheet's list; the key
+// alone was taken, approvalEnvelopeFiledUrl found no link, and a filed envelope refused the send as "not yet filed to Drive", its
+// card offering File signed copy, which asked DocuSign for the paper again.
 function approvalRecordAdopt(job, sheetJob) {
   if (!job || !sheetJob) return false;
+  var stamp = function (j, kind, k) { var v = j && j.at && j.at[kind + ':' + k]; return (v === undefined || v === null || v === '') ? null : Number(v); };
+  var mineNewer = Number(job.updatedAt || 0) >= Number(sheetJob.updatedAt || 0), moved = false;
+  // One key by the sheet's rule: `theirs` and `mine` are {key: value} views; `put(k, v)` writes the sheet's copy, `drop(k)` removes;
+  // `kind` is the stamps' prefix (`docState:<key>`, `signedRecords:<id>`).
+  var adopt = function (theirs, mine, keys, put, drop, kind) {
+    var has = function (o, k) { return Object.prototype.hasOwnProperty.call(o, k); };
+    keys.forEach(function (k) {
+      var inA = has(theirs, k), inB = has(mine, k), sA = stamp(sheetJob, kind, k), sB = stamp(job, kind, k), take;
+      if (!inA) take = (sA !== null && (sB === null || sA > sB)) ? 'gone' : 'mine';
+      else if (!inB) take = (sB !== null && (sA === null || sB > sA)) ? 'mine' : 'sheet';
+      else if (sA !== null && sB !== null) take = sB >= sA ? 'mine' : 'sheet';
+      else if (sA !== null) take = 'sheet';
+      else if (sB !== null) take = 'mine';
+      else take = mineNewer ? 'mine' : 'sheet';
+      if (take === 'mine') return;
+      var hi = sA === null ? sB : sB === null ? sA : Math.max(sA, sB);
+      if (take === 'gone') drop(k);
+      else {
+        var v = JSON.parse(JSON.stringify(theirs[k]));
+        if (inB && JSON.stringify(mine[k]) === JSON.stringify(v) && hi === sB) return;
+        put(k, v);
+      }
+      if (hi !== null) { if (!job.at) job.at = {}; job.at[kind + ':' + k] = hi; }
+      moved = true;
+    });
+  };
+  var keysOf = function (a, b, want) {
+    var keys = {};
+    [a, b].forEach(function (o) { Object.keys(o).forEach(function (k) { if (want(k)) keys[k] = 1; }); });
+    return Object.keys(keys);
+  };
+  // The request's key and every envelope's.
   var mine = (job.docState && typeof job.docState === 'object') ? job.docState : {};
   var theirs = (sheetJob.docState && typeof sheetJob.docState === 'object') ? sheetJob.docState : {};
-  var stamp = function (j, k) { var v = j && j.at && j.at['docState:' + k]; return (v === undefined || v === null || v === '') ? null : Number(v); };
-  var has = function (o, k) { return Object.prototype.hasOwnProperty.call(o, k); };
   var envPre = approvalEnvelopeKey('');   // every envelope's key begins with it
-  var keys = {};
-  [theirs, mine].forEach(function (ds) {
-    Object.keys(ds).forEach(function (k) { if (k === APPROVAL_REQ_KEY || k.indexOf(envPre) === 0) keys[k] = 1; });
-  });
-  var mineNewer = Number(job.updatedAt || 0) >= Number(sheetJob.updatedAt || 0), moved = false;
-  Object.keys(keys).forEach(function (k) {
-    var inA = has(theirs, k), inB = has(mine, k), sA = stamp(sheetJob, k), sB = stamp(job, k), take;
-    if (!inA) take = (sA !== null && (sB === null || sA > sB)) ? 'gone' : 'mine';
-    else if (!inB) take = (sB !== null && (sA === null || sB > sA)) ? 'mine' : 'sheet';
-    else if (sA !== null && sB !== null) take = sB >= sA ? 'mine' : 'sheet';
-    else if (sA !== null) take = 'sheet';
-    else if (sB !== null) take = 'mine';
-    else take = mineNewer ? 'mine' : 'sheet';
-    if (take === 'mine') return;
-    var hi = sA === null ? sB : sB === null ? sA : Math.max(sA, sB);
-    if (take === 'gone') delete job.docState[k];
-    else {
-      var v = JSON.parse(JSON.stringify(theirs[k]));
-      if (inB && JSON.stringify(mine[k]) === JSON.stringify(v) && hi === sB) return;
-      if (!job.docState) job.docState = mine;
-      job.docState[k] = v;
-    }
-    if (hi !== null) { if (!job.at) job.at = {}; job.at['docState:' + k] = hi; }
-    moved = true;
-  });
+  adopt(theirs, mine, keysOf(theirs, mine, function (k) { return k === APPROVAL_REQ_KEY || k.indexOf(envPre) === 0; }),
+    function (k, v) { if (!job.docState) job.docState = mine; job.docState[k] = v; },
+    function (k) { if (job.docState) delete job.docState[k]; }, 'docState');
+  // Every envelope's signed records, by id, the first entry of an id on each side (the sheet's own reading of a list).
+  var byId = function (list) {
+    var o = {};
+    (Array.isArray(list) ? list : []).forEach(function (x) { var id = x && x.id; if (id !== undefined && id !== null && id !== '' && !(String(id) in o)) o[String(id)] = x; });
+    return o;
+  };
+  var rMine = byId(job.signedRecords), rTheirs = byId(sheetJob.signedRecords);
+  adopt(rTheirs, rMine, keysOf(rTheirs, rMine, function (k) { return k.indexOf('esr_') === 0; }),
+    function (k, v) {
+      if (!Array.isArray(job.signedRecords)) job.signedRecords = [];
+      var i = job.signedRecords.indexOf(rMine[k]);
+      if (i >= 0) job.signedRecords[i] = v; else job.signedRecords.push(v);
+    },
+    function (k) { if (Array.isArray(job.signedRecords)) job.signedRecords = job.signedRecords.filter(function (x) { return !(x && String(x.id) === k); }); },
+    'signedRecords');
   if (moved) _saveArrivalCheck();
   return moved;
 }
@@ -35186,24 +35279,34 @@ function approvalRequestSendEsign(job, r, b64, perr, filedUrl, paperIds, rcpt, s
     delete _approvalEsignOut[jobId];
     var late = isOver();
     if (!(ok && d && d.ok && d.envelopeId)) {
+      // ⚠ THE APPS SCRIPT'S OWN REFUSAL IS SAID AS ITS OWN (found on review, 2026-11-02): it turned the request away before DocuSign was
+      // asked (`refused`, backend 2026-11-02), so it is never "DocuSign did not take the request", its sentence carries its own way on
+      // and is not told to send again or email the same lines, and a stop is never doubled. Certain that nothing went out, it speaks
+      // even after the watchdog let go.
+      var why = String((d && (d.error || d.message)) || 'no answer from the server').trim().replace(/[.\s]+$/, '');
+      if (d && d.refused) { approvalRequestEsignRefused(jobId, d, why, late ? null : finish); return; }
       if (late) return;
       finish();
-      _docNotice('err', 'DocuSign did not take the request — ' + ((d && (d.error || d.message)) || 'no answer from the server')
-        + '. Nothing went out: press Send through DocuSign again, or Send request to email it.', jobId);
+      _docNotice('err', 'DocuSign did not take the request — ' + why + '. Nothing went out: press Send through DocuSign again, or Send request to email it.', jobId);
       return;
     }
     if (!late) finish();
     var back = Array.isArray(d.signers) ? d.signers : [];
     var now = new Date().toISOString(), envId = String(d.envelopeId);
+    // ⚠⚠ RECORDED ON THE CLIENT AS THIS DEVICE NOW HOLDS IT (found on review, 2026-11-02): the send takes ten to thirty seconds, none of
+    // it through the write queue, so a refresh of the client list can land meanwhile and put the sheet's copy of this client in place
+    // of the one the press began with. Written onto that one, the envelope sat on a copy nothing held: this device's card offered both
+    // sends again at once, and a second press could put out a second envelope. Every answer below writes to the client the list holds.
+    var cur = _invJob(jobId) || job;
     // ⚠⚠ THE ENVELOPE ON ITS OWN KEY, WITH THE PAPER IT CARRIED (2026-11-02): docState() stamps docState:approvalEnv:<id>, which the
     // sheet merges alone, so nothing another device does to the request's own record (a send, I've sent it, Discard draft, on a copy
     // older than this one) can erase it. The request records only its id (`envelopeId`); one save carries both keys.
-    Object.assign(docState(job, approvalEnvelopeKey(envId)), { id: envId, status: String(d.status || 'sent').toLowerCase(), sentAt: now, checkedAt: now,
+    Object.assign(docState(cur, approvalEnvelopeKey(envId)), { id: envId, status: String(d.status || 'sent').toLowerCase(), sentAt: now, checkedAt: now,
       signers: signers.map(function (x, i) {
         var e = back.filter(function (y) { return Number(y.n) === i + 1; })[0] || back[i] || {};
         return { name: x.name, email: x.email, recipientId: String(e.recipientId || (i + 1)), n: i + 1 };
       }), stableIds: paperIds, terms: r.terms });
-    docRecordSent({ job: job, key: APPROVAL_REQ_KEY }, { provider: 'docusign', draftUrl: '', pdfOk: true,
+    docRecordSent({ job: cur, key: APPROVAL_REQ_KEY }, { provider: 'docusign', draftUrl: '', pdfOk: true,
       req: { to: signers.map(function (x) { return x.email; }), cc: rcpt.cc, noEmail: [], viaCounsel: false,
              asked: r.asked.length, ratify: r.ratify.length, filedUrl: filedUrl,
              sig: approvalRequestSig(r.asked.concat(r.ratify)), envelopeId: envId } });
@@ -35215,6 +35318,22 @@ function approvalRequestSendEsign(job, r, b64, perr, filedUrl, paperIds, rcpt, s
       + (r.held.length === 1 ? 'it' : 'them') + ' and ' + (r.held.length === 1 ? 'is' : 'are') + ' not on it.');
     _docNotice(filedUrl ? 'ok' : 'warn', bits.join(' '), jobId);
     showSyncBadge('Sent through DocuSign ✓');
+    _invRefreshReleases(jobId);
+  });
+}
+// The Apps Script turned the request away before DocuSign was asked (backend 2026-11-02 marks each of its refusals `refused`), so
+// nothing went out. `refused: 'out'` is the second envelope it would not make: another device's envelope reached the sheet after this
+// press read the client. The client is read again, its envelopes taken as the press's own read takes them (approvalRecordFromSheet),
+// and the card redrawn, so the envelope the refusal names shows where the press was made; where that read fails, the Apps Script's
+// own sentence says what to do. `finish` is the send's, or null where its watchdog has already let go.
+function approvalRequestEsignRefused(jobId, d, why, finish) {
+  if (finish) finish();
+  var said = 'The Apps Script refused it, so DocuSign was never asked. ' + why + '.';
+  if (d.refused !== 'out') { _docNotice('warn', said, jobId); return; }
+  approvalRecordFromSheet(jobId, function (cok) {
+    var e = cok ? approvalEnvelopesOut(_invJob(jobId))[0] : null;
+    _docNotice('warn', e ? 'Not sent: a release request for this client is already out for signature in DocuSign (sent ' + _draftDay(e.sentAt)
+      + '). It is on the Releases card now; no new request goes until it is complete in DocuSign, or voided there.' : said, jobId);
     _invRefreshReleases(jobId);
   });
 }
@@ -35415,9 +35534,17 @@ function approvalEnvelopeRecords(jobId) {
   });
   return put;
 }
+// ⚠ ONE NAME PER ENVELOPE (found on review, 2026-11-02): the signed copy is filed by name, and a file of the same name is replaced
+// in place (_fileBlobByName), so two envelopes of one client sent on one day shared a name, and the later filing wrote over the
+// earlier one's signed copy, whose link and records then opened the later paper. The first envelope of a day keeps the dated name;
+// each later one that day is numbered in the order sent (approvalEnvelopes: by sentAt, then id), so each keeps its own file and a
+// filing of one again still replaces only its own.
 function approvalEnvelopeBaseName(job, e) {
-  var day = e && e.sentAt ? new Date(e.sentAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).replace(/,/g, '') : '';
-  return ((job && job.hvlId) || 'HVL') + ' - Havellin ' + APPROVAL_REQ_TITLE + (day ? ' - ' + day : '');
+  var dayOf = function (x) { return x && x.sentAt ? new Date(x.sentAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).replace(/,/g, '') : ''; };
+  var day = dayOf(e);
+  var sameDay = day ? approvalEnvelopes(job).filter(function (x) { return dayOf(x) === day; }).map(function (x) { return String(x.id); }) : [];
+  var n = e ? sameDay.indexOf(String(e.id)) : -1;
+  return ((job && job.hvlId) || 'HVL') + ' - Havellin ' + APPROVAL_REQ_TITLE + (day ? ' - ' + day : '') + (n > 0 ? ' (' + (n + 1) + ')' : '');
 }
 // The executed request and its certificate, filed to Signed Records (the agreement's filer, esignArchive, by name: a second
 // filing replaces the first). By itself on completion; by hand (File signed copy on the card) where that failed, never inside
@@ -35427,13 +35554,29 @@ function approvalEnvelopeBaseName(job, e) {
 var _approvalEnvFiling = {};
 function approvalEnvelopeFile(jobId, opt) {
   var auto = !!(opt && opt.auto);
+  // ⚠ A PRESS READS THE CLIENT FROM THE SHEET FIRST (found on review, 2026-11-02): another device may have filed it, its signed records
+  // on the sheet's list, while this device holds the envelope's key without the link (an apply on another device won the key: both
+  // stamp it). Read, the envelope reads as filed, and DocuSign is not asked for the paper again. A read that fails files from this
+  // device's copy, as before. The filing on completion (`auto`) runs the moment this device learns the envelope is complete.
+  if (!auto && !(opt && opt.read) && SHEETS_SYNC_URL && _invJob(jobId)) {
+    var ret = true;
+    approvalRecordFromSheet(jobId, function () { ret = approvalEnvelopeFile(jobId, Object.assign({}, opt || {}, { read: true })); });
+    return ret;
+  }
   var job = _invJob(jobId);
   var signed = approvalEnvelopes(job).filter(function (x) { return x.status === 'completed'; });
   var e = (opt && opt.id != null && opt.id !== '') ? approvalEnvelopeOf(job, opt.id)
     : (signed.filter(function (x) { return !approvalEnvelopeFiledUrl(job, x); })[0] || signed[signed.length - 1] || null);
   var say = function (k, m) { if (auto) showSyncBadge(m, k !== 'ok'); else _docNotice(k, m, jobId); return false; };
   if (!e || e.status !== 'completed') return auto ? false : say('warn', 'Nothing to file: the request has not been signed by everyone in DocuSign.');
-  if (approvalEnvelopeFiledUrl(job, e)) { approvalEnvelopeRecords(jobId); return auto ? false : say('ok', 'The signed request is already filed to Drive.'); }
+  if (approvalEnvelopeFiledUrl(job, e)) {
+    approvalEnvelopeRecords(jobId);
+    if (auto) return false;
+    // A card drawn before the read still offers the press: repainted by id. Only the page sees it (the unit rigs draw the card afresh
+    // from the record, so this line's revert stays green there).
+    if (typeof _invRefreshReleases === 'function') _invRefreshReleases(jobId);
+    return say('ok', 'The signed request is already filed to Drive.');
+  }
   if (_approvalEnvFiling[jobId]) return say('warn', 'The signed request is already being filed.');
   if (!SHEETS_SYNC_URL) return say('warn', 'No Apps Script URL is set (Settings), so the signed request cannot be fetched from DocuSign.');
   if (!auto && e.fileAskedAt && (Date.now() - new Date(e.fileAskedAt).getTime()) < ESIGN_RECHECK_MINS * 60000) {
@@ -35459,10 +35602,16 @@ function approvalEnvelopeFile(jobId, opt) {
         if (typeof _invRefreshReleases === 'function') _invRefreshReleases(jobId);
         return;
       }
-      var env = docState(job, approvalEnvelopeKey(e.id));
+      // ⚠ ON THE CLIENT AS THIS DEVICE NOW HOLDS IT (found on review, 2026-11-02): a refresh of the client list during the round trip
+      // puts the sheet's copy in place of the one the press began with, and a link written onto that one was read by nothing: the
+      // signed records below (which read the list's copy) were never listed, and File signed copy stayed on the card. Where the copy
+      // now held lacks the envelope, the one this device filed is carried onto it first, never an envelope of a filing alone.
+      var cur = _invJob(jobId) || job;
+      if (!approvalEnvelopeOf(cur, e.id)) { if (!cur.docState) cur.docState = {}; cur.docState[approvalEnvelopeKey(e.id)] = e; }
+      var env = docState(cur, approvalEnvelopeKey(e.id));
       env.filedAt = new Date().toISOString(); env.filedUrl = d.signedUrl; env.filedId = d.signedId || '';
       if (d.certUrl) env.certUrl = d.certUrl;
-      _saveJobEdit(job);
+      _saveJobEdit(cur);
       approvalEnvelopeRecords(jobId);
       say('ok', 'Signed release approval filed to Drive ✓' + (d.certUrl ? '' : ' (the certificate of completion did not come back: ' + (d.certError || 'no reason given') + ')'));
       if (typeof _invRefreshReleases === 'function') _invRefreshReleases(jobId);
@@ -35897,6 +36046,15 @@ function approvalRequestRecordRefusal(job, S) {
     : _env.status === 'completed' ? 'It was signed in DocuSign and is recorded by itself: there is nothing to record by hand.'
     : 'It was ' + _env.status + ' in DocuSign, so nothing came back to record: send a fresh request.';
   if (!S.open.length) return 'Nothing on the request is waiting for a signature any more: there is nothing to record.';
+  // ⚠ AND NOT WHILE ITS LINES ARE OUT ON ANOTHER ENVELOPE (found on review, 2026-11-02): an older request a roll-back put back can share
+  // lines with an envelope still out. The dialog then refuses them (invRecordApproval, on both roads), and this road has no untick, so
+  // the press could only ever end in that refusal. The bulk bar's Record approval records a signed paper for the rest.
+  var outIds = {};
+  approvalEnvelopesOut(job).forEach(function (e) { (Array.isArray(e.stableIds) ? e.stableIds : []).forEach(function (id) { outIds[String(id)] = 1; }); });
+  var onOut = S.open.filter(function (r) { return outIds[String(r.stableId)]; }).length;
+  if (onOut) return (onOut === S.open.length ? (onOut === 1 ? 'Its line is' : 'Its lines are') : onOut === 1 ? '1 of its lines is' : onOut + ' of its lines are')
+    + ' out for signature in DocuSign on another envelope, '
+    + 'and every signature there is recorded by itself once everyone has signed. To record a signed paper for any other line, use the bulk bar’s Record approval.';
   return '';
 }
 // The way round for a signed copy of the request sent before the draft now waiting: the bulk bar records any lines.
@@ -52560,7 +52718,14 @@ function deskFoldState(jobId, job, fold, all, today) {
     // A request that went through DocuSign (2026-10-26c): out, its lines are out for signature and nothing is sent past it;
     // declined or voided, it came back with nothing and a fresh request is owed (red, and the bar opens).
     var env = approvalEnvelopeForReq(job, S.req), envOut = approvalEnvelopesOut(job).length > 0;
-    var envEnded = !!(env && (env.status === 'declined' || env.status === 'voided')) && S.open.length > 0;   // never red with nothing left
+    // Any envelope the card draws (found on review, 2026-11-02: one a roll-back displaced was declined, and the bar stayed grey), never
+    // red with nothing it carried left waiting.
+    var ended = approvalEnvelopesShown(job, S).filter(function (e) {
+      if (e.status !== 'declined' && e.status !== 'voided') return false;
+      var ids = (Array.isArray(e.stableIds) ? e.stableIds : []).map(String);
+      return all.some(function (r) { return r && ids.indexOf(String(r.stableId)) >= 0 && _approvalLineOpen(r, job); });
+    })[0] || null;
+    var envEnded = !!ended;
     // A line the request carried that changed after it went (P5) is owed a fresh request, as a line it never carried is.
     var changedSent = (!draft && S.st && S.st.sentAt && !(env && env.status === 'completed')) ? (S.changed || []) : [];
     st.openByDefault = S.fresh.length > 0 || draft || unfiled > 0 || envEnded || changedSent.length > 0;
@@ -52569,6 +52734,7 @@ function deskFoldState(jobId, job, fold, all, today) {
     var unnamedN = once('approval', S.unnamed);   // never asked for until somebody is named (2026-10-26)
     var changedN2 = once('approval', changedSent);
     var unsigned = (S.st && S.st.sentAt && !draft) ? once('approval', S.open) : 0;
+    unsigned += once('approval', S.onEnvelope || []);   // out on another envelope (2026-11-02): out for signature, never owed a fresh request
     var owed = once('leaving', fid ? all.filter(function (r) { return invReceiptOwed(r, job); }) : []);
     var day = '', readyN = 0, notToday = false;
     outs.forEach(function (g) {
@@ -52585,7 +52751,7 @@ function deskFoldState(jobId, job, fold, all, today) {
     var changedN = draft ? approvalRequestChanged(job, S.st).length : 0;   // flagged on the card, never a refusal (2026-10-26)
     if (changedN) bit(s(changedN, 'item', 'items') + ' on the draft changed since it was made', 'amber');
     if (changedN2) bit(s(changedN2, 'item', 'items') + ' changed since the request went: send a fresh request', 'amber');
-    if (envEnded) bit((env.status === 'declined' ? 'Declined' : 'Voided') + ' in DocuSign: send a fresh request', 'red');
+    if (envEnded) bit((ended.status === 'declined' ? 'Declined' : 'Voided') + ' in DocuSign: send a fresh request', 'red');
     if (fresh) bit(draft ? s(fresh, 'more item needs', 'more items need') + ' written approval: send a fresh request once the draft has gone'
       : envOut ? s(fresh, 'more item needs', 'more items need') + ' written approval: the next request, once DocuSign is done'
       : s(fresh, 'item needs', 'items need') + ' written approval: send a request', 'amber');

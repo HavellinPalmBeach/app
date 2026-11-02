@@ -738,11 +738,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     APPROVAL_REQ_WATCHDOG_MS: 'how long the send waits for its chain of calls — a constant, not an approval',
     // The request through DocuSign (2026-10-26c): the envelope's finished states and two in-flight maps, never an approval.
     APPROVAL_ENV_DONE: 'the envelope statuses that end it (completed, declined, voided) — a constant, not an approval',
-    _approvalEnvChecking: 'which clients\' envelopes are being asked about now — a guard, not an approval',
+    // RESTATED 2026-11-02 (the envelope as its own record): the two in-flight maps are keyed by the envelope, not the client.
+    _approvalEnvChecking: 'which envelopes are being asked about now — a guard, not an approval',
     _approvalEnvFiling: 'which clients\' signed requests are being filed now — a guard, not an approval',
     _approvalEsignOut: 'which clients\' DocuSign sends wait on an answer — a guard, not an approval',
-    _approvalEnvAskedAt: 'when this page last asked DocuSign about a client\'s envelope — a floor, not an approval',
+    _approvalEnvAskedAt: 'when this page last asked DocuSign about an envelope — a floor, not an approval',
     APPROVAL_ENV_READ_MS: 'how fresh a read must be for the signatures to be written off it — a constant, not an approval',
+    APPROVAL_ENV_PREFIX: 'the docState key prefix each envelope is recorded under (2026-11-02) — a constant, not an approval',
     INV_APPROVAL_RISE_PCT: 'Ask 5\'s rise past which a release approval no longer covers its line (P5) — a constant, not an approval',
     INV_APPROVAL_WAS_MAX: 'how many replaced release approvals a line keeps (P5) — a constant, not an approval',
   };

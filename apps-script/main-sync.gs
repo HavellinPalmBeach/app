@@ -174,8 +174,9 @@
 // every device): the app now keeps each envelope as its own docState key, 'approvalEnv:<envelopeId>', which this merge already takes
 // key by key, and reads the client from the sheet before an estate's send. Here esignSendRequest refuses a post from a copy of the
 // app opened before the change (no `envKey`) and refuses while the sheet's copy of the client holds an envelope still out for
-// signature (_approvalEnvOutGs; APPROVAL_ENV_PREFIX_GS and APPROVAL_ENV_DONE_GS held equal to the app's), each refusal logged and
-// nothing sent to DocuSign. The merge is unchanged. No action or type changes; it carries 2026-10-28's. Until it is live a copy of
+// signature (_approvalEnvOutGs; APPROVAL_ENV_PREFIX_GS and APPROVAL_ENV_DONE_GS held equal to the app's), each refusal logged, marked
+// `refused` ('out' for the second envelope) so the app never puts it to the person as DocuSign's answer, and nothing sent to DocuSign.
+// The merge is unchanged. No action or type changes; it carries 2026-10-28's. Until it is live a copy of
 // the app that has not been reloaded can send a request through DocuSign that today's app never checks, records on the lines or
 // files, and two devices pressing at once can put out a second envelope while one is out.
 var BACKEND_VERSION = '2026-11-02';
@@ -3113,7 +3114,16 @@ function _approvalEnvOutGs(job) {
 function esignSendRequestForJob(data) {
   data = data || {};
   var log = { act: 'esignSendRequest', jobId: data.jobId, by: data.by };
-  var refuse = function (why) { log.result = 'refused: ' + why; _accessLog(log); return { ok: false, error: why }; };
+  // ⚠ EVERY REFUSAL SAYS IT IS ONE (found on review, 2026-11-02): `refused` tells the app that this script turned the request away
+  // before DocuSign was asked, so it is never put to the person as DocuSign's answer, nor followed by advice to send the same lines
+  // again; 'out' marks the second envelope it will not make, on which the app reads the client again and redraws the card. A crash
+  // (the catch below) is not marked: nothing then says DocuSign was never asked.
+  var refuse = function (why, kind) {
+    log.result = 'refused: ' + why; _accessLog(log);
+    var out = { ok: false, error: why };
+    if (kind !== false) out.refused = kind || 'refused';
+    return out;
+  };
   try {
     if (data.jobId === undefined || data.jobId === null || String(data.jobId).trim() === '')
       return refuse('The request names no client, so nothing was sent: reload the app (an older copy of it is open) and send again.');
@@ -3131,7 +3141,7 @@ function esignSendRequestForJob(data) {
         'October', 'November', 'December'][sent.getMonth()] + ' ' + sent.getDate() + ', ' + sent.getFullYear();
       return refuse('The envelope was not created: a release request for this client is already out for signature in DocuSign'
         + (day ? ' (sent ' + day + ')' : '') + '. Reload the app to see it; if it has just been signed or voided, open the client so the '
-        + 'app checks DocuSign, then send again.');
+        + 'app checks DocuSign, then send again.', 'out');
     }
     var fids = _jobFiduciariesGs(job);
     if (!fids.length) return refuse('No representative is recorded on this client on the sheet, so nothing was sent.');
@@ -3165,7 +3175,7 @@ function esignSendRequestForJob(data) {
     return res;
   } catch (error) {
     Logger.log('esignSendRequestForJob error: ' + error);
-    return refuse(String(error));
+    return refuse(String(error), false);
   }
 }
 // The initials box sits on the line its marker opens, so the tab goes down less than a signature's does (DS_TAB_Y_OFFSET

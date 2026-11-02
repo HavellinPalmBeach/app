@@ -294,7 +294,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   });
 
   // ───────────────────────────────────────────────────────────────────────────
-  guard('every locked writer flushes before its lock goes, and the deployment says 2026-10-28', () => {
+  guard('every locked writer flushes before its lock goes, and the deployment carries 2026-10-28', () => {
     const { GS } = require('./sheet-rig');
     const body = (name) => { const i = GS.indexOf('\nfunction ' + name + '('); if (i < 0) return ''; const j = GS.indexOf('\n}\n', i); return GS.slice(i, j + 2); };
     ['_writeStoreBlob', 'saveAllJobsToSheet', 'saveJobToSheet', 'resetAllJobDataConfirm', 'deleteJobFromSheet'].forEach((f) => {
@@ -304,6 +304,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const flush = code.lastIndexOf('SpreadsheetApp.flush();'), release = code.indexOf('releaseLock');
       ok(flush > 0 && (release < 0 || flush < code.lastIndexOf('finally')), f + ' flushes, inside its try');
     });
-    eq((GS.match(/var BACKEND_VERSION = '([^']+)';/) || [])[1], '2026-10-28', 'BACKEND_VERSION is 2026-10-28');
+    // RESTATED 2026-11-02 (the release request's envelope as its own record): a later deployment carries this one's flushes.
+    const bv = (GS.match(/var BACKEND_VERSION = '([^']+)';/) || [])[1] || '';
+    ok(bv >= '2026-10-28', 'BACKEND_VERSION is 2026-10-28 or later, carrying it (' + bv + ')');
   });
 };
