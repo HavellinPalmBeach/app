@@ -1479,7 +1479,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.28 · 5:26pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.28 · 8:56pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -44381,6 +44381,8 @@ function _invPatch(el, html, inner) {
   // During a press on the desk the repaint waits for the click, and is drawn then (_invPressHolds, _invPressLater).
   if (typeof _invPressHolds === 'function' && _invPressHolds(el)) { _invPressLater(el, html, inner); return true; }
   el._invPatchSeq = (el._invPatchSeq || 0) + 1;   // a repaint drawn now supersedes one held for this element
+  // Drawn between a press's end and its held repaints (the click's own): drawn again after them, so the newer wins (_invPressFlush).
+  if (typeof _invPressOwed !== 'undefined' && _invPressOwed && _invPressInDesk(el)) _invPressSince.push({ el: el, id: el.id || '', html: html, inner: inner, seq: el._invPatchSeq, epoch: _invPressEpoch });
   html = String(html == null ? '' : html);
   var tpl = null;
   try { tpl = (typeof document !== 'undefined' && document.createElement) ? document.createElement('template') : null; } catch (e) { tpl = null; }
@@ -44415,18 +44417,25 @@ function _invMorphNode(a, b) {
     if (want !== null && a.value !== want) a.value = want;
   }
 }
-// What makes two elements the same control (P9's review): the tag, the id, a `data-k`, and what pressing it does. An element with no
-// id, no data-k and no action of its own (a note's block, a chip's wrapper) takes the first action inside it. A text node is matched
-// by place among the text around it.
+// What makes two elements the same control (P9's review): the tag, the id, a `data-k`, and what pressing it does: every handler
+// it carries (onclick, onchange, oninput, onkeydown, any on…), its `for` and its `href`, in name order. An element with no id, no
+// data-k and no action of its own (a note's block, a chip's wrapper) takes the first action inside it. A text node is matched by
+// place among the text around it.
 function _invMorphAct(n) {
-  var acts = ['onclick', 'onchange', 'oninput', 'for', 'href'], out = '';
-  for (var i = 0; i < acts.length; i++) { var v = n.getAttribute(acts[i]); if (v != null) out += '|' + acts[i] + '=' + v; }
+  var names = [], at = n.attributes || [], out = '', i, nm;
+  for (i = 0; i < at.length; i++) {
+    nm = String(at[i].name || '').toLowerCase();
+    if (nm.indexOf('on') === 0 || nm === 'for' || nm === 'href') names.push(nm);
+  }
+  names.sort();
+  for (i = 0; i < names.length; i++) out += '|' + names[i] + '=' + n.getAttribute(names[i]);
   return out;
 }
 function _invMorphKey(n) {
   if (!n || n.nodeType !== 1) return '#' + (n ? n.nodeType : 0);
   var id = n.id || '', k = n.getAttribute('data-k') || '', act = _invMorphAct(n);
-  if (!id && !k && !act && n.querySelector) {
+  // Only an element with elements inside it is searched (an option, a span of text, a box has none: most of a 600-line desk).
+  if (!id && !k && !act && n.firstElementChild && n.querySelector) {
     var d = null;
     try { d = n.querySelector('[onclick],[onchange],[oninput],[for],[href]'); } catch (e) { d = null; }
     if (d) act = '>' + d.tagName + _invMorphAct(d);
@@ -44467,9 +44476,15 @@ function _invMorphKids(a, b) {
 // own repaint of the Reviewed box is newer than the one the name's change asked for) or the tab was drawn since (`_invPressEpoch`);
 // a whole redraw asked for during the press (`_invPressRedraw`) is drawn instead, in place (renderInventoryTab({morph: true})), and
 // covers the rest. Held repaints are drawn as asked, never turned into a whole redraw: that would apply the filters, and a line named
-// under Unnamed shots would leave the view as the next box is pressed. Every write happens at once; only the drawing waits. A release the page never hears (an alert
-// in between, the window left) is caught by the next mousemove with no button down, a select's own change, the window losing the
-// focus, or INV_PRESS_MAX_MS. Only the desk: nothing else on the page asks.
+// under Unnamed shots would leave the view as the next box is pressed. ⚠ AND IN THE ORDER THEY WERE ASKED FOR (the fix of P9's review):
+// a held repaint was worked out before the click, so where it covers a repaint the click made inside it (a row held, a box in it
+// repainted by the press), the click's is drawn again after it (`_invPressSince`), and the desk ends as it would have with nothing
+// held. A held repaint of an element the click took off the page is dropped, and a press that starts before the last one's are drawn
+// keeps them, in order, for its own click. Every write happens at once; only the drawing waits. A release the page never hears (an alert
+// in between, the window left) is caught by the next mousemove with no button down, a select's own change, a key pressed, the
+// window losing the focus, or INV_PRESS_MAX_MS. A tap on a touch screen is the same press: the browser sends its mousedown, mouseup
+// and click together after the finger lifts, and the box is left on that mousedown (browser step 124 K taps it). Only the desk:
+// nothing else on the page asks.
 var INV_PRESS_MAX_MS = 3000;
 var _invPressDown = false;
 var _invPressRedraw = false;
@@ -44477,7 +44492,15 @@ var _invPressTimer = null;
 var _invPressTracked = false;
 var _invPressQ = [];
 var _invPressEpoch = 0;
+var _invPressOwed = false;
+var _invPressSince = [];
 function _invPressStart() {
+  // A press that starts before the last one's held repaints are drawn: they wait for this one, still in the order asked, the last
+  // click's own repaints after them. Nothing is drawn under this press.
+  if (_invPressOwed) {
+    if (_invPressQ.length) _invPressSince.forEach(function (x) { _invPressQ.push({ el: x.el, html: x.html, inner: x.inner, seq: x.seq, epoch: x.epoch }); });
+    _invPressSince = []; _invPressOwed = false;
+  }
   _invPressDown = true;
   if (_invPressTimer) clearTimeout(_invPressTimer);
   _invPressTimer = setTimeout(_invPressEnd, INV_PRESS_MAX_MS);
@@ -44486,28 +44509,38 @@ function _invPressEnd() {
   if (_invPressTimer) { clearTimeout(_invPressTimer); _invPressTimer = null; }
   if (!_invPressDown) return;
   _invPressDown = false;
+  _invPressOwed = true;   // what the click draws from here is recorded, to be drawn again after the held repaints
   setTimeout(_invPressFlush, 0);   // after the click
 }
 function _invPressFlush() {
   if (_invPressDown) return;
-  var q = _invPressQ;
-  _invPressQ = [];
+  var q = _invPressQ, since = _invPressSince, drew = false;
+  _invPressQ = []; _invPressSince = []; _invPressOwed = false;
   if (_invPressRedraw) { renderInventoryTab({ morph: true }); return; }   // the whole tab, which covers every held repaint
   q.forEach(function (x) {
     try {
       if (x.fn) { x.fn(); return; }
-      if (x.epoch === _invPressEpoch && x.el._invPatchSeq === x.seq) _invPatch(x.el, x.html, x.inner);
+      if (x.epoch === _invPressEpoch && x.el._invPatchSeq === x.seq && x.el.isConnected !== false) { _invPatch(x.el, x.html, x.inner); drew = true; }
     } catch (e) {}
   });
+  // The click's own repaints are newer than every held one: drawn again after them, where the tab was not drawn since.
+  if (drew) since.forEach(function (x) {
+    try {
+      if (x.epoch !== _invPressEpoch) return;
+      var el = x.el.isConnected === false ? (x.id && document.getElementById ? document.getElementById(x.id) : null) : x.el;
+      if (el) _invPatch(el, x.html, x.inner);
+    } catch (e) {}
+  });
+}
+// Whether a repaint is the desk's: `el` inside #inventory-content.
+function _invPressInDesk(el) {
+  var host = (typeof document !== 'undefined' && document.getElementById) ? document.getElementById('inventory-content') : null;
+  return !!(el && host && typeof host.contains === 'function' && host.contains(el));
 }
 // True while a press is under way and the repaint is the desk's (`el` inside #inventory-content; no `el`: the whole tab).
 function _invPressHolds(el) {
   if (!_invPressDown) return false;
-  if (el) {
-    var host = (typeof document !== 'undefined' && document.getElementById) ? document.getElementById('inventory-content') : null;
-    if (!host || typeof host.contains !== 'function' || !host.contains(el)) return false;
-  }
-  return true;
+  return el ? _invPressInDesk(el) : true;
 }
 // A repaint by id held for the click (from _invPatch), or one worked out when it is drawn (`fn`, once per `key`).
 function _invPressLater(el, html, inner) {
@@ -44526,6 +44559,8 @@ function _invPressTrack() {
   document.addEventListener('mouseup', function () { _invPressEnd(); }, true);
   document.addEventListener('mousemove', function (e) { if (_invPressDown && e && !e.buttons) _invPressEnd(); }, true);
   document.addEventListener('change', function (e) { if (e && e.target && e.target.tagName === 'SELECT') _invPressEnd(); }, true);
+  // A key pressed: the press ended unheard (a question the box's change asked on the mousedown swallows its mouseup).
+  document.addEventListener('keydown', function () { _invPressEnd(); }, true);
   if (typeof window !== 'undefined' && window.addEventListener) window.addEventListener('blur', function () { _invPressEnd(); });
 }
 

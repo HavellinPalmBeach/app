@@ -37,7 +37,7 @@
 //      Inventory PDF: the PDF, never the CSV; a name typed that quiets #o1's note, then Show the item on #o2's: #o2; the search
 //      typed with a redraw owed, then Not reviewed: it filters; a Total typed with a redraw owed, then No value yet: it filters.
 //      And the gun cabinet's blank line from + Another item in this photo, answered with the Firearm note again, reads nothing to
-//      list with no + Close-up.
+//      list with no + Close-up. And a tap on a touch screen straight after a figure that takes Value 1 line off the bar: the PDF.
 //   At 1440 and 390 px no horizontal overflow; zero page errors throughout.
 //
 //   NODE_PATH=/path/to/node_modules node tests/browser/step124.js [/abs/path/to/havellin.html]
@@ -436,6 +436,28 @@ const DARK = 'Too dark to tell what is on the shelf: photograph it again';
       has(r.row, 'nothing to list', 'its row says nothing to list');
       lacks(r.row, 'could not be read', '⚠ never could not be read');
       ok(!r.cu, 'and offers no + Close-up');
+      // 6. A tap on a touch screen (the iPad): the browser sends the tap's mousedown, mouseup and click together after the finger
+      // lifts, and the box is left on that mousedown. A figure typed that takes Value 1 line off the bar, then the PDF tapped.
+      await p.evaluate((j) => { const T = Date.now() - 86400000;
+        _photoRefs[j].push({ stableId: 'v19', label: 'inventory', collId: null, roomIdx: 3, status: 'uploaded', ts: T, updatedAt: T, filename: 'HVL-2610-P9_Fv19.jpg',
+          driveFileId: 'Fv19', driveFileUrl: 'https://drive.google.com/file/d/Fv19/view', category: 'Furniture', qty: 1, objectName: 'Cedar hope chest', namedBy: 'desk',
+          disposition: 'Auction', channel: 'Kodner Galleries', condition: 'Good' });
+        _invAssignItemNos(j); savePhotoRefs(j); renderInventoryTab(); }, J);
+      await p.waitForTimeout(600);
+      ok(await vis('#inv-workbar button[onclick="agentValueRun(' + J + ')"]'), 'fixture: Value 1 line shows again, for the hope chest');
+      await p.click('#inv-fmv-v19'); await p.fill('#inv-fmv-v19', '140');
+      const tapSel = '#inv-workbar button[onclick="printEstateInventoryReport(' + J + ')"]';
+      await p.evaluate((q) => document.querySelector(q).scrollIntoView({ block: 'center' }), tapSel); await p.waitForTimeout(250);
+      const tb = await p.locator(tapSel).boundingBox();
+      const cdp = await p.context().newCDPSession(p);
+      await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 1 });
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: tb.x + tb.width / 2, y: tb.y + tb.height / 2 }] });
+      await p.waitForTimeout(80);
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+      await p.waitForTimeout(900);
+      await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: false }); await cdp.detach();
+      eq(await p.evaluate(() => window.__ran.splice(0)), ['pdf'], '⚠⚠ tapped on a touch screen straight after the figure: the PDF, never the CSV');
+      eq((await line('v19')).fmv, 140, 'fixture: the figure was written');
       await p.evaluate(() => { window.printEstateInventoryReport = window.__orig.pdf; window.exportInventoryCSV = window.__orig.csv; window.deskShowLine = window.__orig.show; });
     });
 

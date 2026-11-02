@@ -440,6 +440,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         querySelector() { let hit = null; const walk = (n) => (n.childNodes || []).some((c) => { if (c.nodeType !== 1) return false;
           if (['onclick', 'onchange', 'oninput', 'for', 'href'].some((k) => c.hasAttribute(k))) { hit = c; return true; } return walk(c); }); walk(this); return hit; },
         querySelectorAll(sel) { const out = []; const walk = (n) => (n.childNodes || []).forEach((c) => { if (c.nodeType === 1 && c.tagName.toLowerCase() === sel) out.push(c); walk(c); }); walk(this); return out; },
+        get firstElementChild() { return this.childNodes.find((c) => c.nodeType === 1) || null; },
         get textContent() { return this.childNodes.map((c) => (c.nodeType === 3 ? c.nodeValue : c.textContent)).join(''); } };
       Object.keys(attrs || {}).forEach((k) => el.setAttribute(k, attrs[k]));
       (kids || []).forEach((c) => el.appendChild(c));
@@ -495,6 +496,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     s._invMorphKids(box2, mk('DIV', {}, [mk('BUTTON', { onclick: 'b()' }, [tx('B')])]));
     ok(box2.childNodes[0] !== was && was.getAttribute('onclick') === 'a()', '⚠ a button whose action changed is a new button; the old one is never re-pointed');
     eq(s._invMorphKey(mk('INPUT', { id: 'inv-fmv-a', onchange: "_invEdit(7,'a','fmv',this)" })), "INPUT#inv-fmv-a~|onchange=_invEdit(7,'a','fmv',this)", 'the key: tag, id, data-k and the action');
+    // Only an element with elements inside it is searched for the action inside it: a 600-line desk is mostly options, spans and
+    // boxes, and searching each took the key from 100 ms to 650 ms of a whole-tab patch (measured in the browser, 20,348 elements).
+    const leaf = mk('SPAN', { class: 'x' }, [tx('just text')]); let searched = 0; leaf.querySelector = () => { searched++; return null; };
+    const wrap = mk('DIV', {}, [mk('BUTTON', { onclick: 'w()' }, [tx('W')])]);
+    eq([s._invMorphKey(leaf), searched, s._invMorphKey(wrap)], ['SPAN#~', 0, 'DIV#~>BUTTON|onclick=w()'], 'a leaf is never searched; a wrapper takes the action inside it');
+    // Every handler it carries is part of what it does, in name order (a bar's head carries onkeydown beside onclick).
+    eq(s._invMorphKey(mk('DIV', { onkeydown: 'k()', class: 'sec-hdr', onclick: 'c()', title: 't' })), 'DIV#~|onclick=c()|onkeydown=k()', '⚠ the key holds every handler, onkeydown too, in name order');
+    const kd = mk('DIV', { onclick: 'c()', onkeydown: 'k1()' }, [tx('Releases')]), box3 = mk('DIV', {}, [kd]);
+    s._invMorphKids(box3, mk('DIV', {}, [mk('DIV', { onclick: 'c()', onkeydown: 'k2()' }, [tx('Releases')])]));
+    ok(box3.childNodes[0] !== kd && kd.getAttribute('onkeydown') === 'k1()', '⚠ a control whose key handler changed is a new control too: no handler is ever re-pointed');
     // _invPatch itself, where the page can parse markup (a <template>): it morphs, never assigns (the sweep's R24: the morph
     // functions alone passed with _invPatch assigning every time). The template's parse is the hand-built tree for that markup.
     const TREES = {};
@@ -610,8 +621,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const doc = { getElementById: (id) => (id === 'inventory-content' ? host : null),
       addEventListener: (t, f) => { (listeners[t] = listeners[t] || []).push(f); } };
     const fire = (t, e) => (listeners[t] || []).forEach((f) => f(e || {}));
-    const S = sandbox({ fns: ['_invPressStart', '_invPressEnd', '_invPressFlush', '_invPressHolds', '_invPressTrack', '_invPatch', '_invPressLater', '_invPressFn'],
-      vars: ['INV_PRESS_MAX_MS', '_invPressDown', '_invPressRedraw', '_invPressTimer', '_invPressTracked', '_invPressQ', '_invPressEpoch'],
+    const S = sandbox({ fns: ['_invPressStart', '_invPressEnd', '_invPressFlush', '_invPressHolds', '_invPressInDesk', '_invPressTrack', '_invPatch', '_invPressLater', '_invPressFn'],
+      vars: ['INV_PRESS_MAX_MS', '_invPressDown', '_invPressRedraw', '_invPressTimer', '_invPressTracked', '_invPressQ', '_invPressEpoch', '_invPressOwed', '_invPressSince'],
       stubs: { document: doc, window: { addEventListener: (t, f) => { (listeners['w:' + t] = listeners['w:' + t] || []).push(f); } },
         setTimeout: (f, ms) => { timers.push({ f, ms }); return timers.length; }, clearTimeout() {}, renderInventoryTab: (o) => drawn.push(o) } });
     S._invPressTrack(); S._invPressTrack();
@@ -651,6 +662,55 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     fire('mouseup', {});
     timers.filter((t) => t.ms === 0).slice(-1).forEach((t) => t.f());
     eq(rb.outerHTML, 'ticked, by the click', 'a repaint held before the tab was drawn is dropped');
+    // ⚠⚠ IN THE ORDER ASKED (the fix of P9's review): a held repaint was worked out before the click, so where it covers one the click
+    // made inside it (the row held for the figure typed, its box repainted by the press), the click's is drawn again after it.
+    const log = [];
+    const mkEl = (id) => { const e = { id, _h: 'old' }; Object.defineProperty(e, 'outerHTML', { get() { return this._h; }, set(v) { this._h = v; log.push(id + '=' + v); } }); return e; };
+    const row = mkEl('inv-row-a'), rbox = mkEl('inv-rev-a');
+    host.contains = (el) => [inDesk, rb, row, rbox].indexOf(el) >= 0;
+    fire('mousedown', { button: 0 });
+    S._invPatch(row, 'row as the figure left it, box unticked');
+    fire('mouseup', {});
+    S._invPatch(rbox, 'box ticked by the click');
+    timers.filter((t) => t.ms === 0).slice(-1).forEach((t) => t.f());
+    eq(log, ['inv-rev-a=box ticked by the click', 'inv-row-a=row as the figure left it, box unticked', 'inv-rev-a=box ticked by the click'],
+      '⚠⚠ the held row is drawn, then the click\'s box again over it: the desk ends as it would have with nothing held');
+    eq(S._invPressSince, [], 'and the record of the click\'s repaints is let go');
+    log.length = 0;
+    fire('mousedown', { button: 0 });
+    S._invPatch(rbox, 'held box');
+    fire('mouseup', {});
+    S._invPatch(rbox, 'the click\'s box');
+    timers.filter((t) => t.ms === 0).slice(-1).forEach((t) => t.f());
+    eq(log, ['inv-rev-a=the click\'s box'], 'nothing held drawn (superseded): nothing drawn twice');
+    log.length = 0;
+    fire('mousedown', { button: 0 });
+    S._invPatch(row, 'held row'); row.isConnected = false;
+    fire('mouseup', {});
+    timers.filter((t) => t.ms === 0).slice(-1).forEach((t) => t.f());
+    eq(log, [], '⚠ a held repaint of an element the click took off the page is dropped');
+    delete row.isConnected;
+    S._invPatch(row, 'no press');
+    eq(S._invPressSince, [], 'with no press ending, nothing is recorded');
+    // A second press before the first one's held repaints are drawn: nothing is drawn under it, and they wait for its click, still in
+    // the order asked (the first click's own repaint after the first press's held one).
+    log.length = 0;
+    const firstFlush = () => timers.filter((t) => t.ms === 0).slice(-1)[0];
+    fire('mousedown', { button: 0 }); S._invPatch(row, 'first press, held'); fire('mouseup', {});
+    const pending = firstFlush();
+    S._invPatch(rbox, 'first click\'s box');
+    fire('mousedown', { button: 0 });
+    pending.f();
+    eq(log, ['inv-rev-a=first click\'s box'], '⚠ the next press draws nothing of the last one\'s under it, its flush landing mid-press included');
+    fire('mouseup', {}); firstFlush().f();
+    eq(log, ['inv-rev-a=first click\'s box', 'inv-row-a=first press, held', 'inv-rev-a=first click\'s box'], '⚠ then the held row and the first click\'s box over it, in the order asked');
+    // And where the second press holds a newer repaint over the first click's (the row again), the newer is drawn last.
+    log.length = 0;
+    fire('mousedown', { button: 0 }); S._invPatch(row, 'row, first press'); fire('mouseup', {});
+    S._invPatch(rbox, 'box, first click');
+    fire('mousedown', { button: 0 }); S._invPatch(row, 'row, second press'); fire('mouseup', {});
+    timers.filter((t) => t.ms === 0).slice(-2).forEach((t) => t.f());
+    eq(log[log.length - 1], 'inv-row-a=row, second press', '⚠⚠ the second press\'s row is drawn after the first click\'s box, never under it');
     // A whole redraw asked for during the press: drawn instead, in place, and it covers every held repaint.
     fire('mousedown', { button: 0 });
     S._invPatch(rb, 'held again'); S._invPressRedraw = true;
@@ -670,6 +730,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(S._invPressDown === false, 'a right click is no press');
     fire('mousedown', { button: 0 }); fire('w:blur', {});
     ok(S._invPressDown === false, 'the window losing the focus ends it');
+    fire('mousedown', { button: 0 }); fire('keydown', { key: 'a' });
+    ok(S._invPressDown === false, 'a key pressed ends it (a question asked on the mousedown swallows its mouseup)');
     // renderInventoryTab waits for the press, and is drawn then.
     const RT = sandbox({ fns: ['renderInventoryTab', '_invPressHolds'], vars: ['_invPressDown', '_invPressRedraw', '_invPressEpoch'],
       stubs: { document: { getElementById: () => { throw new Error('drawn during the press'); } } } });
@@ -685,7 +747,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq([RT2._invPressEpoch, RT2._invPressRedraw], [ep + 1, false], '⚠ a draw of the tab moves the epoch (so a repaint held before it is dropped) and settles a whole redraw owed');
     // The bars' lines, repainted by id after a card's repaint, wait too (they are drawn with the desk once the press lands).
     let asked = 0;
-    const FH = sandbox({ fns: ['_deskFoldHeadsRepaint', '_invPressHolds', '_invPressFn', '_invPressFlush'], vars: ['_invPressDown', '_invPressRedraw', '_invPressQ'],
+    const FH = sandbox({ fns: ['_deskFoldHeadsRepaint', '_invPressHolds', '_invPressFn', '_invPressFlush'], vars: ['_invPressDown', '_invPressRedraw', '_invPressQ', '_invPressSince', '_invPressOwed', '_invPressEpoch'],
       stubs: { document: { getElementById: () => { asked++; return null; } } } });
     FH._invPressDown = true;
     eq([FH._deskFoldHeadsRepaint(7), FH._deskFoldHeadsRepaint(7), asked, FH._invPressQ.length], [false, false, 0, 1], '⚠ during a press the bars\' lines are not repainted: held, once');
@@ -735,5 +797,18 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(pbmd, 'Under **Not reviewed** or **Unsure** a row you tick stays put, greyed, with **Undo**, until you change the view', 'and its markdown copy');
     lacks(pb, 'press Remove line in its ▾, or type a name), or a shot still waiting', '⚠ the playbook no longer sends a person to each ▾ for them');
     has(fn('_invHeldShown'), "(_invFilter.flag === 'unreviewed' || _invFilter.flag === 'unsure')", '…a row is held under Not reviewed and Unsure, as the pages say');
+    // P9's review: the manual says a press lands on the button pressed and nothing is drawn under it, a tap too; held to the code.
+    const PRESS = 'never hands the press to its neighbour';
+    has(man, PRESS, 'the manual says a press is never handed to the button beside it');
+    has(md, PRESS, 'and its markdown copy');
+    const DRAWN = 'nothing on the desk is drawn between the press going down and coming up, a click or a tap on the iPad: what the edit, or a redraw that waited for you to leave a box, would draw is drawn once the press has landed, and what the press itself drew is drawn again after it';
+    has(man, DRAWN, 'the manual says nothing is drawn under a press, a tap too, and in what order');
+    has(md, DRAWN, 'and its markdown copy, word for word');
+    has(noComments(fn('_invMorphKey')), "n.tagName + '#' + id + '~' + k + act", '…a control is its tag, id and what it does, never its place');
+    has(noComments(fn('_invPressTrack')), "document.addEventListener('mousedown'", '…the press is the mousedown to its click, which a tap sends too');
+    has(noComments(fn('_invPressFlush')), 'since.forEach', '…and what the press drew is drawn again after the held repaints');
+    for (const [name, doc] of [['the manual', man], ['the playbook', pb], ['The Evening Desk', desk]]) lacks(doc, 'in their rooms as the record', '⚠ ' + name + ' never says the photographs stay in their rooms');
+    has(pb, 'every such line comes off in one press and the photos stay in Google Drive as the record', 'the playbook says Google Drive');
+    has(pbmd, 'every such line comes off in one press and the photos stay in Google Drive as the record', 'and its markdown copy');
   });
 };
