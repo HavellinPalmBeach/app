@@ -432,15 +432,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(['', '0', '5', '6', '40'].map(DQ), ['', '', '', '', ''], 'a blank box, nothing, or a whole number raises no flag');
     eq(DQ('5.3'), 'Estimates round up to whole hours: 5.3 is priced as 6.', '⚠ 5.3 is flagged with what it is priced at (P17 refused it, priced at 5.25)');
     const said = [];
-    const S = sandbox({ fns: ['saveEstimateAndPreview', 'fmtHrs', 'esc', 'prepFeeRate'],
-      vars: ['DECLUTTER_MAX_HRS', 'PREP_FEE_RATE'],
+    const S = sandbox({ fns: ['saveEstimateAndPreview', 'flushCalcAll', 'fmtHrs', 'esc', 'prepFeeRate'],
+      vars: ['DECLUTTER_MAX_HRS', 'PREP_FEE_RATE', '_calcAllT'],
       stubs: { document: domStub({ 'e-job': { value: '3' }, 'e-declutter-hrs': { value: '5.3' } }), jobs: [{ id: 3, svc: 'prep' }], estimateStore: {},
                estimateApproved: false, currentEstimate: { jobId: 3, svc: 'prep', prepEnabled: true, prepCost: 0, havellinTotal: 900 },
                estimateContractBlocker: () => null, showFB: (id, k, m) => said.push(m) } });
     attempt(() => S.saveEstimateAndPreview());
     has(said[0] || '', 'Add at least one Home Prep vendor with a cost', '⚠⚠ Save Estimate no longer refuses 5.3 declutter hours: it goes on to the next question (this fixture has no vendor)');
     const sub = [];
-    const U = sandbox({ fns: ['submitForApproval'],
+    const U = sandbox({ fns: ['submitForApproval', 'flushCalcAll'], vars: ['_calcAllT'],
       stubs: { document: domStub({ 'e-declutter-hrs': { value: '5.3' } }), jobs: [{ id: 3, svc: 'prep' }], estimateSubmitted: false,
                REQUIRE_WALKTHROUGH_NOTES: true, currentEstimate: { jobId: 3, svc: 'prep', havellinTotal: 6900, rooms: [] }, estimateSubmitBlocker: () => null,
                estimateEventStatus: (j, st) => st, showFB: (id, k, m) => sub.push(m), saveEstimateState: () => sub.push('WROTE'), saveJobs: () => sub.push('WROTE'),

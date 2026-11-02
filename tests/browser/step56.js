@@ -32,7 +32,10 @@
 // File the received copy is on the signed schedules card beside the ledger, inside Closing the job.
 // Restated 2026-10-27: the work bar's papers open on screen first. The Approval Request no longer prints at once: it opens
 // in the document viewer, titled Release Approval Request, with nothing printed, and the page B, F and G read is the one
-// the viewer's Print / Save PDF prints; the viewer is closed before the desk is pressed again. The receipt still prints at once.
+// the viewer's Print / Save PDF prints; the viewer is closed before the desk is pressed again.
+// Restated 2026-11-02: every card's paper opens on screen first. The receipt no longer prints at once either: Print receipt
+// opens it in the document viewer, titled Receipt - Mary Smith, with nothing printed, and the page D and G read is the one
+// the viewer's Print / Save PDF prints; the viewer is closed before the signed copy is filed and the desk is pressed again.
 const { chromium } = require('playwright');
 const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/havellin.html'));
 let pass = 0, fail = 0;
@@ -311,7 +314,10 @@ const PDF = { name: 'signed.pdf', mimeType: 'application/pdf', buffer: Buffer.fr
       has(await rowText('s2'), 'no signed receipt', 'the row says so too');
       const strip = await txt('#inv-flagstrip');
       has(strip, 'No signed receipt 2', 'and the Needs-you strip counts them');
+      // Restated 2026-11-02: every card's paper opens on screen first; the page read is the one its Print / Save PDF prints.
+      const rcptBefore = await printCount();
       await press('#inv-releases button[onclick=\'printBeneficiaryReceipt(5601,"Mary Smith")\']', 'Print receipt for Mary');
+      await printFromViewer('Receipt - Mary Smith', rcptBefore);
       const r = await T((await lastPrint()).html);
       has(r, 'Receipt for Property Released', 'the receipt prints');
       has(r, 'Released to Mary Smith from the trustees of The Ellsworth Family Trust', '⚠ who it came from, by matter');
@@ -453,9 +459,18 @@ const PDF = { name: 'signed.pdf', mimeType: 'application/pdf', buffer: Buffer.fr
       const pr = await lastPrint();
       ok(pr.html.length > 0 && pr.over <= 0, 'the Approval Request fits a Letter page in print (' + pr.over + ')');
       await p.evaluate(() => closeDocViewer());
-      await p.evaluate(() => printBeneficiaryReceipt(5601, 'Mary Smith')); await p.waitForTimeout(1000);
+      // Restated 2026-11-02: every card's paper opens on screen first, so the viewer's Print / Save PDF (printDocViewer) is what
+      // prints the receipt; nothing prints before it is pressed, and the viewer is closed once the print is captured.
+      const rBefore = await printCount();
+      await p.evaluate(() => { printBeneficiaryReceipt(5601, 'Mary Smith'); });
+      ok(await until(() => p.evaluate(() => { const o = document.getElementById('doc-viewer-modal'); return !!o && o.style.display === 'flex'; })), 'fixture: the receipt opens in the viewer');
+      eq(await txt('#doc-viewer-title'), 'Receipt - Mary Smith', 'the viewer is titled by the receipt');
+      eq(await printCount(), rBefore, 'nothing printed before Print / Save PDF is pressed');
+      await p.evaluate(() => { printDocViewer(); }); await p.waitForTimeout(1000);   // the print path clears its target 650 ms on
+      eq(await printCount(), rBefore + 1, 'the viewer\'s Print / Save PDF printed the receipt once');
       const rc = await lastPrint();
       ok(/Receipt for Property Released/.test(rc.html) && rc.over <= 0, 'the receipt fits a Letter page in print (' + rc.over + ')');
+      await p.evaluate(() => closeDocViewer());
       await p.emulateMedia({ media: 'screen' });
       await p.setViewportSize({ width: 1440, height: 1000 });
       eq(errs, [], 'no page errors');

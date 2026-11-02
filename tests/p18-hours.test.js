@@ -253,8 +253,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(pb.ok ? pb.val.doc.getElementById('e-declutter-hint').innerHTML : '', 'color:var(--warn-tx)', 'in the flag\'s amber, not the error red');
     // Save Estimate: the 5.5 is not refused; the record written is the 6 the estimate priced.
     const said = [], wrote = [];
-    const S = sandbox({ fns: ['saveEstimateAndPreview', 'estDeclutterHrs', 'fmtHrs', 'fmt', 'esc', 'prepFeeRate', 'roundCents'],
-      vars: ['PREP_FEE_RATE'],
+    const S = sandbox({ fns: ['saveEstimateAndPreview', 'flushCalcAll', 'estDeclutterHrs', 'fmtHrs', 'fmt', 'esc', 'prepFeeRate', 'roundCents'],
+      vars: ['PREP_FEE_RATE', '_calcAllT'],
       stubs: { document: domStub({ 'e-job': { value: '3' }, 'e-declutter-hrs': { value: '5.5' } }), jobs: [{ id: 3, svc: 'prep', status: 'new' }],
                estimateStore: {}, estimateApproved: false, estimateSubmitted: false, approvedBy: '', approvedAt: '',
                currentEstimate: Object.assign({}, P, { jobId: 3 }), estimateContractBlocker: () => null, estimateEventStatus: (j, s) => s,
@@ -267,7 +267,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(S.currentEstimate.declutterTCHrs, 6, 'the record holds 6');
     // Submit: no declutter question at all.
     const sub = [];
-    const U = sandbox({ fns: ['submitForApproval'],
+    const U = sandbox({ fns: ['submitForApproval', 'flushCalcAll'], vars: ['_calcAllT'],
       stubs: { document: domStub({ 'e-declutter-hrs': { value: '5.5' } }), jobs: [{ id: 3, svc: 'prep', status: 'new' }], estimateSubmitted: false,
                REQUIRE_WALKTHROUGH_NOTES: true, currentEstimate: Object.assign({}, P, { jobId: 3, rooms: [] }), estimateSubmitBlocker: () => null,
                estimateEventStatus: (j, s) => s, showFB: (id, k, m) => sub.push(m), saveEstimateState: () => sub.push('WROTE'), saveJobs() {},

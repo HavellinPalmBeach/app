@@ -447,8 +447,10 @@ input:checked+.slider:before{transform:translateX(18px);}
 .doc-viewer-ttl{font-size:14px;font-weight:600;color:var(--gray-dk);}
 .doc-viewer-sub{font-size:11.5px;color:var(--gray);margin-top:1px;overflow-wrap:anywhere;}
 /* The document scrolls, the header does not — so Print stays reachable on a long
-   agreement instead of being 45KB above the fold. */
-.doc-viewer-body{overflow-y:auto;overflow-x:hidden;padding:18px;background:#f4f1ea;flex:1 1 auto;}
+   agreement instead of being 45KB above the fold. It scrolls sideways too (2026-11-02): a desk
+   paper's table is wider than a phone (the Disposition Ledger reaches 574 px at 390), and with
+   overflow-x hidden its last columns were cut off where nobody could reach them. */
+.doc-viewer-body{overflow-y:auto;overflow-x:auto;padding:18px;background:#f4f1ea;flex:1 1 auto;}
 .doc-viewer-body .ce-page{margin:0 auto;background:var(--white);}
 .as-doc{max-height:42vh;border:1px solid var(--border);border-radius:6px;margin-top:8px;padding:12px;}
 .as-signer{border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin-top:8px;}
@@ -1012,6 +1014,12 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 .wt-out td{color:var(--gray);font-style:italic;}
 .wt-tag{font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--bronze);border:1px solid var(--bronze-lt);border-radius:3px;padding:1px 4px;margin-left:5px;white-space:nowrap;}
 .wt-note{font-size:12px;color:var(--gray);overflow-wrap:anywhere;}
+/* Build Estimate's private walkthrough note grows with what is said into it (2026-11-02, Anthony: "isn't very big …
+   it filled up pretty quickly"): the box sits over a hidden copy of its text, as the desk's name does (.inv-name). */
+.pnote-grow{display:grid;min-width:0;}
+.pnote-grow::after,.pnote-grow>textarea{grid-area:1/1/2/2;font-family:inherit;font-size:12px;line-height:1.45;padding:6px 8px;margin:0;border:1px solid var(--border-md);border-radius:4px;box-sizing:border-box;white-space:pre-wrap;overflow-wrap:anywhere;min-height:calc(11.6em + 14px);}
+.pnote-grow::after{content:attr(data-v) ' ';visibility:hidden;border-color:transparent;}
+.pnote-grow>textarea{width:100%;height:auto;resize:none;overflow:hidden;background:var(--cream);}
 .pay-tbl{width:100%;border-collapse:collapse;margin-bottom:1rem;}
 .pay-tbl td{padding:9px 14px;border-bottom:1px solid var(--border);font-size:13px;}
 .pay-tbl td.r{text-align:right;font-weight:600;}
@@ -1116,6 +1124,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
   /* 16px inputs stop iOS Safari from auto-zooming the page on focus — the single
      biggest cause of "the app jumps around when I tap a field". */
   input,select,textarea{font-size:16px!important;}
+  .pnote-grow::after{font-size:16px;}   /* the hidden copy keeps the box's 16px, or the box is sized for 12px text */
   /* iOS gives date inputs a different intrinsic height than selects and text boxes,
      so a date sitting beside a dropdown looks like a mistake. Pin them all to one
      height and the row reads as a row. */
@@ -1476,7 +1485,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.28 · 12:47pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.11.02 · 10:33am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5801,9 +5810,10 @@ function buildRoomTable() {
         '<button id="pnote-mic-btn" onclick="startPrivateNoteTranscription()" title="Voice note" ' +
           'style="background:none;border:1px solid var(--border-md);border-radius:4px;cursor:pointer;font-size:15px;line-height:1;padding:5px 7px;color:var(--gray);flex:0 0 auto;">&#127908;</button>' +
         '<div style="flex:1;min-width:0;">' +
-          '<textarea id="e-private-note" rows="5" ' +
-            'oninput="_privateWalkNote=this.value" ' +
-            'style="width:100%;font-size:12px;padding:6px 8px;border:1px solid var(--border-md);border-radius:4px;resize:vertical;font-family:inherit;background:var(--cream);box-sizing:border-box;"></textarea>' +
+          '<div class="pnote-grow" data-v="">' +
+            '<textarea id="e-private-note" rows="8" ' +
+              'oninput="_privateWalkNote=this.value;this.parentNode.dataset.v=this.value"></textarea>' +
+          '</div>' +
           '<div id="pnote-mic-status" style="font-size:10px;color:var(--bronze);font-style:italic;min-height:14px;margin-top:2px;"></div>' +
         '</div>' +
       '</div>' +
@@ -5813,8 +5823,7 @@ function buildRoomTable() {
   document.getElementById('room-table-wrap').innerHTML = html;
   var _vpr = document.getElementById('vol-preset-row');
   if (_vpr) { _vpr.innerHTML = volPresetButtonsHTML(); paintVolPreset(); }
-  var _pn = document.getElementById('e-private-note');
-  if (_pn) _pn.value = _privateWalkNote || '';
+  _privateNotePaint();
   // Single delegated listener for all note textareas
   document.getElementById('room-table-wrap').addEventListener('input', function(e) {
     if (e.target && e.target.tagName === 'TEXTAREA') {
@@ -6505,7 +6514,7 @@ var BACKEND_NEEDS_TYPES = ['saveMedia', 'saveInventory', 'job', 'saveAllJobs', '
 // copy of the app opened before that change (it posts no `envKey`) and refuses while the sheet's copy of the client holds an envelope
 // still out. On an older deployment such a copy can send an envelope this build never reads, and two devices pressing at once can put
 // out a second envelope while one is out.
-var BACKEND_MIN_VERSION = '2026-11-02';
+var BACKEND_MIN_VERSION = '2026-11-02b';
 var _backendVersion = null;
 // The actions the deployment says it has (2026-10-26c), once the version probe answers; null until then. A route the app
 // offers only on a deployment that has it reads this (backendHas): the release request's DocuSign send.
@@ -6579,7 +6588,7 @@ var BACKEND_FEATURE_COST = {
   saveSnapshot:  'no inventory Snapshot can be taken (the deployment has nowhere to keep its lines)',
   // One line for any deployment older than BACKEND_MIN_VERSION, so it names the newest gap first and says
   // which vintage the older one belongs to (the banner's title prints the version that answered).
-  version:       'on a deployment older than 2026-11-02, a copy of the app that has not been reloaded can send an estate\u2019s release request through DocuSign that this build never checks, records on the lines or files, and two devices pressing at once can put out a second envelope while one is out; on a deployment older than 2026-10-28, two devices saving at the same moment can lose one device\u2019s change on the sheet though both were told it saved, and an inventory or estimate store can become unreadable, refusing every save until it is restored from version history; on a deployment older than 2026-10-27e, a figure Agent Two researched can carry a basis sentence citing sales nobody could find (\u201cFour sold comparables at Christie\u2019s and Kodner\u201d under a general estimate) on the Estate Inventory Report, and an Etsy, 1stDibs, Chairish, Ruby Lane or Replacements asking price can stand as a sale behind \u201conline comps\u201d; on a deployment older than 2026-10-27d, a release approval recorded on one device can lose, on the sheet, the record of where the item was going, who was taking it and its value when it was signed, so another device reads the approval as covering the item wherever it goes now, and two devices\u2019 signatures given for different destinations can be counted as one approval; on a deployment older than 2026-10-27c, anyone who holds the Apps Script URL can read every client and inventory, share a client\u2019s folders with any address, trash any file and send a release request through DocuSign to anybody, with no device key asked for; on a deployment older than 2026-10-27b, a client too large for a sheet cell cuts the Jobs tab off at that client, possibly with no error shown, every client below it then reads as deleted (this device keeps its copy of them), and the next estimate, plan, hours or inventory save sweeps their records off the sheet; on a deployment older than 2026-10-27, an item Agent Two researched and found no sale for stays marked unsure, and its paper reads general estimate, however many close listings it counted; on a deployment older than 2026-10-26b, a search page, or a sale whose price was not shown, can stand as a sold comparable, so a researched figure resting on one prints \u201cauction comps\u201d; a long note from Agent Two stops mid-sentence; and neither agent grades an item\u2019s condition; on a deployment older than 2026-10-26, the agents never move to a newer model by themselves (Agent One still runs on the older Opus 5), Agent Two never looks at the photograph of an item whose name is a guess or fixes a wrong category, a figure with no sale behind it prints as \u201cauction comps\u201d, and one slow request can mark a whole batch \u201cnot valued\u201d or lose a batch of names; on a deployment older than 2026-10-25b, a name you type or review on the desk (a wooden mirror retyped as Restoration Hardware) can come back from Agent Two as the generic thing and be valued as that, and a brand the crew says at the camera is not put into the name; on a deployment older than 2026-10-25, Agent Two flags a name it disagrees with (\u201cName may be wrong\u201d) instead of correcting it, puts a note on nearly every item it values (no condition recorded, a rough count, a search that ran short), and Agent One files everyday dishes as collectibles; on a deployment older than 2026-10-24, a blank line added to a photograph already named (Another item in this photo) makes Agent One read the whole photograph again, so every object in it goes on the list a second time, and its names carry a count (\u201capprox. 7 in stack\u201d) that the Qty box contradicts once corrected; on a deployment older than 2026-10-19b, a client\u2019s inventory reset in the Apps Script editor (resetInventoryConfirm) is undone by the first device that saves a line from before it, unless every device reloads first; on a deployment older than 2026-10-16, an incident reported on one device, or a key or fob received there while another device records a handoff, can be dropped when the sheet merges the job (the Incidents and Keys & access cards\u2019 lists are not yet merged entry by entry); on a deployment older than 2026-10-06, two devices\u2019 release signers are not merged and the client\u2019s workbook rounds its money; on a deployment older than 2026-10-05, a co-executor or co-trustee is not put on the DocuSign envelope beside the client, so they sign a printed copy of the agreement and the page they signed has to be filed from the timeline; on a deployment older than 2026-10-03, a co-trustee, a beneficiary, a signed copy filed to Drive, a find on site or a proceeds statement added on one device can be dropped by another device saving an older copy of the job, and the client\u2019s inventory workbook heads a trust\u2019s net proceeds \u201cNet to Estate\u201d; on a deployment older than 2026-10-01, File signed copy adds a second copy of the signed agreement to the client\u2019s Agreement folder instead of replacing the one there; on a deployment older than 2026-09-30b, a payment voided or marked cleared on one device can come back as it was from another device that changed the same payment before reloading, and count again; a firearm\u2019s serial, recipient or dealer route, recorded on one device, can be dropped from the sheet by another device\u2019s older copy of the item, until the first device next saves the inventory; and on a deployment older than 2026-09-30, two people editing different parts of one job (a vendor quote here, the team there) can also undo each other\u2019s work, a damaged store tab is emptied by the next save instead of refused, and Agent One can stop mid-answer on a busy photograph',
+  version:       'on a deployment older than 2026-11-02b, a copy of the app that has not been reloaded can send an estate\u2019s release request through DocuSign that this build never checks, records on the lines or files, and two devices pressing at once can put out a second envelope while one is out; on a deployment older than 2026-10-28, two devices saving at the same moment can lose one device\u2019s change on the sheet though both were told it saved, and an inventory or estimate store can become unreadable, refusing every save until it is restored from version history; on a deployment older than 2026-10-27e, a figure Agent Two researched can carry a basis sentence citing sales nobody could find (\u201cFour sold comparables at Christie\u2019s and Kodner\u201d under a general estimate) on the Estate Inventory Report, and an Etsy, 1stDibs, Chairish, Ruby Lane or Replacements asking price can stand as a sale behind \u201conline comps\u201d; on a deployment older than 2026-10-27d, a release approval recorded on one device can lose, on the sheet, the record of where the item was going, who was taking it and its value when it was signed, so another device reads the approval as covering the item wherever it goes now, and two devices\u2019 signatures given for different destinations can be counted as one approval; on a deployment older than 2026-10-27c, anyone who holds the Apps Script URL can read every client and inventory, share a client\u2019s folders with any address, trash any file and send a release request through DocuSign to anybody, with no device key asked for; on a deployment older than 2026-10-27b, a client too large for a sheet cell cuts the Jobs tab off at that client, possibly with no error shown, every client below it then reads as deleted (this device keeps its copy of them), and the next estimate, plan, hours or inventory save sweeps their records off the sheet; on a deployment older than 2026-10-27, an item Agent Two researched and found no sale for stays marked unsure, and its paper reads general estimate, however many close listings it counted; on a deployment older than 2026-10-26b, a search page, or a sale whose price was not shown, can stand as a sold comparable, so a researched figure resting on one prints \u201cauction comps\u201d; a long note from Agent Two stops mid-sentence; and neither agent grades an item\u2019s condition; on a deployment older than 2026-10-26, the agents never move to a newer model by themselves (Agent One still runs on the older Opus 5), Agent Two never looks at the photograph of an item whose name is a guess or fixes a wrong category, a figure with no sale behind it prints as \u201cauction comps\u201d, and one slow request can mark a whole batch \u201cnot valued\u201d or lose a batch of names; on a deployment older than 2026-10-25b, a name you type or review on the desk (a wooden mirror retyped as Restoration Hardware) can come back from Agent Two as the generic thing and be valued as that, and a brand the crew says at the camera is not put into the name; on a deployment older than 2026-10-25, Agent Two flags a name it disagrees with (\u201cName may be wrong\u201d) instead of correcting it, puts a note on nearly every item it values (no condition recorded, a rough count, a search that ran short), and Agent One files everyday dishes as collectibles; on a deployment older than 2026-10-24, a blank line added to a photograph already named (Another item in this photo) makes Agent One read the whole photograph again, so every object in it goes on the list a second time, and its names carry a count (\u201capprox. 7 in stack\u201d) that the Qty box contradicts once corrected; on a deployment older than 2026-10-19b, a client\u2019s inventory reset in the Apps Script editor (resetInventoryConfirm) is undone by the first device that saves a line from before it, unless every device reloads first; on a deployment older than 2026-10-16, an incident reported on one device, or a key or fob received there while another device records a handoff, can be dropped when the sheet merges the job (the Incidents and Keys & access cards\u2019 lists are not yet merged entry by entry); on a deployment older than 2026-10-06, two devices\u2019 release signers are not merged and the client\u2019s workbook rounds its money; on a deployment older than 2026-10-05, a co-executor or co-trustee is not put on the DocuSign envelope beside the client, so they sign a printed copy of the agreement and the page they signed has to be filed from the timeline; on a deployment older than 2026-10-03, a co-trustee, a beneficiary, a signed copy filed to Drive, a find on site or a proceeds statement added on one device can be dropped by another device saving an older copy of the job, and the client\u2019s inventory workbook heads a trust\u2019s net proceeds \u201cNet to Estate\u201d; on a deployment older than 2026-10-01, File signed copy adds a second copy of the signed agreement to the client\u2019s Agreement folder instead of replacing the one there; on a deployment older than 2026-09-30b, a payment voided or marked cleared on one device can come back as it was from another device that changed the same payment before reloading, and count again; a firearm\u2019s serial, recipient or dealer route, recorded on one device, can be dropped from the sheet by another device\u2019s older copy of the item, until the first device next saves the inventory; and on a deployment older than 2026-09-30, two people editing different parts of one job (a vendor quote here, the team there) can also undo each other\u2019s work, a damaged store tab is emptied by the next save instead of refused, and Agent One can stop mid-answer on a busy photograph',
   preVersion:    'it predates the version check itself (2026-09-09), so client PDFs, photographs, DocuSign, Stripe and Agent One may all be missing as well'
 };
 
@@ -7692,8 +7701,11 @@ function keepFixedFee() {
 
 // Debounced calcAll for high-frequency inputs (e.g. typing notes) where instant
 // per-keystroke recompute isn't needed. Scoring inputs still call calcAll directly.
-var _calcAllT;
-function scheduleCalcAll() { clearTimeout(_calcAllT); _calcAllT = setTimeout(calcAll, 250); }
+var _calcAllT = null;
+function scheduleCalcAll() { clearTimeout(_calcAllT); _calcAllT = setTimeout(function(){ _calcAllT = null; calcAll(); }, 250); }
+// A recompute still waiting on the debounce runs now. Save and Submit write `currentEstimate`, which a note typed in the last
+// quarter second has not reached yet (2026-11-02: typed, Save pressed at once, the note was not saved).
+function flushCalcAll() { if (!_calcAllT) return; clearTimeout(_calcAllT); _calcAllT = null; calcAll(); }
 
 // Home Prep for Sale as a STANDALONE service is fee-only (a flat 30% Home Sale Preparation Fee on managed
 // vendor costs — no room scoring, crew, or labor hours). This toggles the labor-
@@ -11591,7 +11603,7 @@ function resetEstimateJobState(job) {
   // The private walkthrough note — one family's "the son contests the will" on the next family's
   // estimate and its Walkthrough view. _privateWalkNote is the record; the box only mirrors it.
   _privateWalkNote = '';
-  var pn = el('e-private-note'); if (pn) pn.value = '';
+  var pn = el('e-private-note'); if (pn) { pn.value = ''; if (pn.parentNode && pn.parentNode.dataset) pn.parentNode.dataset.v = ''; }
   var pns = el('pnote-mic-status'); if (pns) pns.textContent = '';
   // Crew and concierge counts, and the flags that say somebody chose them. Missing one leaves the
   // next estimate silently pinned to the last one's manual choice.
@@ -11636,6 +11648,7 @@ function saveEstimateAndPreview() {
       + estimateRepriceRoute(jobs.find(function(j){ return j.id === _lkId; }), estimateStore[_lkId]));
     return;
   }
+  flushCalcAll();   // a note typed or dictated a moment ago, onto the record Save writes
   var jobId = parseInt(document.getElementById('e-job').value);
   if (!jobId) { showFB('e-fb','warn','Select a job to attach this estimate to.'); return; }
   var job = jobs.find(function(j){ return j.id===jobId; });
@@ -13627,6 +13640,7 @@ function estimateSubmitBlocker(est, job) {
 // the e-fb print for a caller that will show the message somewhere the user can see.
 function submitForApproval(opts) {
   opts = opts || {};
+  flushCalcAll();   // as Save: what was typed or dictated a moment ago goes with the submission
   // ⚠ RESOLVED ONCE, AT THE TOP. This function looked the same job up TWICE, six lines apart —
   // once for the contract gate and again to move the status to `pending` — and the second copy
   // is what made a source assertion about the first one unfalsifiable (it matched the wrong
@@ -15034,8 +15048,7 @@ function restoreEstimateToUI(est) {
   // Restore crew reason
   // psCrewReason has no field to restore into any more.
   _privateWalkNote = est.privateNote || '';
-  var _pnEl = document.getElementById('e-private-note');
-  if (_pnEl) _pnEl.value = _privateWalkNote;
+  _privateNotePaint();
 
   // Restore room checkboxes and scores — match by SECTION + NAME first, index second.
   //
@@ -17684,7 +17697,7 @@ function printChangeOrder(coId, opt) {
   // to the client's Change Orders folder, so the accepted copy in Drive is byte for byte the page the client prints.
   if (opt && opt.asHtml) return { html: content, title: docNames(job, 'changeorder', { coNo: 'CO-' + co.id.toString().slice(-6) }).printTitle };
   return _printDocument(content, docNames(job, 'changeorder',
-    { coNo: 'CO-' + co.id.toString().slice(-6) }).printTitle);
+    { coNo: 'CO-' + co.id.toString().slice(-6) }).printTitle, { view: true, job: job, label: 'Change Order' });   // on screen first (2026-11-02)
 }
 
 // ─── FILING AN ACCEPTED CHANGE ORDER (Anthony, 2026-10-01, P17) ───────────────
@@ -31910,8 +31923,7 @@ function printInventorySnapshot(jobId, ts, opt) {
     + '</div>';
   var title = _invDocName(job, 'Inventory Snapshot');
   if (asHtml) return { html: html, title: title };
-  pt.innerHTML = html;
-  _printDocument(pt.innerHTML, title);
+  _printDocument(html, title, { view: true, job: job, label: 'Inventory Snapshot' });   // on screen first (2026-11-02)
 }
 // The "what changed" page: a snapshot against the inventory now (`against` 'now'), or the snapshot before it against
 // this one ('prev'). `opt.asHtml` returns {html, title}, or {why} where there is nothing to compare.
@@ -31990,7 +32002,7 @@ function printSnapshotComparison(jobId, ts, against, opt) {
     + '</div>';
   var title = _invDocName(job, 'Inventory Snapshot Comparison');
   if (opt && opt.asHtml) return { html: html, title: title };
-  _printDocument(html, title);
+  _printDocument(html, title, { view: true, job: job, label: 'Inventory Snapshot Comparison' });   // on screen first (2026-11-02)
   return null;
 }
 
@@ -32136,7 +32148,10 @@ function custodyEvents(ref) {
 // cancel or I launch a printer ... it just disappears"): the page is read on screen, and the viewer's Print / Save PDF comes
 // back here with `opt.after`, which reopens the viewer once the dialog has closed. Since 2026-10-27 (Anthony: "Yes") the work
 // bar's papers open the same way: the Contents List, the Estate Inventory PDF, the Release Approval Request (the bar's and the
-// selection's) and the Contents Record. The callers that print straight away are unchanged; a test's stub of this function still
+// selection's) and the Contents Record; and since 2026-11-02 (Anthony: "yes, do the cards' papers too") every card's paper: the
+// Disposition Ledger, a receipt, a Donation Record, the inventory snapshots and their comparison, the Key and Access Custody
+// Record, a will or cash receipt from Found on site, and a change order's PDF. Only the client documents' Print (docAction, whose
+// View is the viewer already) and the viewer's own Print / Save PDF print straight away; a test's stub of this function still
 // receives the page and its title.
 function _printDocument(html, title, opt) {
   var pt = document.getElementById('print-target');
@@ -35280,7 +35295,7 @@ function approvalRequestSendEsign(job, r, b64, perr, filedUrl, paperIds, rcpt, s
     var late = isOver();
     if (!(ok && d && d.ok && d.envelopeId)) {
       // ⚠ THE APPS SCRIPT'S OWN REFUSAL IS SAID AS ITS OWN (found on review, 2026-11-02): it turned the request away before DocuSign was
-      // asked (`refused`, backend 2026-11-02), so it is never "DocuSign did not take the request", its sentence carries its own way on
+      // asked (`refused`, backend 2026-11-02b), so it is never "DocuSign did not take the request", its sentence carries its own way on
       // and is not told to send again or email the same lines, and a stop is never doubled. Certain that nothing went out, it speaks
       // even after the watchdog let go.
       var why = String((d && (d.error || d.message)) || 'no answer from the server').trim().replace(/[.\s]+$/, '');
@@ -35321,7 +35336,7 @@ function approvalRequestSendEsign(job, r, b64, perr, filedUrl, paperIds, rcpt, s
     _invRefreshReleases(jobId);
   });
 }
-// The Apps Script turned the request away before DocuSign was asked (backend 2026-11-02 marks each of its refusals `refused`), so
+// The Apps Script turned the request away before DocuSign was asked (backend 2026-11-02b marks each of its refusals `refused`), so
 // nothing went out. `refused: 'out'` is the second envelope it would not make: another device's envelope reached the sheet after this
 // press read the client. The client is read again, its envelopes taken as the press's own read takes them (approvalRecordFromSheet),
 // and the card redrawn, so the envelope the refusal names shows where the press was made; where that read fails, the Apps Script's
@@ -36433,7 +36448,7 @@ function printBeneficiaryReceipt(jobId, name, read) {
       + 'once their written release approval is complete, or once they are recorded as gone.');
     return false;
   }
-  return _printDocument(invReceiptHtml(job, g.name, lines), _invDocName(job, 'Receipt - ' + g.name));
+  return _printDocument(invReceiptHtml(job, g.name, lines), _invDocName(job, 'Receipt - ' + g.name), { view: true, job: job, label: 'Receipt - ' + g.name });   // on screen first (2026-11-02)
 }
 
 // A value as a JS string argument inside a double-quoted attribute: JSON first, then HTML (the order _custodyHandle's
@@ -37718,7 +37733,7 @@ function printDispositionLedger(jobId, opt) {
     + signoff
     + '</div>';
   if (opt && opt.asHtml) return { html: html, title: _invDocName(job, 'Disposition Ledger') };
-  _printDocument(html, _invDocName(job, 'Disposition Ledger'));
+  _printDocument(html, _invDocName(job, 'Disposition Ledger'), { view: true, job: job, label: 'Disposition Ledger' });   // on screen first (2026-11-02)
 }
 
 // ⚠⚠ FILED TO DRIVE AS THE JOB CLOSES, AND ON DEMAND FROM THE DESK (P19). The page goes to the client's Estate Inventory
@@ -37968,7 +37983,7 @@ function printDonationRecord(jobId, stableId, opt) {
       + 'Whether a charitable deduction is available, and in what amount, is for the donor&rsquo;s tax adviser to determine.</div>'
     + '</div>';
   if (opt && opt.asHtml) return { html: html, title: _invDocName(job, title) };
-  _printDocument(html, _invDocName(job, title));
+  _printDocument(html, _invDocName(job, title), { view: true, job: job, label: title });   // on screen first (2026-11-02)
   return null;
 }
 function _renderDonationsCard(job, all) {
@@ -43122,6 +43137,38 @@ function agentValueCopyLookup(jobId, stableId) {
 // first. It is the confirming source, so it marks the value reviewed and names `WorthPoint comps` as the
 // source (never on a tier where counsel values: there no source is written). A line with no figure at
 // all takes the sale's price as a person's value. Refused by name before anything is written.
+// ⚠⚠ A SALE FOUND BY HAND, WHEREVER IT WAS FOUND (2026-11-02; Anthony, off the eBay developer account: eBay keeps its sold history
+// from apps and gives it to its sellers in Seller Hub's Product Research; he took "Rename to 'Use a sale'"). The source a pasted sale
+// names follows its link, one rule: WorthPoint's record reads WorthPoint comps, an auction house's result Auction comps (a host
+// with "auction" in it, or one on the list), eBay and anything else Online comps. Read by agentValueUseSale and the form's line.
+var INV_SALE_AUCTION_HOSTS = ['invaluable.com', 'bidsquare.com', 'hibid.com', 'ha.com', 'bonhams.com', 'christies.com', 'sothebys.com',
+  'phillips.com', 'kodner.com', 'doyle.com', 'rago.com', 'swanngalleries.com', 'skinnerinc.com'];
+function _invSaleHost(url) {
+  var m = String(url || '').trim().match(/^https?:\/\/([^\/?#:]+)/i);
+  return m ? m[1].toLowerCase().replace(/^www\./, '') : '';
+}
+function invSaleSource(url) {
+  var host = _invSaleHost(url);
+  var is = function(d) { return host === d || host.slice(-(d.length + 1)) === '.' + d; };
+  if (is('worthpoint.com')) return 'WorthPoint comps';
+  if (/auction/.test(host) || INV_SALE_AUCTION_HOSTS.some(is)) return 'Auction comps';
+  return 'Online comps';
+}
+// Who sold it, where the box is left blank: the site, by the name a reader knows it by.
+function invSaleVenue(url) {
+  var host = _invSaleHost(url);
+  if (/^(?:[a-z0-9-]+\.)*ebay\.[a-z.]+$/.test(host)) return 'eBay';
+  if (/(?:^|\.)worthpoint\.com$/.test(host)) return 'WorthPoint';
+  return host;
+}
+// ⚠⚠ A SALE FAR FROM THE LINE'S FIGURE IS ASKED ABOUT ONCE (the desk audit's Ask 14, answered 2026-10-28: "ask once when the sale and
+// the line's figure differ by more than 15%: use the sale, or keep the figure and file the sale only"; ACC-04: a $1,100 sale
+// relabelled a $4,200 figure as if the sale supported it). Within it the sale supports the figure and names its source, as before.
+var INV_SALE_ASK_PCT = 15;
+function invSaleFarOff(figure, price) {
+  var f = Number(figure), p = Number(price);
+  return f > 0 && p > 0 && Math.abs(p - f) > f * INV_SALE_ASK_PCT / 100;
+}
 function agentValueUseSale(jobId, stableId) {
   var ref = _getPhotoRef(jobId, stableId), job = _invJob(jobId);
   if (!ref || !job) return;
@@ -43131,16 +43178,27 @@ function agentValueUseSale(jobId, stableId) {
   if (!title) miss.push('its title');
   if (!(price > 0)) miss.push('its price');
   if (!/^https?:\/\/\S+$/i.test(url)) miss.push('its link');
-  if (miss.length) { alert('Add ' + _andJoin(miss) + ' from the WorthPoint record first. Nothing was changed.'); return; }
-  var comp = _avComp({ title: title, venue: get('venue') || 'WorthPoint', saleDate: get('date'), price: price, url: url, kind: 'sold', by: 'desk' });
-  ref.valComps = [comp].concat(ref.valComps || []).slice(0, AGENT_VALUE_MAX_COMPS);
+  if (miss.length) { alert('Add ' + _andJoin(miss) + ' from the sale first. Nothing was changed.'); return; }
+  var comp = _avComp({ title: title, venue: get('venue') || invSaleVenue(url), saleDate: get('date'), price: price, url: url, kind: 'sold', by: 'desk' });
+  var source = invSaleSource(url);
   var internal = agentValueInternal(job);
-  if (!_avHasFigure(ref) && !internal) {
+  var had = !internal && _invHasValue(ref), cur = had ? roundCents(parseFloat(ref.fmv)) : 0;
+  var use = !internal && !_avHasFigure(ref), keep = false;
+  if (had && invSaleFarOff(cur, comp.price)) {
+    var pct = Math.round(Math.abs(comp.price - cur) / cur * 100);
+    use = confirm('This sale (' + fmt(comp.price) + ') is ' + pct + '% ' + (comp.price < cur ? 'below' : 'above') + ' the line\'s figure ('
+      + fmt(cur) + ').\n\nOK: use the sale. The line\'s value becomes ' + fmt(comp.price) + ', from ' + (source === 'WorthPoint comps' ? source : source.toLowerCase()) + '.\n'
+      + 'Cancel: keep ' + fmt(cur) + ' and file the sale under it only.');
+    keep = !use;
+  }
+  if (use) {
     ref.fmv = comp.price;
     ref.valDate = _avValDate(job);
-    _avTakeValue(ref, 'sale', job);   // the desk's comparable, never the appraisal's (Q93)
+    _avTakeValue(ref, 'sale', job);   // the desk's comparable, never the appraisal's (Q93); the agent's source and sentence go with its figure
   }
-  if (!internal) ref.valSource = 'WorthPoint comps';
+  ref.valComps = [comp].concat(ref.valComps || []).slice(0, AGENT_VALUE_MAX_COMPS);
+  // Kept far from it, the sale is filed and names nothing: the figure is not the sale's (Ask 14).
+  if (!internal && !keep) ref.valSource = source;
   // A sale a person found and pasted is their look at the line (2026-10-25b, the one look): the line is reviewed with it.
   _invStampLineReviewed(ref, job);
   _setPhotoRef(jobId, _invTouch(ref));
@@ -43343,7 +43401,8 @@ function _avPanelHtml(job, ref) {
       + (ref.valLookup ? 'WorthPoint search: <code>' + esc(ref.valLookup) + '</code> <button class="btn-s" style="font-size:9.5px;padding:1px 6px;" onclick="agentValueCopyLookup(' + jid + ',\'' + sid + '\')">Copy</button>' : '')
       + (/^https?:\/\//i.test(photo) ? ' <a href="' + esc(photo) + '" target="_blank" rel="noopener">Photograph</a>' : '')
       + '</div>'
-      + '<details style="margin-top:5px;"><summary style="font-size:10.5px;cursor:pointer;color:var(--gray-dk);">Use a WorthPoint sale</summary>'
+      + '<details style="margin-top:5px;"><summary style="font-size:10.5px;cursor:pointer;color:var(--gray-dk);">Use a sale</summary>'
+      + '<div class="av-sale-hint" style="font-size:10px;color:var(--gray);margin-top:3px;">A sold price you found: eBay\u2019s Product Research (in Seller Hub), WorthPoint or an auction house\u2019s results. Its link says where it came from.</div>'
       + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:5px;margin-top:5px;">'
       + ['title:Title', 'price:Price', 'date:Sale date', 'venue:Venue', 'url:Link'].map(function(p) {
           var k = p.split(':')[0];
@@ -51339,7 +51398,7 @@ function printAccessRecord(jobId, opt) {
     + _invDocHead(job, ACCESS_RECORD_TITLE, 'Every key, fob, remote and access code received for the property: who held it, and when it went back')
     + stamp + accessCustodyRecordHtml(job) + '</div>';
   if (asHtml) return { html: html, title: _invDocName(job, ACCESS_RECORD_TITLE) };
-  _printDocument(html, _invDocName(job, ACCESS_RECORD_TITLE));
+  _printDocument(html, _invDocName(job, ACCESS_RECORD_TITLE), { view: true, job: job, label: ACCESS_RECORD_TITLE });   // on screen first (2026-11-02)
   return true;
 }
 // Filed to the client's Drive folder as the job closes (activateOrCycle, every job with an item recorded) and from the card,
@@ -51778,7 +51837,7 @@ function printSiteFindReceipt(jobId, id) {
   if (!job || !f || !SITE_FIND_KINDS[f.kind] || !invFiduciaryMode(job)) { showSyncBadge('That record is no longer on this job.', true); return false; }
   if (f.voidedAt) { showSyncBadge('That record is void, so there is nothing to print.', true); return false; }
   var html = f.kind === 'will' ? willReceiptHtml(job, f) : cashReceiptHtml(job, f);
-  return _printDocument(html, _invDocName(job, SITE_FIND_KINDS[f.kind].doc));
+  return _printDocument(html, _invDocName(job, SITE_FIND_KINDS[f.kind].doc), { view: true, job: job, label: SITE_FIND_KINDS[f.kind].doc });   // on screen first (2026-11-02)
 }
 
 // ═══════════════════════ INCIDENTS — ANYTHING THAT GOES WRONG ON A JOB (P26, 2026-10-16) ═══════════════════════
@@ -57462,6 +57521,8 @@ function startRoomTranscription(roomId) {
       if (noteEl) {
         var existing = noteEl.value ? noteEl.value.trimRight() + ' ' : '';
         noteEl.value = existing + finalText.trim();
+        // The room's note reaches the estimate only through a recompute, as the private note's dictation (2026-11-02).
+        scheduleCalcAll();
       }
       var notesBtn = document.getElementById('notes-btn-'+roomId);
       if (notesBtn) { notesBtn.style.color = 'var(--bronze)'; notesBtn.style.fontWeight = '600'; }
@@ -61467,6 +61528,15 @@ function updateCollectionDisp(id, val) {
 // service type changes, which would otherwise wipe what was just dictated.
 var _privateWalkNote = '';
 
+// The box shows `_privateWalkNote`, and the hidden copy under it (.pnote-grow's data-v) sizes it to the whole note, so a
+// writer of the note other than the box's own typing paints both through here.
+function _privateNotePaint(el) {
+  el = el || document.getElementById('e-private-note');
+  if (!el) return;
+  el.value = _privateWalkNote || '';
+  if (el.parentNode && el.parentNode.dataset) el.parentNode.dataset.v = el.value;
+}
+
 // Same shape as startCollectionTranscription, targeting the private-notes box.
 function startPrivateNoteTranscription() {
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -61493,8 +61563,12 @@ function startPrivateNoteTranscription() {
     if (finalText) {
       var el = document.getElementById('e-private-note');
       if (el) {
-        el.value = (el.value ? el.value.trimRight() + ' ' : '') + finalText.trim();
-        _privateWalkNote = el.value;
+        _privateWalkNote = (el.value ? el.value.trimRight() + ' ' : '') + finalText.trim();
+        _privateNotePaint(el);
+        // ⚠ A SCRIPT SETTING .value FIRES NO input EVENT, so the grid's listener never recomputed the estimate after
+        // dictation and Save wrote the note as it stood before it (2026-11-02, Anthony: "when I saved it and went back
+        // to the estimate, they're gone"). Typing schedules the same recompute.
+        scheduleCalcAll();
       }
     }
   };
