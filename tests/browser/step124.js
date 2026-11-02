@@ -16,7 +16,8 @@
 //   E. The Job Plan's Keys & access card: Print the custody record.
 //   F. The Job Plan's Found on site card: Print Receipt for Original Will.
 //   G. The client dashboard's Change Orders card: PDF.
-//   H. 390 px with the viewer open: no horizontal overflow; zero page errors.
+//   H. 390 px: every column of the ledger, the custody record and the will receipt can be scrolled to inside the viewer
+//      (it hid them until 2026-11-02); no page overflow at 390 or 1440; no dialogs; zero page errors.
 //
 //   NODE_PATH=/path/to/node_modules node tests/browser/step124.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
@@ -95,7 +96,8 @@ STORE.snaps[ID] = {
     await p.evaluate(() => {
       window.open = function () { return null; };
       window.__prints = [];
-      window.print = function () { const pt = document.getElementById('print-target'); window.__prints.push({ html: pt ? pt.innerHTML : '', title: document.title }); };
+      window.print = function () { const pt = document.getElementById('print-target'), ov = document.getElementById('doc-viewer-modal');
+        window.__prints.push({ html: pt ? pt.innerHTML : '', title: document.title, viewerUp: !!ov && ov.style.display === 'flex' }); };
     });
 
     const section = async (name, body) => {
@@ -146,6 +148,7 @@ STORE.snaps[ID] = {
       eq((await prints()) - n0, 1, label + ': the dialog opened once');
       const pr = await lastPrint();
       has(await T(pr.html), words[0], '⚠⚠ ' + label + ': with that page');
+      eq(pr.viewerUp, false, label + ': the viewer steps aside while the print dialog is up');
       has(pr.title, fileName, label + ': under the paper\'s file name');
       ok(await until(viewerOpen), '⚠⚠ ' + label + ': the viewer is back once the dialog closes');
       ok(await until(() => p.evaluate((t) => document.title === t, APP_TITLE)), label + ': the app\'s own title is back');
@@ -293,15 +296,40 @@ STORE.snaps[ID] = {
     });
 
     // ── H ───────────────────────────────────────────────────────────────────
-    await section('H. the viewer on a phone: no horizontal overflow; zero page errors', async () => {
+    // Restated on review (2026-11-02): the page's own scroll width cannot see inside the viewer (a fixed overlay whose body
+    // hid what it could not fit), so the check is made in the viewer: every column a person can reach. The ledger, and the two
+    // Job Plan papers a phone reaches in field mode.
+    await section('H. the viewer on a phone: every column reachable inside it, no page overflow; zero page errors', async () => {
+      const reach = () => p.evaluate(() => {
+        const b = document.getElementById('doc-viewer-body'); if (!b) return { ok: false, why: 'no viewer body' };
+        const wide = b.scrollWidth > b.clientWidth + 1, ox = getComputedStyle(b).overflowX;
+        return { ok: !wide || ox === 'auto' || ox === 'scroll', why: b.scrollWidth + ' in ' + b.clientWidth + ', overflow-x ' + ox, wide };
+      });
       await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(500);
-      await toDesk('closing');
-      await press('#inv-ledger-card button[onclick="printDispositionLedger(' + ID + ')"]', 'the ledger card\'s Print, at 390');
-      ok(await until(viewerOpen), 'the viewer is open at 390');
-      ok((await overflow()) <= 0, 'no horizontal overflow at 390 with the viewer open (' + (await overflow()) + ')');
-      if (await viewerOpen()) await close();
+      const at390 = [
+        [async () => toDesk('closing'), '#inv-ledger-card button[onclick="printDispositionLedger(' + ID + ')"]', 'the ledger card\'s Print'],
+        [toPlan, '#plan-access-' + ID + ' button[onclick*="printAccessRecord("]', 'Print the custody record'],
+        [toPlan, '#plan-finds-' + ID + ' button:has-text("Print Receipt for Original Will")', 'Print Receipt for Original Will'],
+      ];
+      let anyWide = false;
+      for (const [go, sel, what] of at390) {
+        await go();
+        await press(sel, what + ', at 390');
+        ok(await until(viewerOpen), what + ': the viewer is open at 390');
+        const r = await reach();
+        anyWide = anyWide || r.wide;
+        ok(r.ok, '⚠⚠ ' + what + ': every column can be scrolled to inside the viewer (' + r.why + ')');
+        ok((await overflow()) <= 0, what + ': no page overflow at 390 with the viewer open (' + (await overflow()) + ')');
+        if (await viewerOpen()) await close();
+      }
+      ok(anyWide, 'fixture: at least one paper is wider than the phone (else the check above proves nothing)');
       ok((await overflow()) <= 0, 'and none once it is closed (' + (await overflow()) + ')');
-      await p.setViewportSize({ width: 1440, height: 1000 });
+      await p.setViewportSize({ width: 1440, height: 1000 }); await p.waitForTimeout(400);
+      await toDesk('closing');
+      await press('#inv-ledger-card button[onclick="printDispositionLedger(' + ID + ')"]', 'the ledger card\'s Print, at 1440');
+      ok((await overflow()) <= 0, 'no page overflow at 1440 with the viewer open (' + (await overflow()) + ')');
+      if (await viewerOpen()) await close();
+      eq(dialogs, [], 'no alert or confirm along the way');
       eq(errs, [], 'zero page errors');
     });
 

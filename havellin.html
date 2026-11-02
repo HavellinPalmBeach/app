@@ -447,8 +447,10 @@ input:checked+.slider:before{transform:translateX(18px);}
 .doc-viewer-ttl{font-size:14px;font-weight:600;color:var(--gray-dk);}
 .doc-viewer-sub{font-size:11.5px;color:var(--gray);margin-top:1px;overflow-wrap:anywhere;}
 /* The document scrolls, the header does not — so Print stays reachable on a long
-   agreement instead of being 45KB above the fold. */
-.doc-viewer-body{overflow-y:auto;overflow-x:hidden;padding:18px;background:#f4f1ea;flex:1 1 auto;}
+   agreement instead of being 45KB above the fold. It scrolls sideways too (2026-11-02): a desk
+   paper's table is wider than a phone (the Disposition Ledger reaches 574 px at 390), and with
+   overflow-x hidden its last columns were cut off where nobody could reach them. */
+.doc-viewer-body{overflow-y:auto;overflow-x:auto;padding:18px;background:#f4f1ea;flex:1 1 auto;}
 .doc-viewer-body .ce-page{margin:0 auto;background:var(--white);}
 .as-doc{max-height:42vh;border:1px solid var(--border);border-radius:6px;margin-top:8px;padding:12px;}
 .as-signer{border:1px solid var(--border);border-radius:6px;padding:8px 10px;margin-top:8px;}
@@ -1476,7 +1478,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.11.02 · 7:43am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.11.02 · 8:52am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
