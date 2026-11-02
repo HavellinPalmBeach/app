@@ -1483,7 +1483,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.11.02 · 7:51am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.11.02 · 9:03am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -42767,6 +42767,38 @@ function agentValueCopyLookup(jobId, stableId) {
 // first. It is the confirming source, so it marks the value reviewed and names `WorthPoint comps` as the
 // source (never on a tier where counsel values: there no source is written). A line with no figure at
 // all takes the sale's price as a person's value. Refused by name before anything is written.
+// ⚠⚠ A SALE FOUND BY HAND, WHEREVER IT WAS FOUND (2026-11-02; Anthony, off the eBay developer account: eBay keeps its sold history
+// from apps and gives it to its sellers in Seller Hub's Product Research; he took "Rename to 'Use a sale'"). The source a pasted sale
+// names follows its link, one rule: WorthPoint's record reads WorthPoint comps, an auction house's result Auction comps (a host
+// with "auction" in it, or one on the list), eBay and anything else Online comps. Read by agentValueUseSale and the form's line.
+var INV_SALE_AUCTION_HOSTS = ['invaluable.com', 'bidsquare.com', 'hibid.com', 'ha.com', 'bonhams.com', 'christies.com', 'sothebys.com',
+  'phillips.com', 'kodner.com', 'doyle.com', 'rago.com', 'swanngalleries.com', 'skinnerinc.com'];
+function _invSaleHost(url) {
+  var m = String(url || '').trim().match(/^https?:\/\/([^\/?#:]+)/i);
+  return m ? m[1].toLowerCase().replace(/^www\./, '') : '';
+}
+function invSaleSource(url) {
+  var host = _invSaleHost(url);
+  var is = function(d) { return host === d || host.slice(-(d.length + 1)) === '.' + d; };
+  if (is('worthpoint.com')) return 'WorthPoint comps';
+  if (/auction/.test(host) || INV_SALE_AUCTION_HOSTS.some(is)) return 'Auction comps';
+  return 'Online comps';
+}
+// Who sold it, where the box is left blank: the site, by the name a reader knows it by.
+function invSaleVenue(url) {
+  var host = _invSaleHost(url);
+  if (/^(?:[a-z0-9-]+\.)*ebay\.[a-z.]+$/.test(host)) return 'eBay';
+  if (/(?:^|\.)worthpoint\.com$/.test(host)) return 'WorthPoint';
+  return host;
+}
+// ⚠⚠ A SALE FAR FROM THE LINE'S FIGURE IS ASKED ABOUT ONCE (the desk audit's Ask 14, answered 2026-10-28: "ask once when the sale and
+// the line's figure differ by more than 15%: use the sale, or keep the figure and file the sale only"; ACC-04: a $1,100 sale
+// relabelled a $4,200 figure as if the sale supported it). Within it the sale supports the figure and names its source, as before.
+var INV_SALE_ASK_PCT = 15;
+function invSaleFarOff(figure, price) {
+  var f = Number(figure), p = Number(price);
+  return f > 0 && p > 0 && Math.abs(p - f) > f * INV_SALE_ASK_PCT / 100;
+}
 function agentValueUseSale(jobId, stableId) {
   var ref = _getPhotoRef(jobId, stableId), job = _invJob(jobId);
   if (!ref || !job) return;
@@ -42776,16 +42808,27 @@ function agentValueUseSale(jobId, stableId) {
   if (!title) miss.push('its title');
   if (!(price > 0)) miss.push('its price');
   if (!/^https?:\/\/\S+$/i.test(url)) miss.push('its link');
-  if (miss.length) { alert('Add ' + _andJoin(miss) + ' from the WorthPoint record first. Nothing was changed.'); return; }
-  var comp = _avComp({ title: title, venue: get('venue') || 'WorthPoint', saleDate: get('date'), price: price, url: url, kind: 'sold', by: 'desk' });
-  ref.valComps = [comp].concat(ref.valComps || []).slice(0, AGENT_VALUE_MAX_COMPS);
+  if (miss.length) { alert('Add ' + _andJoin(miss) + ' from the sale first. Nothing was changed.'); return; }
+  var comp = _avComp({ title: title, venue: get('venue') || invSaleVenue(url), saleDate: get('date'), price: price, url: url, kind: 'sold', by: 'desk' });
+  var source = invSaleSource(url);
   var internal = agentValueInternal(job);
-  if (!_avHasFigure(ref) && !internal) {
+  var had = !internal && _invHasValue(ref), cur = had ? roundCents(parseFloat(ref.fmv)) : 0;
+  var use = !internal && !_avHasFigure(ref), keep = false;
+  if (had && invSaleFarOff(cur, comp.price)) {
+    var pct = Math.round(Math.abs(comp.price - cur) / cur * 100);
+    use = confirm('This sale (' + fmt(comp.price) + ') is ' + pct + '% ' + (comp.price < cur ? 'below' : 'above') + ' the line\'s figure ('
+      + fmt(cur) + ').\n\nOK: use the sale. The line\'s value becomes ' + fmt(comp.price) + ', from ' + (source === 'WorthPoint comps' ? source : source.toLowerCase()) + '.\n'
+      + 'Cancel: keep ' + fmt(cur) + ' and file the sale under it only.');
+    keep = !use;
+  }
+  if (use) {
     ref.fmv = comp.price;
     ref.valDate = _avValDate(job);
-    _avTakeValue(ref, 'sale', job);   // the desk's comparable, never the appraisal's (Q93)
+    _avTakeValue(ref, 'sale', job);   // the desk's comparable, never the appraisal's (Q93); the agent's source and sentence go with its figure
   }
-  if (!internal) ref.valSource = 'WorthPoint comps';
+  ref.valComps = [comp].concat(ref.valComps || []).slice(0, AGENT_VALUE_MAX_COMPS);
+  // Kept far from it, the sale is filed and names nothing: the figure is not the sale's (Ask 14).
+  if (!internal && !keep) ref.valSource = source;
   // A sale a person found and pasted is their look at the line (2026-10-25b, the one look): the line is reviewed with it.
   _invStampLineReviewed(ref, job);
   _setPhotoRef(jobId, _invTouch(ref));
@@ -42988,7 +43031,8 @@ function _avPanelHtml(job, ref) {
       + (ref.valLookup ? 'WorthPoint search: <code>' + esc(ref.valLookup) + '</code> <button class="btn-s" style="font-size:9.5px;padding:1px 6px;" onclick="agentValueCopyLookup(' + jid + ',\'' + sid + '\')">Copy</button>' : '')
       + (/^https?:\/\//i.test(photo) ? ' <a href="' + esc(photo) + '" target="_blank" rel="noopener">Photograph</a>' : '')
       + '</div>'
-      + '<details style="margin-top:5px;"><summary style="font-size:10.5px;cursor:pointer;color:var(--gray-dk);">Use a WorthPoint sale</summary>'
+      + '<details style="margin-top:5px;"><summary style="font-size:10.5px;cursor:pointer;color:var(--gray-dk);">Use a sale</summary>'
+      + '<div class="av-sale-hint" style="font-size:10px;color:var(--gray);margin-top:3px;">A sold price you found: eBay\u2019s Product Research (in Seller Hub), WorthPoint or an auction house\u2019s results. Its link says where it came from.</div>'
       + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:5px;margin-top:5px;">'
       + ['title:Title', 'price:Price', 'date:Sale date', 'venue:Venue', 'url:Link'].map(function(p) {
           var k = p.split(':')[0];

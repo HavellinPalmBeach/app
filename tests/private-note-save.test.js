@@ -2,7 +2,7 @@
 // THE PRIVATE WALKTHROUGH NOTE DICTATED ON BUILD ESTIMATE IS SAVED WITH IT (2026-11-02).
 //
 // Anthony, off a real client: *"the microphone worked fine … when I saved it and went back to the estimate,
-// they're gone."* Measured on the page (browser step 124): the microphone wrote the words into the box and
+// they're gone."* Measured on the page (browser step 125): the microphone wrote the words into the box and
 // into `_privateWalkNote`, but a script setting `.value` fires no input event, so the room grid's listener
 // never recomputed the estimate, `currentEstimate.privateNote` kept the note as it stood at the last
 // recompute, and Save wrote that. The room note's microphone had the same gap, and a note typed and saved
