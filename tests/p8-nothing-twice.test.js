@@ -31,7 +31,7 @@ const val = (r, dflt) => (r && r.ok ? r.val : (dflt === undefined ? 'threw: ' + 
 
 // ─── The desk's side: the grouper, the presses, the room check's writer, what Agent Two waits on ───
 const DESK_FNS = ['agentDupCleared', 'agentNamedTwice', 'agentDuplicateGroups', '_arPair', '_arPairOpen', '_agDupEligible', '_arDupEligible', '_agNameKey',
-  '_agDupIndex', '_agDupHtml', '_agDupHandle', '_agDupUnhandle', 'agentDropDuplicate', 'agentNotDuplicate', 'agentKeepFirstReading',
+  '_agDupIndex', '_agDupHtml', '_agDupHandle', '_agDupUnhandle', 'agentDropDuplicate', 'agentDupPartner', 'agentNotDuplicate', 'agentKeepFirstReading',
   '_invItemNo', '_invRoomName', '_getPhotoRef', '_setPhotoRef', '_jobInvRefs', '_invJob', '_invTombstoneLine', '_invStampBy', 'deviceUser',
   'savePhotoRefs', '_arWrite', '_arStateHtml', '_arState', 'agentValueWaiting', '_avDupReleased', 'agentValueAuto', 'agentValueRun',
   '_avValueButtonHtml', 'agentValueableRefs', '_avHasFigure', '_invHasValue', '_invHasPhoto', '_avState', '_arLineWhy',
@@ -95,7 +95,7 @@ const ELLISON = () => [
 
 // ─── The papers: the trust-schedule test's lifts, with the double counts ───
 const PAPER_FNS = ['invLineReviewed', 'invLineOpen', '_invDocPartyHead', 'invConditionText',
-  'printTrustSchedule', 'printCourtInventory', '_avUnreviewedStamp', 'printEstateInventoryReport', 'jobOnProbateTrack', '_invScheduleSection', 'invValBasisWord',
+  'printTrustSchedule', 'printCourtInventory', '_avUnreviewedStamp', 'printEstateInventoryReport', 'invInventoryWord', 'invTrustOnlyMatter', 'invDriveFolderWords', 'jobOnProbateTrack', '_invScheduleSection', 'invValBasisWord',
   '_invTrack', '_invTrackDefault', '_invOnTrustSchedule', '_invOnProbateSchedule',
   '_invIsExempt', '_invIsProbateAsset', '_invExcludedTracks', '_invHasValue',
   'invDocContractBlock', 'docTierProduces', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror',
@@ -114,7 +114,7 @@ const PAPER_FNS = ['invLineReviewed', 'invLineOpen', '_invDocPartyHead', 'invCon
   'invIsMAIV', 'invMAIVDefaultCat', 'invAcceptCtx', '_invAcceptCtxOf', 'invListRead', 'agentNoticesOn',
   'agentValueUnreviewed', 'agentValueInternal', 'agentValueStale', 'agentValueSpecialistWorth', '_avHasFigure', 'agentNoticeQuiet',
   'agentDupCleared', 'agentNamedTwice', 'agentDuplicateGroups', '_arPair', '_arPairOpen', '_agDupEligible', '_arDupEligible', '_agNameKey', 'invDoubleCounts', 'invDoubleCountUnits',
-  'agentNotDuplicate', 'agentDropDuplicate', '_agDupHandle', '_agDupUnhandle', '_getPhotoRef', '_setPhotoRef', '_invTombstoneLine', '_invStampBy',
+  'agentNotDuplicate', 'agentDropDuplicate', 'agentDupPartner', '_agDupHandle', '_agDupUnhandle', '_getPhotoRef', '_setPhotoRef', '_invTombstoneLine', '_invStampBy',
   'deviceUser', 'agentValueWaiting', '_avDupReleased',
   'invAppraisalChosen', '_avStampCounts', 'invTotalFloor', '_invFloorTotalHtml'];   // P7's floor and source rules, which the printers read since the merge
 const PAPER_VARS = ['_agRun', '_avRun', '_arRun', '_avDupHeld', 'AGENT_NOTICE_KINDS',
@@ -640,7 +640,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(s7, '7 possible double counts not yet decided: #10 and #11; #12 and #13; #14 and #15; #16 and #17; #18 and #19; #20 and #21; and 1 more', '⚠ six named, then how many more');
     lacks(s7, '#22 and #23', 'the seventh not named');
     // The estate package's question names it (P8's review: the confirm that makes an interim copy deliberate said nothing).
-    const PK = sandbox({ fns: PAPER_FNS.concat(['probatePackageGaps', '_planRoomStatus']), vars: PAPER_VARS,
+    // (P9: the question reads the Needs you chips' own tests, so their catalogue and leaf tests are lifted with it.)
+    const PK = sandbox({ fns: PAPER_FNS.concat(['probatePackageGaps', '_planRoomStatus', 'invLineNothingToList', '_invNeedsValue']), vars: PAPER_VARS.concat(['INV_WORK_FLAGS']),
       stubs: { document: domStub({}), jobs: [Object.assign({}, ESTATE, { matterType: 'probate' })], _photoRefs: { 7: PAINTINGS() }, jobPlanStore: {},
         invReleaseCautions: () => [], _invPrintThumb: () => '', _invThumbFor: () => '' } });
     const gaps = val(attempt(() => PK.probatePackageGaps(7)), []);

@@ -166,6 +166,7 @@
   },
   {
    "id": "INV-09",
+   "fixed": "2026-10-28 in part (P13, backend 2026-11-02b: Agent One returns group, kept as agentGroup; invLotSplitState answers nocount for a group at a count of one over $100 or with no value; the line reads \"grouped, untested\" and the worklist names it and never prints its clearance over it; and since P13's review the line's record shows the mark, a count typed in Qty or One article answers it (groupBy: 'desk', invGroupUncounted), and the worklist's remedies are only what the app records; tests/p13-traceable.test.js, browser step 129). Not built: the clearance reworded (it still reads \"permits them to stand\"; a question for Anthony). Owed: the redeploy.",
    "title": "On a Form 706 estate a mixed group at qty 1 escapes the $100 lot test, and the worklist prints a clearance",
    "kind": "accuracy",
    "severity": "high",
@@ -183,6 +184,7 @@
   },
   {
    "id": "INV-10",
+   "fixed": "2026-10-28 (P13: Item # and Room on both schedules; the item number, not the file name, links to the photograph; the footer reworded to what is true, drafted for Anthony; tests/p13-traceable.test.js, browser step 129)",
    "title": "The Court Inventory and Trust Schedule carry no item number, room or photograph reference, and the Estate Inventory Report's 'reference-numbered' photographs are not",
    "kind": "accuracy",
    "severity": "high",
@@ -285,6 +287,7 @@
   },
   {
    "id": "INV-16",
+   "fixed": "2026-10-28 in part (P13: a removal records its reason from what the press knows, removedWhy and removedOf; \"Numbers not used\" on the Report, both schedules, the ledger, the Contents List and the Contents Record; Removed items names it; since P13's review a duplicate's Remove names the line the group's own evidence pairs it with, agentDupPartner, never the lowest number; tests/p13-traceable.test.js, browser step 129). Not built: the three reason chips at Remove line (a question for Anthony); Combine (INV-19) does not exist.",
    "title": "Removals carry no reason, so the numbers on the Estate Inventory Report have unexplained gaps",
    "kind": "accuracy",
    "severity": "medium",
@@ -319,6 +322,7 @@
   },
   {
    "id": "INV-18",
+   "fixed": "2026-10-28 in part (P13: a count left in a name reads \"count in the name\" on the row, invNameCarriesCount; tests/p13-traceable.test.js, browser step 129). Not built: a one-press Take it out, and Agent Two stripping a count on ordinary lots.",
    "title": "A count in a name is never caught at the desk, and a corrected count then contradicts it on the schedule",
    "kind": "inconsistency",
    "severity": "low",
@@ -353,6 +357,7 @@
   },
   {
    "id": "INV-20",
+   "fixed": "2026-10-28 in part (P13: the summary counts Total Lines and Total Articles, the category table both, and since P13's review a group with no count apart, \"plus 2 grouped lines not counted\"; tests/p13-traceable.test.js, browser step 129). Not built: the completeness card and the schedules' footers.",
    "title": "The summary counts lines as items, and no paper or screen says how many articles the list holds",
    "kind": "inconsistency",
    "severity": "low",

@@ -111,6 +111,13 @@ function net(opts) {
         if (o.failUpload && o.failUpload.test(body.filename)) return sp(res({ ok: false, error: 'Drive is unavailable' }));
         return sp(res({ ok: true, fileUrl: 'https://drive.google.com/file/d/up' + n + '/view', fileId: 'up' + n }));
       }
+      // The pages' photographs (P13): every one Drive holds, as the deployment answers; `thumbs: false` a photo service that fails.
+      if (body.action === 'getThumbnails') {
+        if (o.thumbs === false) return sp(res({ ok: false, error: 'the photo service did not answer' }));
+        const thumbs = {};
+        (body.fileIds || []).forEach((id) => { thumbs[id] = 'data:image/jpeg;base64,AAAA'; });
+        return sp(res({ ok: true, thumbs, missing: [] }));
+      }
       if (body.action === 'getSubfolders') {
         // A job folder's subfolders, as Drive lists them (o.subfolders), for a job whose record lacks one.
         return sp(res({ ok: true, subfolders: o.subfolders || null }));
@@ -692,9 +699,33 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        '⚠ every PDF filed to the Estate Inventory folder too, under undated names, so the next package replaces them');
     eq(r.N.log.pdfs.length, 4, 'four conversions, through the one PDF builder');
     // Sequential, never parallel, and in order.
-    eq(r.N.log.posts, ['shareFolder', 'shareFolder', 'shareFolder', 'shareFolder', 'uploadHtml', 'uploadHtml', 'uploadHtml', 'uploadHtml', 'uploadHtml', 'htmlToPdf', 'htmlToPdf', 'htmlToPdf', 'htmlToPdf'],
-       'one Apps Script call after another');
+    // RESTATED (P13 of the desk audit, 2026-10-28; DOC-03): the pages' photographs are gathered first, before any page is built.
+    eq(r.N.log.posts, ['getThumbnails', 'shareFolder', 'shareFolder', 'shareFolder', 'shareFolder', 'uploadHtml', 'uploadHtml', 'uploadHtml', 'uploadHtml', 'uploadHtml', 'htmlToPdf', 'htmlToPdf', 'htmlToPdf', 'htmlToPdf'],
+       'one Apps Script call after another, the photographs first');
     ok(r.N.log.gets.some((u) => /action=loadMedia&jobId=7/.test(u)), '⚠ the inventory is read from the sheet first, never assumed empty');
+  });
+
+  // P13's review (2026-10-28): the package's notice said nothing when its pages' photographs could not be drawn, so the PDFs went to
+  // counsel with "photo" in every cell under a green notice.
+  G('11 · the package says how many photographs its pages could not draw, and a notice saying so is never green (P13\'s review)', () => {
+    const good = pkgRig();
+    good.c.sendProbatePackage(7);
+    lacks((good.notices[good.notices.length - 1] || {}).m || '', 'could not be drawn', 'every photograph drawn: nothing said of them');
+    const bad = pkgRig({ net: { thumbs: false } });
+    bad.c.sendProbatePackage(7);
+    const n = bad.notices[bad.notices.length - 1] || {};
+    eq(n.t, 'warn', '⚠⚠ the photo service failed: amber');
+    ok(/On the pages: \d+ photographs? could not be drawn from Drive, so (its line links|their lines link) to the photograph in Drive instead\./.test(n.m || ''), '⚠⚠ and the notice says how many (' + String(n.m || '').slice(-200) + ')');
+    eq(bad.N.log.drafts.length, 1, 'the draft is made all the same (a flag, never a refusal)');
+    // ⚠ Only where a page draws them: on tier none the package is the ledger and the worklist, which link a number and draw no
+    // photograph, so nothing is fetched and nothing is said of photographs, whatever the photo service does.
+    const none = pkgRig({ job: Object.assign(ESTATE(), { docTier: 'none' }), net: { thumbs: false } });
+    none.c.sendProbatePackage(7);
+    const nn = none.notices[none.notices.length - 1] || {};
+    eq(none.N.log.posts.filter((a) => a === 'getThumbnails').length, 0, '⚠ tier none: no photograph is fetched for pages that draw none');
+    lacks(nn.m || '', 'could not be drawn', '⚠ …and the notice claims nothing of photographs');
+    eq(none.N.log.drafts.length, 1, '…and the package still goes');
+    ok(bad.N.log.posts.filter((a) => a === 'getThumbnails').length > 0, 'fixture: the valued tier did fetch them');
   });
 
   G('11 · documents with gaps go out as working copies — a floor, DRAFT, never FINAL — and the record states what was recorded', () => {
@@ -714,7 +745,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(rec, 'Released Christie’s Courier CH-0091', 'and its custody event, with the receipt');
     lacks(rec, 'Dining chairs', 'a line with neither appears in neither table');
     // The same pages the desk prints.
-    const pdfCourt = r.N.log.pdfs.filter((h) => /Estate Inventory — Tangible Personal Property/.test(h))[0] || '';
+    const pdfCourt = r.N.log.pdfs.filter((h) => /Court Inventory \(§733\.604\) — Tangible Personal Property/.test(h))[0] || '';   // its own name since P14
     ok(pdfCourt.length > 0 && pdfCourt === court, '⚠ the attached PDF and the filed copy are built from the same page');
   });
 
@@ -813,7 +844,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const href = decodeURIComponent(fallback.hrefs[0] || '');
     has(href, 'mailto:ann@lowe.law?cc=rex@hale.example,agreements@havellinpalmbeach.com', 'to the attorney, copied as before');
     has(href, 'are in the estate’s Google Drive folder:', '⚠ it can carry no PDF, so the documents are linked from Drive');
-    has(href, 'Court Inventory: https://drive.google.com/file/d/up2/view', 'the filed Court Inventory');
+    // Restated 2026-10-28 (P14 of the desk audit, DOC-17): each page linked says what it is for, beside its title.
+    has(href, 'Court Inventory (the estate’s tangible personal property, scheduled for the §733.604 inventory filing): https://drive.google.com/file/d/up2/view', 'the filed Court Inventory');
     const fst = fallback.job().docState.probatePackage || {};
     ok(fst.provider === 'mailto' && !!fst.draftedAt && !fst.sentAt, 'recorded as an email opened, never as sent');
     has(text(fallback.c.probatePackageCardHtml(fallback.job())), 'Opened as a plain email — send it from your mail app, then confirm', 'the card says what the app did');
@@ -837,8 +869,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // RESTATED 2026-10-03 (P19): the package carries the Disposition Ledger too, on both routes and at every tier, before the
     // Appraisal Worklist (probatePackageDocs; p19-ledger.test.js). Everything else here is as it was.
     eq(pf.pdfs.map((x) => x.name.replace(/ - 69 Beach.*$/, '')), ['Havellin Court Inventory', 'Havellin Estate Inventory', 'Havellin Disposition Ledger'], 'fixture: the worklist\'s PDF failed, the other three attached');
-    has(pf.text, 'Appraisal Worklist: https://drive.google.com/file/d/up5/view', '⚠ the page that could not be attached is linked to its filed copy');
-    lacks(pf.text, 'Court Inventory: https://', 'an attached page is not linked as well');
+    // Restated 2026-10-28 (P14, DOC-17): the link carries what the page is for.
+    has(pf.text, 'Appraisal Worklist (the items flagged for a specialist’s appraisal, grouped by specialist): https://drive.google.com/file/d/up5/view', '⚠ the page that could not be attached is linked to its filed copy');
+    lacks(pf.text, 'inventory filing): https://', 'an attached page is not linked as well');
     has((pdfFail.notices[pdfFail.notices.length - 1] || {}).m, 'The Appraisal Worklist could not be made into a PDF, so it is linked from Drive instead of attached', 'and the notice says so');
     eq(JSON.parse(JSON.stringify(pdfFail.job().docState.probatePackage.pkg.docs)), ['court', 'schedule', 'ledger'], 'the record names what was attached');
 

@@ -183,6 +183,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(said, 'Donate set on 2 items', 'the sweep counts what it set');
     has(said, '4 firearms left as they were (#1 Remington 870 shotgun, #2 Remington 870 shotgun, #3 Remington 870 shotgun, #4 Remington 870 shotgun)', '⚠ and names the firearms it left');
     has(said, 'a firearm goes only to a licensed dealer, so where it goes and who takes it are set on its own line', 'and why');
+    // RESTATED 2026-10-28 (P9 of the desk audit, LIV-02): the selection clears after each bulk action, so the six are picked again.
+    E.c._invPick = { a: 1, b: 1, c: 1, d: 1, l: 1, m: 1 };
     E.c._invBulkApply(7, 'channel', 'Goodwill Palm Beach');
     eq(['a', 'l'].map((id) => E.row(id).channel || ''), ['', 'Goodwill Palm Beach'], '⚠ a recipient swept across the selection never lands on a firearm');
     // A selection of firearms alone: nothing written, and said.

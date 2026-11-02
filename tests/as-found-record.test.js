@@ -73,7 +73,7 @@ function rig(over) {
   const ctx = sandbox({
     fns: ['_invDocPartyHead', '_invJob', 'asFoundRecord', '_planRooms', '_slotRefs', '_roomFoundAttest', '_roomFoundDone',
           '_afTime', '_afDate', '_asFoundRows', 'printAsFoundRecord', '_invDocName',
-          '_invDocHead', '_invPrintThumb', 'resolveValBasis', 'estateValueDate', '_avdDate',
+          '_invDocHead', '_invPrintThumb', '_invPrintThumbSrc', '_invPaperPhotoUrl', 'resolveValBasis', 'estateValueDate', '_avdDate',
           'buildInventoryPayload', '_invAssignItemNos', '_jobInvRefs', '_invTouch',
           'invFiduciaryMode', 'isDecedentJob', 'invProbateRows', 'matterDef', 'matterTypeOf',
           // ⚠ AXIS 3 (`statesValues`) RIDES THE SAME PAYLOAD. Lifted rather than stubbed for
@@ -81,7 +81,7 @@ function rig(over) {
           // "are we contracted to state values" drift from the workbook's.
           'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep',
           '_invExportValue', '_invRoomName', '_invItemNo', 'savePhotoRefs', '_warnPhotoStoreFull',
-          'invIsFirearm', 'invIsMAIV', 'invMAIVCategory', 'invMAIVDefaultCat', 'estateProceedsHolder', 'inventoryNetLabel'],
+          'invIsFirearm', 'invIsMAIV', 'invMAIVCategory', 'invMAIVDefaultCat', 'estateProceedsHolder', 'inventoryNetLabel', 'invDriveFolderWords', 'invTrustOnlyMatter'],
     vars: ['jobPlanStore', 'estimateStore', 'AS_FOUND_COLUMNS', 'INVENTORY_COLUMNS', 'DECEDENT_SERVICES', 'MATTER_TYPES', 'INV_NET_LABELS',
            'INV_CATEGORIES', 'INV_TAXONOMY', 'INV_DISPOSITIONS', 'INV_VAL_BASES',
            'MAIV_OTHER', 'MAIV_BY_CATEGORY', 'INV_CAT_GLYPH',

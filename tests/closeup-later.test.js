@@ -47,7 +47,7 @@ function rig(over, opt) {
   opt = opt || {};
   const uploads = [], alerts = [], renders = [], repaints = [];
   const ctx = sandbox({
-    fns: ['invCloseUpRefusal', 'invAddCloseUp', '_invPhotoSource', '_invHasPhoto', '_getPhotoRef', '_setPhotoRef',
+    fns: ['invCloseUpRefusal', 'invAddCloseUp', 'invCloseUpLanded', 'invLineUnread', '_invPatch', '_invPhotoSource', '_invHasPhoto', '_getPhotoRef', '_setPhotoRef',
           '_captureShot', 'photoSubfolder', 'fieldDispToInv', '_cleanName', '_photoUid', '_slotRefs', '_invTouch',
           '_invDetailRefs', '_jobInvRefs', 'collectionLineUnshot'],
     vars: ['_photoUidSeq', 'FIELD_DISPOSITIONS', 'FIELD_DISP_DEFAULT', 'PHOTO_CAPTURE_LABELS', 'AS_FOUND_SUBFOLDER',
@@ -144,10 +144,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('E · the record: + Close-up beside + Another item in this photo, wired to the handler; never on a typed line');
   {
     const ctx = sandbox({
-      fns: ['_renderInvPanel', 'invCloseUpRefusal', '_invHasPhoto', '_invCloseUpsHtml', '_invCloseUpTileHtml', '_invPhotoOpenHtml', '_invDetailRefs',
+      fns: ['_renderInvPanel', '_invPanelGroupHtml', 'invGroupUncounted', '_invPanelColsFor', '_invRowHasWho', '_invCloseUpAddHtml', 'invCloseUpRefusal', '_invHasPhoto', '_invCloseUpsHtml', '_invCloseUpTileHtml', '_invPhotoOpenHtml', '_invDetailRefs',
             '_invPhotoSiblings', '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef', '_agRecordNoticesHtml', 'agentNoticeQuiet', 'invLineReviewed',
             '_invPanelAppraisalHtml', '_invHasAppraisal', 'invAppraisalInProgress', 'invAppraised', '_invLinkedAppraiser', 'invLineAppraiser', 'invAppraisalSourceText', 'invAppraisalChosen', 'agentValueUnreviewed', '_avHasFigure', 'invLineAccepted', 'invLineHold', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', 'agentNoticesOn'],
-      vars: ['AGENT_NOTICE_KINDS', 'MAIV_OTHER', 'MAIV_BY_CATEGORY'],
+      vars: ['AGENT_NOTICE_KINDS', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', 'INV_RELEASE_DISPOSITIONS'],
       stubs: {
         _photoRefs: { 1: PLATES().concat([
           { stableId: 'dx', label: 'detail', groupId: 'p', status: 'failed', ts: 1002 },
@@ -233,7 +233,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const repaints = [];
     let done = null;
     const ctx = sandbox({
-      fns: ['invRetryCloseUp', 'retryPhotoUpload', '_getPhotoRef', '_setPhotoRef', 'photoSubfolder'],
+      fns: ['invRetryCloseUp', 'invCloseUpLanded', 'invLineUnread', '_invPatch', 'retryPhotoUpload', '_getPhotoRef', '_setPhotoRef', 'photoSubfolder'],
       vars: ['AS_FOUND_SUBFOLDER', 'PHOTO_SUBFOLDER'],
       stubs: {
         _photoRefs: { 1: PLATES().concat([{ stableId: 'dx', label: 'detail', groupId: 's', roomIdx: 2, filename: 'X_DETAIL_2.jpg', status: 'failed', ts: 2000 }]) },
@@ -254,7 +254,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('I · the pages say it, each held to the control: the photography guide, the desk guide, the manual and the playbook');
   {
     const label = '&#10133; Close-up</label>';
-    has(liveLines(fn('_renderInvPanel')), label, 'the record\'s control reads + Close-up');
+    // RESTATED 2026-10-28 (P9): one builder for the control, read by the record and by a too-dark frame's row.
+    has(liveLines(fn('_renderInvPanel')), '_invCloseUpAddHtml(jid, ref)', 'the record draws the control');
+    has(liveLines(fn('_invCloseUpAddHtml')), label, 'the record\'s control reads + Close-up');
     const photo = text(read('photography-guide.html'));
     has(photo, 'One missed can still be added on the computer: open the item on Job Admin & Inv and press + Close-up', 'Photographing a House says a missed close-up can be added at the computer');
     lacks(photo, 'cannot be added later', '⚠ and no longer says it cannot');
@@ -265,7 +267,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(read('CONCIERGE_GUIDE.md'), '**A close-up missed in the house** (new 2026-10-24): in that ▾, press **➕ Close-up**', 'and its markdown copy');
     // What the pages claim, held to the code: the Look at this is quieted by the review, never by a close-up.
     // 2026-10-26: on the review of every line off its photograph (the note may be about any of them), still never on a close-up.
-    has(liveLines(fn('agentNoticeQuiet')), "return sib.length ? sib.every(function(r) { return invLineReviewed(r); }) : invLineReviewed(ref);", 'a Look at this goes quiet on review, which the pages say'); 
+    // RESTATED 2026-10-28 (P9 of the desk audit, AGT-02): a person's look at a line with a name; a tick on an unnamed one is none.
+    has(liveLines(fn('agentNoticeQuiet')), "return sib.length ? sib.every(function(r) { return looked(r); }) : looked(ref);", 'a Look at this goes quiet on review, which the pages say');
+    has(liveLines(fn('agentNoticeQuiet')), "var looked = function(r) { return invLineReviewed(r) && !!String((r && r.objectName) || '').trim(); };", '…a review of a named line'); 
     lacks(liveLines(fn('invAddCloseUp')), 'reviewed', 'and adding a close-up reviews nothing');
     ok(source().indexOf('function invAddCloseUp(') > 0, 'the handler is in the app');
   }

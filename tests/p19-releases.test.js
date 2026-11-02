@@ -193,6 +193,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       invSaveApprovalFix: 'Correct…\'s writer (P5): with a reason, stamping the hand edit',
       // P5's review (2026-10-27): a firearm's dealer route asks first where it moves a recorded approval, as a row's change does.
       invSetDealerRoute: 'the dealer route asks first where it moves a recorded approval (P5\'s review)',
+      // P14 of the desk audit (2026-10-28, LIV-16): a display, whether a living line's record shows the two boxes at all.
+      _invPanelColShown: 'the living record shows Authorized By and Approval Date where one is recorded or written approval is needed (P14)',
     };
     const extra = [...owners].filter((n) => !ALLOWED[n]).sort();
     eq(extra, [], '⚠⚠ no function outside the rule, the writer and the displays reads authBy or approvalDate');

@@ -438,7 +438,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const s = sandbox({
       fns: APPR_FNS.concat(['_invDocPartyHead', 'invOwnInitial', 'invInitialGroupKey', '_invDocName', 'printApprovalRequest', 'invApprovalMoved', 'invApprovalPrevWords', 'approvalRequestTerms', '_approvalHash', 'approvalLineDestKey', 'invApprovalTermsOf', '_approvalLineOpen', 'invReleaseRecipientNamed', 'invDispDocWord', 'invReleaseCautions', '_invCautionBadges',
                             '_invCautionNotices', '_invNamed', '_invItemNo', '_invAwaitingApproval', 'invWrittenReleaseNeeded',
-                            '_jobInvRefs', '_invAssignItemNos', '_invTouch', '_invPrintThumb',
+                            '_jobInvRefs', '_invAssignItemNos', '_invTouch', '_invPrintThumb', '_invPrintThumbSrc', '_invPaperPhotoUrl',
                             '_invFileId', '_invRoomName', '_invMoney', 'invIsFirearm',
                             '_invDocHead', 'resolveValBasis', 'estateValueDate', '_invPicked',
                             '_invMatchesFilter', '_invFilterHides', '_setPhotoRef', 'savePhotoRefs',
@@ -486,7 +486,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const s = sandbox({
       fns: APPR_FNS.concat(['_invDocPartyHead', 'invOwnInitial', 'invInitialGroupKey', '_invDocName', 'printApprovalRequest', 'invApprovalMoved', 'invApprovalPrevWords', 'approvalRequestTerms', '_approvalHash', 'approvalLineDestKey', 'invApprovalTermsOf', '_approvalLineOpen', 'invReleaseRecipientNamed', 'invDispDocWord', 'invReleaseCautions', '_invCautionBadges',
                             '_invCautionNotices', '_invNamed', '_invItemNo', '_invAwaitingApproval', 'invWrittenReleaseNeeded',
-                            '_jobInvRefs', '_invAssignItemNos', '_invTouch', '_invPrintThumb',
+                            '_jobInvRefs', '_invAssignItemNos', '_invTouch', '_invPrintThumb', '_invPrintThumbSrc', '_invPaperPhotoUrl',
                             '_invFileId', '_invRoomName', '_invMoney', 'invIsFirearm',
                             '_invDocHead', 'resolveValBasis', 'estateValueDate', '_invPicked',
                             '_invMatchesFilter', '_invFilterHides', '_setPhotoRef', 'savePhotoRefs',
@@ -516,7 +516,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ];
     let badge = '';
     const s = sandbox({
-      fns: APPR_FNS.concat(['_invBulkApply', '_invStampBy', 'deviceUser', 'invFillPlanChannel', 'invPlanChannel', 'invNoteDispositionMove', 'invReleaseCautions', '_invNamed', '_invItemNo',
+      fns: APPR_FNS.concat(['_invBulkApply', '_invPickedAsked', '_invBulkDone', '_invNoNameLeftText', 'invLineNothingToList', '_invStampBy', 'deviceUser', 'invFillPlanChannel', 'invPlanChannel', 'invNoteDispositionMove', 'invReleaseCautions', '_invNamed', '_invItemNo',
                             '_invPicked', '_jobInvRefs', '_invTouch', '_invMatchesFilter', '_invFilterHides',
                             '_setPhotoRef', 'savePhotoRefs', '_warnPhotoStoreFull', '_invRoomName']),
       vars: APPR_VARS.concat(['INV_RELEASE_CAUTIONS', 'INV_RELEASE_DISPOSITIONS']),
@@ -549,14 +549,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
            fmv: '', disposition: '', condition: 'Good' }),
     ];
     const s = sandbox({
-      fns: APPR_FNS.concat(['invOutForAppraisal', 'signedRecordsOf', 'jobListEntries', '_invDocPartyHead', 'invConditionText', '_lotSplitWorklistBlock', 'invLotSplitState', 'invLotArticleValue', 'invLotSplitSentence', 'invLotsToSplit', 'invLotsUntestable', '_invDocName', 'printAppraisalWorklist', 'invAppraisalInProgress', 'invLineAppraiser', '_invLinkedAppraiser', '_jobAppraisers', '_apprLabel', 'guideLinkHtml', 'jobOnProbateTrack', '_apprTransport', 'invTransportBlocked', 'invTransportReason', '_apprGroups', '_apprWithheld', '_apprNFA',
+      fns: APPR_FNS.concat(['invOutForAppraisal', 'signedRecordsOf', 'jobListEntries', '_invDocPartyHead', 'invConditionText', 'invGroupUncounted', '_lotSplitWorklistBlock', 'invLotSplitState', 'invLotArticleValue', 'invLotSplitSentence', 'invLotsToSplit', 'invLotsUntestable', '_invDocName', 'printAppraisalWorklist', 'invAppraisalInProgress', 'invLineAppraiser', '_invLinkedAppraiser', '_jobAppraisers', '_apprLabel', 'guideLinkHtml', 'jobOnProbateTrack', '_apprTransport', 'invTransportBlocked', 'invTransportReason', '_apprGroups', '_apprWithheld', '_apprNFA',
                             '_apprEstimateFlags', 'collectionsAwaitingPhoto', '_invHasPhoto', '_collLinesOf', 'collectionLineId', '_invJob', '_jobInvRefs', '_invAssignItemNos', '_invTouch',
                             '_invItemNo', '_invRoomName', '_invMoney', 'invIsFirearm',
                             'invFirearmAuthorized', 'invReleaseBlocked', 'invAppraiserFor',
                             'maivAggregate', '_maivWorklistBlock', 'maivFilingApplies',
                             'maivStatement', 'maivStatement_', 'invIsMAIV', 'invMAIVDefaultCat',
                             'invMAIVCategory', 'isDecedentJob', '_gate706', 'fmtDate2',
-                            'savePhotoRefs', '_warnPhotoStoreFull', 'roundCents', 'fmt', 'invDispGoesToDealer', 'invDealerNamed', 'invDealerUnchecked', 'invDealerDirState', 'invDealerUncheckedText', '_invDealerDirStaleText', 'invDealerWhy', 'invLineQty', 'maivOwedLines', 'maivOwedText', '_avStampText', '_avStampCounts']),
+                            'savePhotoRefs', '_warnPhotoStoreFull', 'roundCents', 'fmt', 'invDispGoesToDealer', 'invDealerNamed', 'invDealerUnchecked', 'invDealerDirState', 'invDealerUncheckedText', '_invDealerDirStaleText', 'invDealerWhy', 'invLineQty', 'maivOwedLines', 'maivOwedText', '_avStampText', '_avStampCounts', 'invValueAsOfWords', 'invTransportFact', '_apprFirmOf', 'estateValueDate']),
       vars: APPR_VARS.concat(['MAIV_AGGREGATE_THRESHOLD', 'MAIV_CATEGORIES', 'MAIV_OTHER',
                               'MAIV_BY_CATEGORY', 'DECEDENT_SERVICES', 'INVENTORY_COLUMNS',
                               'INV_TAXONOMY', 'INV_CATEGORIES']),
@@ -578,14 +578,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠ the empty state no longer names an action the app does not offer');
   {
     const s = sandbox({
-      fns: APPR_FNS.concat(['_invDocPartyHead', 'invAppraisalInProgress', 'invLineAppraiser', '_invLinkedAppraiser', '_jobAppraisers', '_apprLabel', '_lotSplitWorklistBlock', 'invLotSplitState', 'invLotArticleValue', 'invLotSplitSentence', 'invLotsToSplit', 'invLotsUntestable', '_invDocName', 'printAppraisalWorklist', 'guideLinkHtml', '_apprTransport', 'invTransportBlocked', 'invTransportReason', '_apprGroups', '_apprWithheld', '_apprNFA',
+      fns: APPR_FNS.concat(['_invDocPartyHead', 'invAppraisalInProgress', 'invLineAppraiser', '_invLinkedAppraiser', '_jobAppraisers', '_apprLabel', 'invGroupUncounted', '_lotSplitWorklistBlock', 'invLotSplitState', 'invLotArticleValue', 'invLotSplitSentence', 'invLotsToSplit', 'invLotsUntestable', '_invDocName', 'printAppraisalWorklist', 'guideLinkHtml', '_apprTransport', 'invTransportBlocked', 'invTransportReason', '_apprGroups', '_apprWithheld', '_apprNFA',
                             '_apprEstimateFlags', 'collectionsAwaitingPhoto', '_invHasPhoto', '_collLinesOf', 'collectionLineId', '_invJob', '_jobInvRefs', '_invAssignItemNos', '_invTouch',
                             '_invItemNo', '_invRoomName', '_invMoney', 'invIsFirearm',
                             'invFirearmAuthorized', 'invReleaseBlocked', 'invAppraiserFor',
                             'maivAggregate', '_maivWorklistBlock', 'maivFilingApplies',
                             'maivStatement', 'maivStatement_', 'invIsMAIV', 'invMAIVDefaultCat',
                             'invMAIVCategory', 'isDecedentJob', '_gate706', 'fmtDate2',
-                            'savePhotoRefs', '_warnPhotoStoreFull', 'roundCents', 'fmt', 'invDispGoesToDealer', 'invDealerNamed', 'invDealerUnchecked', 'invDealerDirState', 'invDealerUncheckedText', '_invDealerDirStaleText', 'invDealerWhy', 'invLineQty', 'maivOwedLines', 'maivOwedText', '_avStampText', '_avStampCounts']),
+                            'savePhotoRefs', '_warnPhotoStoreFull', 'roundCents', 'fmt', 'invDispGoesToDealer', 'invDealerNamed', 'invDealerUnchecked', 'invDealerDirState', 'invDealerUncheckedText', '_invDealerDirStaleText', 'invDealerWhy', 'invLineQty', 'maivOwedLines', 'maivOwedText', '_avStampText', '_avStampCounts', 'invValueAsOfWords', 'invTransportFact', '_apprFirmOf', 'estateValueDate']),
       vars: APPR_VARS.concat(['MAIV_AGGREGATE_THRESHOLD', 'MAIV_CATEGORIES', 'MAIV_OTHER',
                               'MAIV_BY_CATEGORY', 'DECEDENT_SERVICES', 'INVENTORY_COLUMNS',
                               'INV_TAXONOMY', 'INV_CATEGORIES']),
@@ -597,8 +597,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     s.printAppraisalWorklist(1);
     const text = readable(s.__printed || '');
     has(text, 'No individual item is currently flagged', 'it still says nothing is flagged');
-    has(text, 'tick Needs Appraisal on the manifest',
-        '⚠ and names the control that now exists — it used to name one that did not');
-    has(text, 'Appraise', 'plus the field route');
+    // RESTATED (P14 of the desk audit, 2026-10-28; DOC-20): the worklist goes in every package to counsel, so it states what it
+    // lists, never which control to press (it named Needs Appraisal on the manifest and the field's ⚑ Appraise).
+    has(text, 'Art, jewelry, silver and rugs are listed here on their category alone, and any other item once it is flagged for appraisal.',
+        '⚠ and says what it lists');
+    lacks(text, 'tick Needs Appraisal', '…never which control to press');
   }
 };

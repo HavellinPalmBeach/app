@@ -480,7 +480,7 @@ function groupB({ group, ok, eq, has, lacks }) {
     const dom = liveDom(7);
     dom.html = '<div id="wrap"><div id="inv-releases" style="display:none;"></div></div>';
     const S = { rel: '<div class="card" id="inv-releases">Approval request</div>' };
-    const R = lift(['_invRefreshReleases'], { document: dom, _invJob: () => ({ id: 7 }), _jobInvRefs: () => [], _renderInvReleasesCard: () => S.rel });
+    const R = lift(['_invRefreshReleases', '_invPatch'], { document: dom, _invJob: () => ({ id: 7 }), _jobInvRefs: () => [], _renderInvReleasesCard: () => S.rel });
     R._invRefreshReleases(7);
     eq(dom.html, '<div id="wrap"><div class="card" id="inv-releases">Approval request</div></div>', '⚠ a card that starts to say something is drawn where the host stood');
     S.rel = '';
@@ -512,7 +512,7 @@ function groupB({ group, ok, eq, has, lacks }) {
     has(r, "'<div id=\"inv-records\" data-job=\"' + esc(String(jobId)) + '\">' + _renderLedgerCards(job, all) + '</div>'", 'the close-out papers\' host, exactly (p19-ledger)');
     ok(r.indexOf('_agDupHtml(jobId, all)') > -1 && r.indexOf('_agDupHtml(jobId, all)') < r.indexOf('+ body'), 'Possible duplicates before the rows (agent-inventory)');
     const raw = SRC.slice(SRC.indexOf('function renderInventoryTab('));
-    has(raw.slice(0, 900), '_invEnsureLoaded(jobId)', 'the render hydrates first (loading)');
+    has(raw.slice(0, 1300), '_invEnsureLoaded(jobId)', 'the render hydrates first (loading; 1,300 since P9\'s review, the press hold opening the render)');
     eq((r.match(/_invApplyWhenDefault\(jobId, all\)/g) || []).length, 1, 'one once-per-client filter default (p15-followups)');
     ok(r.indexOf('collectionLinesEnsure(jobId)') < r.indexOf('_invAssignItemNos(jobId)'), 'collections before the numbering (room-check)');
     ok(r.indexOf('_renderInventoryImportPanel(jobId)') > r.indexOf('_renderInvWorkbar(job, all)') && r.indexOf('_renderInventoryImportPanel(jobId)') < r.indexOf('+ body'),
@@ -1005,14 +1005,15 @@ function groupE({ group, ok, eq, has, lacks }) {
       _invRowDomId: (id) => 'row-' + id, _renderInvRoomHead: () => '<div id="rmh-GR">RH</div>', _renderInvGroupHead: () => '<div id="gh-G">GH</div>' } });
     D.render();
     const v0 = heads(D.dom.html).filter((x) => x.f === 'values')[0];
-    eq([v0.open, v0.line], [false, '✓ nothing needs an appraisal · no appraisers yet'], 'fixture: Values shut, nothing waiting');
+    // Restated 2026-10-28 (P14 of the desk audit, NEW-14): on living work the bar reads the chip's words, *to a specialist*.
+    eq([v0.open, v0.line], [false, '✓ none waiting on a specialist · no appraisers yet'], 'fixture: Values shut, nothing waiting');
     // A collection's piece keeps the collection's ⚑ (collectionPieceOf): the split adds a line flagged for a specialist.
     const piece = LINE('a2', { objectName: '', needsAppr: true, derivedFrom: 'a', ts: T0 + 1 });
     D.C._photoRefs[7].push(piece);
     const s = settle(D, () => D.C._invSplitRepaint(7, piece));
     ok(s.r.ok, 'the repaint runs (' + (s.r.err || 'ok') + ')');
     const v = s.partial.filter((x) => x.f === 'values')[0];
-    eq([v.open, v.line], [true, '1 needs an appraisal (1 with no appraiser linked) · no appraisers yet'], '⚠ the bar opened by its rule, and its line moved');
+    eq([v.open, v.line], [true, '1 waiting on a specialist (1 with no specialist linked) · no appraisers yet'], '⚠ the bar opened by its rule, and its line moved');
     eq(s.partial, s.full, '⚠⚠ every bar reads what a full render draws');
   }
 
@@ -1459,7 +1460,7 @@ function groupH({ group, ok, eq, has, lacks }) {
   {
     const bar = (jobO) => {
       const job = PROBATE(jobO);
-      const C = lift(['_renderInvWorkbar'], { jobs: [job], _photoRefs: { 7: [LINE('a')] }, estimateStore: { 7: { estimate: { svc: job.svc, rooms: [] } } },
+      const C = lift(['_renderInvWorkbar', '_invNothingLineHtml', 'invLineNothingToList'], { jobs: [job], _photoRefs: { 7: [LINE('a')] }, estimateStore: { 7: { estimate: { svc: job.svc, rooms: [] } } },
         jobPlanStore: {}, vendorDirectory: [], SHEETS_SYNC_URL: '', _invCloudSeen: {}, document: domStub({}) });
       const r = attempt(() => C._renderInvWorkbar(job, C._jobInvRefs(7)));
       return r.ok ? String(r.val) : '<!-- threw: ' + r.err + ' -->';
@@ -1879,7 +1880,7 @@ function groupI({ group, ok, eq, has, lacks }) {
 
   group('I7 · the two stale sentences: the duplicate imports name Remove line; the possible-duplicate chip points above the rows');
   {
-    const C = lift(['_renderDuplicateImportNotice', '_renderInvRow'], { jobs: [PROBATE()], estimateStore: { 7: { estimate: { rooms: [] } } }, _invOpen: {}, _invPick: {},
+    const C = lift(['_renderDuplicateImportNotice', '_renderInvRow', 'invLineNothingToList', 'invLineUnread'], { jobs: [PROBATE()], estimateStore: { 7: { estimate: { rooms: [] } } }, _invOpen: {}, _invPick: {},
       _photoRefs: { 7: [LINE('a', { itemNo: 3, sourceVehId: 1, objectName: '2019 Lexus RX' }), LINE('b', { itemNo: 4, sourceVehId: 1, objectName: '2019 Lexus RX' })] },
       _agDupSet: { a: 2 }, document: domStub({}) });
     const n = C._renderDuplicateImportNotice(7);
@@ -1896,9 +1897,11 @@ function groupI({ group, ok, eq, has, lacks }) {
 
   group('I8 · one rule each, read where it is needed: the filter\'s parts, the quiet notice, every must-find found');
   {
-    eq(callersOf('_invFilterHides'), ['_invEarlierUndecided', '_invMatchesFilter', 'deskShowLine'], 'what hides a line: the filter, Show the item and the earlier-days hint');
-    eq(noComments(fn('_invMatchesFilter')).replace(/\s+/g, ' ').trim(), 'function _invMatchesFilter(r, job) { return _invFilterHides(r, job).length === 0; }',
-      '⚠ a line shows when no part hides it: no second copy of any part');
+    // RESTATED 2026-10-28 (P9 of the desk audit, ROW-08): a row ticked under Not reviewed or Unsure is held on screen while the chip
+    // alone hides it (_invHeldShown, handed the filter's own parts). Still one rule, read where it is needed.
+    eq(callersOf('_invFilterHides'), ['_invEarlierUndecided', '_invHeldShown', '_invMatchesFilter', 'deskShowLine'], 'what hides a line: the filter, the held row, Show the item and the earlier-days hint');
+    eq(noComments(fn('_invMatchesFilter')).replace(/\s+/g, ' ').trim(), "function _invMatchesFilter(r, job) { var h = _invFilterHides(r, job); return h.length === 0 || (typeof _invHeldShown === 'function' && _invHeldShown(r, job, h)); }",
+      '⚠ a line shows when no part hides it, or the only part is the chip it was ticked under: no second copy of any part');
     // RESTATED IN THE REVIEWS' THIRD ROUND (2026-10-26): the rule is _invLineHolds now (invLineHold is its first reason and
     // asks nothing of its own), so the line's own note is asked there; a removed photograph line's notes (since the merge of main's
     // 2026-10-26, agentNoticesOn; round three's agentNoticeLoud is gone) are asked by _invPhotoNoteOpen, which reads that line.
@@ -2437,10 +2440,13 @@ function groupL({ group, ok, eq, has, lacks }) {
       + '<div id="inv-proceeds-card"></div><div id="inv-donations-card"></div></div>'),
       'Closing the job: close-out call, vendor ratings, Disposition Ledger, signed schedules, proceeds, donations', '⚠ the estate\'s Closing title names the schedules');
     const wb = codeOnly(fn('_renderInvWorkbar'));
-    ok(/fid && !invDocContractBlock\(job, ''\) \? btn\(''/.test(wb) && (fn('_renderInvWorkbar').match(/btn\('printCourtInventory\(/g) || []).length === 1
+    // Restated 2026-10-28 (P14 of the desk audit, EST-20): each print is offered where the matter has its instrument, through one
+    // rule (invInstrumentOffered), which asks the tier's rule (invDocContractBlock) inside it.
+    ok(/invInstrumentOffered\(job, ''\) \? btn\(''/.test(wb) && (fn('_renderInvWorkbar').match(/btn\('printCourtInventory\(/g) || []).length === 1
       && (fn('_renderInvWorkbar').match(/btn\('printTrustSchedule\(/g) || []).length === 1, 'the two prints stay in More ▾, once each');
-    has(fn('_renderInvWorkbar'), "(fid && !invDocContractBlock(job, 'court') ? btn('printCourtInventory(", 'the Court Inventory under the tier\'s rule alone');
-    has(fn('_renderInvWorkbar'), "(fid && !invDocContractBlock(job, 'trustee') ? btn('printTrustSchedule(", 'the Trust Schedule likewise');
+    has(fn('_renderInvWorkbar'), "(invInstrumentOffered(job, 'court') ? btn('printCourtInventory(", 'the Court Inventory where the matter has it, under the tier\'s rule');
+    has(fn('_renderInvWorkbar'), "(invInstrumentOffered(job, 'trustee') ? btn('printTrustSchedule(", 'the Trust Schedule likewise');
+    has(fn('invInstrumentOffered'), 'invDocContractBlock(job, kind)', 'and the rule asks the tier\'s first');
     lacks(codeOnly(fn('_renderSignedSchedulesCard')), 'print', 'and the card prints nothing (no control twice)');
   }
 
@@ -2573,7 +2579,7 @@ function groupM({ group, ok, eq, has, lacks }) {
 
   group('M2 · a row\'s chip line wraps at every width: no chip cut off behind an ellipsis');
   {
-    const C = lift(['_renderInvRow'], { jobs: [PROBATE()], estimateStore: { 7: { estimate: { rooms: [] } } }, _invOpen: {}, _invPick: {},
+    const C = lift(['_renderInvRow', 'invLineNothingToList', 'invLineUnread'], { jobs: [PROBATE()], estimateStore: { 7: { estimate: { rooms: [] } } }, _invOpen: {}, _invPick: {},
       _photoRefs: { 7: [LINE('a', { itemNo: 3, objectName: 'Grandfather clock', category: 'Antiques', fmv: 3500, needsAppr: true, flagBequest: true, flagDisputed: true })] },
       _agDupSet: { a: 2 }, document: domStub({}) });
     const row = attempt(() => C._renderInvRow(C.jobs[0], C._photoRefs[7][0]));
@@ -3073,7 +3079,7 @@ function groupO({ group, ok, eq, has, lacks }) {
   {
     const dom = liveDom(8);
     dom.html = '<div id="wrap"><div class="card" id="inv-releases">CLIENT 8</div></div>';
-    const R = lift(['_invRefreshReleases'], { document: dom, _invJob: (id) => ({ id }), _jobInvRefs: () => [], _renderInvReleasesCard: (j) => '<div class="card" id="inv-releases">CLIENT ' + j.id + '</div>' });
+    const R = lift(['_invRefreshReleases', '_invPatch'], { document: dom, _invJob: (id) => ({ id }), _jobInvRefs: () => [], _renderInvReleasesCard: (j) => '<div class="card" id="inv-releases">CLIENT ' + j.id + '</div>' });
     const a = attempt(() => R._invRefreshReleases(7));
     eq([a.ok, a.val, dom.html], [true, false, '<div id="wrap"><div class="card" id="inv-releases">CLIENT 8</div></div>'],
       '⚠⚠ client 8 on the desk: client 7\'s card is not written into it');

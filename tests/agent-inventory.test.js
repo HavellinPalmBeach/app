@@ -128,7 +128,7 @@ function rig(refs, over) {
           // exactly what would let the block above the rows and the chip on the row come to
           // disagree about which lines are contested.
           '_agNameKey', '_agDupEligible', 'agentDuplicateGroups', '_arPair', '_arPairOpen', 'agentDupCleared', 'agentNamedTwice', '_agDupIndex', '_agDupHtml',
-          '_agDupHandle', '_agDupUnhandle', 'agentDropDuplicate', 'agentNotDuplicate', 'agentValueWaiting', '_avDupReleased', '_invItemNo',
+          '_agDupHandle', '_agDupUnhandle', 'agentDropDuplicate', 'agentDupPartner', 'agentNotDuplicate', 'agentValueWaiting', '_avDupReleased', '_invItemNo',
           // P16: the desk's one removal writer, which records who removed the line.
           '_invTombstoneLine', '_invStampBy', 'deviceUser', '_invJob',
           // P24: the room check's links join the same-name rule in one grouping.
@@ -796,7 +796,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // GREEN. A source check cannot tell a rendered control from a disabled one; this reads the
     // markup the function actually returns. CLAUDE.md records that shape more than any other.
     const rowRig = (dupSet, over) => sandbox({
-      fns: ['invLineReviewed', 'invLineOpen', '_renderInvRow', 'invApprovalPrevWords', 'invApprovalMoved', '_invRowPhotoHtml', '_invRowHasWho', 'invOutForAppraisal', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', 'invPickupRecord', 'signedRecordsOf', '_invRowDomId', '_invRecipientInput', 'invPlanChannel', '_renderInvPanel', 'invCloseUpRefusal', '_invCloseUpsHtml', '_invCloseUpTileHtml', '_avPanelHtml', '_avNoticeLabel', '_avNoticeKinds', '_invDetailRefs', 'invAppraisalSourceText', 'invAppraisalChosen', 'invLineAppraiser', '_invLinkedAppraiser', 'invAppraised', 'invAppraisalInProgress', '_invHasAppraisal', '_invHasValue', '_invPanelAppraisalHtml', '_invPhotoOpenHtml',
+      fns: ['invLineReviewed', 'invLineOpen', '_renderInvRow', 'invLineNothingToList', 'invLineUnread', 'invApprovalPrevWords', 'invApprovalMoved', '_invRowPhotoHtml', '_invRowHasWho', 'invOutForAppraisal', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', 'invPickupRecord', 'signedRecordsOf', '_invRowDomId', '_invRecipientInput', 'invPlanChannel', '_renderInvPanel', '_invPanelGroupHtml', 'invGroupUncounted', '_invPanelColsFor', '_invCloseUpAddHtml', 'invCloseUpRefusal', '_invCloseUpsHtml', '_invCloseUpTileHtml', '_avPanelHtml', '_avNoticeLabel', '_avNoticeKinds', '_invDetailRefs', 'invAppraisalSourceText', 'invAppraisalChosen', 'invLineAppraiser', '_invLinkedAppraiser', 'invAppraised', 'invAppraisalInProgress', '_invHasAppraisal', '_invHasValue', '_invPanelAppraisalHtml', '_invPhotoOpenHtml',
             '_invPhotoSiblings', '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef',
             '_invNamed', '_invItemNo',
             // P16: the row names a firearm's dealer route and the panel carries the firearm block.

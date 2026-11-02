@@ -198,7 +198,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('the Court Inventory stops being signed on a matter with no probate in it');
   {
-    const FNS = ['_invDocPartyHead', 'invConditionText', '_invScheduleSection', 'invValBasisWord', 'invLineAppraiser', '_invLinkedAppraiser', '_jobAppraisers', '_apprLabel', 'invProbateRows', '_invTrackDefault', 'printCourtInventory', '_avUnreviewedStamp', 'agentValueUnreviewed', '_invAssignItemNos', '_jobInvRefs', '_invTouch',
+    const FNS = ['_invDocPartyHead', 'invConditionText', '_invScheduleSection', '_invItemNo', 'invValBasisWord', 'invLineAppraiser', '_invLinkedAppraiser', '_jobAppraisers', '_apprLabel', 'invProbateRows', '_invTrackDefault', 'printCourtInventory', '_avUnreviewedStamp', 'agentValueUnreviewed', '_invAssignItemNos', '_jobInvRefs', '_invTouch',
                  'savePhotoRefs', 'isFormalDoc', 'resolveDocLevel', 'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'gateDispute',
                  '_gateYes', '_gate706', 'isDecedentJob', '_invGuardrailItems',
                  'invAwaitingAppraisal', '_invJob', 'invNeedsAppraisal', 'invAppraisalChosen', 'invFiduciaryMode',
@@ -206,7 +206,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                  '_invOnProbateSchedule', '_invTrack', 'resolveValBasis', 'estateValueDate',
                  '_invMoney', '_invExcludedTracks', '_invDocName', '_invHasValue', '_invIsExempt',
                  'matterDef', 'matterTypeOf', 'invDocContractBlock',
-                 'docTierProduces', 'docTierOf', 'svcHasDocStep', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'estimateAppraiserNames', 'docScopeDef', 'roundCents', 'fmt', 'scheduleSigners', 'jobFiduciaries', 'jobListEntries', '_avHasFigure', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invIsFirearm', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', 'invAcceptCtx', 'agentDuplicateGroups', '_arPair', '_arPairOpen', 'agentDupCleared', '_agDupEligible', 'agentNamedTwice', '_avStampCounts', 'invTotalFloor', '_invFloorTotalHtml'];
+                 'docTierProduces', 'docTierOf', 'svcHasDocStep', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'estimateAppraiserNames', 'docScopeDef', 'roundCents', 'fmt', 'scheduleSigners', 'jobFiduciaries', 'jobListEntries', '_avHasFigure', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invIsFirearm', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', 'invAcceptCtx', 'agentDuplicateGroups', '_arPair', '_arPairOpen', 'agentDupCleared', '_agDupEligible', 'agentNamedTwice', '_avStampCounts', 'invTotalFloor', '_invFloorTotalHtml', 'jobOnProbateTrack'];
     const VARS = ['DECEDENT_SERVICES', 'INV_ACCEPT_AMMO_RE', 'INV_OPEN_HOLDS', 'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD',
                   'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS',
                   'EXEMPT_CAP_732_402', 'MATTER_TYPES', 'INV_CONTRACT_DOCS', 'DOC_SCOPES', 'MAIV_OTHER', 'MAIV_BY_CATEGORY'];
@@ -292,8 +292,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // ⚠ And `probate` changes nothing at all — the field earns its keep by what it STOPS, not
     // by what it adds to the common case. Compared byte for byte, so a stray note added to the
     // probate arm later fails rather than passing unnoticed.
-    eq(render('probate', 'Probate').h, normal.h,
-       'an explicit probate answer renders the same document, byte for byte, as no answer at all');
+    // Restated 2026-10-28 (P14 of the desk audit, EST-20): an Estate Settlement (this job's service) with no matter answered is
+    // off the probate track, and its page now says so in one note under the heading (`inv-matter-unset-note`); the explicit
+    // probate answer is that page without the note, byte for byte, so the answer still adds nothing to the common case.
+    const _nAt = normal.h.indexOf('<div class="inv-matter-unset-note"');
+    const _nEnd = _nAt < 0 ? -1 : normal.h.indexOf('</div>', _nAt) + 6;
+    ok(_nAt > 0, 'an unanswered Estate Settlement says the matter type is not recorded (P14)');
+    eq(normal.h.split('inv-matter-unset-note').length - 1, 1, 'in one note');
+    eq(render('probate', 'Probate').h, _nAt < 0 ? normal.h : normal.h.slice(0, _nAt) + normal.h.slice(_nEnd),
+       'an explicit probate answer renders the same document, byte for byte, as no answer at all, the unanswered note aside');
   }
 
   group('⚠ THE SECOND READER — the workbook Summary, and the net that catches the next one');

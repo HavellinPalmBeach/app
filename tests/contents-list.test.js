@@ -10,7 +10,7 @@ const FNS = ['invLineReviewed', 'invLineOpen', '_invDocPartyHead', 'invCondition
   'contentsList', 'printContentsList', '_clFlags',
   '_invAssignItemNos', '_jobInvRefs', '_invItemNo', '_invRoomName', '_planRooms',
   '_invFileId', '_invTouch', 'savePhotoRefs', '_warnPhotoStoreFull',
-  '_invDocHead', '_invDocName', '_invPrintThumb', '_invProgressStamp', '_invReviewStats', 'invLineReviewed', 'invLineOpen',
+  '_invDocHead', '_invDocName', '_invPrintThumb', '_invPrintThumbSrc', '_invPaperPhotoUrl', '_invProgressStamp', '_invReviewStats', 'invLineReviewed', 'invLineOpen',
   '_invThumbFor', '_invThumbCache', '_invThumbKey',
   'invFiduciaryMode', 'isDecedentJob', 'svcFamily',
   'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep',
@@ -21,7 +21,7 @@ const FNS = ['invLineReviewed', 'invLineOpen', '_invDocPartyHead', 'invCondition
   'printEstateInventoryReport', 'invAppraised', '_invHasValue', 'invAppraisalSourceText', 'invLineAppraiser', '_invLinkedAppraiser', 'invAppraisalInProgress', '_apprLabel', 'jobOnProbateTrack', '_avUnreviewedStamp', 'agentValueUnreviewed', '_invGroupItems', 'invIsFirearm', '_invDispLabel', '_invIsExempt',
   '_invIsProbateAsset', '_invTrack', '_invHasAppraisal', '_jobAppraisers', 'invAppraiserFor',
   'resolveValBasis', '_avHasFigure', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invReleaseCautions', '_invPhotoNoteOpen', 'agentValueSpecialistWorth', 'invLineAcceptedOnly', '_invAcceptedStampWords', 'invListReadRefusal', '_invManifestUnread', '_arDupEligible'
-, 'invAcceptCtx', 'agentDuplicateGroups', '_arPair', '_arPairOpen', 'agentDupCleared', '_agDupEligible', 'agentNamedTwice', '_invAcceptCtxOf', 'invListRead', '_invListReadHtml', '_invReadKey', '_avStampCounts', 'invTotalFloor', '_invFloorTotalHtml', '_invOnProbateSchedule', 'roundCents'];
+, 'invAcceptCtx', 'agentDuplicateGroups', '_arPair', '_arPairOpen', 'agentDupCleared', '_agDupEligible', 'agentNamedTwice', '_invAcceptCtxOf', 'invListRead', '_invListReadHtml', '_invReadKey', '_avStampCounts', 'invTotalFloor', '_invFloorTotalHtml', '_invOnProbateSchedule', 'roundCents', 'invDriveFolderWords', 'invTrustOnlyMatter', 'invInventoryWord', '_invExcludedTracks'];
 const VARS = ['_agDupSetJob', 'INV_OPEN_HOLDS', 'INV_ACCEPT_AMMO_RE', 'MATTER_TYPES',  'INV_CONTRACT_DOCS',
   '_agRun', '_avRun', '_arRun', 'AGENT_NOTICE_KINDS', 
   'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DECEDENT_SERVICES', 'SVC_ORDER',
@@ -320,6 +320,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(t, 'no photograph available on this device', '⚠ and NOT as a device that needs a connection');
   }
 
+  group('⚠ P13 (2026-10-28, DOC-03): a row with its file in Drive and no thumbnail here links to it; the reader is never told to re-open a tab');
+  {
+    const { ctx, last } = rig(ESTATE, [IT('a', { roomIdx: 1 })]);
+    ctx.printContentsList(7);
+    const t = text(last().html);
+    lacks(t, 're-open this tab', '⚠⚠ no advice to a reader who has no tab');
+    lacks(t, 'on this device', 'nor anything about this device');
+    has(last().html, 'href="https://drive.google.com/file/d/fa/view"', 'the row links to its photograph instead');
+  }
+
   // ───────────────────────────────────────────────────────────────────────────
   group('⚠ THE THREE FLAGS, and the wording is the point');
   {
@@ -488,13 +498,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // contains every string a source check would look for. This drives the real workbar.
     const BAR = FNS.concat(['_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_arPair', '_arPairOpen', 'agentDupCleared', '_agDupEligible', 'agentNamedTwice', 
       'agentShotGroups', 'agentNameableRefs', '_agState', '_agStateHtml', '_agNoticesHtml', 'agentNotices',
-      '_renderInvWorkbar', 'invColdWords', '_arCheckButtonHtml', '_arState', 'agentRoomsToCheck', '_arCheckable', '_arStateHtml', '_avValueButtonHtml', 'agentValueWaiting', 'agentValueableRefs', '_avHasFigure', '_invHasValue', '_avStateHtml', '_avState', '_avNoticesHtml', 'agentValueNotices', '_avNoticeKinds', '_avNoticeLabel', 'agentValueInternal', 'agentValueUnreviewed', 'agentValueStale', 'agentValueSpecialistWorth', 'invPrimaryDoc', '_invProgressBar', 'invWorkFlags', '_invNeedsValue',
+      '_renderInvWorkbar', '_invNothingLineHtml', 'invLineNothingToList', 'invColdWords', '_arCheckButtonHtml', '_arState', 'agentRoomsToCheck', '_arCheckable', '_arStateHtml', '_avValueButtonHtml', 'agentValueWaiting', 'agentValueableRefs', '_avHasFigure', '_invHasValue', '_avStateHtml', '_avState', '_avNoticesHtml', 'agentValueNotices', '_avNoticeKinds', '_avNoticeLabel', 'agentValueInternal', 'agentValueUnreviewed', 'agentValueStale', 'agentValueSpecialistWorth', 'invPrimaryDoc', '_invProgressBar', 'invWorkFlags', '_invNeedsValue',
       'printEstateInventoryReport', 'invAppraisalChosen', '_avUnreviewedStamp', 'printContentsRecord', '_invHasPhoto', 'photoShareLive', 'photoSharesOf', '_invDispLabel',
       'invReleaseBlocked', 'invIsFirearm', 'invTransportBlocked', 'invFirearmAuthorized',
       'invAwaitingAppraisal', '_invHasAppraisal', '_jobAppraisers', '_invAwaitingApproval', 'invWrittenReleaseNeeded',
       'invProbateRows', 'matterDef', 'matterTypeOf', 'maivFilingApplies', '_gate706',
       // P16: the gate reads the dealer route; the share names both photo folders by the filing rule.
-      'invDealerRoute', 'invDealerRouteOffered', 'invTransportDealer', 'invChannelLeftover', 'photoSubfolder', 'photoSharesLine', 'photoSharesOf', 'agentNoticesOn', 'invDealerNamed', 'invDispGoesToDealer', 'invFirearmsDealerFirm', 'invFirearmsDealerFirms', 'vendorCats', '_vendorNameKey', '_avStampCounts', 'invTotalFloor', '_invFloorTotalHtml', '_invOnProbateSchedule', 'roundCents']);
+      'invDealerRoute', 'invDealerRouteOffered', 'invTransportDealer', 'invChannelLeftover', 'photoSubfolder', 'photoSharesLine', 'photoSharesOf', 'agentNoticesOn', 'invDealerNamed', 'invDispGoesToDealer', 'invFirearmsDealerFirm', 'invFirearmsDealerFirms', 'vendorCats', '_vendorNameKey', '_avStampCounts', 'invTotalFloor', '_invFloorTotalHtml', '_invOnProbateSchedule', 'roundCents', 'invInstrumentOffered']);
     const BVARS = VARS.concat(['_agDupSetJob', 'INV_OPEN_HOLDS', 'INV_ACCEPT_AMMO_RE', 'INV_WORK_FLAGS', 'INV_DISPOSITIONS', 'INV_GROUP_ORDER',
       'INV_RELEASE_DISPOSITIONS', 'INV_RELEASE_CAUTIONS', 'MATTER_TYPES', 'INV_UNDECIDED',
       '_invFilter', '_invShowRoll', '_invOpen', '_invPick', 'INV_VAL_BASES', 'INVENTORY_COLUMNS',
@@ -593,11 +603,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // legitimately present now, which is why a `lacks` on the wording would prove nothing.
     lacks(t, '2 items have no photograph available on this device',
           '⚠ the lost row is NOT counted among the ones a connection would fix');
-    // The converse: a row that HAS a file and no cached thumbnail still gets the old advice,
-    // because that is the one case reconnecting fixes.
-    has(t, '1 item has no photograph available on this device',
-        'the genuine stale-device case still says so, and only it');
-    has(t, 're-open this tab with a connection', 'with the advice that works for it');
+    // RESTATED (P13 of the desk audit, 2026-10-28; DOC-03): the converse used to keep "re-open this tab with a connection" for a
+    // row with a file and no thumbnail on this device. The page fetches its own photographs before it is built now, so the
+    // sentence to a reader who has no tab is gone, and such a row links to its photograph in Drive instead.
+    lacks(t, 'no photograph available on this device', 'the stale-device sentence is gone');
+    lacks(t, 're-open this tab', '⚠⚠ and with it the advice to a reader who has no tab');
+    has(last().html, 'href="https://drive.google.com/file/d/fa/view"', 'the row with a file links to its photograph instead');
     // The two counts are separate reads, and the distinguishing one is the file id.
     has(fnLive('printEstateInventoryReport'), '_invFileId',
         '⚠ the function reads the file id at all — it never did, which is why it could not tell them apart');

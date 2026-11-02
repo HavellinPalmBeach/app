@@ -174,7 +174,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   G('T4 · the desk\'s More ▾ menu keeps its state across a redraw', () => {
     const bar = (seed) => {
       const job = ESTATE();
-      const s = lift(['_renderInvWorkbar'], [], {
+      const s = lift(['_renderInvWorkbar', '_invNothingLineHtml', 'invLineNothingToList'], [], {
         jobs: [job], _photoRefs: { 7: [LINE('a')] }, estimateStore: { 7: { estimate: { rooms: ROOMS } } }, document: domStub(seed || {}),
       });
       return s._renderInvWorkbar(job, s._jobInvRefs(7));
@@ -192,7 +192,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   G('T5 · the schedule table prints *not stated* for a line with no basis, as the report does', () => {
     const s = lift(['_invScheduleSection'], [], {});
     const rows = (list) => s._invScheduleSection('Furniture', list).html;
-    const none = rows([{ objectName: 'Sideboard', qty: 1, fmv: 1200, valSource: '' }]);
+    // The line carries its number (P13, 2026-10-28: the schedules lead with Item #, and a line on a schedule always has one).
+    const none = rows([{ objectName: 'Sideboard', itemNo: 1, qty: 1, fmv: 1200, valSource: '' }]);
     has(none, '<span style="color:#A32D2D;">not stated</span>', '⚠⚠ a valued line with no basis reads not stated, in red');
     lacks(text(none), '—', 'never a dash');
     const named = rows([{ objectName: 'Sideboard', qty: 1, fmv: 1200, valSource: 'Appraisal' }]);
@@ -220,7 +221,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(csv[0], cols.join(','), 'the CSV\'s header row is the payload\'s own column list');
     eq(csv.length, 2, 'one line');
     lacks(noComments(fn('buildInventoryPayload')), 'sheetHeader', 'the payload reads header alone');
-    lacks(noComments(fn('buildInventoryCSV')), 'INVENTORY_COLUMNS', 'the CSV keeps no header list of its own');
+    // Restated 2026-10-28 (P14 of the desk audit, LIV-16): the CSV takes the columns on the job (_invColOnJob, so a living client's
+    // file leaves out the estate's) and names each through the catalogue (_invColHeader, *Promised to someone* on living work); it
+    // still keeps no list of names of its own, and on this estate its header row is the payload's list exactly (above).
+    const _csvBody = noComments(fn('buildInventoryCSV'));
+    lacks(_csvBody, 'sheetHeader', 'the CSV keeps no second name for a column');
+    eq((_csvBody.replace("'Job ID'", '').match(/'[A-Z][a-z]+ [A-Za-z]+'/g) || []), [], 'nor a header of its own beyond Job ID');
+    has(_csvBody, '_invColHeader(job, c)', 'each named through the catalogue');
     // The script finds the column under the one name (2026-10-03, live).
     const gs = require('fs').readFileSync(require('path').join(__dirname, '..', 'apps-script', 'saveInventory.gs'), 'utf8');
     has(gs, "idx('Net Proceeds')", 'saveInventory.gs resolves the Net formula by Net Proceeds');

@@ -102,6 +102,13 @@ function net(opts) {
         return sp(res({ ok: true, fileUrl: 'https://drive.google.com/file/d/up' + n + '/view', fileId: 'up' + n }));
       }
       if (body.action === 'getSubfolders') return sp(res({ ok: true, subfolders: null }));
+      // The pages' photographs (P13), as the deployment answers: every one Drive holds. RESTATED in P13's review (2026-10-28): the
+      // package now says, never green, how many photographs its pages could not draw, and this fixture answered none.
+      if (body.action === 'getThumbnails') {
+        const thumbs = {};
+        (body.fileIds || []).forEach((id) => { thumbs[id] = 'data:image/jpeg;base64,AAAA'; });
+        return sp(res({ ok: true, thumbs, missing: [] }));
+      }
       if (body.action === 'htmlToPdf') {
         log.pdfs.push(body.html);
         return sp(res({ ok: true, base64: Buffer.from('%PDF-1.4 ' + 'x'.repeat(150) + ' #' + log.pdfs.length).toString('base64') }));
@@ -343,7 +350,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(t, 'Trust package', 'the package row, labelled for the trust route');
     // RESTATED 2026-10-03 (P19): the package carries the Disposition Ledger too, on both routes and at every tier, before the
     // Appraisal Worklist (probatePackageDocs; p19-ledger.test.js). Everything else here is as it was.
-    has(t, 'Carries the Trust Schedule, Estate Inventory Report, Disposition Ledger and Appraisal Worklist, with links to the photographs and the release and custody record, to ann@lowe.law.',
+    // RESTATED 2026-10-28 (P14 of the desk audit, DOC-28): on a trust-only matter the Report is the Inventory Report.
+    has(t, 'Carries the Trust Schedule, Inventory Report, Disposition Ledger and Appraisal Worklist, with links to the photographs and the release and custody record, to ann@lowe.law.',
         'it says what it carries, and to whom, before it goes');
     has(card, 'onclick="event.stopPropagation();sendProbatePackage(7)">&#128231; Send trust package</button>', '⚠ and the send, named for the route');
     // RESTATED 2026-10-03 (P19): this pinned margin-top:0px — no grid above the blocks. The trust's own details (its name,
@@ -479,11 +487,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const p = mimeParts(mime);
     // RESTATED 2026-10-03 (P19): the package carries the Disposition Ledger too, on both routes and at every tier, before the
     // Appraisal Worklist (probatePackageDocs; p19-ledger.test.js). Everything else here is as it was.
-    eq(p.pdfs.map((x) => x.name.replace(/ - 69 Beach Blvd - .*$/, '')), ['Havellin Trust Schedule', 'Havellin Estate Inventory', 'Havellin Disposition Ledger', 'Havellin Appraisal Worklist'],
-       '⚠⚠ the Trust Schedule, the Estate Inventory Report, the Disposition Ledger and the Appraisal Worklist attached');
+    eq(p.pdfs.map((x) => x.name.replace(/ - 69 Beach Blvd - .*$/, '')), ['Havellin Trust Schedule', 'Havellin Inventory', 'Havellin Disposition Ledger', 'Havellin Appraisal Worklist'],
+       '⚠⚠ the Trust Schedule, the Inventory Report (P14: never "Estate Inventory" on a trust), the Disposition Ledger and the Appraisal Worklist attached');
     const led = (r.N.log.uploads.filter((u) => /Disposition Ledger/.test(u.filename))[0] || {}).html || '';
     has(text(led), 'proceeds net to the trust', 'P19: the ledger the trust package carries says the proceeds are the trust\'s');
-    ok(!r.N.log.uploads.some((u) => /Court Inventory/.test(u.filename)) && !r.N.log.pdfs.some((h) => /Estate Inventory — Tangible Personal Property/.test(h)),
+    ok(!r.N.log.uploads.some((u) => /Court Inventory/.test(u.filename)) && !r.N.log.pdfs.some((h) => /Court Inventory \(§733\.604\) — Tangible Personal Property/.test(h)),
        '⚠⚠ and no Court Inventory: not attached, not filed, not built');
     // The attached Trust Schedule is the desk's own page, with its gaps.
     const ts = (r.N.log.uploads.filter((u) => /Trust Schedule/.test(u.filename))[0] || {}).html || '';
@@ -500,15 +508,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'Dear Ann,',
       '',
       'Attached are Havellin’s inventory documents for the Walter Ellsworth trust administration, 69 Beach Blvd, Palm Beach, as they stand on October 2, 2026:',
-      '  - Trust Schedule',
-      '  - Estate Inventory Report',
-      '  - Disposition Ledger',
-      '  - Appraisal Worklist',
+      // RESTATED 2026-10-28 (P14, DOC-17 and DOC-28): each attachment says what it is for, and the Report is the Inventory Report.
+      // RESTATED 2026-11-02 (P14's review): *every item listed*, never *photographed*, which a typed line is not.
+      '  - Trust Schedule — the tangible personal property held in the trust, scheduled to support the trustee’s accounting',
+      '  - Inventory Report — every item listed, with its value and where it is going',
+      '  - Disposition Ledger — where each item went and what it brought',
+      '  - Appraisal Worklist — the items flagged for a specialist’s appraisal, grouped by specialist',
       '',
       'In the trust’s Google Drive folder:',
       '  - Appraisal report or offer — Christies appraisal.pdf: https://drive.google.com/file/d/APPR1/view',
       '  - As-Found Record photographs: https://drive.google.com/drive/folders/AF7',
-      '  - Estate Inventory photographs: https://drive.google.com/drive/folders/INV7',
+      '  - Inventory photographs: https://drive.google.com/drive/folders/INV7',
       '  - Release approvals and chain of custody: https://drive.google.com/file/d/up1/view',
       '',
       'If you need anything further for the administration of the trust, reply here and we will send it.',
@@ -528,7 +538,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        'both photograph folders shared with the attorney, and with the copied trustee (P22)');
     eq(r.N.log.uploads.map((u) => [u.folderId, u.filename]), [
       ['INV7', 'HVL-0007 - Havellin Release Approvals and Chain of Custody.html'], ['INV7', 'HVL-0007 - Havellin Trust Schedule.html'],
-      ['INV7', 'HVL-0007 - Havellin Estate Inventory Report.html'], ['INV7', 'HVL-0007 - Havellin Disposition Ledger.html'],
+      ['INV7', 'HVL-0007 - Havellin Inventory Report.html'], ['INV7', 'HVL-0007 - Havellin Disposition Ledger.html'],
       ['INV7', 'HVL-0007 - Havellin Appraisal Worklist.html']],
        'the record and every page filed to Estate Inventory, undated, so the next package replaces them');
     const st = (r.job().docState || {}).probatePackage || {};
@@ -537,7 +547,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        cc: ['rex@hale.example', AGREEMENTS] }, 'what it carried and to whom');
     ok((r.job().at || {})['docState:probatePackage'] > 0, 'stamped on its key: a person\'s edit');
     has(r.last().m, 'Draft created in ' + BOX + ' for ann@lowe.law, copied to rex@hale.example and ' + AGREEMENTS
-        + ', with the Trust Schedule, Estate Inventory Report, Disposition Ledger and Appraisal Worklist attached', 'the notice');
+        + ', with the Trust Schedule, Inventory Report, Disposition Ledger and Appraisal Worklist attached', 'the notice');
     eq(r.last().t, 'ok', 'all of it went');
     // The card waits on the confirming tap, which records the send.
     const card = r.c.probatePackageCardHtml(r.job());
@@ -561,7 +571,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const p = mimeParts(mime);
     eq(p.text.split('\n')[0], 'Dear Rex,', '⚠ the trustee greeted');
     has(p.html, '<p style="font-size:15px;line-height:1.65;color:#2e2e33;margin:0 0 14px;">Dear Rex,</p>', 'in both parts');
-    eq(p.pdfs.map((x) => x.name.replace(/ - 69 Beach Blvd - .*$/, '')), ['Havellin Trust Schedule', 'Havellin Estate Inventory', 'Havellin Disposition Ledger', 'Havellin Appraisal Worklist'],
+    // Restated 2026-10-28 (P14 of the desk audit, DOC-28): on a trust-only matter the Report files as the *Inventory*.
+    eq(p.pdfs.map((x) => x.name.replace(/ - 69 Beach Blvd - .*$/, '')), ['Havellin Trust Schedule', 'Havellin Inventory', 'Havellin Disposition Ledger', 'Havellin Appraisal Worklist'],
        'the same four documents');
     eq(r.N.log.shares, [{ folderId: 'AF7', email: 'rex@hale.example' }, { folderId: 'INV7', email: 'rex@hale.example' }], '⚠ the folders shared with the trustee');
     eq(JSON.parse(JSON.stringify(r.job().docState.probatePackage.pkg)).to, 'rex@hale.example', 'recorded as sent to the trustee');
@@ -593,7 +604,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(href, 'Dear Rex,', 'greeting the trustee');
     has(href, 'Havellin’s inventory records for the Walter Ellsworth trust administration, 69 Beach Blvd, Palm Beach, as they stand on October 2, 2026, are in the trust’s Google Drive folder:',
         '⚠ it can carry no PDF, so the documents are linked from the trust’s folder');
-    has(href, '  - Trust Schedule: https://drive.google.com/file/d/up2/view', 'the filed Trust Schedule, linked');
+    // Restated 2026-10-28 (P14 of the desk audit, DOC-17): each page linked says what it is for, beside its title.
+    has(href, '  - Trust Schedule (the tangible personal property held in the trust, scheduled to support the trustee’s accounting): https://drive.google.com/file/d/up2/view',
+        'the filed Trust Schedule, linked, with what it is for');
     lacks(href, 'Court Inventory', 'and no Court Inventory');
     const st = fb.job().docState.probatePackage || {};
     ok(st.provider === 'mailto' && !!st.draftedAt && !st.sentAt, 'recorded as an email opened, never as sent');
@@ -732,13 +745,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(g.probatePackageInventoryBlocker(TRUST({ matterType: 'neither' }), []), '', 'no route: nothing to say (the route refusal is the blocker\'s)');
     // The gaps the confirm names: the plan's rooms not locked, lines with no disposition, and on a values tier lines with none.
     const G2 = lift(['probatePackageGaps'], [], { jobs: [TRUST()], estimateStore: { 7: EST() }, jobPlanStore: {}, _photoRefs: { 7: INVENTORY() } });
-    eq(G2.probatePackageGaps(7), ['1 room not yet locked', '1 line with no disposition', '1 line with no value'], 'the Study unlocked, the chairs undecided and unvalued');
+    // RESTATED 2026-10-28 (P9 of the desk audit, INV-07, NEW-07): the question counts what the desk counts, so the Sargent portrait,
+    // flagged for a look (it waits on an appraisal: its figure is marked Appraisal and no appraiser recorded it) and not yet ticked,
+    // is named too.
+    eq(G2.probatePackageGaps(7), ['1 room not yet locked', '1 line with no disposition', '1 line with no value', '1 line flagged for a look and not yet ticked'], 'the Study unlocked, the chairs undecided and unvalued, the portrait not yet ticked');
     G2.jobPlanStore[7] = { rooms: { 1: { status: 'locked' } } };
     G2._photoRefs[7] = INVENTORY().map((r) => Object.assign({}, r, r.label === 'inventory' ? { disposition: 'Auction', fmv: 100 } : {}));
     eq(G2.probatePackageGaps(7), [], 'locked, decided, valued: nothing to ask');
     G2.jobs[0].docTier = 'contents';
     G2._photoRefs[7] = INVENTORY();
-    eq(G2.probatePackageGaps(7), ['1 line with no disposition'], 'a contents tier states no values, so a missing one is no gap');
+    eq(G2.probatePackageGaps(7), ['1 line with no disposition', '1 line flagged for a look and not yet ticked'], 'a contents tier states no values, so a missing one is no gap');
     // The card withholds the send while the gate holds, and says why.
     const unact = renderDash(TRUST({ status: 'won', activatedOn: '' }));
     lacks(unact, 'sendProbatePackage(', '⚠⚠ the send is withheld on a job not yet activated');
@@ -756,7 +772,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const yes = pkgRig({ stubs: { confirm: (m) => { asked.push(m); return true; } } });
     ok(yes.c.sendProbatePackage(7) === true, 'it starts');
     eq(asked.length, 1, 'asked once');
-    has(asked[0], 'The inventory is still being built: 1 room not yet locked, 1 line with no disposition and 1 line with no value.', '⚠ the confirm names every gap');
+    has(asked[0], 'The inventory is still being built: 1 room not yet locked, 1 line with no disposition, 1 line with no value and 1 line flagged for a look and not yet ticked.', '⚠ the confirm names every gap');
     has(asked[0], 'The trust package would go to ann@lowe.law now with those gaps marked on its pages. Send it anyway?', 'and to whom');
     ok(yes.opened.length >= 1, 'accepted: the draft made');
   });

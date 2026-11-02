@@ -576,7 +576,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('the small items — the desk\'s All filter stays chosen');
   {
     let open = 1, captured = true, C = null;
-    C = sandbox({ fns: ['_invApplyWhenDefault', 'setInvWhen', 'invClearFilters'], vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', '_invFilter', '_invWhenJob'],
+    C = sandbox({ fns: ['_invApplyWhenDefault', 'setInvWhen', '_invFilterChanged', 'invClearFilters'], vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', '_invFilter', '_invWhenJob'],
                   stubs: { _invCapturedToday: () => captured, renderInventoryTab: () => C._invApplyWhenDefault(open, []) } });
     C.renderInventoryTab();
     eq(C._invFilter.when, 'today', 'a desk opened on a day with a capture opens on Today');

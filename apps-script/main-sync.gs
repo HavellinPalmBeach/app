@@ -173,6 +173,8 @@
 // the ones the web shows; he took "Agent Two reads 4 pages"): a research line may read four pages, not two (AGENT_VALUE_FETCHES),
 // so a results page and the lots opened from it are more often a sale it can cite. No action or type changes; carries 2026-10-28's.
 // Until it is live a research line reads two pages. Each research request runs longer: testAgentValue() prints the seconds.
+// ⚠⚠ 2026-11-02c (the merge of two builds that each named themselves 2026-11-02b, neither deployed): one version carrying both,
+// so the banner can tell a deployment that has them apart from one that has either alone. The two, as each was written:
 // ⚠⚠ 2026-11-02b (the 2026-10-26c finding, Anthony chose the fix: a device whose copy of a client predated a release request's DocuSign
 // envelope could still send a request, and its stamped approvalRequest record won the merge, so the envelope's record was gone from
 // every device): the app now keeps each envelope as its own docState key, 'approvalEnv:<envelopeId>', which this merge already takes
@@ -183,7 +185,12 @@
 // The merge is unchanged. No action or type changes; it carries 2026-11-02's (and so 2026-10-28's). Until it is live a copy of
 // the app that has not been reloaded can send a request through DocuSign that today's app never checks, records on the lines or
 // files, and two devices pressing at once can put out a second envelope while one is out.
-var BACKEND_VERSION = '2026-11-02b';
+// ⚠ 2026-11-02b (the desk audit's P13, "Every line traceable to its photograph and number"; INV-09): Agent One says whether each
+// line it names holds more than one article (`group` in record_contents, required: a lot of one kind or a mixed group of a drawer,
+// box or shelf), so the app can test a group recorded at a count of one against §20.2031-6(a)'s $100 an article (invLotSplitState
+// 'nocount'): the worklist printed its clearance over a mixed drawer it never tested. One field and one sentence of the prompt; no
+// action or type changes; it carries 2026-11-02's. Until it is live a group named at a count of one reads as one article.
+var BACKEND_VERSION = '2026-11-02c';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive', 'esignSendRequest',
@@ -4135,11 +4142,14 @@ function _agTool(categories, conditions) {
           items: {
             type: 'object',
             additionalProperties: false,
-            required: ['name', 'category', 'qty', 'confidence', 'basis', 'crop'],
+            required: ['name', 'category', 'qty', 'group', 'confidence', 'basis', 'crop'],
             properties: {
               name:       { type: 'string',  description: 'Describe it as fully as the photograph and the crew\'s note support, never with a count: how many goes in qty.' },
               category:   { type: 'string',  enum: categories },
               qty:        { type: 'integer', description: 'Articles on this line. 1 for a single object; the count for a lot, from the crew\'s note where it gives one.' },
+              // ⚠ 2026-10-28 (P13): whether the line holds more than one article, whatever qty says. A mixed group is one line of qty 1
+              // by the naming rules, and the app tests a group with no count against the Form 706 $100 an article cap (invLotSplitState).
+              group:      { type: 'boolean', description: 'true when this line holds more than one article, whether a lot of one kind counted in qty (a pair, a set) or a mixed group recorded as one line (a drawer, box, shelf or bag of things). false for a single object.' },
               confidence: { type: 'string',  enum: ['high', 'medium', 'low'] },
               // ⚠ THE BASIS ROUTES THE VALUATION (2026-10-26): the app sends a line to sold-comparable research when its basis says a
               // mark was read (agentValueMode). Free text failed both ways ("mark too faint to read" went to research; "nameplate reads
@@ -4261,6 +4271,9 @@ function _agSystem(ctx) {
     + 'stack" or "stack of 6". The count goes in qty and nowhere else, because a stack or a box hides '
     + 'what is under the top one and a person corrects the count in one place. When the crew\'s note '
     + 'gives a count ("set of 8", "twelve of them"), use it for qty; otherwise qty is what you can see.\n'
+    // 2026-10-28 (P13): the app tests a mixed group recorded at qty 1 against the Form 706 cap only where it knows it is a group.
+    + 'Set group to true on every line that holds more than one article: a lot of one kind, and a mixed group recorded as one '
+    + 'line at qty 1. A single object is false.\n'
     // 2026-10-25b (Anthony: *"if we're taking a picture of something, we just say Crate and Barrel coffee table"*). The crew
     // stood in front of it; a maker or brand they say belongs in the name.
     + 'When the crew\'s note names the maker or brand ("Crate & Barrel coffee table"), put it in the name as '
@@ -4565,7 +4578,7 @@ function testAgentIdentify() {
   Logger.log('  objects: ' + r.objects.length);
   for (var i = 0; i < r.objects.length; i++) {
     var o = r.objects[i];
-    Logger.log('   - [' + o.confidence + '] ' + o.name + '  (' + o.category + ', qty ' + o.qty + (o.condition ? ', ' + o.condition : ', condition not graded') + ') — ' + o.basis);
+    Logger.log('   - [' + o.confidence + '] ' + o.name + '  (' + o.category + ', qty ' + o.qty + (o.group ? ', a group' : '') + (o.condition ? ', ' + o.condition : ', condition not graded') + ') — ' + o.basis);
     // 2026-10-24: a name carries no count. Said here, so the first run after a redeploy shows whether the prompt holds.
     if (AGENT_COUNT_IN_NAME_RE.test(String(o.name || ''))) Logger.log('     WARNING: a count in the name; the count belongs in qty alone.');
   }

@@ -45,6 +45,7 @@
   },
   {
    "id": "DOC-02",
+   "fixed": "2026-10-28 (P14: exempt property claimed inside the probate estate on the Report, under its own heading with the Court Inventory's subtotal block (_invExemptClaimTotalHtml); CLAUDE.md, Each paper says the right thing for its matter; tests/p14-papers.test.js, browser step 124)",
    "title": "Exempt property is 'carved out of the probate estate' on the Report but 'listed and claimed' on the Court Inventory",
    "kind": "inconsistency",
    "severity": "fix-now",
@@ -62,6 +63,7 @@
   },
   {
    "id": "DOC-03",
+   "fixed": "2026-10-28 (P13: the printers and the sends fetch their own lines' photographs into a print-only map, never localStorage, with \"Gathering N photographs\" on the toast and the count told to the person printing; \"re-open this tab\" is gone; tests/p13-traceable.test.js, browser step 129)",
    "title": "On a full house only about 110 lines get a photograph on any paper, and the page tells counsel to 're-open this tab'",
    "kind": "defect",
    "severity": "high",
@@ -96,6 +98,7 @@
   },
   {
    "id": "DOC-05",
+   "fixed": "2026-10-28 in part (P13: Item # and Room columns, one set of column widths with table-layout:fixed, rows by number, each number a link to its photograph; tests/p13-traceable.test.js, browser step 129). Not built: a per-line marker for an unreviewed agent figure or a pending appraisal.",
    "title": "The valued schedules give no item number, room or photograph per line, so a reader cannot cross-reference or tell two like items apart",
    "kind": "accuracy",
    "severity": "high",
@@ -113,6 +116,7 @@
   },
   {
    "id": "DOC-06",
+   "fixed": "2026-10-28 (P13: each photograph and item number links to its Drive file on the Report, the Contents List, the Contents Record, both schedules, the request and the ledger, and the footer says only that: \"Where an item has a photograph, its number links to it in Drive; the photographs are retained for seven years.\", drafted for Anthony; tests/p13-traceable.test.js, browser step 129)",
    "title": "'Photographs are reference-numbered to the line items above' is false: file names carry room and sequence, and no line links to its file",
    "kind": "accuracy",
    "severity": "high",
@@ -130,6 +134,7 @@
   },
   {
    "id": "DOC-07",
+   "fixed": "2026-10-28 (P14: the worklist values as of the estate's day (invValueAsOfWords: the alternate date named where elected), on a living job as of the appraiser's inspection; CLAUDE.md, Each paper says the right thing for its matter; tests/p14-papers.test.js, browser step 124)",
    "title": "The Appraisal Worklist tells the appraiser 'value as of date of death' on a living client's job, and ignores the alternate valuation date",
    "kind": "defect",
    "severity": "fix-now",
@@ -300,6 +305,7 @@
   },
   {
    "id": "DOC-17",
+   "fixed": "2026-10-28 (P14: the Court Inventory is headed Court Inventory (§733.604), and the package email says what each attachment is for (probatePackageDocPurpose); the one-line reconciliation of the two totals is not built; CLAUDE.md, Each paper says the right thing for its matter; tests/p14-papers.test.js, browser step 124)",
    "title": "Two inventory papers in one package with near-identical titles, different scopes and different totals, and nothing says which is the filing",
    "kind": "inconsistency",
    "severity": "medium",
@@ -351,6 +357,7 @@
   },
   {
    "id": "DOC-20",
+   "fixed": "2026-10-28 (P14: the worklist states facts, never the desk's presses (invTransportFact and the worklist's own sentences); CLAUDE.md, Each paper says the right thing for its matter; tests/p14-papers.test.js, browser step 124)",
    "title": "The Appraisal Worklist, attached to every package, prints app instructions to the TC",
    "kind": "inconsistency",
    "severity": "medium",
@@ -436,6 +443,7 @@
   },
   {
    "id": "DOC-25",
+   "fixed": "2026-10-28 (P13: on a Form 706 estate the Report and both schedules mark a lot over $100 an article on its line, \"averages $150 an article: itemise it for the Form 706\", and an untested one \"grouped, untested\"; counsel bundle D23; tests/p13-traceable.test.js, browser step 129)",
    "title": "Grouped lots over $100 an article on a Form 706 estate are flagged only on the worklist, not on the schedule line",
    "kind": "accuracy",
    "severity": "medium",
@@ -487,6 +495,7 @@
   },
   {
    "id": "DOC-28",
+   "fixed": "2026-10-28 (P14: a trust-only matter's Report reads Inventory, files as the Inventory Report, links Inventory photographs and names the trust's Drive folder (invInventoryWord, invDriveFolderWords, probatePackageTitle); CLAUDE.md, Each paper says the right thing for its matter; tests/p14-papers.test.js, browser step 124)",
    "title": "Trust-only packages still call the papers and folders 'Estate Inventory' and 'the estate's Drive folder'",
    "kind": "inconsistency",
    "severity": "low",

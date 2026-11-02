@@ -284,7 +284,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const log = { badges: [], syncs: 0, saves: 0, repaint: 0 };
     const doc = domStub({});
     const c = lift(['pickupGroups', 'invRecordedGone', 'invGoneText', 'pickupRecordCustody', 'pickupVoidCustody', 'voidSignedRecord',
-      '_renderInvReleasesCard', 'openPickupDialog', 'pickupFileFromDialog', 'invPickupRecord', '_renderInvRow', 'jobListPut'], {
+      '_renderInvReleasesCard', 'openPickupDialog', 'pickupFileFromDialog', 'invPickupRecord', '_renderInvRow', 'invLineNothingToList', 'invLineUnread', 'jobListPut'], {
       jobs: [job], _photoRefs: { [job.id]: lines }, estimateStore: {}, contractors: [], vendorDirectory: [{ vendor_name: "Sotheby's  Palm Beach" }],
       showSyncBadge(m, e) { log.badges.push(String(m)); }, _scheduleInventorySync() { log.syncs++; }, savePhotoRefs() { log.saves++; },
       saveJobs() {}, syncJobToSheets() {}, _signedCopyRepaint() { log.repaint++; }, document: doc, jobPlanStore: {}, changeOrders: [],

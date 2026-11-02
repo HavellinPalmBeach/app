@@ -74,7 +74,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const padCanvas = { width: 1000, height: 280, toDataURL: () => 'data:image/png;base64,SIGNATURE', getContext: () => ({ clearRect() {}, beginPath() {}, moveTo() {}, lineTo() {}, stroke() {} }) };
     const c = lift(['signoutGroups', 'signoutLineKind', 'invOutForAppraisal', 'signoutSheetHtml', 'openSignoutDialog', 'openPickupDialog', 'signoutFileFromPad',
       'pickupFileFromDialog', '_signoutAfterFile', '_signoutRecordCustody', 'pickupRecordCustody', 'pickupVoidCustody', 'voidSignedRecord', 'invRecordedGone',
-      'invGoneText', '_renderInvReleasesCard', '_renderInvRow', 'closeOpenWorkFlag', 'signPadSigned', 'signPadDataUrl', 'signPadClear', 'signPadInit',
+      'invGoneText', '_renderInvReleasesCard', '_renderInvRow', 'invLineNothingToList', 'invLineUnread', 'closeOpenWorkFlag', 'signPadSigned', 'signPadDataUrl', 'signPadClear', 'signPadInit',
       'signedRecordLinksHtml', 'jobListPut', 'custodyEvents', 'invReceiptHtml'], {
       jobs: [job], _photoRefs: { [job.id]: lines }, estimateStore: {}, contractors: [], vendorDirectory: [{ vendor_name: "Sotheby's  Palm Beach" }],
       showSyncBadge(m) { log.badges.push(String(m)); }, _scheduleInventorySync() { log.syncs++; }, savePhotoRefs() { log.saves++; },

@@ -43,7 +43,7 @@ const DEVICE_FNS = ['saveJobs', 'loadJobs', 'loadJobsVerdict', 'refreshJobsFromC
   '_snapLinesOf', '_snapPendingOf', '_snapLanded', 'loadSnapshotLines', '_withSnapLines', 'printInventorySnapshot', 'printSnapshotComparison', 'snapshotDiff', 'backendHasType',
   'invLineQty', '_invRoomName', '_invAssignItemNos', '_jobInvRefs', '_invTrack', 'estateValueDate', 'roundCents', '_snapPrevLive', '_snapVal',
   '_snapVoidedBlock', '_invItemNo', '_invMoney', '_invDateTime', '_invDocName', 'invValBasisWord', '_invHasValue', 'invAppraised',
-  'invLineAppraiser', '_invLinkedAppraiser', '_jobAppraisers', '_apprLabel', '_invJob', 'fmt', '_stableJson', '_withDeviceKey', 'deviceKey'];
+  'invLineAppraiser', '_invLinkedAppraiser', '_jobAppraisers', '_apprLabel', '_apprFirmOf', '_invJob', 'fmt', '_stableJson', '_withDeviceKey', 'deviceKey'];
 const DEVICE_VARS = ['PERSON_NAME_ALIASES', 'SYNC_TARGETS', '_pendingWrites', '_retryTimer', '_retryStep', '_flushing', '_retryDelays', 'SYNC_STUCK_TRIES',
   '_outbox', '_outboxTimer', '_outboxSending', '_OUTBOX_WINDOW', '_syncWriteSeq', 'SHEET_NO_CLIENTS_TXT', '_sheetNotice', '_sheetKeptSaid', 'SHEET_CELL_MAX_APP', 'SNAP_LINES_UNREAD_TXT',
   '_snapLines', '_snapPending', 'INV_COLD_TXT', '_backendTypes'];
@@ -785,7 +785,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // it had not read the sheet redrawn when idle, nothing else (_invColdRepaint).
     const drawn = [];
     let idle = 0;
-    const R = sandbox({ fns: ['_invColdRepaint', 'invColdWords', '_invManifestUnread'], vars: ['_invColdShown'],
+    const R = sandbox({ fns: ['_invColdRepaint', '_invPatch', 'invColdWords', '_invManifestUnread'], vars: ['_invColdShown'],
       stubs: { SHEETS_SYNC_URL: SYNC, _invCloudSeen: {}, _invCloudFailed: {}, _invJob: (id) => ({ id }), _jobInvRefs: () => [],
         _renderInvWorkbar: () => 'the bar now', _invRenderWhenIdle: () => { idle++; },
         document: { getElementById: (id) => (id === 'inv-workbar' ? { set outerHTML(h) { drawn.push(h); } } : null) } } });
@@ -1037,13 +1037,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(shown.map((x) => [x.v, x.m]), [['2026-10-27e', ['version']]], '⚠⚠ a 2026-10-27e deployment draws the banner, by version');
     // RESTATED 2026-11-02 (the release request's envelope as its own record): the app now asks for 2026-11-02b, so a 2026-10-28
     // deployment draws the banner too; the line opens with 2026-11-02b's gap, and 2026-10-28's lost change follows it at once,
-    // under its own vintage, then 2026-10-27e's.
+    // under its own vintage, then 2026-10-27e's. RESTATED on the merge with P13 (both named 2026-11-02b; one 2026-11-02c carries both):
+    // the line opens with 2026-11-02c's gaps, the envelope first.
     const C28 = sandbox({ fns: ['checkBackendVersion', '_withDeviceKey', 'deviceKey'], vars: ['BACKEND_NEEDS', 'BACKEND_NEEDS_TYPES', 'BACKEND_MIN_VERSION', '_backendVersion'],
       stubs: { SHEETS_SYNC_URL: 'https://sheets', _showBackendStaleBanner: (v, m) => shown.push({ v, m }), localStorage: { getItem: () => null },
         fetch: () => ({ then(f) { const r = f({ json: () => ({ ok: true, version: '2026-10-28', actions: C28.BACKEND_NEEDS, types: C28.BACKEND_NEEDS_TYPES }) }); return { then(g) { g(r); return { catch() {} }; } }; } }) } });
     C28.checkBackendVersion();
     eq(shown.slice(1).map((x) => [x.v, x.m]), [['2026-10-28', ['version']]], '⚠⚠ and so does a 2026-10-28 deployment, by version');
-    ok(_v.indexOf('on a deployment older than 2026-11-02b, a copy of the app that has not been reloaded can send an estate\u2019s release request through DocuSign') === 0,
+    ok(_v.indexOf('on a deployment older than 2026-11-02c, a copy of the app that has not been reloaded can send an estate\u2019s release request through DocuSign') === 0,
       '⚠⚠ it names the newest gap first: a release request a copy of the app not reloaded can send through DocuSign');
     const _d28 = _v.indexOf(_vint + '2026-10-28, two devices saving at the same moment can lose one device\u2019s change on the sheet though both were told it saved');
     ok(_d28 > 0 && _v.indexOf(_vint) === _d28, '⚠⚠ then the lost change, at once after it, under its own vintage');

@@ -110,7 +110,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // (Record the signed request's ticks, the Releases bar opening, a change to an approved item); Anthony to confirm.
     // 2,875 from 2026-10-27 (P6): one person per client on this tab at a time, the tab reading the sheet, and the refusal when it
     // cannot (the desk audit's SYN-16: the page said nothing about two devices); Anthony to confirm.
-    ok(words < 2875, 'short: ' + words + ' words');
+    // 2,925 from 2026-10-28 (P9): the photos with nothing to list off in one press, a photo too dark to read, and the ticks clearing
+    // after each press (the page described the selection that stayed); Anthony to confirm.
+    ok(words < 2925, 'short: ' + words + ' words');
     ['photography-guide.html', 'incident-guide.html', 'sorting-guide.html', 'packing-guide.html', 'move-day-guide.html', 'first-night-guide.html',
      'firearms-protocol.html', 'concierge-guide.html'].forEach((f) => has(html, '<a href="' + f + '">', 'names ' + f));
     has(t, 'Linked from the top of the Job Admin & Inv tab.', 'and says where the app links it');
@@ -431,12 +433,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(AK.map((k) => [k.label, k.cls]), [['Must find', 'a-err'], ['Possible NFA item', 'a-err'], ['Firearm', 'a-err'], ['Look at this', 'a-warn']], 'three notes in red, Look at this in amber');
     has(code(fn('_agNoticesHtml')), "'Agent One raised '", 'under Agent One raised N things to look at');
     const Q = sandbox({ fns: ['agentNoticeQuiet'], stubs: { invLineReviewed: (r) => !!(r && r.rev), mustFindAllFound: (j) => !!(j && j.allFound) } });
-    eq([Q.agentNoticeQuiet('other', { rev: false }, {}), Q.agentNoticeQuiet('other', { rev: true }, {})], [false, true], 'Look at this: gone once the item is reviewed');
+    // RESTATED 2026-10-28 (P9 of the desk audit, AGT-01): a reviewed item is a named one; a tick on a line with no name never
+    // takes its note off the list (agentNoticeQuiet asks for the name as well), so the items here carry their names.
+    eq([Q.agentNoticeQuiet('other', { rev: false, objectName: 'Sideboard' }, {}), Q.agentNoticeQuiet('other', { rev: true, objectName: 'Sideboard' }, {})], [false, true], 'Look at this: gone once the item is reviewed');
+    eq(Q.agentNoticeQuiet('other', { rev: true, objectName: '' }, {}), false, '…a named item: a tick on one with no name leaves the note');
     eq([Q.agentNoticeQuiet('mustfind', { rev: true }, { allFound: false }), Q.agentNoticeQuiet('mustfind', {}, { allFound: true })], [false, true], 'a Must find: stays until every must-find is found');
     eq([Q.agentNoticeQuiet('firearm', { rev: true }, { allFound: true }), Q.agentNoticeQuiet('nfa', { rev: true }, { allFound: true })], [false, false], 'Firearm and Possible NFA item: always stay');
     // 2026-10-26: Agent One keeps a photograph's notes on the photograph's own line, whichever thing they are about, so a Look at
     // this goes quiet once every line off that photograph is reviewed (the real sibling walk, on a photograph split three ways).
-    const sibRefs = [{ stableId: 'p', rev: true }, { stableId: 'p2', derivedFrom: 'p', rev: true, ts: 2 }, { stableId: 'p3', derivedFrom: 'p', rev: false, ts: 3 }];
+    const sibRefs = [{ stableId: 'p', rev: true, objectName: 'Shelf' }, { stableId: 'p2', derivedFrom: 'p', rev: true, ts: 2, objectName: 'Vase' }, { stableId: 'p3', derivedFrom: 'p', rev: false, ts: 3, objectName: 'Clock' }];
     const QS = sandbox({ fns: ['agentNoticeQuiet', '_invPhotoSiblings', '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef'],
       stubs: { _photoRefs: { 7: sibRefs }, invLineReviewed: (r) => !!(r && r.rev), mustFindAllFound: () => false } });
     const quietOn = (refs) => { QS._photoRefs[7] = refs; return QS.agentNoticeQuiet('other', refs[0], { id: 7 }); };
@@ -470,7 +475,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // for its name, count and value. The page's sentences on the real rule, with a real context (invAcceptCtx: the job and the
     // open duplicate groups), each flag the page names, and the box it describes. review-flagged.test.js holds the rule whole.
     const RV = lift(['invLineAccepted', 'invLineHold', 'invAcceptCtx', 'invLineReviewed', 'invLineUnsure', '_invRevBoxHtml', '_invProgressStamp',
-      '_avUnreviewedStamp', 'invMarkListRead', 'invListRead', 'invListSeen', 'invListReadRefusal', '_invListReadHtml', 'agentNotices', 'agentDuplicateGroups', '_arPair', '_arPairOpen', 'agentDupCleared'],
+      '_avUnreviewedStamp', 'invMarkListRead', '_invPatch', 'invListRead', 'invListSeen', 'invListReadRefusal', '_invListReadHtml', 'agentNotices', 'agentDuplicateGroups', '_arPair', '_arPairOpen', 'agentDupCleared'],
       { jobs: [], _photoRefs: {}, estimateStore: {}, vendors: [], vendorDirectory: [], contractors: [], document: { getElementById: () => null },
         jobPlanStore: {}, SHEETS_SYNC_URL: '', _invCloudSeen: {}, _invCloudFailed: {}, alert(m) { RV.__alerts = (RV.__alerts || []).concat([String(m)]); },
         _saveJobEdit(job) { RV.__saved = (RV.__saved || 0) + 1; RV.__savedJob = job; }, _renderInvWorkbar: () => '' });
@@ -595,7 +600,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq([look(EST(), { valConf: 'low' }).stands, !!unsureFlag && unsureFlag.test(standing, EST()), !!unsureFlag && unsureFlag.test(Object.assign({}, standing, ticked), EST())],
       [true, true, false], '⚠⚠ Unsure gathers an item standing on a grey tick where Agent Two guessed, and lets it go once ticked');
     // "ticking nothing": pressing it sets the filter (every day) and writes nothing on an item.
-    const FL = sandbox({ fns: ['setInvFlag'], stubs: { _invFilter: { flag: '', when: 'today' }, renderInventoryTab: () => {} } });
+    const FL = sandbox({ fns: ['setInvFlag', '_invFilterChanged'], stubs: { _invFilter: { flag: '', when: 'today' }, renderInventoryTab: () => {} } });
     const before = JSON.stringify(standing);
     attempt(() => FL.setInvFlag('unsure'));
     eq([FL._invFilter.flag, FL._invFilter.when], ['unsure', 'all'], 'pressing Unsure shows the guessed items, every day');
@@ -712,7 +717,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const bulk = code(fn('_renderInvBulk'));
     has(bulk, "menu('disposition', 'Set disposition…'", 'Set disposition…');
     has(bulk, '>Remove lines</button>', 'Remove lines');
-    has(t, 'Remove lines takes them off the list and keeps the photos; Set disposition… gives them all one destination, such as Donate, guns aside.', 'as the page says');
+    has(t, 'Remove lines takes them off the list and keeps the photos in Drive; Set disposition… gives them all one destination, such as Donate, guns aside.', 'as the page says');
     // The Needs you counts and the earlier days.
     has(code(fn('setInvFlag')), "if (_invFilter.flag) _invFilter.when = 'all';", 'a Needs you count covers every day: pressing one shows every day');
     has(code(fn('_renderInvFlagStrip')), '>Needs you</span>', 'the Needs you row');
@@ -746,7 +751,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const gunOpts = attempt(() => DO._invDispOptions({ id: 7, svc: 'downsizing_move', destAddr: '1 Ocean Blvd' }, '', { category: 'Firearms' }));
     eq(gunOpts.ok ? gunOpts.val.filter((d) => d === 'Donate' || d === 'Junk') : null, [], 'a gun’s own Where it goes offers neither Donate nor Junk');
     // 2026-10-24: + Close-up, a close-up missed in the house, is a label over the record's chooser (closeup-later.test.js).
-    ['&#10133; Another item in this photo</button>', '&#10133; Close-up</label>', 'Remove line</button>', '_invPhotoOpenHtml(jid, ref, 240)'].forEach((w) => has(code(fn('_renderInvPanel')), w, 'the record carries ' + decode(w.replace(/<[^>]+>/g, ''))));
+    // RESTATED 2026-10-28 (P9): + Close-up's label is one builder, _invCloseUpAddHtml, read by the record and by the row of a photo
+    // Agent One could not read.
+    ['&#10133; Another item in this photo</button>', '_invCloseUpAddHtml(jid, ref)', 'Remove line</button>', '_invPhotoOpenHtml(jid, ref, 240)'].forEach((w) => has(code(fn('_renderInvPanel')), w, 'the record carries ' + decode(w.replace(/<[^>]+>/g, ''))));
+    has(code(fn('_invCloseUpAddHtml')), '&#10133; Close-up</label>', 'the record carries + Close-up');
     // 2026-10-26b (Anthony: "maybe we just need a little link under each photo"): the record's photograph and each close-up open in Drive.
     has(code(fn('_invPhotoOpenHtml')), '>Open in Drive &#8599;</a>', 'each photograph in a record carries a small Open in Drive link');
     has(code(fn('_invCloseUpTileHtml')), '_invPhotoOpenHtml(jobId, d, 120)', 'a close-up\'s tile too');
