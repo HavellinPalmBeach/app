@@ -55,7 +55,7 @@ const ITEM = (id, over) => Object.assign({
 const PRINT_FNS = ['_invDocPartyHead', 'invLineReviewed', 'invLineOpen', 'invInitialGroupWords', 'invOwnInitial', 'invInitialGroupKey', 'invDocContractBlock', 'invReleaseRecipientNamed',
   'printContentsRecord', 'contentsRecordSignoff', 'dispositionRecord', 'printApprovalRequest', 'invDispDocWord', 'printCourtInventory', 'jobOnProbateTrack', '_avUnreviewedStamp',
   'agentShotGroups', 'agentNameableRefs', '_agState', '_agStateHtml', '_agNoticesHtml', 'agentNotices',
-  'printDispositionLedger', 'referralFeeVendorsNote', 'vendorPaysReferral', '_vendorByName', '_vendorNameKey', '_andJoin', '_renderInvWorkbar', 'invColdWords', '_arCheckButtonHtml', '_arState', 'agentRoomsToCheck', '_arCheckable', '_arStateHtml', '_avValueButtonHtml', 'agentValueWaiting', 'agentValueableRefs', '_avHasFigure', '_invHasValue', '_avStateHtml', '_avState', '_avNoticesHtml', 'agentValueNotices', '_avNoticeKinds', '_avNoticeLabel', 'agentValueInternal', 'agentValueUnreviewed', 'agentValueStale', 'agentValueSpecialistWorth', 'invPrimaryDoc', '_invReviewStats', '_invProgressStamp',
+  'printDispositionLedger', 'referralFeeVendorsNote', 'vendorPaysReferral', '_vendorByName', '_vendorNameKey', '_andJoin', '_renderInvWorkbar', '_invNothingLineHtml', 'invLineNothingToList', 'invColdWords', '_arCheckButtonHtml', '_arState', 'agentRoomsToCheck', '_arCheckable', '_arStateHtml', '_avValueButtonHtml', 'agentValueWaiting', 'agentValueableRefs', '_avHasFigure', '_invHasValue', '_avStateHtml', '_avState', '_avNoticesHtml', 'agentValueNotices', '_avNoticeKinds', '_avNoticeLabel', 'agentValueInternal', 'agentValueUnreviewed', 'agentValueStale', 'agentValueSpecialistWorth', 'invPrimaryDoc', '_invReviewStats', '_invProgressStamp',
   '_invDocName', '_invDocHead', '_invPrintThumb', '_invRecipient', '_jobDestLabel',
   '_jobHasDestination', 'invFiduciaryMode', 'isDecedentJob', '_invJob', '_jobInvRefs',
   '_invAssignItemNos', '_invItemNo', '_invNamed', '_invRoomName', '_invDispLabel',
@@ -319,7 +319,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         ok(estate.indexOf(k) >= 0, 'and still on an estate one');
       });
     // Axis 1 is the record itself and does not move.
-    ['objectName', 'category', 'room', 'channel', 'serial', 'flagBequest', 'flagDisputed',
+    // RESTATED 2026-10-28 (P9 of the desk audit, ROW-05): the name is on both as the row's own box, never the record's (one box
+    // per value), so it is held off both here as the count is.
+    ok(living.indexOf('objectName') < 0 && estate.indexOf('objectName') < 0, 'objectName is on both, on the row and off the record');
+    ['category', 'room', 'channel', 'serial', 'flagBequest', 'flagDisputed',
      'dispDate', 'receiptDoc'].forEach((k) => {
       ok(living.indexOf(k) >= 0 && estate.indexOf(k) >= 0, k + ' is on both');
     });

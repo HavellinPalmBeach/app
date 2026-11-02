@@ -785,7 +785,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // it had not read the sheet redrawn when idle, nothing else (_invColdRepaint).
     const drawn = [];
     let idle = 0;
-    const R = sandbox({ fns: ['_invColdRepaint', 'invColdWords', '_invManifestUnread'], vars: ['_invColdShown'],
+    const R = sandbox({ fns: ['_invColdRepaint', '_invPatch', 'invColdWords', '_invManifestUnread'], vars: ['_invColdShown'],
       stubs: { SHEETS_SYNC_URL: SYNC, _invCloudSeen: {}, _invCloudFailed: {}, _invJob: (id) => ({ id }), _jobInvRefs: () => [],
         _renderInvWorkbar: () => 'the bar now', _invRenderWhenIdle: () => { idle++; },
         document: { getElementById: (id) => (id === 'inv-workbar' ? { set outerHTML(h) { drawn.push(h); } } : null) } } });

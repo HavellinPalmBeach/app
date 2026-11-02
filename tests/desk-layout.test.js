@@ -478,7 +478,7 @@ function groupB({ group, ok, eq, has, lacks }) {
     const dom = liveDom(7);
     dom.html = '<div id="wrap"><div id="inv-releases" style="display:none;"></div></div>';
     const S = { rel: '<div class="card" id="inv-releases">Approval request</div>' };
-    const R = lift(['_invRefreshReleases'], { document: dom, _invJob: () => ({ id: 7 }), _jobInvRefs: () => [], _renderInvReleasesCard: () => S.rel });
+    const R = lift(['_invRefreshReleases', '_invPatch'], { document: dom, _invJob: () => ({ id: 7 }), _jobInvRefs: () => [], _renderInvReleasesCard: () => S.rel });
     R._invRefreshReleases(7);
     eq(dom.html, '<div id="wrap"><div class="card" id="inv-releases">Approval request</div></div>', '⚠ a card that starts to say something is drawn where the host stood');
     S.rel = '';
@@ -510,7 +510,7 @@ function groupB({ group, ok, eq, has, lacks }) {
     has(r, "'<div id=\"inv-records\" data-job=\"' + esc(String(jobId)) + '\">' + _renderLedgerCards(job, all) + '</div>'", 'the close-out papers\' host, exactly (p19-ledger)');
     ok(r.indexOf('_agDupHtml(jobId, all)') > -1 && r.indexOf('_agDupHtml(jobId, all)') < r.indexOf('+ body'), 'Possible duplicates before the rows (agent-inventory)');
     const raw = SRC.slice(SRC.indexOf('function renderInventoryTab('));
-    has(raw.slice(0, 900), '_invEnsureLoaded(jobId)', 'the render hydrates first (loading)');
+    has(raw.slice(0, 1300), '_invEnsureLoaded(jobId)', 'the render hydrates first (loading; 1,300 since P9\'s review, the press hold opening the render)');
     eq((r.match(/_invApplyWhenDefault\(jobId, all\)/g) || []).length, 1, 'one once-per-client filter default (p15-followups)');
     ok(r.indexOf('collectionLinesEnsure(jobId)') < r.indexOf('_invAssignItemNos(jobId)'), 'collections before the numbering (room-check)');
     ok(r.indexOf('_renderInventoryImportPanel(jobId)') > r.indexOf('_renderInvWorkbar(job, all)') && r.indexOf('_renderInventoryImportPanel(jobId)') < r.indexOf('+ body'),
@@ -1454,7 +1454,7 @@ function groupH({ group, ok, eq, has, lacks }) {
   {
     const bar = (jobO) => {
       const job = PROBATE(jobO);
-      const C = lift(['_renderInvWorkbar'], { jobs: [job], _photoRefs: { 7: [LINE('a')] }, estimateStore: { 7: { estimate: { svc: job.svc, rooms: [] } } },
+      const C = lift(['_renderInvWorkbar', '_invNothingLineHtml', 'invLineNothingToList'], { jobs: [job], _photoRefs: { 7: [LINE('a')] }, estimateStore: { 7: { estimate: { svc: job.svc, rooms: [] } } },
         jobPlanStore: {}, vendorDirectory: [], SHEETS_SYNC_URL: '', _invCloudSeen: {}, document: domStub({}) });
       const r = attempt(() => C._renderInvWorkbar(job, C._jobInvRefs(7)));
       return r.ok ? String(r.val) : '<!-- threw: ' + r.err + ' -->';
@@ -1874,7 +1874,7 @@ function groupI({ group, ok, eq, has, lacks }) {
 
   group('I7 · the two stale sentences: the duplicate imports name Remove line; the possible-duplicate chip points above the rows');
   {
-    const C = lift(['_renderDuplicateImportNotice', '_renderInvRow'], { jobs: [PROBATE()], estimateStore: { 7: { estimate: { rooms: [] } } }, _invOpen: {}, _invPick: {},
+    const C = lift(['_renderDuplicateImportNotice', '_renderInvRow', 'invLineNothingToList', 'invLineUnread'], { jobs: [PROBATE()], estimateStore: { 7: { estimate: { rooms: [] } } }, _invOpen: {}, _invPick: {},
       _photoRefs: { 7: [LINE('a', { itemNo: 3, sourceVehId: 1, objectName: '2019 Lexus RX' }), LINE('b', { itemNo: 4, sourceVehId: 1, objectName: '2019 Lexus RX' })] },
       _agDupSet: { a: 2 }, document: domStub({}) });
     const n = C._renderDuplicateImportNotice(7);
@@ -1891,9 +1891,11 @@ function groupI({ group, ok, eq, has, lacks }) {
 
   group('I8 · one rule each, read where it is needed: the filter\'s parts, the quiet notice, every must-find found');
   {
-    eq(callersOf('_invFilterHides'), ['_invEarlierUndecided', '_invMatchesFilter', 'deskShowLine'], 'what hides a line: the filter, Show the item and the earlier-days hint');
-    eq(noComments(fn('_invMatchesFilter')).replace(/\s+/g, ' ').trim(), 'function _invMatchesFilter(r, job) { return _invFilterHides(r, job).length === 0; }',
-      '⚠ a line shows when no part hides it: no second copy of any part');
+    // RESTATED 2026-10-28 (P9 of the desk audit, ROW-08): a row ticked under Not reviewed or Unsure is held on screen while the chip
+    // alone hides it (_invHeldShown, handed the filter's own parts). Still one rule, read where it is needed.
+    eq(callersOf('_invFilterHides'), ['_invEarlierUndecided', '_invHeldShown', '_invMatchesFilter', 'deskShowLine'], 'what hides a line: the filter, the held row, Show the item and the earlier-days hint');
+    eq(noComments(fn('_invMatchesFilter')).replace(/\s+/g, ' ').trim(), "function _invMatchesFilter(r, job) { var h = _invFilterHides(r, job); return h.length === 0 || (typeof _invHeldShown === 'function' && _invHeldShown(r, job, h)); }",
+      '⚠ a line shows when no part hides it, or the only part is the chip it was ticked under: no second copy of any part');
     // RESTATED IN THE REVIEWS' THIRD ROUND (2026-10-26): the rule is _invLineHolds now (invLineHold is its first reason and
     // asks nothing of its own), so the line's own note is asked there; a removed photograph line's notes (since the merge of main's
     // 2026-10-26, agentNoticesOn; round three's agentNoticeLoud is gone) are asked by _invPhotoNoteOpen, which reads that line.
@@ -2568,7 +2570,7 @@ function groupM({ group, ok, eq, has, lacks }) {
 
   group('M2 · a row\'s chip line wraps at every width: no chip cut off behind an ellipsis');
   {
-    const C = lift(['_renderInvRow'], { jobs: [PROBATE()], estimateStore: { 7: { estimate: { rooms: [] } } }, _invOpen: {}, _invPick: {},
+    const C = lift(['_renderInvRow', 'invLineNothingToList', 'invLineUnread'], { jobs: [PROBATE()], estimateStore: { 7: { estimate: { rooms: [] } } }, _invOpen: {}, _invPick: {},
       _photoRefs: { 7: [LINE('a', { itemNo: 3, objectName: 'Grandfather clock', category: 'Antiques', fmv: 3500, needsAppr: true, flagBequest: true, flagDisputed: true })] },
       _agDupSet: { a: 2 }, document: domStub({}) });
     const row = attempt(() => C._renderInvRow(C.jobs[0], C._photoRefs[7][0]));
@@ -3068,7 +3070,7 @@ function groupO({ group, ok, eq, has, lacks }) {
   {
     const dom = liveDom(8);
     dom.html = '<div id="wrap"><div class="card" id="inv-releases">CLIENT 8</div></div>';
-    const R = lift(['_invRefreshReleases'], { document: dom, _invJob: (id) => ({ id }), _jobInvRefs: () => [], _renderInvReleasesCard: (j) => '<div class="card" id="inv-releases">CLIENT ' + j.id + '</div>' });
+    const R = lift(['_invRefreshReleases', '_invPatch'], { document: dom, _invJob: (id) => ({ id }), _jobInvRefs: () => [], _renderInvReleasesCard: (j) => '<div class="card" id="inv-releases">CLIENT ' + j.id + '</div>' });
     const a = attempt(() => R._invRefreshReleases(7));
     eq([a.ok, a.val, dom.html], [true, false, '<div id="wrap"><div class="card" id="inv-releases">CLIENT 8</div></div>'],
       '⚠⚠ client 8 on the desk: client 7\'s card is not written into it');

@@ -640,7 +640,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(s7, '7 possible double counts not yet decided: #10 and #11; #12 and #13; #14 and #15; #16 and #17; #18 and #19; #20 and #21; and 1 more', '⚠ six named, then how many more');
     lacks(s7, '#22 and #23', 'the seventh not named');
     // The estate package's question names it (P8's review: the confirm that makes an interim copy deliberate said nothing).
-    const PK = sandbox({ fns: PAPER_FNS.concat(['probatePackageGaps', '_planRoomStatus']), vars: PAPER_VARS,
+    // (P9: the question reads the Needs you chips' own tests, so their catalogue and leaf tests are lifted with it.)
+    const PK = sandbox({ fns: PAPER_FNS.concat(['probatePackageGaps', '_planRoomStatus', 'invLineNothingToList', '_invNeedsValue']), vars: PAPER_VARS.concat(['INV_WORK_FLAGS']),
       stubs: { document: domStub({}), jobs: [Object.assign({}, ESTATE, { matterType: 'probate' })], _photoRefs: { 7: PAINTINGS() }, jobPlanStore: {},
         invReleaseCautions: () => [], _invPrintThumb: () => '', _invThumbFor: () => '' } });
     const gaps = val(attempt(() => PK.probatePackageGaps(7)), []);

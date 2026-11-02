@@ -732,13 +732,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(g.probatePackageInventoryBlocker(TRUST({ matterType: 'neither' }), []), '', 'no route: nothing to say (the route refusal is the blocker\'s)');
     // The gaps the confirm names: the plan's rooms not locked, lines with no disposition, and on a values tier lines with none.
     const G2 = lift(['probatePackageGaps'], [], { jobs: [TRUST()], estimateStore: { 7: EST() }, jobPlanStore: {}, _photoRefs: { 7: INVENTORY() } });
-    eq(G2.probatePackageGaps(7), ['1 room not yet locked', '1 line with no disposition', '1 line with no value'], 'the Study unlocked, the chairs undecided and unvalued');
+    // RESTATED 2026-10-28 (P9 of the desk audit, INV-07, NEW-07): the question counts what the desk counts, so the Sargent portrait,
+    // flagged for a look (it waits on an appraisal: its figure is marked Appraisal and no appraiser recorded it) and not yet ticked,
+    // is named too.
+    eq(G2.probatePackageGaps(7), ['1 room not yet locked', '1 line with no disposition', '1 line with no value', '1 line flagged for a look and not yet ticked'], 'the Study unlocked, the chairs undecided and unvalued, the portrait not yet ticked');
     G2.jobPlanStore[7] = { rooms: { 1: { status: 'locked' } } };
     G2._photoRefs[7] = INVENTORY().map((r) => Object.assign({}, r, r.label === 'inventory' ? { disposition: 'Auction', fmv: 100 } : {}));
     eq(G2.probatePackageGaps(7), [], 'locked, decided, valued: nothing to ask');
     G2.jobs[0].docTier = 'contents';
     G2._photoRefs[7] = INVENTORY();
-    eq(G2.probatePackageGaps(7), ['1 line with no disposition'], 'a contents tier states no values, so a missing one is no gap');
+    eq(G2.probatePackageGaps(7), ['1 line with no disposition', '1 line flagged for a look and not yet ticked'], 'a contents tier states no values, so a missing one is no gap');
     // The card withholds the send while the gate holds, and says why.
     const unact = renderDash(TRUST({ status: 'won', activatedOn: '' }));
     lacks(unact, 'sendProbatePackage(', '⚠⚠ the send is withheld on a job not yet activated');
@@ -756,7 +759,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const yes = pkgRig({ stubs: { confirm: (m) => { asked.push(m); return true; } } });
     ok(yes.c.sendProbatePackage(7) === true, 'it starts');
     eq(asked.length, 1, 'asked once');
-    has(asked[0], 'The inventory is still being built: 1 room not yet locked, 1 line with no disposition and 1 line with no value.', '⚠ the confirm names every gap');
+    has(asked[0], 'The inventory is still being built: 1 room not yet locked, 1 line with no disposition, 1 line with no value and 1 line flagged for a look and not yet ticked.', '⚠ the confirm names every gap');
     has(asked[0], 'The trust package would go to ann@lowe.law now with those gaps marked on its pages. Send it anyway?', 'and to whom');
     ok(yes.opened.length >= 1, 'accepted: the draft made');
   });

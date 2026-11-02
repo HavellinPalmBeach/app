@@ -430,7 +430,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       estimateStore: { 7: { approved: true, estimate: EST_HR } }, savePhotoRefs: () => {}, _scheduleInventorySync: () => {}, showSyncBadge: () => {},
       _invRefreshSummary: () => {}, _invRefreshGuardrail: () => {}, _invRefreshFlagStrip: () => {}, _invRefreshRecords: () => {}, renderInventoryTab: () => {},
       _renderInvReleasesCard: () => '<div class="card" id="inv-releases">File pickup list</div>', _renderInvRow: () => '' });
-    const E = lift(['_invEdit'], STATE.concat(['savePhotoRefs', '_scheduleInventorySync', 'showSyncBadge', '_invRefreshSummary', '_invRefreshGuardrail', '_invRefreshFlagStrip',
+    const E = lift(['_invEdit', '_invPatch'], STATE.concat(['savePhotoRefs', '_scheduleInventorySync', 'showSyncBadge', '_invRefreshSummary', '_invRefreshGuardrail', '_invRefreshFlagStrip',
       '_invRefreshRecords', 'renderInventoryTab', '_renderInvReleasesCard', '_renderInvRow']), estubs);
     const ed = attempt(() => E._invEdit(7, 'b', 'channel', { value: 'Palm Beach Estate Buyers' }));
     ok(ed.ok, 'the edit runs: ' + (ed.err || ''));

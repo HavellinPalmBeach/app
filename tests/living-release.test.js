@@ -68,8 +68,8 @@ const STOP = ['_printDocument', 'alert', 'showSyncBadge', 'renderInventoryTab', 
 function rig(job, rows, extra) {
   const log = { printed: [], alerts: [], badges: [], notices: [] };
   const c = lift(['invWrittenReleaseNeeded', 'invWrittenReleasePicked', '_invAwaitingApproval', '_approvalLineOpen', 'invRatificationOwed',
-    'printApprovalRequest', 'approvalRequestState', 'signoutGroups', 'collectionPartnerLines', 'deskFoldState', '_renderInvBulk', '_renderInvWorkbar',
-    '_invBulkApply', '_renderInvRow', 'printContentsRecord', 'invReleaseCautions', '_invPanelCautionHtml', 'invRecordApproval', 'printDispositionLedger',
+    'printApprovalRequest', 'approvalRequestState', 'signoutGroups', 'collectionPartnerLines', 'deskFoldState', '_renderInvBulk', '_renderInvWorkbar', '_invNothingLineHtml',
+    '_invBulkApply', '_invPickedAsked', '_invBulkDone', '_invNoNameLeftText', '_renderInvRow', 'invLineNothingToList', 'invLineUnread', 'printContentsRecord', 'invReleaseCautions', '_invPanelCautionHtml', 'invRecordApproval', 'printDispositionLedger',
     'printAppraisalWorklist'], STOP, Object.assign({
     jobs: [job], _photoRefs: { 7: rows }, estimateStore: { 7: { estimate: { rooms: [{ idx: 1, name: 'Study', st: 'in' }] } } },
     vendorDirectory: [], document: domStub({}), _invPick: {},

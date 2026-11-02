@@ -276,7 +276,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     A.edit('s10', { objectName: 'Henredon walnut dresser, nine drawers', namedBy: 'desk', fmv: '1250' });
     clock.run(3000);
     vm.runInContext('invReadFirst = function () { return false; };', B.ctx);
-    B.pick(['s10']); B.ctx._invBulkApply(J, 'reviewed', 1); clock.run(4000);
+    // RESTATED 2026-10-28 (P9 of the desk audit, ROW-01): Mark reviewed leaves a line with no name alone, and on B's stale copy the
+    // line is unnamed, so it no longer writes it at all. The defect is shown with a sweep that writes every picked line whole.
+    B.pick(['s10']); B.ctx._invBulkApply(J, 'condition', 'Good'); clock.run(4000);
     eq([sheetLine(srv, 's10').objectName, sheetLine(srv, 's10').fmv], ['', undefined], 'fixture: without the read A\'s name and figure are gone from the sheet');
   });
 
@@ -771,7 +773,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       _avHasFigure: () => false, alert: (m) => asked.push('alert: ' + m),
       invReadFirst: (jobId, what) => { asked.push(what); return true; },
     };
-    const C = sandbox({ fns: ['agentValueRun', 'agentRevalue', 'invBulkRevalue', 'agentRoomCheckRun'], stubs: Object.assign({ agentValueableRefs: () => [{ stableId: 's1' }], agentRoomsToCheck: () => [] }, stubs) });
+    const C = sandbox({ fns: ['agentValueRun', 'agentRevalue', 'invBulkRevalue', '_invPickedAsked', 'agentRoomCheckRun'], stubs: Object.assign({ agentValueableRefs: () => [{ stableId: 's1' }], agentRoomsToCheck: () => [] }, stubs) });
     C.agentValueRun(J); C.agentRevalue(J, 's1'); C.invBulkRevalue(J); C.agentRoomCheckRun(J, {});
     eq(asked, ['Value lines', 'Re-value', 'Re-value', 'Check rooms'], '⚠⚠ each asks the sheet first, by its own name');
     asked.length = 0;
@@ -851,7 +853,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(failed[J], true, '⚠ a read desk whose read fails is marked failed');
     // The work bar is drawn again when the words move.
     let drawn = 0;
-    const W = sandbox({ fns: ['_invColdRepaint'], stubs: { _invColdShown: { [J]: { bar: '', stale: '' } }, invColdWords: () => '', invSheetStaleWords: () => 'sheet not answering since 9:42 PM: this device’s copy',
+    const W = sandbox({ fns: ['_invColdRepaint', '_invPatch'], stubs: { _invColdShown: { [J]: { bar: '', stale: '' } }, invColdWords: () => '', invSheetStaleWords: () => 'sheet not answering since 9:42 PM: this device’s copy',
       _invJob: () => JOB(), _jobInvRefs: () => [], _renderInvWorkbar: () => { drawn++; return '<div id="inv-workbar"></div>'; }, document: domStub({}), _invRenderWhenIdle() {} } });
     W._invColdRepaint(J);
     eq(drawn, 1, '⚠ the work bar is repainted by id when the stale words appear');

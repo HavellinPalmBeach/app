@@ -477,8 +477,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(S.agentNameableRefs(7).map((r) => r.stableId), ['b'], '⚠ a photograph Agent One found nothing in is not sent again');
     const row = fn('_renderInvRow');
     has(row, 'nothing to list</span>', 'the row says nothing to list');
-    has(row, "ref.agentConf === 'none'", '…read off the empty answer\'s stamp');
-    has(row, 'Remove line takes the line off and keeps the photograph', 'and says what to press, the photograph kept');
+    // RESTATED 2026-10-28 (P9 of the desk audit): read through the one predicate, invLineNothingToList, and the press it names is
+    // the work bar's, which takes every such line off at once (it was Remove line in each ▾).
+    has(row, 'invLineNothingToList(ref)', '…read off the empty answer\'s stamp, through the one predicate');
+    has(fn('invLineNothingToList'), "r.agentConf === 'none'", '…which reads the stamp');
+    has(row, 'takes them all off and keeps the photographs', 'and says what to press, the photographs kept');
   }
 
   group('⚠⚠ A2 · a name typed while a run was out is never written over; the notes are added to, never replaced');
@@ -652,7 +655,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        'never a reviewed line, a desk figure, or a typed line');
     eq(R2.posts.length, 0, 'nothing sent for them');
     eq(R2.ctx.agentValueAfterRename(7, 'd'), false, 'a typed line renamed is not researched on the web either');
-    has(fn('invAddCloseUp'), "if (d && d.status === 'uploaded' && _invFileId(d)) agentValueAfterCloseUp(jobId, stableId);", 'the close-up\'s own upload sends it, once it is in Drive');
+    // RESTATED 2026-10-28 (P9): the same answer also hands a frame Agent One could not read back to Name shots (invCloseUpLanded).
+    has(fn('invAddCloseUp'), "if (d && d.status === 'uploaded' && _invFileId(d)) { invCloseUpLanded(jobId, stableId); agentValueAfterCloseUp(jobId, stableId); }", 'the close-up\'s own upload sends it, once it is in Drive');
     has(fn('invRetryCloseUp'), 'agentValueAfterCloseUp(jobId, d.groupId)', '…and a retried one');
     // On review (2026-10-26): with a run out, a close-up is never dropped; a line still waiting in the run goes with it.
     const Q = rig(ESTATE(), [ROW({ stableId: 'a', objectName: 'Plates, likely Italian', valFailed: 'could not tell what it is' }), ROW({ stableId: 'w', objectName: 'Oak dresser' }),
@@ -755,7 +759,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       ROW({ stableId: 'C', objectName: 'Brass lamp, likely Italian', agentConf: 'low' })];
     let pick = [], dupRows = [];
     const B = sandbox({
-      fns: ['_invBulkApply', 'agentValueUnreviewed', '_avHasFigure', '_invHasValue', '_avStampReviewed', '_invStampBy', 'deviceUser', '_avTakeValue', '_invKeyOnJob', '_invColOnJob',
+      fns: ['_invBulkApply', '_invPickedAsked', '_invBulkDone', '_invNoNameLeftText', 'invLineNothingToList', 'agentValueUnreviewed', '_avHasFigure', '_invHasValue', '_avStampReviewed', '_invStampBy', 'deviceUser', '_avTakeValue', '_invKeyOnJob', '_invColOnJob',
             '_getPhotoRef', '_setPhotoRef', '_invJob', 'invFiduciaryMode', 'isDecedentJob', '_invStampLineReviewed', 'invLineUnsure', 'invLineReviewed', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invLineOpen', 'invAcceptCtx', '_agNameKey', 'agentValueInternal',
             'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep', 'agentNotices', 'agentNoticesOn', 'agentNoticeQuiet', '_jobInvRefs', '_invPhotoSiblings', '_invPhotoSource', '_invDerivedRefs',
             'agentValueNotices', '_avNoticeKinds', '_avNoticeLabel', 'agentValueStale', 'agentValueSpecialistWorth', 'agentValueAgain', '_avState', '_invNamed', '_invItemNo',
@@ -779,7 +783,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(B._invBulkLast.msg, '1 of them was marked unsure: ', 'the unsure line it swept past');
     // ⚠ The merge's review: a tick no longer takes a pair off Possible duplicates (INV_OPEN_HOLDS), so the bar named a pair as
     // left that was still listed. It names the line that stays open, and what settles it.
-    has(B._invBulkLast.msg, '\u26a0 1 stays open: a tick does not settle an unnamed line or a possible duplicate (name it, or Remove or Not duplicates under Possible duplicates): Brass lamp', '⚠⚠ the line still in a possible duplicate stays open, and the bar says what settles it');
+    has(B._invBulkLast.msg, '\u26a0 1 stays open: a tick does not settle a possible duplicate (Remove or Not duplicates, under Possible duplicates): Brass lamp', '⚠⚠ the line still in a possible duplicate stays open, and the bar says what settles it (RESTATED P9: an unnamed line is no longer ticked at all)');
     lacks(B._invBulkLast.msg, 'left Possible duplicates', '⚠ …and never that the tick took it off the list');
     has(B._invBulkLast.msg, 'Agent Two is still valuing lines on this job: a figure that lands on one of these after this tick is not covered by it.', 'and that a figure still landing is not covered by the tick');
     dupRows = [];
@@ -794,7 +798,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     let E = null;
     const job = ESTATE();
     E = rig(job, [ROW({ stableId: 'm', objectName: 'Wooden wall mirror', namedBy: 'agent', valuedBy: 'agent', fmv: 25, valLow: 20, valHigh: 30, valConf: 'high', valNameAt: 'Wooden wall mirror' })], {
-      fns: ['_invEdit', 'invUnitValue', '_invQtyCarriesValue', '_invPaintFigures', 'invAppraised', '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_arPair', '_arPairOpen', 'agentDupCleared', '_agDupEligible', '_arDupEligible', 'agentNamedTwice', 'invIsFirearm', '_invPhotoNoteOpen', 'invReleaseCautions', 'invBequestElsewhere', 'invAwaitingAppraisal', 'invFirearmSettle', 'invFirearmDispRefusal', 'invFiduciaryMode', 'isDecedentJob', 'invFirearmSettleText', '_invNamed', '_invItemNo', 'invTransportDealer', 'invFirearmsDealerFirm', 'invFirearmsDealerFirms', '_vendorNameKey', 'vendorCats', 'invChannelLeftover', 'invDealerRoute', 'invDealerRouteOffered', 'invDealerNamed', 'invDispGoesToDealer', 'invAppraisalSourceAsk'], vars: ['_agDupSetJob', 'INV_ACCEPT_AMMO_RE', 'INV_RELEASE_CAUTIONS', 'INV_OPEN_HOLDS', 'INV_FIREARM_NEVER', 'DECEDENT_SERVICES', 'INV_SALE_DISPOSITIONS', 'FIREARMS_DEALER_CATEGORY'],
+      fns: ['_invEdit', '_invPatch', 'invUnitValue', '_invQtyCarriesValue', '_invPaintFigures', 'invAppraised', '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_arPair', '_arPairOpen', 'agentDupCleared', '_agDupEligible', '_arDupEligible', 'agentNamedTwice', 'invIsFirearm', '_invPhotoNoteOpen', 'invReleaseCautions', 'invBequestElsewhere', 'invAwaitingAppraisal', 'invFirearmSettle', 'invFirearmDispRefusal', 'invFiduciaryMode', 'isDecedentJob', 'invFirearmSettleText', '_invNamed', '_invItemNo', 'invTransportDealer', 'invFirearmsDealerFirm', 'invFirearmsDealerFirms', '_vendorNameKey', 'vendorCats', 'invChannelLeftover', 'invDealerRoute', 'invDealerRouteOffered', 'invDealerNamed', 'invDispGoesToDealer', 'invAppraisalSourceAsk'], vars: ['_agDupSetJob', 'INV_ACCEPT_AMMO_RE', 'INV_RELEASE_CAUTIONS', 'INV_OPEN_HOLDS', 'INV_FIREARM_NEVER', 'DECEDENT_SERVICES', 'INV_SALE_DISPOSITIONS', 'FIREARMS_DEALER_CATEGORY'],
       stubs: { _invRefreshSummary() {}, _invRefreshGuardrail() {}, _invRefreshFlagStrip() {}, _invRefreshRecords() {}, _invRefreshReleases() {},
         INV_STICKY_FIELDS: [], invStaffRefused: () => '', invBequestFor: () => null, invNoteDispositionMove: () => false, invFillPlanChannel: () => false,
         _invRowDomId: (s) => 'inv-row-' + s, _renderInvRow: () => '<div></div>',
@@ -932,7 +936,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       ROW({ stableId: 'ap', valuedBy: 'appraiser', fmv: 4000, valSource: 'Appraisal' }), ROW({ stableId: 'un', objectName: '', namedBy: undefined }),
       ROW({ stableId: 'nv', objectName: 'Everyday stainless flatware', agentConf: 'high' })];
     let asked = '';
-    const R = rig(job, rows, { fns: ['invBulkRevalue', '_invPicked'],
+    const R = rig(job, rows, { fns: ['invBulkRevalue', '_invPickedAsked', '_invPicked'],
       stubs: { _invPick: { ag: 1, dk: 1, ap: 1, un: 1, nv: 1 }, confirm: (m) => { asked = String(m); return true; } } });
     let n = null, err = '';
     try { n = R.ctx.invBulkRevalue(7); } catch (e) { err = String(e && e.message || e); }
@@ -943,11 +947,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(asked, '2 carry a value a person or an appraiser recorded and are left as they are.', 'the confirm names what it leaves');
     has(asked, '1 has no name yet and is left for Agent One (Name shots).', 'and the unnamed line');
     has(asked, '1 of them was marked reviewed: the new figure is not covered by that tick.', 'and the reviewed line whose tick does not cover the new figure (the merge\'s review: under the flagged-lines rule it may stand, not "come back unreviewed")');
-    const busy = rig(job, rows, { fns: ['invBulkRevalue', '_invPicked'], stubs: { _invPick: { ag: 1 } } });
+    const busy = rig(job, rows, { fns: ['invBulkRevalue', '_invPickedAsked', '_invPicked'], stubs: { _invPick: { ag: 1 } } });
     busy.ctx._avState(7).running = true;
     eq(busy.ctx.invBulkRevalue(7), false, 'refused while a run is out');
     has(busy.alerts[0] || '', 'already valuing', 'saying so');
-    const none = rig(job, rows, { fns: ['invBulkRevalue', '_invPicked'], stubs: { _invPick: { dk: 1 } } });
+    const none = rig(job, rows, { fns: ['invBulkRevalue', '_invPickedAsked', '_invPicked'], stubs: { _invPick: { dk: 1 } } });
     eq(none.ctx.invBulkRevalue(7), false, 'nothing of Agent Two\'s in the selection: nothing sent');
     has(none.alerts[0] || '', 'Nothing to value again in this selection.', 'saying so');
     has(fn('_renderInvBulk'), "invBulkRevalue(' + jid + ')", 'the selection bar carries it');

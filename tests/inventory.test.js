@@ -591,7 +591,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('a cleared value stays blank, and money shows as money');
   {
-    const m = sandbox({ fns: ['_invEdit', '_invAcceptCtxOf', 'invLineReviewed', 'invLineOpen', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invLineAcceptedOnly', 'agentValueUnreviewed', '_avTakeValue', '_getPhotoRef', '_setPhotoRef', 'savePhotoRefs',
+    const m = sandbox({ fns: ['_invEdit', '_invPatch', '_invAcceptCtxOf', 'invLineReviewed', 'invLineOpen', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invLineAcceptedOnly', 'agentValueUnreviewed', '_avTakeValue', '_getPhotoRef', '_setPhotoRef', 'savePhotoRefs',
                               '_warnPhotoStoreFull', '_invTouch', 'moneyToNumber', '_invHasVal', 'invAppraised', '_invHasValue', '_invJob', 'invUnitValue', 'invLineQty', '_invQtyCarriesValue', '_invPaintFigures', 'agentValueAfterRename', 'agentValueStale', '_avHasFigure', 'invAcceptCtx', '_arDupEligible', 'invFirearmSettle', 'invIsFirearm', 'invFirearmDispRefusal', 'invFiduciaryMode', 'isDecedentJob', 'invFirearmSettleText', '_invNamed', '_invItemNo', 'invTransportDealer', 'invFirearmsDealerFirm', 'invFirearmsDealerFirms', '_vendorNameKey', 'vendorCats', 'invChannelLeftover', 'invDealerRoute', 'invDealerRouteOffered', 'invDealerNamed', 'invDispGoesToDealer', 'invAppraisalSourceAsk'],
                         vars: ['_agDupSetJob', 'INV_ACCEPT_AMMO_RE', 'INV_STICKY_FIELDS', 'INV_FIREARM_NEVER', 'DECEDENT_SERVICES', 'INV_SALE_DISPOSITIONS', 'FIREARMS_DEALER_CATEGORY'],
                         // _invRefreshReleases with its sibling repaints: _invEdit runs it on every edit since the desk build's review (2026-10-23).
@@ -804,6 +804,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(panel.indexOf('disposition') < 0, 'and so is the disposition');
     // 2026-10-24 (Anthony: the count "viewable at the headline level"): the count moved onto the row too.
     ok(panel.indexOf('qty') < 0 && living.indexOf('qty') < 0, 'and so is the count, on both');
+    // RESTATED 2026-10-28 (P9 of the desk audit, ROW-05): the name too. The row has carried it in a box of its own since
+    // 2026-10-24, and a name typed in the record left the row's box with the old one, written back by the next edit there.
+    ok(living.indexOf('objectName') < 0, 'and so is the name, on a living job');
+    ok(panel.indexOf('objectName') < 0, '…and on an estate job');
     ok(panel.indexOf('valNote') >= 0, 'the valuation basis / comps note is in the panel');
     ok(panel.indexOf('gross') >= 0, 'the proceeds are');
     ok(panel.indexOf('flagMAIV') >= 0, 'and the flags');
@@ -815,7 +819,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ['assetTrack', 'flagExempt', 'flagMAIV', 'maivCat', 'valDate', 'valSource', 'valNote']
       .forEach((k) => ok(living.indexOf(k) < 0, k + ' is off a living job'));
     // The converse is the half that matters: the record itself is untouched on both.
-    ['objectName', 'category', 'room', 'condition', 'serial', 'channel', 'needsAppr',
+    ['category', 'room', 'condition', 'serial', 'channel', 'needsAppr',
      'flagBequest', 'flagDisputed', 'flagNFA', 'dispDate', 'receiptDoc', 'gross', 'fees']
       .forEach((k) => {
         ok(living.indexOf(k) >= 0, k + ' is on a living job');

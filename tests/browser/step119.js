@@ -201,9 +201,15 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
       has(msg, 'Donate set on 2 items', 'the bar says what it set');
       has(msg, '4 firearms left as they were', '⚠ and how many firearms it left');
       has(msg, 'a firearm goes only to a licensed dealer', 'and why');
-      // Set recipient Goodwill across what is still picked (the shotguns, the lamp and the rug).
+      // Set recipient Goodwill across the same six (the shotguns, the lamp and the rug).
+      // RESTATED 2026-10-28 (P9 of the desk audit, LIV-02): the selection clears after each bulk action, so the six are picked again.
+      eq(await p.evaluate(() => Object.keys(_invPick).length), 0, 'the selection cleared after the sweep');
+      for (const id of ['g1', 'g2', 'g3', 'g4', 'l5', 'l6']) {
+        const sel = '#inv-row-' + id + ' input[onchange^="_invTogglePick"]';
+        await p.locator(sel).scrollIntoViewIfNeeded(); await p.click(sel); await p.waitForTimeout(250);
+      }
       const still = await p.evaluate(() => Object.keys(_invPick).sort());
-      eq(still, ['g1', 'g2', 'g3', 'g4', 'l5', 'l6'], 'fixture: the selection is still picked');
+      eq(still, ['g1', 'g2', 'g3', 'g4', 'l5', 'l6'], 'fixture: the six picked again');
       await p.fill('#inv-bulk-recip', 'Goodwill Palm Beach');
       await press('#inv-bulk-' + J + ' button[onclick*="\'channel\'"]', 'Set recipient');
       eq([(await line(J, 'g1')).ch, (await line(J, 'l5')).ch], ['', 'Goodwill Palm Beach'], '⚠ a recipient swept across the selection never lands on a firearm');
