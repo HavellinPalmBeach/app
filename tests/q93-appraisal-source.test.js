@@ -183,8 +183,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(attempt(() => C._invGuardrailItems(7).length).val, 1, what + ': fixture: the linked line waits on the guardrail');
     const before = attempt(() => C.deskFoldState(7, C.jobs[0], 'values', C._photoRefs[7], '2026-10-24')).val || { bits: [] };
     // Restated 2026-10-28 (P14 of the desk audit, NEW-14): on living work the Values bar reads the chip's words, *to a specialist*.
-    const _oneW = J === LIVING ? '1 to a specialist, each linked' : '1 needs an appraisal, each linked';
-    const _noneW = J === LIVING ? '✓ nothing to a specialist' : '✓ nothing needs an appraisal';
+    const _oneW = J === LIVING ? '1 waiting on a specialist, each linked' : '1 needs an appraisal, each linked';
+    const _noneW = J === LIVING ? '✓ none waiting on a specialist' : '✓ nothing needs an appraisal';
     has(before.bits.map((b) => b.text).join(' | '), _oneW, what + ': fixture: and on the Values bar\'s line');
     const t = typeFigure(C, '$18,500');
     ok(t.ok, what + ': the figure is typed (' + (t.err || 'ok') + ')');
@@ -488,7 +488,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       eq(attempt(() => C._invGuardrailItems(7).length).val, 1, what + ': ⚠ so it stays on the guardrail (a desk estimate clears no appraisal)');
       const bar = attempt(() => C.deskFoldState(7, C.jobs[0], 'values', C._photoRefs[7], '2026-10-24')).val || { bits: [] };
       // Restated 2026-10-28 (P14, NEW-14): the living bar's words.
-      lacks(bar.bits.map((b) => b.text).join(' | '), '✓ nothing to a specialist', what + ': and the Values bar does not say nothing needs one');
+      lacks(bar.bits.map((b) => b.text).join(' | '), '✓ none waiting on a specialist', what + ': and the Values bar does not say nothing needs one');
     }
   });
   {

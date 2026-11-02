@@ -137,7 +137,7 @@ const LABEL = 'Marie Wayland · Wayland Fine Art';
         has(row, '⚑ Appraisal · ' + LABEL + ' · pending', '⚠⚠ the row: the appraiser is the source, pending');
         has(await text('#inv-guardrail'), 'Appraisal in progress · ' + LABEL + ': when the report comes back, type its figure on the line.', 'the guardrail: in progress, naming them');
         // On a living job the bar names the state as its chip does, To a specialist (P14 of the desk audit, 2026-10-28; NEW-14).
-        has((await barLine(id)).map((x) => x[0]).join(' | '), id === EST ? '1 needs an appraisal, each linked' : '1 to a specialist, each linked', 'the bar\'s line: one waiting, linked');
+        has((await barLine(id)).map((x) => x[0]).join(' | '), id === EST ? '1 needs an appraisal, each linked' : '1 waiting on a specialist, each linked', 'the bar\'s line: one waiting, linked');
         await press('#inv-row-p' + id + ' button[title="Open the full record"]', 'the row\'s ▾');
         has(await text('#inv-row-p' + id + ' .inv-panel-appr'), 'Valuation source Appraisal · ' + LABEL + ' · pending', 'and its record says so');
       });
@@ -157,7 +157,7 @@ const LABEL = 'Marie Wayland · Wayland Fine Art';
         has(row, 'report not filed', 'and naming the report not filed');
         eq(await text('#inv-guardrail'), '', '⚠⚠ off the guardrail: no Waive needed');
         const bl = await barLine(id);
-        has(bl.map((x) => x[0]).join(' | '), id === EST ? '✓ nothing needs an appraisal' : '✓ nothing to a specialist', 'the bar\'s count with it');
+        has(bl.map((x) => x[0]).join(' | '), id === EST ? '✓ nothing needs an appraisal' : '✓ none waiting on a specialist', 'the bar\'s count with it');
         eq(bl.filter((x) => /report not filed/.test(x[0])), [['report not filed: Marie Wayland (1 item)', 'amber']], 'the bar\'s line names the report owed, amber');
         has(await text('#appr-rpt-' + id + '-' + apprId), 'report not filed: #1 Oil on canvas, harbour scene', 'the appraiser\'s row names the item owed its report');
       });
@@ -232,7 +232,7 @@ const LABEL = 'Marie Wayland · Wayland Fine Art';
       r = await line(LIVE2);
       eq([r.fmv, r.valSource || '', r.valuedBy], [650, '', 'desk'], '⚠⚠ the figure typed with no appraiser linked is the desk\'s, never an appraisal');
       has(await text('#inv-guardrail'), 'Formal documentation', '⚠ the Formal guardrail still holds the item (a desk estimate clears no appraisal)');
-      lacks((await barLine(LIVE2)).map((x) => x[0]).join(' | '), '✓ nothing to a specialist', 'and the bar does not say nothing needs one (a living job: To a specialist, P14)');
+      lacks((await barLine(LIVE2)).map((x) => x[0]).join(' | '), '✓ none waiting on a specialist', 'and the bar does not say nothing needs one (a living job: waiting on a specialist, P14\'s review)');
       // Link again and let the appraisal land; then relink to somebody else, Cancel.
       await p.selectOption('#inv-guardrail select', '1'); await p.waitForTimeout(800);
       await p.fill(box, '18500'); await p.press(box, 'Tab'); await p.waitForTimeout(800);

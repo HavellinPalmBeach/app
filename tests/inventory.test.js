@@ -467,7 +467,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'isDecedentJob', '_gate706', 'roundCents', 'fmt',
       // P19: the firearm gate asks every fiduciary's approval against the job, and the withheld block names who authorises.
       'invApprovalMissing', 'invApprovalGap', 'jobFiduciaries', 'jobListEntries', 'invRepresentativeTitle', 'matterDef', 'matterTypeOf', 'invDealerNamed', 'invDispGoesToDealer', 'invDealerUnchecked', 'invDealerDirState', 'invDealerUncheckedText', '_invDealerDirStaleText', 'invDealerWhy', 'invFirearmsDealerFirm', 'invFirearmsDealerFirms', 'vendorCats', '_vendorNameKey'
-    , 'invLineQty', 'maivOwedLines', 'maivOwedText', '_avStampText', '_avStampCounts', 'invValueAsOfWords', 'estateValueDate', 'invTransportFact']);
+    , 'invLineQty', 'maivOwedLines', 'maivOwedText', '_avStampText', '_avStampCounts', 'invValueAsOfWords', 'estateValueDate', 'invTransportFact', 'invNfaTransferText']);
     const WL_VARS = INV_VARS.concat([
       'INV_FIREARM_CLIENT_TXT', 'FIREARMS_DEALER_CATEGORY', 'INV_TRANSPORT_REASONS', 'MATTER_TYPES', 'INV_SALE_DISPOSITIONS',
       'MAIV_AGGREGATE_THRESHOLD', 'MAIV_CATEGORIES', 'MAIV_OTHER', 'MAIV_BY_CATEGORY',

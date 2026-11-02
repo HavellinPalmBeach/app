@@ -366,7 +366,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(b, '20.2031-6(a)', 'it cites the subsection it is applying');
     has(b, 'Sterling flatware service', 'and names the lot rather than giving a bare count');
     has(b, '#12', 'by its permanent item number, which is what a reply cites');
-    has(b, 'Split', 'and names the fix');
+    // Restated 2026-11-02 (P14's review): the worklist goes in every package, so it states the rule and how the lot stands against
+    // it, never the desk's fix (*Split … or record on the line*).
+    has(b, 'not meet that rule: each article is to be named on its own', 'and says what the rule asks of it');
+    lacks(b, 'record on the line', '⚠ never the desk\'s direction');
     lacks(b, 'Kitchen sundries', 'a lot inside the cap is not on the action list');
 
     // ⚠ THE CLEARANCE IS A FINDING, NOT AN ABSENCE — withholding it leaves a reader unable

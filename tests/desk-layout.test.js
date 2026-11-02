@@ -1003,14 +1003,14 @@ function groupE({ group, ok, eq, has, lacks }) {
     D.render();
     const v0 = heads(D.dom.html).filter((x) => x.f === 'values')[0];
     // Restated 2026-10-28 (P14 of the desk audit, NEW-14): on living work the bar reads the chip's words, *to a specialist*.
-    eq([v0.open, v0.line], [false, '✓ nothing to a specialist · no appraisers yet'], 'fixture: Values shut, nothing waiting');
+    eq([v0.open, v0.line], [false, '✓ none waiting on a specialist · no appraisers yet'], 'fixture: Values shut, nothing waiting');
     // A collection's piece keeps the collection's ⚑ (collectionPieceOf): the split adds a line flagged for a specialist.
     const piece = LINE('a2', { objectName: '', needsAppr: true, derivedFrom: 'a', ts: T0 + 1 });
     D.C._photoRefs[7].push(piece);
     const s = settle(D, () => D.C._invSplitRepaint(7, piece));
     ok(s.r.ok, 'the repaint runs (' + (s.r.err || 'ok') + ')');
     const v = s.partial.filter((x) => x.f === 'values')[0];
-    eq([v.open, v.line], [true, '1 to a specialist (1 with no specialist linked) · no appraisers yet'], '⚠ the bar opened by its rule, and its line moved');
+    eq([v.open, v.line], [true, '1 waiting on a specialist (1 with no specialist linked) · no appraisers yet'], '⚠ the bar opened by its rule, and its line moved');
     eq(s.partial, s.full, '⚠⚠ every bar reads what a full render draws');
   }
 

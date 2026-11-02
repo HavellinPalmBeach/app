@@ -197,6 +197,10 @@ const PRO = 12701, TRU = 12702, CON = 12703, UNA = 12704, CTT = 12705, LIV = 127
       const ci = await paper('#inv-more button[onclick="printCourtInventory(' + UNA + ')"]', 'Court Inventory (unanswered)');
       has(ci, 'No matter type is recorded on this job, so Havellin cannot confirm from the record that this estate is administered through probate',
         '⚠ the unanswered Estate Settlement\'s Court Inventory names what is not on the record');
+      // P14's review (2026-11-02): its lines are on the schedule by the probate default alone, so it is a draft, never adopted.
+      has(ci, 'the matter type is not recorded', '⚠⚠ …and is a draft for it');
+      has(ci, 'each item is on the probate estate by default', '…the note saying the lines are there by default');
+      lacks(ci, 'Reviewed and adopted by', '…with no adoption line');
       await close();
     });
 
@@ -212,7 +216,7 @@ const PRO = 12701, TRU = 12702, CON = 12703, UNA = 12704, CTT = 12705, LIV = 127
     // ── F ──
     await section('F. living: To a specialist, no date of death, the firm once, the worklist\'s inspection, the record and the CSV follow the job', async () => {
       await toDesk(LIV);
-      has(await txt('#desk-stat-values-' + LIV), '1 to a specialist (1 with no specialist linked)', '⚠ the Values bar: the chip\'s own name');
+      has(await txt('#desk-stat-values-' + LIV), '1 waiting on a specialist (1 with no specialist linked)', '⚠ the Values bar: what it counts, beside the chip (P14\'s review)');
       lacks(await txt('#desk-stat-values-' + LIV), 'needs an appraisal', '…never "needs an appraisal"');
       await p.evaluate((id) => { if (typeof deskFoldOpen === 'function') deskFoldOpen(id, 'values'); renderInventoryTab(); }, LIV); await p.waitForTimeout(600);
       const g = await txt('#inv-guardrail');

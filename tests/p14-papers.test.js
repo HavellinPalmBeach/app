@@ -66,12 +66,14 @@ const STOP = ['jobs', '_photoRefs', 'estimateStore', 'jobPlanStore', 'vendorDire
   '_invCloudFailed', 'savePhotoRefs', '_scheduleInventorySync', 'renderInventoryTab', 'showSyncBadge', '_invRefreshFlagStrip', '_invRefreshRecords',
   '_invRefreshReleases', '_invRefreshAgentNotices', '_deskFoldHeadsRepaint', '_todayStr', 'saveJobs', 'syncJobToSheets', '_invThumbHTML',
   'setTimeout', 'clearTimeout', '_printDocument', '_invPrintThumb', 'alert', '_invRefreshSummary', '_invRefreshGuardrail', 'invReadFirst',
-  'refreshPhotoRefs', 'fetch', 'resolveSubfolderId', '_invShareEach'];
+  'refreshPhotoRefs', 'fetch', 'resolveSubfolderId', '_invShareEach', '_estStoreState'];
 const ROOTS = ['printEstateInventoryReport', 'printCourtInventory', 'printTrustSchedule', 'printAppraisalWorklist', 'printContentsList',
   'printAsFoundRecord', 'invInstrumentOffered', '_renderAppraisalGuardrail', '_renderAppraiserRoster', '_apprFormCellsHtml', 'deskFoldState',
   '_renderInvPanel', 'buildInventoryCSV', 'buildProbatePackageEmailText', 'buildProbatePackageEmailHtml', 'probatePackageTitle',
   'probatePackageDocPurpose', 'probatePackageDocs', 'invTransportFact', 'invTransportReason', '_apprLabel', 'invLineAppraiser', 'invAppraisalSourceText',
-  '_pkgShareFolders', 'probatePackageCardHtml', 'invValueAsOfWords', 'invInventoryWord', 'invDriveFolderWords', '_apprGuardrailHead'];
+  '_pkgShareFolders', 'probatePackageCardHtml', 'invValueAsOfWords', 'invInventoryWord', 'invDriveFolderWords', '_apprGuardrailHead',
+  // P14's review: the chip's rule beside the bar's, and who arranges an appraisal.
+  'invNeedsAppraisal', 'invAwaitingAppraisal', 'jobAppraisalDuty', 'invNfaTransferText'];
 let _cl = null;
 function rig(job, rows, o) {
   o = o || {};
@@ -89,6 +91,7 @@ function rig(job, rows, o) {
     _printDocument(h) { printed.push(String(h)); }, _invPrintThumb: () => '', alert(m) { said.push(String(m)); }, _invRefreshSummary() {}, _invRefreshGuardrail() {},
     invReadFirst: () => false, refreshPhotoRefs() {}, fetch: () => ({ then() { return this; }, catch() { return this; } }),
     resolveSubfolderId: (j, name, cb) => cb(name === 'As-Found Record' ? 'AF' : 'INV'), _invShareEach: (ids, a, e, done) => done(1, ''),
+    _estStoreState: o.estStore || 'ready',   // P14's review: the estimate store has read, unless a check says otherwise
   } });
   C.said = said; C.printed = printed;
   return C;
@@ -258,7 +261,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       inDrive: [], unshared: [] };
     const tx = attempt(() => C.buildProbatePackageEmailText(ctx)).val || '';
     has(tx, '  - Court Inventory — the estate’s tangible personal property, scheduled for the §733.604 inventory filing', 'the Court Inventory: for the filing');
-    has(tx, '  - Estate Inventory Report — every item photographed and listed, with its value and where it is going, including any property outside the probate estate',
+    has(tx, '  - Estate Inventory Report — every item listed, with its value and where it is going, including any property outside the probate estate',
       'the Report: the whole register, the outside property included');
     has(tx, '  - Disposition Ledger — where each item went and what it brought', 'the ledger');
     has(tx, '  - Appraisal Worklist — the items flagged for a specialist’s appraisal, grouped by specialist', 'the worklist');
@@ -275,7 +278,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       attached: ['trustee', 'schedule'].map((k) => ({ key: k, title: T.probatePackageTitle(MATTERS.trust, k) })) };
     const tt = attempt(() => T.buildProbatePackageEmailText(tctx)).val || '';
     has(tt, '  - Trust Schedule — the tangible personal property held in the trust, scheduled to support the trustee’s accounting', 'the Trust Schedule: for the accounting');
-    has(tt, '  - Inventory Report — every item photographed and listed, with its value and where it is going\n', '⚠ the Inventory Report, and no probate estate on a trust');
+    has(tt, '  - Inventory Report — every item listed, with its value and where it is going\n', '⚠ the Inventory Report, and no probate estate on a trust');
   }
 
   // ═══════════════════════════════ E · AN APPRAISER'S FIRM ONCE (VAL-30) ═══════════════════════════════
@@ -340,7 +343,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const tr = Object.assign({}, MATTERS.trust, { docTier: 'contents' });
     has(textOf(attempt(() => rig(tr, [art()])._renderAppraisalGuardrail(tr)).val), '1 item for the trustee or their counsel to have appraised', 'a trust: the trustee or their counsel');
     const ne = Object.assign({}, MATTERS.neither, { docTier: 'contents' });
-    has(textOf(attempt(() => rig(ne, [art()])._renderAppraisalGuardrail(ne)).val), '1 item for the client to have appraised', 'Neither: the client, lowercase on the desk');
+    // Restated 2026-11-02 (P14's review): on a decedent job *the Client* is the deceased, so Neither names the representative's title.
+    has(textOf(attempt(() => rig(ne, [art()])._renderAppraisalGuardrail(ne)).val), '1 item for the Authorized Representative to have appraised', 'Neither: the representative, by title');
     const lv = Object.assign({}, MATTERS.living);
     const lg = textOf(attempt(() => rig(lv, [art()])._renderAppraisalGuardrail(lv)).val);
     has(lg, '1 item to go to a specialist has no appraisal figure yet.', 'living work: to a specialist');
@@ -357,13 +361,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const art = LINE({ stableId: 'p1', itemNo: 1, objectName: 'Oil portrait', category: 'Art & Décor', fmv: '', valSource: '', valuedBy: undefined, needsAppr: true });
     const C = rig(MATTERS.living, [art]);
     const st = attempt(() => C.deskFoldState(14, MATTERS.living, 'values', C._photoRefs[14])).val || { bits: [] };
-    has(st.bits.map((b) => b.text).join(' | '), '1 to a specialist (1 with no specialist linked)', '⚠ living: the chip\'s own words');
+    has(st.bits.map((b) => b.text).join(' | '), '1 waiting on a specialist (1 with no specialist linked)', '⚠ living: the specialist\'s words, for what it counts (P14\'s review)');
     lacks(st.bits.map((b) => b.text).join(' | '), 'needs an appraisal', '…never "needs an appraisal" beside a "To a specialist" chip');
     const E = rig(MATTERS.probate, [Object.assign({}, art)]);
     has((attempt(() => E.deskFoldState(14, MATTERS.probate, 'values', E._photoRefs[14])).val || { bits: [] }).bits.map((b) => b.text).join(' | '),
       '1 needs an appraisal (1 with no appraiser linked)', 'an estate: as it was');
     const none = rig(MATTERS.living, []);
-    has((attempt(() => none.deskFoldState(14, MATTERS.living, 'values', [])).val || { bits: [] }).bits.map((b) => b.text).join(' | '), '✓ nothing to a specialist', 'living, nothing waiting');
+    has((attempt(() => none.deskFoldState(14, MATTERS.living, 'values', [])).val || { bits: [] }).bits.map((b) => b.text).join(' | '), '✓ none waiting on a specialist', 'living, nothing waiting');
     const lr = textOf(attempt(() => C._renderAppraiserRoster(MATTERS.living)).val);
     has(lr, 'an effective date (the value date — usually the day the appraiser inspects it)', '⚠ living: the day the appraiser inspects it');
     lacks(lr, 'date of death', '…never the date of death');
@@ -416,6 +420,175 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }
 
   // ═══════════════════════════════ I · THE PAPER OUTSIDE THE APP ═══════════════════════════════
+  // ═══════════════════════════════ J · P14'S REVIEW (2026-11-02) ═══════════════════════════════
+  group('⚠⚠ J1 · the exempt subtotal is a floor on both papers: an unvalued exempt line is named and the §732.402 cap is not passed in silence');
+  {
+    const bed = LINE({ stableId: 'a9', itemNo: 9, objectName: 'Bedroom set', fmv: '', valSource: '', valuedBy: undefined, flagExempt: true });
+    const C = rig(MATTERS.probate, ROWS().concat([bed]));
+    ['printEstateInventoryReport', 'printCourtInventory'].forEach((f) => {
+      const t = page(C, f).text;
+      has(t, 'Total exempt property claimed, recorded so far — not a complete total: $900', f + ': ⚠⚠ the exempt subtotal reads as a floor');
+      lacks(t, 'Total exempt property claimed: $900', f + ': …never as the complete claim');
+      has(t, '1 item claimed exempt is recorded without a value and NOT included above: #9 Bedroom set.', f + ': the unvalued exempt line is named under it');
+      has(t, 'The $20,000 §732.402 allowance cannot be tested until it is valued.', f + ': ⚠ the cap is said to be untestable, not passed');
+    });
+    // $19,500 recorded and a bedroom set unvalued: the cap cannot be tested, and the page says so.
+    const near = rig(MATTERS.probate, [LINE({ stableId: 'b1', itemNo: 1, objectName: 'Dining set', fmv: 19500, flagExempt: true }),
+      LINE({ stableId: 'b2', itemNo: 2, objectName: 'Bedroom set', fmv: '', valSource: '', valuedBy: undefined, flagExempt: true })]);
+    ['printEstateInventoryReport', 'printCourtInventory'].forEach((f) => {
+      const t = page(near, f).text;
+      has(t, 'Total exempt property claimed, recorded so far — not a complete total: $19,500', f + ': $19,500 so far');
+      has(t, 'cannot be tested until it is valued', f + ': ⚠⚠ under the cap on what is recorded, the test cannot be made, and the page says so');
+      lacks(t, 'Exceeds the $20,000', f + ': …and claims no excess');
+    });
+    // Over the cap on the recorded figures alone: the excess stands whatever the rest are worth, and nothing calls it untestable.
+    const over = rig(MATTERS.probate, [LINE({ stableId: 'c1', itemNo: 1, objectName: 'Dining set', fmv: 21000, flagExempt: true }),
+      LINE({ stableId: 'c2', itemNo: 2, objectName: 'Bedroom set', fmv: '', valSource: '', valuedBy: undefined, flagExempt: true })]);
+    ['printEstateInventoryReport', 'printCourtInventory'].forEach((f) => {
+      const t = page(over, f).text;
+      has(t, 'Exceeds the $20,000 §732.402 allowance for household furniture, furnishings and appliances on the recorded figures alone', f + ': over on what is recorded');
+      lacks(t, 'cannot be tested', f + ': …and never untestable once passed');
+    });
+    // Every exempt line valued: the claim as P14 built it.
+    has(page(rig(MATTERS.probate, ROWS()), 'printCourtInventory').text, 'Total exempt property claimed: $900', 'every exempt line valued: the complete claim, as before');
+    has(code(fn('printEstateInventoryReport')), '_invExemptClaimTotalHtml(invTotalFloor(exempt))', 'the Report hands the floor in, never its bare total');
+    lacks(code(fn('printCourtInventory')), '_invExemptClaimTotalHtml(exemptSec.total)', 'the Court Inventory too');
+  }
+  group('⚠ J2 · the worklist\'s grouped-lot block states the rule and the lots, never the desk\'s fix or its shorthand');
+  {
+    const lots = [LINE({ stableId: 'l1', itemNo: 21, objectName: 'Sterling flatware service', category: 'Silver', qty: 60, fmv: 9000, needsAppr: true }),
+      LINE({ stableId: 'l2', itemNo: 22, objectName: 'Cut crystal stemware', category: 'General/Household', qty: 12, fmv: 2400 })];
+    ['probate', 'trust'].forEach((m) => {
+      const t = page(rig(MATTERS[m], lots), 'printAppraisalWorklist').text;
+      has(t, 'Grouped lots — Treas. Reg. §20.2031-6(a)', m + ': fixture: a Form 706 estate draws the lot block');
+      has(t, '2 grouped lots list more than one article under a single value.', m + ': the lots, in the reader\'s words');
+      has(t, 'As listed, these lots do not meet that rule: each article is to be named on its own before the return is prepared', m + ': the rule and how they stand');
+      ['manifest', 'record on the line', 'Split these lots', 'Split this lot', 'grouped line'].forEach((x) => lacks(t, x, m + ': ⚠ no "' + x + '" on the paper'));
+    });
+    // The source net reaches the blocks the worklist draws through, not only its own text (the review: B2 read the printer alone).
+    ['_lotSplitWorklistBlock', '_maivWorklistBlock'].forEach((f) => {
+      const t = code(fn(f));
+      ['record on the line', 'on this manifest', 'press ', 'Job Admin', 'tick '].forEach((x) => lacks(t, x, f + ': no "' + x + '" in its words'));
+    });
+  }
+  group('⚠ J3 · a living client\'s worklist names no estate and no personal representative, its NFA block and its transport line included');
+  {
+    const rows = [LINE({ stableId: 'n1', itemNo: 4, objectName: 'Thompson submachine gun', category: 'Firearms', flagNFA: true, disposition: 'Sell', fmv: 20000 }),
+      LINE({ stableId: 'n2', itemNo: 1, objectName: 'Sterling flatware service', category: 'Silver', qty: 60, fmv: 9000, needsAppr: true })];
+    const L = rig(MATTERS.living, rows);
+    const t = page(L, 'printAppraisalWorklist').text;
+    has(t, 'Appraisal Worklist', 'fixture: the living worklist rendered');
+    has(t, 'value as of the appraiser’s inspection', '…as a living paper');
+    has(t, 'NFA item', '…with its NFA block');
+    has(t, 'A registered item transfers from the client to the dealer on ATF paperwork, and no written authority makes it lawful for Havellin to carry one.', '⚠ the client\'s transfer, in the block');
+    has(t, 'NFA item — never transported by Havellin. It transfers from the client to the dealer on ATF paperwork.', '⚠ …and on the transport line');
+    ['estate', 'personal representative', 'Personal Representative', 'carve-out'].forEach((x) => lacks(t, x, '⚠⚠ a living worklist: no "' + x + '"'));
+    const E = rig(MATTERS.probate, rows);
+    const et = page(E, 'printAppraisalWorklist').text;
+    has(et, 'the estate carve-out names the personal representative', 'an estate keeps its NFA block');
+    has(et, 'It transfers from the estate to the dealer on ATF paperwork.', '…and its transport line');
+    const gun = L._photoRefs[14][0];
+    has(attempt(() => L.invTransportReason(gun, MATTERS.living)).val || '', 'from the client to the dealer', 'the desk\'s reason on living work, the same words');
+    has(attempt(() => E.invTransportReason(E._photoRefs[14][0], MATTERS.probate)).val || '', 'from the estate to the dealer', '…and on an estate');
+    has(attempt(() => L.invTransportReason(gun)).val || '', 'from the estate to the dealer', 'with no job handed in, the words as before');
+  }
+  group('⚠ J4 · the guardrail claims nobody arranges an appraisal only once the estimate is read, and names the representative on Neither');
+  {
+    const art = (o) => LINE(Object.assign({ stableId: 'p1', itemNo: 1, objectName: 'Oil portrait', category: 'Art & Décor', fmv: '', valSource: '', valuedBy: undefined, needsAppr: true }, o || {}));
+    const job = Object.assign({}, MATTERS.probate, { docTier: 'values', docLevel: 'formal' });
+    // Unread: no approved estimate on the device and the store not read.
+    const cold = rig(job, [art()], { estStore: 'loading' });
+    const ct = textOf(attempt(() => cold._renderAppraisalGuardrail(job)).val);
+    has(ct, '1 item needs an appraisal before this inventory is complete', 'fixture: the guardrail drew');
+    lacks(ct, 'does not arrange appraisals', '⚠⚠ an unread store never says Havellin arranges none');
+    has(ct, 'Who arranges the appraisal is read off the approved estimate, which has not loaded on this device yet.', '…and says why it cannot say who does');
+    const off = rig(job, [art()], { estStore: 'offline' });
+    lacks(textOf(attempt(() => off._renderAppraisalGuardrail(job)).val), 'does not arrange appraisals', 'offline: the same');
+    // Read: the counsel head.
+    has(textOf(attempt(() => rig(job, [art()])._renderAppraisalGuardrail(job)).val), '1 item for the estate attorney to have appraised: on this engagement Havellin does not arrange appraisals.',
+      'the store read, no appraiser on an approved estimate: counsel arranges it');
+    // An approved estimate listing an appraiser, with the store still marked unread: the estimate decides.
+    const listed = rig(job, [art()], { estStore: 'loading' });
+    listed.estimateStore[14] = { approved: true, estimate: { svc: 'probate', vendors: [{ type: 'Appraiser — fine art', name: 'Kodner', cost: 1500 }], rooms: [] } };
+    eq(attempt(() => listed.jobAppraisalDuty(job)).val, 'listed', 'fixture: the approved estimate lists an appraiser');
+    const lt = textOf(attempt(() => listed._renderAppraisalGuardrail(job)).val);
+    has(lt, '1 item needs an appraisal before this inventory is complete', 'an approved estimate here: the estate head');
+    lacks(lt, 'has not loaded on this device yet', '…with nothing said of an unread store');
+    // Neither: the representative by title, never "the client" (on a decedent job, the deceased).
+    const ne = Object.assign({}, MATTERS.neither, { docTier: 'contents', docLevel: 'formal' });
+    const nt = textOf(attempt(() => rig(ne, [art()])._renderAppraisalGuardrail(ne)).val);
+    has(nt, '1 item for the Authorized Representative to have appraised', '⚠ Neither: the Authorized Representative');
+    lacks(nt, 'for the client to have', '…never the client');
+    // Living work is never asked about the estimate.
+    lacks(textOf(attempt(() => rig(MATTERS.living, [art()], { estStore: 'loading' })._renderAppraisalGuardrail(MATTERS.living)).val), 'has not loaded', 'living work: no estimate sentence');
+  }
+  group('⚠ J5 · on a living desk the Values bar says what it counts, beside a chip that counts something else');
+  {
+    const A = { id: 77, name: 'Maria Ortiz', firm: 'Gulfstream Appraisal Group', credential: 'ASA', independent: true };
+    const job = Object.assign({}, MATTERS.living, { appraisers: [A] });
+    const C = rig(job, [LINE({ stableId: 'g1', itemNo: 1, objectName: 'Oil portrait', category: 'Art & Décor', needsAppr: true, apprId: 77, fmv: 2600, valSource: 'Appraisal', valuedBy: 'appraiser' })]);
+    const r = C._photoRefs[14][0];
+    eq(attempt(() => C.invNeedsAppraisal(r, job)).val, true, 'fixture: the To a specialist chip counts the appraised line');
+    eq(attempt(() => C.invAwaitingAppraisal(r, 14)).val, false, 'fixture: …and it waits on nobody');
+    const line = ((attempt(() => C.deskFoldState(14, job, 'values', C._photoRefs[14])).val || { bits: [] }).bits).map((b) => b.text).join(' | ');
+    has(line, '✓ none waiting on a specialist', '⚠ the bar: none waiting, what it counts');
+    lacks(line, 'nothing to a specialist', '⚠⚠ never "nothing to a specialist" beside a chip counting one');
+  }
+  group('⚠⚠ J6 · an unanswered Estate Settlement\'s Court Inventory over lines nobody tracked is a draft, never adopted');
+  {
+    // The sideboard, the sofa and the car (the painting waits on its appraisal, a draft of its own on a Formal estate).
+    const plain = ROWS().slice(0, 3);
+    const t = page(rig(MATTERS.unanswered, plain), 'printCourtInventory').text;
+    has(t, 'DRAFT', 'the page is a draft');
+    has(t, 'the matter type is not recorded', '…naming why');
+    lacks(t, 'Reviewed and adopted by', '⚠ …with no adoption line');
+    has(t, 'each item is on the probate estate by default, until a matter type or an asset track says otherwise', 'the note says the lines are there by default');
+    has(t, 'a final copy follows once the estate is recorded as administered through probate', 'and what a final copy waits on, as a fact');
+    lacks(t, 'Edit Client', '…never the desk\'s press');
+    // Every line on it tracked to probate by a person: somebody put it there, so the page is P14's.
+    const tracked = ROWS().slice(0, 3).map((r) => Object.assign({}, r, { assetTrack: r.assetTrack || 'Probate' }));
+    const tt = page(rig(MATTERS.unanswered, tracked), 'printCourtInventory').text;
+    has(tt, 'FINAL', 'every line tracked Probate by a person: FINAL, as P14 built it');
+    has(tt, 'listed because it is tracked to the probate estate', '…and the note says so');
+    has(tt, 'Reviewed and adopted by', '…with its adoption line');
+    // The probate answer is never touched.
+    const pt = page(rig(MATTERS.probate, plain), 'printCourtInventory').text;
+    has(pt, 'FINAL', 'a probate matter over untracked lines: FINAL');
+    lacks(pt, 'the matter type is not recorded', '…and no such reason');
+  }
+  group('⚠ J7 · off the probate track the papers name no court filing: the Contents List\'s valuer and the Trust Schedule\'s carve-out');
+  {
+    const ct = (m) => Object.assign({}, MATTERS[m], { docTier: 'contents' });
+    const tr = page(rig(ct('trust'), ROWS()), 'printContentsList').text;
+    has(tr, 'Valuation of the property is the responsibility of the trustee or their counsel, who receive this list for that purpose.', '⚠ a Contents-tier trust: the trustee or their counsel');
+    lacks(tr, 'court filing', '…and no court filing');
+    lacks(tr, 'estate attorney', '…and no estate attorney');
+    const ne = page(rig(ct('neither'), ROWS()), 'printContentsList').text;
+    has(ne, 'Valuation of the property is the responsibility of the Authorized Representative and their counsel', '⚠ Neither: the representative and their counsel');
+    lacks(ne, 'court filing', '…and no court filing');
+    has(page(rig(ct('probate'), ROWS()), 'printContentsList').text, 'Valuation of the property and the court filing are the responsibility of the Client and the estate attorney',
+      'the probate track keeps its words');
+    lacks(page(rig(ct('unanswered'), ROWS()), 'printContentsList').text, 'court filing', 'an unanswered Estate Settlement, off the track: no court filing');
+    has(page(rig(Object.assign({}, MATTERS.trust, { docTier: 'values' }), ROWS()), 'printContentsList').text, 'stated separately on the Inventory — Asset Schedule',
+      'a valued trust\'s Contents List points at the Inventory by its own name');
+    // The Trust Schedule names a §733.604 inventory only beside one.
+    const tline = [LINE({ stableId: 't1', itemNo: 1, objectName: 'Walnut sideboard', fmv: 1200, assetTrack: 'Trust' }),
+      LINE({ stableId: 't2', itemNo: 2, objectName: 'Household sofa', fmv: 900, assetTrack: 'Probate' })];
+    const ts = page(rig(MATTERS.trust, tline), 'printTrustSchedule').text;
+    has(ts, 'is excluded from this schedule.', 'fixture: a trust-only matter with a line tracked Probate');
+    lacks(ts, '§733.604', '⚠ a trust-only matter: no §733.604 inventory named');
+    has(page(rig(MATTERS.both, tline), 'printTrustSchedule').text, 'Probate and exempt property is reported on the estate’s §733.604 inventory', 'Both: the estate\'s inventory is named');
+  }
+  group('J8 · the package email claims no photograph the app did not witness');
+  {
+    const C = rig(MATTERS.probate, ROWS());
+    ['schedule', 'contents'].forEach((k) => {
+      const w = attempt(() => C.probatePackageDocPurpose(MATTERS.probate, k)).val || '';
+      ok(/^every item listed/.test(w), k + ': fixture: its purpose');
+      lacks(w, 'photographed', '⚠ ' + k + ': never "every item photographed"');
+    });
+  }
+
   group('I · the four documents say what changed, and the counsel bundle carries the heading as drafted');
   {
     const read = (f) => fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
@@ -426,12 +599,22 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       has(t, 'the appraiser’s inspection', f + ': the living worklist\'s value date');
       has(t, 'Matter type not recorded', f + ': More ▾ by the matter');
       has(t, 'Promised to someone', f + ': the living CSV and record');
+      // P14's review (2026-11-02).
+      has(t, 'Total exempt property claimed, recorded so far', f + ': the exempt subtotal a floor');
+      has(t, 'N waiting on a specialist', f + ': the living Values bar says what it counts');
+      has(t, 'the matter type is not recorded', f + ': an unanswered Estate Settlement\'s Court Inventory a draft');
+      has(t, 'which has not loaded on this device yet', f + ': the guardrail on an unread estimate');
+      has(t, f.endsWith('.html') ? '<em>the trustee or their counsel</em> on a trust' : '*the trustee or their counsel* on a trust', f + ': the Contents List\'s valuer by the matter');
     });
     [['concierge-guide.html', read('concierge-guide.html')], ['CONCIERGE_GUIDE.md', read('CONCIERGE_GUIDE.md')]].forEach(([f, t]) => {
       has(t, 'Matter type not recorded', f + ': More ▾ by the matter');
       has(t, 'what each attachment is for', f + ': the package email');
+      has(t, 'waiting on a specialist', f + ': the living Values bar (P14\'s review)');
+      has(t, 'the matter type is not recorded', f + ': the unanswered Court Inventory a draft (P14\'s review)');
     });
     const bundle = read('COUNSEL_REVIEW_BUNDLE.md');
     has(bundle, 'Exempt Property Claimed (Fla. Stat. §732.402)', '⚠ the heading is in the bundle, as drafted');
+    has(bundle, 'The $20,000 §732.402 allowance cannot be tested until it is valued.', 'the review\'s floor words are in the bundle');
+    has(bundle, 'no written authority makes it lawful for Havellin to carry one', '…and the living NFA sentence');
   }
 };

@@ -502,8 +502,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       '',
       'Attached are Havellin’s inventory documents for the Walter Ellsworth trust administration, 69 Beach Blvd, Palm Beach, as they stand on October 2, 2026:',
       // RESTATED 2026-10-28 (P14, DOC-17 and DOC-28): each attachment says what it is for, and the Report is the Inventory Report.
+      // RESTATED 2026-11-02 (P14's review): *every item listed*, never *photographed*, which a typed line is not.
       '  - Trust Schedule — the tangible personal property held in the trust, scheduled to support the trustee’s accounting',
-      '  - Inventory Report — every item photographed and listed, with its value and where it is going',
+      '  - Inventory Report — every item listed, with its value and where it is going',
       '  - Disposition Ledger — where each item went and what it brought',
       '  - Appraisal Worklist — the items flagged for a specialist’s appraisal, grouped by specialist',
       '',

@@ -19,7 +19,7 @@
 const { sandbox, source, fn } = require('./harness');
 
 const FNS = ['invIsFirearm', 'invFirearmAuthorized', 'invReleaseBlocked',
-             'invTransportBlocked', 'invTransportReason', 'invTransportable',
+             'invTransportBlocked', 'invTransportReason', 'invTransportable', 'invNfaTransferText',
              // P16: the gate reads a line's dealer route (a firearm going to a named person).
              'invDealerRoute', 'invDealerRouteOffered', 'invTransportDealer', 'invChannelLeftover',
              // P19: written authority is every fiduciary's (invApprovalComplete); with no job it is the rule before.

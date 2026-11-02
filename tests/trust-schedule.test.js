@@ -100,10 +100,16 @@ module.exports = ({ group, ok, eq, has, lacks }) => {
     const legacy = rig(J({}), FURNITURE());
     legacy.c.printCourtInventory(7);
     // Restated 2026-10-28 (P14 of the desk audit, EST-20): this job is an Estate Settlement, so with no matter answered it is off
-    // the probate track and its page says the matter type is not recorded, in one note; the rest is the probate page byte for byte.
-    const _lh = legacy.last().html, _lAt = _lh.indexOf('<div class="inv-matter-unset-note"');
-    eq(_lAt < 0 ? _lh : _lh.slice(0, _lAt) + _lh.slice(_lh.indexOf('</div>', _lAt) + 6), pro.last().html,
-       'an unanswered matter renders the court schedule identically to an explicit probate answer, the unanswered note aside');
+    // the probate track and its page says the matter type is not recorded, in one note.
+    // Restated again 2026-11-02 (P14's review): and these lines carry no asset track, so each is on the schedule by the probate
+    // default alone; the page is a DRAFT for it, its property still listed, never adopted until the matter is answered.
+    const _lh = legacy.last().html;
+    eq(_lh.split('inv-matter-unset-note').length - 1, 1, 'an unanswered matter says the matter type is not recorded, in one note');
+    ok(_lh.indexOf('#357a50') < 0, '⚠ …and, over lines on the schedule by default, is never stamped FINAL (P14\'s review)');
+    has(_lh, 'the matter type is not recorded', '…naming why');
+    lacks(_lh, 'Reviewed and adopted by', '…with no adoption block');
+    has(_lh, '$19,000', '…its property still listed');
+    has(_lh, 'each item is on the probate estate by default', '…and the note says the lines are there by default');
   }
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -193,8 +199,17 @@ module.exports = ({ group, ok, eq, has, lacks }) => {
     has(t, '$4,000', 'only the trust line is totalled');
     lacks(t, '$7,000', 'the other two are not swept in');
     has(t, '2 items tagged Homestead / Non-probate are excluded', 'and the excluded pots are named from the rows');
-    has(t, 'passes outside both and is reported on neither',
-        'with the honest statement that neither schedule covers them');
+    // Restated 2026-11-02 (P14's review): a trust-only matter has no §733.604 inventory beside this schedule, so the statement
+    // names the trust alone; on a pour-over will (Both) it still says neither schedule covers them.
+    has(t, 'Homestead and non-probate property passes outside the trust and is not reported on this schedule.',
+        'with the honest statement that this schedule does not cover them');
+    lacks(t, '733.604 inventory', '…and no estate inventory named for an estate with no court');
+    const rb = rig(J({ matterType: 'both' }), [
+      IT('i1', { objectName: 'Trust sofa', fmv: '4000', assetTrack: 'Trust' }),
+      IT('i3', { objectName: 'Homestead contents', fmv: '1000', assetTrack: 'Homestead' }),
+    ]);
+    rb.c.printTrustSchedule(7);
+    has(txt(rb.last().html), 'passes outside both and is reported on neither', 'Both: neither schedule covers them, as before');
   }
 
   // ───────────────────────────────────────────────────────────────────────────
