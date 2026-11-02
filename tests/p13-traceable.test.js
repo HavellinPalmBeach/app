@@ -409,13 +409,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(/required: \['name', 'category', 'qty', 'group', 'confidence', 'basis', 'crop'\]/.test(GS), 'required, so the strict tool answers it on every line');
     has(GS, "'Set group to true on every line that holds more than one article", 'and the prompt says when');
     // RESTATED at the merges with the cell-cap fix (backend 2026-10-28) and with 2026-11-02, which reached main first: this build is 2026-11-02b, carrying them.
-    ok(((GS.match(/var BACKEND_VERSION = '([^']+)';/) || [])[1] || '') >= '2026-11-02b', 'main-sync.gs is 2026-11-02b or later');
+    ok(((GS.match(/var BACKEND_VERSION = '([^']+)';/) || [])[1] || '') >= '2026-11-02c', 'main-sync.gs is 2026-11-02c or later (the version carrying both 2026-11-02b builds)');
     const B = sandbox({ vars: ['BACKEND_MIN_VERSION', 'BACKEND_FEATURE_COST'] });
-    ok(B.BACKEND_MIN_VERSION >= '2026-11-02b', 'the app relies on it');
+    ok(B.BACKEND_MIN_VERSION >= '2026-11-02c', 'the app relies on it');
     const _v13 = B.BACKEND_FEATURE_COST.version, _p13 = 'a drawer, box or shelf of things Agent One names as one line on a Form 706 estate is not marked as a group';
-    const _at13 = _v13.indexOf('on a deployment older than 2026-11-02b, ' + _p13);
-    const _newer13 = (_v13.slice(0, Math.max(0, _at13)).match(/on a deployment older than (\d{4}-\d{2}-\d{2}[a-z]?),/g) || []).map((x) => x.replace(/^on a deployment older than /, '').replace(/,$/, ''));
-    ok(_at13 === 0 || (_at13 > 0 && _newer13.every((x) => x > '2026-11-02b')), 'and the stale banner names it first, or first after newer gaps, by its vintage (' + _newer13.join(', ') + ')');
+    // RESTATED on the merge with main's envelope fix (both named 2026-11-02b; 2026-11-02c carries both): the gap is named under
+    // 2026-11-02c's vintage, the first, after the envelope's.
+    const _at13 = _v13.indexOf(', and ' + _p13);
+    ok(_v13.indexOf('on a deployment older than 2026-11-02c, ') === 0 && _at13 > 0 && _v13.indexOf('; on a deployment older than ') > _at13,
+      'and the stale banner names it under the newest vintage, 2026-11-02c, which carries it');
     ok(_v13.indexOf('; on a deployment older than 2026-10-28, two devices saving') > _at13 && _at13 >= 0, '…then 2026-10-28\'s gap, by its vintage');
     has(B.BACKEND_FEATURE_COST.version, '; on a deployment older than 2026-10-27e, a figure Agent Two researched', '…then 2026-10-27e\'s gap, by its vintage');
     const A = sandbox({ fns: ['_agWrite', '_getPhotoRef', '_setPhotoRef', '_invAgentCondition', '_invCondIsAgents'], vars: ['INV_CATEGORIES', 'INV_TAXONOMY', 'INV_DEFAULT_CATEGORY', 'AGENT_CONDITIONS'],

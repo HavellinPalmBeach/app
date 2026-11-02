@@ -78,7 +78,10 @@ const res = (obj, status) => ({ ok: (status || 200) < 300, status: status || 200
 const SYNC = 'https://script.google.com/macros/s/APPROVALPIN/exec';
 const BOX = 'anthony@havellinpalmbeach.com';
 function net(media) {
-  const log = { drafts: [] };
+  const log = { drafts: [], jobReads: 0 };
+  // RESTATED 2026-11-02 (the release request's envelope as its own record): an estate's send reads the client from the sheet first
+  // (approvalRecordFromSheet); the rig sets `sheet.jobs` to its own copy, so the read moves nothing.
+  const sheet = { jobs: null };
   let n = 0;
   const fetch = (url, init) => {
     const u = String(url);
@@ -91,6 +94,7 @@ function net(media) {
     }
     if (u.indexOf(SYNC) === 0) {
       if (/action=loadMedia/.test(u)) return sp(res({ ok: true, media: media }));
+      if (/action=loadJobs/.test(u)) { log.jobReads++; return sp(res(sheet.jobs ? { ok: true, jobs: sheet.jobs() } : { ok: false })); }
       return sp(res({ ok: false }));
     }
     if (u === 'https://www.googleapis.com/oauth2/v3/userinfo') return sp(res({ email: BOX }));
@@ -100,7 +104,7 @@ function net(media) {
     }
     return sr(new TypeError('Failed to fetch ' + u));
   };
-  return { fetch, log };
+  return { fetch, log, sheet };
 }
 
 // ── Fixtures: the Ashworth estate, both representatives with an email ─────────────────────────────────────────────────
@@ -173,6 +177,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         _invReadLineRepaint() {}, agentValueAfterRename() {}, _invPaintFigures: () => { log.painted++; }, _deskFoldHeadsRepaint() {},
       }, o.stubs || {}));
     c._invCloudSeen = { 7: true };
+    N.sheet.jobs = () => JSON.parse(JSON.stringify(c.jobs));
     const R = { c, N, dom, log, media, job: () => c.jobs[0], row: (id) => c._photoRefs[7].find((x) => x.stableId === id) || {},
       st: () => (c.jobs[0].docState || {}).approvalRequest, card: () => text(c._renderInvReleasesCard(c.jobs[0], c._jobInvRefs(7))),
       el: (id) => dom.getElementById(id), at: (t) => { c.Date = FixedDate(t); } };
@@ -342,7 +347,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const R = rig();
     R.c.sendApprovalRequest(7);
     R.c.invMarkRequestSent(7);
-    const req = R.st().req || {};
+    eq(R.N.log.jobReads, 1, 'fixture: the send read the client from the sheet first');
+    const req = (R.st() || {}).req || {};
     eq(req.stableIds, ['e2', 'e4'], 'fixture: the request carried the dresser and the chairs');
     eq(typeof req.terms, 'string', 'with its terms');
     eq(req.terms.split(';').length, 2, 'one entry per line, in the paper\'s order');
@@ -389,17 +395,22 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const R = rig();
     const rows = R.c._photoRefs[7];
     const list = [R.row('e2'), R.row('e4')];
-    R.job().docState.approvalRequest = { sentAt: '2026-10-13T15:00:00.000Z', req: { stableIds: ['e2', 'e4'], terms: R.c.approvalRequestTerms(list),
-      envelope: { id: 'env-1', status: 'completed', sentAt: '2026-10-13T15:00:00.000Z', appliedAt: '', completedAt: '2026-10-19T15:00:00Z',
-        signers: [{ name: 'Thomas Ashworth', recipientId: '1', n: 1, signedOn: '2026-10-19' }, { name: 'Nora Ashworth', recipientId: '2', n: 2, signedOn: '2026-10-19' }] } } };
+    // RESTATED 2026-11-02 (the release request's envelope as its own record): the envelope is its own docState key carrying the lines
+    // and terms it went with; the request holds only its id.
+    R.job().docState.approvalRequest = { sentAt: '2026-10-13T15:00:00.000Z', req: { asked: 2, ratify: 0, envelopeId: 'env-1' } };
+    R.job().docState['approvalEnv:env-1'] = { id: 'env-1', status: 'completed', sentAt: '2026-10-13T15:00:00.000Z', completedAt: '2026-10-19T15:00:00Z',
+      stableIds: ['e2', 'e4'], terms: R.c.approvalRequestTerms(list),
+      signers: [{ name: 'Thomas Ashworth', recipientId: '1', n: 1, signedOn: '2026-10-19' }, { name: 'Nora Ashworth', recipientId: '2', n: 2, signedOn: '2026-10-19' }] };
+    const env = () => R.job().docState['approvalEnv:env-1'];
     R.land('e2', (x) => { x.fmv = 2900; });   // the $450 dresser raised to $2,900 while the envelope was out (the audit's recheck)
     R.land('e4', (x) => { x.fmv = 320; });    // the chairs nudged within the rule
-    eq(R.c.approvalEnvelopeChanged(R.job(), R.st().req, rows), ['e2'], '⚠⚠ the value past the rule is a change (it was none until today)');
+    eq(R.c.approvalEnvelopeChanged(R.job(), env(), rows), ['e2'], '⚠⚠ the value past the rule is a change (it was none until today)');
     R.c._invReadAt = { 7: NOW };
     eq(R.c.approvalEnvelopeApply(7), 1, 'one line recorded');
     eq([R.row('e2').authBy, R.row('e4').authBy], [undefined, BOTH], 'the dresser waits; the chairs are signed');
     eq(R.row('e4').authFor.fmv, 300, '⚠ pinned to the $300 the envelope carried');
-    eq(R.st().req.envelope.changed, ['e2'], 'named on the record');
+    eq(env().changed, ['e2'], 'named on the envelope\'s record');
+    eq(Object.keys(R.st().req).sort(), ['asked', 'envelopeId', 'ratify'], 'and the request\'s own record is untouched');
   });
 
   G('H · ⚠⚠ the bulk request and Record approval take only lines that wait on written approval, and say what they left out (REL-07)', () => {

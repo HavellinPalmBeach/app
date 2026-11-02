@@ -698,9 +698,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq([S.idle || 0, S.full || 0], [1, 0], 'a signed copy\'s filing answering waits for the box');
     // The DocuSign arrival: a completed request recorded on the lines is drawn once nobody is typing.
     const shows = { v: true };
+    // RESTATED 2026-11-02 (the release request's envelope as its own record): the envelope is its own docState key, found by the real
+    // readers (approvalEnvelopesOut), the request holding only its id.
     const R = lift(['approvalEnvelopeRefresh'], [], {
-      jobs: [Object.assign(JOB(), { docState: { approvalRequest: { req: { envelope: { id: 'E1' } } } } })], SHEETS_SYNC_URL: SYNC, APPROVAL_REQ_KEY: 'approvalRequest',
-      approvalEnvelopeOut: () => true, approvalEnvelopeDue: () => true, approvalEnvelope: (r) => r.envelope, _approvalEnvChecking: {}, _approvalEnvAskedAt: {},
+      jobs: [Object.assign(JOB(), { docState: { approvalRequest: { req: { envelopeId: 'E1' } }, 'approvalEnv:E1': { id: 'E1', status: 'sent' } } })], SHEETS_SYNC_URL: SYNC, APPROVAL_REQ_KEY: 'approvalRequest',
+      approvalEnvelopeDue: () => true, _approvalEnvChecking: {}, _approvalEnvAskedAt: {},
       _appsScriptPost: (u, b, cb) => cb(true, { ok: true, status: 'completed' }), applyApprovalEnvelopeStatus: () => 'completed', approvalEnvelopeFile() {},
       _invEnsureLoaded() {}, refreshPhotoRefs: (id, cb) => cb(true, true, null), approvalEnvelopeApply: () => 2,
       _invDeskShows: () => shows.v, _invRenderWhenIdle: () => { R.idle = (R.idle || 0) + 1; }, renderInventoryTab: () => { R.full = (R.full || 0) + 1; },
@@ -814,6 +816,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       SHEETS_SYNC_URL: SYNC, _invCloudSeen: { [J]: true }, jobs: [JOB()], _invJob: () => JOB(), _docNotice: (t, m) => notices.push(String(m)),
       _invEnsureLoaded() {}, refreshPhotoRefs: (id, cb) => cb(false, false, null), setTimeout: () => 1, clearTimeout() {}, _dashSendState() {},
       deskFoldOpen() {}, showSyncBadge: (m) => notices.push(String(m)), _docBusy: null,
+      // RESTATED 2026-11-02: an estate's send reads the client from the sheet first (approvalRecordFromSheet); here it lands, so the
+      // inventory's read is the one measured.
+      approvalRecordFromSheet: (id, cb) => cb(true), _invRefreshReleases() {},
     };
     let built = 0;
     const R = sandbox({ fns: ['sendApprovalRequest'], vars: ['APPROVAL_REQ_KEY', 'APPROVAL_REQ_WATCHDOG_MS'], stubs: Object.assign({
@@ -823,6 +828,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     R.sendApprovalRequest(J);
     eq(built, 0, '⚠⚠ the release request is not built off this device\'s copy');
     has(notices.join('\n'), 'The inventory could not be read from the sheet, so the request could ask for lines another device has already had approved.', 'and says why');
+    // And the client's own read failing this time (2026-11-02): nothing built, and the inventory not even asked for.
+    notices.length = 0;
+    let asked = 0;
+    const R2 = sandbox({ fns: ['sendApprovalRequest'], vars: ['APPROVAL_REQ_KEY', 'APPROVAL_REQ_WATCHDOG_MS'], stubs: Object.assign({
+      approvalRequestBlocker: () => '', approvalRequestSendBlocker: () => '', approvalRequestEsignRefusal: () => '', _invAwaitingApproval: () => [{ stableId: 's1' }],
+      invFiduciaryMode: () => true, approvalRequestRecipients: () => ({ to: 'dan@example.com' }), printApprovalRequest: () => { built++; return { html: 'x' }; },
+    }, base, { approvalRecordFromSheet: (id, cb) => cb(false, 'the read failed'), refreshPhotoRefs: (id, cb) => { asked++; cb(true, true, null); } }) });
+    attempt(() => R2.sendApprovalRequest(J));   // a send that went on would throw on the stubbed page: the counts below say so
+    eq([built, asked], [0, 0], '⚠⚠ the client\'s read failing this time: nothing built, the inventory not read');
+    has(notices.join('\n'), 'The client could not be read from the sheet, so the request could go out past one another device has already sent.', 'and says why');
     notices.length = 0;
     const F = sandbox({ fns: ['_fileCloseoutPaper', '_cpWhere'], vars: ['FILING_WATCHDOG_MS', 'PHOTO_SUBFOLDER'], stubs: Object.assign({
       _armFiling: () => () => true, _jobInvRefs: () => { built++; return [{}]; },
@@ -982,12 +997,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     dom.getElementById('panel-inventory').classList.add('active');
     dom.hidden = false;
     const calls = [];
-    const job = Object.assign(JOB(), { docState: { approvalRequest: { sentAt: '2026-10-27T20:00:00Z', req: { envelope: { id: 'ENV1', signers: [{ recipientId: '1', name: 'Daniel Price' }] } } } } });
+    // RESTATED 2026-11-02 (the release request's envelope as its own record): the envelope on its own key, the request holding its id.
+    const job = Object.assign(JOB(), { docState: { approvalRequest: { sentAt: '2026-10-27T20:00:00Z', req: { envelopeId: 'ENV1' } },
+      'approvalEnv:ENV1': { id: 'ENV1', status: 'sent', sentAt: '2026-10-27T20:00:00Z', signers: [{ recipientId: '1', name: 'Daniel Price' }] } } });
     const C = sandbox({
       fns: ['_invRefreshFromCloud', '_invRereadArm', '_invRereadTick', '_invDeskShows', '_invCloudRetryArm', 'invSheetChangeWords', '_invManifestUnread',
-        'approvalEnvelopeRefresh', 'approvalEnvelopeDue', 'approvalEnvelopeOut', 'approvalEnvelope', 'applyApprovalEnvelopeStatus', 'docStateBare'],
+        'approvalEnvelopeRefresh', 'approvalEnvelopeDue', 'approvalEnvelopes', 'approvalEnvelopesOut', 'approvalEnvelopeIsOut', 'approvalEnvelopeOf', 'approvalEnvelopeKey',
+        'applyApprovalEnvelopeStatus', 'docStateBare'],
       vars: ['INV_DESK_REREAD_MS', 'INV_CLOUD_RETRY_MS', '_invReread', '_invCloudRetry', 'INV_READ_WATCHDOG_MS', 'ESIGN_RECHECK_MINS', 'APPROVAL_REQ_KEY',
-        'APPROVAL_ENV_DONE', '_approvalEnvChecking', '_approvalEnvAskedAt'],
+        'APPROVAL_ENV_DONE', 'APPROVAL_ENV_PREFIX', '_approvalEnvChecking', '_approvalEnvAskedAt'],
       stubs: {
         document: dom, Date: clock.Date, setTimeout: clock.setTimeout, clearTimeout: clock.clearTimeout,
         SHEETS_SYNC_URL: SYNC, _invCloudSeen: { [J]: true }, _invCloudFailed: {}, jobs: [job],

@@ -1,476 +1,339 @@
-// Step 128 — P9 of the desk audit (2026-10-28): every press lands, and empty photographs leave the list.
+// Step 128 (renumbered from 124, then 127, on merging main, whose steps 124 to 127 landed first) — the estate's release request through DocuSign survives a device that had not reloaded (2026-11-02; Anthony chose
+// the fix of the 2026-10-26c finding: "a device whose copy of the job predates an envelope can still send a request, and its
+// stamped docState.approvalRequest wins the whole-record merge, so the envelope's record is gone from every device").
 //
-// EST-09, LIV-08, DOC-19, INV-08, ROW-17, AGT-01: photographs Agent One found nothing in sat in Unnamed shots, in Select all and on
-// every paper as blank numbered items, and came off one ▾ at a time. AGT-02: a frame too dark to read read *nothing to list* and its
-// note left with the line. ROW-01, NEW-01: Mark reviewed wrote a stuck tick onto blank lines and took a too-dark note off the list.
-// ROW-08: under Not reviewed each tick slid the next line under the finger. ROW-05: the name and Who takes it had two boxes each.
-// LIV-02: the selection survived bulk actions and filters, and Remove lines took lines nobody could see. INV-07, NEW-07: the
-// package's question counted named lines only. ROW-03, ROW-04, SYN-12: the search kept one letter, the first figure typed over
-// Agent Two's dropped the focus, and a press straight after an edit did nothing.
-//
-// Drives the REAL page with an active trust estate on the values tier: a harbour painting valued by Agent Two, a side table to
-// Donate, candlesticks to Keep, three Move lines, six lines not yet decided, two photographs Agent One found nothing in (#13 in
-// the Dining Room, #14 in the Kitchen) and one too dark to read (#15, its note *Too dark to tell what is on the shelf*). Job
-// Admin & Inv through its own nav button, the client through its picker:
-//   A. The chips: Unnamed shots 1 (only #15), Nothing to list 2; the work bar's *Remove the 2 with nothing to list*; #15's row
-//      reads *could not be read: Too dark …* with + Close-up, and never *nothing to list*.
-//   B. Under Not reviewed, two presses on the first row's Reviewed box 150 ms apart, then two on the next row's 600 ms apart:
-//      exactly two lines ticked, each row held in place, greyed, its box shut, with Undo; Undo gives the line back unticked.
-//   C. Select all on Not yet decided picks the six lines, never #13, #14 or #15 (no line with no name: P9's review); #15 ticked by
-//      its own box; Mark reviewed (after the sheet's read) ticks the six, leaves #15 alone and names it; the too-dark note is still
-//      on the list above the rows; the selection is cleared and the bar says so until OK.
-//   D. The search: *harbor* typed at 400 ms and at 80 ms a key keeps every letter, the box keeps the focus, the list filters.
-//   E. A Total typed over Agent Two's figure, then Tab: the focus is on Where it goes and the figure is the desk's; an Each
-//      typed on another agent figure, then Where it goes clicked: the focus is on that select.
-//   F. A Total typed and No value yet pressed straight away: the first press filters. A name typed and ✓ I've read the list
-//      pressed straight away: recorded on the first press. A Total typed and the Estate Inventory PDF pressed straight away:
-//      the viewer opens on the first press.
-//   G. One box per value: the Donate line's record has no name box and no Who takes it box; the Keep line's keeps Who takes it.
-//   H. A picked group folded, a line on screen picked, Remove lines: asked first, the folded lines named and left, only the line
-//      on screen removed. A pick and then a chip pressed: the selection is gone.
-//   I. Remove the 2 with nothing to list: the sheet read first, one question naming #13 (Dining Room) and #14 (Kitchen), both off
-//      as tombstones with their photographs kept; the chip and the press gone; the Estate Inventory PDF prints no blank row;
-//      Removed items gives one back.
-//   J. The package's question counts the desk's gaps: the photograph not yet named, the lines with no disposition and no value.
-//   K. (P9's review) Presses at a person's speed (down, 100 ms, up) straight after an edit that adds or takes away the control
-//      beside the one pressed, or with a redraw owed: the last missing figure typed while *Value 1 line* shows, then the Estate
-//      Inventory PDF: the PDF, never the CSV; a name typed that quiets #o1's note, then Show the item on #o2's: #o2; the search
-//      typed with a redraw owed, then Not reviewed: it filters; a Total typed with a redraw owed, then No value yet: it filters.
-//      And the gun cabinet's blank line from + Another item in this photo, answered with the Firearm note again, reads nothing to
-//      list with no + Close-up. And a tap on a touch screen straight after a figure that takes Value 1 line off the bar: the PDF.
-//   At 1440 and 390 px no horizontal overflow; zero page errors throughout.
+// Drives TWO REAL PAGES (A, Anthony's laptop, and B, Ashley's iPad, two browser contexts) over one emulated sheet whose Jobs tab
+// runs the REAL saveAllJobsToSheet / saveJobToSheet / getJobsFromSheet / _mergeJobRecord out of apps-script/main-sync.gs, and
+// whose inventory merges through saveInventory.gs's _mergeMediaItems. A trust with two trustees, a painting going to auction and
+// a lamp to a charity; both pages hold the morning's copy of the client.
+//   A. A presses Send through DocuSign: one envelope, on its own key on the sheet, the request holding only its id.
+//   B. B, loaded before that and holding the morning's copy, presses Send request: the press reads the client from the sheet
+//      first and is refused by name, nothing filed, made a PDF, drafted or sent; B's card then shows the envelope, out for
+//      signature, with Check DocuSign and no send.
+//   C. B's copy put back to the morning's (as a third device would still hold it), Send through DocuSign pressed: refused the
+//      same way. One esignSendRequest in the whole route log; the sheet's envelope as A sent it.
+//   D. (found on review) the race the Apps Script is the last word on: B's copy morning's again, and its read before the send
+//      answered by the sheet as it stood a moment before A's envelope reached it, so the press goes as far as DocuSign's post, where
+//      the Apps Script refuses a second envelope (`refused: 'out'`). B says it as the Apps Script's refusal, never DocuSign's and
+//      never with a doubled stop or advice to email the same lines, reads the client again and its card shows the envelope.
+//   E. A reloads from the sheet and still reads the envelope; no horizontal overflow at 1440 and 390 on either page; zero page
+//      errors.
 //
 //   NODE_PATH=/path/to/node_modules node tests/browser/step128.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
+const fs = require('fs'), path = require('path'), vm = require('vm');
+const { matchBrace } = require(path.join(__dirname, '..', 'harness'));
 const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/havellin.html'));
-const SYNC = 'https://sync.example.test/exec';
-const J = 12401;
 let pass = 0, fail = 0;
 let b = null;
 const ok = (c, m) => { if (c) { pass++; } else { fail++; console.log('  ✗ ' + m); } };
 const eq = (a, e, m) => ok(JSON.stringify(a) === JSON.stringify(e), m + '  [got ' + JSON.stringify(a) + ', want ' + JSON.stringify(e) + ']');
 const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + ']');
-const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n + ']');
-const DARK = 'Too dark to tell what is on the shelf: photograph it again';
+const J = (x) => JSON.parse(JSON.stringify(x));
+
+// ── THE SHEET: the REAL job merge out of main-sync.gs over an in-memory Jobs tab (step 46's), the REAL inventory merge ──
+const ROOT = path.join(__dirname, '..', '..');
+const GS = fs.readFileSync(path.join(ROOT, 'apps-script', 'main-sync.gs'), 'utf8');
+function gsFn(name) {
+  const re = new RegExp('(^|\\n)function\\s+' + name + '\\s*\\(', 'g');
+  const m = re.exec(GS); if (!m) throw new Error('not in .gs: ' + name);
+  const start = m.index + (m[1] ? m[1].length : 0), open = GS.indexOf('{', re.lastIndex);
+  return GS.slice(start, matchBrace(GS, open) + 1);
+}
+function gsVar(name) {
+  const m = GS.match(new RegExp('(^|\\n)(var\\s+' + name + '\\s*=[\\s\\S]*?;)\\n')); if (!m) throw new Error('not in .gs: var ' + name);
+  return m[2];
+}
+function fakeSheet(name, header) {
+  const rows = header ? [header.slice()] : [];
+  return {
+    getName: () => name, getLastRow: () => rows.length,
+    getLastColumn: () => rows.reduce((m, r) => Math.max(m, r.length), 0),
+    appendRow(r) { rows.push(r.slice()); },
+    getDataRange() { return { getValues: () => rows.map((r) => r.slice()) }; },
+    getRange(r, c, nr, nc) {
+      return {
+        getValues() { const out = []; for (let i = 0; i < nr; i++) { const row = rows[r - 1 + i] || [], cells = [];
+          for (let j = 0; j < nc; j++) cells.push(row[c - 1 + j] === undefined ? '' : row[c - 1 + j]); out.push(cells); } return out; },
+        setValues(v) { v.forEach((cells, i) => { while (rows.length < r + i) rows.push([]); const row = rows[r - 1 + i];
+          cells.forEach((cell, j) => { row[c - 1 + j] = cell; }); }); },
+        clearContent() { for (let i = 0; i < nr; i++) { const row = rows[r - 1 + i]; if (!row) continue;
+          for (let j = 0; j < nc; j++) row[c - 1 + j] = ''; }
+          while (rows.length > 1 && rows[rows.length - 1].every((x) => x === '' || x === undefined)) rows.pop(); },
+      };
+    },
+  };
+}
+const S = {
+  console, Logger: { log() {} }, Date, JSON, Math, Number, String, Object, Array,
+  LockService: { getScriptLock: () => ({ waitLock() {}, tryLock() { return true; }, releaseLock() {} }) },
+  // The job ledger and the deleted-client refusal have their own suites: stubbed, so this step measures the merge.
+  _jobRefusal: () => null, _presentJobIds: () => ({}), getJobLedger: () => ({ seen: {}, since: 0 }), _ledgerMarkSeen: () => {},
+  _jobsTabUnread: () => '', _recordedDeletes: () => [],
+};
+const SHEETS = { Jobs: fakeSheet('Jobs', ['ID', 'HVL ID', 'Name', 'Email', 'Phone', 'Address', 'City', 'Zip', 'Service', 'Status', 'Created', 'Data JSON']) };
+S.SpreadsheetApp = { flush() {}, openById: () => ({ getSheetByName: (n) => SHEETS[n] || null, insertSheet(n) { SHEETS[n] = fakeSheet(n); return SHEETS[n]; } }) };
+vm.createContext(S);
+vm.runInContext([gsVar('SHEET_ID'), gsVar('JOB_KEYED_LISTS'), gsVar('JOB_KEYED_MAPS'), gsVar('JOB_LIST_KEY'), gsVar('JOB_PAYMENT_STICKY'),
+  gsVar('BACKEND_VERSION'), gsVar('BACKEND_ACTIONS'), gsVar('BACKEND_TYPES'), gsVar('SHEET_CELL_MAX'),
+  ...['getJobsFromSheet', 'saveAllJobsToSheet', 'saveJobToSheet', '_jobStamp', '_jobListKey', '_mergeJobKeyed', '_mergeJobRecord', '_paymentSticky',
+    '_lockOrBusy', '_jobRowOf', '_jobRowTooLarge', '_commas'].map(gsFn)].join('\n\n'), S, { filename: 'main-sync.gs (extracted)' });
+const INV = { Logger: { log() {} }, console }; vm.createContext(INV);
+vm.runInContext(fs.readFileSync(path.join(ROOT, 'apps-script', 'saveInventory.gs'), 'utf8'), INV, { filename: 'saveInventory.gs' });
+
+const SYNC = 'https://sync.example.test/exec';
+const T0 = Date.parse('2026-10-10T15:00:00Z');
+const ID = 12401;
+const ENV = 'approvalEnv:env-124';
+const OUT_WORDS = 'A request is out for signature in DocuSign: no new request goes until it is complete, or until it is voided in DocuSign.';
+const sheetJob = () => J(S.getJobsFromSheet().find((j) => j && j.id === ID) || null);
+const shared = { media: {}, estimates: {}, net: [] };   // net: every request either page made, in order: [device, action]
 
 (async () => {
   try {
     b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-    const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 }, timezoneId: 'America/New_York' });
-    const net = { reads: 0, value: 0 };
-    let sheet = {};
-    await ctx.route(SYNC + '**', async (r) => {
-      const req = r.request();
-      const json = (o) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(o) });
-      if (req.method() === 'POST') {
-        let body = {}; try { body = JSON.parse(req.postData() || '{}'); } catch (e) {}
-        if (body.action === 'agentValue') { net.value++; return json({ ok: true, success: true, results: {}, failed: {}, remaining: 0 }); }
-        return json({ ok: true });
-      }
-      if (/action=loadMedia/.test(req.url())) { net.reads++; return json({ ok: true, media: sheet }); }
-      return json({ ok: true });
-    });
-    await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
-    const p = await ctx.newPage();
-    p.setDefaultTimeout(10000);
-    const errs = []; p.on('pageerror', (e) => errs.push(String(e)));
-    const said = [];
-    let answer = true;   // what the next dialog answers: OK, or Cancel
-    p.on('dialog', async (d) => { said.push(d.message()); if (answer || d.type() === 'alert') await d.accept(); else await d.dismiss(); });
+
+    async function device(tag, who) {
+      const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 }, timezoneId: 'America/New_York' });
+      const d = { tag, ctx, errs: [], dialogs: [] };
+      await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+      await ctx.route(SYNC + '**', async (r) => {
+        const req = r.request();
+        const json = (o) => r.fulfill({ status: 200, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(o) });
+        let body = {}; if (req.method() === 'POST') { try { body = JSON.parse(req.postData() || '{}'); } catch (e) {} }
+        const action = body.action || body.type || ((/action=([A-Za-z]+)/.exec(req.url()) || [])[1]) || '';
+        shared.net.push({ dev: tag, action, body: action === 'esignSendRequest' ? { envKey: body.envKey, signers: (body.signers || []).map((x) => x.name) } : undefined });
+        if (action === 'saveAllJobs') { S.saveAllJobsToSheet(body.payload || []); return json({ ok: true, success: true, dropped: [] }); }
+        if (action === 'job') { S.saveJobToSheet(body.payload); return json({ ok: true, success: true, dropped: [] }); }
+        if (action === 'loadJobs') {
+          const list = S.getJobsFromSheet();
+          // Section D: one read answered by the sheet as it stood before A's envelope reached it (B's morning copy in its place).
+          if (shared.staleRead === tag) { shared.staleRead = null; const i = list.findIndex((j) => j && j.id === ID); if (i >= 0) list[i] = JSON.parse(shared.morning); }
+          return json({ ok: true, success: true, jobs: list, deletedJobs: [], recorded: [] });
+        }
+        if (action === 'loadMedia') return json({ ok: true, success: true, media: J(shared.media) });
+        if (action === 'saveMedia') {
+          const pl = body.payload || {}, k = String(pl.jobId);
+          shared.media[k] = Object.assign({}, shared.media[k] || {}, { items: J(INV._mergeMediaItems(J((shared.media[k] && shared.media[k].items) || []), J(pl.items || []))) });
+          return json({ ok: true, success: true, jobId: k });
+        }
+        if (action === 'loadEstimates') return json({ ok: true, success: true, estimates: J(shared.estimates) });
+        if (action === 'loadContractors') return json({ ok: true, success: true, contractors: { added: [], defaults: [] } });
+        if (action === 'version') return json({ ok: true, success: true, version: S.BACKEND_VERSION, actions: S.BACKEND_ACTIONS, types: S.BACKEND_TYPES, deviceKey: 'off' });
+        if (action === 'uploadHtml') return json({ ok: true, fileUrl: 'https://drive.google.com/file/d/up' + shared.net.length + '/view', fileId: 'up' + shared.net.length });
+        if (action === 'htmlToPdf') return json({ ok: true, base64: Buffer.from('%PDF-1.4 ' + 'x'.repeat(200)).toString('base64') });
+        if (action === 'getSubfolders') return json({ ok: true, subfolders: null });
+        // Section D: the Apps Script's refusal of a second envelope, in the words and shape esignSendRequestForJob answers it
+        // (p2-device-key.test.js holds the server to them).
+        if (action === 'esignSendRequest' && shared.refuseOut === tag) return json({ ok: false, refused: 'out',
+          error: 'The envelope was not created: a release request for this client is already out for signature in DocuSign (sent November 2, 2026). '
+            + 'Reload the app to see it; if it has just been signed or voided, open the client so the app checks DocuSign, then send again.' });
+        if (action === 'esignSendRequest') return json({ ok: true, envelopeId: 'env-124', status: 'sent',
+          signers: (body.signers || []).map((s, i) => ({ name: s.name, email: s.email, recipientId: String(i + 1), n: i + 1 })) });
+        if (action === 'esignStatus') return json({ ok: true, envelopeId: body.envelopeId, status: 'sent', signers: [] });
+        if (action === 'getDriveThumbnails') return json({ ok: true, thumbs: {} });
+        return json({ ok: true, success: true });
+      });
+      const p = await ctx.newPage(); p.setDefaultTimeout(15000);
+      p.on('pageerror', (e) => d.errs.push(String(e)));
+      p.on('dialog', async (dl) => { d.dialogs.push(dl.type() + ': ' + dl.message()); await dl.accept(); });
+      d.p = p;
+      await p.goto(APP); await p.waitForTimeout(1500);
+      // The URL in Settings (kept, so a reload reads the sheet at start-up) and who uses the device; Gmail and new tabs stubbed.
+      await p.evaluate(([u, w]) => {
+        SHEETS_SYNC_URL = u;
+        try { localStorage.setItem('hav_sheets_url', u); localStorage.setItem('hav_device_user', w); } catch (e) {}
+        _backendActions = ['esignSendRequest'];   // the deployment answers that it has the action (the version probe's answer)
+        window.__drafts = [];
+        window.gmailCreateDraft = function (mime, cb) { window.__drafts.push(mime); cb(true, { draftId: 'd1', messageId: 'm1' }); };
+        window.open = function () { return null; };
+      }, [SYNC, who]);
+      d.sent = (a) => shared.net.filter((x) => x.dev === tag && x.action === a);
+      return d;
+    }
+
+    // The client both pages hold, the same copy on each: a trust, two trustees with email, two lines leaving, the estimate approved.
+    const seed = (d) => d.p.evaluate(([ID, T0]) => {
+      jobs.unshift({ id: ID, hvlId: 'HVL-2611-E124', name: 'Margaret Ellison', svc: 'cleanout', matterType: 'trust', addr: '5 E St', city: 'Palm Beach', zip: '33480',
+        executor: 'Thomas Ellison', executorRole: 'Trustee', executorEmail: 'tom@example.com', deathDate: '2026-04-02', executorAuth: 'received',
+        coFiduciaries: [{ id: 'cf1', name: 'Catherine Ellison-Reyes', role: 'Co-Trustee', email: 'cat@example.com', phone: '' }],
+        docTier: 'values', gate706: 'no', status: 'active', won: true, wonAt: '2026-09-25', approved: true, tc: 'Ashley Jerome', created: '2026-09-20', start: '2026-10-06',
+        activatedOn: '2026-10-05', agrApproved: true, agrSent: true, agrSigned: true, probateAttyName: 'Ann Lowe', probateAttyEmail: 'ann@lowe.law',
+        driveFolder: 'https://drive.google.com/drive/folders/ROOT' + ID, driveSubfolders: { 'Estate Inventory': 'INV' + ID, 'As-Found Record': 'AF' + ID, 'Signed Records': 'SR' + ID },
+        docState: {}, at: {}, updatedAt: T0,
+        payments: [{ uid: 'e' + ID, stage: 'deposit', amount: 20000, receivedOn: '2026-10-01', method: 'wire', clearedOn: '2026-10-01' }] });
+      estimateStore[ID] = { approved: true, submitted: true, approvedBy: 'Anthony Graziano', approvedAt: 'September 23, 2026', savedAt: T0,
+        estimate: { jobId: ID, svc: 'cleanout', havellinTotal: 40000, fixedPrice: true, fixedAmount: 40000, fixedLines: true, totTC: 100, totPS: 150, tcRate: 150, psRate: 100,
+          days: 8, vendors: [], prepItems: [], pkgCost: 0, rooms: [{ idx: 0, name: 'Living Room', st: 'in', vol: 3, cplx: 3 }] } };
+      const item = (sid, o) => Object.assign({ stableId: sid, label: 'inventory', roomIdx: 0, seq: 1, status: 'uploaded', category: 'Furniture', disposition: '',
+        ts: T0, updatedAt: T0, filename: 'HVL_' + ID + '_INV_' + sid + '.jpg', driveFileId: 'f-' + sid, namedBy: 'desk', reviewed: true }, o);
+      _photoRefs[ID] = [
+        item('a', { itemNo: 1, objectName: 'Harbor painting', category: 'Art & Décor', fmv: '2400', disposition: 'Auction', channel: 'Kodner Galleries' }),
+        item('b', { itemNo: 2, objectName: 'Table lamp', fmv: '60', disposition: 'Donate', channel: 'Goodwill Palm Beach' })];
+      savePhotoRefs(ID);
+      saveJobs(); localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore));
+      const media = {}; media[ID] = { items: JSON.parse(localStorage.getItem('hav_media_' + ID) || '[]') };
+      return { media, est: estimateStore[ID] };
+    }, [ID, T0]);
+
     const section = async (name, body) => {
       console.log('\n## ' + name);
       try { await body(); } catch (e) { fail++; console.log('  ✗ ' + name + ' threw: ' + String(e && e.message || e).split('\n')[0]); }
     };
-    const vis = (sel) => p.locator(sel).first().isVisible().catch(() => false);
-    const press = async (sel, what) => {
-      const n = await p.locator(sel).count();
-      const v = n === 1 && await vis(sel);
-      ok(v, (what || sel) + ' — one control, on screen (' + n + ')');
-      if (v) { await p.click(sel, { timeout: 5000 }).catch((e) => ok(false, (what || sel) + ' — ' + e.message.split('\n')[0])); await p.waitForTimeout(900); }
+    const until = async (p, f, ms) => { const t0 = Date.now(); while (Date.now() - t0 < (ms || 10000)) { if (await f()) return true; await p.waitForTimeout(250); } return false; };
+    const txt = (d, sel) => d.p.evaluate((s) => { const el = document.querySelector(s); return el ? el.textContent.replace(/\s+/g, ' ').trim() : ''; }, sel);
+    const vis = (d, sel) => d.p.locator(sel).first().isVisible().catch(() => false);
+    const press = async (d, sel, what) => {
+      const n = await d.p.locator(sel).count();
+      const v = n >= 1 && await vis(d, sel);
+      ok(v, d.tag + ': ' + (what || sel) + ' — on screen (' + n + ')');
+      if (v) { await d.p.locator(sel).first().click({ timeout: 5000 }).catch((e) => ok(false, (what || sel) + ' — ' + e.message.split('\n')[0])); }
       return v;
     };
-    const overflow = () => p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-    const txt = (sel) => p.evaluate((s) => { const el = document.querySelector(s); return el ? el.textContent.replace(/\s+/g, ' ').trim() : ''; }, sel);
-    const line = (sid) => p.evaluate(([j, sid]) => { const r = (_photoRefs[j] || []).find((x) => x.stableId === sid); return r ? JSON.parse(JSON.stringify(r)) : null; }, [J, sid]);
-    const live = () => p.evaluate((j) => (_photoRefs[j] || []).filter((r) => r.label === 'inventory' && !r.deletedAt).map((r) => r.stableId).sort(), J);
-    const picks = () => p.evaluate(() => Object.keys(_invPick).sort());
-    const chips = () => p.evaluate(() => [...document.querySelectorAll('#inv-flagstrip button')].map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
-    const active = () => p.evaluate(() => { const a = document.activeElement; return a ? (a.id || (a.tagName + (a.className ? '.' + a.className : ''))) : ''; });
-    const viewerOpen = () => p.evaluate(() => { const o = document.getElementById('doc-viewer-modal'); return !!o && o.style.display === 'flex'; });
-    const closeViewer = async () => { if (await viewerOpen()) await press('#doc-viewer-modal button[onclick="closeDocViewer()"]', 'Close the viewer'); };
-    const eir = async () => {
-      await press('#inv-workbar button[onclick="printEstateInventoryReport(' + J + ')"]', 'Estate Inventory PDF, on the work bar');
-      ok(await viewerOpen(), 'the Estate Inventory Report opens in the viewer');
-      const t = await txt('#doc-viewer-body');
-      await closeViewer();
-      return t;
+    const overflow = (d) => d.p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    const toDesk = async (d) => {
+      const p = d.p;
+      await p.evaluate((id) => { setCurrentJob(id); populateInventorySelect(); }, ID);
+      await p.click('.nb[onclick*="\'inventory\'"]'); await p.waitForTimeout(900);
+      if (String(await p.evaluate(() => (document.getElementById('inv-job') || {}).value)) !== String(ID)) { await p.selectOption('#inv-job', String(ID)); await p.waitForTimeout(900); }
     };
-
-    await p.goto(APP); await p.waitForTimeout(1600);
-    sheet = await p.evaluate(([J, SYNC, DARK]) => {
-      SHEETS_SYNC_URL = SYNC;
-      try { localStorage.setItem('hav_device_user', 'Ashley Jerome'); } catch (e) {}
-      const T = Date.now() - 2 * 86400000;
-      jobs.unshift({ id: J, hvlId: 'HVL-2610-P9', name: 'Ruth Calder', svc: 'cleanout', matterType: 'trust', addr: '40 Via Mizner', city: 'Palm Beach', zip: '33480',
-        executor: 'Daniel Calder', executorRole: 'Successor Trustee', executorEmail: 'dan@example.com', probateAttyEmail: 'counsel@example.com', deathDate: '2026-08-14',
-        executorAuth: 'received', trustName: 'Calder Family Trust', docTier: 'values', gate706: 'no', status: 'active', won: true, wonAt: '2026-10-01', approved: true,
-        tc: 'Ashley Jerome', created: '2026-09-28', start: '2026-10-12', activatedOn: '2026-10-10', agrApproved: true, agrSent: true, agrSigned: true, sqft: 3400,
-        driveFolder: 'https://drive.google.com/drive/folders/R' + J, driveSubfolders: { 'Estate Inventory': 'INV_P9', 'As-Found Record': 'AF_P9' }, at: {},
-        payments: [{ uid: 'd' + J, stage: 'deposit', amount: 9000, receivedOn: '2026-10-08', method: 'wire', clearedOn: '2026-10-08' }] });
-      estimateStore[J] = { approved: true, submitted: true, approvedBy: 'Anthony Graziano', savedAt: T,
-        estimate: { jobId: J, svc: 'cleanout', havellinTotal: 18000, fixedPrice: true, fixedAmount: 18000, fixedLines: true, totTC: 50, totPS: 70, days: 4,
-          vendors: [], prepItems: [], rooms: [{ idx: 2, name: 'Kitchen', st: 'in', vol: 3, cplx: 3 }, { idx: 3, name: 'Living Room', st: 'in', vol: 3, cplx: 3 },
-            { idx: 4, name: 'Dining Room', st: 'in', vol: 3, cplx: 3 }] } };
-      let seq = 0;
-      const shot = (sid, room, o) => Object.assign({ stableId: sid, itemNo: ++seq, label: 'inventory', collId: null, roomIdx: room, seq: seq, status: 'uploaded', ts: T + seq * 1000,
-        filename: 'HVL-2610-P9_F' + sid + '.jpg', driveFileId: 'F' + sid, driveFileUrl: 'https://drive.google.com/file/d/F' + sid + '/view', category: 'General/Household',
-        qty: 1, updatedAt: T + seq * 1000 }, o);
-      const desk = (name, disp, fmv, o) => Object.assign({ objectName: name, namedBy: 'desk', disposition: disp, fmv: fmv, valuedBy: 'desk', valSource: 'Estimate',
-        valDate: '2026-08-14', condition: 'Good' }, o || {});
-      _photoRefs[J] = [
-        shot('a1', 3, { objectName: 'Oil painting, harbor scene, gilt frame', agentName: 'Oil painting, harbor scene, gilt frame', namedBy: 'agent', agentConf: 'medium',
-          agentAt: T, category: 'Art & Décor', disposition: 'Auction', channel: 'Kodner Galleries', fmv: 350, valLow: 250, valHigh: 450, valConf: 'medium',
-          valuedBy: 'agent', valSource: 'General estimate', valNote: 'A decorative harbour scene in oils.', valAgentAt: T, valNameAt: 'Oil painting, harbor scene, gilt frame',
-          valDate: '2026-08-14', condition: 'Good' }),
-        shot('a2', 3, desk('Mahogany drop-leaf side table', 'Donate', 400, { channel: 'Habitat ReStore', category: 'Furniture' })),
-        shot('a3', 3, desk('Brass candlesticks, pair', 'Keep', 80)),
-        shot('m4', 3, desk('Tufted linen three-seat sofa', 'Move', 900, { category: 'Furniture' })),
-        shot('m5', 3, desk('Walnut bookcase', 'Move', 300, { category: 'Furniture' })),
-        shot('m6', 3, desk('Brass floor lamp', 'Move', 120)),
-        shot('u7', 2, desk('Blue glass vase', '', 60)),
-        shot('u8', 2, desk('Set of six ladder-back dining chairs', '', 450, { category: 'Furniture' })),
-        shot('u9', 2, desk('Wool area rug, 5 by 8', '', 200)),
-        shot('u10', 2, desk('Silver-plated serving tray', '', 40)),
-        shot('u11', 2, desk('Ceramic table lamp', '', 35)),
-        shot('u12', 2, desk('Framed botanical print', '', 25, { category: 'Art & Décor' })),
-        shot('n13', 4, { objectName: '', agentAt: T, agentConf: 'none' }),
-        shot('n14', 2, { objectName: '', agentAt: T, agentConf: 'none' }),
-        shot('d15', 3, { objectName: '', agentAt: T, agentConf: 'unread', agentNotices: [{ kind: 'other', text: DARK }] }),
-        shot('a16', 3, { objectName: 'Gilt mirror, carved frame', agentName: 'Gilt mirror, carved frame', namedBy: 'agent', agentConf: 'medium', agentAt: T,
-          category: 'Art & Décor', disposition: 'Auction', channel: 'Kodner Galleries', fmv: 220, valLow: 150, valHigh: 300, valConf: 'medium', valuedBy: 'agent',
-          valSource: 'General estimate', valNote: 'A carved gilt mirror.', valAgentAt: T, valNameAt: 'Gilt mirror, carved frame', valDate: '2026-08-14', condition: 'Good' }),
-        // A line that stands as the agents left it through the whole step, so ✓ I've read the list is offered (Q107).
-        shot('a17', 3, { objectName: 'Walnut side chair, turned legs', agentName: 'Walnut side chair, turned legs', namedBy: 'agent', agentConf: 'medium', agentAt: T,
-          category: 'Furniture', disposition: 'Auction', channel: 'Kodner Galleries', fmv: 90, valLow: 60, valHigh: 120, valConf: 'medium', valuedBy: 'agent',
-          valSource: 'General estimate', valNote: 'A turned-leg walnut side chair.', valAgentAt: T, valNameAt: 'Walnut side chair, turned legs', valDate: '2026-08-14', condition: 'Good' })];
-      _invCloudSeen[J] = true;
-      savePhotoRefs(J); saveJobs(); localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore));
-      const out = {}; out[J] = { items: JSON.parse(localStorage.getItem('hav_media_' + J) || '[]') };
-      return out;
-    }, [J, SYNC, DARK]);
-
-    const toDesk = async () => {
-      await p.click('.nb[onclick*="\'inventory\'"]'); await p.waitForTimeout(800);
-      const cur = await p.evaluate(() => (document.getElementById('inv-job') || {}).value);
-      if (String(cur) !== String(J)) { await p.selectOption('#inv-job', String(J)); await p.waitForTimeout(1300); }
-      if (await p.locator('#panel-inventory button[onclick="setInvWhen(\'all\')"]').count()) { await p.click('#panel-inventory button[onclick="setInvWhen(\'all\')"]'); await p.waitForTimeout(600); }
+    const openBar = async (d, fold) => {
+      const p = d.p, body = p.locator('#desk-body-' + fold + '-' + ID), hd = p.locator('#desk-hd-' + fold + '-' + ID);
+      if ((await body.count()) === 1 && !(await body.isVisible()) && (await hd.isVisible())) { await p.click('#desk-hd-' + fold + '-' + ID); await p.waitForTimeout(300); }
     };
+    // What a page holds of the request and its envelopes.
+    const held = (d) => d.p.evaluate(([id, k]) => {
+      const j = jobs.find((x) => x.id === id) || {}, ds = j.docState || {}, at = j.at || {};
+      return { env: ds[k] ? JSON.parse(JSON.stringify(ds[k])) : null, envKeys: Object.keys(ds).filter((x) => x.indexOf('approvalEnv:') === 0),
+               ptr: ((ds.approvalRequest || {}).req || {}).envelopeId || null, reqAt: at['docState:approvalRequest'] || null, updatedAt: j.updatedAt || null };
+    }, [ID, ENV]);
+    const SEND = '#inv-releases button[onclick="sendApprovalRequest(' + ID + ')"]';
+    const SEND_DS = '#inv-releases button[onclick="sendApprovalRequestEsign(' + ID + ')"]';
+    const CHECK = '#inv-releases button[onclick="approvalEnvelopeCheckNow(' + ID + ')"]';
+    const ANY_SEND = '#inv-releases button[onclick^="sendApprovalRequest"], #inv-releases button[onclick^="invRecordRequestApproval"]';
 
-    // ── A ─────────────────────────────────────────────────────────────────────────────────────
-    await section('A. a pile of its own for the photographs with nothing to list, and a too-dark frame says why', async () => {
-      await toDesk();
-      const c = await chips();
-      ok(c.indexOf('Unnamed shots 1') >= 0, '⚠⚠ Unnamed shots counts only the photograph still waiting for a name: ' + JSON.stringify(c));
-      ok(c.indexOf('Nothing to list 2') >= 0, '⚠⚠ Nothing to list 2, its own chip');
-      has(await txt('#inv-workbar'), 'Agent One found nothing to list in 2 photographs', 'the work bar says how many');
-      ok(await vis('#inv-workbar button[onclick="invRemoveNothingToList(' + J + ')"]'), '⚠⚠ and offers the one press');
-      has(await txt('#inv-workbar button[onclick="invRemoveNothingToList(' + J + ')"]'), 'Remove the 2 with nothing to list', 'in those words');
-      const d = await txt('#inv-row-d15 .inv-row-sub');
-      has(d, 'could not be read: ' + DARK, '⚠⚠ the too-dark frame says why it was not named');
-      lacks(d, 'nothing to list', '⚠ and never "nothing to list"');
-      ok(await vis('#inv-row-d15 .inv-row-sub label.inv-cu-add'), '⚠ + Close-up on its row');
-      has(await txt('#inv-row-n13 .inv-row-sub'), 'nothing to list', 'a photograph with nothing in it says so');
-      await press('#inv-flagstrip button[onclick="setInvFlag(\'nothing\')"]', 'the Nothing to list chip');
-      eq((await p.evaluate(() => [...document.querySelectorAll('#panel-inventory [id^="inv-row-"]')].map((x) => x.id))).sort(), ['inv-row-n13', 'inv-row-n14'],
-        'the chip shows the two photographs and nothing else');
-      await press('#inv-flagstrip button[onclick="setInvFlag(\'nothing\')"]', 'the chip again, off');
-      eq(await overflow(), 0, 'no horizontal overflow at 1440');
+    const A = await device('A', 'Anthony Graziano');
+    const B = await device('B', 'Ashley Jerome');
+    const seeded = await seed(A); await seed(B);
+    shared.media = seeded.media; shared.estimates = {}; shared.estimates[ID] = seeded.est;
+    ok(await until(A.p, async () => !!sheetJob(), 8000), 'fixture: the sheet holds the client');
+    await toDesk(A); await toDesk(B);
+    await openBar(A, 'releases'); await openBar(B, 'releases');
+
+    // ── A ───────────────────────────────────────────────────────────────────
+    let sentEnv = null, morning = null;
+    await section('A. A presses Send through DocuSign: one envelope, on its own key on the sheet; the request holds only its id', async () => {
+      ok(await vis(B, SEND) && await vis(B, SEND_DS), 'fixture: B, loaded before the send, offers Send request and Send through DocuSign');
+      morning = await B.p.evaluate((id) => JSON.stringify(jobs.find((x) => x.id === id)), ID);
+      await press(A, SEND_DS, 'Send through DocuSign');
+      ok(await until(A.p, async () => A.sent('esignSendRequest').length > 0, 10000), 'the envelope was asked for');
+      eq(A.sent('esignSendRequest').map((x) => x.body), [{ envKey: 1, signers: ['Thomas Ellison', 'Catherine Ellison-Reyes'] }], 'one envelope, both trustees, the post marked as keeping it on its own key');
+      ok(await until(A.p, async () => { const s = sheetJob(); return !!(s && s.docState && s.docState[ENV]); }, 12000), '⚠⚠ the sheet holds the envelope on its own key');
+      const s = sheetJob() || {}, e = (s.docState || {})[ENV] || {};
+      eq([e.id, e.status, e.stableIds], ['env-124', 'sent', ['a', 'b']], 'the envelope with the lines it carried');
+      eq(((s.docState || {}).approvalRequest || {}).req && s.docState.approvalRequest.req.envelopeId, 'env-124', 'and the request on the sheet points at it');
+      sentEnv = J(e);
+      await openBar(A, 'releases');
+      has(await txt(A, '#inv-releases'), 'Out for signature in DocuSign since', 'A\'s card: out for signature');
     });
 
-    // ── B ─────────────────────────────────────────────────────────────────────────────────────
-    await section('B. under Not reviewed a ticked row stays where it was: a double tap ticks one line', async () => {
-      await press('#inv-flagstrip button[onclick="setInvFlag(\'unreviewed\')"]', 'the Not reviewed chip');
-      const first = await p.evaluate(() => { const r = document.querySelector('#panel-inventory [id^="inv-rev-"] input'); return r ? r.closest('label').id.replace('inv-rev-', '') : ''; });
-      ok(!!first, 'fixture: a row under Not reviewed');
-      const at = async (sid) => { const bx = await p.locator('#inv-rev-' + sid + ' input').boundingBox(); return { x: bx.x + bx.width / 2, y: bx.y + bx.height / 2 }; };
-      const tickedNow = () => p.evaluate((j) => (_photoRefs[j] || []).filter((r) => r.reviewed && !r.deletedAt).map((r) => r.stableId).sort(), J);
-      const t0 = await tickedNow();
-      let pt = await at(first);
-      await p.mouse.click(pt.x, pt.y); await p.waitForTimeout(150); await p.mouse.click(pt.x, pt.y); await p.waitForTimeout(700);
-      const t1 = (await tickedNow()).filter((x) => t0.indexOf(x) < 0);
-      eq(t1, [first], '⚠⚠ two presses 150 ms apart tick one line, the one under the finger');
-      ok(await p.evaluate((sid) => { const r = document.getElementById('inv-row-' + sid); return !!r && /inv-row-held/.test(r.className); }, first), '⚠⚠ its row stays in place, greyed');
-      ok(await p.evaluate((sid) => { const i = document.querySelector('#inv-rev-' + sid + ' input'); return !!i && i.disabled && i.checked; }, first), 'its box ticked and shut to a second press');
-      has(await txt('#inv-row-' + first + ' .inv-held-line'), 'Reviewed by Ashley Jerome', 'and it says what was done, with Undo');
-      // The next row under Not reviewed, pressed twice 600 ms apart.
-      const second = await p.evaluate((f) => { const all = [...document.querySelectorAll('#panel-inventory [id^="inv-rev-"]')].map((x) => x.id.replace('inv-rev-', ''));
-        return all.filter((x) => x !== f)[0] || ''; }, first);
-      pt = await at(second);
-      await p.mouse.click(pt.x, pt.y); await p.waitForTimeout(600); await p.mouse.click(pt.x, pt.y); await p.waitForTimeout(700);
-      eq((await tickedNow()).filter((x) => t0.indexOf(x) < 0), [first, second].sort(), '⚠⚠ two presses 600 ms apart tick one more line, never a third');
-      await press('#inv-row-' + second + ' .inv-held-undo', 'Undo on the second');
-      eq((await line(second)).reviewed, false, 'Undo takes the tick off');
-      ok(await p.evaluate((sid) => { const r = document.getElementById('inv-row-' + sid); return !!r && !/inv-row-held/.test(r.className); }, second), 'and the row is an ordinary row under the chip again');
-      await press('#inv-flagstrip button[onclick="setInvFlag(\'unreviewed\')"]', 'the chip again, off');
-      eq(await p.evaluate(() => Object.keys(_invHeld).length), 0, 'the view changed: nothing held');
+    // ── B ───────────────────────────────────────────────────────────────────
+    await section('B. B, on the morning\'s copy, presses Send request: it reads the sheet first and is refused by name; its card then shows the envelope', async () => {
+      const h0 = await held(B);
+      eq([h0.envKeys, h0.ptr], [[], null], 'fixture: B\'s copy has no envelope and no request (it has not read the sheet since)');
+      ok(await vis(B, SEND), 'fixture: B\'s card still offers Send request');
+      const n0 = shared.net.length;
+      await press(B, SEND, 'Send request');
+      await B.p.waitForTimeout(2500);
+      const mine = shared.net.slice(n0).filter((x) => x.dev === 'B').map((x) => x.action);
+      ok(mine.indexOf('loadJobs') >= 0, '⚠⚠ the press read the client from the sheet first');
+      eq(mine.filter((a) => ['uploadHtml', 'htmlToPdf', 'esignSendRequest'].indexOf(a) >= 0), [], '⚠⚠ nothing filed, made a PDF or sent');
+      eq(await B.p.evaluate(() => window.__drafts.length), 0, '⚠⚠ no Gmail draft (before 2026-11-02 the draft went, and its record erased the envelope on every device)');
+      has(await txt(B, '#jband-fb-admin'), OUT_WORDS, '⚠⚠ refused by name');
+      await openBar(B, 'releases');
+      const card = await txt(B, '#inv-releases');
+      has(card, 'Out for signature in DocuSign since', '⚠⚠ B\'s card now shows the envelope another device sent');
+      has(card, 'to Thomas Ellison and Catherine Ellison-Reyes, 2 lines', 'to whom, and what it carried');
+      ok(await vis(B, CHECK), 'with Check DocuSign');
+      eq(await B.p.locator(ANY_SEND).count(), 0, 'and no send and no record by hand past it');
+      const h1 = await held(B);
+      eq([h1.envKeys, h1.ptr], [[ENV], 'env-124'], 'B holds the sheet\'s envelope and request');
+      eq(h1.updatedAt, h0.updatedAt, 'what B took from the sheet moved no clock of its own');
     });
 
-    // ── C ─────────────────────────────────────────────────────────────────────────────────────
-    await section('C. Select all leaves the empty photographs out; Mark reviewed leaves a line with no name alone, its note on the list', async () => {
-      await press('#inv-grph- button[onclick*="_invPickGroup"]', 'Select all on Not yet decided');
-      const pk = await picks();
-      ok(pk.indexOf('n13') < 0 && pk.indexOf('n14') < 0, '⚠⚠ Select all never picks a photograph Agent One found nothing in');
-      ok(pk.indexOf('d15') < 0, '⚠⚠ nor the too-dark frame, nor any line with no name (P9\'s review: it reached the trustee\'s request)');
-      ok(pk.indexOf('u7') >= 0 && pk.indexOf('u12') >= 0, 'it picks the undecided lines');
-      await p.click('#inv-row-d15 input[onchange*="_invTogglePick"]'); await p.waitForTimeout(700);
-      ok((await picks()).indexOf('d15') >= 0, 'fixture: #15 picked by its own box');
-      const r0 = net.reads, n0 = said.length;
-      await press('#inv-bulk-' + J + ' button:has-text("Mark reviewed")', 'Mark reviewed');
-      ok(net.reads > r0, 'the sheet is read first');
-      eq((await line('d15')).reviewed, undefined, '⚠⚠ the line with no name is left alone: no stuck tick');
-      eq((await line('u9')).reviewed, true, 'the named lines are ticked');
-      has(await txt('#inv-agent-notices'), DARK, '⚠⚠ the too-dark note is still on the list above the rows');
-      eq(await picks(), [], '⚠⚠ the selection is cleared');
-      const bar = await txt('#inv-bulk-' + J);
-      has(bar, 'has no name, so it was left alone: #15', 'the bar names the line left alone');
-      has(bar, 'The selection is cleared.', 'and says the selection is cleared');
-      await press('#inv-bulk-' + J + ' button:has-text("OK")', 'OK on the bar');
-      eq(await p.locator('#inv-bulk-' + J).count(), 0, 'and the bar goes');
-      ok(said.length === n0, 'no question was asked (nothing off screen)');
+    // ── C ───────────────────────────────────────────────────────────────────
+    await section('C. the morning\'s copy again (a third device\'s), Send through DocuSign pressed: refused the same way; one envelope in the whole log', async () => {
+      await B.p.evaluate((m) => { const j = JSON.parse(m), i = jobs.findIndex((x) => x.id === j.id); jobs[i] = j;
+        try { localStorage.setItem('havellin_jobs_v3', JSON.stringify(jobs)); } catch (e) {} }, morning);
+      await toDesk(B); await openBar(B, 'releases');
+      eq((await held(B)).envKeys, [], 'fixture: B holds the morning\'s copy again');
+      ok(await vis(B, SEND_DS), 'fixture: and its card offers Send through DocuSign');
+      const n0 = shared.net.length;
+      await press(B, SEND_DS, 'Send through DocuSign');
+      await B.p.waitForTimeout(2500);
+      const mine = shared.net.slice(n0).filter((x) => x.dev === 'B').map((x) => x.action);
+      ok(mine.indexOf('loadJobs') >= 0, '⚠⚠ the press read the client from the sheet first');
+      eq(mine.filter((a) => ['uploadHtml', 'htmlToPdf', 'esignSendRequest'].indexOf(a) >= 0), [], '⚠⚠ nothing filed, made a PDF or sent');
+      has(await txt(B, '#jband-fb-admin'), OUT_WORDS, '⚠⚠ refused by name');
+      await openBar(B, 'releases');
+      has(await txt(B, '#inv-releases'), 'Out for signature in DocuSign since', 'B\'s card shows the envelope again');
+      ok(await vis(B, CHECK), 'with Check DocuSign');
+      eq(shared.net.filter((x) => x.action === 'esignSendRequest').map((x) => x.dev), ['A'], '⚠⚠ one esignSendRequest in the whole route log, A\'s');
+      await B.p.waitForTimeout(2500);   // whatever B saved meanwhile reaches the sheet
+      const s = sheetJob() || {};
+      eq((s.docState || {})[ENV], sentEnv, '⚠⚠ the sheet\'s envelope is as A sent it');
+      eq(((s.docState || {}).approvalRequest || {}).req && s.docState.approvalRequest.req.envelopeId, 'env-124', 'and the request still points at it');
     });
 
-    // ── D ─────────────────────────────────────────────────────────────────────────────────────
-    await section('D. the search keeps every letter and the focus', async () => {
-      for (const delay of [400, 80]) {
-        await p.click('#inv-q'); await p.fill('#inv-q', ''); await p.waitForTimeout(400);
-        await p.click('#inv-q');
-        await p.keyboard.type('harbor', { delay: delay });
-        await p.waitForTimeout(700);
-        eq(await p.evaluate(() => [document.getElementById('inv-q').value, _invFilter.q]), ['harbor', 'harbor'], '⚠⚠ typed at ' + delay + ' ms a key, the box and the filter hold every letter');
-        eq(await active(), 'inv-q', '⚠⚠ and the box keeps the focus');
-        eq(await p.evaluate(() => [...document.querySelectorAll('#panel-inventory [id^="inv-row-"]')].map((x) => x.id)), ['inv-row-a1'], 'the list shows the painting');
+    // ── D ───────────────────────────────────────────────────────────────────
+    await section('D. the race: B\'s read finds no envelope, the Apps Script refuses the second one; B says so as its refusal and shows the envelope', async () => {
+      shared.morning = morning;
+      await B.p.evaluate((m) => { const j = JSON.parse(m), i = jobs.findIndex((x) => x.id === j.id); jobs[i] = j;
+        try { localStorage.setItem('havellin_jobs_v3', JSON.stringify(jobs)); } catch (e) {} }, morning);
+      await toDesk(B); await openBar(B, 'releases');
+      ok(await vis(B, SEND_DS), 'fixture: B holds the morning\'s copy again, and its card offers Send through DocuSign');
+      shared.staleRead = 'B'; shared.refuseOut = 'B';
+      const n0 = shared.net.length, dl0 = B.dialogs.length;
+      await press(B, SEND_DS, 'Send through DocuSign');
+      ok(await until(B.p, async () => (await txt(B, '#jband-fb-admin')).indexOf('Not sent:') >= 0, 12000), 'B answers');
+      const mine = shared.net.slice(n0).filter((x) => x.dev === 'B').map((x) => x.action);
+      eq([mine.filter((a) => a === 'esignSendRequest').length, mine.filter((a) => a === 'loadJobs').length], [1, 2],
+        'fixture: the read found nothing, the post went and was refused, and B read the client again');
+      const fb = await txt(B, '#jband-fb-admin');
+      has(fb, 'Not sent: a release request for this client is already out for signature in DocuSign (sent ', '⚠⚠ said as the Apps Script\'s refusal of a second envelope');
+      has(fb, 'It is on the Releases card now; no new request goes until it is complete in DocuSign, or voided there.', 'and where the envelope now shows');
+      ok(!/DocuSign did not take|\.\.|Send request to email it/.test(fb), '⚠⚠ never DocuSign\'s answer, never a doubled stop, never "email it" (' + fb.slice(0, 120) + ')');
+      await openBar(B, 'releases');
+      has(await txt(B, '#inv-releases'), 'Out for signature in DocuSign since', '⚠⚠ B\'s card shows the envelope at once');
+      ok(await vis(B, CHECK), 'with Check DocuSign');
+      eq(await B.p.locator(ANY_SEND).count(), 0, 'and no send past it');
+      eq(B.dialogs.slice(dl0), [], 'no alert');
+      await B.p.waitForTimeout(2000);
+      eq(((sheetJob() || {}).docState || {})[ENV], sentEnv, 'the sheet\'s envelope is as A sent it');
+    });
+
+    // ── E ───────────────────────────────────────────────────────────────────
+    await section('E. A reloads from the sheet and still reads the envelope; no overflow at 1440 and 390; zero page errors', async () => {
+      const loads0 = A.sent('loadJobs').length;
+      await A.p.reload(); await A.p.waitForTimeout(2500);
+      ok(A.sent('loadJobs').length > loads0, 'fixture: the reloaded page read the client list from the sheet');
+      await toDesk(A); await openBar(A, 'releases');
+      const h = await held(A);
+      eq([h.env && h.env.id, h.env && h.env.status, h.ptr], ['env-124', 'sent', 'env-124'], '⚠⚠ A still holds the envelope and the request pointing at it');
+      has(await txt(A, '#inv-releases'), 'Out for signature in DocuSign since', '⚠⚠ and its card reads it');
+      ok(await vis(A, CHECK), 'with Check DocuSign');
+      eq(await A.p.locator(ANY_SEND).count(), 0, 'and no send past it');
+      for (const d of [A, B]) {
+        for (const w of [1440, 390]) {
+          await d.p.setViewportSize({ width: w, height: 900 }); await d.p.waitForTimeout(500);
+          await openBar(d, 'releases');
+          eq(await overflow(d), 0, d.tag + ': no horizontal overflow at ' + w + ' with the envelope on the card');
+        }
       }
-      await p.keyboard.type(' sc', { delay: 300 }); await p.waitForTimeout(700);
-      eq(await p.evaluate(() => document.getElementById('inv-q').value), 'harbor sc', '⚠ a space typed between words stays in the box');
-      await press('#panel-inventory button[onclick="invClearFilters()"]', 'Clear filters');
+      eq(A.errs.concat(B.errs), [], 'zero page errors on either page');
     });
-
-    // ── E ─────────────────────────────────────────────────────────────────────────────────────
-    await section('E. the first figure typed over Agent Two\'s keeps the focus', async () => {
-      await p.click('#inv-fmv-a1'); await p.fill('#inv-fmv-a1', '500');
-      await p.keyboard.press('Tab'); await p.waitForTimeout(700);
-      eq((await line('a1')).valuedBy, 'desk', 'fixture: the figure is the desk\'s now');
-      ok(await p.evaluate(() => { const a = document.activeElement; return !!a && !!a.closest && !!a.closest('#inv-row-a1 .inv-c-disp'); }), '⚠⚠ Tab lands on Where it goes, in the same row (ROW-04)');
-      await p.click('#inv-each-a16'); await p.fill('#inv-each-a16', '180');
-      await p.click('#inv-row-a16 .inv-c-disp select'); await p.waitForTimeout(700);
-      eq((await line('a16')).valuedBy, 'desk', 'fixture: the Each typed is the desk\'s');
-      ok(await p.evaluate(() => { const a = document.activeElement; return !!a && !!a.closest && !!a.closest('#inv-row-a16 .inv-c-disp'); }), '⚠⚠ the select clicked next has the focus');
-      await p.keyboard.press('Escape');
-    });
-
-    // ── F ─────────────────────────────────────────────────────────────────────────────────────
-    await section('F. a press straight after an edit lands', async () => {
-      await p.click('#inv-fmv-u7'); await p.fill('#inv-fmv-u7', '75');
-      await p.click('#inv-flagstrip button[onclick="setInvFlag(\'noval\')"]'); await p.waitForTimeout(800);
-      eq(await p.evaluate(() => _invFilter.flag), 'noval', '⚠⚠ a Total typed, then No value yet: the first press filters (SYN-12)');
-      eq((await line('u7')).fmv, 75, 'fixture: the Total was written');
-      await press('#panel-inventory button[onclick="invClearFilters()"]', 'Clear filters');
-      // The list stands as the agents left it on the mirror? Its figure is the desk's now (E). Give the read line a reason to show.
-      const readBtn = '#inv-workbar button[onclick="invMarkListRead(' + J + ')"]';
-      const offered = await vis(readBtn);
-      ok(offered, 'fixture: ✓ I\'ve read the list is offered (a line stands as the agents left it)');
-      if (offered) {
-        await p.fill('#inv-row-a2 .inv-name textarea', 'Mahogany drop-leaf side table, Sheraton style');
-        await p.click(readBtn); await p.waitForTimeout(800);
-        ok(await p.evaluate((j) => !!(jobs.find((x) => x.id === j).invRead || {}).at, J), '⚠⚠ a name typed, then ✓ I\'ve read the list: recorded on the first press');
-        eq((await line('a2')).objectName, 'Mahogany drop-leaf side table, Sheraton style', 'fixture: the name was written');
-      }
-      await p.click('#inv-fmv-u8'); await p.fill('#inv-fmv-u8', '475');
-      await p.click('#inv-workbar button[onclick="printEstateInventoryReport(' + J + ')"]'); await p.waitForTimeout(1200);
-      ok(await viewerOpen(), '⚠⚠ a Total typed, then the Estate Inventory PDF: the viewer opens on the first press');
-      await closeViewer();
-    });
-
-    // ── G ─────────────────────────────────────────────────────────────────────────────────────
-    await section('G. one box per value in the line\'s record', async () => {
-      await press('#inv-row-a2 button.inv-c-open', 'the side table\'s ▾');
-      const boxes = await p.evaluate(() => { const r = document.getElementById('inv-row-a2');
-        return { names: r.querySelectorAll('[onchange*="\'objectName\'"]').length,
-          who: r.querySelectorAll('[onchange*="\'channel\'"]').length, heads: [...r.querySelectorAll('div')].filter((d) => /^(Object Name|Item|Channel \/ Recipient)$/.test(d.textContent.trim())).map((d) => d.textContent.trim()) }; });
-      eq(boxes.names, 1, '⚠⚠ one name box, the row\'s (ROW-05)');
-      eq(boxes.who, 1, '⚠⚠ one Who takes it box, the row\'s');
-      await press('#inv-row-a2 button.inv-c-open', 'shut it');
-      await press('#inv-row-a3 button.inv-c-open', 'the candlesticks\' ▾ (Keep: the row has no Who takes it box)');
-      eq(await p.evaluate(() => document.getElementById('inv-row-a3').querySelectorAll('[onchange*="\'channel\'"]').length), 1, 'the Keep line\'s record keeps its Who takes it box');
-      await press('#inv-row-a3 button.inv-c-open', 'shut it');
-    });
-
-    // ── H ─────────────────────────────────────────────────────────────────────────────────────
-    await section('H. a press over picks off screen asks first; a filter changed clears the selection', async () => {
-      await press('#inv-grph-Move button[onclick*="_invPickGroup"]', 'Select all on Move');
-      eq(await picks(), ['m4', 'm5', 'm6'], 'fixture: the three Move lines picked');
-      await press('#inv-grph-Move button[onclick*="_invToggleFold"]', 'fold Move');
-      await p.click('#inv-row-a3 input[onchange*="_invTogglePick"]'); await p.waitForTimeout(700);
-      eq(await picks(), ['a3', 'm4', 'm5', 'm6'], 'fixture: and one line on screen');
-      const n0 = said.length;
-      await press('#inv-bulk-' + J + ' button:has-text("Remove lines")', 'Remove lines');
-      const q = said.slice(n0).find((m) => /not on screen/.test(m)) || '';
-      has(q, '3 of the 4 selected lines are not on screen', '⚠⚠ asked first, counting what is off screen');
-      has(q, '#4 Tufted linen three-seat sofa', 'and naming it');
-      const lv = await live();
-      ok(lv.indexOf('m4') >= 0 && lv.indexOf('m5') >= 0 && lv.indexOf('m6') >= 0, '⚠⚠ the folded Move lines are left');
-      ok(lv.indexOf('a3') < 0, 'only the line on screen is removed');
-      await press('#inv-grph-Move button[onclick*="_invToggleFold"]', 'unfold Move');
-      await press('#inv-grph-Move button[onclick*="_invPickGroup"]', 'Select all on Move again');
-      await press('#inv-flagstrip button[onclick="setInvFlag(\'undecided\')"]', 'a chip');
-      eq(await picks(), [], '⚠⚠ a filter changed: the selection is gone (LIV-02)');
-      eq(await p.locator('#inv-bulk-' + J).count(), 0, 'and the bar with it');
-      await press('#inv-flagstrip button[onclick="setInvFlag(\'undecided\')"]', 'the chip again, off');
-      await p.evaluate(([j]) => { restoreInventoryItem(j, 'a3'); }, [J]); await p.waitForTimeout(500);
-    });
-
-    // ── I ─────────────────────────────────────────────────────────────────────────────────────
-    await section('I. Remove the 2 with nothing to list: one question, the photographs kept, every paper clean', async () => {
-      const before = await eir();
-      has(before, 'IN PROGRESS', 'fixture: the report is IN PROGRESS');
-      const r0 = net.reads, n0 = said.length;
-      await press('#inv-workbar button[onclick="invRemoveNothingToList(' + J + ')"]', 'Remove the 2 with nothing to list');
-      ok(net.reads > r0, '⚠ the sheet is read first (P6)');
-      const q = said.slice(n0).find((m) => /found nothing to list in/.test(m)) || '';
-      has(q, 'Remove the 2 lines Agent One found nothing to list in?', '⚠⚠ one question');
-      has(q, '#13 (Dining Room)', 'naming each by number and room');
-      has(q, '#14 (Kitchen)', 'both');
-      has(q, 'No photograph is deleted', 'and saying the photographs stay');
-      const n13 = await line('n13'), n14 = await line('n14');
-      ok(!!n13.deletedAt && !!n14.deletedAt && !!n13.deletedBy, '⚠⚠ both off, as tombstones with who');
-      eq([n13.driveFileId, n14.driveFileId], ['Fn13', 'Fn14'], 'their photographs untouched');
-      eq((await line('d15')).deletedAt, undefined, '⚠⚠ the too-dark frame is not swept away');
-      ok((await chips()).every((c) => !/^Nothing to list/.test(c)), 'the chip goes with the pile');
-      eq(await p.locator('#inv-workbar button[onclick="invRemoveNothingToList(' + J + ')"]').count(), 0, 'and the press');
-      const after = await eir();
-      ok(!/\b13\b[^0-9$]{0,6}—/.test(after) && after.indexOf('Dining Room 1 as photographed — not stated') < 0, '⚠⚠ the report prints no blank row for them');
-      const restore = '#panel-inventory button[onclick="restoreInventoryItem(' + J + ',\'n13\')"]';
-      if (!(await vis(restore))) { await p.evaluate(([j]) => { deskFoldOpen(j, 'history'); renderInventoryTab(); }, [J]); await p.waitForTimeout(400); }
-      await press(restore, 'Restore on #13, under Removed items');
-      ok(!(await line('n13')).deletedAt, 'Removed items gives it back');
-    });
-
-    // ── J ─────────────────────────────────────────────────────────────────────────────────────
-    await section('J. the package\'s question counts what the desk counts', async () => {
-      const g = await p.evaluate((j) => probatePackageGaps(j), J);
-      ok(g.some((x) => /^1 photograph not yet named$/.test(x)), '⚠⚠ the photograph not yet named: ' + JSON.stringify(g));
-      ok(g.some((x) => /photograph Agent One found nothing in, not yet taken off the list/.test(x)), '⚠ the one given back, nothing to list');
-      ok(g.some((x) => /lines? with no disposition/.test(x)), 'the lines with no disposition');
-    });
-
-    // ── K ─────────────────────────────────────────────────────────────────────────────────────
-    // A press at a person's speed: the pointer down, 100 ms, then up, so whatever the edit repaints lands between the two.
-    const humanPress = async (sel) => {
-      // To the middle of the screen, clear of the sticky header (scrollIntoViewIfNeeded left a chip under it).
-      await p.evaluate((q) => { const el = document.querySelector(q); if (el) el.scrollIntoView({ block: 'center' }); }, sel); await p.waitForTimeout(250);
-      const bx = await p.locator(sel).first().boundingBox();
-      const x = bx.x + bx.width / 2, y = bx.y + bx.height / 2;
-      ok(await p.evaluate(([q, x, y]) => { const el = document.querySelector(q), at = document.elementFromPoint(x, y); return !!el && !!at && (at === el || el.contains(at)); }, [sel, x, y]),
-        'fixture: the pointer is over ' + sel + ' before the press');
-      await p.mouse.move(x, y); await p.mouse.down(); await p.waitForTimeout(100); await p.mouse.up(); await p.waitForTimeout(900);
-    };
-    await section('K. (P9\'s review) a press lands on the control pressed, whatever the edit adds or takes away beside it', async () => {
-      await p.evaluate((j) => {
-        const T = Date.now() - 86400000;
-        const base = (sid, o) => Object.assign({ stableId: sid, label: 'inventory', collId: null, roomIdx: 3, status: 'uploaded', ts: T, updatedAt: T,
-          filename: 'HVL-2610-P9_F' + sid + '.jpg', driveFileId: 'F' + sid, driveFileUrl: 'https://drive.google.com/file/d/F' + sid + '/view', category: 'General/Household', qty: 1 }, o);
-        _photoRefs[j].push(base('v18', { objectName: 'Pine blanket chest', namedBy: 'desk', disposition: 'Auction', channel: 'Kodner Galleries', condition: 'Good', category: 'Furniture' }));
-        ['o1', 'o2', 'o3'].forEach((id, k) => _photoRefs[j].push(base(id, { objectName: 'Box of papers ' + (k + 1), agentName: 'Box of papers ' + (k + 1), namedBy: 'agent',
-          agentConf: 'medium', agentAt: T, disposition: 'Keep', fmv: 10, valuedBy: 'desk', valSource: 'Estimate', valDate: '2026-08-14', condition: 'Good',
-          agentNotices: [{ kind: 'other', text: 'Look at the papers in box ' + (k + 1) + ': they may include a will' }] })));
-        _photoRefs[j].push(base('g20', { objectName: 'Oak gun cabinet, glazed door', agentName: 'Oak gun cabinet, glazed door', namedBy: 'agent', agentConf: 'high', agentAt: T,
-          category: 'Furniture', disposition: 'Auction', channel: 'Kodner Galleries', fmv: 400, valuedBy: 'desk', valSource: 'Estimate', valDate: '2026-08-14', condition: 'Good',
-          agentNotices: [{ kind: 'firearm', text: 'Long guns visible behind the glass door' }] }));
-        _invAssignItemNos(j); savePhotoRefs(j); renderInventoryTab();
-        window.__ran = [];
-        window.__orig = { pdf: window.printEstateInventoryReport, csv: window.exportInventoryCSV, show: window.deskShowLine };
-        window.printEstateInventoryReport = function () { window.__ran.push('pdf'); };
-        window.exportInventoryCSV = function () { window.__ran.push('csv'); };
-        window.deskShowLine = function (jj, sid) { window.__ran.push('show:' + sid); };
-      }, J);
-      await p.waitForTimeout(600);
-      // 1. The last missing figure, then the Estate Inventory PDF.
-      ok(await vis('#inv-workbar button[onclick="agentValueRun(' + J + ')"]'), 'fixture: Value 1 line shows before the Estate Inventory PDF');
-      await p.click('#inv-fmv-v18'); await p.fill('#inv-fmv-v18', '125');
-      await humanPress('#inv-workbar button[onclick="printEstateInventoryReport(' + J + ')"]');
-      eq(await p.evaluate(() => window.__ran.splice(0)), ['pdf'], '⚠⚠ the last figure typed, then the Estate Inventory PDF: the PDF, never the CSV beside it');
-      eq((await line('v18')).fmv, 125, 'fixture: the figure was written');
-      eq(await p.locator('#inv-workbar button[onclick="agentValueRun(' + J + ')"]').count(), 0, 'and Value 1 line has gone, once the press was done');
-      // 2. A name that quiets #o1's note, then Show the item on #o2's.
-      const shows = () => p.evaluate(() => [...document.querySelectorAll('#inv-agent-notices button.desk-show')].map((b) => (b.getAttribute('onclick') || '').replace(/^.*,'|'\).*$/g, '')));
-      const before = await shows();
-      ok(before.indexOf('o1') >= 0 && before.indexOf('o2') >= 0 && before.indexOf('o3') >= 0, 'fixture: the three notes on the list: ' + JSON.stringify(before));
-      await p.click('#inv-row-o1 .inv-name textarea'); await p.keyboard.press('End'); await p.keyboard.type(' (deeds)');
-      await humanPress('#inv-agent-notices button.desk-show[onclick*="\'o2\'"]');
-      eq(await p.evaluate(() => window.__ran.splice(0)), ['show:o2'], '⚠⚠ #o1\'s note quietened under the press: Show the item on #o2\'s shows #o2 (it showed #o3)');
-      ok((await shows()).indexOf('o1') < 0, 'and #o1\'s note has gone, once the press was done');
-      // 3. The search typed with a redraw owed, then Not reviewed.
-      await p.click('#inv-q'); await p.keyboard.type('bo', { delay: 120 }); await p.waitForTimeout(700);
-      eq(await p.evaluate(() => { _invRenderWhenIdle(); return [document.activeElement && document.activeElement.id, _invRenderOwed]; }), ['inv-q', true], 'fixture: a redraw owed while the search has the focus');
-      await humanPress('#inv-flagstrip button[onclick="setInvFlag(\'unreviewed\')"]');
-      eq(await p.evaluate(() => _invFilter.flag), 'unreviewed', '⚠⚠ the redraw owed on leaving the box no longer swallows the press: Not reviewed filters on the first press');
-      await press('#panel-inventory button[onclick="invClearFilters()"]', 'Clear filters');
-      // 4. A Total typed with a redraw owed, then No value yet.
-      await p.click('#inv-fmv-u9'); await p.fill('#inv-fmv-u9', '210');
-      await p.evaluate(() => _invRenderWhenIdle());
-      await humanPress('#inv-flagstrip button[onclick="setInvFlag(\'noval\')"]');
-      eq(await p.evaluate(() => _invFilter.flag), 'noval', '⚠⚠ a Total typed with a redraw owed, then No value yet: it filters on the first press');
-      eq((await line('u9')).fmv, 210, 'fixture: the Total was written');
-      await press('#panel-inventory button[onclick="invClearFilters()"]', 'Clear filters');
-      // 5. The gun cabinet's blank line, answered with the Firearm note again.
-      const r = await p.evaluate((j) => {
-        const made = invSplitItemN(j, 'g20', 1);
-        if (typeof made === 'string') return { err: made };
-        const sid = made[0].stableId;
-        agentApplyResult(j, { srcId: 'g20', rows: [sid] }, { objects: [], notices: [{ kind: 'firearm', text: 'Long guns visible behind the glass door' }] });
-        renderInventoryTab();
-        const ref = _photoRefs[j].find((x) => x.stableId === sid), row = document.getElementById(_invRowDomId(sid));
-        return { conf: ref.agentConf, row: row ? row.querySelector('.inv-row-sub').textContent.replace(/\s+/g, ' ').trim() : '', cu: !!(row && row.querySelector('label.inv-cu-add')) };
-      }, J);
-      eq(r.conf, 'none', '⚠⚠ the blank line split off the gun cabinet, answered with its Firearm note again: nothing else in it');
-      has(r.row, 'nothing to list', 'its row says nothing to list');
-      lacks(r.row, 'could not be read', '⚠ never could not be read');
-      ok(!r.cu, 'and offers no + Close-up');
-      // 6. A tap on a touch screen (the iPad): the browser sends the tap's mousedown, mouseup and click together after the finger
-      // lifts, and the box is left on that mousedown. A figure typed that takes Value 1 line off the bar, then the PDF tapped.
-      await p.evaluate((j) => { const T = Date.now() - 86400000;
-        _photoRefs[j].push({ stableId: 'v19', label: 'inventory', collId: null, roomIdx: 3, status: 'uploaded', ts: T, updatedAt: T, filename: 'HVL-2610-P9_Fv19.jpg',
-          driveFileId: 'Fv19', driveFileUrl: 'https://drive.google.com/file/d/Fv19/view', category: 'Furniture', qty: 1, objectName: 'Cedar hope chest', namedBy: 'desk',
-          disposition: 'Auction', channel: 'Kodner Galleries', condition: 'Good' });
-        _invAssignItemNos(j); savePhotoRefs(j); renderInventoryTab(); }, J);
-      await p.waitForTimeout(600);
-      ok(await vis('#inv-workbar button[onclick="agentValueRun(' + J + ')"]'), 'fixture: Value 1 line shows again, for the hope chest');
-      await p.click('#inv-fmv-v19'); await p.fill('#inv-fmv-v19', '140');
-      const tapSel = '#inv-workbar button[onclick="printEstateInventoryReport(' + J + ')"]';
-      await p.evaluate((q) => document.querySelector(q).scrollIntoView({ block: 'center' }), tapSel); await p.waitForTimeout(250);
-      const tb = await p.locator(tapSel).boundingBox();
-      const cdp = await p.context().newCDPSession(p);
-      await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 1 });
-      await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: tb.x + tb.width / 2, y: tb.y + tb.height / 2 }] });
-      await p.waitForTimeout(80);
-      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-      await p.waitForTimeout(900);
-      await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: false }); await cdp.detach();
-      eq(await p.evaluate(() => window.__ran.splice(0)), ['pdf'], '⚠⚠ tapped on a touch screen straight after the figure: the PDF, never the CSV');
-      eq((await line('v19')).fmv, 140, 'fixture: the figure was written');
-      await p.evaluate(() => { window.printEstateInventoryReport = window.__orig.pdf; window.exportInventoryCSV = window.__orig.csv; window.deskShowLine = window.__orig.show; });
-    });
-
-    eq(await overflow(), 0, 'no horizontal overflow at 1440');
-    await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(700);
-    eq(await overflow(), 0, 'no horizontal overflow at 390');
-    eq(errs, [], 'zero page errors');
-    console.log('\n' + pass + ' passed, ' + fail + ' failed');
-    await b.close();
-    process.exit(fail ? 1 : 0);
-  } catch (e) {
-    console.log('step 128 threw: ' + (e && e.stack || e));
-    if (b) await b.close().catch(() => {});
-    process.exit(1);
-  }
+  } catch (e) { fail++; console.log('  ✗ threw: ' + (e && e.stack || e)); }
+  if (b) await b.close().catch(() => {});
+  console.log('\nstep128: ' + pass + ' passed, ' + fail + ' failed');
+  process.exit(fail ? 1 : 0);
 })();

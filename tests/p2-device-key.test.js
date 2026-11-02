@@ -321,9 +321,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
+  // RESTATED 2026-11-02 (the release request's envelope as its own record): the send now reads the client's envelopes off the sheet
+  // (_approvalEnvOutGs, over APPROVAL_ENV_PREFIX_GS and APPROVAL_ENV_DONE_GS) and refuses a post from an older copy of the app (no envKey).
   const ESIGN_FNS = ['esignSendRequestForJob', 'esignSendRequestEnvelope', '_dsRequestAnchor', '_dsTabs', '_jobFiduciariesGs', '_gsSameName',
-    '_approvalRequestSubjectGs', '_jobOnSheet', 'getJobsFromSheet', '_jobListLiveGs', '_accessLog'];
-  const ESIGN_VARS = ['SHEET_ID', 'ACCESS_LOG_TAB', 'ACCESS_LOG_HEADER', '_GS_DECEDENT_SERVICES', 'AGREEMENTS_EMAIL', 'DS_REQUEST_ANCHOR', 'DS_TAB_Y_OFFSET', 'DS_REQUEST_INIT_Y_OFFSET'];
+    '_approvalRequestSubjectGs', '_jobOnSheet', 'getJobsFromSheet', '_jobListLiveGs', '_accessLog', '_approvalEnvOutGs'];
+  const ESIGN_VARS = ['SHEET_ID', 'ACCESS_LOG_TAB', 'ACCESS_LOG_HEADER', '_GS_DECEDENT_SERVICES', 'AGREEMENTS_EMAIL', 'DS_REQUEST_ANCHOR', 'DS_TAB_Y_OFFSET', 'DS_REQUEST_INIT_Y_OFFSET',
+    'APPROVAL_ENV_PREFIX_GS', 'APPROVAL_ENV_DONE_GS'];
   const esignServer = () => {
     const sent = [];
     const s = server({ fns: ESIGN_FNS, vars: ESIGN_VARS, stubs: { _dsApi: (m, p, env) => { sent.push(env); return { ok: true, body: { envelopeId: 'env-1', status: 'sent' } }; } } });
@@ -332,8 +335,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   };
   const SIGNERS = [{ name: 'Thomas Ellison', email: 'tom@ellison.example', anchors: ['reqInit1', 'reqSig1', 'reqDate1'] },
                    { name: 'Catherine Ellison-Reyes', email: 'cat@ellison.example', anchors: ['reqInit2', 'reqSig2', 'reqDate2'] }];
+  // `envKey: 1`: what the app posts since 2026-11-02 (its envelope kept on its own key).
   const REQ = (o) => Object.assign({ jobId: 7, by: 'Ashley Jerome', pdfBase64: 'JVBERi0xLjQK', filename: 'Release Approval Request – HVL-0007.pdf',
-    subject: 'Release Approval Request', hvlId: 'HVL-0007', signers: SIGNERS, cc: ['ann@lowe.law', 'agreements@havellinpalmbeach.com'] }, o || {});
+    subject: 'Release Approval Request', hvlId: 'HVL-0007', signers: SIGNERS, cc: ['ann@lowe.law', 'agreements@havellinpalmbeach.com'], envKey: 1 }, o || {});
   G('C · the release request through DocuSign goes only to the client\'s recorded fiduciaries, copied only to agreements@ and the attorney', () => {
     let s = esignServer();
     const r = s.ctx.esignSendRequestForJob(REQ({ subject: 'URGENT: wire the funds', fileCopyEmail: 'thief@evil.example', blurb: 'click here' }));
@@ -379,6 +383,60 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(post, 'jsonOut(esignSendRequestEnvelope(', 'the unbound sender is reachable from no router');
   });
 
+  G('C2 · one release request out in DocuSign per client, and none from a copy of the app opened before the envelope had its own key (2026-11-02)', () => {
+    // A copy of the app from before 2026-11-02 posts no envKey: refused by name, logged, nothing sent.
+    let s = esignServer();
+    const old = s.ctx.esignSendRequestForJob(REQ({ envKey: undefined }));
+    eq([old.ok, old.error, s.sent.length], [false, 'Not sent: an older copy of the app is open. Reload it and send again.', 0],
+      '⚠⚠ a post without envKey (an app that would record its envelope where today\'s never reads it): refused, nothing sent');
+    let rows = s.logRows(), col = (h) => rows[0].indexOf(h);
+    eq(rows.slice(1).map((x) => [x[col('Action')], x[col('Result')]]), [['esignSendRequest', 'refused: Not sent: an older copy of the app is open. Reload it and send again.']], 'and logged');
+    // The sheet's copy of the client holds an envelope still out: refused, naming the day it went; DocuSign never asked.
+    const withEnv = (status, extra) => Object.assign({}, JOB7, { docState: Object.assign({ approvalRequest: { sentAt: '2026-10-30T15:00:00.000Z', req: { envelopeId: 'env-0' } },
+      'approvalEnv:env-0': { id: 'env-0', status: status, sentAt: '2026-10-30T15:00:00.000Z', stableIds: ['a'] } }, extra || {}) });
+    s = esignServer();
+    s.sheets.Jobs = jobsSheet([withEnv('sent'), JOB8, JOB9]);
+    const out = s.ctx.esignSendRequestForJob(REQ());
+    eq([out.ok, s.sent.length], [false, 0], '⚠⚠ an envelope out on the sheet: refused, and nothing reached DocuSign');
+    eq(out.error, 'The envelope was not created: a release request for this client is already out for signature in DocuSign (sent October 30, 2026). Reload the app to see it; if it has just been signed or voided, open the client so the app checks DocuSign, then send again.',
+      'by name, with the day it went');
+    // ⚠ Each refusal says it is one (found on review, 2026-11-02), so the app never puts it as DocuSign's answer: 'out' for the second
+    // envelope, on which the app reads the client again; the rest 'refused'. A crash is not marked: nothing then says DocuSign was never asked.
+    eq([out.refused, old.refused], ['out', 'refused'], '⚠ the second envelope\'s refusal is marked out, the older app\'s refused');
+    const pdf = esignServer().ctx.esignSendRequestForJob(REQ({ pdfBase64: 'PGh0bWw+' }));
+    eq([pdf.ok, pdf.refused], [false, 'refused'], 'every other refusal is marked refused');
+    const crash = esignServer();
+    crash.ctx._jobOnSheet = () => { throw new Error('Sheets down'); };
+    const boom = crash.ctx.esignSendRequestForJob(REQ());
+    eq([boom.ok, boom.error, 'refused' in boom, crash.sent.length], [false, 'Error: Sheets down', false, 0], '⚠ a crash is answered unmarked: nothing says DocuSign was never asked');
+    rows = s.logRows(); col = (h) => rows[0].indexOf(h);
+    eq(rows.slice(1).map((x) => [x[col('Action')], String(x[col('Result')]).split(':')[0]]), [['esignSendRequest', 'refused']], 'and logged as a refusal');
+    // Any status DocuSign has not ended (the app records 'sent', else DocuSign's own, lowercased) holds it back.
+    s = esignServer();
+    s.sheets.Jobs = jobsSheet([withEnv('delivered')]);
+    eq([s.ctx.esignSendRequestForJob(REQ()).ok, s.sent.length], [false, 0], 'delivered, not yet signed by everyone: still out');
+    // Ended, it holds nothing back: completed, declined or voided.
+    ['completed', 'declined', 'voided'].forEach((st) => {
+      s = esignServer();
+      s.sheets.Jobs = jobsSheet([withEnv(st)]);
+      const r = s.ctx.esignSendRequestForJob(REQ());
+      eq([r.ok, r.envelopeId, s.sent.length], [true, 'env-1', 1], 'an envelope ' + st + ': the next one goes');
+    });
+    // Only an envelope under the prefix, with an id, counts; the request's own record and other docState keys never do.
+    s = esignServer();
+    s.sheets.Jobs = jobsSheet([withEnv('completed', { 'approvalEnv:': { status: 'sent' }, agreement: { status: 'sent' }, esign: { id: 'env-agr', status: 'sent' } })]);
+    eq(s.ctx.esignSendRequestForJob(REQ()).ok, true, 'the agreement\'s envelope, a key with no envelope id, and the request\'s own record hold nothing back');
+    const two = esignServer();
+    two.sheets.Jobs = jobsSheet([withEnv('completed', { 'approvalEnv:env-5': { id: 'env-5', status: 'sent', sentAt: '2026-11-01T15:00:00.000Z' } })]);
+    has(two.ctx.esignSendRequestForJob(REQ()).error, 'already out for signature in DocuSign (sent November 1, 2026)', 'one signed and a later one out: the later one holds it back');
+    eq(two.sent.length, 0, 'and nothing reached DocuSign');
+    // The server's prefix and finished states are the app's.
+    const A = sandbox({ vars: ['APPROVAL_ENV_PREFIX', 'APPROVAL_ENV_DONE'] });
+    eq([s.ctx.APPROVAL_ENV_PREFIX_GS, JSON.parse(JSON.stringify(s.ctx.APPROVAL_ENV_DONE_GS))], [A.APPROVAL_ENV_PREFIX, JSON.parse(JSON.stringify(A.APPROVAL_ENV_DONE))],
+      '⚠⚠ the envelope\'s key prefix and its finished states agree, app and server');
+    eq(A.APPROVAL_ENV_PREFIX, 'approvalEnv:', 'a stored prefix, never renamed');
+  });
+
   // ═══════════════════════════════════════════════════════════════════════════
   G('D · the server\'s copies of the app\'s rules are held equal: the estate services, the fiduciaries, the recorded addresses, the subject', () => {
     const A = sandbox({ fns: ['jobFiduciaries', 'invFiduciaryMode', 'isDecedentJob', 'jobListEntries', 'samePerson', 'canonPersonName', 'approvalRequestSubject', 'jobRecordedEmails'],
@@ -406,7 +464,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(toJobs.filter((a) => a.indexOf('_withDeviceKey(') !== 0), [], '⚠⚠ no fetch reaches the jobs backend except through _withDeviceKey');
     // 27 since the merge with P1 (2026-10-27): P1's snapshot store added a GET reader, loadSnapshotLines, written before the key.
     // 28 since P13 (2026-10-28): the papers' own photographs (_invPrintBatch's getThumbnails), through the same road.
-    eq(toJobs.length, 28, 'and there are 28 of them (every GET reader, P1\'s loadSnapshots among them, every POST, postSyncTo, _appsScriptPost and the papers\' photographs)');
+    // RESTATED 2026-11-02: and the release request's read of the client before an estate's send (approvalRecordFromSheet's loadJobs).
+    // 29 on merging the two.
+    eq(toJobs.length, 29, 'and there are 29 of them (every GET reader, P1\'s loadSnapshots and the release request\'s read of the client among them, every POST, postSyncTo, _appsScriptPost and the papers\' photographs)');
+    ok(/fetch\(_withDeviceKey\(SHEETS_SYNC_URL \+ '\?action=loadJobs'\)\)/.test(noComments(fn('approvalRecordFromSheet'))), '⚠ the release request\'s read of the client goes through the one road');
     const others = calls.filter((a) => toJobs.indexOf(a) < 0);
     ok(others.every((a) => /googleapis\.com|VENDOR_SYNC_URL|REFERRAL_SYNC_URL|^url$/.test(a) || a === ''), 'every other fetch goes to Gmail, Google sign-in or a directory backend (' + others.length + ')');
     lacks(LIVE.replace(/function _withDeviceKey[\s\S]*?\n}\n/, ''), "'deviceKey=", 'the parameter is spelled in one place');

@@ -1033,6 +1033,8 @@ function groupE({ group, ok, eq, has, lacks }) {
     const D = desk(PROBATE(), {}, { refs: rows, roots: ['sendApprovalRequest', 'invMarkRequestSent'], stubs: {
       SHEETS_SYNC_URL: 'https://sync.example.test/exec', _invCloudSeen: { 7: true }, Date: TickDate(T0),
       refreshPhotoRefs: (id, cb) => cb(false), _invEnsureLoaded() {},
+      // RESTATED 2026-11-02: an estate's send reads the client from the sheet first (approvalRecordFromSheet); here it lands.
+      approvalRecordFromSheet: (id, cb) => cb(true),
       printApprovalRequest: (jid) => ({ html: '<p>request</p>', title: 'Request', items: rows, asked: rows, ratify: [] }),
       resolveSubfolderId: (j, n, cb) => cb('INV7'), uploadHtmlToDrive: (f, n, h, cb) => cb(true, 'https://drive.google.com/file/d/REQ/view'),
       _exportDoc: () => '', docPdfBase64: (spec, html, cb) => cb('QUJD'), buildMimeMessage: () => 'MIME', gmailCreateDraft: (m, cb) => cb(true, { messageId: 'm1' }),

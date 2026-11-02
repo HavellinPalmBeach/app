@@ -294,7 +294,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   });
 
   // ───────────────────────────────────────────────────────────────────────────
-  guard('every locked writer flushes before its lock goes, and the deployment says 2026-10-28', () => {
+  guard('every locked writer flushes before its lock goes, and the deployment carries 2026-10-28', () => {
     const { GS } = require('./sheet-rig');
     const body = (name) => { const i = GS.indexOf('\nfunction ' + name + '('); if (i < 0) return ''; const j = GS.indexOf('\n}\n', i); return GS.slice(i, j + 2); };
     ['_writeStoreBlob', 'saveAllJobsToSheet', 'saveJobToSheet', 'resetAllJobDataConfirm', 'deleteJobFromSheet'].forEach((f) => {

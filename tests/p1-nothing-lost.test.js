@@ -1035,13 +1035,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         fetch: () => ({ then(f) { const r = f({ json: () => ({ ok: true, version: '2026-10-27e', actions: C.BACKEND_NEEDS, types: C.BACKEND_NEEDS_TYPES }) }); return { then(g) { g(r); return { catch() {} }; } }; } }) } });
     C.checkBackendVersion();
     eq(shown.map((x) => [x.v, x.m]), [['2026-10-27e', ['version']]], '⚠⚠ a 2026-10-27e deployment draws the banner, by version');
-    // RESTATED at the merge with P13 (backend 2026-11-02b, which carries 2026-10-28): the lost change is named first, or first after
-    // newer gaps, each under its own vintage.
-    const _at28 = _v.indexOf('on a deployment older than 2026-10-28, two devices saving at the same moment can lose one device\u2019s change on the sheet though both were told it saved');
-    const _newer28 = (_v.slice(0, Math.max(0, _at28)).match(/on a deployment older than (\d{4}-\d{2}-\d{2}[a-z]?),/g) || []).map((x) => x.replace(/^on a deployment older than /, '').replace(/,$/, ''));
-    ok(_at28 === 0 || (_at28 > 0 && _newer28.length > 0 && _newer28.every((x) => x > '2026-10-28')),
-      '⚠⚠ and it names the lost change first, or first after the newer gaps (' + _newer28.join(', ') + ')');
-    ok(_v.indexOf(_vint + '2026-10-27e, a figure Agent Two researched') > 0 && _v.indexOf(_vint, Math.max(0, _at28)) === _v.indexOf(_vint + '2026-10-27e, '),
+    // RESTATED 2026-11-02 (the release request's envelope as its own record): the app now asks for 2026-11-02b, so a 2026-10-28
+    // deployment draws the banner too; the line opens with 2026-11-02b's gap, and 2026-10-28's lost change follows it at once,
+    // under its own vintage, then 2026-10-27e's. RESTATED on the merge with P13 (both named 2026-11-02b; one 2026-11-02c carries both):
+    // the line opens with 2026-11-02c's gaps, the envelope first.
+    const C28 = sandbox({ fns: ['checkBackendVersion', '_withDeviceKey', 'deviceKey'], vars: ['BACKEND_NEEDS', 'BACKEND_NEEDS_TYPES', 'BACKEND_MIN_VERSION', '_backendVersion'],
+      stubs: { SHEETS_SYNC_URL: 'https://sheets', _showBackendStaleBanner: (v, m) => shown.push({ v, m }), localStorage: { getItem: () => null },
+        fetch: () => ({ then(f) { const r = f({ json: () => ({ ok: true, version: '2026-10-28', actions: C28.BACKEND_NEEDS, types: C28.BACKEND_NEEDS_TYPES }) }); return { then(g) { g(r); return { catch() {} }; } }; } }) } });
+    C28.checkBackendVersion();
+    eq(shown.slice(1).map((x) => [x.v, x.m]), [['2026-10-28', ['version']]], '⚠⚠ and so does a 2026-10-28 deployment, by version');
+    ok(_v.indexOf('on a deployment older than 2026-11-02c, a copy of the app that has not been reloaded can send an estate\u2019s release request through DocuSign') === 0,
+      '⚠⚠ it names the newest gap first: a release request a copy of the app not reloaded can send through DocuSign');
+    const _d28 = _v.indexOf(_vint + '2026-10-28, two devices saving at the same moment can lose one device\u2019s change on the sheet though both were told it saved');
+    ok(_d28 > 0 && _v.indexOf(_vint) === _d28, '⚠⚠ then the lost change, at once after it, under its own vintage');
+    ok(_v.indexOf(_vint + '2026-10-27e, a figure Agent Two researched') > 0 && _v.indexOf(_vint, _d28 + 1) === _v.indexOf(_vint + '2026-10-27e, '),
       'then 2026-10-27e\'s gap, under its own vintage');
     // The rule, one definition with its readers counted.
     const app = fs.readFileSync(path.join(__dirname, '..', 'havellin.html'), 'utf8').split('\n').filter((l) => !/^\s*\/\//.test(l)).join('\n');
