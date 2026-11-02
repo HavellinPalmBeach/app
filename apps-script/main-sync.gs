@@ -169,7 +169,16 @@
 // it saved, a write that fails as it is applied fails after doPost has returned ok (whether the device then receives that ok or an
 // error page is not known), a store cut at an = can turn unreadable (every save to it refused until it is restored from version
 // history), and a hard delete can race other saves, go unrecorded, or answer ok with the client's row still on the tab.
-var BACKEND_VERSION = '2026-10-28';
+// ⚠⚠ 2026-11-02 (the 2026-10-26c finding, Anthony chose the fix: a device whose copy of a client predated a release request's DocuSign
+// envelope could still send a request, and its stamped approvalRequest record won the merge, so the envelope's record was gone from
+// every device): the app now keeps each envelope as its own docState key, 'approvalEnv:<envelopeId>', which this merge already takes
+// key by key, and reads the client from the sheet before an estate's send. Here esignSendRequest refuses a post from a copy of the
+// app opened before the change (no `envKey`) and refuses while the sheet's copy of the client holds an envelope still out for
+// signature (_approvalEnvOutGs; APPROVAL_ENV_PREFIX_GS and APPROVAL_ENV_DONE_GS held equal to the app's), each refusal logged and
+// nothing sent to DocuSign. The merge is unchanged. No action or type changes; it carries 2026-10-28's. Until it is live a copy of
+// the app that has not been reloaded can send a request through DocuSign that today's app never checks, records on the lines or
+// files, and two devices pressing at once can put out a second envelope while one is out.
+var BACKEND_VERSION = '2026-11-02';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive', 'esignSendRequest',
@@ -3082,6 +3091,25 @@ function _approvalRequestSubjectGs(job) {
   var street = String((job && job.addr) || '').split(',')[0].trim();
   return 'Havellin Palm Beach — Release Approval Request for ' + (street || (job && job.name) || 'the property');
 }
+// ⚠⚠ ONE RELEASE REQUEST OUT IN DOCUSIGN PER CLIENT (2026-11-02). Since that day's app each envelope is its own docState key on the
+// client, 'approvalEnv:<envelopeId>' (the app's APPROVAL_ENV_PREFIX: a stored prefix, never renamed), which this script's merge
+// takes alone on its own stamp (docState is one of JOB_KEYED_MAPS). The app reads the client from the sheet before it sends and
+// refuses past an envelope another device sent; this is the last word, for two devices pressing within the seconds before the first
+// envelope's record reaches the sheet, and for a copy of the app opened before the change (it posts no `envKey`, and it would record
+// its envelope where the new app never reads it, so nothing would ever check it, record it on the lines or file it).
+var APPROVAL_ENV_PREFIX_GS = 'approvalEnv:';   // MUST MATCH the app's APPROVAL_ENV_PREFIX
+var APPROVAL_ENV_DONE_GS = ['completed', 'declined', 'voided'];   // MUST MATCH the app's APPROVAL_ENV_DONE
+// The envelopes the sheet's copy of the client holds that are still out for signature (sent, and not completed, declined or voided).
+function _approvalEnvOutGs(job) {
+  var ds = (job && job.docState && typeof job.docState === 'object') ? job.docState : {};
+  var out = [];
+  for (var k in ds) {
+    if (k.indexOf(APPROVAL_ENV_PREFIX_GS) !== 0) continue;
+    var e = ds[k];
+    if (e && e.id && APPROVAL_ENV_DONE_GS.indexOf(String(e.status || '')) < 0) out.push(e);
+  }
+  return out;
+}
 function esignSendRequestForJob(data) {
   data = data || {};
   var log = { act: 'esignSendRequest', jobId: data.jobId, by: data.by };
@@ -3089,10 +3117,22 @@ function esignSendRequestForJob(data) {
   try {
     if (data.jobId === undefined || data.jobId === null || String(data.jobId).trim() === '')
       return refuse('The request names no client, so nothing was sent: reload the app (an older copy of it is open) and send again.');
+    // An app from before 2026-11-02 records its envelope where today's app never reads it (above).
+    if (!data.envKey) return refuse('Not sent: an older copy of the app is open. Reload it and send again.');
     var job = _jobOnSheet(data.jobId);
     if (!job) return refuse('This client is not on the sheet, so nothing was sent.');
     log.hvlId = job.hvlId || '';
     if (!_GS_DECEDENT_SERVICES[job.svc || job.serviceType]) return refuse('DocuSign carries an estate’s release request only, so nothing was sent.');
+    var outEnv = _approvalEnvOutGs(job);
+    if (outEnv.length) {
+      // The day it went, in the script's own time zone, as a person reads it ("October 30, 2026").
+      var sent = new Date(outEnv[0].sentAt || '');
+      var day = isNaN(sent.getTime()) ? '' : ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September',
+        'October', 'November', 'December'][sent.getMonth()] + ' ' + sent.getDate() + ', ' + sent.getFullYear();
+      return refuse('The envelope was not created: a release request for this client is already out for signature in DocuSign'
+        + (day ? ' (sent ' + day + ')' : '') + '. Reload the app to see it; if it has just been signed or voided, open the client so the '
+        + 'app checks DocuSign, then send again.');
+    }
     var fids = _jobFiduciariesGs(job);
     if (!fids.length) return refuse('No representative is recorded on this client on the sheet, so nothing was sent.');
     var noEmail = fids.filter(function (f) { return !f.email; }).map(function (f) { return f.name; });
