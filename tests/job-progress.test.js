@@ -380,7 +380,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // alone) and nothing drove the join. That is the same gap this repo has recorded four
     // times; the fix is always to drive the real renderer and read the real output.
 const DFNS = ['jobIsFeeOnly', 'renderClientDashboard', 'jobIsTest', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'jobPaymentsListHtml', '_paymentKey', 'paymentStageLabel', 'paymentMethodLabel', 'fmt', 'coCardActions', 'field', 'fmtDate2', 'dot', 'sectionHdr', 'walkawaySettlementHtml', 'walkawaySettlement', 'jobRefundedTotal', 'refundCounts',
-      'dashUtilityBar', '_dashUtilityBarHtml', 'driveFolderPending', 'agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineNext', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'esignSignedCopyGaps', 'depositVoidFlag', 'agreementHandedOverInPerson',
+      'dashUtilityBar', 'walkthroughOffered', '_dashUtilityBarHtml', 'driveFolderPending', 'agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineNext', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'esignSignedCopyGaps', 'depositVoidFlag', 'agreementHandedOverInPerson',
       'jobTimelineDoc', 'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord',
       '_jtDocSecondaries', 'docPreviewOnly', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', '_jtSendAction',
       'jobSchedule', 'jobOnProbateTrack', 'estatePackageRoute', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jtScheduleHtml', '_jtSchedDeadlinesHtml', 'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'jobProgress',

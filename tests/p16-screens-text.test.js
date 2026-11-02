@@ -222,7 +222,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('B4 — the dashboard\'s client card shows what was typed as text');
   {
     const FNS = ['estimateNoteGaps', '_dashUtilityBarHtml', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', '_jtSendAction',
-      'activeHouseFlags', 'agreementSignature', 'dashUtilityBar', 'driveFolderPending', 'depositPaidTotal', 'depositTargetFor',
+      'activeHouseFlags', 'agreementSignature', 'dashUtilityBar', 'walkthroughOffered', 'driveFolderPending', 'depositPaidTotal', 'depositTargetFor',
       'docKeyFor', 'docSentAt', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'field', 'fmt',
       'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'isAgreementSigned', 'isJobFunded', 'isJobWon',
       'jobActivationBlockers', 'resolveExecutorAuth', 'jobOnProbateTrack', 'estatePackageRoute', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob',

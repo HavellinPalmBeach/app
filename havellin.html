@@ -1485,7 +1485,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.11.02 · 2:31pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.11.02 · 3:20pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -18800,9 +18800,7 @@ function dashUtilityBar(job) {
   // statement about the job rather than about this device. Offered while unread, the handler
   // says which it is. Once the store is read and there is genuinely no estimate, it is
   // withheld: the fix is to go and build one, and a button that only refuses is worse than none.
-  var _wtSeen = (typeof _estStoreState === 'undefined') || _estStoreState === 'ready';
-  var _wtRec  = (typeof estimateStore !== 'undefined') ? estimateStore[id] : null;
-  if (!_wtSeen || (_wtRec && _wtRec.estimate)) {
+  if (walkthroughOffered(id)) {
     out.push({ label: '&#128269; Walkthrough', call: 'dashWalkthrough(' + id + ')' });
   }
   // The job folder is made ONCE, automatically, when the CLIENT IS CREATED
@@ -23311,6 +23309,14 @@ function dashEditEstimate(jobId) {
 // Build Estimate tab sets, and priming is what stops a PIN approving the wrong client's
 // estimate. This one takes its record by job id and returns a string: there is no global to
 // get wrong, and nothing left pointed at this job afterwards.
+// Whether 🔍 Walkthrough is offered for a job: always while this device has not read the estimates (the handler says which it
+// is), and once they are read only where the job has an estimate. One rule for the dashboard's utility bar and the Job Plan's
+// header (2026-11-02, Anthony: the private note readable from the Job Plan, behind a press, never open on the iPad in the house).
+function walkthroughOffered(jobId) {
+  var seen = (typeof _estStoreState === 'undefined') || _estStoreState === 'ready';
+  var rec = (typeof estimateStore !== 'undefined') ? estimateStore[jobId] : null;
+  return !seen || !!(rec && rec.estimate);
+}
 function dashWalkthrough(jobId) {
   var job = jobs.find(function (j) { return j.id === jobId; });
   if (!job) { dashNotice('warn', 'This job could not be found.'); _dashRedraw(jobId); return; }
@@ -56812,6 +56818,10 @@ function renderJobPlan(jobId, job, est) {
     '<div style="display:flex;flex-wrap:wrap;gap:2px 22px;font-size:12px;line-height:1.5;">' +
     _hdrBits.map(function(b){ return '<span><span style="color:var(--gray);">' + b[0] + ':</span> <strong>' + b[1] + '</strong></span>'; }).join('') +
     (job.driveFolder ? '<span><a href="'+job.driveFolder+'" target="_blank" rel="noopener" style="color:var(--bronze);text-decoration:none;">&#128193; Photos in Drive</a></span>' : '') +
+    // The walkthrough, the private note at its top, one press away and never drawn open (2026-11-02): the dashboard's own page and handler.
+    ((typeof walkthroughOffered === 'function' && walkthroughOffered(jobId))
+      ? '<span><button type="button" id="plan-walkthrough-' + jobId + '" onclick="dashWalkthrough(' + jobId + ')" style="background:none;border:none;padding:0;margin:0;font:inherit;color:var(--bronze);cursor:pointer;">&#128269; Walkthrough</button></span>'
+      : '') +
     '</div>' +
     planScheduleHtml(jobId, job, est) +
     (est.access ? '<div class="alert a-warn" style="margin-top:8px;font-size:11px;">&#9888; Estimate added 15% to all hours for access. Plan loading routes before Day 1.</div>' : '') +
