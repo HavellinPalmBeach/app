@@ -169,7 +169,11 @@
 // it saved, a write that fails as it is applied fails after doPost has returned ok (whether the device then receives that ok or an
 // error page is not known), a store cut at an = can turn unreadable (every save to it refused until it is restored from version
 // history), and a hard delete can race other saves, go unrecorded, or answer ok with the client's row still on the tab.
-var BACKEND_VERSION = '2026-10-28';
+// ⚠ 2026-11-02 (Anthony, off the eBay developer account: eBay's API holds back its sold history, so the sales Agent Two can cite are
+// the ones the web shows; he took "Agent Two reads 4 pages"): a research line may read four pages, not two (AGENT_VALUE_FETCHES),
+// so a results page and the lots opened from it are more often a sale it can cite. No action or type changes; carries 2026-10-28's.
+// Until it is live a research line reads two pages. Each research request runs longer: testAgentValue() prints the seconds.
+var BACKEND_VERSION = '2026-11-02';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive', 'esignSendRequest',
@@ -4932,7 +4936,10 @@ var AGENT_VALUE_GENERAL_BATCH = 8;    // ordinary lots per request ("about ten",
 // the first thing in the prompt, so a `max_uses` that varied with the batch would give every
 // request a different prefix and the cached system prompt would never be read back.
 var AGENT_VALUE_SEARCHES    = { comps: 5, general: 8 };
-var AGENT_VALUE_FETCHES     = 2;      // comps only: reading a results page the search turned up
+// 2026-11-02 (Anthony: "Agent Two reads 4 pages"; it was 2): more chances to open the lot itself from a results page, where the sold
+// price is, so fewer research lines come back unsure. Each read lengthens the request; UrlFetchApp ends one at about 60 s and the
+// fallback (_agModels) takes it then. Lower it again if testAgentValue() or the logs show research running past the limit.
+var AGENT_VALUE_FETCHES     = 4;      // comps only: reading a results page the search turned up, and the lots opened from it
 var AGENT_VALUE_CONTINUES   = 2;      // `pause_turn` continuations per request before it is called unfinished
 var AGENT_VALUE_MAX_COMPS   = 6;      // comparables kept per line (the manifest lives in a ~5MB localStorage)
 // ⚠⚠ A LISTING SURVEY COUNTS (2026-10-27; Anthony: *"if we see literally dozens of listings on eBay and Etsy, can't we use that to

@@ -1,344 +1,191 @@
-// Step 124 — every card's paper opens on screen first, as More ▾'s and the work bar's do (2026-11-02; Anthony, asked whether
-// the cards' papers should open the same way: "yes, do the cards' papers too").
+// Step 124 — Use a sale (2026-11-02; Anthony, off the eBay developer account: eBay holds its sold history back from apps and gives it to
+// its sellers in Seller Hub's Product Research; he took "Rename to 'Use a sale'"), with the desk audit's Ask 14 (answered 2026-10-28:
+// a sale more than 15% from the line's figure is asked about once: use the sale, or keep the figure and file the sale only).
 //
-// Drives the REAL page through its own controls against one routed Apps Script (its stores, loadMedia and loadSnapshots
-// answered as the deployment would). What is seeded is state a person could not type in one sitting: an active probate estate
-// with a representative, an inventory on the sheet (a portrait sold at auction with Kodner Galleries, a sofa donated to
-// Goodwill, a tea service approved to Mary Smith, a Bible kept), two inventory snapshots, a key received and held, an original
-// will found in the study, and a change order awaiting the client's acceptance. Each paper is opened by the button a person
-// presses, and for each: the viewer is on screen, titled by the paper, the client under it, the page there to read, nothing
-// printed by opening it; Print / Save PDF prints that page once, under the paper's file name, and the viewer comes back after
-// the dialog; Close takes it away.
-//   A. The Disposition Ledger card's Print (Closing the job).
-//   B. Mary Smith's leaving row: Print receipt (Releases & signed papers).
-//   C. The Donations card: Print Donation Record for Goodwill.
-//   D. The snapshots (Removed items & snapshots): Print on a snapshot, Compare with now, Compare with previous.
-//   E. The Job Plan's Keys & access card: Print the custody record.
-//   F. The Job Plan's Found on site card: Print Receipt for Original Will.
-//   G. The client dashboard's Change Orders card: PDF.
-//   H. 390 px: every column of the ledger, the custody record and the will receipt can be scrolled to inside the viewer
-//      (it hid them until 2026-11-02); no page overflow at 390 or 1440; no dialogs; zero page errors.
+// Drives the REAL page with an active probate estate whose dining room holds three pairs of sterling candelabra, each valued by
+// Agent Two at $4,200 from auction comps. Job Admin & Inv through its own nav button; each record opened by its own ▾:
+//   A. The form reads Use a sale and says where a sale comes from. A LiveAuctioneers sale at $1,100 asks once, naming both figures;
+//      OK: the line's value is $1,100, the person's, from auction comps.
+//   B. An eBay sale at $1,100 on the second pair, Cancel: $4,200 and Agent Two's source stand, the sale filed first.
+//   C. An eBay sale at $3,900 on the third: nothing asked, $4,200 kept, its source online comps, the venue eBay.
+//   D. More ▾ → Court Inventory: the Basis column reads auction comps, auction comps and online comps.
+//   At 1440 and 390 px no horizontal overflow; zero page errors throughout.
 //
 //   NODE_PATH=/path/to/node_modules node tests/browser/step124.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
 const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/havellin.html'));
+const SYNC = 'https://sync.example.test/exec';
+const J = 12401;
 let pass = 0, fail = 0;
 let b = null;
 const ok = (c, m) => { if (c) { pass++; } else { fail++; console.log('  ✗ ' + m); } };
 const eq = (a, e, m) => ok(JSON.stringify(a) === JSON.stringify(e), m + '  [got ' + JSON.stringify(a) + ', want ' + JSON.stringify(e) + ']');
 const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + ']');
-
-const SYNC = 'https://script.google.com/macros/s/STEP124/exec';
-const ID = 12401, HVL = 'HVL-2610-12401';
-const NAME = 'Eleanor Vance', ADDR = '124 Seaview Ave', CLIENT = NAME + ' · ' + ADDR;
-const T0 = Date.parse('2026-09-28T15:00:00Z'), T1 = T0 - 86400000;
-const CO_ID = 1760000124001;
-const STORE = { jobs: [], estimates: {}, media: {}, snaps: {}, cos: null };
-
-const L = (id, o) => Object.assign({ stableId: id, label: 'inventory', collId: null, roomIdx: 1, seq: 1, status: 'uploaded', qty: 1,
-  category: 'Furniture', condition: 'Good', ts: T0, updatedAt: T0, namedBy: 'desk', reviewed: true,
-  driveFileId: 'f-' + id, driveFileUrl: 'https://drive.google.com/file/d/f-' + id + '/view' }, o);
-const LINES = [
-  L('a1', { itemNo: 1, objectName: 'Sargent portrait', disposition: 'Auction', channel: 'Kodner Galleries', gross: 1000, fees: 250, dispDate: '2026-09-30',
-    authBy: 'Rex Hale', approvalDate: '2026-09-25', fmv: '1000' }),
-  L('d1', { itemNo: 2, objectName: 'Camelback sofa', disposition: 'Donate', channel: 'Goodwill', condition: 'Fair', fmv: '300', dispDate: '2026-09-29',
-    authBy: 'Rex Hale', approvalDate: '2026-09-25' }),
-  L('m1', { itemNo: 3, objectName: 'Walnut tea table', disposition: 'Distribute', channel: 'Mary Smith', fmv: '450', authBy: 'Rex Hale', approvalDate: '2026-09-25' }),
-  L('k1', { itemNo: 4, objectName: 'Family Bible', disposition: 'Keep', fmv: '40' }),
-];
-// The two snapshots' lines as the sheet's snapshot store holds them (since 2026-10-27, P1).
-const SL = (o) => Object.assign({ category: 'Furniture', fmv: '', disposition: '', track: 'Probate', qty: 1, room: 'Study', condition: 'Good', basis: '', valDate: '' }, o);
-STORE.snaps[ID] = {
-  [T1]: { ts: T1, items: [SL({ itemNo: 1, object: 'Portrait' }), SL({ itemNo: 2, object: 'Camelback sofa', fmv: '300' })] },
-  [T0]: { ts: T0, items: [SL({ itemNo: 1, object: 'Sargent portrait' }), SL({ itemNo: 2, object: 'Camelback sofa', fmv: '300' }), SL({ itemNo: 9, object: 'Card table' })] } };
+const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n + ']');
+const EBAY = 'https://www.ebay.com/itm/123456789012';
+const LA = 'https://www.liveauctioneers.com/item/77';
 
 (async () => {
   try {
     b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
     const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 }, timezoneId: 'America/New_York' });
-    await ctx.addInitScript((u) => { try { localStorage.setItem('hav_sheets_url', u); localStorage.setItem('hav_device_user', 'Ashley Jerome'); } catch (e) {} }, SYNC);
-    await ctx.route(SYNC + '**', async (route) => {
-      const req = route.request(), url = new URL(req.url()), action = url.searchParams.get('action');
-      const json = (o) => route.fulfill({ status: 200, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(o) });
+    let sheet = {};
+    await ctx.route(SYNC + '**', async (r) => {
+      const req = r.request();
+      const json = (o) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(o) });
       if (req.method() === 'POST') {
         let body = {}; try { body = JSON.parse(req.postData() || '{}'); } catch (e) {}
-        if (body.type === 'saveAllJobs') { STORE.jobs = body.payload || []; return json({ ok: true }); }
-        if (body.type === 'job') { STORE.jobs = STORE.jobs.filter((j) => j.id !== (body.payload || {}).id).concat([body.payload]); return json({ ok: true }); }
-        if (body.type === 'saveAllEstimates') { Object.assign(STORE.estimates, body.payload || {}); return json({ ok: true }); }
-        if (body.type === 'saveAllChangeOrders') { STORE.cos = body.payload || []; return json({ ok: true }); }
-        if (body.action === 'getSubfolders') return json({ ok: true, subfolders: {} });
+        if (body.action === 'getSubfolders') return json({ ok: true, subfolders: null });
         return json({ ok: true });
       }
-      switch (action) {
-        case 'loadJobs': return json({ jobs: STORE.jobs, deletedJobs: [] });
-        case 'loadEstimates': return json({ ok: true, estimates: STORE.estimates });
-        case 'loadJobPlans': return json({ ok: true, jobPlans: {} });
-        case 'loadLogs': return json({ ok: true, logs: {} });
-        case 'loadChangeOrders': return json({ ok: true, changeOrders: STORE.cos || [] });
-        case 'loadContractors': return json({ ok: true, contractors: { added: [], defaults: [] } });
-        case 'loadMedia': {
-          const id = url.searchParams.get('jobId');
-          return json({ ok: true, media: id ? { [id]: { items: STORE.media[id] || [] } } : {} });
-        }
-        case 'loadSnapshots': return json({ ok: true, snapshots: STORE.snaps[url.searchParams.get('jobId')] || {} });
-        case 'version': return json({ ok: false, error: 'Unknown action' });
-        default: return json({ ok: false, error: 'not in this test: ' + action });
-      }
+      if (/action=loadMedia/.test(req.url())) return json({ ok: true, media: sheet });
+      return json({ ok: true });
     });
-
+    await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
     const p = await ctx.newPage();
     p.setDefaultTimeout(10000);
     const errs = []; p.on('pageerror', (e) => errs.push(String(e)));
-    const dialogs = [];
-    p.on('dialog', async (d) => { dialogs.push(d.type() + ': ' + d.message()); await d.accept(); });
-    await p.goto(APP); await p.waitForTimeout(1800);
-    const APP_TITLE = await p.evaluate(() => document.title);
-    await p.evaluate(() => {
-      window.open = function () { return null; };
-      window.__prints = [];
-      window.print = function () { const pt = document.getElementById('print-target'), ov = document.getElementById('doc-viewer-modal');
-        window.__prints.push({ html: pt ? pt.innerHTML : '', title: document.title, viewerUp: !!ov && ov.style.display === 'flex' }); };
-    });
-
+    const said = []; let answer = true;
+    p.on('dialog', async (d) => { said.push(d.message()); if (d.type() === 'confirm' && !answer) await d.dismiss(); else await d.accept(); });
     const section = async (name, body) => {
       console.log('\n## ' + name);
       try { await body(); } catch (e) { fail++; console.log('  ✗ ' + name + ' threw: ' + String(e && e.message || e).split('\n')[0]); }
     };
     const vis = (sel) => p.locator(sel).first().isVisible().catch(() => false);
-    // A print hides the panels for the dialog and restores them about 650 ms later (_printDocument), so a press waits until a
-    // panel is showing again before the next control is looked for.
-    const settled = async () => { for (let i = 0; i < 40; i++) { if (await p.evaluate(() => !!document.querySelector('.panel.active') && document.getElementById('print-target').style.display !== 'block')) return; await p.waitForTimeout(100); } };
     const press = async (sel, what) => {
-      await settled();
       const n = await p.locator(sel).count();
-      const v = n === 1 && await vis(sel);
-      ok(v, (what || sel) + ' — one control, on screen (' + n + ')');
-      if (v) { await p.click(sel, { timeout: 5000 }).catch((e) => ok(false, (what || sel) + ' — ' + e.message.split('\n')[0])); await p.waitForTimeout(400); }
+      const v = n >= 1 && await vis(sel);
+      ok(v, (what || sel) + ' — on screen (' + n + ')');
+      if (v) { await p.locator(sel).first().click({ timeout: 5000 }).catch((e) => ok(false, (what || sel) + ' — ' + e.message.split('\n')[0])); await p.waitForTimeout(700); }
       return v;
     };
-    const txt = (sel) => p.evaluate((s) => { const el = document.querySelector(s); return el ? el.textContent.replace(/\s+/g, ' ').trim() : ''; }, sel);
-    const val = (sel) => p.evaluate((s) => { const el = document.querySelector(s); return el ? el.value : null; }, sel);
-    const T = (h) => p.evaluate((h) => { const d = document.createElement('div');
-      d.innerHTML = String(h).replace(/<\/td>/g, ' </td>').replace(/<\/th>/g, ' </th>').replace(/<br>/g, ' '); return d.textContent.replace(/\s+/g, ' '); }, h);
     const overflow = () => p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-    const until = async (f, ms) => { for (let i = 0; i < (ms || 5000) / 150; i++) { if (await f()) return true; await p.waitForTimeout(150); } return false; };
+    const line = (id) => p.evaluate(([j, id]) => { const r = (_photoRefs[j] || []).find((x) => x.stableId === id) || {};
+      const c = (r.valComps || [])[0] || {};
+      return { fmv: r.fmv, src: r.valSource, by: r.valuedBy, rev: !!r.reviewed, first: [c.price, c.venue, c.by] }; }, [J, id]);
     const viewerOpen = () => p.evaluate(() => { const o = document.getElementById('doc-viewer-modal'); return !!o && o.style.display === 'flex'; });
-    const prints = () => p.evaluate(() => (window.__prints || []).length);
-    const lastPrint = () => p.evaluate(() => (window.__prints || []).slice(-1)[0] || { html: '', title: '' });
-    const close = () => press('#doc-viewer-modal button[onclick="closeDocViewer()"]', 'Close');
 
-    // One paper off its card: the press opens the viewer (a desk paper reads the sheet first, P6, so it opens once that read
-    // has answered), titled by the paper, the client under it, the page there to read, nothing printed by opening it; Print /
-    // Save PDF prints that page once under the paper's file name, and the viewer comes back after the dialog; Close takes it
-    // away. Answers the page's text as the viewer showed it.
-    const paper = async (sel, label, words, fileName) => {
-      const before = await prints();
-      await press(sel, label + ': its button');
-      ok(await until(viewerOpen), '⚠⚠ ' + label + ': the viewer is on screen');
-      eq(await txt('#doc-viewer-title'), label, label + ': titled by the paper');
-      eq(await txt('#doc-viewer-sub'), CLIENT, label + ': its client under it');
-      const body = await T(await p.evaluate(() => (document.getElementById('doc-viewer-body') || {}).innerHTML || ''));
-      words.forEach((w) => has(body, w, label + ': the page is there to read (' + w + ')'));
-      await p.waitForTimeout(700);
-      eq(await prints(), before, '⚠ ' + label + ': nothing printed by opening it');
-      ok(await vis('#doc-viewer-print'), label + ': Print / Save PDF is offered');
-      const n0 = await prints();
-      await press('#doc-viewer-print', label + ': Print / Save PDF');
-      await until(async () => (await prints()) > n0, 3000);
-      eq((await prints()) - n0, 1, label + ': the dialog opened once');
-      const pr = await lastPrint();
-      has(await T(pr.html), words[0], '⚠⚠ ' + label + ': with that page');
-      eq(pr.viewerUp, false, label + ': the viewer steps aside while the print dialog is up');
-      has(pr.title, fileName, label + ': under the paper\'s file name');
-      ok(await until(viewerOpen), '⚠⚠ ' + label + ': the viewer is back once the dialog closes');
-      ok(await until(() => p.evaluate((t) => document.title === t, APP_TITLE)), label + ': the app\'s own title is back');
-      await p.waitForTimeout(300);
-      eq((await prints()) - n0, 1, label + ': and it printed only once');
-      await close();
-      ok(!(await viewerOpen()), label + ': Close takes it away');
-      return body;
+    await p.goto(APP); await p.waitForTimeout(1600);
+    sheet = await p.evaluate(([J, SYNC]) => {
+      SHEETS_SYNC_URL = SYNC;
+      window.print = function () {};
+      try { localStorage.setItem('hav_device_user', 'Anthony Graziano'); } catch (e) {}
+      const T = Date.now() - 2 * 86400000;
+      jobs.unshift({ id: J, hvlId: 'HVL-2611-US1', name: 'Walter Pemberton', svc: 'probate', matterType: 'probate', addr: '9 Banyan Rd', city: 'Palm Beach', zip: '33480',
+        executor: 'Grace Pemberton', executorRole: 'Personal Representative', executorEmail: 'grace@example.com', deathDate: '2026-07-20', executorAuth: 'received',
+        probateAttyName: 'Ann Lowe', probateAttyEmail: 'ann@lowe.law', probateCase: '50-2026-CP-005555', docTier: 'values', gate706: 'no',
+        status: 'active', won: true, wonAt: '2026-10-01', approved: true, tc: 'Ashley Jerome', created: '2026-09-28', start: '2026-10-12', activatedOn: '2026-10-10',
+        agrApproved: true, agrSent: true, agrSigned: true,
+        driveFolder: 'https://drive.google.com/drive/folders/R' + J, driveSubfolders: { 'Estate Inventory': 'INV_US', 'As-Found Record': 'AF_US' }, at: {}, docState: {},
+        payments: [{ uid: 'd' + J, stage: 'deposit', amount: 15000, receivedOn: '2026-10-08', method: 'wire', clearedOn: '2026-10-08' }] });
+      estimateStore[J] = { approved: true, submitted: true, approvedBy: 'Anthony Graziano', savedAt: T,
+        estimate: { jobId: J, svc: 'probate', havellinTotal: 30000, fixedPrice: true, fixedAmount: 30000, fixedLines: true, totTC: 80, totPS: 120, days: 6,
+          vendors: [], prepItems: [], rooms: [{ idx: 3, name: 'Dining Room', st: 'in', vol: 3, cplx: 3 }] } };
+      const pair = (id, n) => ({ stableId: id, itemNo: 30 + n, qty: 1, label: 'inventory', collId: null, roomIdx: 3, seq: n, status: 'uploaded', ts: T + n * 60000,
+        filename: 'HVL-2611-US1_Dining_INV_' + n + '.jpg', driveFileId: 'F_' + id, driveFileUrl: 'https://drive.google.com/file/d/F_' + id + '/view',
+        objectName: 'Sterling silver candelabra, pair', namedBy: 'agent', agentConf: 'high', agentAt: T + n * 60000 + 5000, category: 'Silver',
+        disposition: 'Sell', channel: 'Kodner Galleries', condition: 'Good', condBy: 'desk', updatedAt: T + n * 60000 + 5000,
+        fmv: 4200, valLow: 3800, valHigh: 4600, valuedBy: 'agent', valConf: 'medium', valSource: 'Auction comps', valDate: '2026-07-20',
+        valNote: 'Two sold pairs at regional houses, 2025', valNameAt: 'Sterling silver candelabra, pair', valAgentAt: T + n * 60000 + 9000,
+        valComps: [{ title: 'Pair of sterling candelabra', venue: 'Hindman', saleDate: '2025-05', price: 4400, url: 'https://hindmanauctions.com/items/1', kind: 'sold', by: 'agent' }] });
+      _photoRefs[J] = [
+        { stableId: 'af1', label: 'before', roomIdx: 3, seq: 1, collId: null, status: 'uploaded', ts: T, updatedAt: T, filename: 'HVL-2611-US1_Dining_before_1.jpg',
+          driveFileId: 'F_AF', driveFileUrl: 'https://drive.google.com/file/d/F_AF/view' },
+        pair('far', 1), pair('keep', 2), pair('near', 3)];
+      savePhotoRefs(J); saveJobs(); localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore));
+      const out = {}; out[J] = { items: JSON.parse(localStorage.getItem('hav_media_' + J) || '[]') };
+      return out;
+    }, [J, SYNC]);
+
+    const toDesk = async () => {
+      await p.evaluate((id) => { setCurrentJob(id); populateInventorySelect(); }, J);
+      await p.click('.nb[onclick*="\'inventory\'"]'); await p.waitForTimeout(900);
+      const cur = await p.evaluate(() => (document.getElementById('inv-job') || {}).value);
+      if (String(cur) !== String(J)) { await p.selectOption('#inv-job', String(J)); await p.waitForTimeout(1300); }
+      if (await p.locator('#panel-inventory button[onclick="setInvWhen(\'all\')"]').count()) { await p.click('#panel-inventory button[onclick="setInvWhen(\'all\')"]'); await p.waitForTimeout(600); }
     };
-    // ⚠ THE DESK'S FOUR BARS (2026-10-22): a card sits in a fold bar that opens by its own rules, so it is opened by a real
-    // press of its header, and only when its body is hidden.
-    const openBar = async (fold) => {
-      const body = p.locator('#desk-body-' + fold + '-' + ID), hd = p.locator('#desk-hd-' + fold + '-' + ID);
-      if ((await body.count()) === 1 && !(await body.isVisible()) && (await hd.isVisible())) { await p.click('#desk-hd-' + fold + '-' + ID); await p.waitForTimeout(300); }
-      ok(await body.isVisible().catch(() => false), 'the ' + fold + ' bar is open');
+    const open = async (id) => {
+      if (!(await p.evaluate((id) => !!document.getElementById('av-wp-title-' + id), id))) { await p.click('button[onclick="_invToggleOpen(\'' + id + '\')"]'); await p.waitForTimeout(700); }
+      return p.evaluate((id) => !!document.getElementById('av-wp-title-' + id), id);
     };
-    const toDesk = async (fold) => {
-      await settled();
-      await p.evaluate((id) => { setCurrentJob(id); populateInventorySelect(); }, ID);
-      await p.click('.nb[onclick*="\'inventory\'"]'); await p.waitForTimeout(800);
-      if (String(await val('#inv-job')) !== String(ID)) { await p.selectOption('#inv-job', String(ID)); await p.waitForTimeout(800); }
-      if (fold) await openBar(fold);
-    };
-    const toPlan = async () => {
-      await settled();
-      await p.evaluate((id) => { setCurrentJob(id); }, ID);
-      await p.click('.nb[onclick*="\'job-plan\'"]'); await p.waitForTimeout(900);
-      if (String(await val('#plan-job')) !== String(ID)) { await p.selectOption('#plan-job', String(ID)); await p.waitForTimeout(900); }
+    // The real form: open it by its summary, type the sale, press Use this sale.
+    const useSale = async (id, price, url, venue) => {
+      ok(await open(id), id + ': its record is open');
+      const isOpen = await p.evaluate((id) => { const d = document.querySelector('details:has(#av-wp-title-' + id + ')'); return !!(d && d.open); }, id);
+      if (!isOpen) await press('details:has(#av-wp-title-' + id + ') > summary', id + ': Use a sale');
+      await p.fill('#av-wp-title-' + id, 'Pair of sterling candelabra, Gorham');
+      await p.fill('#av-wp-price-' + id, String(price));
+      await p.fill('#av-wp-date-' + id, '2026-09-14');
+      if (venue) await p.fill('#av-wp-venue-' + id, venue);
+      await p.fill('#av-wp-url-' + id, url);
+      await press('details:has(#av-wp-title-' + id + ') button:has-text("Use this sale")', id + ': Use this sale');
+      await p.waitForTimeout(500);
     };
 
-    // ── Seed ────────────────────────────────────────────────────────────────
-    STORE.media[ID] = JSON.parse(JSON.stringify(LINES));
-    await p.evaluate(([ID, HVL, NAME, ADDR, T0, T1, CO_ID, LINES]) => {
-      jobs = jobs.filter((j) => j.id !== ID);
-      jobs.unshift({ id: ID, hvlId: HVL, name: NAME, fname: 'Eleanor', lname: 'Vance', svc: 'probate', status: 'active',
-        won: true, wonAt: '2026-09-17', wonBy: 'Anthony Graziano', wonMethod: 'call', approved: true, agrApproved: true, agrApprovedBy: 'Anthony Graziano',
-        agrSent: true, agrSigned: true, depositReceived: true, tc: 'Ashley Jerome', created: '2026-09-10', start: '2026-09-21', walkthrough: '2026-09-15',
-        activatedOn: '2026-09-21', activatedBy: 'Ashley Jerome', addr: ADDR, city: 'Palm Beach', zip: '33480',
-        matterType: 'probate', docTier: 'values', gate706: 'no', deathDate: '2026-08-01', executorAuth: 'received',
-        executor: 'Rex Hale', executorFname: 'Rex', executorLname: 'Hale', executorRole: 'Personal Representative', executorEmail: 'rex@hale.example',
-        probateAttyName: 'Richard Comiter', probateAttyFirm: 'Comiter Law', probateAttyEmail: 'rc@example.com', probateCase: '50-2026-CP-001240',
-        driveFolder: 'https://drive.google.com/drive/folders/ROOT124',
-        driveSubfolders: { 'Estate Inventory': 'INV124', 'As-Found Record': 'AF124', 'Signed Records': 'SR124' },
-        crew: { tc: { name: 'Ashley Jerome', locked: true }, tc2: { name: '', locked: false }, ps: [{ name: 'Anthony Graziano Jr', locked: true }], confirmed: true },
-        payments: [{ uid: 'dep124', stage: 'deposit', amount: 12000, receivedOn: '2026-09-15', method: 'wire', clearedOn: '2026-09-15' }],
-        invSnapshots: [{ ts: T1, label: 'As of walkthrough', count: 2, totalFMV: 300 }, { ts: T0, label: 'Before the sale', count: 3, totalFMV: 300 }],
-        // A front door key received from the representative and held by the concierge (Keys & access).
-        accessItems: [{ id: 'ak1', kind: 'key', label: 'front door', qty: 2, code: '', receivedOn: '2026-09-21', receivedFrom: 'Rex Hale',
-          recordedBy: 'Ashley Jerome', recordedAt: T0 }],
-        accessEvents: [{ id: 'ae1', itemId: 'ak1', kind: 'received', on: '2026-09-21', from: 'Rex Hale', to: 'Ashley Jerome', note: '',
-          recordedBy: 'Ashley Jerome', recordedAt: T0 }],
-        // An original will found in the study, not yet handed over (Found on site).
-        siteFinds: [{ id: 'sf1', kind: 'will', foundOn: '2026-09-23', where: 'study, desk drawer', foundBy: 'Anthony Graziano Jr',
-          description: 'Sealed cream envelope marked Last Will in ink, unopened', recordedBy: 'Ashley Jerome', recordedAt: T0 }],
-        docState: { 'invoice:deposit': { draftedAt: '2026-09-15T10:00:00Z', sentAt: '2026-09-15T10:00:00Z' } },
-        at: {}, updatedAt: Date.now() });
-      estimateStore[ID] = { approved: true, submitted: true, approvedBy: 'Anthony Graziano', approvedAt: 'September 16, 2026', savedAt: T0,
-        estimate: { jobId: ID, svc: 'probate', havellinTotal: 24000, grandTotal: 24000, fixedPrice: false, totTC: 40, totPS: 80, tcRate: 150, psRate: 100,
-          tcFee: 6000, psFee: 8000, days: 4, collections: [], vendors: [], prepItems: [], pkgCost: 0, psSlots: [],
-          rooms: [{ idx: 1, name: 'Study', st: 'in', vol: 3, cplx: 3 }] } };
-      try { localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore)); } catch (x) {}
-      // A change order raised and awaiting the client's acceptance, as Create writes it.
-      changeOrders = changeOrders.filter((c) => c.jobId !== ID);
-      changeOrders.push({ id: CO_ID, updatedAt: T0, jobId: ID, description: 'Added the detached garage apartment to scope.', reason: 'scope_add',
-        tcHrs: 6, psHrs: 8, createdAt: 'Sep 29, 2026', clientApproved: false, clientName: '', clientAcceptedAt: '' });
-      saveChangeOrders();
-      _photoRefs[ID] = JSON.parse(JSON.stringify(LINES));
-      savePhotoRefs(ID);
-      saveJobs(); renderJobs();
-    }, [ID, HVL, NAME, ADDR, T0, T1, CO_ID, LINES]);
-    await p.waitForTimeout(800);
-
-    // ── A ───────────────────────────────────────────────────────────────────
-    await section('A. the Disposition Ledger card\'s Print: on screen first; Print / Save PDF prints it; Close', async () => {
-      await toDesk('closing');
-      ok(await vis('#inv-ledger-card'), 'fixture: the Disposition Ledger card is on the desk');
-      const body = await paper('#inv-ledger-card button[onclick="printDispositionLedger(' + ID + ')"]', 'Disposition Ledger',
-        ['Sargent portrait', 'Camelback sofa', 'Walnut tea table'], 'Havellin Disposition Ledger - ' + ADDR);
-      has(body, 'Rex Hale, Personal Representative', 'the representative\'s sign-off line is on the page on screen');
-      ok(await vis('#inv-ledger-card'), 'the desk is under it, the card where it was');
+    // ── A ─────────────────────────────────────────────────────────────────────────────────────
+    await section('A. The form is Use a sale; a sale 74% below the figure asks once, and OK uses it', async () => {
+      await toDesk();
+      ok(await open('far'), 'the first pair\'s record is open');
+      const summary = await p.evaluate(() => { const s = document.querySelector('details:has(#av-wp-title-far) > summary'); return s ? s.textContent.trim() : ''; });
+      eq(summary, 'Use a sale', '⚠ the form reads Use a sale');
+      await press('details:has(#av-wp-title-far) > summary', 'Use a sale');
+      const hint = await p.evaluate(() => { const d = document.querySelector('details:has(#av-wp-title-far) .av-sale-hint'); return d ? d.textContent.trim() : ''; });
+      eq(hint, 'A sold price you found: eBay’s Product Research (in Seller Hub), WorthPoint or an auction house’s results. Its link says where it came from.', 'and says where a sale comes from');
+      ok(await vis('details:has(#av-wp-title-far) .av-sale-hint'), 'on screen');
+      const n0 = said.length; answer = true;
+      await useSale('far', 1100, LA, 'Kodner Galleries');
+      const asked = said.slice(n0);
+      eq(asked.length, 1, '⚠⚠ asked once');
+      has(asked[0], 'This sale ($1,100) is 74% below the line\'s figure ($4,200).', 'naming both figures');
+      has(asked[0], 'OK: use the sale. The line\'s value becomes $1,100, from auction comps.', 'and what OK does');
+      eq(await line('far'), { fmv: 1100, src: 'Auction comps', by: 'desk', rev: true, first: [1100, 'Kodner Galleries', 'desk'] },
+         '⚠⚠ OK: $1,100, the person\'s, from auction comps, the sale first, the line reviewed');
     });
 
-    // ── B ───────────────────────────────────────────────────────────────────
-    await section('B. Mary Smith\'s leaving row: Print receipt opens the receipt on screen first', async () => {
-      await toDesk('releases');
-      const row = await p.evaluate(() => [...document.querySelectorAll('#inv-releases .inv-leaving-row')].map((r) => r.textContent.replace(/\s+/g, ' ').trim())
-        .filter((t) => t.indexOf('Mary Smith') === 0)[0] || '');
-      has(row, '#3', 'fixture: Mary Smith\'s row carries the tea table');
-      await paper('#inv-releases button[onclick^="printBeneficiaryReceipt("]', 'Receipt - Mary Smith', ['Walnut tea table', 'Mary Smith'], 'Havellin Receipt - Mary Smith - ' + ADDR);
+    // ── B ─────────────────────────────────────────────────────────────────────────────────────
+    await section('B. Cancel keeps $4,200 and Agent Two\'s source, and files the sale only', async () => {
+      const n0 = said.length; answer = false;
+      await useSale('keep', 1100, EBAY);
+      eq(said.slice(n0).length, 1, 'asked once');
+      eq(await line('keep'), { fmv: 4200, src: 'Auction comps', by: 'agent', rev: true, first: [1100, 'eBay', 'desk'] },
+         '⚠⚠ Cancel: the figure and its source stand, the eBay sale filed first (never relabelling the figure, ACC-04)');
+      answer = true;
     });
 
-    // ── C ───────────────────────────────────────────────────────────────────
-    await section('C. the Donations card: Print Donation Record for Goodwill, on screen first', async () => {
-      await toDesk('closing');
-      ok(await vis('#inv-donations-card'), 'fixture: the Donations card is on the desk');
-      const body = await paper('#inv-donations-card button[onclick="printDonationRecord(' + ID + ',\'d1\')"]', 'Donation Record - Goodwill',
-        ['Camelback sofa', 'Charity: Goodwill'], 'Havellin Donation Record - Goodwill - ' + ADDR);
-      has(body, 'Donated on behalf of the estate, by Rex Hale, Personal Representative.', 'on whose behalf');
+    // ── C ─────────────────────────────────────────────────────────────────────────────────────
+    await section('C. Within 15%: nothing asked, the figure kept, the sale names its source', async () => {
+      const n0 = said.length;
+      await useSale('near', 3900, EBAY);
+      eq(said.slice(n0), [], 'nothing asked at $3,900 against $4,200');
+      eq(await line('near'), { fmv: 4200, src: 'Online comps', by: 'agent', rev: true, first: [3900, 'eBay', 'desk'] },
+         '⚠ the figure kept, from online comps, the venue eBay off the link');
+      eq(await overflow(), 0, 'no horizontal overflow at 1440 with the form open');
     });
 
-    // ── D ───────────────────────────────────────────────────────────────────
-    await section('D. the snapshots: Print, Compare with now and Compare with previous, each on screen first', async () => {
-      await toDesk('history');
-      eq(await p.locator('#inv-snapshots .snap-row').count(), 2, 'fixture: two snapshots listed');
-      const s = await paper('#inv-snapshots button[onclick="printInventorySnapshot(' + ID + ',' + T0 + ')"]', 'Inventory Snapshot',
-        ['Card table', 'Before the sale'], 'Havellin Inventory Snapshot - ' + ADDR);
-      has(s, 'Sargent portrait', 'the snapshot\'s lines, read from the sheet');
-      const now = await paper('#inv-snapshots button[onclick="printSnapshotComparison(' + ID + ',' + T0 + ',\'now\')"]', 'Inventory Snapshot Comparison',
-        ['Inventory Snapshot — What Changed', 'Items 3 → 4'], 'Havellin Inventory Snapshot Comparison - ' + ADDR);
-      has(now, 'Walnut tea table', 'what was added since, against the inventory now');
-      const prev = await paper('#inv-snapshots button[onclick="printSnapshotComparison(' + ID + ',' + T0 + ',\'prev\')"]', 'Inventory Snapshot Comparison',
-        ['(As of walkthrough) compared with the snapshot of', 'Items 2 → 3'], 'Havellin Inventory Snapshot Comparison - ' + ADDR);
-      has(prev, 'Renamed (1)', 'the snapshot before it set against this one');
+    // ── D ─────────────────────────────────────────────────────────────────────────────────────
+    await section('D. More ▾ → Court Inventory: the Basis column says where each figure came from', async () => {
+      await p.evaluate(() => { _invOpen = {}; renderInventoryTab(); }); await p.waitForTimeout(400);
+      if (!(await vis('#inv-more button[onclick="printCourtInventory(' + J + ')"]'))) await press('#inv-more > summary', 'More ▾');
+      await press('#inv-more button[onclick="printCourtInventory(' + J + ')"]', 'Court Inventory');
+      ok(await viewerOpen(), 'the Court Inventory is on screen');
+      const rows = await p.evaluate(() => [...document.querySelectorAll('#doc-viewer-body tr')].map((tr) => tr.textContent.replace(/\s+/g, ' ').trim())
+        .filter((t) => /Sterling silver candelabra/.test(t)));
+      eq(rows.length, 3, 'three pairs on the schedule');
+      eq(rows.map((t) => (t.match(/\$[\d,]+(?:\.\d\d)?/) || [''])[0]), ['$1,100', '$4,200', '$4,200'], 'their figures, in item order');
+      eq(rows.map((t) => /auction comps/.test(t) ? 'auction comps' : (/online comps/.test(t) ? 'online comps' : '?')),
+         ['auction comps', 'auction comps', 'online comps'], '⚠⚠ the basis follows each sale\'s link, and Cancel left Agent Two\'s');
+      await press('#doc-viewer-modal button[onclick="closeDocViewer()"]', 'Close');
+      await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(600);
+      ok(await open('near'), 'a record open on a phone');
+      eq(await overflow(), 0, 'no horizontal overflow at 390');
     });
 
-    // ── E ───────────────────────────────────────────────────────────────────
-    await section('E. the Job Plan\'s Keys & access card: Print the custody record, on screen first', async () => {
-      await toPlan();
-      ok(await vis('#plan-access-' + ID), 'fixture: the Keys & access card is on the Job Plan');
-      const body = await paper('#plan-access-' + ID + ' button[onclick*="printAccessRecord("]', 'Key and Access Custody Record',
-        ['front door', 'IN PROGRESS — 1 of 1 still held'], 'Havellin Key and Access Custody Record - ' + ADDR);
-      has(body, 'Ashley Jerome', 'who holds it');
-      ok(await vis('#plan-access-' + ID), 'the Job Plan is under it, the card where it was');
-    });
-
-    // ── F ───────────────────────────────────────────────────────────────────
-    await section('F. the Job Plan\'s Found on site card: Print Receipt for Original Will, on screen first', async () => {
-      await toPlan();
-      ok(await vis('#plan-finds-' + ID), 'fixture: the Found on site card is on the Job Plan');
-      const body = await paper('#plan-finds-' + ID + ' button:has-text("Print Receipt for Original Will")', 'Receipt for Original Will',
-        ['Sealed cream envelope marked Last Will in ink, unopened', 'Havellin has not opened it'], 'Havellin Receipt for Original Will - ' + ADDR);
-      has(body, 'Received by:', 'the line for the person receiving it');
-    });
-
-    // ── G ───────────────────────────────────────────────────────────────────
-    await section('G. the client dashboard\'s Change Orders card: PDF opens the change order on screen first', async () => {
-      await settled();
-      await p.click('.nb[onclick*="\'jobs\'"]'); await p.waitForTimeout(400);
-      await press('#panel-jobs tr[onclick="openClientDashboard(' + ID + ')"]', 'the client\'s row on the client list');
-      await p.waitForTimeout(600);
-      const body = await paper('#client-dashboard-view button[onclick="printChangeOrder(' + CO_ID + ')"]', 'Change Order',
-        ['Added the detached garage apartment to scope.', 'CO-' + String(CO_ID).slice(-6)], 'Havellin Change Order CO-' + String(CO_ID).slice(-6) + ' - ' + ADDR);
-      has(body, 'This change order does not itself create a charge.', 'an hourly change order\'s terms');
-      ok(await vis('#client-dashboard-view button[onclick="openCOAcceptModal(' + CO_ID + ')"]'), 'the dashboard is under it, Get Acceptance where it was');
-    });
-
-    // ── H ───────────────────────────────────────────────────────────────────
-    // Restated on review (2026-11-02): the page's own scroll width cannot see inside the viewer (a fixed overlay whose body
-    // hid what it could not fit), so the check is made in the viewer: every column a person can reach. The ledger, and the two
-    // Job Plan papers a phone reaches in field mode.
-    await section('H. the viewer on a phone: every column reachable inside it, no page overflow; zero page errors', async () => {
-      const reach = () => p.evaluate(() => {
-        const b = document.getElementById('doc-viewer-body'); if (!b) return { ok: false, why: 'no viewer body' };
-        const wide = b.scrollWidth > b.clientWidth + 1, ox = getComputedStyle(b).overflowX;
-        return { ok: !wide || ox === 'auto' || ox === 'scroll', why: b.scrollWidth + ' in ' + b.clientWidth + ', overflow-x ' + ox, wide };
-      });
-      await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(500);
-      const at390 = [
-        [async () => toDesk('closing'), '#inv-ledger-card button[onclick="printDispositionLedger(' + ID + ')"]', 'the ledger card\'s Print'],
-        [toPlan, '#plan-access-' + ID + ' button[onclick*="printAccessRecord("]', 'Print the custody record'],
-        [toPlan, '#plan-finds-' + ID + ' button:has-text("Print Receipt for Original Will")', 'Print Receipt for Original Will'],
-      ];
-      let anyWide = false;
-      for (const [go, sel, what] of at390) {
-        await go();
-        await press(sel, what + ', at 390');
-        ok(await until(viewerOpen), what + ': the viewer is open at 390');
-        const r = await reach();
-        anyWide = anyWide || r.wide;
-        ok(r.ok, '⚠⚠ ' + what + ': every column can be scrolled to inside the viewer (' + r.why + ')');
-        ok((await overflow()) <= 0, what + ': no page overflow at 390 with the viewer open (' + (await overflow()) + ')');
-        if (await viewerOpen()) await close();
-      }
-      ok(anyWide, 'fixture: at least one paper is wider than the phone (else the check above proves nothing)');
-      ok((await overflow()) <= 0, 'and none once it is closed (' + (await overflow()) + ')');
-      await p.setViewportSize({ width: 1440, height: 1000 }); await p.waitForTimeout(400);
-      await toDesk('closing');
-      await press('#inv-ledger-card button[onclick="printDispositionLedger(' + ID + ')"]', 'the ledger card\'s Print, at 1440');
-      ok((await overflow()) <= 0, 'no page overflow at 1440 with the viewer open (' + (await overflow()) + ')');
-      if (await viewerOpen()) await close();
-      eq(dialogs, [], 'no alert or confirm along the way');
-      eq(errs, [], 'zero page errors');
-    });
-
+    eq(errs, [], 'zero page errors');
+    console.log('\n' + pass + ' passed, ' + fail + ' failed');
     await b.close();
-    console.log('\nstep124: ' + pass + ' passed, ' + fail + ' failed');
     process.exit(fail ? 1 : 0);
   } catch (e) {
-    console.log('step124 crashed: ' + (e && e.stack || e));
-    console.log('\nstep124: ' + pass + ' passed, ' + (fail + 1) + ' failed');
+    console.log('step 124 threw: ' + (e && e.stack || e));
     if (b) await b.close().catch(() => {});
     process.exit(1);
   }

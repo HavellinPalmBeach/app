@@ -91,6 +91,8 @@ Every `comps` line carries `valLookup`: the search terms (maker, pattern, mark, 
 agent would type into WorthPoint. The desk row shows it with a copy button and the photo link. A
 person runs it, and **Use this sale** takes a pasted WorthPoint record (title, price, date, venue,
 link) into the comps, sets `valSource: 'WorthPoint comps'` (new) and marks the value reviewed.
+*Since 2026-11-02 the form is **Use a sale** and takes a sale from anywhere (eBay's Product Research, WorthPoint, an auction
+house's results); its source follows the link, and a sale more than 15% from the line's figure is asked about once (§13).*
 
 If WorthPoint opens partner or API access, the lookup becomes a call in the same place and nothing
 else in this design moves.
@@ -329,7 +331,7 @@ and browser step 69.
   2026-10-26, below), and the re-run is the app's: the general answer is
   never written, the line is forced to research for the session, and it goes in the next call of the same run. The server
   values what it is asked, as asked.
-- **Searches (§7).** Research: five searches and two page reads per line. Ordinary lots: eight to a request with up to
+- **Searches (§7).** Research: five searches and two page reads per line (four since `2026-11-02`, below). Ordinary lots: eight to a request with up to
   eight searches. `max_uses` is constant per depth so the cached prompt is read back (the tool list renders first). Line
   labels are plain strings checked on the server, never an enum (an enum would change the tool on every request).
 - **The URL guard (§4b)** reads links out of every tool *result* block (search results, fetched pages, and what the dynamic
@@ -350,7 +352,7 @@ and browser step 69.
 - **The desk.** *Value N lines* on the work bar, after *Name N shots*; *Unreviewed values* chip; *Accept value* under the
   figure; *Accept values* on the bulk bar (only lines with an unreviewed agent figure are touched; all three gone since
   2026-10-25b, below); the line's record carries
-  the comparables, the WorthPoint search with Copy, *Use a WorthPoint sale* and Re-value, and nothing on a line Agent Two has
+  the comparables, the WorthPoint search with Copy, *Use a WorthPoint sale* (*Use a sale* since 2026-11-02) and Re-value, and nothing on a line Agent Two has
   not touched. Re-value researches one line and replaces only the agent's own figure.
 - **The appraisal (§2.3)** takes the line when its source is set to Appraisal (on the line or the bulk bar), or when a figure
   is typed over the agent's on a line with an appraiser linked. Linking an appraiser alone changes nothing: the agent's number
@@ -621,3 +623,19 @@ and browser step 69.
   drops it); `_avPanelHtml` draws *LISTED · N close listings for sale, $low to $high each, middle $median* with *the page
   counted*. `invLineUnsure` reads `valConf`, so a medium survey figure carries no *unsure*. `BACKEND_MIN_VERSION`
   `2026-10-27`. `tests/listing-survey.test.js`, browser step 115.
+- **Use a sale, and four page reads (2026-11-02, Apps Script `2026-11-02` for the reads; Q111):** Anthony, off the eBay developer
+  account, once its licence was read (live listings only through the Browse API, itself contract-gated for production; sold
+  history a Restricted API, which may not reach an outside AI without eBay's written consent): *"what are people going to use an
+  API for if you can't get pricing out of it?"* He took *"Rename to 'Use a sale'"* and *"Agent Two reads 4 pages"*. **App:**
+  `invSaleSource(url)`, the one rule for the source a pasted sale names (worthpoint.com → `WorthPoint comps`; a host with
+  "auction" in it or on `INV_SALE_AUCTION_HOSTS` → `Auction comps`; eBay and the rest → `Online comps`), and
+  `invSaleVenue(url)` for a blank Venue (*eBay*, *WorthPoint*, else the host). The desk audit's Ask 14, answered 2026-10-28, is
+  built with it (`invSaleFarOff`, `INV_SALE_ASK_PCT` 15; ACC-04): a sale more than 15% from the line's figure asks once; OK
+  makes the sale's price the person's figure (`_avTakeValue(ref, 'sale')`, Agent Two's sentence and confidence going with its
+  figure) from the sale's source; Cancel files the sale first in `valComps` and names nothing, so the figure keeps its own
+  source; within 15% the figure stays and the sale names its source; where counsel values nothing is asked or written but the
+  comparable. The form's summary reads *Use a sale*, with a line naming Product Research, WorthPoint and auction results.
+  A sale's *Online comps* or *Auction comps* is one of `AGENT_VALUE_SOURCES`, so a figure typed over an agent figure later
+  drops it (*not stated* until a person names one), where *WorthPoint comps* stayed. **Server:** `AGENT_VALUE_FETCHES` 4 (was 2):
+  more chances to open the lot itself from a results page; each research request runs longer, the fallback taking one that
+  passes UrlFetchApp's limit. `tests/use-a-sale.test.js`, browser step 124.

@@ -179,9 +179,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   // The agreement forms, their call graph lifted once.
   let _agr = null;
-  // ⚠ THE CLOCK IS FIXED (2026-11-02): the agreement's footer prints the month it is rendered in ("October 2026"), so the
-  // byte-for-byte hashes below went red the day the month turned. Never read the clock in a test.
   const agr = () => _agr || (_agr = lift(['agreementHtml', 'probateAgreementHtml', 'agrReferralFeeTxt', 'esignAnchorsPresent', 'esignCoSignerAnchors'], [],
+    // ⚠ THE CLOCK FIXED (2026-11-02): both forms print the month and year they are rendered in, so the byte-for-byte hashes below,
+    // recorded in October 2026, went red on 1 November. Rendered on NOW, as every other sandbox here is.
     { estimateStore: {}, currentEstimate: null, jobs: [], document: domStub({}), Date: FixedDate(NOW) }));
 
   // ═══════════════════════════════════════════════════════════════════════════
