@@ -235,7 +235,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const noop = () => {};
     const reopen = (e) => {
       const ctx = sandbox({
-        fns: ['restoreEstimateToUI', '_fxAmtSet', '_fxAmtGet', 'moneyToNumber', 'fixedFeeForCharge', 'discountOnFixedFee', 'discountOnLabor',
+        fns: ['restoreEstimateToUI', '_privateNotePaint', '_fxAmtSet', '_fxAmtGet', 'moneyToNumber', 'fixedFeeForCharge', 'discountOnFixedFee', 'discountOnLabor',
               'pinVendorLineHours', 'vendorDirectoryReady', 'vendorLineTCHrs', 'coordHrsFor', 'coordTouches', 'vendorGroupOfLine',
               'vendorGroupCategories', 'directoryCategories', 'vendorCats', 'followDocTier', 'activeDocScope', 'docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep', 'seedDocScopeFromJob', 'estimateDocScope', 'docScopeDef', 'docTierWord', 'docScopeWord', 'estimateAppraiserLines', 'vendorLineHrs', 'roundCents', 'fmt'],
         vars: ['ROOMS', '_fixedAmountUserSet', '_fixedAmountBasis', '_fixedPrepMovedOut', '_fixedLinesRestated', 'RUSH_PCT',
@@ -407,7 +407,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // A saved estimate reopened before the directory lands keeps its vendor hours.
     const noop = () => {};
     const R = sandbox({
-      fns: ['restoreEstimateToUI', '_fxAmtSet', '_fxAmtGet', 'moneyToNumber', 'fixedFeeForCharge', 'discountOnFixedFee', 'discountOnLabor',
+      fns: ['restoreEstimateToUI', '_privateNotePaint', '_fxAmtSet', '_fxAmtGet', 'moneyToNumber', 'fixedFeeForCharge', 'discountOnFixedFee', 'discountOnLabor',
             'pinVendorLineHours', 'vendorDirectoryReady', 'vendorLineTCHrs', 'coordHrsFor', 'coordTouches', 'vendorGroupOfLine',
             'vendorGroupCategories', 'directoryCategories', 'vendorCats', 'followDocTier', 'activeDocScope', 'docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep', 'seedDocScopeFromJob', 'estimateDocScope', 'docScopeDef', 'docTierWord', 'docScopeWord', 'estimateAppraiserLines', 'vendorLineHrs', 'roundCents', 'fmt'],
       vars: ['ROOMS', '_fixedAmountUserSet', '_fixedAmountBasis', '_fixedPrepMovedOut', '_fixedLinesRestated', 'RUSH_PCT',
