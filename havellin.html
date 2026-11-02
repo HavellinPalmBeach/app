@@ -1476,7 +1476,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.28 · 12:47pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.11.02 · 7:43am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -17679,7 +17679,7 @@ function printChangeOrder(coId, opt) {
   // to the client's Change Orders folder, so the accepted copy in Drive is byte for byte the page the client prints.
   if (opt && opt.asHtml) return { html: content, title: docNames(job, 'changeorder', { coNo: 'CO-' + co.id.toString().slice(-6) }).printTitle };
   return _printDocument(content, docNames(job, 'changeorder',
-    { coNo: 'CO-' + co.id.toString().slice(-6) }).printTitle);
+    { coNo: 'CO-' + co.id.toString().slice(-6) }).printTitle, { view: true, job: job, label: 'Change Order' });   // on screen first (2026-11-02)
 }
 
 // ─── FILING AN ACCEPTED CHANGE ORDER (Anthony, 2026-10-01, P17) ───────────────
@@ -31905,8 +31905,7 @@ function printInventorySnapshot(jobId, ts, opt) {
     + '</div>';
   var title = _invDocName(job, 'Inventory Snapshot');
   if (asHtml) return { html: html, title: title };
-  pt.innerHTML = html;
-  _printDocument(pt.innerHTML, title);
+  _printDocument(html, title, { view: true, job: job, label: 'Inventory Snapshot' });   // on screen first (2026-11-02)
 }
 // The "what changed" page: a snapshot against the inventory now (`against` 'now'), or the snapshot before it against
 // this one ('prev'). `opt.asHtml` returns {html, title}, or {why} where there is nothing to compare.
@@ -31985,7 +31984,7 @@ function printSnapshotComparison(jobId, ts, against, opt) {
     + '</div>';
   var title = _invDocName(job, 'Inventory Snapshot Comparison');
   if (opt && opt.asHtml) return { html: html, title: title };
-  _printDocument(html, title);
+  _printDocument(html, title, { view: true, job: job, label: 'Inventory Snapshot Comparison' });   // on screen first (2026-11-02)
   return null;
 }
 
@@ -32131,7 +32130,10 @@ function custodyEvents(ref) {
 // cancel or I launch a printer ... it just disappears"): the page is read on screen, and the viewer's Print / Save PDF comes
 // back here with `opt.after`, which reopens the viewer once the dialog has closed. Since 2026-10-27 (Anthony: "Yes") the work
 // bar's papers open the same way: the Contents List, the Estate Inventory PDF, the Release Approval Request (the bar's and the
-// selection's) and the Contents Record. The callers that print straight away are unchanged; a test's stub of this function still
+// selection's) and the Contents Record; and since 2026-11-02 (Anthony: "yes, do the cards' papers too") every card's paper: the
+// Disposition Ledger, a receipt, a Donation Record, the inventory snapshots and their comparison, the Key and Access Custody
+// Record, a will or cash receipt from Found on site, and a change order's PDF. Only the client documents' Print (docAction, whose
+// View is the viewer already) and the viewer's own Print / Save PDF print straight away; a test's stub of this function still
 // receives the page and its title.
 function _printDocument(html, title, opt) {
   var pt = document.getElementById('print-target');
@@ -36067,7 +36069,7 @@ function printBeneficiaryReceipt(jobId, name, read) {
       + 'once their written release approval is complete, or once they are recorded as gone.');
     return false;
   }
-  return _printDocument(invReceiptHtml(job, g.name, lines), _invDocName(job, 'Receipt - ' + g.name));
+  return _printDocument(invReceiptHtml(job, g.name, lines), _invDocName(job, 'Receipt - ' + g.name), { view: true, job: job, label: 'Receipt - ' + g.name });   // on screen first (2026-11-02)
 }
 
 // A value as a JS string argument inside a double-quoted attribute: JSON first, then HTML (the order _custodyHandle's
@@ -37352,7 +37354,7 @@ function printDispositionLedger(jobId, opt) {
     + signoff
     + '</div>';
   if (opt && opt.asHtml) return { html: html, title: _invDocName(job, 'Disposition Ledger') };
-  _printDocument(html, _invDocName(job, 'Disposition Ledger'));
+  _printDocument(html, _invDocName(job, 'Disposition Ledger'), { view: true, job: job, label: 'Disposition Ledger' });   // on screen first (2026-11-02)
 }
 
 // ⚠⚠ FILED TO DRIVE AS THE JOB CLOSES, AND ON DEMAND FROM THE DESK (P19). The page goes to the client's Estate Inventory
@@ -37602,7 +37604,7 @@ function printDonationRecord(jobId, stableId, opt) {
       + 'Whether a charitable deduction is available, and in what amount, is for the donor&rsquo;s tax adviser to determine.</div>'
     + '</div>';
   if (opt && opt.asHtml) return { html: html, title: _invDocName(job, title) };
-  _printDocument(html, _invDocName(job, title));
+  _printDocument(html, _invDocName(job, title), { view: true, job: job, label: title });   // on screen first (2026-11-02)
   return null;
 }
 function _renderDonationsCard(job, all) {
@@ -50973,7 +50975,7 @@ function printAccessRecord(jobId, opt) {
     + _invDocHead(job, ACCESS_RECORD_TITLE, 'Every key, fob, remote and access code received for the property: who held it, and when it went back')
     + stamp + accessCustodyRecordHtml(job) + '</div>';
   if (asHtml) return { html: html, title: _invDocName(job, ACCESS_RECORD_TITLE) };
-  _printDocument(html, _invDocName(job, ACCESS_RECORD_TITLE));
+  _printDocument(html, _invDocName(job, ACCESS_RECORD_TITLE), { view: true, job: job, label: ACCESS_RECORD_TITLE });   // on screen first (2026-11-02)
   return true;
 }
 // Filed to the client's Drive folder as the job closes (activateOrCycle, every job with an item recorded) and from the card,
@@ -51412,7 +51414,7 @@ function printSiteFindReceipt(jobId, id) {
   if (!job || !f || !SITE_FIND_KINDS[f.kind] || !invFiduciaryMode(job)) { showSyncBadge('That record is no longer on this job.', true); return false; }
   if (f.voidedAt) { showSyncBadge('That record is void, so there is nothing to print.', true); return false; }
   var html = f.kind === 'will' ? willReceiptHtml(job, f) : cashReceiptHtml(job, f);
-  return _printDocument(html, _invDocName(job, SITE_FIND_KINDS[f.kind].doc));
+  return _printDocument(html, _invDocName(job, SITE_FIND_KINDS[f.kind].doc), { view: true, job: job, label: SITE_FIND_KINDS[f.kind].doc });   // on screen first (2026-11-02)
 }
 
 // ═══════════════════════ INCIDENTS — ANYTHING THAT GOES WRONG ON A JOB (P26, 2026-10-16) ═══════════════════════
