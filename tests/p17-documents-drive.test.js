@@ -717,6 +717,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(n.t, 'warn', '⚠⚠ the photo service failed: amber');
     ok(/On the pages: \d+ photographs? could not be drawn from Drive, so (its line links|their lines link) to the photograph in Drive instead\./.test(n.m || ''), '⚠⚠ and the notice says how many (' + String(n.m || '').slice(-200) + ')');
     eq(bad.N.log.drafts.length, 1, 'the draft is made all the same (a flag, never a refusal)');
+    // ⚠ Only where a page draws them: on tier none the package is the ledger and the worklist, which link a number and draw no
+    // photograph, so nothing is fetched and nothing is said of photographs, whatever the photo service does.
+    const none = pkgRig({ job: Object.assign(ESTATE(), { docTier: 'none' }), net: { thumbs: false } });
+    none.c.sendProbatePackage(7);
+    const nn = none.notices[none.notices.length - 1] || {};
+    eq(none.N.log.posts.filter((a) => a === 'getThumbnails').length, 0, '⚠ tier none: no photograph is fetched for pages that draw none');
+    lacks(nn.m || '', 'could not be drawn', '⚠ …and the notice claims nothing of photographs');
+    eq(none.N.log.drafts.length, 1, '…and the package still goes');
+    ok(bad.N.log.posts.filter((a) => a === 'getThumbnails').length > 0, 'fixture: the valued tier did fetch them');
   });
 
   G('11 · documents with gaps go out as working copies — a floor, DRAFT, never FINAL — and the record states what was recorded', () => {

@@ -307,12 +307,16 @@ const MISSING = 'f-b7';
       eq(bc, ['desk', 'Ashley Jerome'], '⚠⚠ One article recorded as a person\'s answer, with who');
       if (!(await vis('#inv-grp-bc'))) await press(tog, 'the candlestick\'s ▾ again');
       has(await txt('#inv-grp-bc'), 'it was recorded as one article by Ashley Jerome', 'the record says who answered');
-      // The sideboard drawer: its count typed in the row's own Qty box.
+      // The sideboard drawer: its record open, its count typed in the row's own Qty box.
+      const tog2 = 'button[onclick="_invToggleOpen(\'sd\')"]';
+      if (!(await vis('#inv-grp-sd'))) await press(tog2, 'the drawer\'s ▾');
+      has(await txt('#inv-grp-sd'), 'A group with no count.', 'the drawer\'s record shows the mark before its count');
       const qty = '#inv-row-sd input.inv-qty';
       ok(await vis(qty), 'the drawer\'s Qty box is on screen');
       await p.fill(qty, '5'); await p.keyboard.press('Tab'); await p.waitForTimeout(900);
       const sd = await p.evaluate((id) => { const r = (_photoRefs[id] || []).filter((x) => x.stableId === 'sd')[0] || {}; return [r.qty, r.groupBy]; }, EST);
       eq(sd, ['5', 'desk'], '⚠⚠ the count typed in Qty answers the mark');
+      has(await txt('#inv-grp-sd'), 'its count was recorded by Ashley Jerome', '⚠ and the open record says so at once, repainted by id');
       const s = await p.evaluate(() => { const el = document.getElementById('inv-summary'); return el ? el.innerText.replace(/\s+/g, ' ') : ''; });
       lacks(s, 'grouped line', '⚠ the summary counts no group apart now');
       has(s, 'Total Articles ' + (BOOKS + 12 + 8 + 1 + 6 + 2 + 5 + 1 + 6 + 6), 'and counts the drawer\'s five, the candlestick and the plates left');

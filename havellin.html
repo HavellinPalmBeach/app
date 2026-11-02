@@ -1476,7 +1476,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.28 · 5:50pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.28 · 8:32pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -17923,6 +17923,11 @@ function probatePackageDocs(job) {
   out.push('worklist');
   return out;
 }
+// Whether any page the package owes draws the lines' photographs (P13's review, 2026-10-28): the Estate Inventory Report
+// ('schedule') and the Contents List ('contents'). The rest link an item's number to its photograph and draw none. DOM-free.
+function probatePackageDrawsPhotos(owed) {
+  return (owed || []).some(function (k) { return k === 'schedule' || k === 'contents'; });
+}
 // One document's page, from its own printer: {html, title} or {why}.
 function probatePackagePage(jobId, key) {
   var o = { asHtml: true };
@@ -18369,10 +18374,14 @@ function sendProbatePackage(jobId) {
     // device's capped cache held, so counsel's Estate Inventory Report carried 110 photographs for 300 lines. Every inventory line's
     // photograph this session holds none of is fetched (invFetchPrintPhotos, memory only) before a page is built; the watchdog
     // waits for it, each batch having its own.
+    // ⚠ ONLY WHERE A PAGE DRAWS THEM (P13's review, 2026-10-28): the Estate Inventory Report and the Contents List draw a line's
+    // photograph; the Court Inventory, the Trust Schedule, the ledger and the worklist link its number and draw none. A package of
+    // those alone (tier none) fetched every photograph and, with the photo service down, told the sender they could not be drawn.
+    var _pkgPhotos = (typeof probatePackageDrawsPhotos === 'function') ? probatePackageDrawsPhotos(probatePackageDocs(job)) : true;
     var _pkgBuild = function () {
       // What could not be drawn is said to the sender, as the printers' toast says it (P13's review, 2026-10-28: every batch could
       // time out and the PDFs went to counsel with "photo" in every cell under an 'ok' notice). Read as the pages are built.
-      var _photoSaid = (typeof invPrintPhotoWords === 'function') ? invPrintPhotoWords(jobId, _jobInvRefs(jobId)) : '';
+      var _photoSaid = (_pkgPhotos && typeof invPrintPhotoWords === 'function') ? invPrintPhotoWords(jobId, _jobInvRefs(jobId)) : '';
       var owed = probatePackageDocs(job);
       var pages = [], left = [];
       owed.forEach(function (k) {
@@ -18460,7 +18469,7 @@ function sendProbatePackage(jobId) {
         });
       });
     };
-    var _pkgIds = (typeof invPrintPhotoIds === 'function') ? invPrintPhotoIds(jobId, _jobInvRefs(jobId)) : [];
+    var _pkgIds = (_pkgPhotos && typeof invPrintPhotoIds === 'function') ? invPrintPhotoIds(jobId, _jobInvRefs(jobId)) : [];
     if (!_pkgIds.length) { _pkgBuild(); return; }
     step('Gathering ' + _pkgIds.length + ' photograph' + (_pkgIds.length === 1 ? '' : 's') + ' from Drive…');
     clearTimeout(watchdog);

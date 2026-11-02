@@ -607,6 +607,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(ed.ok, 'the row\'s edit ran' + (ed.ok ? '' : ': ' + ed.err));
     const sd = E._getPhotoRef(7, 'sd') || {};
     eq([sd.groupBy, sd.groupWho], ['desk', 'Ashley Jerome'], '⚠⚠ a count typed in Qty on a marked line is a person\'s answer (one, here)');
+    has(String((doc.getElementById('inv-grp-sd') || {}).outerHTML || ''), 'it was recorded as one article by Ashley Jerome', '⚠ the record\'s mark is repainted by id as the count lands (no redraw of the tab)');
     eq(P.invLotSplitState(sd, P.jobs[0]), '', '…so the lot rule no longer reads it as a group with no count');
   }
 
@@ -632,9 +633,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('O · ⚠ the package, the request\'s send and the close-out filer tell the sender how many photographs could not be drawn, and a notice saying so is not "ok"');
   {
     const pkg = live(fn('sendProbatePackage'));
-    has(pkg, "var _photoSaid = (typeof invPrintPhotoWords === 'function') ? invPrintPhotoWords(jobId, _jobInvRefs(jobId)) : '';", 'the package reads what its pages could not draw, as they are built');
+    has(pkg, "invPrintPhotoWords(jobId, _jobInvRefs(jobId)) : '';", 'the package reads what its pages could not draw, as they are built');
     has(pkg, "if (_photoSaid) bits.push('On the pages: ' + _photoSaid);", '…says it in the notice');
     has(pkg, '!unfiled.length && !_photoSaid &&', '…and a notice saying it is not clean');
+    // Only where a page the package owes draws photographs (the Estate Inventory Report, the Contents List).
+    const PD = sandbox({ fns: ['probatePackageDrawsPhotos'] });
+    eq([['court', 'schedule', 'ledger', 'worklist'], ['trustee', 'contents', 'ledger', 'worklist'], ['court', 'ledger', 'worklist'], ['ledger', 'worklist'], [], null]
+      .map((o) => PD.probatePackageDrawsPhotos(o)), [true, true, false, false, false, false], 'probatePackageDrawsPhotos: the Report or the Contents List, and nothing else');
+    has(pkg, "var _pkgPhotos = (typeof probatePackageDrawsPhotos === 'function') ? probatePackageDrawsPhotos(probatePackageDocs(job)) : true;", 'the package asks it of the pages it owes');
+    has(pkg, "var _photoSaid = (_pkgPhotos && ", '…before it says anything of photographs');
+    has(pkg, "var _pkgIds = (_pkgPhotos && ", '…and before it fetches any');
     const req = live(fn('sendApprovalRequest')), es = live(fn('approvalRequestSendEsign'));
     has(req, "r.photoSaid = (typeof invPrintPhotoWords === 'function') ? invPrintPhotoWords(jobId, items || []) : '';", 'the request reads what its page could not draw');
     has(req, "if (r.photoSaid) bits.push('On the request: ' + r.photoSaid);", '…says it on the email route');
