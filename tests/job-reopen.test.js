@@ -526,7 +526,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('the rendered Client Dashboard: one Re-open on a closed job, one Close once re-opened, nothing twice');
   {
     const FNS = ['jobIsFeeOnly', 'walkawayNet', 'walkawayDeposit', '_dashUtilityBarHtml', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', '_jtSendAction', 'activeHouseFlags',
-      'agreementSignature', 'dashUtilityBar', 'driveFolderPending', 'depositPaidTotal', 'depositTargetFor',
+      'agreementSignature', 'dashUtilityBar', 'walkthroughOffered', 'driveFolderPending', 'depositPaidTotal', 'depositTargetFor',
       'draftOutstanding', 'draftIsStale', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'staleDocName', '_draftDay', '_andJoin',
       '_dashNoticeHtml',
       'docKeyFor', 'docSentAt', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'field', 'getJobActuals',

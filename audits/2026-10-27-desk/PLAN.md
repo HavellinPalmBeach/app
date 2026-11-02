@@ -591,7 +591,7 @@ Publish that rate only as section (a) step 10 allows.
 
 **P10. The release request carries the stamp the other papers carry.** Fix now · S to M. Rewritten on 27 October to your Q100, Q104, Q107 and Q109 answers.
 - ✓ **Built 2026-10-28** on your Ask 8 answer (the one-tap reason): no backend change (`tests/p10-request-stamp.test.js`, browser step 130; `BUILD_HISTORY.md`, 2026-10-28e P10; counsel bundle D23). Both copies of the request and the Donation Record print the Report's stamp over their own lines, the values' pill bronze until read; a line still flagged reads *Needs a look: …* on its row on the request, the Donation Record, both schedules and the Report; each request value shows its basis; a living ⚑ line keeps its caution over Agent Two's figure (*only Havellin's estimate ($1,200) on record*); on Formal a value with no basis is a DRAFT reason. Send request and Send through DocuSign ask once and Cancel opens the lines under Not reviewed. A figure typed drops the agent's range and opens the five reasons on its row, printed with the person's name; unpicked, *Havellin estimate (staff)* under $500 and *basis not stated* in amber at $500 or more; **No basis** on the work bar gathers those. Closes EST-04, NEW-02, VAL-28, LIV-22, DOC-14, DOC-15, LIV-01, VAL-07, ROW-10 and DOC-09.
-- ✓ **Its review, the same day** (`BUILD_HISTORY.md`, 2026-10-28f; no backend change): the schedules' DRAFT pill escapes the line it names; a reason picked for the desk's figure goes when an appraiser's figure replaces it (so Cancel on unlinking leaves *basis not stated*), and when a WorthPoint sale names its source; the living ⚑ caution's heading follows its lines; where counsel values the request prints no basis under a value (VAL-03 still owes taking the values off); the estate package's question names a value with no basis on Formal; and the two schedules carry only the marks about the figure or the item (a firearm, Hold, a bequest or a caution only on the request, the Report and the Donation Record), for you to confirm.
+- ✓ **Its review** (`BUILD_HISTORY.md`, 2026-11-02e: begun 2026-10-28, finished 2026-11-02 after two stops at the usage limit; no backend change): the schedules' DRAFT pill escapes the line it names; a reason picked for the desk's figure goes when an appraiser's figure replaces it (so Cancel on unlinking leaves *basis not stated*), and when a sale used (**Use a sale**) names its source; the living ⚑ caution's heading follows its lines; where counsel values the request prints no basis under a value (VAL-03 still owes taking the values off); the estate package's question names a value with no basis on Formal; and the two schedules carry only the marks about the figure or the item (a firearm, Hold, a bequest or a caution only on the request, the Report and the Donation Record), for you to confirm.
 - Reader:
   - **The request, both copies** (the email PDF and the DocuSign copy), the Donation Record and the living request print the same stamp as the Report and the ledger, in the same words: how many items were checked, how many stand as the agents left them, and whether the list was read (Q100, Q104, Q107), with the value pill bronze until it is (Q109). Today they print none, while *The Evening Desk* says papers print IN PROGRESS until every flagged item is checked (EST-04, NEW-02, VAL-28, LIV-22).
   - **A line still flagged is marked on its row** with what the desk's box names ("needs a look: a figure for an earlier name"). A line that stands carries no mark of its own (Q106); the stamp speaks for it (DOC-14).
@@ -693,7 +693,7 @@ Publish that rate only as section (a) step 10 allows.
 - Closes: ACC-09, VAL-08, ACC-10, VAL-09, ACC-12, VAL-11, VAL-06, AGT-06, VAL-16, VAL-21.
 - Checks: a browser step; the harness (P3) scores the market change before and after.
 - Code: setValBasis, setEstateAVD, estateValueDate, _avSystem, _avTool, invNeedsAppraisal, agentValueNotices, printAppraisalWorklist, waiveAppraisal.
-- Decide first: Ask 14.
+- Decide first: Ask 14. ✓ **Ask 14 built 2026-11-02** with *Use a sale* (Q111; `invSaleFarOff`, `tests/use-a-sale.test.js`, browser step 124): the rest of P15 is not built.
 
 **P16. Approvals agree everywhere.** Fix now for the first two items; fix if cheap for the rest · S each, about a day.
 - **A line with the appraiser waits** on its leaving row ("check it back in first"); a line already gone leaves the hand-off (REL-06, NEW-03).
@@ -735,6 +735,7 @@ Publish that rate only as section (a) step 10 allows.
   - an engagement term in both forms (RT-02): what Havellin's values are, the intended users, no reliance by anyone else, the AI assistance, an optional route through counsel on a contested matter, and the consent to de-identified internal use (RT-12).
 
 **P18. Two devices: the merge itself.** Fix now · L, two sessions · both .gs files redeployed. It can follow Phase 3 if "one person per client on the desk" holds.
+- ⏸ **Deferred 28 October (Anthony):** *"one person per client right now is fine. We're not going to have multiple people working on the desk at night. We can fix that later … There's only three of us in the business."* The rule stays in the guides; P18 is built when the desk needs more than one person on a client at once.
 - Session 1: per-field clocks on what a person owns, in both merges, held equal by a test. That covers name, category, count, Each and Total, source, basis, date, condition, destination, review, Not duplicates and removal.
   - A removal beats a later edit, except **Restore**, and a deliberate clear is a clock too.
   - Agent writes carry the time of their request, skip any field a person changed since, and never move the line's clock (CLAUDE.md's own rule).
@@ -1055,7 +1056,7 @@ Why: a family signs a "final record" on what is still a working copy. Since 27 O
 Why: today it reads "Authorized by —" with no explanation.
 
 **Ask 14. A WorthPoint sale far from the line's figure: what happens?** (P15; ACC-04; revisits the 2026-10-06 rule)
-- ✓ **Answered 28 October:** ask once when the sale and the line's figure differ by more than 15%, as recommended: use the sale, or keep the figure and file the sale only.
+- ✓ **Answered 28 October:** ask once when the sale and the line's figure differ by more than 15%, as recommended: use the sale, or keep the figure and file the sale only. **Built 2026-11-02** (with *Use a sale*, Q111).
 - Ask once when they differ by more than 15%: use the sale, or keep the figure and file the sale only (Recommended)
 - Always replace the figure with the sale
 - As now: the figure is relabelled "WorthPoint comps"
@@ -1349,7 +1350,7 @@ Severity is the verifier's re-rating, or the reviewer's for RT rows. Pack is one
 |ACC-01|accuracy|fix-now|C|still|A figure built on invented comparables is kept, and its basis sentence still…|7|_avLineResult|
 |ACC-02|accuracy|fix-now|C|still|A FINAL, adoptable Court Inventory double counts a painting the room check…|8|printCourtInventory|
 |ACC-03|accuracy|high|C|still|§20.2031-6(b) 'does not require an expert appraisal' is concluded from…|7|maivAggregate|
-|ACC-04|accuracy|high|DC||Use a WorthPoint sale relabels Agent Two's figure as 'WorthPoint comps' even…|Ask 14|agentValueUseSale|
+|ACC-04|accuracy|high|DC|fixed 2 Nov|Use a WorthPoint sale relabels Agent Two's figure as 'WorthPoint comps' even…|Ask 14 · built 2 Nov|agentValueUseSale|
 |ACC-05|gap|med|C||An appraiser's figure erases the agent's prediction, and a TC's correction…|3|_avTakeValue|
 |ACC-06|gap|high|C||No measurement of the agents' accuracy, and the model upgrades itself with no…|3|testAgentIdentify|
 |ACC-07|accuracy|high|C||The papers carry no evidence: comparables, dates, range, confidence, method and…|17|_invScheduleSection|

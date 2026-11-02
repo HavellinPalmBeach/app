@@ -13,8 +13,9 @@
 //      still holds three clients and says nothing was deleted; the snapshot's page is filed to Drive under a dated name; five
 //      seconds on, all still whole.
 //   B. A second device, reloaded off the sheet: three clients; the estate's desk lists the snapshot; Compare with now, pressed
-//      on its row, reads the snapshot's lines from the sheet, then prints: 450 items, a count corrected since named under
-//      Count changed.
+//      on its row, reads the snapshot's lines from the sheet, then opens the comparison in the document viewer (nothing printed
+//      until the viewer's Print / Save PDF is pressed; restated 2026-11-02: every card's paper opens on screen first), which
+//      prints it: 450 items, a count corrected since named under Count changed.
 //   C. A cold desk: the trust estate's inventory read from the sheet is aborted (a dead spot), and More ▾ › Snapshot, + Add line
 //      item and CSV each refuse by name and record nothing.
 //   D. A record too large for the sheet: a client grown past a cell on this device is saved through Edit Client's own Save
@@ -225,6 +226,14 @@ function seed(srv) {
       }
       const n0 = B.net.length;
       await press(B.p, '#inv-snapshots button[onclick="printSnapshotComparison(' + E + ',' + snapTs + ',\'now\')"]', 'Compare with now, on the snapshot\'s row');
+      // Restated 2026-11-02: every card's paper opens on screen first. Once its lines are read the comparison opens in the
+      // document viewer, titled by the paper, with nothing printed; the viewer's Print / Save PDF prints the page read below.
+      const viewerOpen = () => B.p.evaluate(() => { const o = document.getElementById('doc-viewer-modal'); return !!o && o.style.display === 'flex'; });
+      await until(B.p, viewerOpen, 6000);
+      ok(await viewerOpen(), 'the comparison opens in the document viewer once the snapshot\'s lines are read');
+      eq(await txt(B.p, '#doc-viewer-title'), 'Inventory Snapshot Comparison', 'the viewer is titled by the paper');
+      eq(await B.p.evaluate(() => window.__printed || ''), '', 'nothing printed before Print / Save PDF is pressed');
+      await press(B.p, '#doc-viewer-print', 'Print / Save PDF, in the viewer');
       await until(B.p, () => B.p.evaluate(() => !!window.__printed), 6000);
       ok(B.net.slice(n0).some((n) => n.action === 'loadSnapshots'), '⚠ the device asked the sheet for the snapshot\'s lines');
       const page = await B.p.evaluate(() => { const d = document.createElement('div'); d.innerHTML = window.__printed || ''; return d.textContent.replace(/\s+/g, ' '); });
@@ -232,6 +241,11 @@ function seed(srv) {
       has(page, 'Count changed 1', '⚠ and names the count corrected since (it read "Unchanged 400")');
       has(page, 'Unchanged 449', 'the rest unchanged');
       await B.p.evaluate(() => { const pt = document.getElementById('print-target'); if (pt) { pt.style.display = 'none'; pt.innerHTML = ''; } document.querySelectorAll('.panel').forEach((x) => { if (x.dataset.wasActive === '1') x.classList.add('active'); }); });
+      // Restated 2026-11-02: the viewer comes back once the print dialog closes, and is closed by its own Close.
+      await until(B.p, viewerOpen, 4000);
+      ok(await viewerOpen(), 'the viewer comes back after the print dialog');
+      await press(B.p, '#doc-viewer-modal button[onclick="closeDocViewer()"]', 'Close the viewer');
+      ok(!(await viewerOpen()), 'Close takes the viewer away');
     });
 
     await section('C. A cold desk refuses by name: Snapshot, + Add line item, CSV', async () => {

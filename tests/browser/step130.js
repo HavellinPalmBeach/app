@@ -313,14 +313,15 @@ const EST = 13001, LIV = 13002, CON = 13003;
     await section('F. the Donation Record carries the stamp over its charity\'s lines', async () => {
       await toDesk(EST);
       await openBar('closing', EST);
-      const before = await p.evaluate(() => (window.__prints || []).length);
+      // Since 2026-11-02 (main's *Every card's paper opens on screen first*, merged into P10) the Donations card's paper opens in the
+      // document viewer, as the More ▾ papers do, rather than printing at once.
       await press('#inv-donations-card button[onclick^="printDonationRecord(' + EST + '"]', 'Print Donation Record');
       await p.waitForTimeout(800);
-      const h = await p.evaluate(() => (window.__prints || []).slice(-1)[0] || '');
-      ok((await p.evaluate(() => (window.__prints || []).length)) > before, 'it printed');
-      const t = h.replace(/<[^>]+>/g, ' ').replace(/&mdash;/g, '—').replace(/\s+/g, ' ');
+      ok(await viewerOpen(), 'it opened on screen first');
+      const t = await viewerText();
       has(t, 'Donation Record', 'the Donation Record');
       has(t, 'IN PROGRESS', '⚠ stamped (VAL-28)');
+      await close();
     });
 
     // ── G ──

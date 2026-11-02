@@ -40,7 +40,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // Resolved by driving the real renderer until it stopped throwing. Everything here is
   // lifted verbatim from havellin.html — nothing is stubbed that the page itself has.
   const FNS = ['_dashUtilityBarHtml', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', '_jtSendAction',
-    'activeHouseFlags', 'agreementSignature', 'dashUtilityBar', 'driveFolderPending', 'depositPaidTotal', 'depositTargetFor',
+    'activeHouseFlags', 'agreementSignature', 'dashUtilityBar', 'walkthroughOffered', 'driveFolderPending', 'depositPaidTotal', 'depositTargetFor',
     'docKeyFor', 'docSentAt', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'field',
     'getJobActuals', 'jobLogEntries', 'houseFlagsOf', 'isAgreementSigned', 'isJobFunded', 'isJobWon',
     'jobActivationBlockers', 'resolveExecutorAuth', 'jobOnProbateTrack', 'estatePackageRoute', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jobPayments', 'agrApprovalWithdrawn', 'jobTimeline', 'estimateNoteGaps', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineActions', 'esignSignedCopyGaps', 'docReadOnlyWord', 'discountOfferBlocker', 'jobTimelineNext', 'depositVoidFlag', 'paymentSummaryText', 'paymentMethodLabel', 'agreementHandedOverInPerson',
@@ -104,7 +104,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // The bar for a job, without rendering anything — dashUtilityBar is DOM-free.
   function bar(jobOver, driveRoot) {
     if (driveRoot === undefined) return ctx.dashUtilityBar(Object.assign({ id: 7 }, jobOver || {}));
-    const c = sandbox({ fns: ['dashUtilityBar', '_dashUtilityBarHtml', 'driveFolderPending'], vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', '_driveFolderInFlight'],
+    const c = sandbox({ fns: ['dashUtilityBar', 'walkthroughOffered', '_dashUtilityBarHtml', 'driveFolderPending'], vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', '_driveFolderInFlight'],
       stubs: { document: domStub({}), DRIVE_FOLDER_ID: driveRoot } });
     return c.dashUtilityBar(Object.assign({ id: 7 }, jobOver || {}));
   }
@@ -141,7 +141,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // "the one thing to do next" is the wrong home for it. Ashley's report is what asked for
   // it; `walkthrough-view.test.js` owns what the page itself says.
   const bWt = (function () {
-    const c = sandbox({ fns: ['dashUtilityBar', 'driveFolderPending'], vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', '_driveFolderInFlight'],
+    const c = sandbox({ fns: ['dashUtilityBar', 'walkthroughOffered', 'driveFolderPending'], vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', '_driveFolderInFlight'],
       stubs: { document: domStub({}), estimateStore: { 7: { estimate: EST(), approved: true } },
                _estStoreState: 'ready' } });
     return c.dashUtilityBar({ id: 7, driveFolder: 'https://drive.google.com/x' });

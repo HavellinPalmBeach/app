@@ -20,7 +20,8 @@
 //      through the bulk bar's Record approval: Cleared to carry, to Jupiter.
 //   E. The custody dialog on the Colt: it opens on Choose…; Add event with nothing chosen records nothing; Released to Uncle
 //      Bob asks first (the protocol, and what the gate says), Cancel records nothing, OK records it.
-//   F. The Releases bar: the daughter's row carries the clock and not the revolver; Print receipt prints the clock and not
+//   F. The Releases bar: the daughter's row carries the clock and not the revolver; Print receipt opens the receipt on screen
+//      first (restated 2026-11-02: every card's paper opens on screen first), and its Print / Save PDF prints the clock and not
 //      the revolver; Jupiter Gun Exchange has its own row with File the dealer's receipt (#7).
 //   G. The flintlock's record: Category set to Firearms: its row and open record repaint by id (Firearms, the Firearm block)
 //      with no full render.
@@ -317,9 +318,20 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
       lacks(meg, '#9', '⚠⚠ REL-03: and never the revolver');
       const before = await p.evaluate(() => window.__prints.length);
       await press('#inv-releases button[onclick^="printBeneficiaryReceipt("]', 'Print receipt');
+      // Restated 2026-11-02: every card's paper opens on screen first. Print receipt opens the receipt in the document viewer,
+      // titled by the paper, and nothing prints until Print / Save PDF is pressed there; the checks below still read the page
+      // that press printed, and the viewer is closed so the overlay leaves the desk to the sections after.
+      ok(await viewerOpen(), 'the receipt opens in the document viewer');
+      eq(await txt('#doc-viewer-title'), 'Receipt - Margaret Price', 'the viewer is titled by the paper');
+      eq(await p.evaluate(() => window.__prints.length), before, 'nothing printed before Print / Save PDF is pressed');
+      await press('#doc-viewer-print', 'Print / Save PDF, in the viewer');
+      await p.waitForSelector('#doc-viewer-modal', { state: 'visible', timeout: 4000 }).catch(() => ok(false, 'the viewer comes back after the print dialog'));
+      eq(await p.evaluate(() => window.__prints.length), before + 1, 'Print / Save PDF printed the page once');
       const printed = await p.evaluate((n) => (window.__prints[n] || '').replace(/<[^>]+>/g, ' '), before);
       has(printed, 'Mantel clock', 'the receipt prints the clock');
       lacks(printed, 'Colt revolver', '⚠⚠ and not the revolver');
+      await press('#doc-viewer-modal button[onclick="closeDocViewer()"]', 'Close the viewer');
+      ok(!(await viewerOpen()), 'Close takes the viewer away');
       const jup = rows.filter((t) => t.indexOf('Jupiter Gun Exchange') === 0)[0] || '';
       has(jup, '(licensed dealer', 'the dealer has its own row');
       has(jup, 'File the dealer’s receipt (#7', '⚠⚠ REL-15: with File the dealer\'s receipt for the rifle');

@@ -16,7 +16,7 @@
 //   I · The Evening Desk's sentence held to the request.
 //   J · the reason rides the save list, the list's read and the export.
 //   K · P10's review (2026-10-28): the DRAFT pill escapes a name; an appraiser's figure carries no reason picked for the desk's, through
-//       a Cancel that takes the appraisal off, nor does a WorthPoint sale's source; the living caution's heading follows its lines;
+//       a Cancel that takes the appraisal off, nor does a sale's source (Use a sale); the living caution's heading follows its lines;
 //       no basis under a value where counsel values; the package names a value with no basis on Formal; the schedules mark only
 //       what is about the figure or the item; and the five changes a sweep could undo with every check passing.
 // Driven through the real functions (closure lifts), with only the boundaries stubbed by name.
@@ -478,10 +478,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(noComments(fn('_avTakeValue')), "['valLow', 'valHigh', " + FOUR + ']', 'a figure typed takes the range and the reason off');
     has(noComments(fn('_invEdit')), "if (key === 'valSource') [" + FOUR + ']', 'a source chosen in the record takes the reason off');
     has(noComments(fn('_invBulkApply')), "if (key === 'valSource') [" + FOUR + ']', 'and across a selection');
-    // P10's review: the appraisal's figure, the Cancel that takes an appraisal off, and a WorthPoint sale's source name the same four.
+    // P10's review: the appraisal's figure, the Cancel that takes an appraisal off, and a sale's source (Use a sale) name the same four.
     eq(noComments(fn('_avTakeValue')).split('[' + FOUR + ']').length - 1, 1, 'the appraisal arm names the four on their own (the typed arm with the range)');
     has(noComments(fn('_invSetAppraiser')), '[' + FOUR + ']', 'the Cancel that takes the appraisal off');
-    has(noComments(fn('agentValueUseSale')), "ref.valSource = 'WorthPoint comps'; [" + FOUR + ']', 'and a WorthPoint sale\'s source');
+    has(noComments(fn('agentValueUseSale')), "ref.valSource = source; [" + FOUR + ']', 'and a WorthPoint sale\'s source');
     const saved = noComments(fn('savePhotoRefs'));
     ['valWhy:r.valWhy', 'valWhyBy:r.valWhyBy', 'valWhyAt:r.valWhyAt', 'valWhyUrl:r.valWhyUrl'].forEach((k) => has(saved, k, 'the manifest keeps ' + k.split(':')[0]));
     const P = papers();

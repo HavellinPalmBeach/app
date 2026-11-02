@@ -224,7 +224,7 @@ module.exports = ({ group, ok, eq, has, lacks }) => {
     const badges = [];
     const ctx = sandbox({
       fns: ['createDriveJobFolder', '_driveFolderLanded', '_asBackgroundRedraw', 'createDriveFolderNow', 'driveFolderPending',
-            '_driveFolderFailed', '_backendErrorKind', 'dashUtilityBar', '_saveJobEdit', '_jobTouch', '_withDeviceKey', 'deviceKey'],
+            '_driveFolderFailed', '_backendErrorKind', 'dashUtilityBar', 'walkthroughOffered', '_saveJobEdit', '_jobTouch', '_withDeviceKey', 'deviceKey'],
       vars: ['_dashKeepNotice', '_driveFolderInFlight', '_estStoreState', 'SIGNED_RECORDS_SUBFOLDER', 'INCIDENT_SUBFOLDER'],
       stubs: {
         SHEETS_SYNC_URL: 'https://script.google.com/macros/s/AAA/exec',
@@ -276,7 +276,7 @@ module.exports = ({ group, ok, eq, has, lacks }) => {
     const badges = [];
     const ctx = sandbox({
       fns: ['createDriveJobFolder', '_driveFolderLanded', '_asBackgroundRedraw', 'createDriveFolderNow', 'driveFolderPending',
-            '_driveFolderFailed', '_backendErrorKind', 'dashUtilityBar', '_saveJobEdit', '_jobTouch', '_withDeviceKey', 'deviceKey'],
+            '_driveFolderFailed', '_backendErrorKind', 'dashUtilityBar', 'walkthroughOffered', '_saveJobEdit', '_jobTouch', '_withDeviceKey', 'deviceKey'],
       vars: ['_dashKeepNotice', '_driveFolderInFlight', '_estStoreState', 'SIGNED_RECORDS_SUBFOLDER', 'INCIDENT_SUBFOLDER'],
       stubs: {
         SHEETS_SYNC_URL: 'https://script.google.com/macros/s/AAA/exec',
@@ -332,7 +332,7 @@ module.exports = ({ group, ok, eq, has, lacks }) => {
     let n = 0;
     const ctx = sandbox({
       fns: ['createDriveJobFolder', '_driveFolderLanded', '_asBackgroundRedraw', 'createDriveFolderNow', 'driveFolderPending',
-            '_driveFolderFailed', '_backendErrorKind', 'dashUtilityBar', '_saveJobEdit', '_jobTouch', '_withDeviceKey', 'deviceKey'],
+            '_driveFolderFailed', '_backendErrorKind', 'dashUtilityBar', 'walkthroughOffered', '_saveJobEdit', '_jobTouch', '_withDeviceKey', 'deviceKey'],
       vars: ['_dashKeepNotice', '_driveFolderInFlight', '_estStoreState', 'SIGNED_RECORDS_SUBFOLDER', 'INCIDENT_SUBFOLDER'],
       stubs: {
         SHEETS_SYNC_URL: 'https://script.google.com/macros/s/AAA/exec',
