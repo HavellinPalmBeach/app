@@ -84,6 +84,24 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
       if (v) { await p.locator(sel).first().click({ timeout: 5000 }).catch((e) => ok(false, (what || sel) + ' — ' + e.message.split('\n')[0])); await p.waitForTimeout(800); }
       return v;
     };
+    // Restated 2026-11-02 (merging main: every card's paper opens on screen first): the ledger card's Print opens the Disposition
+    // Ledger in the document viewer and prints nothing; the viewer's Print / Save PDF prints the page (what __prints reads), and
+    // Close takes the viewer away so the desk under it can be pressed again. Returns the page printed.
+    const viewerOpen = () => p.evaluate(() => { const o = document.getElementById('doc-viewer-modal'); return !!o && o.style.display === 'flex'; });
+    const printLedger = async (what) => {
+      const before = await p.evaluate(() => window.__prints.length);
+      await press('#inv-ledger-card button:has-text("Print")', what);
+      for (let i = 0; i < 25 && !(await viewerOpen()); i++) await p.waitForTimeout(200);   // the ledger reads the sheet first
+      ok(await viewerOpen(), what + ': the ledger opens in the document viewer');
+      eq(await txt('#doc-viewer-title'), 'Disposition Ledger', '…titled by the paper');
+      eq(await p.evaluate(() => window.__prints.length), before, '…and nothing printed yet');
+      await press('#doc-viewer-print', 'Print / Save PDF, in the viewer');
+      eq(await p.evaluate(() => window.__prints.length), before + 1, 'Print / Save PDF printed the page once');
+      await p.waitForTimeout(900);
+      await press('#doc-viewer-modal button[onclick="closeDocViewer()"]', 'Close the viewer');
+      ok(!(await viewerOpen()), 'Close takes the viewer away');
+      return p.evaluate(() => window.__prints[window.__prints.length - 1] || '');
+    };
     const txt = (sel) => p.evaluate((s) => { const el = document.querySelector(s); return el ? el.textContent.replace(/\s+/g, ' ').trim() : ''; }, sel);
     const overflow = () => p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     const barLine = (id) => p.evaluate((id) => Array.from(document.querySelectorAll('#desk-stat-closing-' + id + ' span')).map((s) => s.textContent.trim()).join(' · '), id);
@@ -191,8 +209,7 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
     });
 
     await section('C. the ledger printed: Authorized by says what is owed; the gaps; the sign-off\'s words; the ratification sentence; print media', async () => {
-      await press('#inv-ledger-card button:has-text("Print")', 'Print, on the ledger card');
-      const html = await p.evaluate(() => window.__prints[window.__prints.length - 1] || '');
+      const html = await printLedger('Print, on the ledger card');   // through the viewer since 2026-11-02
       const t = String(html).replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;|&#\d+;/g, (m) => ({ '&amp;': '&', '&rsquo;': '’', '&mdash;': '—', '&nbsp;': ' ' }[m] || m)).replace(/\s+/g, ' ');
       has(t, 'Pair of brass table lamps Donate Goodwill Palm Beach ratification owed', '⚠⚠ DOC-11: the lamps read "ratification owed"');
       has(t, 'signed so far by Thomas Ashworth (Oct 21, 2026); still to sign: Nora Ashworth', '⚠⚠ REL-08: one of two, and who is still to sign');
@@ -204,8 +221,7 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
       const sel = p.locator('#panel-inventory select[onchange*="\'a3\'"][onchange*="disposition"]').first();
       if (await sel.count()) { await sel.selectOption('Keep'); await p.waitForTimeout(1200); }
       else await p.evaluate((A) => { const r = _photoRefs[A].find((x) => x.stableId === 'a3'); r.disposition = 'Keep'; r.updatedAt = Date.now(); savePhotoRefs(A); renderInventoryTab(); }, A);
-      await press('#inv-ledger-card button:has-text("Print")', 'Print again');
-      const html2 = await p.evaluate(() => window.__prints[window.__prints.length - 1] || '');
+      const html2 = await printLedger('Print again');   // through the viewer since 2026-11-02
       const t2 = String(html2).replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;|&#\d+;/g, (m) => ({ '&amp;': '&', '&rsquo;': '’', '&mdash;': '—', '&nbsp;': ' ' }[m] || m)).replace(/\s+/g, ' ');
       has(t2, 'Reviewed and approved as the record to date of the disposition of the property listed above.', '⚠⚠ Ask 12: the record to date under IN PROGRESS');
       lacks(t2, 'as the final record of the disposition', '…never the final record under a working copy');
@@ -326,8 +342,7 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
       has(card, 'Thomas Ashworth, Personal Representative', '⚠⚠ the card: the representative in a capacity');
       has(card, 'Nora Ashworth, Co-Personal Representative', '…Nora, recorded as Other, as a co-representative');
       lacks(card, 'Family Member', '…never the raw role recorded');
-      await press('#inv-ledger-card button:has-text("Print")', 'Print, on the ledger card');
-      const html = await p.evaluate(() => window.__prints[window.__prints.length - 1] || '');
+      const html = await printLedger('Print, on the ledger card');   // through the viewer since 2026-11-02
       const t = String(html).replace(/<[^>]+>/g, ' ').replace(/&[a-z]+;|&#\d+;/g, (m) => ({ '&amp;': '&', '&rsquo;': '’', '&mdash;': '—', '&nbsp;': ' ' }[m] || m)).replace(/\s+/g, ' ');
       has(t, 'Thomas Ashworth, Personal Representative', 'the signature line in a capacity');
       has(t, 'Nora Ashworth, Co-Personal Representative', '…and hers');

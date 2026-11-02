@@ -222,8 +222,12 @@ const LINES = [
       ok(await vis('#inv-ledger-card'), '⚠⚠ the Disposition Ledger card is on the desk');
       has(await txt('#inv-ledger-card'), '6 of 6 lines on the ledger · Gross $1,237.50 · Fees $309.38 · Net to the estate $928.12', 'its figures, net to the estate');
       has(await txt('#inv-ledger-card'), 'Not in Drive yet — it is filed when the job closes, or now with File to Drive.', 'not yet filed, and when it will be');
-      has(await txt('#inv-ledger-card'), 'No signed copy on file — the Personal Representative signs it at close-out.', 'nobody has signed');
-      ok(await p.locator('#inv-ledger-card input[type=file]').count() === 1, 'File signed copy is on the card');
+      // RESTATED (P12, 2026-10-28; EST-13): a signed copy records who signed it, so the card has a row per fiduciary and a press per
+      // signer, then one for a copy both signed.
+      has(await txt('#inv-ledger-card'), 'No signed copy on file — each signer signs it at close-out.', 'nobody has signed');
+      has(await txt('#inv-ledger-card'), '⚠ Rex Hale, Personal Representative — not signed on a copy filed yet', 'Rex still to sign');
+      has(await txt('#inv-ledger-card'), '⚠ Dana Hale, Co-Personal Representative — not signed on a copy filed yet', 'Dana still to sign');
+      ok(await p.locator('#inv-ledger-card label.btn-s', { hasText: 'File the copy signed by Rex Hale and Dana Hale' }).count() === 1, 'File signed copy is on the card (one copy both signed)');
       ok(await p.locator('#inv-workbar button[onclick^="printDispositionLedger("]').count() === 0, '⚠ and the strip\'s More menu no longer carries the ledger');
       const before = await printsN();
       await press('#inv-ledger-card button[onclick="printDispositionLedger(' + ID + ')"]', 'the card\'s Print');
@@ -235,7 +239,8 @@ const LINES = [
       has(t, 'Where each item went and what it brought · proceeds net to the estate', 'whose the proceeds are');
       has(t, '1 Sargent portrait', 'item numbers');
       has(t, 'Totals $1,237.50 $309.38 $928.12', 'totals to the cent');
-      has(t, 'Reviewed and approved as the final record of the disposition of the property listed above.', '⚠⚠ the sign-off');
+      // RESTATED (P12, 2026-10-28; Anthony, Ask 12): the stamp reads IN PROGRESS, so the sign-off approves the record to date.
+      has(t, 'Reviewed and approved as the record to date of the disposition of the property listed above.', '⚠⚠ the sign-off');
       eq((pg.html.match(/Signature: _/g) || []).length, 2, '⚠⚠ one signature line per fiduciary');
       has(t, 'Rex Hale, Personal Representative', 'the representative');
       has(t, 'Dana Hale, Co-Personal Representative', 'and the co-representative');
@@ -347,7 +352,8 @@ const LINES = [
       await press('#inventory-content button[onclick="activateOrCycle(' + ID + ')"]', 'Close job, on the desk\'s band');
       const q = dialogs.filter((d) => /^confirm/.test(d));
       eq(q.length, 1, 'one question');
-      has(q[0] || '', 'The Disposition Ledger has no signed copy on file. It is filed to Drive as the job closes; have the Personal Representative sign it, then file the signed copy on the Disposition Ledger card, under Closing the job on Job Admin & Inv.', '⚠⚠ naming the unsigned ledger');
+      // RESTATED (P12, 2026-10-28): two fiduciaries recorded, so the question names both.
+      has(q[0] || '', 'The Disposition Ledger has no signed copy on file. It is filed to Drive as the job closes; have Rex Hale and Dana Hale each sign it, then file the signed copy on the Disposition Ledger card, under Closing the job on Job Admin & Inv.', '⚠⚠ naming the unsigned ledger');
       lacks(q[0] || '', 'payment is recorded', 'and nothing about the midpoint, which is paid');
       eq((await job()).status, 'closed', 'OK closes it: flagged, never refused');
       ok(await until(async () => UPLOADS.some((u) => /Disposition Ledger\.html$/.test(u.filename))), 'the ledger is filed to Drive');
@@ -359,7 +365,8 @@ const LINES = [
       await toDesk();
       has(await txt('#inv-ledger-card'), ', as the job closed · Filed copy', 'the card says it was filed as the job closed, with the link');
       await settled();
-      await p.setInputFiles('#inv-ledger-card input[type=file]', pdf('ledger-signed.pdf'));
+      // RESTATED (P12, 2026-10-28): the copy both signed, through its own press (the card's last).
+      await p.setInputFiles('#inv-ledger-card input[type=file] >> nth=-1', pdf('ledger-signed.pdf'));
       ok(await until(async () => /Signed Disposition Ledger/.test(await txt('#inv-ledger-card'))), 'the signed copy files');
       const sr = ((await job()).signedRecords || []).filter((r) => r.kind === 'ledger');
       eq(sr.map((r) => r.ref), ['ledger'], 'recorded as kind ledger, ref ledger');
@@ -368,8 +375,9 @@ const LINES = [
       if (!ja) { await p.click('#inventory-content .ja-hd').catch(() => {}); await p.waitForTimeout(400); }
       const line = await p.evaluate((id) => { const d = document.getElementById('plan-derived-admin-' + id); if (!d) return null;
         const l = Array.from(d.querySelectorAll('.pl-line')).find((x) => /Disposition Ledger signed/.test(x.textContent)); return l ? { ok: /pl-ok/.test(l.className), t: l.textContent } : null; }, ID);
-      ok(!!line && line.ok, '⚠⚠ "Disposition Ledger signed by the Personal Representative" is green on the desk');
-      has(line ? line.t : '', 'Disposition Ledger signed by the Personal Representative', 'naming who signs');
+      // RESTATED (P12, 2026-10-28; EST-13): green only once every fiduciary is on a copy, and it names them.
+      ok(!!line && line.ok, '⚠⚠ "Disposition Ledger signed by each of Rex Hale and Dana Hale" is green on the desk');
+      has(line ? line.t : '', 'Disposition Ledger signed by each of Rex Hale and Dana Hale', 'naming who signs');
     });
 
     // ── F. overflow, print, errors ──────────────────────────────────────────

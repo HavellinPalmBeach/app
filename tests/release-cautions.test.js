@@ -39,12 +39,12 @@ const FNS = ['invLineReviewed', 'invLineOpen', '_invDocPartyHead', 'invOwnInitia
              'jobFiduciaries', '_andJoin', 'invPropertyNoun', 'estateProceedsHolder', 'matterDef', 'matterTypeOf',
              'invHavellinRecipient',
              // P19: the Disposition Ledger reads its figures, its gaps and its signers through these.
-             'dispositionLedger', '_invRecipient', '_ledgerReceiptCell', '_ledgerNames', '_reconFlagText', 'ledgerSigners', 'fiduciaryCapacity',
+             'dispositionLedger', '_invRecipient', '_ledgerReceiptCell', '_ledgerNames', '_reconFlagText', 'ledgerSigners', 'fiduciaryCapacity', 'ledgerSignerRole',
              '_invProgressStamp', '_invReviewStats', 'jobTakesProceedsStatements', 'proceedsReconciliation',
              '_jobDestLabel', '_agrApprover', 'signedRecordsOf',
              // P20: the request lists what left before every fiduciary approved apart, and prints who signed readably.
              'invRatificationOwed', 'invRecordedGone', 'invPickupRecord', 'custodyEvents', 'invReceiptRecord', 'invViaDealer', 'invRecipientName', 'invApprovalSignedText', 'invApprovalSigners', 'invStaffRefused', 'agentValueUnreviewed', '_avHasFigure', '_invStampLineReviewed', '_avStampReviewed', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'agentValueSpecialistWorth', 'invLineAcceptedOnly', '_invAcceptedStampWords', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', 'invAcceptCtx', 'agentDuplicateGroups', '_arPair', '_arPairOpen', 'agentDupCleared', '_agDupEligible', 'agentNamedTwice', 'invListRead', 'invWrittenReleaseNeeded', 'invDealerUnchecked', 'invDealerDirState', 'invDealerNamed', 'invDispGoesToDealer'];
-const VARS = ['INV_LINE_INITIAL_MIN', 'INV_DISP_DOC_WORDS', 'INV_PLAN_CHANNEL_KINDS', 'INV_UNDECIDED', 'INV_RELEASE_CAUTIONS', 'INV_ACCEPT_AMMO_RE', 'INV_OPEN_HOLDS', 'INV_RELEASE_DISPOSITIONS', 'INV_CAT_GLYPH',
+const VARS = ['FIDUCIARY_PR_ROLE_RE', 'FIDUCIARY_TRUSTEE_ROLE_RE', 'INV_LINE_INITIAL_MIN', 'INV_DISP_DOC_WORDS', 'INV_PLAN_CHANNEL_KINDS', 'INV_UNDECIDED', 'INV_RELEASE_CAUTIONS', 'INV_ACCEPT_AMMO_RE', 'INV_OPEN_HOLDS', 'INV_RELEASE_DISPOSITIONS', 'INV_CAT_GLYPH',
               'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
               'DECEDENT_SERVICES', 'INVENTORY_COLUMNS', 'MATTER_TYPES', 'INV_SALE_DISPOSITIONS', 'MAIV_OTHER', 'MAIV_BY_CATEGORY'];
 

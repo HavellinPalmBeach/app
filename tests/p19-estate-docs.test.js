@@ -96,8 +96,8 @@ const SCH_FNS = ['invIsFirearm', '_invLineHolds', 'invConditionText', 'invAccept
   'invAppraisalThreshold', '_invHasAppraisal', '_jobAppraisers', 'resolveValBasis', 'estateValueDate', '_invMoney', '_invDocName',
   'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'estimateAppraiserNames',
   'docScopeDef', 'weArrangeAppraisals', 'roundCents', 'fmt', 'fmtDate2',
-  'trustInstrumentTitle', 'fmtCEDate', 'scheduleSigners', 'scheduleSignLines', 'jobFiduciaries', 'samePerson', 'canonPersonName', 'jobListEntries', '_avHasFigure', 'invLineAccepted', 'invLineHold', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', '_avStampCounts', 'invTotalFloor', '_invFloorTotalHtml'];
-const SCH_VARS = ['INV_ACCEPT_AMMO_RE', 'INV_CONTRACT_DOCS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DECEDENT_SERVICES', 'MATTER_TYPES', 'INV_ASSET_TRACKS',
+  'trustInstrumentTitle', 'fmtCEDate', 'scheduleSigners', 'scheduleSignLines', 'scheduleSignerCapacity', 'jobFiduciaries', 'samePerson', 'canonPersonName', 'jobListEntries', '_avHasFigure', 'invLineAccepted', 'invLineHold', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', '_avStampCounts', 'invTotalFloor', '_invFloorTotalHtml'];
+const SCH_VARS = ['SCHEDULE_CAPACITY', 'FIDUCIARY_PR_ROLE_RE', 'FIDUCIARY_TRUSTEE_ROLE_RE', 'INV_ACCEPT_AMMO_RE', 'INV_CONTRACT_DOCS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DECEDENT_SERVICES', 'MATTER_TYPES', 'INV_ASSET_TRACKS',
   'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'EXEMPT_CAP_732_402', 'INV_CATEGORIES', 'DOC_SCOPES', 'PERSON_NAME_ALIASES', 'MAIV_OTHER', 'MAIV_BY_CATEGORY'];
 const IT = (id, o) => Object.assign({ stableId: id, label: 'inventory', objectName: 'Item ' + id, category: 'Furniture', condition: 'Good',
   // Appraised (source Appraisal with the figure): since 2026-10-14 a $4,000 line awaits an appraisal in any category, which

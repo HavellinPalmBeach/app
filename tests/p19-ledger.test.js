@@ -344,6 +344,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     c.jobs = [job]; c._photoRefs = {};
     return { c, log, job, answer: (a) => { answer = a; } };
   }
+  // RESTATED (P12's review, 2026-10-28): Close job's own read says *Reading the inventory from the sheet first…* before the question
+  // (p12-close-truth R1); these checks are of what the filing says after it.
+  const fb = (r) => r.log.badges.filter((b) => b.m !== 'Reading the inventory from the sheet first…');
   const PAID = [{ uid: 'd1', stage: 'deposit', amount: 5000, receivedOn: '2026-09-20', method: 'wire' },
                 { uid: 'm1', stage: 'midpoint', amount: 2500, receivedOn: '2026-09-28', method: 'wire' }];
 
@@ -383,7 +386,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const r = closeRig(ESTATE({ payments: PAID, signedRecords: [{ id: 's1', kind: 'ledger', ref: 'ledger', signedBy: 'Rex Hale', filedAt: T0 }] }));
     r.c.activateOrCycle(7);
     eq(r.job.status, 'closed', 'the job closes');
-    eq(r.log.gets, 1, '⚠ the manifest is read from the sheet first');
+    // RESTATED (P12's review, 2026-10-28): Close job reads the inventory before its question on every press (p12-close-truth R1),
+    // and the filing then reads it again for itself, so two reads; the filing's own is the one this group is about.
+    eq(r.log.gets, 2, '⚠ the manifest is read from the sheet first (the close\'s read, then the filing\'s own)');
     eq(r.log.uploads.length, 1, 'one filing');
     const up = r.log.uploads[0] || {};
     eq([up.folderId, up.filename], ['INV7', 'HVL-0007 - Havellin Disposition Ledger.html'], 'to Estate Inventory, under the undated name the package uses');
@@ -394,7 +399,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(/^\d{4}-\d{2}-\d{2}T/.test(st.filedAt || ''), 'with when');
     ok(typeof (r.job.at || {})['docState:dispositionLedger'] === 'number', '⚠ stamped on its own key, so a stale device cannot drop it');
     ok(r.log.syncs >= 2, 'and synced (the close, then the filing)');
-    eq(r.log.badges.map((b) => b.m), ['Disposition Ledger filed to Drive ✓'], 'reported through the sync badge');
+    eq(fb(r).map((b) => b.m), ['Disposition Ledger filed to Drive ✓'], 'reported through the sync badge');
     eq(Object.keys(r.c._ledgerFiling).length, 0, 'the in-flight mark is cleared');
     // A re-open is not a close.
     const r2 = closeRig(ESTATE({ status: 'closed', deliveredOn: '2026-10-02', payments: PAID }));
@@ -406,27 +411,27 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     let r = closeRig(ESTATE({ payments: PAID }), { url: '' });
     r.c.activateOrCycle(7);
     eq([r.job.status, r.log.uploads.length], ['closed', 0], 'no Apps Script URL: the job still closes, nothing is filed');
-    has((r.log.badges[0] || {}).m, 'no Apps Script URL in Settings. Press File to Drive on the Disposition Ledger card (under Closing the job on Job Admin & Inv) once one is set.', 'the badge says why and where to go');
-    eq((r.log.badges[0] || {}).err, true, 'as an error');
+    has((fb(r)[0] || {}).m, 'no Apps Script URL in Settings. Press File to Drive on the Disposition Ledger card (under Closing the job on Job Admin & Inv) once one is set.', 'the badge says why and where to go');
+    eq((fb(r)[0] || {}).err, true, 'as an error');
     r = closeRig(ESTATE({ payments: PAID }), { media: 'fail' });
     r.c.activateOrCycle(7);
     eq(r.log.uploads.length, 0, '⚠⚠ the manifest could not be read: nothing is filed (an empty ledger would replace a true one)');
-    has((r.log.badges[0] || {}).m, 'the inventory could not be read from the sheet', 'and the badge says so');
+    has((fb(r)[0] || {}).m, 'the inventory could not be read from the sheet', 'and the badge says so');
     ok(!(r.job.docState || {}).dispositionLedger, 'nothing recorded');
     r = closeRig(ESTATE({ payments: PAID }), { upload: 'fail' });
     r.c.activateOrCycle(7);
-    has((r.log.badges[0] || {}).m, 'The Disposition Ledger was not filed to Drive — Drive said no. Press File to Drive on the Disposition Ledger card (under Closing the job on Job Admin & Inv) to try again.', 'a failed upload names the fix');
+    has((fb(r)[0] || {}).m, 'The Disposition Ledger was not filed to Drive — Drive said no. Press File to Drive on the Disposition Ledger card (under Closing the job on Job Admin & Inv) to try again.', 'a failed upload names the fix');
     ok(!(r.job.docState || {}).dispositionLedger, 'and records nothing, so the card offers File to Drive');
     eq(Object.keys(r.c._ledgerFiling).length, 0, 'and the next press is not refused as in flight');
     r = closeRig(ESTATE({ payments: PAID, driveFolder: '' }));
     r.c.activateOrCycle(7);
-    has((r.log.badges[0] || {}).m, 'this client has no Drive folder yet', 'no Drive folder: said');
+    has((fb(r)[0] || {}).m, 'this client has no Drive folder yet', 'no Drive folder: said');
     r = closeRig(ESTATE({ svc: 'prep', matterType: '', payments: PAID }));
     r.c.activateOrCycle(7);
     eq([r.log.gets, r.log.uploads.length, r.log.badges.length], [0, 0, 0], 'a Home Prep close files nothing and says nothing: it has no inventory');
     r = closeRig(ESTATE({ payments: PAID }), { rows: [] });
     r.c.activateOrCycle(7);
-    eq([r.log.uploads.length, r.log.badges.length], [0, 0], 'an inventory with no lines: nothing to file, nothing said');
+    eq([r.log.uploads.length, fb(r).length], [0, 0], 'an inventory with no lines: nothing to file, nothing said');
     // One at a time, and on demand from the desk.
     r = closeRig(ESTATE({ status: 'closed', deliveredOn: '2026-10-02' }), { upload: 'hang' });
     eq(r.c.fileDispositionLedger(7), true, 'File to Drive from the desk starts a filing');
