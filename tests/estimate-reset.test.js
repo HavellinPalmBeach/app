@@ -164,7 +164,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     let ctx = null;
     ctx = sandbox({
       fns: ['resetEstimateJobState', 'neutralizeEstimateView', 'loadJobIntoEstimate', 'applyOpenedEstimate',
-            'clearEstimateTab', 'startEstimateOver', 'resetEstimate', 'restoreEstimateToUI', 'loadEstimateForJob',
+            'clearEstimateTab', 'startEstimateOver', 'resetEstimate', 'restoreEstimateToUI', '_privateNotePaint', 'loadEstimateForJob',
             'estimateHasContent', 'loadEstimateScratch', 'clearEstimateScratch', 'clearAllRooms', 'setRoomState', 'roomState',
             'roomDefault', 'volPresetSeed', 'volPresetShift', 'paintVolPreset', 'seedDocScopeFromJob',
             'docScopeDef', 'docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep', 'estDeclutterHrs',

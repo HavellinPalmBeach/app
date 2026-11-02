@@ -113,7 +113,7 @@
   },
   {
    "id": "EST-06",
-   "fixed": "2026-10-28 in part (P13: every paper gathers its own lines' photographs before it prints, uncapped and in memory only, invPhotosFirst; each line's photograph and number links to its Drive file; a photograph Drive cannot serve reads \"photo\", linked; the \"this device\" sentence and \"reference-numbered\" are gone; tests/p13-traceable.test.js, browser step 124). Open: the request's send does not share the photograph folder with the fiduciaries.",
+   "fixed": "2026-10-28 in part (P13: every paper gathers its own lines' photographs before it prints, uncapped and in memory only, invPhotosFirst; each line's photograph and number links to its Drive file; a photograph Drive cannot serve reads \"photo\", linked; the \"this device\" sentence and \"reference-numbered\" are gone; tests/p13-traceable.test.js, browser step 126). Open: the request's send does not share the photograph folder with the fiduciaries.",
    "title": "Photographs on the papers come from a capped device cache (124 of 300); no paper links an item to its photograph, yet the papers say they are 'reference-numbered'",
    "kind": "accuracy",
    "severity": "high",

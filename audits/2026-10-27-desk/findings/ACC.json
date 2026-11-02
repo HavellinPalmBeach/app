@@ -359,7 +359,7 @@
   },
   {
    "id": "ACC-20",
-   "fixed": "2026-10-28 (P13: the Court Inventory and the Trust Schedule lead every row with Item #, a link to its photograph, and name the Room; tests/p13-traceable.test.js, browser step 124)",
+   "fixed": "2026-10-28 (P13: the Court Inventory and the Trust Schedule lead every row with Item #, a link to its photograph, and name the Room; tests/p13-traceable.test.js, browser step 126)",
    "title": "The Court Inventory and Trust Schedule rows carry no item number, so the filed schedule cannot be tied to its photographs or appraisals",
    "kind": "accuracy",
    "severity": "medium",

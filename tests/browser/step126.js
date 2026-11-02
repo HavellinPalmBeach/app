@@ -1,4 +1,4 @@
-// Step 124 — Every line traceable to its photograph and number (P13 of the desk audit, 2026-10-28; EST-06, DOC-03, ROW-02, ACC-20,
+// Step 126 — Every line traceable to its photograph and number (P13 of the desk audit, 2026-10-28; EST-06, DOC-03, ROW-02, ACC-20,
 // VAL-13, DOC-05, DOC-06, INV-10, INV-16, INV-20, INV-09, DOC-25, VAL-29, INV-18).
 //
 // Drives the REAL page with one probate estate filing a Form 706, on the values tier, of 168 lines: 150 book lots and the lines the
@@ -20,7 +20,7 @@
 // answers its mark, the summary then counts no group apart, and the Court Inventory says "grouped, untested" of neither.
 // E: 1440 and 390 px, no horizontal overflow; zero page errors.
 //
-//   NODE_PATH=/path/to/node_modules node tests/browser/step124.js [/abs/path/to/havellin.html]
+//   NODE_PATH=/path/to/node_modules node tests/browser/step126.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
 const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/havellin.html'));
 let pass = 0, fail = 0;

@@ -1035,7 +1035,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         fetch: () => ({ then(f) { const r = f({ json: () => ({ ok: true, version: '2026-10-27e', actions: C.BACKEND_NEEDS, types: C.BACKEND_NEEDS_TYPES }) }); return { then(g) { g(r); return { catch() {} }; } }; } }) } });
     C.checkBackendVersion();
     eq(shown.map((x) => [x.v, x.m]), [['2026-10-27e', ['version']]], '⚠⚠ a 2026-10-27e deployment draws the banner, by version');
-    // RESTATED at the merge with P13 (backend 2026-10-28b, which carries 2026-10-28): the lost change is named first, or first after
+    // RESTATED at the merge with P13 (backend 2026-11-02b, which carries 2026-10-28): the lost change is named first, or first after
     // newer gaps, each under its own vintage.
     const _at28 = _v.indexOf('on a deployment older than 2026-10-28, two devices saving at the same moment can lose one device\u2019s change on the sheet though both were told it saved');
     const _newer28 = (_v.slice(0, Math.max(0, _at28)).match(/on a deployment older than (\d{4}-\d{2}-\d{2}[a-z]?),/g) || []).map((x) => x.replace(/^on a deployment older than /, '').replace(/,$/, ''));
