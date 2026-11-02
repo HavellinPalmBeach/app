@@ -12,6 +12,9 @@
 // called those functions directly, because nothing on screen offered them), the real print path
 // (window.print stubbed to read the print target), the real invoices across three
 // stages, the real dashboard and the real Job Plan — on a fixed-price job and a T&M job side by side.
+// Restated 2026-11-02: every card's paper opens on screen first. PDF no longer prints at once: it opens the
+// change order in the document viewer, titled by the paper, and the page is printed (and read here) only when
+// the viewer's Print / Save PDF is pressed; Close then takes the viewer off the dashboard.
 //
 //   NODE_PATH=/path/to/node_modules node tests/browser/step23.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
@@ -135,12 +138,26 @@ let b = null;
     seen.accepted = await p.evaluate((c) => { const co = changeOrders.find(x => x.id === c); return !!(co && co.clientApproved); }, coId);
     return seen;
   }
+  // Restated 2026-11-02: every card's paper opens on screen first. The row's PDF opens the change order in the document
+  // viewer, titled by the paper, and nothing prints until the viewer's Print / Save PDF is pressed; that press prints the
+  // page (what this helper reads), the viewer comes back once the dialog closes, and Close takes it away so the dashboard
+  // under it can be pressed again (left open, its overlay took the next + New press).
+  const viewerOpen = () => p.evaluate(() => { const o = document.getElementById('doc-viewer-modal'); return !!o && o.style.display === 'flex'; });
   async function print(coId) {
     await ensureDash(await jobOf(coId));
     await p.evaluate(() => { window.__prints = []; });
     await press('#client-dashboard-view button[onclick="printChangeOrder(' + coId + ')"]'); await p.waitForTimeout(350);
+    ok(await viewerOpen(), 'PDF opens the change order in the document viewer');
+    const vt = (await text('#doc-viewer-title')).trim();
+    ok(vt === 'Change Order', 'the viewer is titled by the paper (' + vt + ')');
+    const early = await p.evaluate(() => window.__prints.length);
+    ok(early === 0, 'nothing printed before Print / Save PDF is pressed (' + early + ')');
+    await press('#doc-viewer-print'); await p.waitForTimeout(350);
     const got = (await p.evaluate(() => window.__prints[0] || null)) || { html: '', title: '' };
     await p.waitForTimeout(700);
+    ok(await viewerOpen(), 'the viewer comes back once the print dialog closes');
+    await press('#doc-viewer-modal button[onclick="closeDocViewer()"]'); await p.waitForTimeout(150);
+    ok(!(await viewerOpen()), 'Close takes the viewer away');
     got.after = await p.evaluate(() => ({ target: document.getElementById('print-target').innerHTML.length,
       visible: Array.from(document.querySelectorAll('.panel')).filter(x => getComputedStyle(x).display !== 'none').length }));
     got.text = await T(got.html);

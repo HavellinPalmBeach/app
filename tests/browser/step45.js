@@ -5,12 +5,16 @@
 // panel, PDF), the Job Plan, Build Estimate's vendor cards, its Premium and Fixed price toggles and its crew size.
 // The Vendor Directory is answered by a route, as the real Apps Script would answer it. What is seeded is state a
 // person could not type in one sitting (a won, signed, funded job; logged hours; a closed job).
+// Restated 2026-11-02: every card's paper opens on screen first. The change order card's PDF no longer prints at once:
+// it opens the page in the document viewer, titled by the paper, and the page is read off the viewer's Print / Save PDF
+// (the band's Print on the signing packet still prints at once, through docAction).
 //
 //   A. the living-client packet, printed: §3.9 names ACH, wire and check (no card); the hourly §12.4 keeps the
 //      deposit; §3.5 charges the prep fee on vendors "identified in the Estimate or added by Change Order"
 //   B. the estate packet on a *neither* matter: the hourly §8.1 keeps the deposit; §5.3's counsel row names the Client
 //   C. a change order adds a landscaper to a Home Transition with bundled prep: the vendor block, the refusal without
-//      a cost, the readout, the card, the acceptance, the PDF, the Job Plan, and the final bills its fee with no PIN
+//      a cost, the readout, the card, the acceptance, the PDF (opened in the viewer, printed from its Print / Save PDF),
+//      the Job Plan, and the final bills its fee with no PIN
 //   D. the final's Manager approval: a blocked final says what blocks it (B8); an hourly rush job's accepted change
 //      order moves the baseline by what the final bills for it, so the exact hours read inside the tolerance (B9)
 //   E. crew hours with no concierge hours are flagged on the band where the final is sent (B25)
@@ -84,6 +88,24 @@ const DIR = [
       await press(sel, what);
       await p.waitForTimeout(500);
       return T(await p.evaluate(() => window.__prints[window.__prints.length - 1] || ''));
+    };
+    // Restated 2026-11-02: every card's paper opens on screen first. A card's paper (the change order's PDF) opens in the
+    // document viewer titled by the paper and prints nothing until the viewer's Print / Save PDF is pressed; the page read
+    // is still the page printed, and the viewer is closed after, since its overlay covers the page.
+    const viewerOpen = () => p.evaluate(() => { const o = document.getElementById('doc-viewer-modal'); return !!o && o.style.display === 'flex'; });
+    const printedFromViewer = async (sel, what, label) => {
+      await p.evaluate(() => { window.__prints = []; });
+      await press(sel, what);
+      ok(await viewerOpen(), what + ' opens in the document viewer');
+      eq(await txt('#doc-viewer-title'), label, 'the viewer is titled by the paper');
+      eq(await p.evaluate(() => window.__prints.length), 0, 'nothing printed before Print / Save PDF is pressed');
+      await press('#doc-viewer-print', 'Print / Save PDF, in the viewer');
+      await p.waitForSelector('#doc-viewer-modal', { state: 'visible', timeout: 4000 }).catch(() => ok(false, 'the viewer comes back after the print dialog'));
+      eq(await p.evaluate(() => window.__prints.length), 1, 'Print / Save PDF printed the page once');
+      const page = await T(await p.evaluate(() => window.__prints[window.__prints.length - 1] || ''));
+      await press('#doc-viewer-modal button[onclick="closeDocViewer()"]', 'Close the viewer');
+      ok(!(await viewerOpen()), 'Close takes the viewer away');
+      return page;
     };
     const viewed = async (sel, what) => {
       await press(sel, what);
@@ -209,7 +231,8 @@ const DIR = [
       await p.fill('#coa-client-name', 'Nora Harper');
       await press('#co-accept-modal button:has-text("I Accept This Change Order")', 'I Accept');
       has(await txt('#dash-fb'), 'Landscaper now sits with the prep vendors on the Job Plan, to be booked and quoted.', 'the notice says where it went');
-      const pr = await printed('#client-dashboard-view button[onclick="printChangeOrder(' + co.id + ')"]', 'the row\'s PDF');
+      // Restated 2026-11-02: every card's paper opens on screen first (the PDF opens the viewer; its Print / Save PDF prints).
+      const pr = await printedFromViewer('#client-dashboard-view button[onclick="printChangeOrder(' + co.id + ')"]', 'the row\'s PDF', 'Change Order');
       has(pr, 'This change order adds Landscaper to the preparation vendors.', 'the page says what it adds');
       has(pr, 'Added preparation vendor: Landscaper', 'and names it in the table');
       lacks(pr, 'Third-party vendor costs are unaffected', '⚠ never the line this change makes false');

@@ -1,66 +1,52 @@
-// Step 124 — Each paper says the right thing for its matter (P14 of the desk audit, 2026-10-28; DOC-02, DOC-07, VAL-24, NEW-14,
-// DOC-28, DOC-20, DOC-17, VAL-30, EST-20, VAL-25, LIV-16).
+// Step 124 — Use a sale (2026-11-02; Anthony, off the eBay developer account: eBay holds its sold history back from apps and gives it to
+// its sellers in Seller Hub's Product Research; he took "Rename to 'Use a sale'"), with the desk audit's Ask 14 (answered 2026-10-28:
+// a sale more than 15% from the line's figure is asked about once: use the sale, or keep the figure and file the sale only).
 //
-// Drives the REAL page with six clients on Job Admin & Inv, each reached through the tab's own nav button and its picker: a probate
-// estate (an exempt sofa, a non-probate car, a painting flagged for appraisal, a firearm with no written authority), a trust-only
-// estate, a contested probate, an Estate Settlement with no matter type recorded, a Contents-list probate estate on Formal, and a
-// living Home Transition (a painting to a specialist, a line promised to a daughter).
-//   A · probate: the work bar's Estate Inventory PDF lists the sofa under Exempt Property Claimed inside the estate with its
-//       subtotal, the car under "Non-probate Property — outside the probate estate", nothing "carved out"; More ▾ offers the Court
-//       Inventory and no Trust Schedule; the Court Inventory is headed as it is filed; the Appraisal Worklist values as of the date
-//       of death and states the firearm's gate as fact; the Report prints in print media with nothing cut off.
-//   B · trust-only: More ▾ offers the Trust Schedule and no Court Inventory; the Report reads "Inventory — Asset Schedule" and the
-//       trust's Drive folder.
-//   C · contested probate: no Trust Schedule. D · unanswered: both, with "Matter type not recorded: set it in Edit Client." under
-//       them, and the Court Inventory says the matter is not recorded.
-//   E · Contents-list estate: the guardrail says the estate attorney has the appraisal done, never "before this inventory is
-//       complete".
-//   F · living: the Values bar reads "to a specialist", the roster's note no date of death, the guardrail ends "or Waive"; an
-//       appraiser picked from the Vendor Directory with no contact prints once; the worklist values "as of the appraiser's
-//       inspection"; the line's record reads Flags and Promised to someone, no Authorized By; the CSV, downloaded through its
-//       button, carries no estate column and captured-at in local time.
-//   G · 1440 and 390 px: no horizontal overflow; zero page errors.
+// Drives the REAL page with an active probate estate whose dining room holds three pairs of sterling candelabra, each valued by
+// Agent Two at $4,200 from auction comps. Job Admin & Inv through its own nav button; each record opened by its own ▾:
+//   A. The form reads Use a sale and says where a sale comes from. A LiveAuctioneers sale at $1,100 asks once, naming both figures;
+//      OK: the line's value is $1,100, the person's, from auction comps.
+//   B. An eBay sale at $1,100 on the second pair, Cancel: $4,200 and Agent Two's source stand, the sale filed first.
+//   C. An eBay sale at $3,900 on the third: nothing asked, $4,200 kept, its source online comps, the venue eBay.
+//   D. More ▾ → Court Inventory: the Basis column reads auction comps, auction comps and online comps.
+//   At 1440 and 390 px no horizontal overflow; zero page errors throughout.
 //
 //   NODE_PATH=/path/to/node_modules node tests/browser/step124.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
-const fs = require('fs');
 const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/havellin.html'));
+const SYNC = 'https://sync.example.test/exec';
+const J = 12401;
 let pass = 0, fail = 0;
 let b = null;
 const ok = (c, m) => { if (c) { pass++; } else { fail++; console.log('  ✗ ' + m); } };
 const eq = (a, e, m) => ok(JSON.stringify(a) === JSON.stringify(e), m + '  [got ' + JSON.stringify(a) + ', want ' + JSON.stringify(e) + ']');
 const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + ']');
 const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n + ']');
-const SYNC = 'https://script.google.com/macros/s/STEP124/exec';
-const T0 = Date.parse('2026-10-21T02:09:00Z');   // 10:09 PM on the 20th, Eastern
-const PRO = 12401, TRU = 12402, CON = 12403, UNA = 12404, CTT = 12405, LIV = 12406;
+const EBAY = 'https://www.ebay.com/itm/123456789012';
+const LA = 'https://www.liveauctioneers.com/item/77';
 
 (async () => {
   try {
     b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
-    const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 }, timezoneId: 'America/New_York', acceptDownloads: true });
-    await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+    const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 }, timezoneId: 'America/New_York' });
     let sheet = {};
     await ctx.route(SYNC + '**', async (r) => {
       const req = r.request();
-      const json = (o) => r.fulfill({ status: 200, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(o) });
-      if (req.method() === 'POST') return json({ ok: true });
+      const json = (o) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(o) });
+      if (req.method() === 'POST') {
+        let body = {}; try { body = JSON.parse(req.postData() || '{}'); } catch (e) {}
+        if (body.action === 'getSubfolders') return json({ ok: true, subfolders: null });
+        return json({ ok: true });
+      }
       if (/action=loadMedia/.test(req.url())) return json({ ok: true, media: sheet });
       return json({ ok: true });
     });
+    await ctx.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
     const p = await ctx.newPage();
     p.setDefaultTimeout(10000);
     const errs = []; p.on('pageerror', (e) => errs.push(String(e)));
-    const said = [];
-    p.on('dialog', async (d) => { said.push(d.message()); await d.accept(); });
-    await p.goto(APP); await p.waitForTimeout(1600);
-    await p.evaluate((u) => {
-      SHEETS_SYNC_URL = u;
-      try { localStorage.setItem('hav_device_user', 'Ashley Jerome'); } catch (e) {}
-      window.open = function () { return null; };
-      agentValueAuto = function () { return false; };
-    }, SYNC);
-
+    const said = []; let answer = true;
+    p.on('dialog', async (d) => { said.push(d.message()); if (d.type() === 'confirm' && !answer) await d.dismiss(); else await d.accept(); });
     const section = async (name, body) => {
       console.log('\n## ' + name);
       try { await body(); } catch (e) { fail++; console.log('  ✗ ' + name + ' threw: ' + String(e && e.message || e).split('\n')[0]); }
@@ -73,216 +59,134 @@ const PRO = 12401, TRU = 12402, CON = 12403, UNA = 12404, CTT = 12405, LIV = 124
       if (v) { await p.locator(sel).first().click({ timeout: 5000 }).catch((e) => ok(false, (what || sel) + ' — ' + e.message.split('\n')[0])); await p.waitForTimeout(700); }
       return v;
     };
-    const txt = (sel) => p.evaluate((s) => { const el = document.querySelector(s); return el ? el.textContent.replace(/\s+/g, ' ').trim() : ''; }, sel);
-    const val = (sel) => p.evaluate((s) => { const el = document.querySelector(s); return el ? el.value : null; }, sel);
     const overflow = () => p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
-    const toDesk = async (id) => {
-      await p.click('.nb[onclick*="\'inventory\'"]'); await p.waitForTimeout(900);
-      if (String(await val('#inv-job')) !== String(id)) { await p.selectOption('#inv-job', String(id)); await p.waitForTimeout(1100); }
-    };
+    const line = (id) => p.evaluate(([j, id]) => { const r = (_photoRefs[j] || []).find((x) => x.stableId === id) || {};
+      const c = (r.valComps || [])[0] || {};
+      return { fmv: r.fmv, src: r.valSource, by: r.valuedBy, rev: !!r.reviewed, first: [c.price, c.venue, c.by] }; }, [J, id]);
     const viewerOpen = () => p.evaluate(() => { const o = document.getElementById('doc-viewer-modal'); return !!o && o.style.display === 'flex'; });
-    const close = () => press('#doc-viewer-modal button[onclick="closeDocViewer()"]', 'Close');
-    const openMore = async () => { if (!(await p.evaluate(() => { const d = document.getElementById('inv-more'); return !!d && d.open; }))) await press('#inv-more > summary', 'More ▾'); };
-    const moreHas = (f, id) => p.evaluate(([f, id]) => !!document.querySelector('#inv-more button[onclick="' + f + '(' + id + ')"]'), [f, id]);
-    const paper = async (sel, what) => { await press(sel, what); ok(await viewerOpen(), what + ': the viewer is on screen'); const t = await txt('#doc-viewer-body'); return t; };
 
-    // ── Seed ──
-    sheet = await p.evaluate(([ids, T0]) => {
-      const [PRO, TRU, CON, UNA, CTT, LIV] = ids;
-      vendorDirectory = [{ _row: 2, vendor_name: 'Gulfstream Appraisal Group', category: 'Art Appraiser', status: 'Active', license_cert: 'ISA' }];
-      const est = (id, svc) => ({ approved: true, submitted: true, approvedBy: 'Anthony Graziano', savedAt: T0,
-        estimate: { jobId: id, svc, havellinTotal: 40000, fixedPrice: true, fixedAmount: 40000, fixedLines: true, totTC: 100, totPS: 150, tcRate: 150, psRate: 100,
-          days: 8, vendors: [], prepItems: [], pkgCost: 0, rooms: [{ idx: 0, name: 'Living Room', st: 'in', vol: 3, cplx: 3 }, { idx: 1, name: 'Garage', st: 'in', vol: 3, cplx: 3 }] } });
-      const estate = (id, svc, matter, o) => Object.assign({ id, hvlId: 'HVL-2610-' + id, name: 'Harold Ashworth', svc, matterType: matter, addr: id + ' Via Bellaria', city: 'Palm Beach', zip: '33480',
-        status: 'active', won: true, wonAt: '2026-09-25', approved: true, tc: 'Ashley Jerome', created: '2026-09-20', start: '2026-10-06', activatedOn: '2026-10-05',
-        agrApproved: true, agrSent: true, agrSigned: true, docState: {}, at: {}, appraisers: [],
-        executor: 'Ruth Ashworth', executorRole: matter === 'trust' ? 'Successor Trustee' : 'Personal Representative', executorEmail: 'ruth@example.com', deathDate: '2026-04-02', executorAuth: 'received',
-        probateAttyName: 'Ann Lowe', probateAttyEmail: 'ann@lowe.law', probateCase: matter === 'trust' ? '' : '50-2026-CP-004321', docTier: 'values', gate706: 'yes',
-        driveFolder: 'https://drive.google.com/drive/folders/ROOT' + id, driveSubfolders: { 'Estate Inventory': 'INV' + id, 'As-Found Record': 'AF' + id, 'Signed Records': 'SR' + id },
-        payments: [{ uid: 'd' + id, stage: 'deposit', amount: 20000, receivedOn: '2026-10-01', method: 'wire', clearedOn: '2026-10-01' }] }, o || {});
-      const item = (id, sid, o) => Object.assign({ stableId: sid, label: 'inventory', roomIdx: 0, status: 'uploaded', category: 'Furniture', disposition: 'Keep',
-        objectName: 'Line ' + sid, ts: T0, updatedAt: T0, filename: 'HVL_' + id + '_INV_' + sid + '.jpg', driveFileId: 'f-' + id + sid, namedBy: 'desk', reviewed: true,
-        valuedBy: 'desk', valSource: 'Dealer quote' }, o);
-      const estateRows = (id) => [
-        item(id, 'sb', { itemNo: 1, objectName: 'Walnut sideboard', fmv: 1200 }),
-        item(id, 'so', { itemNo: 2, objectName: 'Household sofa', fmv: 900, flagExempt: true }),
-        item(id, 'car', { itemNo: 3, objectName: 'Mercedes sedan', category: 'Vehicles & Watercraft', roomIdx: 1, fmv: 14000, assetTrack: 'Non-probate' }),
-        item(id, 'pa', { itemNo: 4, objectName: 'Oil on canvas, harbour scene', category: 'Art & Décor', fmv: 2200, needsAppr: true }),
-        item(id, 'gun', { itemNo: 5, objectName: 'Remington 870 shotgun', category: 'Firearms', disposition: 'Sell', fmv: 450, serial: 'RS1234', valuedBy: 'desk' }),
-        item(id, 'lost', { itemNo: 6, objectName: 'Brass lamp', fmv: 80, status: 'failed', driveFileId: '', filename: '' })];
-      const seed = (job, rows) => {
-        jobs.unshift(job);
-        estimateStore[job.id] = est(job.id, job.svc);
-        jobPlanStore[job.id] = { rooms: { 0: { status: 'locked' }, 1: { status: 'locked' } }, tasks: {}, at: {} };
-        _photoRefs[job.id] = rows; savePhotoRefs(job.id); _invCloudSeen[job.id] = true;
-      };
-      seed(estate(PRO, 'probate', 'probate'), estateRows(PRO));
-      seed(estate(TRU, 'cleanout', 'trust', { trustName: 'Ashworth Family Trust', trustDate: '2015-03-03' }),
-        estateRows(TRU).map((r) => r.stableId === 'car' ? Object.assign(r, { assetTrack: '' }) : r));
-      seed(estate(CON, 'contested_probate', 'probate'), estateRows(CON));
-      seed(estate(UNA, 'cleanout', ''), estateRows(UNA));
-      seed(estate(CTT, 'probate', 'probate', { docTier: 'contents', docLevel: 'formal' }),
-        [item(CTT, 'pa', { itemNo: 1, objectName: 'Oil portrait', category: 'Art & Décor', fmv: '', valSource: '', valuedBy: undefined, needsAppr: true })]);
-      seed({ id: LIV, hvlId: 'HVL-2610-' + LIV, name: 'Robert Hale', svc: 'downsizing_move', addr: LIV + ' Royal Palm Way', city: 'Palm Beach', zip: '33480',
-        status: 'active', won: true, wonAt: '2026-09-25', approved: true, tc: 'Ashley Jerome', created: '2026-09-20', start: '2026-10-06', activatedOn: '2026-10-05',
-        agrApproved: true, agrSent: true, agrSigned: true, docState: {}, at: {}, appraisers: [], email: 'robert@hale.example', destAddr: '200 Royal Palm Way',
-        destCity: 'Palm Beach', destSqft: 1800, driveFolder: 'https://drive.google.com/drive/folders/ROOT' + LIV,
-        payments: [{ uid: 'd' + LIV, stage: 'deposit', amount: 15000, receivedOn: '2026-10-01', method: 'wire', clearedOn: '2026-10-01' }] },
-        [item(LIV, 'pa', { itemNo: 1, objectName: 'Oil portrait', category: 'Art & Décor', fmv: '', valSource: '', valuedBy: undefined, needsAppr: true }),
-         item(LIV, 'ch', { itemNo: 2, objectName: 'Cherry dresser', disposition: 'Distribute', channel: 'Anne Hale (daughter)', flagBequest: true, fmv: 300 })]);
-      saveJobs(); localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore));
-      _logsState = 'ready';
-      const out = {}; ids.forEach((id) => { out[id] = { items: JSON.parse(localStorage.getItem('hav_media_' + id) || '[]') }; }); return out;
-    }, [[PRO, TRU, CON, UNA, CTT, LIV], T0]);
+    await p.goto(APP); await p.waitForTimeout(1600);
+    sheet = await p.evaluate(([J, SYNC]) => {
+      SHEETS_SYNC_URL = SYNC;
+      window.print = function () {};
+      try { localStorage.setItem('hav_device_user', 'Anthony Graziano'); } catch (e) {}
+      const T = Date.now() - 2 * 86400000;
+      jobs.unshift({ id: J, hvlId: 'HVL-2611-US1', name: 'Walter Pemberton', svc: 'probate', matterType: 'probate', addr: '9 Banyan Rd', city: 'Palm Beach', zip: '33480',
+        executor: 'Grace Pemberton', executorRole: 'Personal Representative', executorEmail: 'grace@example.com', deathDate: '2026-07-20', executorAuth: 'received',
+        probateAttyName: 'Ann Lowe', probateAttyEmail: 'ann@lowe.law', probateCase: '50-2026-CP-005555', docTier: 'values', gate706: 'no',
+        status: 'active', won: true, wonAt: '2026-10-01', approved: true, tc: 'Ashley Jerome', created: '2026-09-28', start: '2026-10-12', activatedOn: '2026-10-10',
+        agrApproved: true, agrSent: true, agrSigned: true,
+        driveFolder: 'https://drive.google.com/drive/folders/R' + J, driveSubfolders: { 'Estate Inventory': 'INV_US', 'As-Found Record': 'AF_US' }, at: {}, docState: {},
+        payments: [{ uid: 'd' + J, stage: 'deposit', amount: 15000, receivedOn: '2026-10-08', method: 'wire', clearedOn: '2026-10-08' }] });
+      estimateStore[J] = { approved: true, submitted: true, approvedBy: 'Anthony Graziano', savedAt: T,
+        estimate: { jobId: J, svc: 'probate', havellinTotal: 30000, fixedPrice: true, fixedAmount: 30000, fixedLines: true, totTC: 80, totPS: 120, days: 6,
+          vendors: [], prepItems: [], rooms: [{ idx: 3, name: 'Dining Room', st: 'in', vol: 3, cplx: 3 }] } };
+      const pair = (id, n) => ({ stableId: id, itemNo: 30 + n, qty: 1, label: 'inventory', collId: null, roomIdx: 3, seq: n, status: 'uploaded', ts: T + n * 60000,
+        filename: 'HVL-2611-US1_Dining_INV_' + n + '.jpg', driveFileId: 'F_' + id, driveFileUrl: 'https://drive.google.com/file/d/F_' + id + '/view',
+        objectName: 'Sterling silver candelabra, pair', namedBy: 'agent', agentConf: 'high', agentAt: T + n * 60000 + 5000, category: 'Silver',
+        disposition: 'Sell', channel: 'Kodner Galleries', condition: 'Good', condBy: 'desk', updatedAt: T + n * 60000 + 5000,
+        fmv: 4200, valLow: 3800, valHigh: 4600, valuedBy: 'agent', valConf: 'medium', valSource: 'Auction comps', valDate: '2026-07-20',
+        valNote: 'Two sold pairs at regional houses, 2025', valNameAt: 'Sterling silver candelabra, pair', valAgentAt: T + n * 60000 + 9000,
+        valComps: [{ title: 'Pair of sterling candelabra', venue: 'Hindman', saleDate: '2025-05', price: 4400, url: 'https://hindmanauctions.com/items/1', kind: 'sold', by: 'agent' }] });
+      _photoRefs[J] = [
+        { stableId: 'af1', label: 'before', roomIdx: 3, seq: 1, collId: null, status: 'uploaded', ts: T, updatedAt: T, filename: 'HVL-2611-US1_Dining_before_1.jpg',
+          driveFileId: 'F_AF', driveFileUrl: 'https://drive.google.com/file/d/F_AF/view' },
+        pair('far', 1), pair('keep', 2), pair('near', 3)];
+      savePhotoRefs(J); saveJobs(); localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore));
+      const out = {}; out[J] = { items: JSON.parse(localStorage.getItem('hav_media_' + J) || '[]') };
+      return out;
+    }, [J, SYNC]);
 
-    // ── A ──
-    await section('A. probate: exempt property claimed inside the estate on the Report; More ▾ by the matter; the Court Inventory\'s own name; the worklist\'s date and facts', async () => {
-      await toDesk(PRO);
-      const rep = await paper('#inv-workbar button[onclick="printEstateInventoryReport(' + PRO + ')"]', 'Estate Inventory PDF');
-      const iEx = rep.indexOf('Exempt Property Claimed (Fla. Stat. §732.402)'), iOut = rep.indexOf('Non-probate Property — outside the probate estate');
-      ok(iEx > 0 && iOut > iEx, '⚠⚠ the exempt heading inside the estate, before the outside block (' + iEx + ', ' + iOut + ')');
-      ok(rep.indexOf('Household sofa', iEx) > iEx && rep.indexOf('Household sofa', iEx) < iOut, '⚠ the sofa ticked Exempt is listed under it');
-      has(rep, 'Total exempt property claimed: $900', '…with its subtotal');
-      ok(rep.indexOf('Mercedes sedan', iOut) > iOut, 'the car under the outside block');
-      lacks(rep, 'carved out', '⚠⚠ nothing "carved out of the probate estate"');
-      has(rep, 'Probate estate, exempt property included (Fair Market Value): $4,830', 'the estate\'s subtotal counts the sofa');
-      has(rep, 'did not reach the estate’s Drive folder', 'the estate\'s folder on a probate matter');
-      // Print media: nothing in the page column cut off.
-      const pr = await p.evaluate(() => { const b = document.getElementById('doc-viewer-body'); return b ? b.innerHTML : ''; });
-      const pp = await ctx.newPage();
-      await pp.setContent('<html><body style="margin:0">' + pr + '</body></html>');
-      await pp.emulateMedia({ media: 'print' });
-      await pp.setViewportSize({ width: 739, height: 1000 });
-      ok(await pp.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth) <= 0, 'the Report in print media at Letter width: nothing runs off the page');
-      await pp.close();
-      await close();
-      await openMore();
-      eq([await moreHas('printCourtInventory', PRO), await moreHas('printTrustSchedule', PRO)], [true, false], '⚠ More ▾ on probate: the Court Inventory, no Trust Schedule');
-      lacks(await txt('#inv-more'), 'Matter type not recorded', '…and no unanswered note');
-      const ci = await paper('#inv-more button[onclick="printCourtInventory(' + PRO + ')"]', 'Court Inventory');
-      has(ci, 'Court Inventory (§733.604) — Tangible Personal Property', '⚠ the Court Inventory carries its own name');
-      has(ci, 'Total exempt property claimed: $900', '…and claims the same $900 in the same words');
-      await close();
-      await openMore();
-      const wl = await paper('#inv-more button[onclick="printAppraisalWorklist(' + PRO + ')"]', 'Appraisal Worklist');
-      has(wl, 'Items flagged for specialist appraisal · value as of the date of death (Apr 2, 2026) · prepared', '⚠ the worklist: the estate\'s date, named');
-      has(wl, '#5 Remington 870 shotgun — No written authority on file yet.', '⚠ the firearm\'s gate, as a fact');
-      ['press Record approval', 'Record approval on Job Admin', 'select the firearm', 'Open the line', 'not on your person'].forEach((x) => lacks(wl, x, '⚠ no "' + x + '" on the paper'));
-      await close();
+    const toDesk = async () => {
+      await p.evaluate((id) => { setCurrentJob(id); populateInventorySelect(); }, J);
+      await p.click('.nb[onclick*="\'inventory\'"]'); await p.waitForTimeout(900);
+      const cur = await p.evaluate(() => (document.getElementById('inv-job') || {}).value);
+      if (String(cur) !== String(J)) { await p.selectOption('#inv-job', String(J)); await p.waitForTimeout(1300); }
+      if (await p.locator('#panel-inventory button[onclick="setInvWhen(\'all\')"]').count()) { await p.click('#panel-inventory button[onclick="setInvWhen(\'all\')"]'); await p.waitForTimeout(600); }
+    };
+    const open = async (id) => {
+      if (!(await p.evaluate((id) => !!document.getElementById('av-wp-title-' + id), id))) { await p.click('button[onclick="_invToggleOpen(\'' + id + '\')"]'); await p.waitForTimeout(700); }
+      return p.evaluate((id) => !!document.getElementById('av-wp-title-' + id), id);
+    };
+    // The real form: open it by its summary, type the sale, press Use this sale.
+    const useSale = async (id, price, url, venue) => {
+      ok(await open(id), id + ': its record is open');
+      const isOpen = await p.evaluate((id) => { const d = document.querySelector('details:has(#av-wp-title-' + id + ')'); return !!(d && d.open); }, id);
+      if (!isOpen) await press('details:has(#av-wp-title-' + id + ') > summary', id + ': Use a sale');
+      await p.fill('#av-wp-title-' + id, 'Pair of sterling candelabra, Gorham');
+      await p.fill('#av-wp-price-' + id, String(price));
+      await p.fill('#av-wp-date-' + id, '2026-09-14');
+      if (venue) await p.fill('#av-wp-venue-' + id, venue);
+      await p.fill('#av-wp-url-' + id, url);
+      await press('details:has(#av-wp-title-' + id + ') button:has-text("Use this sale")', id + ': Use this sale');
+      await p.waitForTimeout(500);
+    };
+
+    // ── A ─────────────────────────────────────────────────────────────────────────────────────
+    await section('A. The form is Use a sale; a sale 74% below the figure asks once, and OK uses it', async () => {
+      await toDesk();
+      ok(await open('far'), 'the first pair\'s record is open');
+      const summary = await p.evaluate(() => { const s = document.querySelector('details:has(#av-wp-title-far) > summary'); return s ? s.textContent.trim() : ''; });
+      eq(summary, 'Use a sale', '⚠ the form reads Use a sale');
+      await press('details:has(#av-wp-title-far) > summary', 'Use a sale');
+      const hint = await p.evaluate(() => { const d = document.querySelector('details:has(#av-wp-title-far) .av-sale-hint'); return d ? d.textContent.trim() : ''; });
+      eq(hint, 'A sold price you found: eBay’s Product Research (in Seller Hub), WorthPoint or an auction house’s results. Its link says where it came from.', 'and says where a sale comes from');
+      ok(await vis('details:has(#av-wp-title-far) .av-sale-hint'), 'on screen');
+      const n0 = said.length; answer = true;
+      await useSale('far', 1100, LA, 'Kodner Galleries');
+      const asked = said.slice(n0);
+      eq(asked.length, 1, '⚠⚠ asked once');
+      has(asked[0], 'This sale ($1,100) is 74% below the line\'s figure ($4,200).', 'naming both figures');
+      has(asked[0], 'OK: use the sale. The line\'s value becomes $1,100, from auction comps.', 'and what OK does');
+      eq(await line('far'), { fmv: 1100, src: 'Auction comps', by: 'desk', rev: true, first: [1100, 'Kodner Galleries', 'desk'] },
+         '⚠⚠ OK: $1,100, the person\'s, from auction comps, the sale first, the line reviewed');
     });
 
-    // ── B ──
-    await section('B. trust-only: the Trust Schedule and no Court Inventory; the Report says Inventory and the trust\'s Drive folder', async () => {
-      await toDesk(TRU);
-      await openMore();
-      eq([await moreHas('printCourtInventory', TRU), await moreHas('printTrustSchedule', TRU)], [false, true], '⚠ More ▾ on a trust: the Trust Schedule, no Court Inventory');
-      await press('#inv-more > summary', 'More ▾ (shut)');
-      const rep = await paper('#inv-workbar button[onclick="printEstateInventoryReport(' + TRU + ')"]', 'Estate Inventory PDF');
-      has(rep, 'Inventory — Asset Schedule', 'the Report is headed Inventory');
-      lacks(rep, 'Estate Inventory', '⚠ never Estate Inventory on a trust administration');
-      has(rep, 'did not reach the trust’s Drive folder', '⚠ the trust\'s Drive folder');
-      await close();
+    // ── B ─────────────────────────────────────────────────────────────────────────────────────
+    await section('B. Cancel keeps $4,200 and Agent Two\'s source, and files the sale only', async () => {
+      const n0 = said.length; answer = false;
+      await useSale('keep', 1100, EBAY);
+      eq(said.slice(n0).length, 1, 'asked once');
+      eq(await line('keep'), { fmv: 4200, src: 'Auction comps', by: 'agent', rev: true, first: [1100, 'eBay', 'desk'] },
+         '⚠⚠ Cancel: the figure and its source stand, the eBay sale filed first (never relabelling the figure, ACC-04)');
+      answer = true;
     });
 
-    // ── C, D ──
-    await section('C. contested probate: no Trust Schedule. D. unanswered: both, with the line under them; the Court Inventory says so', async () => {
-      await toDesk(CON);
-      await openMore();
-      eq([await moreHas('printCourtInventory', CON), await moreHas('printTrustSchedule', CON)], [true, false], '⚠ contested probate: no "Held in Trust" schedule offered');
-      await press('#inv-more > summary', 'More ▾ (shut)');
-      await toDesk(UNA);
-      await openMore();
-      eq([await moreHas('printCourtInventory', UNA), await moreHas('printTrustSchedule', UNA)], [true, true], 'unanswered: both offered');
-      has(await txt('#inv-more'), 'Matter type not recorded: set it in Edit Client.', '⚠ …with the line under them');
-      const ci = await paper('#inv-more button[onclick="printCourtInventory(' + UNA + ')"]', 'Court Inventory (unanswered)');
-      has(ci, 'No matter type is recorded on this job, so Havellin cannot confirm from the record that this estate is administered through probate',
-        '⚠ the unanswered Estate Settlement\'s Court Inventory names what is not on the record');
-      await close();
+    // ── C ─────────────────────────────────────────────────────────────────────────────────────
+    await section('C. Within 15%: nothing asked, the figure kept, the sale names its source', async () => {
+      const n0 = said.length;
+      await useSale('near', 3900, EBAY);
+      eq(said.slice(n0), [], 'nothing asked at $3,900 against $4,200');
+      eq(await line('near'), { fmv: 4200, src: 'Online comps', by: 'agent', rev: true, first: [3900, 'eBay', 'desk'] },
+         '⚠ the figure kept, from online comps, the venue eBay off the link');
+      eq(await overflow(), 0, 'no horizontal overflow at 1440 with the form open');
     });
 
-    // ── E ──
-    await section('E. a Contents-list estate on Formal: the guardrail says the estate attorney has the appraisal done', async () => {
-      await toDesk(CTT);
-      await p.evaluate((id) => { if (typeof deskFoldOpen === 'function') deskFoldOpen(id, 'values'); renderInventoryTab(); }, CTT); await p.waitForTimeout(600);
-      const g = await txt('#inv-guardrail');
-      has(g, '1 item for the estate attorney to have appraised: on this engagement Havellin does not arrange appraisals.', '⚠ counsel has it appraised');
-      lacks(g, 'before this inventory is complete', '…never "before this inventory is complete"');
-    });
-
-    // ── F ──
-    await section('F. living: To a specialist, no date of death, the firm once, the worklist\'s inspection, the record and the CSV follow the job', async () => {
-      await toDesk(LIV);
-      has(await txt('#desk-stat-values-' + LIV), '1 to a specialist (1 with no specialist linked)', '⚠ the Values bar: the chip\'s own name');
-      lacks(await txt('#desk-stat-values-' + LIV), 'needs an appraisal', '…never "needs an appraisal"');
-      await p.evaluate((id) => { if (typeof deskFoldOpen === 'function') deskFoldOpen(id, 'values'); renderInventoryTab(); }, LIV); await p.waitForTimeout(600);
-      const g = await txt('#inv-guardrail');
-      has(g, '1 item to go to a specialist has no appraisal figure yet.', 'the guardrail: to a specialist');
-      lacks(g, 'reasonable estimates on a standard job', '⚠ never the estate\'s advice');
-      // The roster's add form: pick the directory firm, which has no named contact, and save.
-      const add = '#appr-add-' + LIV;
-      if (await vis(add)) await press(add, '+ Add an appraiser');
-      lacks(await txt('#desk-body-values-' + LIV), 'usually the date of death', 'the roster\'s note: no date of death');
-      has(await txt('#desk-body-values-' + LIV), 'the value date — usually the day the appraiser inspects it', '⚠ …the day the appraiser inspects it');
-      const picker = await p.evaluate(() => { const s = Array.from(document.querySelectorAll('select')).filter((x) => /_apprPickVendor/.test(x.getAttribute('onchange') || ''))[0]; return s ? s.options.length : 0; });
-      ok(picker >= 2, 'the Vendor Directory picker lists the firm');
-      await p.evaluate(() => { const s = Array.from(document.querySelectorAll('select')).filter((x) => /_apprPickVendor/.test(x.getAttribute('onchange') || ''))[0]; s.value = '0'; s.dispatchEvent(new Event('change')); });
-      await p.waitForTimeout(300);
-      await press('button[onclick="addAppraiser(' + LIV + ')"]', 'Save appraiser');
-      const roster = await txt('#desk-body-values-' + LIV);
-      has(roster, 'Gulfstream Appraisal Group', 'the appraiser on the roster');
-      lacks(roster, 'Gulfstream Appraisal Group · Gulfstream Appraisal Group', '⚠⚠ the firm prints once on the roster');
-      const opt = await p.evaluate((id) => { const s = document.querySelector('#inv-guardrail select'); return s ? Array.from(s.options).map((o) => o.textContent.trim()) : []; }, LIV);
-      ok(opt.indexOf('Gulfstream Appraisal Group (ISA)') >= 0, '⚠ the guardrail\'s picker names it once (' + opt.join(' | ') + ')');
-      await openMore();
-      const wl = await paper('#inv-more button[onclick="printAppraisalWorklist(' + LIV + ')"]', 'Appraisal Worklist (living)');
-      has(wl, 'value as of the appraiser’s inspection', '⚠⚠ the worklist on a living job: the appraiser\'s inspection');
-      lacks(wl, 'date of death', '…never a date of death');
-      await close();
-      // The line's record.
-      await press('#inv-row-ch button[title="Open the full record"]', 'the dresser\'s ▾');
-      const rec = await txt('#inv-row-ch');
-      has(rec, 'Promised to someone', 'the record: a promise, in the desk\'s words');
-      lacks(rec, 'Specific Bequest', '…never a bequest');
-      lacks(rec, 'Flags & Track', '…the section is Flags');
-      lacks(rec, 'Authorized By', '⚠ an everyday line the client approves by word: no Authorized By');
+    // ── D ─────────────────────────────────────────────────────────────────────────────────────
+    await section('D. More ▾ → Court Inventory: the Basis column says where each figure came from', async () => {
       await p.evaluate(() => { _invOpen = {}; renderInventoryTab(); }); await p.waitForTimeout(400);
-      // The CSV, through its button.
-      const dl = p.waitForEvent('download', { timeout: 8000 });
-      await press('#inv-workbar button[onclick="exportInventoryCSV(' + LIV + ')"]', 'CSV');
-      const d = await dl.catch(() => null);
-      ok(!!d, 'the CSV downloads');
-      const csv = d ? fs.readFileSync(await d.path(), 'utf8').replace(/^﻿/, '') : '';
-      const head = csv.split('\r\n')[0] || '';
-      ['Valuation Date', 'MAIV §20.2031-6', 'Exempt §732.402', 'Asset Track', 'Specific Bequest'].forEach((h) => lacks(head, h, '⚠ the living CSV: no "' + h + '"'));
-      has(head, 'Promised to someone', '…a promise to someone');
-      has(csv, ',2026-10-20 22:09,', '⚠ captured at 10:09 PM on the 20th, local time');
-      lacks(csv, 'T02:09:00', '…never the UTC stamp');
+      if (!(await vis('#inv-more button[onclick="printCourtInventory(' + J + ')"]'))) await press('#inv-more > summary', 'More ▾');
+      await press('#inv-more button[onclick="printCourtInventory(' + J + ')"]', 'Court Inventory');
+      ok(await viewerOpen(), 'the Court Inventory is on screen');
+      const rows = await p.evaluate(() => [...document.querySelectorAll('#doc-viewer-body tr')].map((tr) => tr.textContent.replace(/\s+/g, ' ').trim())
+        .filter((t) => /Sterling silver candelabra/.test(t)));
+      eq(rows.length, 3, 'three pairs on the schedule');
+      eq(rows.map((t) => (t.match(/\$[\d,]+(?:\.\d\d)?/) || [''])[0]), ['$1,100', '$4,200', '$4,200'], 'their figures, in item order');
+      eq(rows.map((t) => /auction comps/.test(t) ? 'auction comps' : (/online comps/.test(t) ? 'online comps' : '?')),
+         ['auction comps', 'auction comps', 'online comps'], '⚠⚠ the basis follows each sale\'s link, and Cancel left Agent Two\'s');
+      await press('#doc-viewer-modal button[onclick="closeDocViewer()"]', 'Close');
+      await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(600);
+      ok(await open('near'), 'a record open on a phone');
+      eq(await overflow(), 0, 'no horizontal overflow at 390');
     });
 
-    // ── G ──
-    await section('G. 1440 and 390 px: no horizontal overflow; zero page errors', async () => {
-      ok((await overflow()) <= 0, 'no horizontal overflow at 1440 (' + (await overflow()) + ')');
-      await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(500);
-      for (const id of [PRO, UNA, LIV]) {
-        await toDesk(id);
-        await openMore();
-        ok((await overflow()) <= 0, 'no horizontal overflow at 390 on ' + id + ', More ▾ open (' + (await overflow()) + ')');
-        await press('#inv-more > summary', 'More ▾ (shut)');
-      }
-      await p.evaluate((id) => printEstateInventoryReport(id), PRO); await p.waitForTimeout(600);
-      ok(await viewerOpen(), 'fixture: the Report in the viewer');
-      ok((await overflow()) <= 0, 'the Report at 390: no horizontal overflow (' + (await overflow()) + ')');
-      await close();
-      eq(errs, [], 'zero page errors');
-    });
-
-    await b.close();
+    eq(errs, [], 'zero page errors');
     console.log('\n' + pass + ' passed, ' + fail + ' failed');
+    await b.close();
     process.exit(fail ? 1 : 0);
   } catch (e) {
-    console.log('  ✗ threw: ' + (e && e.stack || e));
+    console.log('step 124 threw: ' + (e && e.stack || e));
     if (b) await b.close().catch(() => {});
-    console.log('\n' + pass + ' passed, ' + (fail + 1) + ' failed');
     process.exit(1);
   }
 })();

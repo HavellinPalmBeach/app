@@ -8,7 +8,10 @@
 // it holds and the viewer comes back once the dialog closes (`after`), Cancel included; Close drops it.
 //   · Since 2026-10-27 the work bar's papers open the same way (Anthony: "Yes"): the Contents List, the Estate Inventory PDF,
 //     the Release Approval Request (the bar's and the selection's) and the Contents Record.
-//   · Every other caller of _printDocument prints straight away, as before; a test's stub still receives the page and title.
+//   · Since 2026-11-02 every card's paper too (Anthony: "yes, do the cards' papers too"): the Disposition Ledger, a receipt, a
+//     Donation Record, the inventory snapshots and their comparison, the Key and Access Custody Record, a will or cash receipt and
+//     a change order's PDF. Only a client document's Print (docAction) and the viewer's own Print / Save PDF print straight away;
+//     a test's stub still receives the page and title.
 // Driven on the real _printDocument, _openViewer, printDocViewer and closeDocViewer over the DOM stub, with the timers held so
 // the order is read: the page set, the dialog, the restore.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -108,22 +111,36 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   // Restated 2026-10-27 (Anthony, asked whether the work bar's papers should open the same way: "Yes"): the Contents List, the
   // Estate Inventory PDF, the Release Approval Request (the bar's and the selection's, one printer) and the Contents Record.
+  // Restated 2026-11-02 (Anthony: "yes, do the cards' papers too"): every card's paper opens on screen first as well.
   // Restated 2026-10-28 (P14 of the desk audit, DOC-28): the Estate Inventory PDF is named by the matter (invInventoryWord:
   // *Inventory* on a trust-only matter, else *Estate Inventory*), its viewer title with it.
-  group('V5 · the five More ▾ papers and the work bar’s four open in the viewer; the rest print straight away');
+  group('V5 · the More ▾ papers, the work bar’s and every card’s open in the viewer; only the client documents’ Print and the viewer’s own print straight away');
   {
     const VIEW = { printAsFoundRecord: "'As-Found Record'", printCourtInventory: "'Court Inventory'", printTrustSchedule: "'Trust Schedule'",
                    printAppraisalWorklist: "'Appraisal Worklist'", printIncidentRecord: 'title',
                    printContentsList: "'Contents List'", printEstateInventoryReport: 'invInventoryWord(job)',
-                   printApprovalRequest: "'Release Approval Request'", printContentsRecord: "'Contents Record'" };
+                   printApprovalRequest: "'Release Approval Request'", printContentsRecord: "'Contents Record'",
+                   printDispositionLedger: "'Disposition Ledger'", printBeneficiaryReceipt: "'Receipt - ' + g.name",
+                   printDonationRecord: 'title', printInventorySnapshot: "'Inventory Snapshot'",
+                   printSnapshotComparison: "'Inventory Snapshot Comparison'", printAccessRecord: 'ACCESS_RECORD_TITLE',
+                   printSiteFindReceipt: 'SITE_FIND_KINDS[f.kind].doc', printChangeOrder: "'Change Order'" };
     Object.keys(VIEW).forEach((f) => {
       const b = noComments(fn(f));
       eq(count(b, '_printDocument('), 1, f + ': one print call');
       has(b, '{ view: true, job: job, label: ' + VIEW[f] + ' }', '⚠ ' + f + ' opens in the viewer, named');
     });
-    ['printDispositionLedger'].forEach((f) => {
-      lacks(noComments(fn(f)), 'view: true', f + ' prints straight away (not asked)');
-    });
+    // ⚠ THE NET: every call of _printDocument in live code opens the viewer, except the two that are the print itself (a client
+    // document's Print through docAction, whose View is the viewer already, and the viewer's own Print / Save PDF).
+    const live = noComments(require('fs').readFileSync(require('path').join(__dirname, '..', 'havellin.html'), 'utf8'));
+    const straight = [];
+    let i = live.indexOf('_printDocument(');
+    while (i >= 0) {
+      const head = live.lastIndexOf('function ', i), name = (/^function\s+([A-Za-z0-9_$]+)/.exec(live.slice(head)) || [])[1] || '?';
+      const call = live.slice(i, live.indexOf(');', i) + 2);
+      if (name !== '_printDocument' && call.indexOf('view: true') < 0) straight.push(name);
+      i = live.indexOf('_printDocument(', i + 1);
+    }
+    eq(straight.sort(), ['docAction', 'printDocViewer'], '⚠⚠ no other paper prints straight away');
     has(noComments(fn('printDocViewer')), 'if (s.paper) {', 'the viewer prints a desk paper from the page it holds');
   }
 };

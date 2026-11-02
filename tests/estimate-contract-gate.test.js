@@ -252,7 +252,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // and Submit sails past the gate on the one job it exists to stop.
     {
       const sub = sandbox({
-        fns: ['submitForApproval', 'estimateSubmitBlocker', 'estimateContractBlocker',
+        fns: ['submitForApproval', 'flushCalcAll', 'estimateSubmitBlocker', 'estimateContractBlocker',
               'estimateContractMissing', 'isDecedentJob', 'matterTypeOf', 'matterDef',
               'invFiduciaryMode', 'docTierOf', 'docTierDef', 'svcHasDocStep',
               'unscoredRoomNames', 'estimateNoteGaps', 'estimateEventStatus', 'isJobWon', 'estimateTierMoved', 'docTierScope', 'seedDocScopeFromJob', 'estimateDocScope', 'docScopeDef', 'docTierWord', 'docScopeWord', 'fmtHrs',
@@ -264,7 +264,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                // P22: docScopeDef (lifted, through estimateTierMoved's seedDocScopeFromJob and estimateDocScope) reads the
                // scope catalogue, and the page's approval flag sits beside the submitted one this test drives. Without them a
                // revert that reaches those paths threw instead of failing an assertion.
-               'DOC_SCOPES', 'estimateApproved'],
+               'DOC_SCOPES', 'estimateApproved', '_calcAllT'],
         stubs: {
           showFB: (id, kind, msg) => { spoke.push({ id, kind, msg }); },
           saveEstimateState: () => { wrote.push('est'); },
