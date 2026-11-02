@@ -16,7 +16,7 @@
 //   INV-07, NEW-07: the package's question counts every gap the desk counts, and the walkthrough's own collection line is not
 //     the inventory.
 //   ROW-03, ROW-04, SYN-12: the search, the row and the by-id repaints patch in place (_invPatch), so a box keeps its focus and
-//     a press straight after an edit lands on the button pressed. Browser step 124 drives each of these through the real page.
+//     a press straight after an edit lands on the button pressed. Browser step 126 drives each of these through the real page.
 // ─────────────────────────────────────────────────────────────────────────────
 const { sandbox, source, fn, decl, domStub } = require('./harness');
 

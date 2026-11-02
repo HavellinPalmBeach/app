@@ -1015,6 +1015,12 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 .wt-out td{color:var(--gray);font-style:italic;}
 .wt-tag{font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--bronze);border:1px solid var(--bronze-lt);border-radius:3px;padding:1px 4px;margin-left:5px;white-space:nowrap;}
 .wt-note{font-size:12px;color:var(--gray);overflow-wrap:anywhere;}
+/* Build Estimate's private walkthrough note grows with what is said into it (2026-11-02, Anthony: "isn't very big …
+   it filled up pretty quickly"): the box sits over a hidden copy of its text, as the desk's name does (.inv-name). */
+.pnote-grow{display:grid;min-width:0;}
+.pnote-grow::after,.pnote-grow>textarea{grid-area:1/1/2/2;font-family:inherit;font-size:12px;line-height:1.45;padding:6px 8px;margin:0;border:1px solid var(--border-md);border-radius:4px;box-sizing:border-box;white-space:pre-wrap;overflow-wrap:anywhere;min-height:calc(11.6em + 14px);}
+.pnote-grow::after{content:attr(data-v) ' ';visibility:hidden;border-color:transparent;}
+.pnote-grow>textarea{width:100%;height:auto;resize:none;overflow:hidden;background:var(--cream);}
 .pay-tbl{width:100%;border-collapse:collapse;margin-bottom:1rem;}
 .pay-tbl td{padding:9px 14px;border-bottom:1px solid var(--border);font-size:13px;}
 .pay-tbl td.r{text-align:right;font-weight:600;}
@@ -1119,6 +1125,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
   /* 16px inputs stop iOS Safari from auto-zooming the page on focus — the single
      biggest cause of "the app jumps around when I tap a field". */
   input,select,textarea{font-size:16px!important;}
+  .pnote-grow::after{font-size:16px;}   /* the hidden copy keeps the box's 16px, or the box is sized for 12px text */
   /* iOS gives date inputs a different intrinsic height than selects and text boxes,
      so a date sitting beside a dropdown looks like a mistake. Pin them all to one
      height and the row reads as a row. */
@@ -1479,7 +1486,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.10.28 · 8:56pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.11.02 · 10:10am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -5804,9 +5811,10 @@ function buildRoomTable() {
         '<button id="pnote-mic-btn" onclick="startPrivateNoteTranscription()" title="Voice note" ' +
           'style="background:none;border:1px solid var(--border-md);border-radius:4px;cursor:pointer;font-size:15px;line-height:1;padding:5px 7px;color:var(--gray);flex:0 0 auto;">&#127908;</button>' +
         '<div style="flex:1;min-width:0;">' +
-          '<textarea id="e-private-note" rows="5" ' +
-            'oninput="_privateWalkNote=this.value" ' +
-            'style="width:100%;font-size:12px;padding:6px 8px;border:1px solid var(--border-md);border-radius:4px;resize:vertical;font-family:inherit;background:var(--cream);box-sizing:border-box;"></textarea>' +
+          '<div class="pnote-grow" data-v="">' +
+            '<textarea id="e-private-note" rows="8" ' +
+              'oninput="_privateWalkNote=this.value;this.parentNode.dataset.v=this.value"></textarea>' +
+          '</div>' +
           '<div id="pnote-mic-status" style="font-size:10px;color:var(--bronze);font-style:italic;min-height:14px;margin-top:2px;"></div>' +
         '</div>' +
       '</div>' +
@@ -5816,8 +5824,7 @@ function buildRoomTable() {
   document.getElementById('room-table-wrap').innerHTML = html;
   var _vpr = document.getElementById('vol-preset-row');
   if (_vpr) { _vpr.innerHTML = volPresetButtonsHTML(); paintVolPreset(); }
-  var _pn = document.getElementById('e-private-note');
-  if (_pn) _pn.value = _privateWalkNote || '';
+  _privateNotePaint();
   // Single delegated listener for all note textareas
   document.getElementById('room-table-wrap').addEventListener('input', function(e) {
     if (e.target && e.target.tagName === 'TEXTAREA') {
@@ -7690,8 +7697,11 @@ function keepFixedFee() {
 
 // Debounced calcAll for high-frequency inputs (e.g. typing notes) where instant
 // per-keystroke recompute isn't needed. Scoring inputs still call calcAll directly.
-var _calcAllT;
-function scheduleCalcAll() { clearTimeout(_calcAllT); _calcAllT = setTimeout(calcAll, 250); }
+var _calcAllT = null;
+function scheduleCalcAll() { clearTimeout(_calcAllT); _calcAllT = setTimeout(function(){ _calcAllT = null; calcAll(); }, 250); }
+// A recompute still waiting on the debounce runs now. Save and Submit write `currentEstimate`, which a note typed in the last
+// quarter second has not reached yet (2026-11-02: typed, Save pressed at once, the note was not saved).
+function flushCalcAll() { if (!_calcAllT) return; clearTimeout(_calcAllT); _calcAllT = null; calcAll(); }
 
 // Home Prep for Sale as a STANDALONE service is fee-only (a flat 30% Home Sale Preparation Fee on managed
 // vendor costs — no room scoring, crew, or labor hours). This toggles the labor-
@@ -11589,7 +11599,7 @@ function resetEstimateJobState(job) {
   // The private walkthrough note — one family's "the son contests the will" on the next family's
   // estimate and its Walkthrough view. _privateWalkNote is the record; the box only mirrors it.
   _privateWalkNote = '';
-  var pn = el('e-private-note'); if (pn) pn.value = '';
+  var pn = el('e-private-note'); if (pn) { pn.value = ''; if (pn.parentNode && pn.parentNode.dataset) pn.parentNode.dataset.v = ''; }
   var pns = el('pnote-mic-status'); if (pns) pns.textContent = '';
   // Crew and concierge counts, and the flags that say somebody chose them. Missing one leaves the
   // next estimate silently pinned to the last one's manual choice.
@@ -11634,6 +11644,7 @@ function saveEstimateAndPreview() {
       + estimateRepriceRoute(jobs.find(function(j){ return j.id === _lkId; }), estimateStore[_lkId]));
     return;
   }
+  flushCalcAll();   // a note typed or dictated a moment ago, onto the record Save writes
   var jobId = parseInt(document.getElementById('e-job').value);
   if (!jobId) { showFB('e-fb','warn','Select a job to attach this estimate to.'); return; }
   var job = jobs.find(function(j){ return j.id===jobId; });
@@ -13625,6 +13636,7 @@ function estimateSubmitBlocker(est, job) {
 // the e-fb print for a caller that will show the message somewhere the user can see.
 function submitForApproval(opts) {
   opts = opts || {};
+  flushCalcAll();   // as Save: what was typed or dictated a moment ago goes with the submission
   // ⚠ RESOLVED ONCE, AT THE TOP. This function looked the same job up TWICE, six lines apart —
   // once for the contract gate and again to move the status to `pending` — and the second copy
   // is what made a source assertion about the first one unfalsifiable (it matched the wrong
@@ -15032,8 +15044,7 @@ function restoreEstimateToUI(est) {
   // Restore crew reason
   // psCrewReason has no field to restore into any more.
   _privateWalkNote = est.privateNote || '';
-  var _pnEl = document.getElementById('e-private-note');
-  if (_pnEl) _pnEl.value = _privateWalkNote;
+  _privateNotePaint();
 
   // Restore room checkboxes and scores — match by SECTION + NAME first, index second.
   //
@@ -43047,6 +43058,38 @@ function agentValueCopyLookup(jobId, stableId) {
 // first. It is the confirming source, so it marks the value reviewed and names `WorthPoint comps` as the
 // source (never on a tier where counsel values: there no source is written). A line with no figure at
 // all takes the sale's price as a person's value. Refused by name before anything is written.
+// ⚠⚠ A SALE FOUND BY HAND, WHEREVER IT WAS FOUND (2026-11-02; Anthony, off the eBay developer account: eBay keeps its sold history
+// from apps and gives it to its sellers in Seller Hub's Product Research; he took "Rename to 'Use a sale'"). The source a pasted sale
+// names follows its link, one rule: WorthPoint's record reads WorthPoint comps, an auction house's result Auction comps (a host
+// with "auction" in it, or one on the list), eBay and anything else Online comps. Read by agentValueUseSale and the form's line.
+var INV_SALE_AUCTION_HOSTS = ['invaluable.com', 'bidsquare.com', 'hibid.com', 'ha.com', 'bonhams.com', 'christies.com', 'sothebys.com',
+  'phillips.com', 'kodner.com', 'doyle.com', 'rago.com', 'swanngalleries.com', 'skinnerinc.com'];
+function _invSaleHost(url) {
+  var m = String(url || '').trim().match(/^https?:\/\/([^\/?#:]+)/i);
+  return m ? m[1].toLowerCase().replace(/^www\./, '') : '';
+}
+function invSaleSource(url) {
+  var host = _invSaleHost(url);
+  var is = function(d) { return host === d || host.slice(-(d.length + 1)) === '.' + d; };
+  if (is('worthpoint.com')) return 'WorthPoint comps';
+  if (/auction/.test(host) || INV_SALE_AUCTION_HOSTS.some(is)) return 'Auction comps';
+  return 'Online comps';
+}
+// Who sold it, where the box is left blank: the site, by the name a reader knows it by.
+function invSaleVenue(url) {
+  var host = _invSaleHost(url);
+  if (/^(?:[a-z0-9-]+\.)*ebay\.[a-z.]+$/.test(host)) return 'eBay';
+  if (/(?:^|\.)worthpoint\.com$/.test(host)) return 'WorthPoint';
+  return host;
+}
+// ⚠⚠ A SALE FAR FROM THE LINE'S FIGURE IS ASKED ABOUT ONCE (the desk audit's Ask 14, answered 2026-10-28: "ask once when the sale and
+// the line's figure differ by more than 15%: use the sale, or keep the figure and file the sale only"; ACC-04: a $1,100 sale
+// relabelled a $4,200 figure as if the sale supported it). Within it the sale supports the figure and names its source, as before.
+var INV_SALE_ASK_PCT = 15;
+function invSaleFarOff(figure, price) {
+  var f = Number(figure), p = Number(price);
+  return f > 0 && p > 0 && Math.abs(p - f) > f * INV_SALE_ASK_PCT / 100;
+}
 function agentValueUseSale(jobId, stableId) {
   var ref = _getPhotoRef(jobId, stableId), job = _invJob(jobId);
   if (!ref || !job) return;
@@ -43056,16 +43099,27 @@ function agentValueUseSale(jobId, stableId) {
   if (!title) miss.push('its title');
   if (!(price > 0)) miss.push('its price');
   if (!/^https?:\/\/\S+$/i.test(url)) miss.push('its link');
-  if (miss.length) { alert('Add ' + _andJoin(miss) + ' from the WorthPoint record first. Nothing was changed.'); return; }
-  var comp = _avComp({ title: title, venue: get('venue') || 'WorthPoint', saleDate: get('date'), price: price, url: url, kind: 'sold', by: 'desk' });
-  ref.valComps = [comp].concat(ref.valComps || []).slice(0, AGENT_VALUE_MAX_COMPS);
+  if (miss.length) { alert('Add ' + _andJoin(miss) + ' from the sale first. Nothing was changed.'); return; }
+  var comp = _avComp({ title: title, venue: get('venue') || invSaleVenue(url), saleDate: get('date'), price: price, url: url, kind: 'sold', by: 'desk' });
+  var source = invSaleSource(url);
   var internal = agentValueInternal(job);
-  if (!_avHasFigure(ref) && !internal) {
+  var had = !internal && _invHasValue(ref), cur = had ? roundCents(parseFloat(ref.fmv)) : 0;
+  var use = !internal && !_avHasFigure(ref), keep = false;
+  if (had && invSaleFarOff(cur, comp.price)) {
+    var pct = Math.round(Math.abs(comp.price - cur) / cur * 100);
+    use = confirm('This sale (' + fmt(comp.price) + ') is ' + pct + '% ' + (comp.price < cur ? 'below' : 'above') + ' the line\'s figure ('
+      + fmt(cur) + ').\n\nOK: use the sale. The line\'s value becomes ' + fmt(comp.price) + ', from ' + (source === 'WorthPoint comps' ? source : source.toLowerCase()) + '.\n'
+      + 'Cancel: keep ' + fmt(cur) + ' and file the sale under it only.');
+    keep = !use;
+  }
+  if (use) {
     ref.fmv = comp.price;
     ref.valDate = _avValDate(job);
-    _avTakeValue(ref, 'sale', job);   // the desk's comparable, never the appraisal's (Q93)
+    _avTakeValue(ref, 'sale', job);   // the desk's comparable, never the appraisal's (Q93); the agent's source and sentence go with its figure
   }
-  if (!internal) ref.valSource = 'WorthPoint comps';
+  ref.valComps = [comp].concat(ref.valComps || []).slice(0, AGENT_VALUE_MAX_COMPS);
+  // Kept far from it, the sale is filed and names nothing: the figure is not the sale's (Ask 14).
+  if (!internal && !keep) ref.valSource = source;
   // A sale a person found and pasted is their look at the line (2026-10-25b, the one look): the line is reviewed with it.
   _invStampLineReviewed(ref, job);
   _setPhotoRef(jobId, _invTouch(ref));
@@ -43268,7 +43322,8 @@ function _avPanelHtml(job, ref) {
       + (ref.valLookup ? 'WorthPoint search: <code>' + esc(ref.valLookup) + '</code> <button class="btn-s" style="font-size:9.5px;padding:1px 6px;" onclick="agentValueCopyLookup(' + jid + ',\'' + sid + '\')">Copy</button>' : '')
       + (/^https?:\/\//i.test(photo) ? ' <a href="' + esc(photo) + '" target="_blank" rel="noopener">Photograph</a>' : '')
       + '</div>'
-      + '<details style="margin-top:5px;"><summary style="font-size:10.5px;cursor:pointer;color:var(--gray-dk);">Use a WorthPoint sale</summary>'
+      + '<details style="margin-top:5px;"><summary style="font-size:10.5px;cursor:pointer;color:var(--gray-dk);">Use a sale</summary>'
+      + '<div class="av-sale-hint" style="font-size:10px;color:var(--gray);margin-top:3px;">A sold price you found: eBay\u2019s Product Research (in Seller Hub), WorthPoint or an auction house\u2019s results. Its link says where it came from.</div>'
       + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:5px;margin-top:5px;">'
       + ['title:Title', 'price:Price', 'date:Sale date', 'venue:Venue', 'url:Link'].map(function(p) {
           var k = p.split(':')[0];
@@ -44483,7 +44538,7 @@ function _invMorphKids(a, b) {
 // keeps them, in order, for its own click. Every write happens at once; only the drawing waits. A release the page never hears (an alert
 // in between, the window left) is caught by the next mousemove with no button down, a select's own change, a key pressed, the
 // window losing the focus, or INV_PRESS_MAX_MS. A tap on a touch screen is the same press: the browser sends its mousedown, mouseup
-// and click together after the finger lifts, and the box is left on that mousedown (browser step 124 K taps it). Only the desk:
+// and click together after the finger lifts, and the box is left on that mousedown (browser step 126 K taps it). Only the desk:
 // nothing else on the page asks.
 var INV_PRESS_MAX_MS = 3000;
 var _invPressDown = false;
@@ -57685,6 +57740,8 @@ function startRoomTranscription(roomId) {
       if (noteEl) {
         var existing = noteEl.value ? noteEl.value.trimRight() + ' ' : '';
         noteEl.value = existing + finalText.trim();
+        // The room's note reaches the estimate only through a recompute, as the private note's dictation (2026-11-02).
+        scheduleCalcAll();
       }
       var notesBtn = document.getElementById('notes-btn-'+roomId);
       if (notesBtn) { notesBtn.style.color = 'var(--bronze)'; notesBtn.style.fontWeight = '600'; }
@@ -61690,6 +61747,15 @@ function updateCollectionDisp(id, val) {
 // service type changes, which would otherwise wipe what was just dictated.
 var _privateWalkNote = '';
 
+// The box shows `_privateWalkNote`, and the hidden copy under it (.pnote-grow's data-v) sizes it to the whole note, so a
+// writer of the note other than the box's own typing paints both through here.
+function _privateNotePaint(el) {
+  el = el || document.getElementById('e-private-note');
+  if (!el) return;
+  el.value = _privateWalkNote || '';
+  if (el.parentNode && el.parentNode.dataset) el.parentNode.dataset.v = el.value;
+}
+
 // Same shape as startCollectionTranscription, targeting the private-notes box.
 function startPrivateNoteTranscription() {
   var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -61716,8 +61782,12 @@ function startPrivateNoteTranscription() {
     if (finalText) {
       var el = document.getElementById('e-private-note');
       if (el) {
-        el.value = (el.value ? el.value.trimRight() + ' ' : '') + finalText.trim();
-        _privateWalkNote = el.value;
+        _privateWalkNote = (el.value ? el.value.trimRight() + ' ' : '') + finalText.trim();
+        _privateNotePaint(el);
+        // ⚠ A SCRIPT SETTING .value FIRES NO input EVENT, so the grid's listener never recomputed the estimate after
+        // dictation and Save wrote the note as it stood before it (2026-11-02, Anthony: "when I saved it and went back
+        // to the estimate, they're gone"). Typing schedules the same recompute.
+        scheduleCalcAll();
       }
     }
   };
