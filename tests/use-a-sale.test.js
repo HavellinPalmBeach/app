@@ -169,7 +169,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const m = GS.match(/\nvar AGENT_VALUE_FETCHES\s*=\s*(\d+);/);
     eq(m && Number(m[1]), 4, 'four page reads on a research line (Anthony: "Agent Two reads 4 pages")');
     ok(/max_uses: AGENT_VALUE_FETCHES/.test(liveLines(GS)), 'the fetch tool reads the constant');
-    eq((GS.match(/var BACKEND_VERSION = '([^']+)';/) || [])[1], '2026-11-02', 'main-sync.gs is 2026-11-02, carrying 2026-10-28');
+    // RESTATED at the merge with P13 (backend 2026-11-02b, which carries this one): 2026-11-02 or later.
+    const _bv = (GS.match(/var BACKEND_VERSION = '([^']+)';/) || [])[1] || '';
+    ok(_bv >= '2026-11-02', 'main-sync.gs is 2026-11-02 or later, carrying 2026-10-28 (' + _bv + ')');
   }
 
   group('D · one rule, its readers');
