@@ -35,7 +35,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fns: ['renderJobPlan', 'planProcedureHtml', 'guideLinkHtml', 'custodyLogKept', 'planBolHtml', 'bolSignedCopies', 'signedRecordLinksHtml', 'signedCopyControlHtml', 'planTaskCtx', 'planTaskApplies', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', 'planTasksHtml', 'planTaskSectionsHtml', 'planSubsec', 'chkGrid',
             'planChk', '_planTaskDone', 'planPhaseWrap', 'secCaret', 'planStageCard', 'planStageState', 'planDerivedHtml', 'derivedLinesHtml', 'planDerivedLines', 'prepVendorsConfirmed', 'estateAuthority', 'estateTaxReturn', 'jobListEntries', 'siteFindsCardHtml', 'siteFindsOf', 'donationReceiptLine', 'ledgerDerivedLines', 'ledgerSignedCopies', 'signedRecordsOf', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine',
             '_planRooms', '_planRoomStatus', '_planRoomListHtml', 'clearedFlag', '_shotCount', '_slotRefs', 'roomStatusNormalize',
-            'firearmsBannerHtml', 'firearmsWorkspaceLine', 'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey',
+            'firearmsBannerHtml', 'firearmsWorkspaceLine', 'firearmsFlaggedAtIntake', '_firearmsRow', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey', 'walkthroughOffered',
             'planGateChipsHtml', 'vendorSourcingProgress', 'logisticsLinesFor', 'logisticsLineOn', 'logisticsCatsFor', 'jobTeamGateLine', 'crewDuplicates', 'isCrewPlaceholder', 'samePerson', 'canonPersonName', 'planVendorsMeta', 'vendorsWithoutCoi', 'vendorCoiState', '_vendorYmd', 'jobListEntries', 'fmtDate2', 'planStageMeta', 'planHoursMeta', 'planHoursMetaHtml', 'planHoursRuleTxt', '_hrsTxt', '_todayStr', '_ymdLocal',
             'planCurrentStage', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly', 'renderCloseoutCard', 'renderCloseoutBody', 'closeoutState', 'jobAtClose', 'closeoutRatedTone', 'closeoutMeta', '_assignedVendorsForJob', 'unratedVendorsForJob', 'lookupVendorById', 'vendorIdOf', 'bestClientEmail', '_coFmt', 'renderVendorScorecard', 'computeVendorAvg', 'esc', 'fmtDate2', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'clientRecipient', 'firstName', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs', 'fmt', 'jobHasFirearms', 'jobFirearmLines', '_firearmsFoundText', 'invIsFirearm', 'agentNoticesOn', '_invNamed', '_invItemNo', '_invRoomName', 'firearmsClientTakesAll', 'firearmsClientRuleText', 'invFirearmClientTakes'],
       vars: ['PLAN_PROCEDURE', 'PLAN_VALUABLES_VENDOR_TYPES', 'BOL_SIGNED_REF', '_signedCopySpecs', '_signedCopyKeys', 'PLAN_COI_PTYPES', 'DECEDENT_SERVICES', 'SVC_LABELS', '_planOpenPhases', 'PLAN_TASKS', 'PLAN_FLOW', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'jobPlanStore', 'estimateStore', 'LEDGER_SIGNED_REF', 'INV_SALE_DISPOSITIONS',
@@ -422,5 +422,33 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const row = fn('_planRoomListHtml');
     has(row, '<span class="rl-top"><span class="rl-name">', 'name and pill on the top line');
     ok(row.indexOf('class="rl-counts"') < row.indexOf('class="rl-note"'), 'counts, then the note');
+  }
+
+  // 🔍 WALKTHROUGH ON THE JOB PLAN'S HEADER (2026-11-02; Anthony, asked where the private walkthrough note goes once the
+  // estimate is approved, took the button: the dashboard's own page, one press away, never drawn open on the iPad in the house).
+  group('🔍 Walkthrough on the Job Plan header: the dashboard\'s page, behind a press, by the dashboard\'s rule');
+  {
+    const r = plan(JOB({ driveFolder: 'https://drive.google.com/drive/folders/X' }), EST({ privateNote: 'The son contests the will.' }));
+    has(r.hdr, 'id="plan-walkthrough-7"', 'the header carries the button');
+    has(r.hdr, 'onclick="dashWalkthrough(7)"', 'and it opens the dashboard\'s own walkthrough, the one page and handler');
+    has(r.hdr, '&#128269; Walkthrough', 'named as on the dashboard');
+    ok(r.hdr.indexOf('Photos in Drive') >= 0 && r.hdr.indexOf('Photos in Drive') < r.hdr.indexOf('plan-walkthrough-7'), 'beside the Drive link, after it');
+    lacks(r.hdr + r.out, 'contests the will', '⚠ the private note itself is nowhere on the plan: only the press opens it');
+    // The rule is the dashboard utility bar's, read by both.
+    const w = sandbox({ fns: ['walkthroughOffered'], stubs: {} });
+    w.estimateStore[7] = { estimate: EST() };
+    w._estStoreState = 'ready';
+    ok(w.walkthroughOffered(7) === true, 'offered once the estimates are read and this job has one');
+    ok(w.walkthroughOffered(8) === false, 'withheld once they are read and this job has none');
+    w._estStoreState = 'loading';
+    ok(w.walkthroughOffered(8) === true, 'offered while the estimates are still loading (the handler says which it is)');
+    w._estStoreState = 'offline';
+    ok(w.walkthroughOffered(8) === true, 'and while they could not be read');
+    const live = (t) => noComments(t).replace(/function walkthroughOffered\([\s\S]*?\n}\n/, '');
+    const body = live(src);
+    ok(body.length > src.length * 0.5, 'the stripped source is still most of the file');
+    eq((body.match(/walkthroughOffered\(/g) || []).length, 2, 'two readers of the rule: the utility bar and the Job Plan header');
+    has(noComments(fn('dashUtilityBar')), 'if (walkthroughOffered(id))', 'the utility bar asks it');
+    has(noComments(fn('renderJobPlan')), 'walkthroughOffered(jobId)', 'and so does the Job Plan header');
   }
 };
