@@ -99,6 +99,9 @@ function net(opts) {
     if (u.indexOf(SYNC) === 0) {
       log.gets.push(u);
       if (/action=loadMedia/.test(u)) return sp(res(o.media ? { ok: true, media: o.media } : { ok: false, error: 'offline' }));
+      // RESTATED 2026-11-02 (the release request's envelope as its own record): an estate's send reads the client from the sheet
+      // first (approvalRecordFromSheet). The sheet's copy is the rig's own (o.sheetJobs, set by the rig), so the read moves nothing.
+      if (/action=loadJobs/.test(u)) return sp(res(o.sheetJobs ? { ok: true, jobs: o.sheetJobs() } : { ok: false, error: 'offline' }));
       return sp(res({ ok: false }));
     }
     if (u === 'https://www.googleapis.com/oauth2/v3/userinfo') return sp(res({ email: BOX }));
@@ -111,7 +114,7 @@ function net(opts) {
     }
     return sr(new TypeError('Failed to fetch ' + u));
   };
-  return { fetch, log };
+  return { fetch, log, opts: o };
 }
 function mimeParts(mime) {
   const mix = (/boundary="(MIX-[^"]+)"/.exec(mime) || [])[1];
@@ -201,6 +204,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         _docNotice: (t, m) => notices.push({ t, m: String(m) }), dashNotice: (t, m) => notices.push({ t, m: String(m) }),
         _dashSendState() {}, showSyncBadge: (m) => badges.push(String(m)),
       }, o.stubs || {}));
+    N.opts.sheetJobs = () => JSON.parse(JSON.stringify(c.jobs));
     return { c, N, dom, notices, opened, hrefs, saves, badges, job: () => c.jobs[0], last: () => (notices[notices.length - 1] || {}),
              st: () => (c.jobs[0].docState || {}).approvalRequest, card: () => c._renderInvReleasesCard(c.jobs[0], c._jobInvRefs(7)) };
   }

@@ -2,7 +2,7 @@
 // P15 OF THE DESK AUDIT (2026-10-28): THE VALUE FOLLOWS THE JOB'S STANDARD, MARKET AND DATE. As the plan sets it (audits/2026-10-27-desk/
 // PLAN.md, P15; the findings ACC-09, VAL-08, ACC-10, VAL-09, ACC-12, VAL-11, VAL-06, AGT-06, VAL-16, VAL-21, and Ask 14, ACC-04):
 //
-//   S · the server (main-sync.gs, backend 2026-10-28b, carrying the cell-cap fix's 2026-10-28): the standard by class in place of "not retail", each basis with its own words,
+//   S · the server (main-sync.gs, backend 2026-11-02c, carrying 2026-11-02b, 2026-11-02 and the cell-cap fix's 2026-10-28): the standard by class in place of "not retail", each basis with its own words,
 //       the buyer's premium on every comparable, a like item's asking price as Replacement Value's evidence, a line's own value date;
 //   B · the basis: asked first, "(counsel only)" where fair market value is the law's, the agent's figures made at another basis named
 //       with Re-value, the column and the total by the basis, a line's own basis printed where it differs;
@@ -108,6 +108,7 @@ function rig(job, rows, o) {
     jobs: [job], _photoRefs: { [job.id]: rows.map((r) => Object.assign({}, r)) },
     estimateStore: { [job.id]: { estimate: { svc: job.svc, rooms: [{ idx: 0, name: 'Study' }, { idx: 1, name: 'Garage' }] } } },
     jobPlanStore: {}, vendorDirectory: [], document: o.dom || domStub({}),
+    confirm: (m) => { said.push(String(m)); return typeof o.answer === 'function' ? o.answer(String(m)) : o.answer !== false; },   // Use a sale asks bare confirm (main's rule)
     window: { confirm: (m) => { said.push(String(m)); return typeof o.answer === 'function' ? o.answer(String(m)) : o.answer !== false; },
               prompt: (m) => { said.push(String(m)); return o.reason === undefined ? 'The family is keeping it' : o.reason; }, open() {} },
     SHEETS_SYNC_URL: 'https://script.google.com/macros/s/P15/exec', _invCloudSeen: { [job.id]: true }, _invCloudFailed: {},
@@ -210,11 +211,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('S3 · the version, and the app\'s copy of the premium list held equal to the server\'s');
   {
-    eq(g.BACKEND_VERSION, '2026-10-28b', 'the backend is 2026-10-28b (main took 2026-10-28 for the cell-cap fix, which this carries)');
+    // RESTATED on merging main (2026-11-02): main took 2026-11-02 and 2026-11-02b first, so P15 is 2026-11-02c and carries both.
+    eq(g.BACKEND_VERSION, '2026-11-02c', 'the backend is 2026-11-02c (it carries 2026-11-02b, 2026-11-02 and 2026-10-28)');
     const app = sandbox({ fns: [], vars: ['BACKEND_MIN_VERSION', 'AGENT_VALUE_PREMIUMS'] });
-    eq(app.BACKEND_MIN_VERSION, '2026-10-28b', 'the app asks for it');
+    eq(app.BACKEND_MIN_VERSION, '2026-11-02c', 'the app asks for it');
     eq(JSON.stringify(app.AGENT_VALUE_PREMIUMS), JSON.stringify(g.AGENT_VALUE_PREMIUMS), 'one list of premium answers on both sides');
-    // P15's review: the banner names the Replacement Value gap too, until 2026-10-28b is live.
+    // P15's review: the banner names the Replacement Value gap too, until 2026-11-02c is live.
+    has(sandbox({ vars: ['BACKEND_FEATURE_COST'] }).BACKEND_FEATURE_COST.version, 'on a deployment older than 2026-11-02c, Agent Two values every basis', 'the newest gap carries its vintage (the review\'s nit)');
     has(sandbox({ vars: ['BACKEND_FEATURE_COST'] }).BACKEND_FEATURE_COST.version, 'ends a Replacement Value line resting on asking prices as a general estimate',
       'the out-of-date banner names what stays wrong on Replacement Value');
   }
@@ -474,27 +477,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }
 
   // ═══════════════════════════════ K · ASK 14 ═══════════════════════════════
-  group('⚠⚠ K1 · a WorthPoint sale far from the line\'s figure asks once (Anthony, Ask 14; ACC-04)');
-  {
-    const dom = (price) => domStub({ 'av-wp-title-s1': { value: 'Bronze dancer, signed' }, 'av-wp-price-s1': { value: String(price) }, 'av-wp-url-s1': { value: 'https://www.worthpoint.com/worthopedia/1' },
-      'av-wp-date-s1': { value: '2026-03-02' }, 'av-wp-venue-s1': { value: 'WorthPoint' } });
-    const base = () => AGENT({ fmv: 4200, valLow: 3000, valHigh: 5500, reviewed: false, namedBy: 'agent' });
-    const keep = rig(ESTATE(), [base()], { answer: false, dom: dom(1100) });
-    eq(keep.agentValueUseSale(7, 's1'), 'filed', 'Cancel: filed only');
-    has(keep.said[0], 'The WorthPoint sale is $1,100 and #40 Bronze figure of a dancer is valued at $4,200: 74% apart.', '⚠⚠ asked once, both figures named');
-    const k = ref(keep);
-    eq([k.fmv, k.valSource, k.valuedBy, !!k.valReviewed, !!k.reviewed], [4200, 'Auction comps', 'agent', false, false], '⚠⚠ filed only: the figure, its source, its owner and its review untouched');
-    eq([k.valComps[0].price, k.valComps[0].by], [1100, 'desk'], '…the sale first among the comparables');
-    const use = rig(ESTATE(), [base()], { answer: true, dom: dom(1100) });
-    eq(use.agentValueUseSale(7, 's1'), 'used', 'OK: the sale is used');
-    const u = ref(use);
-    eq([u.fmv, u.valuedBy, u.valSource, u.valNote], [1100, 'desk', 'WorthPoint comps', 'WorthPoint sale, 2026-03-02: $1,100.'], '⚠⚠ the sale is the figure, the desk\'s, its basis the sale');
-    eq(u.valHigh, undefined, '…the agent\'s range off');
-    ok(!!u.reviewed, '…and the line reviewed: a sale a person pasted is their look');
-    const near = rig(ESTATE(), [base()], { dom: dom(3900) });
-    near.agentValueUseSale(7, 's1');
-    eq([near.said.length, ref(near).fmv, ref(near).valSource], [0, 4200, 'WorthPoint comps'], 'within 15%: no question, the sale supports the figure as before');
-  }
+  // K1 (Ask 14 as P15 first built it) is gone: on merging main (2026-11-02) Ask 14 is *Use a sale*'s one rule, held by
+  // tests/use-a-sale.test.js; K2 holds P15's review's two fixes carried into that rule.
 
   // ═══════════════════════════════ P15'S REVIEW ═══════════════════════════════
   group('⚠⚠ G1 · a figure is recorded at the basis and the date its request asked for, whatever changed while it was out');
@@ -591,10 +575,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(genAsk.basis, 'No sale the research could show: the going rate, with 1 asking price on the record.', '⚠ kept at high with an asking price: "the going rate", never "a best estimate"');
   }
 
-  group('⚠⚠ K2 · Ask 14 on a line of several weighs one article; a recorded $0 is a figure (P15\'s review)');
+  group('⚠⚠ K2 · Use a sale on a line of several weighs one article; a recorded $0 is a figure (P15\'s review, in main\'s one rule)');
   {
-    const dom = (price) => domStub({ 'av-wp-title-s1': { value: 'Herend plate, Rothschild Bird' }, 'av-wp-price-s1': { value: String(price) }, 'av-wp-url-s1': { value: 'https://www.worthpoint.com/worthopedia/1' },
-      'av-wp-date-s1': { value: '2026-03-02' }, 'av-wp-venue-s1': { value: 'WorthPoint' } });
+    const dom = (price, extra) => domStub(Object.assign({ 'av-wp-title-s1': { value: 'Herend plate, Rothschild Bird' }, 'av-wp-price-s1': { value: String(price) }, 'av-wp-url-s1': { value: 'https://www.worthpoint.com/worthopedia/1' },
+      'av-wp-date-s1': { value: '2026-03-02' }, 'av-wp-venue-s1': { value: 'WorthPoint' } }, extra || {}));
     const plates = () => AGENT({ objectName: 'Herend Rothschild Bird dinner plates', qty: 8, fmv: 720, valLow: 560, valHigh: 880, reviewed: false, namedBy: 'agent' });
     const near = rig(ESTATE(), [plates()], { dom: dom(90) });
     near.agentValueUseSale(7, 's1');
@@ -604,24 +588,31 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'the form asks what the price is for on a line of several, one piece as it opens');
     lacks(near._avPanelHtml(near.jobs[0], AGENT()), 'Price is for', '…and only the price on a line of one');
     // The sale of the whole set, said so on the form: weighed against the whole line, as on a line of one.
-    const set = rig(ESTATE(), [plates()], { dom: domStub({ 'av-wp-title-s1': { value: 'Herend Rothschild Bird, 8 dinner plates' }, 'av-wp-price-s1': { value: '700' },
-      'av-wp-url-s1': { value: 'https://www.worthpoint.com/worthopedia/8' }, 'av-wp-per-s1': { value: 'all' } }) });
+    const set = rig(ESTATE(), [plates()], { dom: dom(700, { 'av-wp-title-s1': { value: 'Herend Rothschild Bird, 8 dinner plates' }, 'av-wp-per-s1': { value: 'all' } }) });
     set.agentValueUseSale(7, 's1');
     eq([set.said.length, ref(set).fmv, ref(set).valComps[0].each], [0, 720, undefined], '⚠ the set of eight sold at $700 against $720: it supports the figure, filed as the set\'s price');
     const far = rig(ESTATE(), [plates()], { dom: dom(150) });
-    eq(far.agentValueUseSale(7, 's1'), 'used', 'a plate sold at $150 against $90 each: asked, OK');
-    has(far.said[0], 'The WorthPoint sale is $150 each and #40 Herend Rothschild Bird dinner plates is valued at $90 each ($720 for all 8): 67% apart.', '⚠ the question weighs one article');
-    has(far.said[0], 'OK uses the sale: $150 each becomes the value, $1,200 for all 8, with the sale as its basis.', '…and says what OK makes the line');
-    eq([ref(far).fmv, ref(far).unitVal, ref(far).valNote], [1200, 150, 'WorthPoint sale, 2026-03-02: $150 each.'], '⚠⚠ Each takes the sale and the total is it times the count');
+    far.agentValueUseSale(7, 's1');
+    has(far.said[0], 'This sale ($150 each) is 67% above the line\'s figure ($90 each, $720 for all 8).', '⚠ the question weighs one article');
+    has(far.said[0], 'OK: use the sale. The line\'s value becomes $150 each, $1,200 for all 8, from WorthPoint comps.', '…and says what OK makes the line');
+    has(far.said[0], 'Cancel: keep $720 and file the sale under it only.', '…and what Cancel keeps');
+    eq([ref(far).fmv, ref(far).unitVal, ref(far).valSource, ref(far).valuedBy], [1200, 150, 'WorthPoint comps', 'desk'], '⚠⚠ OK: Each takes the sale and the total is it times the count');
     eq(far.invUnitValue(ref(far)), 150, '…Each × Qty = Total');
     has(far._avPanelHtml(far.jobs[0], Object.assign({}, ref(far), { valuedBy: 'agent' })), '$150 each &middot;', 'the record lists the sale as one piece\'s price');
+    const farAll = rig(ESTATE(), [plates()], { answer: false, dom: dom(150, { 'av-wp-per-s1': { value: 'all' } }) });
+    farAll.agentValueUseSale(7, 's1');
+    has(farAll.said[0], 'This sale ($150) is 79% below the line\'s figure ($720).', '⚠ said to be for all eight: weighed against the whole line');
+    eq([ref(farAll).fmv, ref(farAll).valSource, ref(farAll).valComps[0].price], [720, 'Auction comps', 150], '…Cancel: the figure and its source stand, the sale filed');
     const unval = rig(ESTATE(), [AGENT({ objectName: 'Herend Rothschild Bird dinner plates', qty: 8, fmv: '', valLow: '', valHigh: '', valFailed: 'could not tell', reviewed: false, namedBy: 'agent' })], { dom: dom(90) });
     unval.agentValueUseSale(7, 's1');
     eq([ref(unval).fmv, ref(unval).unitVal, ref(unval).valuedBy], [720, 90, 'desk'], '⚠ a set with no figure takes the sale as Each, the total that times the count');
-    const zero = rig(ESTATE(), [AGENT({ fmv: 0, valLow: 0, valHigh: 0, reviewed: false, namedBy: 'agent' })], { answer: false, dom: dom(1100) });
-    eq(zero.agentValueUseSale(7, 's1'), 'filed', '⚠⚠ a $1,100 sale on a line valued at $0: asked; Cancel files it only');
-    has(zero.said[0], 'is valued at $0.', '…naming the $0');
-    eq([ref(zero).fmv, ref(zero).valSource, !!ref(zero).valReviewed], [0, 'Auction comps', false], '…the $0, its source and its review untouched');
+    const zero = rig(ESTATE(), [AGENT({ fmv: 0, valLow: 0, valHigh: 0, reviewed: false, namedBy: 'agent', valuedBy: 'desk', valSource: '' })], { answer: false, dom: dom(1100) });
+    zero.agentValueUseSale(7, 's1');
+    has(zero.said[0], 'This sale ($1,100) is above the line\'s figure ($0).', '⚠⚠ a $1,100 sale on a line a person valued at $0: asked');
+    eq([ref(zero).fmv, ref(zero).valSource], [0, ''], '…Cancel: the $0 stands and names nothing (it was relabelled WorthPoint comps with no question)');
+    const zeroOk = rig(ESTATE(), [AGENT({ fmv: 0, valLow: 0, valHigh: 0, reviewed: false, namedBy: 'agent', valuedBy: 'desk', valSource: '' })], { dom: dom(1100) });
+    zeroOk.agentValueUseSale(7, 's1');
+    eq([ref(zeroOk).fmv, ref(zeroOk).valSource], [1100, 'WorthPoint comps'], '…OK: the sale is the figure');
   }
 
   group('⚠⚠ W3 · Send worklist lets go of the send lock when an answer never comes');

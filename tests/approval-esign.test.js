@@ -117,6 +117,9 @@ function net(opts) {
     if (u.indexOf(SYNC) === 0) {
       log.gets.push(u);
       if (/action=loadMedia/.test(u)) return sp(res(o.media ? { ok: true, media: o.media } : { ok: false, error: 'offline' }));
+      // RESTATED 2026-11-02 (the envelope as its own record): an estate's send reads the client from the sheet first
+      // (approvalRecordFromSheet). The sheet's copy is the rig's own (o.sheetJobs, set by the rig), so the read moves nothing.
+      if (/action=loadJobs/.test(u)) return sp(res(o.sheetJobs ? { ok: true, jobs: o.sheetJobs() } : { ok: false, error: 'offline' }));
       return sp(res({ ok: false }));
     }
     if (u === 'https://www.googleapis.com/oauth2/v3/userinfo') return sp(res({ email: BOX }));
@@ -261,6 +264,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         // review the selection bar's Record approval reads the sheet first too.
         invReadFirst: () => false,
       }, o.stubs || {}));
+    N.opts.sheetJobs = () => JSON.parse(JSON.stringify(c.jobs));
     return { c, N, dom, notices, opened, hrefs, saves, badges, job: () => c.jobs[0], last: () => (notices[notices.length - 1] || {}),
              st: () => (c.jobs[0].docState || {}).approvalRequest, card: () => c._renderInvReleasesCard(c.jobs[0], c._jobInvRefs(7)) };
   }
@@ -294,7 +298,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     r.c._backendActions = ['esignSendRequest'];
     r.alerts = [];
     r.c.alert = (m) => r.alerts.push(String(m));
-    r.env = () => ((r.st() || {}).req || {}).envelope || null;
+    // RESTATED 2026-11-02: the envelope is its own docState key (approvalEnv:<id>), never inside the request's record; the newest.
+    r.env = () => { const all = (attempt(() => r.c.approvalEnvelopes(r.job())).val || []); return all.length ? all[all.length - 1] : null; };
+    r.envStamp = () => (r.job().at || {})['docState:approvalEnv:env-r1'];
+    r.reqStamp = () => (r.job().at || {})['docState:approvalRequest'];
     r.row = (id) => r.c._photoRefs[7].find((x) => x.stableId === id) || {};
     r.bar = () => (attempt(() => r.c.deskFoldState(7, r.job(), 'releases', r.c._jobInvRefs(7), '2026-10-17')).val || { bits: [] });
     r.barLine = () => (r.bar().bits || []).map((b) => b.text).join(' · ');
@@ -386,15 +393,26 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       ['Thomas Ellison', 'tom@ellison.example', ['reqInit1', 'reqSig1', 'reqDate1']],
       ['Catherine Ellison-Reyes', 'cat@ellison.example', ['reqInit2', 'reqSig2', 'reqDate2']]], '⚠⚠ each trustee with the markers the page carries for them');
     eq(post.cc, ['ann@lowe.law', 'agreements@havellinpalmbeach.com'], 'the estate attorney copied, and agreements@');
+    eq(post.envKey, 1, '⚠⚠ posted with envKey, the mark of an app that keeps its envelope on its own key (the redeployed script refuses a post without it)');
+    ok(r.N.log.gets.some((u) => /action=loadJobs/.test(u)), '⚠ the client was read from the sheet before it went');
     ok(String(post.pdfBase64 || '').length > 100, 'the PDF of the DocuSign copy');
     has(r.N.log.pdfs[0] || '', '/hri1/', 'built from the DocuSign copy');
     eq(r.N.log.drafts.length, 0, 'no Gmail draft');
     eq(r.N.log.posts.filter((p) => p === 'esignSendRequest').length, 1, 'posted once');
     const st = r.st() || {};
     eq([st.provider, !!st.sentAt, st.esign], ['docusign', true, undefined], 'recorded as sent, and the agreement\'s esign field untouched');
-    const e = r.env() || {};
-    eq([e.id, e.status, (e.signers || []).map((x) => [x.name, x.recipientId, x.n])], ['env-r1', 'sent', [['Thomas Ellison', '1', 1], ['Catherine Ellison-Reyes', '2', 2]]], 'the envelope on the request\'s own record');
-    eq(st.req.stableIds, ['a', 'b', 'd'], 'the lines it carried, in the paper\'s order');
+    // RESTATED 2026-11-02 (the envelope as its own record): the envelope is its own docState key, carrying the paper it went with;
+    // the request holds only its id.
+    const e = (r.job().docState || {})['approvalEnv:env-r1'] || {};
+    eq([e.id, e.status, (e.signers || []).map((x) => [x.name, x.recipientId, x.n])], ['env-r1', 'sent', [['Thomas Ellison', '1', 1], ['Catherine Ellison-Reyes', '2', 2]]], '⚠⚠ the envelope on its own key');
+    eq(e.stableIds, ['a', 'b', 'd'], 'the lines it carried, in the paper\'s order, on the envelope');
+    ok(typeof e.terms === 'string' && e.terms.length > 0, 'with the terms it carried');
+    const req = st.req || {};
+    eq([req.envelopeId, 'envelope' in req, 'stableIds' in req, 'terms' in req], ['env-r1', false, false, false], '⚠⚠ the request holds only a pointer: no envelope, no lines, no terms of its own');
+    eq([req.asked, req.ratify, req.to], [3, 0, ['tom@ellison.example', 'cat@ellison.example']], 'beside its counts and recipients');
+    ok(!!r.envStamp() && !!r.reqStamp(), 'the send stamps both keys (one save carries both)');
+    eq((JSON.stringify(r.job()).match(/"terms"/g) || []).length, 1, 'the paper is stored once, on the envelope');
+    eq(r.c.approvalRequestState(r.job(), r.c._jobInvRefs(7)).carried, 3, 'and the request reads its lines off the envelope (approvalReqView)');
     has(r.last().m, 'Sent through DocuSign to Thomas Ellison and Catherine Ellison-Reyes (3 lines), each initialling and signing on screen; ann@lowe.law and agreements@havellinpalmbeach.com copied once everyone has signed.', 'the notice');
     const card = text(r.card());
     has(card, 'Out for signature in DocuSign since Oct 17 to Thomas Ellison and Catherine Ellison-Reyes, 3 lines', '⚠⚠ the card: out for signature');
@@ -431,7 +449,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     r.c.approvalEnvelopeRefresh({ jobId: 7 });
     eq(r.N.log.status.length, 0, '⚠⚠ inside the floor from the send: not asked');
     r.at(NOW + 21 * MIN);
-    const stamp0 = JSON.stringify(r.job().at || {});
+    const stamp0 = JSON.stringify(r.job().at || {}), envAt0 = r.envStamp(), reqAt0 = r.reqStamp();
     const upd0 = r.job().updatedAt, sync0 = r.saves.filter((x) => x === 'sync').length;
     r.N.opts.esignStatus = STATUS('sent', [['1', 'completed', '2026-10-18T14:00:00Z'], ['2', 'sent']]);
     r.c.approvalEnvelopeRefresh({ jobId: 7 });
@@ -448,7 +466,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     r.c.approvalEnvelopeRefresh({ jobId: 7 });
     const e = r.env();
     eq([e.status, e.signers.map((x) => x.signedOn)], ['completed', ['2026-10-18', '2026-10-19']], 'complete: each trustee\'s own local day');
-    ok(!!(r.job().at || {})['docState:approvalRequest'], 'stamped: a recorded act, like the hand entry it replaces');
+    // RESTATED 2026-11-02: it read `docState:approvalRequest`, which the send had already stamped (vacuous); the completion stamps
+    // the envelope's own key and never the request's.
+    ok(r.envStamp() > envAt0, 'stamped: a recorded act, like the hand entry it replaces, on the envelope\'s own key');
+    eq(r.reqStamp(), reqAt0, '⚠⚠ and never the request\'s record, which another device\'s send may hold');
     eq(['a', 'b', 'd'].map((id) => [r.row(id).authBy, r.row(id).approvalDate]), [
       ['Thomas Ellison (2026-10-18); Catherine Ellison-Reyes (2026-10-19)', '2026-10-19'],
       ['Thomas Ellison (2026-10-18); Catherine Ellison-Reyes (2026-10-19)', '2026-10-19'],
@@ -705,10 +726,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(body('sendApprovalRequest'), 'approvalRequestEsignRefusal(', 'the send asks the refusal');
     has(body('approvalRequestCardHtml'), 'approvalRequestEsignRefusal(', 'the card asks it');
     has(body('sendApprovalRequest'), 'approvalRequestSendBlocker(', 'the send refuses past an envelope (the shared blocker)');
-    has(body('approvalRequestSendBlocker'), 'approvalEnvelopeOut(', '…which asks whether one is out');
+    // RESTATED 2026-11-02 (the envelope as its own record): over every envelope the client holds.
+    has(body('approvalRequestSendBlocker'), 'approvalEnvelopeBlocking(', '…which asks whether one is out, over every envelope');
     has(body('approvalRequestEsignRefusal'), 'approvalRequestSendBlocker(', 'and DocuSign\'s own refusal asks it too');
-    has(body('invRecordApproval'), 'approvalEnvelopeOut(', 'the bulk bar\'s Record approval too');
-    has(body('approvalRequestRecordRefusal'), 'approvalEnvelope(', 'and Record the signed request');
+    has(body('invRecordApproval'), 'approvalEnvelopesOut(', 'the bulk bar\'s Record approval too, over every envelope out');
+    has(body('approvalRequestRecordRefusal'), 'approvalEnvelopeForReq(', 'and Record the signed request, over the request\'s own');
+    has(body('sendApprovalRequest'), 'approvalRecordFromSheet(', '⚠ the send reads the client from the sheet first');
     has(body('invSaveApproval'), 'invApplyApproval(', 'the press writes through the one writer');
     has(body('approvalEnvelopeApply'), 'invApplyApproval(', 'and so does DocuSign');
     has(body('_invRefreshFromCloud'), 'approvalEnvelopeApply(', 'the desk\'s read lands the signatures');

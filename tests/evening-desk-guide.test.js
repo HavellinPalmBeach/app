@@ -827,7 +827,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // RESTATED 2026-10-27 (P5, REL-02): each ticked except a line changed since the request went (approvalRequestMovedIds).
     has(dlg, 'id="ia-line-\' + i + \'"\' + (ch ? \'\' : \' checked\')', 'each ticked, except one changed since');
     // RESTATED 2026-10-27 (P5, found on review): the request opened from, else the last one that went (the bulk bar's selection).
-    has(dlg, 'var _lastReq = fromReq ? (opt.req || null) : approvalRequestLastSent(', '…read off what the request carried');
+    // RESTATED 2026-11-02 (the envelope as its own record): read through approvalReqView, so a request that went through DocuSign
+    // reads the lines its envelope carried.
+    has(dlg, 'var _lastReq = fromReq ? (opt.req || null) : approvalReqView(job, approvalRequestLastSent(', '…read off what the request carried');
     has(dlg, 'approvalRequestMovedIds(job, _lastReq, ', '…line by line');
     eq(sandbox({ vars: ['INV_REQ_UNTICK_TXT'] }).INV_REQ_UNTICK_TXT, 'Untick any line the signed copy struck out.', 'the dialog says to untick what the signed copy struck out');
     has(dlg, 'Date of the signed approval', 'the date on the paper');
@@ -850,7 +852,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // More ▾'s papers on screen first (2026-10-26): the viewer, its Print / Save PDF.
     has(code(fn('printAsFoundRecord')), '{ view: true, job: job, label: ', 'a More ▾ paper opens in the viewer');
     has(SRC, 'onclick="printDocViewer()">&#128424; Print / Save PDF</button>', 'its Print / Save PDF');
-    has(t, 'Bar and More ▾ papers open on screen first: Print / Save PDF from there.', 'as the page says (the bar\'s since 2026-10-27)');
+    has(t, 'Every paper opens on screen first: Print / Save PDF from there.', 'as the page says (the bar\'s since 2026-10-27, every card\'s since 2026-11-02)');
     // The letter, the hold for a taker and Discard draft (2026-10-26): each sentence on the code that makes it true.
     eq(sandbox({ vars: ['INV_LINE_INITIAL_MIN'] }).INV_LINE_INITIAL_MIN, 500, 'one initial per group under $500');
     has(code(fn('printApprovalRequest')), '!invReleaseRecipientNamed(r) && !invRatificationOwed(r, job)', 'an item with nobody to take it is held off the request');

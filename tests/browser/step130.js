@@ -12,10 +12,10 @@
 // advice on the guardrail; the row's Reviewed tick leaves it there; Add to appraisal list records the decision. D: Waive (a prompt)
 // on the necklace; its record names who and when, with Undo waiver; Undo (asked) puts it back. E: More ▾ → Appraisal Worklist groups
 // Carla's oil under her; Send worklist drafts her packet to her; the row reads "Worklist drafted". F: the Values bar names her
-// overdue report. G: the Approval Request names the appraisal in progress on the oil. H: Use a WorthPoint sale far from the figure
+// overdue report. G: the Approval Request names the appraisal in progress on the oil. H: Use a sale far from the figure (main's rule since 2026-11-02)
 // asks once; Cancel files the sale only. I: 1440 and 390 px, no horizontal overflow; zero page errors.
 // P15's review (2026-10-28): J: the basis select while Agent Two is valuing says so and is put back; K: on a set of eight plates the
-// WorthPoint form asks for the price for one, and one plate's sale at their value asks nothing; E carries the photograph inside
+// Use a sale form asks for the price for one, and one plate's sale at their value asks nothing; E carries the photograph inside
 // Carla's PDF, never a link into Havellin's Drive; L: on a client's own home Send to a specialist takes the item off the guardrail.
 //
 //   NODE_PATH=/path/to/node_modules node tests/browser/step130.js [/abs/path/to/havellin.html]
@@ -291,17 +291,17 @@ const EST = 13001;
     });
 
     // ── H ──
-    await section('H. a WorthPoint sale far from the figure asks once; Cancel files the sale only (Ask 14)', async () => {
+    await section('H. a sale far from the figure asks once; Cancel files the sale only (Ask 14, Use a sale\'s rule since the merge with main)', async () => {
       await p.evaluate(() => { _invOpen = {}; renderInventoryTab(); }); await p.waitForTimeout(500);
       await record('ch');
-      await press('#inv-row-ch details summary', 'Use a WorthPoint sale');
+      await press('#inv-row-ch details summary', 'Use a sale');
       await p.fill('#av-wp-title-ch', 'Walnut chest on stand, 19th c.');
       await p.fill('#av-wp-price-ch', '1100');
       await p.fill('#av-wp-url-ch', 'https://www.worthpoint.com/worthopedia/walnut-chest-1');
       answer = false; said.length = 0;
       await press('#inv-row-ch button[onclick="agentValueUseSale(' + EST + ',\'ch\')"]', 'Use this sale');
       answer = true;
-      has(said.join(' | '), 'The WorthPoint sale is $1,100 and #5 Walnut chest on stand is valued at $4,200: 74% apart.', '⚠⚠ asked once, both figures named');
+      has(said.join(' | '), 'This sale ($1,100) is 74% below the line\'s figure ($4,200).', '⚠⚠ asked once, both figures named');
       const c = await line('ch');
       eq([c.fmv, c.valSource, c.valuedBy, (c.valComps || [])[0] && c.valComps[0].price], [4200, 'Auction comps', 'agent', 1100], 'Cancel: the figure untouched, the sale filed first');
     });
@@ -318,10 +318,10 @@ const EST = 13001;
     });
 
     // ── K ──
-    await section('K. a set of eight: the WorthPoint form asks for the price for one, weighed against one plate (P15\'s review)', async () => {
+    await section('K. a set of eight: the Use a sale form asks for the price for one, weighed against one plate (P15\'s review)', async () => {
       await p.evaluate(() => { _invOpen = {}; _invFilter.when = 'all'; renderInventoryTab(); }); await p.waitForTimeout(500);
       await record('pl');
-      await press('#inv-row-pl details summary', 'Use a WorthPoint sale');
+      await press('#inv-row-pl details summary', 'Use a sale');
       has(await txt('#inv-row-pl details'), 'Price is for', '⚠ the form asks what the price is for');
       eq(await val('#av-wp-per-pl'), 'each', '…one piece, as it opens');
       await p.fill('#av-wp-title-pl', 'Herend Rothschild Bird dinner plate');

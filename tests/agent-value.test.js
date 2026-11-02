@@ -117,11 +117,11 @@ const AV_FNS = ['_avValueButtonHtml', 'agentValueWaiting', 'agentDuplicateGroups
   'invFiduciaryMode', 'isDecedentJob', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep', 'estateValueDate',
   '_avdDate', '_ymdLocal', 'resolveValBasis', '_agNameKey', '_agDetailRefs', 'invLineCloseUps', '_invFileId', 'invAppraisalThreshold',
   'gateDispute', '_gateYes', 'invNeedsAppraisal', 'invAppraisalChosen', 'fmt', '_invMoney', '_invNamed', '_invItemNo', '_andJoin',
-  'moneyToNumber', '_readAppsScriptJson', '_invJob', '_avNameIsAgents', '_invStampLineReviewed', '_invRenderWhenIdle', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', 'agentValueLooks', '_avPhotoContext', '_invPhotoSource', '_invRoomName', 'agentListedOff', 'agentValueAgain', 'invLineQty', 'invLineReviewed', 'invLineOpen', '_avSurveyOf', '_withDeviceKey', 'deviceKey', 'invFirearmSettle', 'invFirearmDispRefusal', 'invIsFirearm', '_avStampCounts', 'agentValueAdvised', 'agentValueAdvice', 'agentValueAdviceVerb', 'invValueStandardMoved', 'invValueStandardWords', 'invLineValueDate', 'estateAvdOn'];
-const AV_VARS = ['INV_WP_SALE_APART', 'AGENT_VALUE_PREMIUMS', 'AGENT_VALUE_PREMIUM_WORDS', '_avRun', '_avForceComps', '_avAfter', 'AGENT_VALUE_BATCH', 'AGENT_VALUE_GENERAL_CEILING', 'AGENT_VALUE_WHOLE_FROM', 'AGENT_VALUE_MAX_COMPS', 'AGENT_CONDITIONS', 'INV_FIREARM_NEVER',
+  'moneyToNumber', '_readAppsScriptJson', '_invJob', '_avNameIsAgents', '_invStampLineReviewed', '_invRenderWhenIdle', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', 'agentValueLooks', '_avPhotoContext', '_invPhotoSource', '_invRoomName', 'agentListedOff', 'agentValueAgain', 'invLineQty', 'invLineReviewed', 'invLineOpen', '_avSurveyOf', '_withDeviceKey', 'deviceKey', 'invFirearmSettle', 'invFirearmDispRefusal', 'invIsFirearm', '_avStampCounts', 'invSaleSource', 'invSaleVenue', 'invSaleFarOff', '_invSaleHost', 'agentValueAdvised', 'agentValueAdvice', 'agentValueAdviceVerb', 'invValueStandardMoved', 'invValueStandardWords', 'invLineValueDate', 'estateAvdOn'];
+const AV_VARS = ['_avRun', '_avForceComps', '_avAfter', 'AGENT_VALUE_BATCH', 'AGENT_VALUE_GENERAL_CEILING', 'AGENT_VALUE_WHOLE_FROM', 'AGENT_VALUE_MAX_COMPS', 'AGENT_CONDITIONS', 'INV_FIREARM_NEVER', 'AGENT_VALUE_PREMIUMS', 'AGENT_VALUE_PREMIUM_WORDS',
   'AGENT_VALUE_MARK_RE', 'AGENT_VALUE_NO_MARK_RE', 'AGENT_VALUE_CONFS', 'AGENT_VALUE_SOURCES', 'AGENT_VALUE_OWN', 'AGENT_VALUE_SALE_DATE_RE',
   'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'DECEDENT_SERVICES', 'DOC_TIERS',
-  'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'AGENT_MAX_DETAILS', 'INV_VAL_SOURCES', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', 'AGENT_VALUE_READ_RE', 'AGENT_VALUE_HEDGE_RE', 'AGENT_LISTED_MAX', '_avAutoAgain', 'INV_CATEGORIES', 'AGENT_PASS_GAP_MS', 'AGENT_ROOM_CONF_RANK'];
+  'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'AGENT_MAX_DETAILS', 'INV_VAL_SOURCES', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', 'AGENT_VALUE_READ_RE', 'AGENT_VALUE_HEDGE_RE', 'AGENT_LISTED_MAX', '_avAutoAgain', 'INV_CATEGORIES', 'AGENT_PASS_GAP_MS', 'AGENT_ROOM_CONF_RANK', 'INV_SALE_AUCTION_HOSTS', 'INV_SALE_ASK_PCT'];
 
 // A synchronous, already-settled promise (the runner is synchronous), unwrapping a returned thenable like a real one.
 function sp(v) {
@@ -191,7 +191,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(body.tool_choice, { type: 'auto' }, '⚠ auto, never a forced tool choice (a 400 on this model)');
     eq(body.tools.map((t) => t.type || t.name), ['web_search_20260209', 'web_fetch_20260209', 'record_values'], 'search, fetch and the answer tool on a researched line');
     eq(body.tools[0].max_uses, 5, 'five searches for research');
-    eq(body.tools[1].max_uses, 2, 'two page reads');
+    // RESTATED 2026-11-02 (Anthony: "Agent Two reads 4 pages"; use-a-sale.test.js holds the change).
+    eq(body.tools[1].max_uses, 4, 'four page reads');
     eq(body.tools[2].strict, true, 'the answer tool is strict');
     eq(body.system[0].cache_control, { type: 'ephemeral' }, 'the system prompt is cached for the job');
     eq(body.fallbacks, 'default', 'the server-side refusal fallback, opted into');

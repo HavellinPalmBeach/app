@@ -169,17 +169,31 @@
 // it saved, a write that fails as it is applied fails after doPost has returned ok (whether the device then receives that ok or an
 // error page is not known), a store cut at an = can turn unreadable (every save to it refused until it is restored from version
 // history), and a hard delete can race other saves, go unrecorded, or answer ok with the client's row still on the tab.
-// ⚠ 2026-10-28b (the desk audit's P15, "The value follows the job's standard, market and date"; ACC-09, ACC-12, ACC-10): Agent Two's
+// ⚠ 2026-11-02 (Anthony, off the eBay developer account: eBay's API holds back its sold history, so the sales Agent Two can cite are
+// the ones the web shows; he took "Agent Two reads 4 pages"): a research line may read four pages, not two (AGENT_VALUE_FETCHES),
+// so a results page and the lots opened from it are more often a sale it can cite. No action or type changes; carries 2026-10-28's.
+// Until it is live a research line reads two pages. Each research request runs longer: testAgentValue() prints the seconds.
+// ⚠⚠ 2026-11-02b (the 2026-10-26c finding, Anthony chose the fix: a device whose copy of a client predated a release request's DocuSign
+// envelope could still send a request, and its stamped approvalRequest record won the merge, so the envelope's record was gone from
+// every device): the app now keeps each envelope as its own docState key, 'approvalEnv:<envelopeId>', which this merge already takes
+// key by key, and reads the client from the sheet before an estate's send. Here esignSendRequest refuses a post from a copy of the
+// app opened before the change (no `envKey`) and refuses while the sheet's copy of the client holds an envelope still out for
+// signature (_approvalEnvOutGs; APPROVAL_ENV_PREFIX_GS and APPROVAL_ENV_DONE_GS held equal to the app's), each refusal logged, marked
+// `refused` ('out' for the second envelope) so the app never puts it to the person as DocuSign's answer, and nothing sent to DocuSign.
+// The merge is unchanged. No action or type changes; it carries 2026-11-02's (and so 2026-10-28's). Until it is live a copy of
+// the app that has not been reloaded can send a request through DocuSign that today's app never checks, records on the lines or
+// files, and two devices pressing at once can put out a second envelope while one is out.
+// ⚠ 2026-11-02c (the desk audit's P15, "The value follows the job's standard, market and date"; ACC-09, ACC-12, ACC-10): Agent Two's
 // standard follows the regulation's rule by class in place of a blanket "not retail" (auction with the buyer's premium for art,
 // antiques, silver and jewelry; the used or resale market for branded furniture, decor and electronics; the going used rate for
 // everyday things), each basis sentence names its market, and a comparable says whether its price includes the buyer's premium
 // (`premium`: included, added, hammer only, none), a hammer-only result grossed up by the house's stated premium or labelled as such;
 // a basis other than Fair Market Value gets a paragraph of its own and the range's words fit it, and on Replacement Value an asking
 // price of a like item is the evidence, never a general estimate for want of a sale; a line valued as of its own day (§2032(a)(1))
-// is told so (`valueDate`). No action or type changes; it carries 2026-10-28's (the cell-cap fix, above). Until it is live the prompt values every basis as
+// is told so (`valueDate`). No action or type changes; it carries 2026-11-02b's (and so 2026-11-02's and 2026-10-28's). Until it is live the prompt values every basis as
 // Fair Market Value at second-hand prices, says "not retail" of branded furniture, mixes hammer and all-in prices with no word, and
 // values a line that left inside the six months as of the alternate date.
-var BACKEND_VERSION = '2026-10-28b';
+var BACKEND_VERSION = '2026-11-02c';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive', 'esignSendRequest',
@@ -3092,17 +3106,57 @@ function _approvalRequestSubjectGs(job) {
   var street = String((job && job.addr) || '').split(',')[0].trim();
   return 'Havellin Palm Beach — Release Approval Request for ' + (street || (job && job.name) || 'the property');
 }
+// ⚠⚠ ONE RELEASE REQUEST OUT IN DOCUSIGN PER CLIENT (2026-11-02). Since that day's app each envelope is its own docState key on the
+// client, 'approvalEnv:<envelopeId>' (the app's APPROVAL_ENV_PREFIX: a stored prefix, never renamed), which this script's merge
+// takes alone on its own stamp (docState is one of JOB_KEYED_MAPS). The app reads the client from the sheet before it sends and
+// refuses past an envelope another device sent; this is the last word, for two devices pressing within the seconds before the first
+// envelope's record reaches the sheet, and for a copy of the app opened before the change (it posts no `envKey`, and it would record
+// its envelope where the new app never reads it, so nothing would ever check it, record it on the lines or file it).
+var APPROVAL_ENV_PREFIX_GS = 'approvalEnv:';   // MUST MATCH the app's APPROVAL_ENV_PREFIX
+var APPROVAL_ENV_DONE_GS = ['completed', 'declined', 'voided'];   // MUST MATCH the app's APPROVAL_ENV_DONE
+// The envelopes the sheet's copy of the client holds that are still out for signature (sent, and not completed, declined or voided).
+function _approvalEnvOutGs(job) {
+  var ds = (job && job.docState && typeof job.docState === 'object') ? job.docState : {};
+  var out = [];
+  for (var k in ds) {
+    if (k.indexOf(APPROVAL_ENV_PREFIX_GS) !== 0) continue;
+    var e = ds[k];
+    if (e && e.id && APPROVAL_ENV_DONE_GS.indexOf(String(e.status || '')) < 0) out.push(e);
+  }
+  return out;
+}
 function esignSendRequestForJob(data) {
   data = data || {};
   var log = { act: 'esignSendRequest', jobId: data.jobId, by: data.by };
-  var refuse = function (why) { log.result = 'refused: ' + why; _accessLog(log); return { ok: false, error: why }; };
+  // ⚠ EVERY REFUSAL SAYS IT IS ONE (found on review, 2026-11-02): `refused` tells the app that this script turned the request away
+  // before DocuSign was asked, so it is never put to the person as DocuSign's answer, nor followed by advice to send the same lines
+  // again; 'out' marks the second envelope it will not make, on which the app reads the client again and redraws the card. A crash
+  // (the catch below) is not marked: nothing then says DocuSign was never asked.
+  var refuse = function (why, kind) {
+    log.result = 'refused: ' + why; _accessLog(log);
+    var out = { ok: false, error: why };
+    if (kind !== false) out.refused = kind || 'refused';
+    return out;
+  };
   try {
     if (data.jobId === undefined || data.jobId === null || String(data.jobId).trim() === '')
       return refuse('The request names no client, so nothing was sent: reload the app (an older copy of it is open) and send again.');
+    // An app from before 2026-11-02 records its envelope where today's app never reads it (above).
+    if (!data.envKey) return refuse('Not sent: an older copy of the app is open. Reload it and send again.');
     var job = _jobOnSheet(data.jobId);
     if (!job) return refuse('This client is not on the sheet, so nothing was sent.');
     log.hvlId = job.hvlId || '';
     if (!_GS_DECEDENT_SERVICES[job.svc || job.serviceType]) return refuse('DocuSign carries an estate’s release request only, so nothing was sent.');
+    var outEnv = _approvalEnvOutGs(job);
+    if (outEnv.length) {
+      // The day it went, in the script's own time zone, as a person reads it ("October 30, 2026").
+      var sent = new Date(outEnv[0].sentAt || '');
+      var day = isNaN(sent.getTime()) ? '' : ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September',
+        'October', 'November', 'December'][sent.getMonth()] + ' ' + sent.getDate() + ', ' + sent.getFullYear();
+      return refuse('The envelope was not created: a release request for this client is already out for signature in DocuSign'
+        + (day ? ' (sent ' + day + ')' : '') + '. Reload the app to see it; if it has just been signed or voided, open the client so the '
+        + 'app checks DocuSign, then send again.', 'out');
+    }
     var fids = _jobFiduciariesGs(job);
     if (!fids.length) return refuse('No representative is recorded on this client on the sheet, so nothing was sent.');
     var noEmail = fids.filter(function (f) { return !f.email; }).map(function (f) { return f.name; });
@@ -3135,7 +3189,7 @@ function esignSendRequestForJob(data) {
     return res;
   } catch (error) {
     Logger.log('esignSendRequestForJob error: ' + error);
-    return refuse(String(error));
+    return refuse(String(error), false);
   }
 }
 // The initials box sits on the line its marker opens, so the tab goes down less than a signature's does (DS_TAB_Y_OFFSET
@@ -4942,7 +4996,10 @@ var AGENT_VALUE_GENERAL_BATCH = 8;    // ordinary lots per request ("about ten",
 // the first thing in the prompt, so a `max_uses` that varied with the batch would give every
 // request a different prefix and the cached system prompt would never be read back.
 var AGENT_VALUE_SEARCHES    = { comps: 5, general: 8 };
-var AGENT_VALUE_FETCHES     = 2;      // comps only: reading a results page the search turned up
+// 2026-11-02 (Anthony: "Agent Two reads 4 pages"; it was 2): more chances to open the lot itself from a results page, where the sold
+// price is, so fewer research lines come back unsure. Each read lengthens the request; UrlFetchApp ends one at about 60 s and the
+// fallback (_agModels) takes it then. Lower it again if testAgentValue() or the logs show research running past the limit.
+var AGENT_VALUE_FETCHES     = 4;      // comps only: reading a results page the search turned up, and the lots opened from it
 var AGENT_VALUE_CONTINUES   = 2;      // `pause_turn` continuations per request before it is called unfinished
 var AGENT_VALUE_MAX_COMPS   = 6;      // comparables kept per line (the manifest lives in a ~5MB localStorage)
 // ⚠⚠ A LISTING SURVEY COUNTS (2026-10-27; Anthony: *"if we see literally dozens of listings on eBay and Etsy, can't we use that to

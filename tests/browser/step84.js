@@ -29,12 +29,17 @@ const EST = 8401;
     b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
     const ctx = await b.newContext({ viewport: { width: 1440, height: 1000 }, timezoneId: 'America/New_York' });
     let sheet = {};
+    // The Jobs tab as this page last sent it (one device, so its newest copy stands): an estate's send reads the client from the
+    // sheet before anything goes (approvalRecordFromSheet, 2026-11-02), and the read answers from here.
+    const sheetJobs = {};
     const posts = [];
     await ctx.route(SYNC + '**', async (r) => {
       const req = r.request();
       const json = (o) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(o) });
       if (req.method() === 'POST') {
         let body = {}; try { body = JSON.parse(req.postData() || '{}'); } catch (e) {}
+        if (body.type === 'saveAllJobs') (body.payload || []).forEach((j) => { if (j && j.id != null) sheetJobs[j.id] = j; });
+        if (body.type === 'job' && body.payload && body.payload.id != null) sheetJobs[body.payload.id] = body.payload;
         posts.push(body);
         if (body.action === 'uploadHtml') return json({ ok: true, fileUrl: 'https://drive.google.com/file/d/up' + posts.length + '/view', fileId: 'up' + posts.length });
         if (body.action === 'htmlToPdf') return json({ ok: true, base64: Buffer.from('%PDF-1.4 ' + 'x'.repeat(200)).toString('base64') });
@@ -42,6 +47,7 @@ const EST = 8401;
         return json({ ok: true });
       }
       if (/action=loadMedia/.test(req.url())) return json({ ok: true, media: sheet });
+      if (/action=loadJobs/.test(req.url())) return json({ ok: true, success: true, jobs: Object.values(sheetJobs), deletedJobs: [], recorded: [] });
       return json({ ok: true });
     });
     const p = await ctx.newPage();

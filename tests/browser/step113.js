@@ -6,6 +6,8 @@
 // out for signature, with Check DocuSign and no send or record by hand. B: twenty-one minutes on, DocuSign answers that both
 // have signed: Check DocuSign pressed, each trustee's day lands on both lines, the signed copy is filed and linked. C: a third
 // trustee with no email: the card names them and leads with the email route. D: 390 px, zero page errors.
+// Since 2026-11-02 the envelope is its own record (docState['approvalEnv:<id>'], the request holding only its id) and an estate's
+// send reads the client from the sheet first, so the routed sheet answers loadJobs with the clients as this page last sent them.
 //
 //   NODE_PATH=/path/to/node_modules node tests/browser/step113.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
@@ -28,12 +30,18 @@ const EST = 11301, THREE = 11302;
     let sheet = {};
     const posts = [];
     let statusAnswer = null;
+    // The Jobs tab as this page last sent it (one device, so its newest copy stands): an estate's send reads the client from the
+    // sheet before anything goes (approvalRecordFromSheet, 2026-11-02), and the read answers from here.
+    const sheetJobs = {};
+    const gets = [];
     await ctx.route(SYNC + '**', async (r) => {
       const req = r.request();
       const json = (o) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(o) });
       if (req.method() === 'POST') {
         let body = {}; try { body = JSON.parse(req.postData() || '{}'); } catch (e) {}
         posts.push(body);
+        if (body.type === 'saveAllJobs') (body.payload || []).forEach((j) => { if (j && j.id != null) sheetJobs[j.id] = j; });
+        if (body.type === 'job' && body.payload && body.payload.id != null) sheetJobs[body.payload.id] = body.payload;
         if (body.action === 'uploadHtml') return json({ ok: true, fileUrl: 'https://drive.google.com/file/d/up' + posts.length + '/view', fileId: 'up' + posts.length });
         if (body.action === 'htmlToPdf') return json({ ok: true, base64: Buffer.from('%PDF-1.4 ' + 'x'.repeat(200)).toString('base64') });
         if (body.action === 'getSubfolders') return json({ ok: true, subfolders: null });
@@ -43,7 +51,9 @@ const EST = 11301, THREE = 11302;
         if (body.action === 'esignArchive') return json({ ok: true, signedUrl: 'https://drive.google.com/file/d/signed113/view', signedId: 'signed113', certUrl: 'https://drive.google.com/file/d/cert113/view' });
         return json({ ok: true });
       }
+      gets.push(((/action=([A-Za-z]+)/.exec(req.url()) || [])[1]) || '');
       if (/action=loadMedia/.test(req.url())) return json({ ok: true, media: sheet });
+      if (/action=loadJobs/.test(req.url())) return json({ ok: true, success: true, jobs: Object.values(sheetJobs), deletedJobs: [], recorded: [] });
       return json({ ok: true });
     });
     const p = await ctx.newPage();
@@ -121,13 +131,21 @@ const EST = 11301, THREE = 11302;
       has(await txt('#inv-releases'), 'Goes through DocuSign to Thomas Ellison and Catherine Ellison-Reyes, each initialling and signing on screen', 'the card says where it goes');
       ok(await p.locator('#inv-releases button.btn-bronze[onclick="sendApprovalRequestEsign(' + EST + ')"]').isVisible(), '⚠⚠ Send through DocuSign leads');
       ok(await p.locator('#inv-releases button[onclick="sendApprovalRequest(' + EST + ')"]').isVisible(), 'the PDF by email beside it');
+      ok(!!sheetJobs[EST], 'fixture: the sheet holds the client as this page sent it');
+      const reads0 = gets.filter((x) => x === 'loadJobs').length;
       await press('#inv-releases button[onclick="sendApprovalRequestEsign(' + EST + ')"]', 'Send through DocuSign');
       await p.waitForTimeout(1500);
+      ok(gets.filter((x) => x === 'loadJobs').length > reads0, '⚠ the press read the client from the sheet first (2026-11-02)');
       const sent = posts.filter((x) => x.action === 'esignSendRequest');
       eq(sent.length, 1, 'one envelope asked for');
+      eq(sent[0] && sent[0].envKey, 1, 'and the post says this app keeps the envelope on its own key (the Apps Script refuses one that does not)');
       eq((sent[0] && sent[0].signers || []).map((x) => [x.name, x.anchors]), [['Thomas Ellison', ['reqInit1', 'reqSig1', 'reqDate1']], ['Catherine Ellison-Reyes', ['reqInit2', 'reqSig2', 'reqDate2']]],
         '⚠⚠ both trustees, each with the markers measured off the page');
       eq(await p.evaluate(() => window.__drafts.length), 0, 'no Gmail draft');
+      const rec = await p.evaluate((id) => { const ds = jobs.find((j) => j.id === id).docState || {};
+        const e = ds['approvalEnv:env-113'] || {}, q = (ds.approvalRequest || {}).req || {};
+        return { env: [e.id, e.status, e.stableIds], ptr: q.envelopeId, inReq: ['envelope', 'stableIds', 'terms'].filter((k) => k in q) }; }, EST);
+      eq(rec, { env: ['env-113', 'sent', ['a', 'b']], ptr: 'env-113', inReq: [] }, '⚠⚠ the envelope on its own key with the lines it carried; the request holds only its id');
       await openBar('releases', EST);
       const card = await txt('#inv-releases');
       has(card, 'Out for signature in DocuSign since', '⚠⚠ the card: out for signature');
@@ -141,12 +159,17 @@ const EST = 11301, THREE = 11302;
     // ── B ───────────────────────────────────────────────────────────────────
     await section('B. twenty-one minutes on, both have signed: Check DocuSign pressed, each trustee\'s day on both lines, the copy filed and linked', async () => {
       // The envelope was checked as it went; DocuSign's floor is twenty minutes, so the clock of its last check is moved back.
-      await p.evaluate((id) => { const e = jobs.find((j) => j.id === id).docState.approvalRequest.req.envelope; e.checkedAt = new Date(Date.now() - 21 * 60000).toISOString(); }, EST);
+      await p.evaluate((id) => { const e = jobs.find((j) => j.id === id).docState['approvalEnv:env-113']; e.checkedAt = new Date(Date.now() - 21 * 60000).toISOString(); }, EST);
       statusAnswer = { ok: true, envelopeId: 'env-113', status: 'completed', completedAt: '2026-10-19T15:00:00Z', signers: [
         { recipientId: '1', name: 'Thomas Ellison', email: 'tom@example.com', status: 'completed', signedAt: '2026-10-18T14:00:00Z' },
         { recipientId: '2', name: 'Catherine Ellison-Reyes', email: 'cat@example.com', status: 'completed', signedAt: '2026-10-19T15:00:00Z' }] };
+      const stamps = () => p.evaluate((id) => { const at = jobs.find((j) => j.id === id).at || {}; return [at['docState:approvalEnv:env-113'] || 0, at['docState:approvalRequest'] || 0]; }, EST);
+      const at0 = await stamps();
       await press('#inv-releases button[onclick="approvalEnvelopeCheckNow(' + EST + ')"]', 'Check DocuSign');
       await p.waitForTimeout(1500);
+      const at1 = await stamps();
+      ok(at1[0] > at0[0], '⚠ the completion is stamped on the envelope\'s own key');
+      eq(at1[1], at0[1], '⚠⚠ and never on the request\'s (a completion on a stale copy put back an older request before 2026-11-02)');
       eq(await p.evaluate((id) => _photoRefs[id].map((r) => [r.stableId, r.authBy, r.approvalDate]), EST), [
         ['a', 'Thomas Ellison (2026-10-18); Catherine Ellison-Reyes (2026-10-19)', '2026-10-19'],
         ['b', 'Thomas Ellison (2026-10-18); Catherine Ellison-Reyes (2026-10-19)', '2026-10-19']], '⚠⚠ each trustee\'s own day, on both lines');

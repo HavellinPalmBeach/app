@@ -4,7 +4,9 @@
 // an alarm code) lands in the device user's hands; Close job on the band is refused while they are held, naming them; the
 // alarm code is marked lost and reads red on the card and on the client dashboard; the key is returned; the close now goes
 // through, wipes the code's digits and files the record; the printed record carries no digits. Phone width is measured
-// with the card open.
+// with the card open. Restated 2026-11-02: every card's paper opens on screen first: the card's Print the custody record
+// opens the record in the document viewer, titled by the paper, and nothing prints until its Print / Save PDF is pressed;
+// that press prints the page this step reads.
 //
 //   NODE_PATH=/path/to/node_modules node tests/browser/step81.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
@@ -44,7 +46,10 @@ const MM = 8101;
       SHEETS_SYNC_URL = u;
       localStorage.setItem('hav_device_user', 'Ashley Jerome');
       window.open = function () { return null; };
-      window.__printed = ''; window.print = function () { var t = document.getElementById('print-target'); window.__printed = t ? t.innerHTML : ''; };
+      // Restated 2026-11-02: every card's paper opens on screen first. The stub also counts the prints, so the step can
+      // say nothing printed before the viewer's Print / Save PDF was pressed.
+      window.__printed = ''; window.__printCount = 0;
+      window.print = function () { var t = document.getElementById('print-target'); window.__printed = t ? t.innerHTML : ''; window.__printCount++; };
     }, SYNC);
     const vis = (sel) => p.locator(sel).first().isVisible().catch(() => false);
     const press = async (sel, what) => {
@@ -151,9 +156,21 @@ const MM = 8101;
     lacks(up ? up.html : '4521', '4521', 'and the filed page carries no digits');
 
     // The printed record, from the card.
+    // Restated 2026-11-02: every card's paper opens on screen first. The press opens the record in the document viewer,
+    // titled by the paper, with nothing printed; the viewer's Print / Save PDF prints the page read below, the viewer comes
+    // back once the print dialog closes, and Close takes it away (it covers the page, and the phone checks press the card).
     await plan();
+    const viewerOpen = () => p.evaluate(() => { const o = document.getElementById('doc-viewer-modal'); return !!o && o.style.display === 'flex'; });
+    const printCount = () => p.evaluate(() => window.__printCount || 0);
+    const printsBefore = await printCount();
     await press('#plan-access-' + MM + ' button[onclick*="printAccessRecord("]', 'Print the custody record');
-    await p.waitForTimeout(800);
+    ok(await viewerOpen(), 'the custody record opens in the document viewer');
+    eq(await p.evaluate(() => (document.getElementById('doc-viewer-title') || {}).textContent || ''), 'Key and Access Custody Record', 'the viewer is titled by the paper');
+    has(await p.evaluate(() => (document.getElementById('doc-viewer-sub') || {}).textContent || ''), 'Ruth Adler', 'with the client under it');
+    eq(await printCount(), printsBefore, 'nothing printed before Print / Save PDF is pressed');
+    await press('#doc-viewer-print', 'Print / Save PDF, in the viewer');
+    await p.waitForSelector('#doc-viewer-modal', { state: 'visible', timeout: 4000 }).catch(() => ok(false, 'the viewer comes back after the print dialog'));
+    eq(await printCount(), printsBefore + 1, 'Print / Save PDF printed the page once');
     const printed = await p.evaluate(() => window.__printed || '');
     ok(printed.length > 500, 'printed (' + printed.length + ' chars)');
     const plain = printed.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
@@ -162,6 +179,8 @@ const MM = 8101;
     has(plain, 'written on a card that went in the shredding', 'the lost item\'s explanation');
     has(plain, 'cleared at close', 'the code reads cleared at close');
     lacks(plain, '4521', '⚠⚠ never the digits');
+    await press('#doc-viewer-modal button[onclick="closeDocViewer()"]', 'Close the viewer');
+    ok(!(await viewerOpen()), 'Close takes the viewer away');
 
     eq(await overflow(), 0, 'no horizontal overflow at 1440');
     await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(500);

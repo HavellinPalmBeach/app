@@ -13,13 +13,15 @@
 //      card's line is red ("held by Havellin … today"); the desk carries it first, red, in its Urgent strip above the band
 //      (2026-10-22; it led the Job Admin card, shut by default), and Job Admin keeps the trustee's own list.
 //   C. Print Receipt for Original Will: the statement, the description escaped, the blank lines; it fits a Letter page
-//      under print media.
+//      under print media. Restated 2026-11-02: every card's paper opens on screen first: the press opens the document
+//      viewer, titled by the form, nothing prints until its Print / Save PDF, and that press prints the page read here.
 //   D. Record the hand-over (the attorney and today by default); the deposit line falls due ten days later; File signed
 //      receipt, a PDF through the real picker, to the routed Apps Script (Signed Records, uploadFile): the receipt line
 //      goes green; Confirm the deposit with the clerk: every line green.
 //   E. Record cash found: one name twice is refused; two people and a bag number recorded; red until handed over; the
 //      hand-over recorded (the fiduciary and today by default); Print Cash Count and Receipt (two counters' lines, the
-//      fiduciary's for the bag); File signed receipt, a photograph: green.
+//      fiduciary's for the bag; on screen first, printed from the viewer, restated 2026-11-02); File signed receipt, a
+//      photograph: green.
 //   F. Overflow at 1440 and 390 with the card on screen and with the dialog open; no page errors.
 //
 //   NODE_PATH=/opt/node22/lib/node_modules node tests/browser/step57.js [/abs/path/to/havellin.html]
@@ -103,6 +105,25 @@ const pretty = (ymd) => { const [y, m, d] = ymd.split('-').map(Number);
     };
     const val = (sel) => p.evaluate((s) => { const e = document.querySelector(s); return e ? e.value : null; }, sel);
     const txt = (sel) => p.evaluate((s) => { const el = document.querySelector(s); return el ? el.textContent.replace(/\s+/g, ' ').trim() : ''; }, sel);
+    // Restated 2026-11-02: every card's paper opens on screen first. A Found on site receipt opens in the document viewer,
+    // titled by the form with the client line under it, and nothing prints until its Print / Save PDF is pressed; that press
+    // prints the page (what __prints captures), the viewer comes back once the dialog closes, and Close takes it away so the
+    // Job Plan under it can be pressed again.
+    const viewerOpen = () => p.evaluate(() => { const o = document.getElementById('doc-viewer-modal'); return !!o && o.style.display === 'flex'; });
+    const printCount = () => p.evaluate(() => (window.__prints || []).length);
+    const viewThenPrint = async (title, before) => {
+      ok(await until(viewerOpen, 3000), title + ' opens in the document viewer');
+      eq(await txt('#doc-viewer-title'), title, 'the viewer is titled by the paper');
+      eq(await txt('#doc-viewer-sub'), 'Estate of Harold Adler · 100 Ocean Blvd', 'with the client line under it');
+      eq(await printCount(), before, 'nothing printed before Print / Save PDF is pressed');
+      await press('#doc-viewer-print', 'Print / Save PDF, in the viewer');
+    };
+    const closeViewer = async (before) => {
+      await p.waitForSelector('#doc-viewer-modal', { state: 'visible', timeout: 4000 }).catch(() => ok(false, 'the viewer comes back after the print dialog'));
+      eq(await printCount(), before + 1, 'Print / Save PDF printed the page once');
+      await press('#doc-viewer-modal button[onclick="closeDocViewer()"]', 'Close the viewer');
+      ok(!(await viewerOpen()), 'Close takes the viewer away');
+    };
     const overflow = () => p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     const job = (id) => p.evaluate((id) => JSON.parse(JSON.stringify(jobs.find((j) => j.id === id) || null)), id);
     const settle = async () => {
@@ -244,8 +265,11 @@ const pretty = (ymd) => { const [y, m, d] = ymd.split('-').map(Number);
       await openPlan(5701);
       await hookPrint();
       await press('#plan-finds-5701 button:has-text("Print Receipt for Original Will")', 'Print Receipt for Original Will');
+      // Restated 2026-11-02: every card's paper opens on screen first; the page read is the one its Print / Save PDF prints.
+      await viewThenPrint('Receipt for Original Will', 0);
       ok(await until(() => p.evaluate(() => (window.__prints || []).length > 0)), 'the print dialog is reached');
       const pr = await p.evaluate(() => (window.__prints || [])[0] || { html: '', title: '' });
+      await closeViewer(0);
       has(pr.html, 'Receipt for Original Will', 'the form');
       has(pr.html, 'Havellin has not opened it, read its contents or copied it, and keeps no copy of it in any form', '⚠ delivered as found, unopened, no copy kept');
       has(pr.html, '&lt;Last Will&gt;', 'the description escaped on paper');
@@ -348,8 +372,11 @@ const pretty = (ymd) => { const [y, m, d] = ymd.split('-').map(Number);
 
       await hookPrint();
       await press(row + ' button:has-text("Print Cash Count and Receipt")', 'Print Cash Count and Receipt');
+      // Restated 2026-11-02: every card's paper opens on screen first; the page read is the one its Print / Save PDF prints.
+      await viewThenPrint('Cash Count and Receipt', 0);
       ok(await until(() => p.evaluate(() => (window.__prints || []).length > 0)), 'the print dialog is reached');
       const pr = await p.evaluate(() => (window.__prints || [])[0] || { html: '' });
+      await closeViewer(0);
       has(pr.html, '<strong>$1,240.50</strong>', 'the amount, to the cent');
       eq((pr.html.match(/Counted by: ____/g) || []).length, 2, '⚠ a signature line for each counter');
       has(pr.html, 'Received sealed bag No. B-1049, seal intact: ____', 'and the fiduciary\'s, for the sealed bag');

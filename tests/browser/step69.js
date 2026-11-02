@@ -199,7 +199,8 @@ const COMP = { title: 'Herend Rothschild Bird dinner plates, set of 8', venue: '
     ok(/SOLD/.test(rec) && /Mahogany pedestal dining table/.test(rec), 'with its comparable');
     ok(/WorthPoint search: mahogany pedestal dining table/.test(rec), 'and the WorthPoint search');
     ok(/Photograph/.test(rec), 'beside the photograph');
-    await p.click('#inv-row-c summary:has-text("Use a WorthPoint sale")');
+    // Restated 2026-11-02: the form is Use a sale (any sale, its source by its link); this one is WorthPoint's.
+    await p.click('#inv-row-c summary:has-text("Use a sale")');
     await p.fill('#av-wp-title-c', 'Antique mahogany pedestal table, 72in');
     await p.fill('#av-wp-price-c', '575');
     await p.fill('#av-wp-date-c', '2026-01-20');
