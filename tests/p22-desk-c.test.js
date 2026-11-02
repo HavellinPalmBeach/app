@@ -75,7 +75,8 @@ const PROBATE = (over) => Object.assign({ id: 8, name: 'Tripp Butler Sr', hvlId:
   addr: '12 Ocean Way', executor: 'Tripp Butler', deathDate: '2026-03-01', won: true, status: 'active', tc: 'Ashley Jerome', updatedAt: 1 }, over || {});
 const LIVING = (over) => Object.assign({ id: 2, name: 'Margaret Ellsworth', hvlId: 'HVL-0002', svc: 'downsizing_move', addr: '14 Coconut Row',
   destAddr: '801 Sunset Ave', won: true, status: 'won', tc: 'Ashley Jerome', updatedAt: 1 }, over || {});
-const LINE = (id, n, over) => Object.assign({
+// reviewed: checked on the desk (2026-11-02: a line still flagged for a look waits off the release request).
+const LINE = (id, n, over) => Object.assign({ reviewed: true,
   stableId: id, label: 'inventory', collId: null, roomIdx: 1, itemNo: n, status: 'uploaded', qty: 1,
   objectName: 'Line ' + n, category: 'Furniture', condition: 'Good', ts: 100 + n, updatedAt: 100 + n,
 }, over || {});

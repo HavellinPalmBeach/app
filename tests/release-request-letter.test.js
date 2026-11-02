@@ -166,7 +166,8 @@ const LIVING = (o) => Object.assign({
   docState: {}, at: {}, updatedAt: T0, payments: [],
 }, o || {});
 const EST = () => ({ approved: true, estimate: { jobId: 7, svc: 'probate', havellinTotal: 24000, rooms: [{ idx: 1, name: 'Study', st: 'in', vol: 3, cplx: 3 }], vendors: [] } });
-const ROW = (id, over) => Object.assign({
+// reviewed: checked on the desk (2026-11-02: a line still flagged for a look waits off the release request).
+const ROW = (id, over) => Object.assign({ reviewed: true,
   stableId: id, label: 'inventory', collId: null, roomIdx: 1, status: 'uploaded', ts: T0, updatedAt: T0,
   objectName: 'Sideboard', category: 'Furniture', qty: 1, condition: 'Good', fmv: 1200, valSource: 'Comparable sales',
   driveFileId: 'f' + id, driveFileUrl: 'https://drive.google.com/file/d/f' + id + '/view',

@@ -1626,9 +1626,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(live(fn('invLineAccepted')), 'return !invLineHold(ref, fc);', 'invLineAccepted is the reason\'s negation, nothing of its own');
     eq(callersOf('invLineAcceptedOnly'), ['_avStampCounts', '_invRevBoxHtml', '_invReviewStats'], 'the accepted count\'s readers');
     // RESTATED (P7): the §20.2031-6(b) aggregate carries the stamp's words where an agent figure is among its articles, so it asks the context.
-    eq(callersOf('invAcceptCtx'), ['_invAcceptCtxOf', '_invBulkApply', 'maivAggregate', 'printContentsList', 'printContentsRecord', 'printCourtInventory', 'printDispositionLedger',
-      'printEstateInventoryReport', 'printTrustSchedule', 'probatePackageGaps'], '⚠ invAcceptCtx\'s: the desk\'s context, Mark reviewed, the §20.2031-6(b) aggregate, the six printers and the package\'s gaps');
-    eq(calls('invAcceptCtx'), 11, '…and nothing else (the definition and ten calls)');
+    // RESTATED 2026-11-02: the release request holds a line still flagged for a look (invReleaseChecked, its state and its printer).
+    eq(callersOf('invAcceptCtx'), ['_invAcceptCtxOf', '_invBulkApply', 'approvalRequestState', 'invReleaseChecked', 'maivAggregate', 'printApprovalRequest', 'printContentsList', 'printContentsRecord', 'printCourtInventory', 'printDispositionLedger',
+      'printEstateInventoryReport', 'printTrustSchedule', 'probatePackageGaps'], '⚠ invAcceptCtx\'s: the desk\'s context, Mark reviewed, the §20.2031-6(b) aggregate, the release request\'s check, the six printers and the package\'s gaps');
+    eq(calls('invAcceptCtx'), 14, '…and nothing else (the definition and thirteen calls)');
     eq(callersOf('_invAcceptCtxOf'), ['_invEdit', '_invGroupItems', '_invReadLineRepaint', '_invRevBoxHtml', '_renderInvRow', '_renderInvWorkbar'], 'the desk\'s context: its readers');
     has(live(decl('INV_WORK_FLAGS')), 'return !invLineReviewed(r, _invAcceptCtxOf(job));', '…and the Not reviewed chip');
     ['printContentsList', 'printEstateInventoryReport', 'printCourtInventory', 'printTrustSchedule', 'printDispositionLedger', 'printContentsRecord']

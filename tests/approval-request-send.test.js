@@ -174,6 +174,8 @@ const EST = () => ({ approved: true, estimate: { jobId: 7, svc: 'probate', havel
 const ROW = (id, over) => Object.assign({
   stableId: id, label: 'inventory', collId: null, roomIdx: 1, status: 'uploaded', ts: T0, updatedAt: T0,
   objectName: 'Sideboard', category: 'Furniture', qty: 1, condition: 'Good', fmv: 1200, valSource: 'Comparable sales',
+  // Checked on the desk (2026-11-02: a line still flagged for a look is not asked for, invReleaseChecked).
+  reviewed: true, reviewedBy: 'Anthony Graziano',
   driveFileId: 'f' + id, driveFileUrl: 'https://drive.google.com/file/d/f' + id + '/view',
 }, over || {});
 const ALL_SIGNED = 'Rex Hale; Dana Hale; Lee Hale';
@@ -583,7 +585,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(card, '&#128231; Send request</button>', 'labelled Send request');
     const bulk = noComments(fn('_renderInvBulk'));
     eq((bulk.match(/sendApprovalRequest\(' \+ jid \+ ',true\)/g) || []).length, 1, 'the bulk bar: Send request for the selection, once');
-    eq((bulk.match(/sendApprovalRequest\(/g) || []).length, 1, 'and no other send there');
+    // RESTATED 2026-11-02: and, on an estate, the selection through DocuSign beside it (several groups in one envelope).
+    eq((bulk.match(/sendApprovalRequest\(/g) || []).length, 2, 'and the one other send there, the selection through DocuSign');
+    eq((bulk.match(/sendApprovalRequest\(' \+ jid \+ ',true,\\'docusign\\'\)/g) || []).length, 1, 'which is the DocuSign one');
     const edit = noComments(fn('_invEdit'));
     has(edit, '_invRefreshReleases(jobId)', '_invEdit repaints the Releases card through the one helper');
     const rel = noComments(fn('_renderInvReleasesCard'));

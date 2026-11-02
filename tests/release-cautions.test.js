@@ -51,7 +51,8 @@ const VARS = ['INV_LINE_INITIAL_MIN', 'INV_DISP_DOC_WORDS', 'INV_PLAN_CHANNEL_KI
 const JOB = { id: 1, hvlId: 'HVL-0007', name: 'Butler Estate', client: 'Butler Estate',
               svc: 'probate', executor: 'Tripp Butler', tc: 'Anthony Graziano' };
 
-const mk = (o) => Object.assign({ label: 'inventory', jobId: 1, roomIdx: null, qty: 1,
+// reviewed: checked on the desk (2026-11-02: a line still flagged for a look waits off the release request).
+const mk = (o) => Object.assign({ reviewed: true, label: 'inventory', jobId: 1, roomIdx: null, qty: 1,
                                   ts: 1, updatedAt: 1 }, o);
 
 // The estate from the measurement: an ordinary line, a bequest proposed for auction, a

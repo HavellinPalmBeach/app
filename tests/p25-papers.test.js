@@ -304,12 +304,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══ Q35 · THE REQUEST IS THE FIREARMS' TRANSPORT AUTHORITY; THE DEALER'S RECEIPT ═══
   group('Q35 · the release request authorises carrying each firearm, by serial and dealer, under one initial; a dealer\'s transfer is the dealer\'s receipt');
   {
-    const G = (id, o) => Object.assign({ stableId: id, label: 'inventory', category: 'Firearms', authBy: '', approvalDate: '' }, o);
+    // reviewed: each firearm ticked on the desk (2026-11-02: a line still flagged for a look, a firearm unticked among them, waits off the request).
+    const G = (id, o) => Object.assign({ stableId: id, label: 'inventory', category: 'Firearms', authBy: '', approvalDate: '', reviewed: true }, o);
     const lines = [
       G('g1', { itemNo: 1, objectName: 'Remington 870 shotgun', serial: 'RS1', disposition: 'Consign', channel: 'Palm Beach Arms (FFL)' }),
       G('g2', { itemNo: 2, objectName: 'Colt 1911', serial: 'C99', disposition: 'Distribute', channel: 'Marie Delgado (daughter)', viaDealer: 'Gulfstream Guns (FFL)', viaDealerBy: 'Ashley Jerome', viaDealerAt: 5 }),
       G('g3', { itemNo: 3, objectName: 'Ruger revolver', serial: '', disposition: 'Consign', channel: 'Palm Beach Arms (FFL)' }),
-      { stableId: 'v1', label: 'inventory', itemNo: 4, objectName: 'Vase', category: 'Art & Décor', fmv: '200', disposition: 'Donate', channel: 'Goodwill', authBy: '', approvalDate: '' }];
+      { stableId: 'v1', label: 'inventory', itemNo: 4, objectName: 'Vase', category: 'Art & Décor', fmv: '200', disposition: 'Donate', channel: 'Goodwill', authBy: '', approvalDate: '', reviewed: true }];
     const P25_FFL_DIR = [{ vendor_name: 'Palm Beach Arms (FFL)', category: 'Firearms Dealer (FFL)' }, { vendor_name: 'Gulfstream Guns (FFL)', category: 'Firearms Dealer (FFL)' }];
     const R = lift(['printApprovalRequest'], STATE.concat(['_printDocument', '_invPrintThumb', '_invPick', '_invFilter', 'vendorDirectory']),
       Object.assign(BASE(), { jobs: [PROBATE()], _photoRefs: { 7: lines.map((x) => Object.assign({}, x)) }, _invPrintThumb: () => '', _invPick: {},

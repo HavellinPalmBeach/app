@@ -847,6 +847,8 @@ body.field-cam-open #sync-pending{display:none !important;}
 .inv-c-val{flex:0 0 104px;min-width:0;}
 .inv-c-disp{flex:0 0 110px;min-width:0;}
 .inv-c-who{flex:0 0 150px;min-width:0;}
+.inv-approved{font-size:11.5px;font-weight:700;color:var(--ok-tx);margin-top:2px;padding-left:6px;white-space:nowrap;}
+.inv-approved:empty{display:none;}
 .inv-c-rev{flex:0 0 84px;margin:0;}
 .inv-c-open{flex:0 0 30px;}
 .inv-qty{width:100%;min-width:0;box-sizing:border-box;padding:3px 5px;font-size:11px;text-align:right;}
@@ -1485,7 +1487,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.11.02 · 3:20pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.11.02 · 6:42pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -30988,6 +30990,9 @@ function _invEdit(jobId, stableId, key, el) {
     var _bbEl = document.getElementById('inv-bulk-' + jobId), _bbJob = _invJob(jobId);
     if (_bbEl && _bbJob) _bbEl.outerHTML = _renderInvBulk(_bbJob);
   }
+  // And the row's ✓ Approved and its group's approved count (2026-11-02): a destination, a taker or a value can take a line out
+  // from under its approval (P5) or back under it.
+  if (typeof _invApprovedRepaint === 'function') _invApprovedRepaint(jobId, ref);
   // Every one of the counts is derived from a field editable on this row, so the strip is
   // repainted whatever changed rather than on a list of keys that would fall out of step with
   // INV_WORK_FLAGS the first time a seventh count is added.
@@ -31226,6 +31231,16 @@ function invFirearmSettleText(ref, job, took) {
   return _invNamed(ref) + ' is a firearm: ' + bits.join('; ') + '.';
 }
 // What the bulk bar says of the firearms it skipped (P4): how many, which, and why, in one sentence.
+// ⚠ WHO TAKES IT IS FOR A LINE THAT LEAVES (2026-11-02; Anthony set Owen on seven Keep lines with Set recipient, and the name
+// showed nowhere: Keep has no Who takes it, and nothing asks for its approval). The sweep of a recipient skips Keep, Hold, New home
+// and Undecided lines and says so; a line going to a person is To a person (Distribute).
+function _invRecipStayedText(list) {
+  var n = (list || []).length;
+  if (!n) return '';
+  return n + ' line' + (n > 1 ? 's' : '') + ' not leaving the property left as ' + (n > 1 ? 'they were' : 'it was') + ' ('
+    + list.slice(0, 8).map(_invNamed).join(', ') + (n > 8 ? ' and ' + (n - 8) + ' more' : '') + '): only a line that leaves has somebody '
+    + 'who takes it. To give ' + (n > 1 ? 'them' : 'it') + ' to someone, set ' + (n > 1 ? 'them' : 'it') + ' to Distribute first.';
+}
 function _invFirearmsSkippedText(list) {
   var n = (list || []).length;
   if (!n) return '';
@@ -34248,12 +34263,21 @@ function printApprovalRequest(jobId, selectedOnly, opt) {
   var held = items.filter(function(r){
     return INV_RELEASE_DISPOSITIONS.indexOf(r.disposition) >= 0 && !invReleaseRecipientNamed(r) && !invRatificationOwed(r, job);
   });
-  items = items.filter(function(r){ return held.indexOf(r) < 0; });
+  // ⚠ STILL FLAGGED, NOT ASKED (2026-11-02, invReleaseChecked): a line the desk still flags for a look stays off the paper too.
+  // (typeof: a sandbox that lifts the printer without the review rule holds nothing back for it.)
+  var _rfc = typeof invReleaseChecked === 'function' ? invAcceptCtx(job, _jobInvRefs(jobId)) : null;
+  var heldReview = !_rfc ? [] : items.filter(function(r){
+    return held.indexOf(r) < 0 && !invRatificationOwed(r, job) && !invReleaseChecked(r, job, _rfc);
+  });
+  items = items.filter(function(r){ return held.indexOf(r) < 0 && heldReview.indexOf(r) < 0; });
   if (!items.length) {
-    var _noOne = 'Nobody is named to take ' + (held.length === 1 ? 'the item' : 'any of the ' + held.length + ' items')
-      + (selectedOnly ? ' selected' : ' waiting for approval') + ' yet. Type who takes each on its row (a charity or a hauler confirmed '
-      + 'on the Job Plan fills itself in), then send the request.';
-    if (_asHtml) return { why: _noOne, held: held };
+    var _noOne = !heldReview.length
+      ? 'Nobody is named to take ' + (held.length === 1 ? 'the item' : 'any of the ' + held.length + ' items')
+        + (selectedOnly ? ' selected' : ' waiting for approval') + ' yet. Type who takes each on its row (a charity or a hauler confirmed '
+        + 'on the Job Plan fills itself in), then send the request.'
+      : (held.length ? 'Nobody is named to take ' + (held.length === 1 ? 'one item' : held.length + ' items') + ' yet: type who takes each on its row. ' : '')
+        + invReleaseUnreviewedText(heldReview.length) + ' Then send the request.';
+    if (_asHtml) return { why: _noOne, held: held, heldReview: heldReview };
     alert(_noOne);
     return;
   }
@@ -34563,8 +34587,21 @@ function _approvalLineOpen(r, job) {
 // gone is asked to be ratified wherever it went. The card and the Releases bar name what waits for a recipient; a charity or a
 // hauler confirmed on the Job Plan fills itself in (invPlanChannel), and a person is typed on the row.
 function invReleaseRecipientNamed(r) { return !!String((r && r.channel) || '').trim(); }
-function _approvalLineRequestable(r, job) {
-  return _approvalLineOpen(r, job) && (invReleaseRecipientNamed(r) || invRatificationOwed(r, job));
+// ⚠⚠ AND CHECKED FIRST (2026-11-02; Anthony, asked whether a line should be reviewed before it is asked for, took "Hold unreviewed
+// lines"): a line the desk still flags for a look (invLineReviewed false: unsure, an appraisal, a possible duplicate, no name, a
+// firearm not yet ticked) stays off the request, as a line with nobody named does; a line standing as valued, or ticked, goes on. A
+// line already gone is asked to be ratified whatever its state. `fc` is the job-wide context (invAcceptCtx); without one the
+// line is read on its own facts, as invLineReviewed reads it.
+function invReleaseChecked(r, job, fc) {
+  return !!(r && invLineReviewed(r, fc || invAcceptCtx(job, _jobInvRefs(job.id))));
+}
+function invReleaseUnreviewedText(n) {
+  return (n === 1 ? '1 line is' : n + ' lines are') + ' still flagged for a look, so ' + (n === 1 ? 'it is' : 'they are')
+    + ' not asked for: check ' + (n === 1 ? 'it' : 'each') + ' and tick Reviewed, or settle what its box names.';
+}
+function _approvalLineRequestable(r, job, fc) {
+  return _approvalLineOpen(r, job) && (invRatificationOwed(r, job) || (invReleaseRecipientNamed(r)
+    && (typeof invReleaseChecked !== 'function' || invReleaseChecked(r, job, fc))));
 }
 // What a request carried, as one short fingerprint (2026-10-26, Anthony: "I can't, I guess, edit it and go back and change
 // everything"): each line's disposition, recipient (trimmed) and value, in the paper's order, a line gone reading as gone.
@@ -34709,15 +34746,18 @@ function approvalRequestState(job, refs) {
   approvalEnvelopesOut(job).forEach(function (e) {
     if (String(e.id) !== own) (Array.isArray(e.stableIds) ? e.stableIds : []).forEach(function (id) { onOut[String(id)] = 1; });
   });
-  var open = [], fresh = [], unnamed = [], changed = [], onEnvelope = [];
+  // `unreviewed` (2026-11-02): waiting, somebody named, and still flagged for a look, so not asked for until it is checked.
+  var open = [], fresh = [], unnamed = [], unreviewed = [], changed = [], onEnvelope = [];
+  var fc = typeof invReleaseChecked === 'function' ? invAcceptCtx(job, refs || []) : null;   // (typeof: as the printer's)
   (refs || []).forEach(function (r) {
     if (!_approvalLineOpen(r, job)) return;
     if (ids && ids.indexOf(String(r.stableId)) >= 0) { open.push(r); if (moved.indexOf(String(r.stableId)) >= 0) changed.push(r); }
     else if (onOut[String(r.stableId)]) onEnvelope.push(r);
-    else if (_approvalLineRequestable(r, job)) fresh.push(r);
-    else unnamed.push(r);
+    else if (_approvalLineRequestable(r, job, fc)) fresh.push(r);
+    else if (!invReleaseRecipientNamed(r)) unnamed.push(r);
+    else unreviewed.push(r);
   });
-  return { st: st, req: req, carried: ids ? ids.length : 0, open: open, fresh: fresh, unnamed: unnamed, changed: changed, onEnvelope: onEnvelope };
+  return { st: st, req: req, carried: ids ? ids.length : 0, open: open, fresh: fresh, unnamed: unnamed, unreviewed: unreviewed, changed: changed, onEnvelope: onEnvelope };
 }
 function approvalRequestSubject(job) {
   var street = String((job && job.addr) || '').split(',')[0].trim();
@@ -35715,7 +35755,7 @@ function approvalRequestCardHtml(job, all) {
   // displaced by a send made on a copy older than it is still drawn, with Check DocuSign or File signed copy, so it is never lost from
   // sight (approvalEnvelopesShown). A draft waiting beside a live envelope is only ever such a send's.
   var envs = approvalEnvelopesShown(job, S), env = approvalEnvelopeForReq(job, S.req);
-  if (!st && !waiting && !S.unnamed.length && !envs.length) return '';
+  if (!st && !waiting && !S.unnamed.length && !(S.unreviewed || []).length && !envs.length) return '';
   var live = draftOutstanding(job, K);
   var btn = function (call, label, primary) { return '<button class="' + (primary ? 'btn-bronze' : 'btn-s') + '" onclick="' + call + '">' + label + '</button>'; };
   var n = function (k) { return k + ' line' + (k === 1 ? '' : 's'); };
@@ -35738,6 +35778,8 @@ function approvalRequestCardHtml(job, all) {
   var unnamedLine = S.unnamed.length ? '<span style="color:#8a5a1e;font-weight:600;">&#9888; ' + esc((S.unnamed.length === 1 ? '1 line waits' : S.unnamed.length + ' lines wait')
     + ' for somebody to be named to take ' + (S.unnamed.length === 1 ? 'it' : 'them') + ', so ' + (S.unnamed.length === 1 ? 'it is' : 'they are')
     + ' not asked for: type who takes each on its row (a charity or a hauler confirmed on the Job Plan fills itself in).') + '</span>' : '';
+  if (S.unreviewed && S.unreviewed.length) unnamedLine += (unnamedLine ? '<br>' : '') + '<span style="color:#8a5a1e;font-weight:600;">&#9888; '
+    + esc(invReleaseUnreviewedText(S.unreviewed.length)) + '</span>';
   var paper = (S.req && S.req.noEmail && S.req.noEmail.length)
     ? esc(_andJoin(S.req.noEmail) + ' had no email: ' + (S.req.viaCounsel ? 'it went through the estate attorney.' : 'they sign the printed copy.')) : '';
   if (live) {
@@ -40543,13 +40585,16 @@ function _invGroupItems(job, items) {
       if (b === '~') return -1;
       return parseInt(a, 10) - parseInt(b, 10);
     });
-    var fmv = 0, done = 0;
+    var fmv = 0, done = 0, need = 0, apr = 0;
     rows.forEach(function(r){
       var n = parseFloat(r.fmv); if (!isNaN(n)) fmv += n;
       if (invLineReviewed(r, _ac)) done++;
+      // How many of the group need written approval, and how many have it (invRowApprovedOn, the row's one answer).
+      // (typeof: a sandbox that lifts the grouping alone draws no count, as P8's printers guard theirs.)
+      if (typeof invRowApprovedOn === 'function' && invWrittenReleaseNeeded(r, job)) { need++; if (invRowApprovedOn(r, job)) apr++; }
     });
     return {
-      key: k, label: _invDispLabel(k), items: rows, fmv: fmv, reviewed: done,
+      key: k, label: _invDispLabel(k), items: rows, fmv: fmv, reviewed: done, needApproval: need, approved: apr,
       rooms: roomKeys.map(function(rk){
         return { key: rk, name: _invRoomName(job.id, rk === '~' ? null : parseInt(rk, 10)), items: byRoom[rk] };
       })
@@ -40909,6 +40954,17 @@ function _invBulkApply(jobId, key, value, read) {
       return;
     }
   }
+  var _stayed = [];
+  if (key === 'channel') {
+    _stayed = picked.filter(function(r) { return INV_RELEASE_DISPOSITIONS.indexOf(r.disposition) < 0; });
+    picked = picked.filter(function(r) { return _stayed.indexOf(r) < 0; });
+    if (!picked.length) {
+      var _stOnly = _invRecipStayedText(_stayed);
+      alert(_stOnly + ' Nothing was changed.');
+      showSyncBadge(_stOnly, true);
+      return;
+    }
+  }
   // ⚠⚠ THE HANDLER ASKS THE STAFF RULE TOO (P19, call 6): a recipient or a disposition swept across forty rows is
   // refused whole if it would sell or release any of them to one of Havellin's people, and the refusal names them. An
   // estate only (invStaffRefused); on a living client's job the sweep goes through and its confirmation names the
@@ -41077,6 +41133,7 @@ function _invBulkApply(jobId, key, value, read) {
     + '. Record who each goes to now, or keep the name if it is right.';
   // ⚠ THE FIREARMS THE SWEEP LEFT AS THEY WERE, AND THE LINES FILED AS FIREARMS THAT LOST A DESTINATION (P4): said, never silent.
   if (_faSkipped.length) what += ' ⚠ ' + _invFirearmsSkippedText(_faSkipped);
+  if (_stayed.length) what += ' ⚠ ' + _invRecipStayedText(_stayed);
   if (_readGone) what += ' ' + invReadGoneText(_readGone);   // P6: removed on another device before the sweep
   if (_faSettled.length) what += ' ⚠ ' + _faSettled.map(function(x) { return invFirearmSettleText(x.ref, job, x.took); }).join(' ');
   // An item that no longer matches the filters on screen has just vanished from the list.
@@ -44082,7 +44139,7 @@ function _renderInvRow(job, ref) {
       // placeholder text off the job record and stores nothing, because the address is already
       // recorded once and writing it per item would also satisfy the firearms `dealer` gate.
       + (_invRowHasWho(ref.disposition)
-          ? '<div class="inv-c inv-c-who" data-cap="Who takes it">' + _invRecipientInput(jid, ref, job) + '</div>'
+          ? '<div class="inv-c inv-c-who" data-cap="Who takes it">' + _invRecipientInput(jid, ref, job) + (typeof _invApprovedChipHtml === 'function' ? _invApprovedChipHtml(jid, ref, job) : '') + '</div>'
           : '')
       + _invRevBoxHtml(jid, ref, _ac)
       + '<button class="icon-btn inv-c-open" onclick="_invToggleOpen(\'' + sid + '\')" title="Open the full record">' + (open ? '&#9652;' : '&#9662;') + '</button>'
@@ -44094,6 +44151,41 @@ function _renderInvRow(job, ref) {
 // stores nothing). One answer, read by the row and by the group's headings, which share a disposition (_invGroupItems).
 function _invRowHasWho(disposition) {
   return INV_RELEASE_DISPOSITIONS.indexOf(disposition) >= 0 || disposition === 'Move';
+}
+// ⚠⚠ APPROVED, ON THE LIST (2026-11-02; Anthony, off the first DocuSign request on the Ellison test client: *"shouldn't somewhere on
+// the big list of items, it should show that they've been approved for disposition, not like there's some sort of little teeny …
+// font somewhere buried inside of each record"*; he took a chip on the row and a count on the group's heading). One answer: the
+// day the line's written approval was completed (`approvalDate`, the latest signer's), where the line needs one
+// (invWrittenReleaseNeeded) and every fiduciary's approval covers it as it reads now (invApprovalComplete, P5's moved rule
+// included), else ''. A line that changed after it was signed loses it, as it loses the approval. DOM-free.
+function invRowApprovedOn(ref, job) {
+  if (!ref || !job || !invWrittenReleaseNeeded(ref, job) || !invApprovalComplete(ref, job)) return '';
+  // The latest signer's day, through the one parser (invApprovalSigners), never the stored fields read here.
+  var last = '';
+  invApprovalSigners(ref, job).forEach(function(x) { if (x.date && String(x.date) > last) last = String(x.date); });
+  return last || 'yes';
+}
+// The chip, under Who takes it: green, "✓ Approved Nov 2", who signed on hover. Its host is always drawn (empty when not
+// approved) so an edit can repaint it by id (_invApprovedRepaint).
+function _invApprovedChipHtml(jid, ref, job) {
+  var on = invRowApprovedOn(ref, job);
+  var _d = /^(\d{4}-\d{2}-\d{2})/.exec(on), day = _d ? String(fmtDate2(_d[1])).replace(/,\s*\d{4}$/, '') : '';
+  return '<div id="inv-apr-' + esc(ref.stableId) + '" class="inv-approved"'
+    + (on ? ' title="' + esc('Approved in writing: ' + (invApprovalSignedText(ref, job) || 'signed')) + '"' : '') + '>'
+    + (on ? '&#10003; Approved' + (day ? ' ' + esc(day) : '') : '') + '</div>';
+}
+// Repaints a row's chip and its group's heading by id, after an edit that may move the approval (a destination, a taker, a value).
+function _invApprovedRepaint(jobId, ref) {
+  var job = _invJob(jobId), el = ref && document.getElementById('inv-apr-' + ref.stableId);
+  if (!job || !el) return false;
+  el.outerHTML = _invApprovedChipHtml(jobId, ref, job);
+  var items = _invAssignItemNos(jobId).filter(function(r) { return _invMatchesFilter(r, job); });
+  _invGroupItems(job, items).forEach(function(g) {
+    if (!g.items.some(function(r) { return r.stableId === ref.stableId; })) return;
+    var head = document.getElementById(_invGroupHeadDomId(g.key));
+    if (head) head.outerHTML = _renderInvGroupHead(job, g);
+  });
+  return true;
 }
 // The row's photograph, a link to the file in Drive where the line has one (a split line shares its photograph's), else
 // the photograph alone (a typed line, or a shot not yet uploaded). The record's photograph opens the same file (_invPhotoOpenHtml).
@@ -44294,8 +44386,50 @@ function _renderInvGroupHead(job, g) {
         + g.items.length + ' item' + (g.items.length > 1 ? 's' : '')
         + (g.fmv ? ' &middot; ' + _money(g.fmv) : '') + '</span></div>'
       + _invProgressBar(st, 90)
+      // "7 of 7 approved" beside the review count, where any line of the group needs written approval (2026-11-02).
+      + (g.needApproval ? '<span class="inv-grp-approved" style="font-size:11px;white-space:nowrap;font-weight:' + (g.approved === g.needApproval ? '700;color:var(--ok-tx)' : '400;color:var(--gray)') + ';">'
+          + (g.approved === g.needApproval ? '&#10003; ' : '') + g.approved + ' of ' + g.needApproval + ' approved</span>' : '')
+      + (typeof _invGroupApprovalBtnHtml === 'function' ? _invGroupApprovalBtnHtml(job, g) : '')
       + '<button class="btn-s" onclick="_invPickGroup(' + job.id + ',\'' + esc(g.key) + '\',true)" style="font-size:10px;">Select all</button>'
     + '</div>';
+}
+// ⚠⚠ APPROVAL BY WHERE IT GOES (2026-11-02; Anthony, after the first request through DocuSign: *"you should be able to … get things
+// signed off based on where they're going. So I would do all the donation stuff at one time, and there should be a button there to
+// get approval. But also … I can tick all those boxes, and I can send three categories to be approved"*). A group's heading
+// offers **Get approval** for its lines that wait and can be asked for (approvalRequestState's `fresh`: somebody named, checked,
+// not on a request out); several groups go together by Select all on each and the selection bar's send. While a request is out
+// for signature, or one signed is not yet recorded or filed, the heading says so in place of the button (approvalRequestSendBlocker,
+// the send's own refusal).
+function invGroupApprovalLines(job, key, all) {
+  var S = approvalRequestState(job, all || _jobInvRefs(job.id));
+  return S.fresh.filter(function(r) { return (r.disposition || '') === key; });
+}
+function _invGroupApprovalBtnHtml(job, g) {
+  if (INV_RELEASE_DISPOSITIONS.indexOf(g.key) < 0) return '';
+  var k = invGroupApprovalLines(job, g.key).length;
+  if (!k) return '';
+  if (approvalRequestSendBlocker(job)) return '<span class="inv-grp-approve-wait" title="' + esc(approvalRequestSendBlocker(job))
+    + '" style="font-size:10.5px;color:var(--gray);white-space:nowrap;">' + k + ' to ask for once the request out is signed</span>';
+  return '<button class="btn-s inv-grp-approve" onclick="invGroupApproval(' + job.id + ',\'' + esc(g.key) + '\')" style="font-size:10px;'
+    + 'border-color:var(--ok-tx);color:var(--ok-tx);" title="Send these ' + k + ' line' + (k === 1 ? '' : 's') + ' for written approval">Get approval &middot; ' + k + '</button>';
+}
+function invGroupApproval(jobId, key) {
+  var job = _invJob(jobId);
+  if (!job) return false;
+  var blk = approvalRequestSendBlocker(job);
+  if (blk) { alert(blk); return false; }
+  var lines = invGroupApprovalLines(job, key);
+  if (!lines.length) { alert('Nothing under ' + _invDispLabel(key) + ' waits to be asked for.'); return false; }
+  var fid = invFiduciaryMode(job), ds = fid && !approvalRequestEsignRefusal(job);
+  var who = fid ? _andJoin(jobFiduciaries(job).map(function(f) { return f.name; })) : '';
+  var n = lines.length + ' ' + _invDispLabel(key) + ' line' + (lines.length === 1 ? '' : 's');
+  if (!confirm('Send ' + n + ' for written approval' + (who ? ' to ' + who : '') + (ds ? ', to sign in DocuSign' : ', as a PDF by email') + '?'
+      + '\n\nThe selection is set to these lines first.')) return false;
+  _invPick = {};
+  lines.forEach(function(r) { _invPick[r.stableId] = 1; });
+  renderInventoryTab();
+  sendApprovalRequest(jobId, true, ds ? 'docusign' : undefined);
+  return true;
 }
 function _renderInvRoomHead(g, rm) {
   return '<div id="' + esc(_invRoomHeadDomId(g.key, rm.key)) + '" style="font-size:10px;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.05em;padding:6px 4px 2px;">'
@@ -44403,9 +44537,9 @@ function _renderInvBulk(job) {
       + '</div>';
   }
 
-  return '<div class="inv-bulk' + (open ? ' inv-bulk-open' : '') + '" id="inv-bulk-' + jid + '" style="position:sticky;bottom:0;z-index:40;background:var(--gray-dk);color:var(--cream);'
-    + 'border-radius:6px;padding:9px 12px;margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;'
-    + 'box-shadow:0 -2px 14px rgba(0,0,0,.15);">'
+  return '<div class="inv-bulk' + (open ? ' inv-bulk-open' : '') + '" id="inv-bulk-' + jid + '" style="position:sticky;top:var(--topbar-h,0px);z-index:40;background:var(--gray-dk);color:var(--cream);'
+    + 'border-radius:6px;padding:9px 12px;margin-bottom:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;'
+    + 'box-shadow:0 2px 14px rgba(0,0,0,.15);">'
     + '<strong style="font-size:12px;">' + n + ' selected</strong>'
     // A phone's one line (the class is display:none above 820 px). &#9662; as More ▾ draws it: a menu, not a fold.
     + '<button type="button" class="inv-bulk-tog" id="inv-bulk-tog-' + jid + '" onclick="toggleInvBulk(' + jid + ')" aria-expanded="' + (open ? 'true' : 'false') + '" '
@@ -44433,6 +44567,9 @@ function _renderInvBulk(job) {
     // it was offered over a selection of Keep lines, and recorded an approval on them; on a client's own home since 2026-10-26).
     + (invWrittenReleasePicked(jid, job).length
       ? '<button onclick="printApprovalRequest(' + jid + ',true)" style="' + btnStyle + '">Approval request</button>'
+        // Through DocuSign for the selection on an estate (2026-11-02): several groups' Select all, then one envelope.
+        + (invFiduciaryMode(job) && !approvalRequestEsignRefusal(job)
+          ? '<button onclick="sendApprovalRequest(' + jid + ',true,\'docusign\')" style="' + btnStyle + '" title="Send the selected lines for written approval, signed in DocuSign">Send through DocuSign</button>' : '')
         + '<button onclick="sendApprovalRequest(' + jid + ',true)" style="' + btnStyle + '" title="Email the Release Approval Request for the selected lines as a PDF, through a Gmail draft">Send request</button>'
         + '<button onclick="invRecordApproval(' + jid + ')" style="' + btnStyle + '" title="Record a signed approval against every selected item">Record approval</button>'
       : '')
@@ -44542,17 +44679,19 @@ function renderInventoryTab() {
   cont.innerHTML = top + _sfHost('sf-host-desk', job)
     + renderJobAdmin(jobId, job)
     // ── Tonight's items, never folded: the work bar, the walkthrough's vehicles still to bring in (a start-of-job task,
-    // gone once every vehicle is in), the chips, the filter, the rows, and the bulk bar, outside every wrapper so it
-    // still sticks to the foot of the tab.
+    // gone once every vehicle is in), the chips, the filter, the bulk bar, outside every wrapper so it sticks to the top (2026-11-02), and the rows. It
+    // was at the foot until 2026-11-02.
     + _renderInvWorkbar(job, all)
     + _renderInventoryImportPanel(jobId)
     + (all.length ? '<div id="inv-flagstrip">' + _renderInvFlagStrip(job, all) + '</div>' + _renderInvFilterRow(job, all) : '')
     + thumbNote
     + _renderDuplicateImportNotice(jobId)
     + _agDupHtml(jobId, all)
+    // ⚠ THE SELECTION BAR ON TOP (2026-11-02; Anthony: "that brown bar is anchored to the bottom of the page, which just makes it hard
+    // to use"; he took "Top, stays in view"): drawn above the rows, outside every wrapper, and stuck under the top bar as the rows scroll.
+    + _renderInvBulk(job)
     + body
     + _invFirearmsDealerListHtml(job)
-    + _renderInvBulk(job)
     // ── The four bars. P19: the signed papers beside what they cover, and an estate's beneficiaries and bequests. The
     // Releases host is drawn even when the card has nothing in it, hidden, so its by-id repaint (_invRefreshReleases)
     // has an element to fill the moment it does.
@@ -52778,7 +52917,7 @@ function deskFoldState(jobId, job, fold, all, today) {
     var outs = signoutGroups(job, all);
     // Drawn where either card draws: on an estate always (the bequests card); on living work where the request, a signing
     // act or a sign-out row has something to say (_renderInvReleasesCard's sections; group D holds the two answers equal).
-    st.show = fid || !!S.st || !!(S.open.length + S.fresh.length + S.unnamed.length) || !!batches.length || !!outs.length;
+    st.show = fid || !!S.st || !!(S.open.length + S.fresh.length + S.unnamed.length + (S.unreviewed || []).length) || !!batches.length || !!outs.length;
     if (unread && !cached) return loading();
     // A request that went through DocuSign (2026-10-26c): out, its lines are out for signature and nothing is sent past it;
     // declined or voided, it came back with nothing and a fresh request is owed (red, and the bar opens).
@@ -52797,6 +52936,7 @@ function deskFoldState(jobId, job, fold, all, today) {
     var rat = once('approval', all.filter(function (r) { return invRatificationOwed(r, job); }));   // on living work too (2026-10-26)
     var fresh = once('approval', S.fresh);
     var unnamedN = once('approval', S.unnamed);   // never asked for until somebody is named (2026-10-26)
+    var unreviewedN = once('approval', S.unreviewed || []);   // nor until it is checked (2026-11-02)
     var changedN2 = once('approval', changedSent);
     var unsigned = (S.st && S.st.sentAt && !draft) ? once('approval', S.open) : 0;
     unsigned += once('approval', S.onEnvelope || []);   // out on another envelope (2026-11-02): out for signature, never owed a fresh request
@@ -52821,6 +52961,7 @@ function deskFoldState(jobId, job, fold, all, today) {
       : envOut ? s(fresh, 'more item needs', 'more items need') + ' written approval: the next request, once DocuSign is done'
       : s(fresh, 'item needs', 'items need') + ' written approval: send a request', 'amber');
     if (unnamedN) bit(s(unnamedN, 'item waits', 'items wait') + ' for somebody to be named to take ' + (unnamedN === 1 ? 'it' : 'them'), 'amber');
+    if (unreviewedN) bit(s(unreviewedN, 'item waits', 'items wait') + ' for a review before ' + (unreviewedN === 1 ? 'it is' : 'they are') + ' asked for', 'amber');
     if (unfiled) bit(s(unfiled, 'signed approval', 'signed approvals') + ' not filed to Drive', 'amber');
     if (rat) bit(rat + ' for ratification', 'amber');
     if (owed) bit(s(owed, 'signed receipt', 'signed receipts') + ' owed', 'amber');

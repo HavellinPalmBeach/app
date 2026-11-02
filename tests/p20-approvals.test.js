@@ -74,7 +74,8 @@ const PROBATE = () => ({ id: 8, name: 'Tripp Butler Sr', hvlId: 'HVL-0008', svc:
   addr: '12 Ocean Way', executor: 'Tripp Butler', deathDate: '2026-03-01', won: true, status: 'active', tc: 'Ashley Jerome', updatedAt: 1 });
 const LIVING = () => ({ id: 2, name: 'Margaret Ellsworth', hvlId: 'HVL-0002', svc: 'downsizing_move', addr: '14 Coconut Row',
   destAddr: '801 Sunset Ave', won: true, status: 'won', tc: 'Ashley Jerome', updatedAt: 1 });
-const LINE = (id, n, over) => Object.assign({
+// reviewed: checked on the desk (2026-11-02: a line still flagged for a look waits off the release request).
+const LINE = (id, n, over) => Object.assign({ reviewed: true,
   stableId: id, label: 'inventory', collId: null, roomIdx: 1, itemNo: n, status: 'uploaded', qty: 1,
   objectName: 'Line ' + n, category: 'Furniture', condition: 'Good', ts: 100 + n, updatedAt: 100 + n,
 }, over || {});
@@ -486,9 +487,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The bulk bar: a recipient swept across the selection names it.
     S._invPick = { v2: 1, v4: 1 };
     S._invBulkApply(2, 'channel', 'carla  ortiz (crew)');
-    eq([lines[1].channel, lines[3].channel], ['carla  ortiz (crew)', 'carla  ortiz (crew)'], 'the bulk recipient is written on a living client\'s lines');
+    // RESTATED 2026-11-02: Set recipient skips a line that does not leave (#4 stays), and says so.
+    const _was4 = lines[3].channel;
+    eq([lines[1].channel, lines[3].channel], ['carla  ortiz (crew)', _was4], 'the bulk recipient is written on a living client\'s leaving line, never on one that stays');
     eq(S.__log.alerts, [], 'nothing refused');
-    has(S.__log.badges.map((b) => b.m).join(' | '), '2 items updated. ⚠ 1 of them is flagged conflict of interest — #2 Lamp (Carla Ortiz works with Havellin; proposed: Distribute). Check before the release request goes to the client.',
+    has(S.__log.badges.map((b) => b.m).join(' | '), '1 item updated. ⚠ 1 of them is flagged conflict of interest — #2 Lamp (Carla Ortiz works with Havellin; proposed: Distribute). Check before the release request goes to the client.',
         '⚠⚠ the bulk bar\'s confirmation names the line and the person (and not the line kept); a living client\'s request goes to the client (2026-10-26)');
     lacks(S.__log.badges.map((b) => b.m).join(' | '), 'flagged disputed', '⚠ a recipient sweep asks only the lines leaving: the disputed line kept is not named');
     // A disposition swept onto a line already naming one of ours names it too.
@@ -551,7 +554,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Every surface that prints who signed reads the one readable form.
     // RESTATED 2026-10-27 (P5): the papers (the ledger, the package's record, the workbook, the sign-out sheet) read it through
     // invApprovalPaperText, which prints an approval only where it still covers the line; Correct… shows it as recorded.
-    eq(callers('invApprovalSignedText'), ['_invApprovalReadHtml', 'invApprovalBoxText', 'invApprovalGap', 'invApprovalPaperText', 'invCorrectApproval', 'printApprovalRequest'],
+    // RESTATED 2026-11-02: the row's ✓ Approved names who signed on hover.
+    eq(callers('invApprovalSignedText'), ['_invApprovalReadHtml', '_invApprovedChipHtml', 'invApprovalBoxText', 'invApprovalGap', 'invApprovalPaperText', 'invCorrectApproval', 'printApprovalRequest'],
        '⚠ the request, the flag, the panel, Correct…, and every paper through the one that asks what it may print');
     eq(callers('invApprovalPaperText'), ['_invExportValue', 'printDispositionLedger', 'probatePackageRecordHtml', 'signoutSheetHtml'],
        '⚠ the ledger, the package\'s record, the workbook, and the sign-out sheet (P28)');

@@ -840,4 +840,102 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(_v5.indexOf(_p5) === 0 || (_at5 > 0 && _newer5.every((x) => x > '2026-10-27d') && _v5.indexOf(_p5) === _at5 + 'on a deployment older than 2026-10-27d, '.length),
       'and the stale banner names what an older deployment drops, first or first after the newer gaps, by its vintage (' + _newer5.join(', ') + ')');
   });
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // 2026-11-02 · APPROVED, ON THE LIST (Anthony, off the first DocuSign request on the Ellison test client: "shouldn't somewhere on
+  // the big list of items, it should show that they've been approved for disposition"; he took a chip on the row and a count on the
+  // group's heading). A green "✓ Approved <day>" under Who takes it, and "N of M approved" beside the group's review count.
+  G('AP · approved shows on the row and on the group heading, and goes when the approval stops covering the line', () => {
+    const R = rig({ roots: ['_renderInvGroupHead', '_invGroupItems', '_invApprovedRepaint', 'invRowApprovedOn'] });
+    const c = R.c, J = R.job();
+    const rowOf = (id) => String((attempt(() => c._renderInvRow(c.jobs[0], R.row(id))).val) || '');
+    const chipOf = (h) => { const m = /<div id="inv-apr-[^"]*" class="inv-approved"[^>]*>([\s\S]*?)<\/div>/.exec(h); return m ? text(m[1]) : null; };
+    const p = rowOf('e1');
+    eq(chipOf(p), '✓ Approved Oct 12', 'the approved painting reads ✓ Approved Oct 12 under Who takes it');
+    has(p, 'title="Approved in writing: Thomas Ashworth; Nora Ashworth', 'and who signed, on hover');
+    ok(p.indexOf('inv-c-who') >= 0 && p.indexOf('inv-c-who') < p.indexOf('inv-apr-e1'), 'in the Who takes it column');
+    eq(chipOf(rowOf('e2')), '', 'a leaving line nobody has approved carries the host, empty');
+    eq(chipOf(rowOf('e18')), null, 'a Keep line has no Who takes it, and no chip');
+    eq(c.invRowApprovedOn(R.row('e1'), J), '2026-10-12', 'one answer: the day the approval was completed');
+    const heads = {};
+    c._invGroupItems(J, c._jobInvRefs(7)).forEach((g) => { heads[g.key] = text(c._renderInvGroupHead(J, g)); });
+    has(heads.Auction, '✓ 1 of 1 approved', 'the Auction heading: 1 of 1 approved, ticked');
+    has(heads.Sell, '0 of 1 approved', 'the Sell heading: 0 of 1');
+    lacks(heads.Sell, '✓ 0 of 1', 'unticked while any waits');
+    lacks(heads.Keep || '', 'approved', 'a Keep heading counts nothing');
+    // One signer of two: not approved.
+    R.land('e1', (x) => { x.authBy = 'Thomas Ashworth'; });
+    eq(chipOf(rowOf('e1')), '', 'one representative of two signed: no chip');
+    R.land('e1', (x) => { x.authBy = BOTH; });
+    // A value past Ask 5's rule, asked and answered yes: the approval no longer covers the line, and the chip goes at once, by id.
+    R.edit('e1', 'fmv', '24000');
+    eq(c.invRowApprovedOn(R.row('e1'), c.jobs[0]), '', 'a value past Ask 5\'s rule: not approved as it now reads');
+    const host = R.el('inv-apr-e1');
+    ok(host && /class="inv-approved"/.test(String(host.outerHTML || '')) && chipOf(String(host.outerHTML)) === '', 'the chip is repainted empty by the edit, by id');
+    // A client's own home: an everyday line needs no written approval, so a stray approval draws no chip and counts nothing.
+    const L = rig({ job: ESTATE({ svc: 'downsizing', matterType: '', coFiduciaries: [], executor: '' }),
+      rows: [ROW('l1', { itemNo: 1, disposition: 'Donate', channel: 'Goodwill', authBy: 'Harold Ashworth', approvalDate: '2026-10-12' })],
+      roots: ['_renderInvGroupHead', '_invGroupItems', '_invApprovedRepaint', 'invRowApprovedOn'] });
+    eq(L.c.invRowApprovedOn(L.row('l1'), L.job()), '', 'living work: an everyday line is not one that waits on written approval');
+    lacks(text(L.c._renderInvGroupHead(L.job(), L.c._invGroupItems(L.job(), L.c._jobInvRefs(7))[0])), 'approved', 'and its heading counts nothing');
+  });
+
+  // 2026-11-02 · APPROVAL BY WHERE IT GOES, CHECKED FIRST, AND WHO TAKES IT ONLY ON A LINE THAT LEAVES (Anthony: "there should be a
+  // button there to get approval"; "Hold unreviewed lines"; Owen set on seven Keep lines showed nowhere).
+  G('AG · Get approval on a group heading, unreviewed lines held off the request, Set recipient skips lines that stay', () => {
+    const rows = [PAINTING(), DRESSER(), CHAIRS(), MIXER(),
+      ROW('e5', { itemNo: 5, objectName: 'Lamp', fmv: 40, disposition: 'Donate', channel: 'Goodwill Palm Beach', namedBy: 'agent', valuedBy: 'desk' }),
+      ROW('e6', { itemNo: 6, objectName: 'Rug', fmv: 0, disposition: 'Donate', channel: '' })];
+    const R = rig({ rows, roots: ['_renderInvGroupHead', '_invGroupItems', 'invGroupApproval', 'invGroupApprovalLines', '_invGroupApprovalBtnHtml',
+      'approvalRequestState', '_renderInvBulk', 'invReleaseChecked'] });
+    const c = R.c, J = R.job(), all = () => c._jobInvRefs(7);
+    // The rig's lines are named on the desk with a destination chosen, so each is reviewed (Q58); the lamp, named by Agent One, is
+    // reviewed only while nothing flags it, and an appraisal flag holds it.
+    const flag = (id) => R.land(id, (x) => { x.needsAppr = true; });
+    const fresh = () => c.approvalRequestState(c.jobs[0], all()).fresh.map((r) => r.stableId).sort();
+    ok(fresh().indexOf('e4') >= 0 && fresh().indexOf('e5') >= 0, 'two Donate lines with Goodwill named and nothing flagged are asked for');
+    flag('e5');
+    const S = c.approvalRequestState(c.jobs[0], all());
+    ok(fresh().indexOf('e5') < 0, '⚠⚠ a line still flagged for a look is not asked for');
+    ok((S.unreviewed || []).some((r) => r.stableId === 'e5'), 'it is counted as waiting for a review');
+    ok(S.unnamed.some((r) => r.stableId === 'e6') && !(S.unreviewed || []).some((r) => r.stableId === 'e6'), 'a line with nobody named stays unnamed, first');
+    has(R.card(), 'still flagged for a look, so it is not asked for', 'the Releases card says so');
+    has(R.bar().bits.map((b) => b.text).join(' | '), 'waits for a review before it is asked for', 'and the Releases bar');
+    const pr = attempt(() => c.printApprovalRequest(7, false, { asHtml: true, read: true })).val || {};
+    ok(pr.html && pr.html.indexOf('Lamp') < 0 && pr.html.indexOf('Dining chairs') >= 0, 'the paper leaves the lamp off and carries the chairs');
+    R.edit('e5', 'reviewed', true);
+    ok(fresh().indexOf('e5') >= 0, 'ticked Reviewed, it is asked for');
+    // The heading's button.
+    const donate = c._invGroupItems(c.jobs[0], all()).find((g) => g.key === 'Donate');
+    const btn = c._renderInvGroupHead(c.jobs[0], donate);
+    has(btn, 'invGroupApproval(7,\'Donate\')', 'the Donate heading offers Get approval');
+    has(text(btn), 'Get approval · 2', 'counting the lines it would send');
+    const keep = c._invGroupItems(c.jobs[0], all()).find((g) => g.key === 'Keep');
+    lacks(c._renderInvGroupHead(c.jobs[0], keep), 'invGroupApproval', 'never on Keep');
+    let sent = null;
+    c.sendApprovalRequest = (j, sel, via) => { sent = { j, sel, via, picked: Object.keys(c._invPick).sort() }; };
+    c.renderInventoryTab = () => {};
+    c.confirm = () => true;
+    c.approvalRequestEsignRefusal = () => '';   // the deployment takes the DocuSign route (the rig's probe answered nothing)
+    ok(c.invGroupApproval(7, 'Donate') === true, 'pressed and confirmed, it sends');
+    eq(sent && sent.picked, ['e4', 'e5'], 'the selection is the group\'s waiting lines, the unnamed rug left out');
+    eq(sent && [sent.sel, sent.via], [true, 'docusign'], 'as a selection, through DocuSign on an estate');
+    // While a request is out for signature, the heading waits and the press refuses.
+    c.approvalRequestSendBlocker = () => 'A request is out for signature in DocuSign.';
+    has(c._renderInvGroupHead(c.jobs[0], donate), 'to ask for once the request out is signed', 'the heading waits while one is out');
+    sent = null;
+    ok(c.invGroupApproval(7, 'Donate') === false && sent === null, 'and the press sends nothing');
+    // Set recipient across Keep and leaving lines: the Keep line is left as it was, and said.
+    c._invPick = { e18: 1, e2: 1 };
+    R.c._invBulkApply(7, 'channel', 'Owen Ellison');
+    eq(String(R.row('e18').channel || ''), '', 'the Keep line takes no recipient');
+    eq(R.row('e2').channel, 'Owen Ellison', 'the Sell line does');
+    c._invPick = { e18: 1 };
+    R.c._invBulkApply(7, 'channel', 'Owen Ellison');
+    ok(R.log.alerts.some((a) => /not leaving the property left as it was .*set it to Distribute first\. Nothing was changed\./.test(a)), 'a selection of Keep alone is refused by name');
+    // The selection bar's DocuSign send, on an estate.
+    c._invPick = { e4: 1 };
+    has(c._renderInvBulk(c.jobs[0]), "sendApprovalRequest(7,true,'docusign')", 'the selection bar sends a selection through DocuSign');
+    has(c._renderInvBulk(c.jobs[0]), 'position:sticky;top:var(--topbar-h', 'and sits at the top, under the top bar');
+  });
 };
