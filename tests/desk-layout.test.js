@@ -1002,14 +1002,15 @@ function groupE({ group, ok, eq, has, lacks }) {
       _invRowDomId: (id) => 'row-' + id, _renderInvRoomHead: () => '<div id="rmh-GR">RH</div>', _renderInvGroupHead: () => '<div id="gh-G">GH</div>' } });
     D.render();
     const v0 = heads(D.dom.html).filter((x) => x.f === 'values')[0];
-    eq([v0.open, v0.line], [false, '✓ nothing needs an appraisal · no appraisers yet'], 'fixture: Values shut, nothing waiting');
+    // Restated 2026-10-28 (P14 of the desk audit, NEW-14): on living work the bar reads the chip's words, *to a specialist*.
+    eq([v0.open, v0.line], [false, '✓ none waiting on a specialist · no appraisers yet'], 'fixture: Values shut, nothing waiting');
     // A collection's piece keeps the collection's ⚑ (collectionPieceOf): the split adds a line flagged for a specialist.
     const piece = LINE('a2', { objectName: '', needsAppr: true, derivedFrom: 'a', ts: T0 + 1 });
     D.C._photoRefs[7].push(piece);
     const s = settle(D, () => D.C._invSplitRepaint(7, piece));
     ok(s.r.ok, 'the repaint runs (' + (s.r.err || 'ok') + ')');
     const v = s.partial.filter((x) => x.f === 'values')[0];
-    eq([v.open, v.line], [true, '1 needs an appraisal (1 with no appraiser linked) · no appraisers yet'], '⚠ the bar opened by its rule, and its line moved');
+    eq([v.open, v.line], [true, '1 waiting on a specialist (1 with no specialist linked) · no appraisers yet'], '⚠ the bar opened by its rule, and its line moved');
     eq(s.partial, s.full, '⚠⚠ every bar reads what a full render draws');
   }
 
@@ -2434,10 +2435,13 @@ function groupL({ group, ok, eq, has, lacks }) {
       + '<div id="inv-proceeds-card"></div><div id="inv-donations-card"></div></div>'),
       'Closing the job: close-out call, vendor ratings, Disposition Ledger, signed schedules, proceeds, donations', '⚠ the estate\'s Closing title names the schedules');
     const wb = codeOnly(fn('_renderInvWorkbar'));
-    ok(/fid && !invDocContractBlock\(job, ''\) \? btn\(''/.test(wb) && (fn('_renderInvWorkbar').match(/btn\('printCourtInventory\(/g) || []).length === 1
+    // Restated 2026-10-28 (P14 of the desk audit, EST-20): each print is offered where the matter has its instrument, through one
+    // rule (invInstrumentOffered), which asks the tier's rule (invDocContractBlock) inside it.
+    ok(/invInstrumentOffered\(job, ''\) \? btn\(''/.test(wb) && (fn('_renderInvWorkbar').match(/btn\('printCourtInventory\(/g) || []).length === 1
       && (fn('_renderInvWorkbar').match(/btn\('printTrustSchedule\(/g) || []).length === 1, 'the two prints stay in More ▾, once each');
-    has(fn('_renderInvWorkbar'), "(fid && !invDocContractBlock(job, 'court') ? btn('printCourtInventory(", 'the Court Inventory under the tier\'s rule alone');
-    has(fn('_renderInvWorkbar'), "(fid && !invDocContractBlock(job, 'trustee') ? btn('printTrustSchedule(", 'the Trust Schedule likewise');
+    has(fn('_renderInvWorkbar'), "(invInstrumentOffered(job, 'court') ? btn('printCourtInventory(", 'the Court Inventory where the matter has it, under the tier\'s rule');
+    has(fn('_renderInvWorkbar'), "(invInstrumentOffered(job, 'trustee') ? btn('printTrustSchedule(", 'the Trust Schedule likewise');
+    has(fn('invInstrumentOffered'), 'invDocContractBlock(job, kind)', 'and the rule asks the tier\'s first');
     lacks(codeOnly(fn('_renderSignedSchedulesCard')), 'print', 'and the card prints nothing (no control twice)');
   }
 

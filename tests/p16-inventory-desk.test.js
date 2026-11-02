@@ -304,15 +304,21 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(wl, '#1 Remington 870 · RS12345678 · to Marie Delgado (daughter), through Palm Beach Arms (FFL), a licensed dealer',
         'with its serial and its route');
     has(wl, '#2 Colt 1911 — Going to a named person', 'the unrouted one is held with the reason');
-    has(wl, 'record its dealer route', 'which names the fix');
+    // Restated 2026-10-28 (P14 of the desk audit, DOC-20): the worklist goes to counsel and the trustee, so it states the fact
+    // (invTransportFact) where it named the desk's fix; the desk's row and record keep the fix (invTransportReason).
+    has(wl, 'the dealer route is not yet recorded', 'which states what is missing');
+    lacks(wl, 'record its dealer route', 'and names no press on the desk (P14)');
     has(wl, '#3 Suppressor — NFA item — never transported by Havellin', 'and the NFA item stays blocked');
     // Before the authority comes back, the worklist's awaiting-authority note says where a person-bound firearm's dealer goes.
     const u = docRig(ESTATE, unsigned);
     u.printAppraisalWorklist(7);
     const held = text((printed[printed.length - 1] || {}).html);
     has(held, '3 firearms are awaiting written authority', 'fixture: all three await authority');
-    has(held, 'with the dealer in Channel / Recipient (on a firearm going to a named person, on its dealer route)',
-        'and the note says where the dealer is recorded on a firearm going to a person');
+    // Restated 2026-10-28 (P14, DOC-20): the note states the rule (authority, serial and dealer on the record) and names no press or
+    // field on the desk; where a person-bound firearm's dealer is recorded is the desk's (its record's dealer route).
+    has(held, 'Once the authority, the serial and the dealer are all on the record', 'and the note states what clears a firearm');
+    lacks(held, 'Channel / Recipient', 'naming no field on the desk (P14)');
+    lacks(held, 'Record approval', 'and no press (P14)');
   });
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -637,7 +643,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     s.printAppraisalWorklist(7);
     const before = text(printed[printed.length - 1]);
     has(before, '1 collection from the walkthrough flagged to appraise has no photograph yet', 'fixture: the note, before the photograph');
-    has(before, 'photograph it in its room (Job Plan, In the house) so the appraiser sees it', '⚠ it names where the photograph is taken');
+    // Restated 2026-10-28 (P14 of the desk audit, DOC-20): the worklist goes in the package, so it states the fact and names no
+    // screen of the app (it said *photograph it in its room (Job Plan, In the house)*).
+    has(before, 'is listed here once photographed', '⚠ it says the collection joins the list once photographed');
+    lacks(before, 'Job Plan, In the house', 'and names no screen of the app (P14)');
     lacks(before, 'not yet in the inventory', 'a collection is never "not in the inventory": it joins by itself');
     // On the inventory but not photographed: still owed.
     s._photoRefs[7].push(LINE('silver', { objectName: 'Silver service', sourceCollId: 11, driveFileId: '', driveFileUrl: null, manual: true }));

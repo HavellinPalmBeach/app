@@ -421,6 +421,7 @@
   },
   {
    "id": "VAL-24",
+   "fixed": "2026-10-28 (P14: the living worklist's head, the roster's note and the guardrail's head follow the job (invValueAsOfWords, _apprEffDateWords, _apprGuardrailHead), the living tooltip names what the worklist lists; CLAUDE.md, Each paper says the right thing for its matter; tests/p14-papers.test.js, browser step 124)",
    "title": "Estate-only wording on living jobs: 'date of death' and 'reasonable estimates on a standard job'",
    "kind": "docs",
    "severity": "low",
@@ -438,6 +439,7 @@
   },
   {
    "id": "VAL-25",
+   "fixed": "2026-10-28 (P14: the guardrail's head names who has the appraisal done where Havellin arranges none (_apprGuardrailHead, jobAppraisalDuty, _agrOtherAppraisalsBy); \"1 item needs\"; CLAUDE.md, Each paper says the right thing for its matter; tests/p14-papers.test.js, browser step 124)",
    "title": "On a Contents-tier estate the Formal guardrail says appraisals are needed 'before this inventory is complete'",
    "kind": "inconsistency",
    "severity": "low",
@@ -525,6 +527,7 @@
   },
   {
    "id": "VAL-30",
+   "fixed": "2026-10-28 (P14: an appraiser's firm prints once (_apprFirmOf, read by _apprLabel and the roster row); the picker still fills the name with the firm where the directory has no contact; CLAUDE.md, Each paper says the right thing for its matter; tests/p14-papers.test.js, browser step 124)",
    "title": "An appraiser picked from the directory with no contact prints the firm twice on every paper",
    "kind": "friction",
    "severity": "low",

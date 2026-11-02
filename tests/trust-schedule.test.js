@@ -28,7 +28,7 @@ const FNS = ['invLineReviewed', 'invLineOpen', '_invDocPartyHead', 'invCondition
   'weArrangeAppraisals', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', 'jobAppraisalDuty', 'approvedEstimateFor', 'estimateDocScope', 'docScopeDef', '_agrOtherAppraisalsBy',
   'photoSubfolder',   // P16: the share button names both photo folders by the rule that files them
   'roundCents', 'fmt',
-  'trustInstrumentTitle', 'scheduleSigners', 'jobFiduciaries', 'jobListEntries', '_agrCounsel', 'photoSharesLine', 'photoSharesOf', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invReleaseCautions', '_invPhotoNoteOpen', 'invLineAcceptedOnly', '_invAcceptedStampWords', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', 'invAcceptCtx', 'agentDuplicateGroups', '_arPair', '_arPairOpen', 'agentDupCleared', '_agDupEligible', 'agentNamedTwice', '_invAcceptCtxOf', '_invListReadHtml', '_invReadKey', 'invListRead', 'agentNoticesOn', '_avStampCounts', 'invTotalFloor', '_invFloorTotalHtml'];
+  'trustInstrumentTitle', 'scheduleSigners', 'jobFiduciaries', 'jobListEntries', '_agrCounsel', 'photoSharesLine', 'photoSharesOf', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invReleaseCautions', '_invPhotoNoteOpen', 'invLineAcceptedOnly', '_invAcceptedStampWords', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', 'invAcceptCtx', 'agentDuplicateGroups', '_arPair', '_arPairOpen', 'agentDupCleared', '_agDupEligible', 'agentNamedTwice', '_invAcceptCtxOf', '_invListReadHtml', '_invReadKey', 'invListRead', 'agentNoticesOn', '_avStampCounts', 'invTotalFloor', '_invFloorTotalHtml', 'invInstrumentOffered', 'invInventoryWord', 'invTrustOnlyMatter', 'invDriveFolderWords'];
 const VARS = [
   '_agRun', '_avRun', '_arRun', 'AGENT_NOTICE_KINDS', 
   'INV_CONTRACT_DOCS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DECEDENT_SERVICES',
@@ -99,8 +99,17 @@ module.exports = ({ group, ok, eq, has, lacks }) => {
     //   created before 2026-09-21 carries none.
     const legacy = rig(J({}), FURNITURE());
     legacy.c.printCourtInventory(7);
-    eq(legacy.last().html, pro.last().html,
-       'an unanswered matter renders the court schedule identically to an explicit probate answer');
+    // Restated 2026-10-28 (P14 of the desk audit, EST-20): this job is an Estate Settlement, so with no matter answered it is off
+    // the probate track and its page says the matter type is not recorded, in one note.
+    // Restated again 2026-11-02 (P14's review): and these lines carry no asset track, so each is on the schedule by the probate
+    // default alone; the page is a DRAFT for it, its property still listed, never adopted until the matter is answered.
+    const _lh = legacy.last().html;
+    eq(_lh.split('inv-matter-unset-note').length - 1, 1, 'an unanswered matter says the matter type is not recorded, in one note');
+    ok(_lh.indexOf('#357a50') < 0, '⚠ …and, over lines on the schedule by default, is never stamped FINAL (P14\'s review)');
+    has(_lh, 'the matter type is not recorded', '…naming why');
+    lacks(_lh, 'Reviewed and adopted by', '…with no adoption block');
+    has(_lh, '$19,000', '…its property still listed');
+    has(_lh, 'each item is on the probate estate by default', '…and the note says the lines are there by default');
   }
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -190,8 +199,17 @@ module.exports = ({ group, ok, eq, has, lacks }) => {
     has(t, '$4,000', 'only the trust line is totalled');
     lacks(t, '$7,000', 'the other two are not swept in');
     has(t, '2 items tagged Homestead / Non-probate are excluded', 'and the excluded pots are named from the rows');
-    has(t, 'passes outside both and is reported on neither',
-        'with the honest statement that neither schedule covers them');
+    // Restated 2026-11-02 (P14's review): a trust-only matter has no §733.604 inventory beside this schedule, so the statement
+    // names the trust alone; on a pour-over will (Both) it still says neither schedule covers them.
+    has(t, 'Homestead and non-probate property passes outside the trust and is not reported on this schedule.',
+        'with the honest statement that this schedule does not cover them');
+    lacks(t, '733.604 inventory', '…and no estate inventory named for an estate with no court');
+    const rb = rig(J({ matterType: 'both' }), [
+      IT('i1', { objectName: 'Trust sofa', fmv: '4000', assetTrack: 'Trust' }),
+      IT('i3', { objectName: 'Homestead contents', fmv: '1000', assetTrack: 'Homestead' }),
+    ]);
+    rb.c.printTrustSchedule(7);
+    has(txt(rb.last().html), 'passes outside both and is reported on neither', 'Both: neither schedule covers them, as before');
   }
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -354,12 +372,15 @@ module.exports = ({ group, ok, eq, has, lacks }) => {
     lacks(strip('contents'), 'printTrustSchedule(7)', 'and withheld where it is not');
     has(strip('contents'), 'the Trust Schedule are withheld for that reason',
         'with the strip explaining the absence rather than leaving it to be guessed at');
-    // ⚠⚠ AND THE MATTER AXIS IS DELIBERATELY NOT GATED — step 6's rule, unchanged. Each
-    //    instrument refuses on its own FACE, which answers the question a withheld button would
-    //    leave hanging: "where is the trustee's schedule?"
-    has(strip('values'), 'printCourtInventory(7)', 'both instruments are offered on a trust matter');
+    // Restated 2026-10-28 (P14 of the desk audit, EST-20): step 6's rule is retired. More ▾ offers each instrument only where the
+    //    matter has it (invInstrumentOffered), both on Both and both while the matter is unanswered; each still refuses on its own
+    //    face for any path round the menu (the printers' groups above).
+    lacks(strip('values'), 'printCourtInventory(7)', 'a trust matter is offered the Trust Schedule alone');
     const probateStrip = rig(J({ matterType: 'probate' }), []).c._renderInvWorkbar(J({ matterType: 'probate' }), []);
-    has(probateStrip, 'printTrustSchedule(7)', 'and both on a probate one');
+    lacks(probateStrip, 'printTrustSchedule(7)', 'and a probate one the Court Inventory alone');
+    has(probateStrip, 'printCourtInventory(7)', 'which it is offered');
+    const bothStrip = rig(J({ matterType: 'both' }), []).c._renderInvWorkbar(J({ matterType: 'both' }), []);
+    ok(bothStrip.indexOf('printTrustSchedule(7)') > 0 && bothStrip.indexOf('printCourtInventory(7)') > 0, 'a pour-over will is offered both');
     // A living job gets neither: `fid` already withholds the estate set there.
     const living = J({ svc: 'downsizing', matterType: 'trust' });
     lacks(rig(living, []).c._renderInvWorkbar(living, []), 'printTrustSchedule(', 'a living job is offered no trust schedule');
@@ -401,7 +422,9 @@ module.exports = ({ group, ok, eq, has, lacks }) => {
     ]);
     pro.c.printEstateInventoryReport(7);
     const p = txt(pro.last().html);
-    has(p, 'carved out of the probate estate', 'a probate matter still carves');
+    // RESTATED (P14 of the desk audit, 2026-10-28; DOC-02): what is outside the estate is listed apart under "… — outside the
+    // probate estate", and exempt property is claimed inside it; nothing is "carved out" any more.
+    has(p, 'Homestead Property outside the probate estate', 'a probate matter still lists what is outside the estate apart');
     has(p, 'Homestead Property', 'and the heading names the pot actually in it');
     lacks(p, 'Homestead, Exempt', 'rather than reciting three pots over whatever is there');
   }

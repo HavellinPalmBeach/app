@@ -283,6 +283,7 @@
   },
   {
    "id": "LIV-16",
+   "fixed": "2026-10-28 (P14: the living CSV drops the fid columns and reads Promised to someone, captured-at in local time on every job; the living record reads Flags and Promised to someone, Authorized By only where written approval is needed or recorded; CLAUDE.md, Each paper says the right thing for its matter; tests/p14-papers.test.js, browser step 124)",
    "title": "Estate-only fields and wording leak into the living line record, the CSV and the Values bar",
    "kind": "inconsistency",
    "severity": "low",

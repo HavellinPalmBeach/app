@@ -435,7 +435,8 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
     eq([await stat('values', NEW), await stat('closing', NEW)], ['loading…', 'loading…'], '⚠⚠ before the manifest is read: "loading…", never a ✓');
     release(); hold = null;
     ok(await until(async () => (await stat('values', NEW)) !== 'loading…'), 'the read lands, and the lines are drawn without a press');
-    eq(await stat('values', NEW), '✓ nothing needs an appraisal · no appraisers yet', 'Values, read');
+    // A living job's bar names the state as its chip does (P14 of the desk audit, 2026-10-28; NEW-14).
+    eq(await stat('values', NEW), '✓ none waiting on a specialist · no appraisers yet', 'Values, read');
     eq(await p.evaluate((id) => { const w = document.getElementById('desk-fold-releases-' + id); return w && getComputedStyle(w).display; }, NEW), 'none',
       'nothing leaving yet: the Releases bar is not drawn');
     await press('#panel-inventory button[onclick="setInvWhen(\'all\')"]', 'All');

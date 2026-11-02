@@ -745,7 +745,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(rec, 'Released Christie’s Courier CH-0091', 'and its custody event, with the receipt');
     lacks(rec, 'Dining chairs', 'a line with neither appears in neither table');
     // The same pages the desk prints.
-    const pdfCourt = r.N.log.pdfs.filter((h) => /Estate Inventory — Tangible Personal Property/.test(h))[0] || '';
+    const pdfCourt = r.N.log.pdfs.filter((h) => /Court Inventory \(§733\.604\) — Tangible Personal Property/.test(h))[0] || '';   // its own name since P14
     ok(pdfCourt.length > 0 && pdfCourt === court, '⚠ the attached PDF and the filed copy are built from the same page');
   });
 
@@ -844,7 +844,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const href = decodeURIComponent(fallback.hrefs[0] || '');
     has(href, 'mailto:ann@lowe.law?cc=rex@hale.example,agreements@havellinpalmbeach.com', 'to the attorney, copied as before');
     has(href, 'are in the estate’s Google Drive folder:', '⚠ it can carry no PDF, so the documents are linked from Drive');
-    has(href, 'Court Inventory: https://drive.google.com/file/d/up2/view', 'the filed Court Inventory');
+    // Restated 2026-10-28 (P14 of the desk audit, DOC-17): each page linked says what it is for, beside its title.
+    has(href, 'Court Inventory (the estate’s tangible personal property, scheduled for the §733.604 inventory filing): https://drive.google.com/file/d/up2/view', 'the filed Court Inventory');
     const fst = fallback.job().docState.probatePackage || {};
     ok(fst.provider === 'mailto' && !!fst.draftedAt && !fst.sentAt, 'recorded as an email opened, never as sent');
     has(text(fallback.c.probatePackageCardHtml(fallback.job())), 'Opened as a plain email — send it from your mail app, then confirm', 'the card says what the app did');
@@ -868,8 +869,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // RESTATED 2026-10-03 (P19): the package carries the Disposition Ledger too, on both routes and at every tier, before the
     // Appraisal Worklist (probatePackageDocs; p19-ledger.test.js). Everything else here is as it was.
     eq(pf.pdfs.map((x) => x.name.replace(/ - 69 Beach.*$/, '')), ['Havellin Court Inventory', 'Havellin Estate Inventory', 'Havellin Disposition Ledger'], 'fixture: the worklist\'s PDF failed, the other three attached');
-    has(pf.text, 'Appraisal Worklist: https://drive.google.com/file/d/up5/view', '⚠ the page that could not be attached is linked to its filed copy');
-    lacks(pf.text, 'Court Inventory: https://', 'an attached page is not linked as well');
+    // Restated 2026-10-28 (P14, DOC-17): the link carries what the page is for.
+    has(pf.text, 'Appraisal Worklist (the items flagged for a specialist’s appraisal, grouped by specialist): https://drive.google.com/file/d/up5/view', '⚠ the page that could not be attached is linked to its filed copy');
+    lacks(pf.text, 'inventory filing): https://', 'an attached page is not linked as well');
     has((pdfFail.notices[pdfFail.notices.length - 1] || {}).m, 'The Appraisal Worklist could not be made into a PDF, so it is linked from Drive instead of attached', 'and the notice says so');
     eq(JSON.parse(JSON.stringify(pdfFail.job().docState.probatePackage.pkg.docs)), ['court', 'schedule', 'ledger'], 'the record names what was attached');
 

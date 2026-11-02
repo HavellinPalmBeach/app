@@ -226,7 +226,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines',
       'estimateAppraiserNames', 'docTierProduces', 'docScopeDef', 'roundCents', 'fmt',
       'scheduleSigners', 'jobFiduciaries'
-    , 'invFirearmClientTakes', '_avStampCounts', 'invTotalFloor', '_invFloorTotalHtml']);
+    , 'invFirearmClientTakes', '_avStampCounts', 'invTotalFloor', '_invFloorTotalHtml', '_invExemptClaimTotalHtml']);
     const COURT_VARS = INV_VARS.concat(['INV_VAL_BASES', 'DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MATTER_TYPES',
                                         'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DOC_SCOPES']);
 
@@ -410,9 +410,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             '_jobAppraisers', '_apprLabel', '_jobInvRefs', 'invNeedsAppraisal', 'invAppraisalChosen', 'invFiduciaryMode', 'isDecedentJob',
             '_invJob', 'invAppraisalThreshold', 'gateDispute', '_gateYes',
             'invIsIntrinsic', 'invCatMeta', 'invAppraiserFor', 'isFormalDoc',
-            'resolveDocLevel', 'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', '_gate706', 'isDecedentJob', 'roundCents', 'fmt'],
+            'resolveDocLevel', 'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', '_gate706', 'isDecedentJob', 'roundCents', 'fmt', '_apprFirmOf', '_apprGuardrailHead', 'jobAppraisalDuty', 'approvedEstimateFor', 'docTierProduces', '_agrOtherAppraisalsBy', 'matterDef', 'matterTypeOf'],
       vars: ['INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
-             'DECEDENT_SERVICES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
+             'DECEDENT_SERVICES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'MATTER_TYPES'],
     });
     const job = { id: 5, svc: 'cleanout', gate706: 'yes',
                   appraisers: [{ id: 77, name: 'Marie Wayland', firm: 'Appraisals by the Sea', credential: 'ISA' }] };
@@ -467,7 +467,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'isDecedentJob', '_gate706', 'roundCents', 'fmt',
       // P19: the firearm gate asks every fiduciary's approval against the job, and the withheld block names who authorises.
       'invApprovalMissing', 'invApprovalGap', 'jobFiduciaries', 'jobListEntries', 'invRepresentativeTitle', 'matterDef', 'matterTypeOf', 'invDealerNamed', 'invDispGoesToDealer', 'invDealerUnchecked', 'invDealerDirState', 'invDealerUncheckedText', '_invDealerDirStaleText', 'invDealerWhy', 'invFirearmsDealerFirm', 'invFirearmsDealerFirms', 'vendorCats', '_vendorNameKey'
-    , 'invLineQty', 'maivOwedLines', 'maivOwedText', '_avStampText', '_avStampCounts']);
+    , 'invLineQty', 'maivOwedLines', 'maivOwedText', '_avStampText', '_avStampCounts', 'invValueAsOfWords', 'estateValueDate', 'invTransportFact', 'invNfaTransferText']);
     const WL_VARS = INV_VARS.concat([
       'INV_FIREARM_CLIENT_TXT', 'FIREARMS_DEALER_CATEGORY', 'INV_TRANSPORT_REASONS', 'MATTER_TYPES', 'INV_SALE_DISPOSITIONS',
       'MAIV_AGGREGATE_THRESHOLD', 'MAIV_CATEGORIES', 'MAIV_OTHER', 'MAIV_BY_CATEGORY',
@@ -890,7 +890,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const a = sandbox({ fns: ['_invSetAppraiser', 'invAppraised', '_invHasValue', '_jobAppraisers', '_apprLabel', '_getPhotoRef',
                               '_setPhotoRef', 'savePhotoRefs', '_warnPhotoStoreFull', '_invTouch', '_invDropBareAppraisal', 'invLineAppraiser',
-                              '_invLinkedAppraiser', '_invNamed', '_invItemNo'],
+                              '_invLinkedAppraiser', '_invNamed', '_invItemNo', '_apprFirmOf'],
                         stubs: { renderInventoryTab() {}, _scheduleInventorySync() {},
                                  _invRefreshGuardrail() {}, _invRefreshSummary() {}, _invRefreshFlagStrip() {}, _invRefreshRecords() {} } });
     a.jobs.push({ id: 1, appraisers: [{ id: 7, name: 'Marie Wayland', firm: 'Appraisals by the Sea' }] });

@@ -17877,6 +17877,30 @@ var PROBATE_PKG_KEY = 'probatePackage';
 var PROBATE_PKG_TITLES = { court: 'Court Inventory', trustee: 'Trust Schedule', schedule: 'Estate Inventory Report',
                            contents: 'Contents List', ledger: 'Disposition Ledger', incidents: 'Incident Record', worklist: 'Appraisal Worklist' };
 var PROBATE_PKG_RECORD_TITLE = 'Release Approvals and Chain of Custody';
+// ⚠ A PAPER'S NAME BY THE MATTER (P14 of the desk audit, 2026-10-28; DOC-28): on a trust-only matter the Report is the
+// *Inventory Report* (invInventoryWord), as its own page and file are headed, never *Estate Inventory* on a trust administration.
+// Every other title is the catalogue's. Read by the send (each page's title, what it could not carry) and the card's line.
+function probatePackageTitle(job, key) {
+  return key === 'schedule' ? invInventoryWord(job) + ' Report' : PROBATE_PKG_TITLES[key];
+}
+// ⚠⚠ WHAT EACH ATTACHMENT IS FOR, ONE PHRASE A PAPER (P14, DOC-17): counsel received the Court Inventory and the Estate Inventory
+// Report, two papers with near-identical titles, different scopes and different totals, and nothing said which was the filing.
+// Read by the email's two bodies after each title, attached or linked from Drive. Plain text.
+function probatePackageDocPurpose(job, key) {
+  switch (key) {
+    case 'court': return 'the estate’s tangible personal property, scheduled for the §733.604 inventory filing';
+    case 'trustee': return 'the tangible personal property held in the trust, scheduled to support the trustee’s accounting';
+    // ⚠ NOT *PHOTOGRAPHED* (P14's review, 2026-11-02): a line typed with + Add line item, or a walkthrough collection still owed its
+    // photograph, has none, and the Report lists it without one; the email never claims what the app did not witness.
+    case 'schedule': return 'every item listed, with its value and where it is going'
+      + (jobOnProbateTrack(job) ? ', including any property outside the probate estate' : '');
+    case 'contents': return 'every item listed by room, without values';
+    case 'ledger': return 'where each item went and what it brought';
+    case 'incidents': return 'every incident reported on the job, with its photographs';
+    case 'worklist': return 'the items flagged for a specialist’s appraisal, grouped by specialist';
+  }
+  return '';
+}
 // Up to thirteen Apps Script calls run one after another (two folder shares, the record, and a filing and a PDF for each
 // of up to five documents, the Disposition Ledger's two since P19) before Gmail is asked, so the watchdog is longer than
 // docSend's 45 seconds.
@@ -18215,14 +18239,15 @@ function buildProbatePackageEmailText(ctx) {
   var folder = trust ? 'the trust’s Google Drive folder' : 'the estate’s Google Drive folder';
   if (ctx.attached.length) {
     L.push('Attached are Havellin’s inventory documents for ' + _pkgEstateLine(job) + ', as they stand on ' + ctx.asOf + ':');
-    ctx.attached.forEach(function (d) { L.push('  - ' + d.title); });
+    // Each with what it is for (P14, DOC-17).
+    ctx.attached.forEach(function (d) { var w = d.key ? probatePackageDocPurpose(job, d.key) : ''; L.push('  - ' + d.title + (w ? ' — ' + w : '')); });
     L.push('');
   }
   if (ctx.scope) { L.push(ctx.scope); L.push(''); }
   if (ctx.inDrive.length || ctx.unshared.length) {
     L.push(ctx.attached.length ? 'In ' + folder + ':'
                                : 'Havellin’s inventory records for ' + _pkgEstateLine(job) + ', as they stand on ' + ctx.asOf + ', are in ' + folder + ':');
-    ctx.inDrive.forEach(function (l) { L.push('  - ' + l.label + ': ' + l.url); });
+    ctx.inDrive.forEach(function (l) { var w = l.key ? probatePackageDocPurpose(job, l.key) : ''; L.push('  - ' + l.label + (w ? ' (' + w + ')' : '') + ': ' + l.url); });
     ctx.unshared.forEach(function (label) { L.push('  - ' + label + ': not yet shared with you'); });
     L.push('');
   }
@@ -18261,13 +18286,14 @@ function buildProbatePackageEmailHtml(ctx) {
     p('Dear ' + _emHtml(_pkgGreeting(job)) + ',') +
     (ctx.attached.length
       ? p('Attached are Havellin&rsquo;s inventory documents for ' + _emHtml(_pkgEstateLine(job)) + ', as they stand on ' + _emHtml(ctx.asOf) + ':')
-        + ul(ctx.attached.map(function (d) { return li(_emHtml(d.title)); }))
+        + ul(ctx.attached.map(function (d) { var w = d.key ? probatePackageDocPurpose(job, d.key) : ''; return li(_emHtml(d.title) + (w ? ' &mdash; ' + _emHtml(w) : '')); }))
       : '') +
     (ctx.scope ? p(_emHtml(ctx.scope)) : '') +
     ((ctx.inDrive.length || ctx.unshared.length)
       ? (ctx.attached.length ? cap('In ' + folder)
                              : p('Havellin&rsquo;s inventory records for ' + _emHtml(_pkgEstateLine(job)) + ', as they stand on ' + _emHtml(ctx.asOf) + ', are in ' + folder + ':'))
-        + ul(ctx.inDrive.map(function (l) { return li('<a href="' + _emHtml(l.url) + '" style="color:' + B.bronzeDk + ';">' + _emHtml(l.label) + '</a>'); })
+        + ul(ctx.inDrive.map(function (l) { var w = l.key ? probatePackageDocPurpose(job, l.key) : '';
+               return li('<a href="' + _emHtml(l.url) + '" style="color:' + B.bronzeDk + ';">' + _emHtml(l.label) + '</a>' + (w ? ' &mdash; ' + _emHtml(w) : '')); })
              .concat(ctx.unshared.map(function (label) { return li(_emHtml(label) + ' &mdash; not yet shared with you'); })))
       : '') +
     '<div style="height:1px;background:' + B.line + ';margin:26px 0 20px;"></div>' +
@@ -18317,7 +18343,8 @@ function _pkgShareFolders(job, emails, cb) {
     resolveSubfolderId(job, AS_FOUND_SUBFOLDER, function (af) {
       var list = [];
       if (af && af !== inv) list.push({ label: 'As-Found Record photographs', id: af });
-      if (inv) list.push({ label: (af && af !== inv) ? 'Estate Inventory photographs' : 'Photographs', id: inv });
+      // *Inventory photographs* on a trust-only matter (P14, DOC-28); the folder's name in Drive is unchanged.
+      if (inv) list.push({ label: (af && af !== inv) ? invInventoryWord(job) + ' photographs' : 'Photographs', id: inv });
       var jobs2 = [];
       list.forEach(function (f) {
         f.url = 'https://drive.google.com/drive/folders/' + encodeURIComponent(f.id);
@@ -18425,8 +18452,8 @@ function sendProbatePackage(jobId) {
       var pages = [], left = [];
       owed.forEach(function (k) {
         var r = probatePackagePage(jobId, k);
-        if (r.html) pages.push({ key: k, title: PROBATE_PKG_TITLES[k], html: r.html, name: r.title + '.pdf' });
-        else left.push({ title: PROBATE_PKG_TITLES[k], why: r.why || '' });
+        if (r.html) pages.push({ key: k, title: probatePackageTitle(job, k), html: r.html, name: r.title + '.pdf' });
+        else left.push({ title: probatePackageTitle(job, k), why: r.why || '' });
       });
       var record = { key: 'record', title: PROBATE_PKG_RECORD_TITLE, html: probatePackageRecordHtml(jobId) };
       var shareTo = pkgShareEmails(rcpt);
@@ -18452,7 +18479,7 @@ function sendProbatePackage(jobId) {
                 // A page that is not attached is linked from Drive instead, where it was filed.
                 pages.forEach(function (pg) {
                   var a = atts.some(function (x) { return x.key === pg.key; });
-                  if ((withPages || !a) && filed[pg.key] && filed[pg.key].ok) out.push({ label: pg.title, url: filed[pg.key].url });
+                  if ((withPages || !a) && filed[pg.key] && filed[pg.key].ok) out.push({ label: pg.title, url: filed[pg.key].url, key: pg.key });
                 });
                 probatePackageReports(job).forEach(function (r) { out.push({ label: r.title + ' — ' + r.name, url: r.url }); });
                 folders.forEach(function (f) { if (f.shared) out.push({ label: f.label, url: f.url }); });
@@ -18585,7 +18612,7 @@ function probatePackageCardHtml(job) {
       || probatePackageInventoryBlocker(job, (typeof _invCloudSeen !== 'undefined' && _invCloudSeen[id] && typeof _photoRefs !== 'undefined') ? (_photoRefs[id] || []) : null);
     if (blk) { btns = ''; lines.push('<span style="color:#A32D2D;">' + esc(blk) + '</span>'); }
     // To whom it will go, asked of the send's own recipients; on the trust route the fallback is named for what it is.
-    else lines.push(esc('Carries the ' + _andJoin(probatePackageDocs(job).map(function (k) { return PROBATE_PKG_TITLES[k]; }))
+    else lines.push(esc('Carries the ' + _andJoin(probatePackageDocs(job).map(function (k) { return probatePackageTitle(job, k); }))
       + ', with links to the photographs and the release and custody record, to '
       + (probatePackageAddressee(job) === 'trustee' ? 'the trustee, ' : '') + probatePackageRecipients(job).to + '.'));
   }
@@ -29533,6 +29560,26 @@ function _invKeyOnJob(job, key) {
   var col = INVENTORY_COLUMNS.filter(function(c){ return c.key === key; })[0];
   return !col || _invColOnJob(job, col);
 }
+// ⚠ A COLUMN'S NAME FOLLOWS THE JOB (P14 of the desk audit, 2026-10-28; LIV-16): on living work a *Specific Bequest* is a
+// promise to someone (the desk's Summary and the client's workbook already say *Promised to someone*); everything else keeps its
+// catalogue header. Read by the line's record and the CSV's header row.
+function _invColHeader(job, col) {
+  if (!col) return '';
+  return (col.key === 'flagBequest' && !invFiduciaryMode(job)) ? 'Promised to someone' : col.header;
+}
+// A record's section label by the job: *Flags* on living work, which has no asset track (an estate's own column, `fid`).
+function _invPanelSectionLabel(job, sec) {
+  return (sec && sec.key === 'flags' && !invFiduciaryMode(job)) ? 'Flags' : (sec ? sec.label : '');
+}
+// ⚠ WHO APPROVED IT, ONLY WHERE A LIVING LINE HAS SOMETHING TO SAY (P14, LIV-16): on a client's own home their word approves an
+// everyday line (2026-10-26), so *Authorized By* and *Approval Date* sat empty on every line. They show where the line needs the
+// client's written approval (invWrittenReleaseNeeded: a firearm, or someone who works with Havellin) or carries one already
+// (a recorded approval is never hidden); on an estate always.
+function _invPanelColShown(job, ref, col) {
+  if (!col || (col.key !== 'authBy' && col.key !== 'approvalDate') || invFiduciaryMode(job)) return true;
+  return !!(String((ref && ref.authBy) || '').trim() || String((ref && ref.approvalDate) || '').trim()
+    || (typeof invWrittenReleaseNeeded === 'function' && invWrittenReleaseNeeded(ref, job)));
+}
 function _invPanelCols(job) {
   return INVENTORY_COLUMNS.filter(function(c) {
     if (c.hideInTab) return false;
@@ -31619,6 +31666,14 @@ var INV_TRANSPORT_REASONS = {
   serial:    'No serial number recorded — the authorisation names each firearm by serial.',
   dealer:    'No dealer named — pick the licensed dealer in Who takes it: a Vendor Directory firm listed under ' + FIREARMS_DEALER_CATEGORY + '.'
 };
+// ⚠ THE NFA SENTENCE FOLLOWS THE JOB (P14's review, 2026-11-02): on a living client's worklist it said the item *transfers from the
+// estate*, beside a head P14 had already fitted to living work. On a client's own home it transfers from the client. Read by the desk's
+// reason and by the paper's fact, both of which hand in the job; a caller with none gets the estate's words, as before.
+function invNfaTransferText(job) {
+  return (job && !invFiduciaryMode(job))
+    ? 'NFA item — never transported by Havellin. It transfers from the client to the dealer on ATF paperwork.'
+    : INV_TRANSPORT_REASONS.nfa;
+}
 // An approval recorded without every fiduciary says who is missing (P19) rather than "no written authority on file",
 // which would be false: one is on file, and it is not enough.
 // ⚠ A FIREARM GOING TO NO DEALER AT ALL SAYS SO FIRST (P4 review, 2026-10-27; LIV-05): on Hold, an estate's Keep or Undecided the
@@ -31632,6 +31687,7 @@ function invTransportReason(ref, job) {
   // A leftover recipient (P22) is named for what it is, not as an empty channel; and since P4 every other reason a firearm has
   // no dealer, in invDealerWhy.
   if (why === 'dealer') return invDealerWhy(ref, job);
+  if (why === 'nfa') return invNfaTransferText(job);
   return gap ? 'Written authority is not complete. ' + gap : (INV_TRANSPORT_REASONS[why] || '');
 }
 // ⚠ WHY A FIREARM HAS NO DEALER, SAID FOR WHAT IT IS (P4), whichever arm the gate answers first: not going to one at all, the
@@ -31661,6 +31717,25 @@ function invDealerWhy(ref, job) {
   return INV_TRANSPORT_REASONS.dealer;
 }
 function invTransportable(ref, job) { return invIsFirearm(ref) && !invTransportBlocked(ref, job); }
+// ⚠⚠ WHAT A PAPER SAYS OF A FIREARM'S GATE: THE FACT, NEVER THE PRESS (P14 of the desk audit, 2026-10-28; DOC-20). The Appraisal
+// Worklist goes in every package to counsel and the trustee, and it printed the desk's directions (*select the line on Job Admin &
+// Inv and press Record approval once the signed authority is back*; *Open the line and record its dealer route*). The desk's row
+// and record keep invTransportReason, which says what to do; a paper reads this, the same gate (invTransportBlocked) in facts.
+function invTransportFact(ref, job) {
+  var why = invTransportBlocked(ref, job);
+  if (!why) return '';
+  if (why === 'nfa') return invNfaTransferText(job);
+  if (why === 'client' || why === 'serial') return INV_TRANSPORT_REASONS[why];
+  if (!invDispGoesToDealer(ref.disposition)) return 'Not going to a licensed dealer.';
+  if (why === 'beneficiary') return 'Going to a named person, through a licensed dealer who makes the transfer; the dealer route is not yet recorded.';
+  if (why === 'authority') {
+    var gap = invApprovalGap(ref, job);
+    return gap ? 'Written authority is not complete. ' + gap : 'No written authority on file yet.';
+  }
+  var named = invDealerNamed(ref);
+  if (invDealerUnchecked(ref)) return 'Licensed dealer not yet checked: ' + named + '.';
+  return named ? named + ' is not listed as a licensed dealer.' : 'No licensed dealer named yet.';
+}
 
 // ⚠⚠ TO A PERSON, THROUGH A LICENSED DEALER (2026-09-30, P16). Anthony, asked whether a firearm left
 // to a family member should have a way through: *"sure"*. The dealer makes the transfer to the person
@@ -32516,6 +32591,25 @@ function _invDocPartyHead(job) {
   if (!_party) return _name;
   return _party.value + (_party.estate && _party.value !== _name && _party.value !== 'Estate of ' + _name ? ' (' + _name + ')' : '');
 }
+// ⚠⚠ EACH PAPER SAYS THE RIGHT THING FOR ITS MATTER (P14 of the desk audit, 2026-10-28; DOC-28, DOC-07, VAL-24): a successor
+// trustee's counsel read *Estate Inventory — Asset Schedule … filed in the estate’s Drive folder* on a trust administration, and
+// a living client's appraiser was told to value *as of date of death*. One answer each, read by every paper that names them.
+// A trust-only matter (the catalogue's flags, never a name): a successor trustee administers it and there is no probate estate.
+function invTrustOnlyMatter(job) { var d = matterDef(job); return !!(d && d.trust && !d.onProbate); }
+// What the inventory is called on a paper and in its file name: *Inventory* on a trust-only matter, else *Estate Inventory*.
+function invInventoryWord(job) { return invTrustOnlyMatter(job) ? 'Inventory' : 'Estate Inventory'; }
+// Whose Drive folder the photographs are filed in, as a paper says it.
+function invDriveFolderWords(job) {
+  return invTrustOnlyMatter(job) ? 'the trust’s Drive folder' : invFiduciaryMode(job) ? 'the estate’s Drive folder' : 'this job’s Drive folder';
+}
+// The day the values are stated as of, as a paper says it, text: on an estate the date of death or, where it is elected, the §2032
+// alternate valuation date, with the day (estateValueDate, the one rule); on living work '' (no death, and no estate day: the
+// caller says what it states instead).
+function invValueAsOfWords(job) {
+  if (!job || !invFiduciaryMode(job)) return '';
+  var vdate = estateValueDate(job);
+  return (job.avd ? 'the alternate valuation date' : 'the date of death') + ' (' + (vdate ? fmtDate2(vdate) : '—') + ')';
+}
 function _invDocHead(job, title, extra) {
   var basis = resolveValBasis(job);
   var vdate = estateValueDate(job);
@@ -32723,11 +32817,10 @@ function _invPrintThumb(jobId, ref, px) {
 // printer refuses with the SAME sentence, so the document cannot be reached around the gate —
 // the rule `docAction` already follows. A gate that lives only on the button is a gate.
 //
-// ⚠ IT GATES ON THE TIER ALONE. The MATTER type is deliberately left where step 2 put it: the
-// Court Inventory renders on a trust matter and refuses on its own face, naming what the estate
-// actually is and that a §733.604 schedule is the wrong instrument for it. That document
-// answers the question a withheld button would leave hanging, so withholding it would remove
-// the explanation. Do not "finish" this by hiding it.
+// ⚠ IT GATES ON THE TIER ALONE. The MATTER type is the menu's (invInstrumentOffered, P14 of the desk audit, 2026-10-28: each
+// instrument offered only where the matter has it, both while it is unanswered), and the printers keep refusing on their own
+// face where the matter has no such instrument: the Court Inventory on a trust matter names what the estate actually is and
+// that a §733.604 schedule is the wrong instrument for it, for any path that reaches it round the menu.
 //
 // ⚠ AND IT GATES EXACTLY TWO DOCUMENTS. Everything else on the strip is produced at every
 // tier and must stay: the Approval Request (nothing of value leaves the property without one,
@@ -32778,6 +32871,17 @@ function invDocContractBlock(job, kind) {
   if (!svcHasDocStep(job && (job.svc || job.serviceType))) return '';
   return docTierProduces(job, d.needs) ? '' : d.why;
 }
+// ⚠ WHICH FILING INSTRUMENT THE DESK OFFERS, BY MATTER (P14 of the desk audit, 2026-10-28; EST-20): the Court Inventory
+// (`court`) on the probate track (jobOnProbateTrack, the one definition: Probate, Both, or a Probate service whose matter is
+// unanswered), the Trust Schedule (`trustee`) where the matter holds a trust (Trust, Both); while the matter type is unanswered,
+// both, under INV_MATTER_UNSET_TXT; never where the tier states no values (invDocContractBlock) or on living work. The menu
+// offers by it; the printers still refuse on their own face, so a path round the menu is no path to the wrong instrument.
+function invInstrumentOffered(job, kind) {
+  if (!job || !invFiduciaryMode(job) || invDocContractBlock(job, kind)) return false;
+  if (!matterTypeOf(job)) return true;
+  return kind === 'court' ? jobOnProbateTrack(job) : !!(matterDef(job) && matterDef(job).trust);
+}
+var INV_MATTER_UNSET_TXT = 'Matter type not recorded: set it in Edit Client.';
 
 // ── 02a · The Contents List — the capture-tier deliverable ──────────────
 // ⚠⚠ THREE CLIENT-FACING SURFACES PROMISED THIS DOCUMENT AND NOTHING PRODUCED IT. The
@@ -32925,7 +33029,7 @@ function printContentsList(jobId, opt) {
     + (rec.unnamed === 1 ? '' : 's') + ' not yet named');
   // (No gap for a line with no condition set since P25, Q50: it reads "as photographed", which is what the photograph shows.)
   if (rec.unsaved) gaps.push('<strong>' + rec.unsaved + '</strong> item'
-    + (rec.unsaved === 1 ? '' : 's') + ' whose photograph has not reached the estate’s Drive folder');
+    + (rec.unsaved === 1 ? '' : 's') + ' whose photograph has not reached ' + invDriveFolderWords(job));   // the trust’s on a trust-only matter (P14)
   var gapBlock = gaps.length
     ? '<div style="border:1px solid #8a6d3b;border-radius:3px;padding:9px 12px;margin-bottom:12px;font-size:11px;color:#3c3228;line-height:1.55;">'
       + '<strong style="color:#8a6d3b;">This list is not yet complete.</strong><ul style="margin:5px 0 0 16px;padding:0;">'
@@ -32986,11 +33090,19 @@ function printContentsList(jobId, opt) {
   // RESPONSIBILITY, and a reader who skipped the line would assume Havellin carries it. The
   // three arms exist so the document never tells an estate that counsel is valuing a list
   // Havellin was in fact engaged to value.
+  // ⚠ WHO VALUES IT FOLLOWS THE MATTER (P14's review, 2026-11-02): on a Contents-tier trust, the trust package's primary page, and
+  // on Neither, it said *the court filing* is *the Client and the estate attorney*'s. A court filing is named on the probate track
+  // only; a trust-only matter names the trustee or their counsel (the package's addressee), Neither the representative by their
+  // title (on a decedent job *the Client* is the deceased); an unanswered matter off the track keeps the estate attorney, no filing.
+  var _whoOther = jobOnProbateTrack(job) ? 'Valuation of the property and the court filing are the responsibility of the Client and the estate attorney'
+    : invTrustOnlyMatter(job) ? 'Valuation of the property is the responsibility of the trustee or their counsel'
+    : matterDef(job) ? 'Valuation of the property is the responsibility of the ' + esc(invRepresentativeTitle(job)) + ' and their counsel'
+    : 'Valuation of the property is the responsibility of the Client and the estate attorney';
   var whoValues = !fid
     ? 'This list states no values.'
     : (weValue
-        ? 'Estimated values are stated separately on the Estate Inventory — Asset Schedule, which is the valued version of this list.'
-        : 'Valuation of the property and the court filing are the responsibility of the Client and the estate attorney, who receive this list for that purpose. Havellin has not valued anything on it and states no opinion of value.');
+        ? 'Estimated values are stated separately on the ' + invInventoryWord(job) + ' — Asset Schedule, which is the valued version of this list.'
+        : _whoOther + ', who receive this list for that purpose. Havellin has not valued anything on it and states no opinion of value.');
 
   // ⚠ NO "RE-OPEN THIS TAB" (P13, 2026-10-28; DOC-03): the page fetched its own photographs before it was built (invPhotosFirst),
   // a line whose photograph could not be drawn links to it, and the person printing was told how many. A row with no file on Drive
@@ -33037,34 +33149,29 @@ function printEstateInventoryReport(jobId, opt) {
   var noLink = typeof _invItemNoLinkHtml === 'function' ? _invItemNoLinkHtml : function (r) { return esc(_invItemNo(r)); };
   var lotHtml = typeof invLotLineHtml === 'function' ? invLotLineHtml : function () { return ''; };
 
-  // Carved out, not omitted: exempt, homestead and non-probate property is reported in
-  // its own schedule so a reader can see both that it exists and that it sits outside
-  // the probate estate.
+  // Outside the estate, not omitted: homestead, non-probate and trust-tracked property is reported in its own block so a reader
+  // can see both that it exists and that it sits outside the probate estate.
   //
-  // ⚠⚠ AND THE CARVE-OUT IS A PROBATE CONCEPT, SO IT STANDS DOWN WHERE THERE IS NO PROBATE
-  // ESTATE FOR ANYTHING TO SIT OUTSIDE OF. Its own reason above says so in as many words. On a
-  // matter recorded `trust` or `neither` the partition answers a question nobody asked — and
-  // once `_invTrack`'s default follows the matter type it answers it catastrophically, putting
-  // EVERY line under a heading naming three pots the property is not in, above an empty Asset
-  // Schedule. `invProbateRows` is the same predicate the workbook already uses, so an unanswered
-  // matter and a `both` matter behave exactly as they do today.
+  // ⚠⚠ EXEMPT PROPERTY IS CLAIMED INSIDE THE PROBATE ESTATE, NEVER CARVED OUT OF IT (P14 of the desk audit, 2026-10-28; DOC-02).
+  // This block read `_invIsExempt(r) || !_invIsProbateAsset(r)`, so a sofa ticked Exempt sat under *Exempt, Non-probate Property —
+  // carved out of the probate estate* on this page while the Court Inventory in the same package listed it under *Exempt Property
+  // (Fla. Stat. §732.402)* inside the estate and said *Exempt property is not excluded*: two legal readings of one item, and the
+  // Report's the one `_invIsExempt`'s own rule calls wrong (P7's review had added a sentence under the totals as a stopgap). The
+  // partition is the Court Inventory's now, `_invOnProbateSchedule`: the estate's own lines, then its exempt property under its
+  // own heading with its subtotal (`_invExemptClaimTotalHtml`, the Court Inventory's words), then what is outside it.
+  //
+  // ⚠⚠ AND THE PARTITION IS A PROBATE CONCEPT, SO IT STANDS DOWN WHERE THERE IS NO PROBATE ESTATE FOR ANYTHING TO SIT OUTSIDE
+  // OF. On a matter recorded `trust` or `neither` it answers a question nobody asked — and once `_invTrack`'s default follows the
+  // matter type it answers it catastrophically, putting EVERY line under a heading naming pots the property is not in, above an
+  // empty Asset Schedule. `invProbateRows` is the same predicate the workbook already uses, so an unanswered matter and a `both`
+  // matter behave exactly as they do today.
   var _probateMatter = invProbateRows(job);
-  var carved = _probateMatter ? all.filter(function(r){ return _invIsExempt(r, job) || !_invIsProbateAsset(r, job); }) : [];
-  var main   = _probateMatter ? all.filter(function(r){ return carved.indexOf(r) < 0; }) : all;
-  // ⚠ THE HEADING NAMES THE POTS IT ACTUALLY HOLDS RATHER THAN RECITING A FIXED LIST — the
-  // rule `_invExcludedTracks` already applies to the Court Inventory's footnote, which used to
-  // claim "Trust / Non-probate / Homestead" over a count that could contain none of them. This
-  // one read "Homestead, Exempt & Non-Probate Property" over whatever was in it, so a `both`
-  // matter with an item tracked Trust was already mis-described before today.
-  var _carvePots = function(list) {
-    var seen = [];
-    (list || []).forEach(function(r){
-      var t = _invTrack(r, job);
-      var pot = (t === 'Trust' || t === 'Homestead' || t === 'Non-probate') ? t : (_invIsExempt(r, job) ? 'Exempt' : t);
-      if (seen.indexOf(pot) < 0) seen.push(pot);
-    });
-    return seen.sort().join(', ');
-  };
+  var carved = _probateMatter ? all.filter(function(r){ return !_invOnProbateSchedule(r, job); }) : [];
+  var exempt = _probateMatter ? all.filter(function(r){ return _invOnProbateSchedule(r, job) && _invIsExempt(r, job); }) : [];
+  var main   = _probateMatter ? all.filter(function(r){ return _invOnProbateSchedule(r, job) && !_invIsExempt(r, job); }) : all;
+  // ⚠ THE HEADING NAMES THE POTS IT ACTUALLY HOLDS RATHER THAN RECITING A FIXED LIST, the rule `_invExcludedTracks` already
+  // applies to the Court Inventory's footnote, and the outside subtotal below reads the same list, so the two agree.
+  var _carvePots = function(list) { return _invExcludedTracks(list, job).replace(/ \/ /g, ', '); };
 
   function itemRow(r) {
     var q = parseInt(r.qty, 10);
@@ -33162,27 +33269,23 @@ function printEstateInventoryReport(jobId, opt) {
   var _basisW = resolveValBasis(job);
   var _inProbate = _probateMatter ? all.filter(function(r){ return _invOnProbateSchedule(r, job); }) : all;
   var _outside = _probateMatter ? all.filter(function(r){ return !_invOnProbateSchedule(r, job); }) : [];
-  // ⚠ THE SUBTOTALS AGREE WITH THE BLOCKS ABOVE THEM (P7's review): the carved-out block lists exempt property beside the property
-  // outside the estate (its heading is DOC-02's, P14's), so the outside subtotal names the tracks it adds (never "exempt"), and
-  // where an exempt line is listed there a sentence says it is counted in the probate estate, as the Court Inventory claims it.
-  // Under the totals, whether or not the subtotals print (a probate matter whose only carved-out lines are exempt has none).
-  var _exListed = carved.filter(function(r){ return _invOnProbateSchedule(r, job); });
+  // ⚠ THE SUBTOTALS AGREE WITH THE BLOCKS ABOVE THEM (P7's review; P14): the probate estate's subtotal is its own lines and its
+  // exempt property, as the blocks list them, and the outside subtotal names the tracks its block's heading names. P7's sentence
+  // under the totals (exempt property listed with the carved-out property but counted in the estate) went with the layout it
+  // explained: exempt property is listed inside the estate now (P14, DOC-02).
   var totalsHtml = (_outside.length
       ? _invFloorTotalHtml(invTotalFloor(_inProbate), _basisW, { what: 'Probate estate, exempt property included', note: false, size: 12, top: 12 })
-        + _invFloorTotalHtml(invTotalFloor(_outside), _basisW, { what: esc(_invExcludedTracks(_outside, job).replace(/ \/ /g, ', ')) + ' property, outside the probate estate',
+        + _invFloorTotalHtml(invTotalFloor(_outside), _basisW, { what: esc(_carvePots(_outside)) + ' property, outside the probate estate',
             note: false, size: 12, top: 2, rule: false })
       : '')
-    + _invFloorTotalHtml(invTotalFloor(all), _basisW, { label: 'Total estimated ' + esc(_basisW.toLowerCase()), top: _outside.length ? 6 : 12 })
-    + (_exListed.length ? '<div class="inv-exempt-note" style="font-size:10.5px;color:#666;font-style:italic;margin-top:4px;text-align:right;">'
-        + 'Exempt property is counted in the probate estate: it is listed above with the carved-out property and claimed under '
-        + '§732.402, not excluded from the estate (' + esc(_exListed.slice(0, 6).map(function(r){ return '#' + (r.itemNo || '?') + ' ' + (r.objectName || 'unnamed'); }).join(', '))
-        + (_exListed.length > 6 ? ' and ' + (_exListed.length - 6) + ' more' : '') + ').</div>' : '');
+    + _invFloorTotalHtml(invTotalFloor(all), _basisW, { label: 'Total estimated ' + esc(_basisW.toLowerCase()), top: _outside.length ? 6 : 12 });
   // An open possible duplicate, named under the IN PROGRESS stamp it already holds (P8, invDoubleCounts; the Ref column carries
   // the numbers). Guarded for a sandbox that lifts this printer alone.
   var _dbl = typeof invDoubleCounts === 'function' ? invDoubleCounts(job, all) : null;
 
   var html = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
-    + _invDocHead(job, 'Estate Inventory &mdash; Asset Schedule')
+    // *Inventory* on a trust-only matter (P14, DOC-28): a successor trustee's counsel read *Estate Inventory* on a trust administration.
+    + _invDocHead(job, invInventoryWord(job) + ' &mdash; Asset Schedule')
     + _invProgressStamp(all, { fc: _ac })
     + (_dbl ? '<div class="inv-dbl-note" style="font-size:10.5px;color:#A32D2D;font-weight:700;margin:-6px 0 12px;">' + esc(_dbl.why)
         + '. ' + esc(_dbl.below) + '</div>' : '')
@@ -33190,12 +33293,15 @@ function printEstateInventoryReport(jobId, opt) {
     // already names the values that stand with nothing flagged, so they are not named twice (noAccepted).
     + _avUnreviewedStamp(all, { noAccepted: true, fc: _ac })
     + block(main, 'Asset Schedule')
-    + block(carved, esc(_carvePots(carved)) + ' Property &mdash; carved out of the probate estate')
+    // The estate's exempt property, inside it, with its subtotal and the cap check, in the Court Inventory's own words (P14, DOC-02;
+    // the heading is to counsel, bundle D22).
+    + (exempt.length ? block(exempt, 'Exempt Property Claimed (Fla. Stat. &sect;732.402)') + _invExemptClaimTotalHtml(invTotalFloor(exempt)) : '')
+    + block(carved, esc(_carvePots(carved)) + ' Property &mdash; outside the probate estate')
     + totalsHtml
     + apprBlock
     + (noFile ? '<div style="font-size:10px;color:#8a6d3b;font-style:italic;margin-top:10px;">'
-        + noFile + ' item' + (noFile > 1 ? 's were' : ' was') + ' photographed and the image did not reach the '
-        + 'estate&rsquo;s Drive folder. Those photographs are not held anywhere and the line is listed without one.</div>' : '')
+        + noFile + ' item' + (noFile > 1 ? 's were' : ' was') + ' photographed and the image did not reach '
+        + invDriveFolderWords(job) + '. Those photographs are not held anywhere and the line is listed without one.</div>' : '')
     + (typeof invNumbersNotUsedHtml === 'function' ? invNumbersNotUsedHtml(jobId) : '')
     // ⚠ WHO REPORTS THE REST FOLLOWS THE MATTER (2026-10-08, the job-flow audit): this page goes in the trust package too,
     // and named "the personal representative's filing" to a trustee's attorney. The probate track keeps its words; a
@@ -33209,8 +33315,8 @@ function printEstateInventoryReport(jobId, opt) {
       + (typeof invPaperPhotoSentence === 'function' && invPaperPhotoSentence(all) ? ' ' + esc(invPaperPhotoSentence(all)) : '') + '</div>'
     + '</div>';
   // The probate package asks for the page itself (`opt.asHtml`, P17) — see printCourtInventory.
-  if (opt && opt.asHtml) return { html: html, title: _invDocName(job, 'Estate Inventory') };
-  _printDocument(html, _invDocName(job, 'Estate Inventory'), { view: true, job: job, label: 'Estate Inventory' });   // on screen first (2026-10-27)
+  if (opt && opt.asHtml) return { html: html, title: _invDocName(job, invInventoryWord(job)) };
+  _printDocument(html, _invDocName(job, invInventoryWord(job)), { view: true, job: job, label: invInventoryWord(job) });   // on screen first (2026-10-27)
 }
 
 // ── CSV ───────────────────────────────────────────────────────────────────────
@@ -33221,11 +33327,33 @@ function _csvCell(v) {
   var s = (v === null || v === undefined) ? '' : String(v);
   return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
 }
+// A captured-at stamp in the device's own time (P14, LIV-16): the CSV printed it in UTC (*2026-10-21T02:09:17.287Z*, the evening
+// before in Palm Beach). Year-month-day and the 24-hour time, so a spreadsheet sorts it; '' for none.
+function _invLocalStamp(iso) {
+  var d = iso ? new Date(iso) : null;
+  if (!d || isNaN(d.getTime())) return '';
+  var two = function (n) { return (n < 10 ? '0' : '') + n; };
+  return _ymdLocal(d) + ' ' + two(d.getHours()) + ':' + two(d.getMinutes());
+}
 function buildInventoryCSV(jobId) {
   var p = buildInventoryPayload(jobId);
-  // The rows and the header row are the workbook's own (2026-10-13; until then the file kept a header row of its own, for
-  // the Net column's old wire name).
-  return [p.columns].concat(p.rows).map(function(row){
+  // The rows are the workbook's own (2026-10-13; until then the file kept a header row of its own, for the Net column's old wire
+  // name), the captured-at stamp in local time.
+  // ⚠ AND ITS COLUMNS FOLLOW THE JOB (P14 of the desk audit, 2026-10-28; LIV-16): a living client's file carried the estate's
+  // apparatus (*Valuation Date*, *MAIV §20.2031-6*, *Exempt §732.402*, *Asset Track*), every column the record already leaves
+  // off a living job (`fid`, _invColOnJob), and *Specific Bequest* for what the desk calls a promise to someone (_invColHeader).
+  // The workbook keeps every column: its Apps Script finds its own by name, and a living job's workbook lays them out as living.
+  var job = jobs.find(function(j){ return j.id === jobId; }) || {};
+  var keep = [0], head = ['Job ID'], tsAt = -1;
+  INVENTORY_COLUMNS.forEach(function(c, i){
+    if (!_invColOnJob(job, c)) return;
+    if (c.key === 'ts') tsAt = keep.length;
+    keep.push(i + 1); head.push(_invColHeader(job, c));
+  });
+  var rows = p.rows.map(function(row){
+    return keep.map(function(i, n){ return n === tsAt ? _invLocalStamp(row[i]) : row[i]; });
+  });
+  return [head].concat(rows).map(function(row){
     return row.map(_csvCell).join(',');
   }).join('\r\n');
 }
@@ -37300,6 +37428,31 @@ function invDoubleCounts(job, list) {
   };
 }
 
+// The exempt property claimed, subtotalled, and the §732.402 cap check under it: one block, read by the Court Inventory and the
+// Estate Inventory Report (P14, DOC-02), so the two papers in one package state the claim in the same words over the same figure.
+// ⚠⚠ IT TAKES THE FLOOR, NEVER A BARE NUMBER (P14's review, 2026-11-02): it took `invTotalFloor(list).total`, so an exempt bedroom
+// set with no value printed *Total exempt property claimed: $900* beside the sofa, and $19,500 of dining set beside an unvalued
+// bedroom set printed no cap sentence at all: the §732.402 test could not be made and the page did not say so. A floor is a floor
+// on every valued paper, by one rule (P7): with a line unvalued the subtotal is *recorded so far*, the lines are named, and the cap
+// is said to be untestable until they are valued, unless the recorded figures already pass it, which no later value can undo.
+function _invExemptClaimTotalHtml(fl) {
+  if (typeof fl === 'number') fl = { total: fl, unvalued: [] };
+  var n = (fl.unvalued || []).length, total = fl.total;
+  return '<div class="inv-exempt-total" style="display:flex;justify-content:flex-end;font-size:11.5px;font-weight:700;margin-top:6px;padding-top:4px;border-top:1px solid #bbb;">'
+      + (n ? 'Total exempt property claimed, recorded so far &mdash; not a complete total' : 'Total exempt property claimed') + ': &nbsp;' + _invMoney(total) + '</div>'
+    + (n
+        ? '<div class="inv-exempt-floor" style="font-size:10px;color:#8a6d3b;font-style:italic;margin-top:4px;text-align:right;">' + n + ' item' + (n > 1 ? 's' : '')
+          + ' claimed exempt ' + (n > 1 ? 'are' : 'is') + ' recorded without a value and NOT included above: '
+          + esc(fl.unvalued.slice(0, 6).map(function(r){ return '#' + (r.itemNo || '?') + ' ' + (r.objectName || 'unnamed'); }).join(', '))
+          + (n > 6 ? ' and ' + (n - 6) + ' more' : '') + '.'
+          + (total > EXEMPT_CAP_732_402 ? '' : ' The ' + fmt(EXEMPT_CAP_732_402) + ' &sect;732.402 allowance cannot be tested until ' + (n > 1 ? 'they are' : 'it is') + ' valued.')
+          + '</div>'
+        : '')
+    + (total > EXEMPT_CAP_732_402
+        ? '<div style="font-size:10px;color:#8a6d3b;font-style:italic;margin-top:4px;text-align:right;">Exceeds the ' + fmt(EXEMPT_CAP_732_402) + ' §732.402 allowance for household furniture, furnishings and appliances'
+          + (n ? ' on the recorded figures alone' : '') + ' &mdash; confirm the composition of this claim with counsel. Motor vehicles are a separate allowance and are not counted here.</div>'
+        : '');
+}
 function printCourtInventory(jobId, opt) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   var _blocked = invDocContractBlock(job, 'court') || (typeof invColdRefusal === 'function' ? invColdRefusal(jobId) : '');   // and a cold desk (2026-10-27, P1)
@@ -37387,6 +37540,15 @@ function printCourtInventory(jobId, opt) {
   var _mtOff = !!(_mt && !_mt.onProbate);
   if (_mtOff) _draftWhy.push('this estate is not being administered through probate');
   if (_mtOff) _draftFix.push('no final copy of THIS schedule will follow — a probate inventory is the wrong instrument for this estate');
+  // ⚠⚠ AN UNANSWERED MATTER OFF THE PROBATE TRACK, OVER LINES NOBODY TRACKED, IS A DRAFT (P14's review, 2026-11-02; EST-20): an
+  // Estate Settlement with no matter recorded printed FINAL with an adoption line, though its lines reached this schedule by
+  // `_invTrack`'s default alone (the Trust Schedule's reasoning, that somebody tracked what is on it, does not hold here, where the
+  // default is Probate). Where every line on it carries an asset track a person set to Probate, somebody did put it there, and the
+  // page stays as P14 built it (FINAL, with the note); where any rests on the default it is a draft until the matter is answered.
+  var _mtUnset = !_mt && !jobOnProbateTrack(job);
+  var _mtUnsetDefault = _mtUnset && onSched.some(function(r){ return !r.assetTrack; });
+  if (_mtUnsetDefault) _draftWhy.push('the matter type is not recorded');
+  if (_mtUnsetDefault) _draftFix.push('a final copy follows once the estate is recorded as administered through probate');
   var draft = _draftWhy.length > 0;
   var status = draft ? 'DRAFT — ' + _draftWhy.join(' \u00b7 ') : 'FINAL';
   var basis = resolveValBasis(job);
@@ -37405,19 +37567,16 @@ function printCourtInventory(jobId, opt) {
   // there was no exempt figure anywhere on the document — which is the one number a
   // reader needs in order to test the §732.402 claim at all.
   var estateSec = section('Tangible Personal Property', items.filter(function(r){ return _invOnProbateSchedule(r, job) && !_invIsExempt(r, job); }), job);
-  var exemptSec = section('Exempt Property (Fla. Stat. §732.402)', items.filter(function(r){ return _invOnProbateSchedule(r, job) && _invIsExempt(r, job); }), job);
-  var exemptTotal = exemptSec.total;
-  var overCap = exemptTotal > EXEMPT_CAP_732_402;
+  var _exemptList = items.filter(function(r){ return _invOnProbateSchedule(r, job) && _invIsExempt(r, job); });
+  var exemptSec = section('Exempt Property (Fla. Stat. §732.402)', _exemptList, job);
   var body = estateSec.html
            + exemptSec.html
-           + (exemptSec.html
-               ? '<div style="display:flex;justify-content:flex-end;font-size:11.5px;font-weight:700;margin-top:6px;padding-top:4px;border-top:1px solid #bbb;">Total exempt property claimed: &nbsp;' + _invMoney(exemptTotal) + '</div>'
-                 + (overCap
-                     ? '<div style="font-size:10px;color:#8a6d3b;font-style:italic;margin-top:4px;text-align:right;">Exceeds the ' + fmt(EXEMPT_CAP_732_402) + ' §732.402 allowance for household furniture, furnishings and appliances &mdash; confirm the composition of this claim with counsel. Motor vehicles are a separate allowance and are not counted here.</div>'
-                     : '')
-               : '');
+           + (exemptSec.html ? _invExemptClaimTotalHtml(invTotalFloor(_exemptList)) : '');   // the floor, never its bare total (P14's review)
   var html = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
-    + '<h2 style="font-family:\'Cormorant Garamond\',serif;margin-bottom:2px;">Estate Inventory — Tangible Personal Property</h2>'
+    // ⚠ ITS OWN NAME (P14, DOC-17): the page read *Estate Inventory — Tangible Personal Property* beside the Report's *Estate
+    // Inventory — Asset Schedule* in one package, with different scopes and totals, while its file and the email called it the
+    // Court Inventory; counsel had to work out which was the filing. Headed as it is filed.
+    + '<h2 style="font-family:\'Cormorant Garamond\',serif;margin-bottom:2px;">Court Inventory (§733.604) — Tangible Personal Property</h2>'
     + '<div style="font-size:12px;margin-bottom:2px;"><strong>' + _invDocPartyHead(job) + '</strong>' + (job.hvlId ? ' &middot; ' + esc(job.hvlId) : '')
     + (job.probateCase ? ' &middot; Case ' + esc(job.probateCase) + ((typeof jobProbateCourt === 'function' && jobProbateCourt(job)) ? ', ' + esc(jobProbateCourt(job)) : '') : '') + '</div>'
     + '<div style="font-size:11px;color:#666;margin-bottom:2px;">' + esc([job.addr, job.city ? job.city + ', FL' : ''].filter(Boolean).join(', ')) + '</div>'
@@ -37440,6 +37599,13 @@ function printCourtInventory(jobId, opt) {
         : '')
     + ((_mt && _mt.onProbate && _mt.trust)
         ? '<div style="margin-bottom:12px;font-size:10.5px;color:#8a6d3b;font-style:italic;line-height:1.5;">Recorded as <em>' + esc(_mt.label) + '</em>, so some property passes under the trust rather than through the estate. Anything tracked Trust is excluded from this schedule and belongs on the trustee\'s.</div>'
+        : '')
+    // ⚠ AN UNANSWERED MATTER OFF THE PROBATE TRACK IS NAMED (P14, EST-20): an Estate Settlement with no matter recorded printed this
+    // page as a §733.604 filing while its package route and the desk read the matter as off probate. The Trust Schedule's own note
+    // for an unrecorded matter, in this schedule's words; since P14's review the page is a DRAFT where a line on it rests on the
+    // probate default (`_mtUnsetDefault`, above), and the note says so.
+    + (_mtUnset
+        ? '<div class="inv-matter-unset-note" style="margin-bottom:12px;font-size:10.5px;color:#8a6d3b;font-style:italic;line-height:1.5;">No matter type is recorded on this job, so Havellin cannot confirm from the record that this estate is administered through probate &mdash; the property below is listed because ' + (_mtUnsetDefault ? 'each item is on the probate estate by default, until a matter type or an asset track says otherwise' : 'it is tracked to the probate estate') + '.</div>'
         : '')
     + body
     // The one floor rule (P7, invTotalFloor): the Estate Inventory Report prints its probate subtotal by it too.
@@ -37584,7 +37750,12 @@ function printTrustSchedule(jobId, opt) {
     // ⚠ THE TWO SCHEDULES ARE NOT COMPLEMENTARY AND THIS SAYS SO. Probate and exempt property is
     // the estate's; homestead and non-probate property passes to heirs and named beneficiaries
     // outside both. A reader holding one schedule must not read the other as covering the rest.
-    + (excluded.length ? '<div style="font-size:10px;color:#8a6d3b;font-style:italic;margin-top:8px;">' + excluded.length + ' item' + (excluded.length > 1 ? 's' : '') + ' tagged ' + _invExcludedTracks(excluded, job) + ' ' + (excluded.length > 1 ? 'are' : 'is') + ' excluded from this schedule. Probate and exempt property is reported on the estate&rsquo;s &sect;733.604 inventory; homestead and non-probate property passes outside both and is reported on neither.</div>' : '')
+    + (excluded.length ? '<div style="font-size:10px;color:#8a6d3b;font-style:italic;margin-top:8px;">' + excluded.length + ' item' + (excluded.length > 1 ? 's' : '') + ' tagged ' + _invExcludedTracks(excluded, job) + ' ' + (excluded.length > 1 ? 'are' : 'is') + ' excluded from this schedule.'
+        // ⚠ A §733.604 INVENTORY IS NAMED ONLY WHERE THERE IS ONE BESIDE THE TRUST (P14's review): on a trust-only matter a line a
+        // person tracked Probate or Non-probate printed *reported on the estate's §733.604 inventory* for an estate with no court.
+        + ((_mt && _mt.onProbate && _mt.trust) ? ' Probate and exempt property is reported on the estate&rsquo;s &sect;733.604 inventory; homestead and non-probate property passes outside both and is reported on neither.'
+          : ' Homestead and non-probate property passes outside the trust and is not reported on this schedule.')
+        + '</div>' : '')
     + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">This schedule covers tangible personal property only. Real property, accounts, securities and business interests are administered under the trust instrument and are reported separately by the trustee. Values are estimated ' + esc(basis.toLowerCase()) + ' as of ' + esc(vlabel) + '.'
       + (typeof invPaperPhotoSentence === 'function' && invPaperPhotoSentence(onSched) ? ' ' + esc(invPaperPhotoSentence(onSched)) : '') + '</div>'   // P13
     + (typeof invNumbersNotUsedHtml === 'function' ? invNumbersNotUsedHtml(jobId) : '')
@@ -38527,6 +38698,9 @@ function _renderContentsCard(job, all) {
 // manifest there is nothing to disclose either. The clearance sentence, though, is NOT an
 // absence: "every grouped lot is inside the cap" is a finding, and withholding it leaves a
 // reader unable to tell a checked estate from an unchecked one.
+// ⚠ IT STATES FACTS (P14's review, 2026-11-02; DOC-20's rule for the whole worklist, which goes in every package): it told
+// counsel to *split these lots … or record on the line why it is properly grouped*, a desk direction in the build's shorthand
+// (*manifest*, *line*) on a page a trust officer reads. The rule and how the lots stand against it, in the reader's words.
 function _lotSplitWorklistBlock(job, items) {
   if (!maivFilingApplies(job)) return '';
   // A group Agent One marked as holding more than one article is a lot whatever its count (P13, INV-09): at a count of one over
@@ -38558,8 +38732,8 @@ function _lotSplitWorklistBlock(job, items) {
     tail = '<strong>' + over.length + ' grouped lot' + (over.length > 1 ? 's average' : ' averages') + ' above '
       + fmt(INV_LOT_ARTICLE_CAP) + ' an article.</strong> Treas. Reg. §20.2031-6(a) asks for a room-by-room '
       + 'itemisation naming each article specifically, and permits a group only where no article in it exceeds '
-      + fmt(INV_LOT_ARTICLE_CAP) + '. Split '
-      + (over.length > 1 ? 'these lots' : 'this lot') + ' into named articles before the return is prepared, or record on the line why it is properly grouped.';
+      + fmt(INV_LOT_ARTICLE_CAP) + '. As listed, ' + (over.length > 1 ? 'these lots do' : 'this lot does') + ' not meet that rule: each article '
+      + 'is to be named on its own before the return is prepared, unless the grouping is shown to be proper.';
   } else if (untested.length) {
     tail = (noVal.length ? 'Every grouped lot on this estate carries a value except ' + noVal.length + ', so the cap cannot be tested '
       + 'on ' + (noVal.length > 1 ? 'those' : 'that one') + ' yet. ' : '') + noCountTxt + 'An untested lot is not a lot inside the cap.';
@@ -38577,7 +38751,7 @@ function _lotSplitWorklistBlock(job, items) {
     + '<div style="font-size:12px;font-weight:700;color:' + tone + ';margin-bottom:2px;">'
     + 'Grouped lots &mdash; Treas. Reg. §20.2031-6(a)</div>'
     + '<div style="font-size:11px;color:#3c3228;line-height:1.5;margin-bottom:6px;">'
-    + lots.length + ' line' + (lots.length > 1 ? 's on this manifest group' : ' on this manifest groups') + ' more than one article under a single value.</div>'
+    + lots.length + ' grouped lot' + (lots.length > 1 ? 's list' : ' lists') + ' more than one article under a single value.</div>'
     + (rows ? '<table style="width:100%;border-collapse:collapse;font-size:10.5px;margin-bottom:6px;">'
       + '<thead><tr style="text-align:left;color:#888;"><th style="padding:2px 6px;">Item #</th>'
       + '<th style="padding:2px 6px;">Lot</th>'
@@ -38586,7 +38760,7 @@ function _lotSplitWorklistBlock(job, items) {
       + '<th style="padding:2px 6px;text-align:right;">Per article</th></tr></thead>'
       + '<tbody>' + rows + '</tbody></table>' : '')
     + '<div style="font-size:11px;color:#3c3228;line-height:1.5;">' + tail + '</div>'
-    + '<div style="font-size:10px;color:#888;font-style:italic;margin-top:5px;">Per-article figures are the lot total over its count. A lot averaging under the cap can still contain a single article above it &mdash; the average is the only figure a grouped line can support.</div>'
+    + '<div style="font-size:10px;color:#888;font-style:italic;margin-top:5px;">Per-article figures are the lot total over its count. A lot averaging under the cap can still contain a single article above it &mdash; the average is the only figure a grouped lot carries.</div>'
     + '</div>';
 }
 
@@ -38691,11 +38865,18 @@ function printAppraisalWorklist(jobId, opt) {
   _invAssignItemNos(jobId);
   var groups = _apprGroups(jobId);
   var names = Object.keys(groups).sort();
-  var dod = job.deathDate ? ' (' + esc(fmtDate2(job.deathDate)) + ')' : '';
+  // ⚠⚠ THE VALUE DATE IS THE ESTATE'S, AND A LIVING CLIENT HAS NONE (P14 of the desk audit, 2026-10-28; DOC-07, VAL-24): the head
+  // read *value as of date of death* on every job, the print date beside it, so a living client's appraiser was told the client
+  // had died, and an estate that elected the §2032 alternate date sent its appraiser the wrong day. The estate's day through the
+  // one rule (invValueAsOfWords: estateValueDate, the alternate date named where elected); on living work the appraiser's own
+  // inspection, the effective date the roster records for them.
+  var _asOf = invValueAsOfWords(job);
   var html = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
     + '<h2 style="font-family:\'Cormorant Garamond\',serif;margin-bottom:4px;">Appraisal Worklist</h2>'
     + '<div style="font-size:12px;margin-bottom:2px;"><strong>' + _invDocPartyHead(job) + '</strong>' + (job.hvlId ? ' &middot; ' + esc(job.hvlId) : '') + '</div>'
-    + '<div style="font-size:11px;color:#888;margin-bottom:16px;">Items flagged for specialist appraisal &middot; value as of date of death' + dod + ' &middot; ' + new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) + '</div>';
+    + '<div class="inv-wl-asof" style="font-size:11px;color:#888;margin-bottom:16px;">Items flagged for specialist appraisal &middot; '
+      + (_asOf ? 'value as of ' + esc(_asOf) : 'value as of the appraiser&rsquo;s inspection')
+      + ' &middot; prepared ' + new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'}) + '</div>';
   var maivItems = _jobInvRefs(jobId);
   var maiv = maivAggregate(maivItems, job);
   var _owedIds = {};
@@ -38710,7 +38891,8 @@ function printAppraisalWorklist(jobId, opt) {
       // ⚠ THIS USED TO SAY "flag intrinsic items in the manifest", NAMING AN ACTION THE APP
       // DID NOT OFFER — there was no control for `needsAppr` anywhere. There is now, on both
       // surfaces, so the sentence names where each one is.
-      + (maiv.count ? ' — but see the aggregate below, which is a separate test.' : '. Art, jewelry, silver and rugs route here on their category alone; for anything else tick Needs Appraisal on the manifest, or press ⚑ Appraise beside the disposition chips when you photograph it on the Job Plan.')
+      // ⚠ A FACT, NOT A PRESS (P14, DOC-20): this page goes in the package, and it told counsel to tick Needs Appraisal on the manifest.
+      + (maiv.count ? ' — but see the aggregate below, which is a separate test.' : '. Art, jewelry, silver and rugs are listed here on their category alone, and any other item once it is flagged for appraisal.')
       + '</div>';
   } else {
     names.forEach(function(a) {
@@ -38750,7 +38932,12 @@ function printAppraisalWorklist(jobId, opt) {
     html += '<div style="margin-top:14px;border:1px solid #8a6d3b;border-radius:3px;padding:10px 12px;">'
       + '<div style="font-size:12px;font-weight:700;color:#8a6d3b;margin-bottom:4px;">'
       + nfa.length + ' NFA item' + (nfa.length > 1 ? 's' : '') + ' &mdash; the dealer collects these, we never carry them</div>'
-      + '<div style="font-size:11px;color:#3c3228;line-height:1.5;"><strong>Havellin does not transport an NFA item under any authority.</strong> A registered item transfers from the estate to the dealer on ATF paperwork, and the estate carve-out names the personal representative rather than anyone they engage &mdash; so there is no written authority that makes carrying one lawful. Confirm the dealer holds the right licence to take them, and tell them before they come out: not every FFL can, and a wasted collection trip is a real cost.</div>'
+      + '<div style="font-size:11px;color:#3c3228;line-height:1.5;"><strong>Havellin does not transport an NFA item under any authority.</strong> '
+      // ⚠ On a client's own home the transfer is the client's, and there is no estate carve-out to name (P14's review).
+      + (invFiduciaryMode(job)
+          ? 'A registered item transfers from the estate to the dealer on ATF paperwork, and the estate carve-out names the personal representative rather than anyone they engage &mdash; so there is no written authority that makes carrying one lawful.'
+          : 'A registered item transfers from the client to the dealer on ATF paperwork, and no written authority makes it lawful for Havellin to carry one.')
+      + ' Confirm the dealer holds the right licence to take them, and tell them before they come out: not every FFL can, and a wasted collection trip is a real cost.</div>'
       + '<div style="font-size:11px;color:#666;margin-top:6px;">'
       + nfa.map(function(r){ return '#' + esc(_invItemNo(r)) + ' ' + esc(r.objectName || '(unnamed)'); }).join(' &middot; ')
       + '</div></div>';
@@ -38762,7 +38949,8 @@ function printAppraisalWorklist(jobId, opt) {
     if (tr.ready.length) {
       html += '<div style="font-size:11px;color:#3c3228;line-height:1.5;"><strong>' + tr.ready.length
         + ' cleared to carry.</strong> Non-NFA, authorised in writing, serial and dealer on the record. '
-        + 'Locked case, unloaded, not on your person, direct route &mdash; and an itemised receipt signed at the counter before you leave. '
+        // How Havellin carries one, stated as what it does (P14, DOC-20): it read *not on your person … before you leave*.
+        + 'Carried in a locked case, unloaded, never on the person, by the direct route, with an itemised receipt signed at the dealer&rsquo;s counter. '
         + guideLinkHtml(FIREARMS_PROTOCOL_DOC, 'Full protocol') + '</div>'
         + '<div style="font-size:11px;color:#666;margin-top:6px;">'
         + tr.ready.map(function(r){ return '#' + esc(_invItemNo(r)) + ' ' + esc(r.objectName || '(unnamed)')
@@ -38775,7 +38963,7 @@ function printAppraisalWorklist(jobId, opt) {
       html += '<div style="font-size:11px;color:#666;margin-top:' + (tr.ready.length ? '8px' : '0') + ';">'
         + tr.blocked.map(function(b){
             return '<div style="margin-top:3px;"><strong>#' + esc(_invItemNo(b.ref)) + ' '
-              + esc(b.ref.objectName || '(unnamed)') + '</strong> &mdash; ' + esc(invTransportReason(b.ref, job)) + '</div>';
+              + esc(b.ref.objectName || '(unnamed)') + '</strong> &mdash; ' + esc(invTransportFact(b.ref, job)) + '</div>';   // the fact (P14)
           }).join('')
         + '</div>';
     }
@@ -38789,7 +38977,8 @@ function printAppraisalWorklist(jobId, opt) {
       // and a firearm one co-trustee authorised stays on this list until the others have (invApprovalComplete).
       + '<div style="font-size:11px;color:#3c3228;line-height:1.5;">Nothing is released until '
       + (jobFiduciaries(job).length > 1 ? 'every ' + invCoFiduciaryNoun(job) + ' has' : !invFiduciaryMode(job) ? 'the client has' : 'the ' + invRepresentativeTitle(job) + ' has')
-      + ' authorised the transfer to a <strong>named licensed dealer</strong> in writing. Record the signed authority with <strong>Record approval</strong> on Job Admin &amp; Inv (select the firearm, then Record approval), with the dealer in Channel / Recipient (on a firearm going to a named person, on its dealer route), and the item joins this worklist. Once the authority, the serial and the dealer are all on the record, a non-NFA firearm may be transported by the named principal; anything NFA is collected by the dealer.</div>'
+      // The fact (P14, DOC-20): it named the desk's press, *Record approval on Job Admin & Inv (select the firearm …)*.
+      + ' authorised the transfer to a <strong>named licensed dealer</strong> in writing. Once the authority, the serial and the dealer are all on the record, a non-NFA firearm may be transported by the named principal; anything NFA is collected by the dealer.</div>'
       + '<div style="font-size:11px;color:#666;margin-top:6px;">'
       + withheld.map(function(r){ return '#' + esc(_invItemNo(r)) + ' ' + esc(r.objectName || '(unnamed)'); }).join(' &middot; ')
       + '</div></div>';
@@ -38797,12 +38986,11 @@ function printAppraisalWorklist(jobId, opt) {
   var f = _apprEstimateFlags(jobId);
   if (f.collections || f.vehicles) {
     var bits = [];
+    // Facts, not the desk's directions (P14, DOC-20): this page goes in the package.
     if (f.collections) bits.push(f.collections + ' collection' + (f.collections > 1 ? 's' : '') + ' from the walkthrough flagged to appraise '
-      + (f.collections > 1 ? 'have' : 'has') + ' no photograph yet: photograph ' + (f.collections > 1 ? 'each' : 'it')
-      + ' in its room (Job Plan, In the house) so the appraiser sees ' + (f.collections > 1 ? 'them' : 'it') + '.');
+      + (f.collections > 1 ? 'have' : 'has') + ' no photograph yet, and ' + (f.collections > 1 ? 'are' : 'is') + ' listed here once photographed.');
     if (f.vehicles) bits.push(f.vehicles + ' collector vehicle' + (f.vehicles > 1 ? 's' : '') + ' from the estimate '
-      + (f.vehicles > 1 ? 'are' : 'is') + ' not yet in the inventory: bring ' + (f.vehicles > 1 ? 'them' : 'it')
-      + ' in on the Job Admin &amp; Inv tab, under From the Estimate Walkthrough, to include ' + (f.vehicles > 1 ? 'them' : 'it') + ' here.');
+      + (f.vehicles > 1 ? 'are' : 'is') + ' not yet in the inventory, and ' + (f.vehicles > 1 ? 'are' : 'is') + ' listed here once added.');
     html += '<div style="margin-top:10px;font-size:11px;color:#8a6d3b;font-style:italic;">Note: ' + bits.join(' ') + '</div>';
   }
   html += '</div>';
@@ -39105,7 +39293,7 @@ function printAsFoundRecord(jobId, read, photos) {
       + '<strong>evidence of the state of the property</strong> and are deliberately not inventory lines: '
       + 'nothing here is valued, dispositioned or proposed for release. They exist so that a question about '
       + 'what a drawer held can be answered from the record months later. Every shot below links to its file '
-      + '' + (invFiduciaryMode(job) ? 'in the estate’s Drive folder' : 'in this job’s Drive folder') + '.'
+      + 'in ' + invDriveFolderWords(job) + '.'   // the trust’s on a trust-only matter (P14, DOC-28)
     + '</div>';
 
   // The gap first. A reader works down this page; a caveat printed under the index has
@@ -39589,8 +39777,17 @@ function _jobAppraisers(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   return (job && job.appraisers) || [];
 }
+// ⚠ THE FIRM ONCE (P14 of the desk audit, 2026-10-28; VAL-30): a Vendor Directory firm with no named contact fills the name box
+// with the firm's name (_apprPickVendor) and the hidden firm box with it too, so every paper printed *Appraisal · Gulfstream
+// Appraisal Group · Gulfstream Appraisal Group (ISA)*. The firm beside the name only where it says something the name does not
+// (case and spacing aside); read by the label (every paper, the picker, the line's source) and the roster's row.
+function _apprFirmOf(a) {
+  var firm = String((a && a.firm) || '').trim();
+  var norm = function (x) { return String(x || '').trim().replace(/\s+/g, ' ').toLowerCase(); };
+  return firm && norm(firm) !== norm(a && a.name) ? firm : '';
+}
 function _apprLabel(a) {
-  return a ? (a.name + (a.firm ? ' · ' + a.firm : '') + (a.credential ? ' (' + a.credential + ')' : '')) : '';
+  return a ? (a.name + (_apprFirmOf(a) ? ' · ' + _apprFirmOf(a) : '') + (a.credential ? ' (' + a.credential + ')' : '')) : '';
 }
 function addAppraiser(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
@@ -39859,12 +40056,18 @@ function _apprPickerHtml() {
 
 // The add form's boxes, empty, as one row's cells: drawn by the roster and again by Cancel, so both draw the same defaults
 // (the directory picker unpicked, the firm box shown, Independent ticked, no conflict note).
+// What the effective date is, by the job: on an estate the value date, usually the date of death; on living work the day the
+// appraiser inspects it (P14, NEW-14; the appraiser's own report gives the date in the end).
+function _apprEffDateWords(job) {
+  return (job && invFiduciaryMode(job)) ? 'the value date — usually the date of death' : 'the value date — usually the day the appraiser inspects it';
+}
 function _apprFormCellsHtml(jobId) {
+  var _fjob = (typeof jobs !== 'undefined' && jobs.find) ? jobs.find(function(j){ return j.id === jobId; }) : null;
   var credOpts = '<option value="">Credential…</option>' + INV_APPRAISER_CREDS.map(function(c){ return '<option>' + esc(c) + '</option>'; }).join('');
   return '<td>' + _apprPickerHtml() + '<div id="appr-name-lbl" style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin:3px 0 1px;">Name</div><input type="text" id="appr-name" style="font-size:11px;width:100%;"><div id="appr-firm-wrap"><div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin:3px 0 1px;">Firm</div><input type="text" id="appr-firm" style="font-size:11px;width:100%;"></div></td>'
     + '<td><select id="appr-cred" style="font-size:11px;width:100%;">' + credOpts + '</select></td>'
     + '<td style="font-size:11px;"><div id="appr-conflict-note" style="font-size:10px;line-height:1.4;margin-bottom:3px;"></div><label style="cursor:pointer;display:inline-flex;align-items:center;gap:5px;"><input type="checkbox" id="appr-indep" checked style="accent-color:var(--bronze);"> Independent</label></td>'
-    + '<td><input type="date" id="appr-effdate" title="Effective date of value (usually date of death)" style="font-size:11px;width:100%;"></td>'
+    + '<td><input type="date" id="appr-effdate" title="' + esc('Effective date of value: ' + _apprEffDateWords(_fjob)) + '" style="font-size:11px;width:100%;"></td>'
     + '<td><input type="date" id="appr-rptdate" style="font-size:11px;width:100%;"></td>'
     + '<td><input type="date" id="appr-duedate" title="Expected turnaround \u2014 when the report is due back" style="font-size:11px;width:100%;"></td>'
     + '<td></td>'
@@ -39913,7 +40116,7 @@ function _renderAppraiserRoster(job) {
   var apprs = job.appraisers || [];
   var rows = apprs.length ? apprs.map(function(a){
     return '<tr>'
-      + '<td style="font-size:11px;"><strong>' + esc(a.name) + '</strong>' + (a.firm ? ' <span style="color:var(--gray);">· ' + esc(a.firm) + '</span>' : '') + '</td>'
+      + '<td style="font-size:11px;"><strong>' + esc(a.name) + '</strong>' + (_apprFirmOf(a) ? ' <span style="color:var(--gray);">· ' + esc(_apprFirmOf(a)) + '</span>' : '') + '</td>'
       + '<td style="font-size:11px;">' + esc(a.credential || '—') + '</td>'
       + '<td style="font-size:11px;">' + (a.independent ? '<span style="color:var(--ok-tx);font-weight:600;">Independent</span>' : '<span style="color:#c0392b;">Not independent</span>') + '</td>'
       + '<td style="font-size:11px;">' + (a.effectiveDate ? esc(fmtDate2(a.effectiveDate)) : '—') + '</td>'
@@ -39934,7 +40137,9 @@ function _renderAppraiserRoster(job) {
   });
   return '<div class="card" style="margin-bottom:1rem;">'
     + '<div class="sec" style="margin-bottom:4px;">Appraisers <span style="font-size:9px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(named &amp; credentialed — link each item you send them)</span></div>'
-    + '<div style="font-size:11px;color:var(--gray);margin-bottom:8px;">A defensible appraisal names an independent, credentialed appraiser with an effective date (the value date — usually the date of death) and a report date. '
+    // The value date by the job (P14, NEW-14): a living client's appraiser was told it was usually the date of death.
+    + '<div style="font-size:11px;color:var(--gray);margin-bottom:8px;">A defensible appraisal names an independent, credentialed appraiser with an effective date ('
+      + esc(_apprEffDateWords(job)) + ') and a report date. '
       + 'The appraiser an item is linked to is its source from then on: when the report comes back, type its figure on the item&rsquo;s line and press File the report on their row.</div>'
     // ⚠ SEVEN COLUMNS, THREE OF THEM NATIVE DATE PICKERS — which carry a hard minimum
     // width no stylesheet can shrink. Measured at 874px: it dragged the whole document
@@ -40016,6 +40221,40 @@ function _invRefreshGuardrail(jobId) {
   if (job && typeof _apprReportsRepaint === 'function') _apprReportsRepaint(jobId);
   if (typeof _deskFoldHeadsRepaint === 'function') _deskFoldHeadsRepaint(jobId);
 }
+// ⚠⚠ THE GUARDRAIL'S HEAD SAYS WHO ARRANGES THE APPRAISAL AND WHAT THE JOB IS (P14 of the desk audit, 2026-10-28; VAL-25, VAL-24).
+// On a Contents-list estate the agreement gives every appraisal to counsel, and the head told the concierge *N items need an
+// appraisal before this inventory is complete* beside a work bar saying counsel values it and arranges any appraisal; on living
+// work it ended *or leave as reasonable estimates on a standard job*, advice for an estate. Three heads: an estate where Havellin
+// arranges the appraisal (jobAppraisalDuty `all` or `listed`), unchanged but for its grammar (*1 item need*); an estate where it
+// does not (`''`), naming what counsel should have appraised and who arranges it (_agrOtherAppraisalsBy, the agreement's §5.2
+// party), the link kept for an appraiser they engage; living work, the specialist's figure or Waive. DOM-free, HTML-ready.
+// ⚠ AN UNREAD ESTIMATE STORE PROVES NOTHING (P14's review, 2026-11-02): jobAppraisalDuty falls back to the tier when this device
+// holds no approved estimate, so on a fresh or cleared device an estate whose estimate lists an appraiser read *on this engagement
+// Havellin does not arrange appraisals* until the store landed (and for good offline). The counsel head is said only once an
+// approved estimate is here or the store has read (`_estStoreState` 'ready'); until then the estate's own head, and why it cannot
+// say who arranges the appraisal. ⚠ AND ON NEITHER IT NAMES THE REPRESENTATIVE (the review): the agreement's *the Client* is, on a
+// decedent job, the deceased; the desk names the person by invRepresentativeTitle, as the release request does.
+function _apprGuardrailHead(job, n, formal) {
+  var many = n > 1, nItems = n + ' item' + (many ? 's' : '');
+  var _estRead = (typeof _estStoreState === 'undefined') || _estStoreState === 'ready'
+    || !!(typeof estimateStore !== 'undefined' && job && approvedEstimateFor(job.id));
+  if (invFiduciaryMode(job) && !jobAppraisalDuty(job) && _estRead) {
+    var who = _agrOtherAppraisalsBy(job);
+    if (who === 'the Client') who = 'the ' + invRepresentativeTitle(job);
+    return (formal ? '&#9888; <strong>Formal documentation:</strong> ' : '&#9873; ') + nItems + ' for ' + esc(who) + ' to have appraised: '
+      + 'on this engagement Havellin does not arrange appraisals. The Appraisal Worklist names ' + (many ? 'them' : 'it') + ' for them; '
+      + 'link an appraiser they engage on ' + (many ? 'each item' : 'the item') + '&rsquo;s row below, then type the report&rsquo;s figure on the line when it comes back, or Waive with a logged reason.';
+  }
+  if (!invFiduciaryMode(job)) {
+    return (formal ? '&#9888; <strong>Formal documentation:</strong> ' : '&#9873; ') + nItems + ' to go to a specialist ' + (many ? 'have' : 'has') + ' no appraisal figure yet. '
+      + 'Link the specialist on ' + (many ? 'each item' : 'the item') + '&rsquo;s row below &mdash; add them to the roster above first if it is empty &mdash; then type the report&rsquo;s figure on the line when it comes back, or Waive.';
+  }
+  var _unread = (invFiduciaryMode(job) && !jobAppraisalDuty(job) && !_estRead)
+    ? ' Who arranges the appraisal is read off the approved estimate, which has not loaded on this device yet.' : '';
+  return (formal
+    ? '&#9888; <strong>Formal documentation:</strong> ' + nItems + ' need' + (many ? '' : 's') + ' an appraisal before this inventory is complete. Link each to an appraiser on its own row below, then type the report&rsquo;s figure on the line when it comes back; or Waive with a logged reason.'
+    : '&#9873; ' + nItems + ' flagged for a specialist appraisal ' + (many ? 'have' : 'has') + ' no appraisal figure yet. Link an appraiser on its own row below &mdash; add them to the roster above first if the roster is empty &mdash; then type the report&rsquo;s figure on the line when it comes back, or leave as reasonable estimates on a standard job.') + _unread;
+}
 function _renderAppraisalGuardrail(job) {
   var items = _invGuardrailItems(job.id);
   if (!items.length) return '';
@@ -40053,9 +40292,7 @@ function _renderAppraisalGuardrail(job) {
       + '<button class="btn-s" onclick="waiveAppraisal(' + job.id + ',\'' + r.stableId + '\')" title="Log a reason and waive the requirement for this item">Waive</button></span>'
       + '</div>';
   }).join('');
-  var head = formal
-    ? '&#9888; <strong>Formal documentation:</strong> ' + items.length + ' item' + (items.length > 1 ? 's' : '') + ' need an appraisal before this inventory is complete. Link each to an appraiser on its own row below, then type the report&rsquo;s figure on the line when it comes back; or Waive with a logged reason.'
-    : '&#9873; ' + items.length + ' item' + (items.length > 1 ? 's' : '') + ' flagged for a specialist appraisal ' + (items.length > 1 ? 'have' : 'has') + ' no appraisal figure yet. Link an appraiser on its own row below &mdash; add them to the roster above first if the roster is empty &mdash; then type the report&rsquo;s figure on the line when it comes back, or leave as reasonable estimates on a standard job.';
+  var head = _apprGuardrailHead(job, items.length, formal);
   return '<div class="card" style="margin-bottom:1rem;border:1px solid ' + (formal ? '#E3B7B7' : 'var(--border-md)') + ';">'
     + '<div class="alert ' + (formal ? 'a-err' : 'a-warn') + '" style="font-size:11.5px;margin-bottom:8px;">' + head + '</div>'
     + rows + '</div>';
@@ -43992,19 +44229,21 @@ function _renderInvWorkbar(job, all) {
       + '<details id="inv-more" style="position:relative;"' + (_moreOpen ? ' open' : '') + '><summary class="btn-s" style="list-style:none;cursor:pointer;display:inline-block;">More &#9662;</summary>'
         + '<div style="position:absolute;z-index:50;right:0;margin-top:4px;background:var(--paper,#fff);border:1px solid var(--border-md);border-radius:6px;padding:6px;display:flex;flex-direction:column;gap:4px;box-shadow:0 4px 14px rgba(0,0,0,.12);min-width:190px;">'
         + btn('printAsFoundRecord(' + jid + ')', 'As-Found Record', 'Room-by-room index of the property as it was found — every as-found photograph, when it was taken and a link to the file. Names any room in scope that carries none.')
-        + (fid && !invDocContractBlock(job, 'court') ? btn('printCourtInventory(' + jid + ')', 'Court Inventory', '§733.604-style court / attorney inventory') : '')
-        // ⚠ BOTH FILING INSTRUMENTS ARE OFFERED ON EVERY DECEDENT JOB AND NEITHER IS GATED BY
-        // THE MATTER TYPE — the rule step 6 set and the reason it set it. Each refuses on its own
-        // FACE when it is the wrong instrument, naming what the estate is and what to issue
-        // instead; a withheld button would leave "where is the trustee's schedule?" hanging,
-        // which is exactly the dead end this document exists to close. A pour-over will is
-        // genuinely both, and gets both.
-        + (fid && !invDocContractBlock(job, 'trustee') ? btn('printTrustSchedule(' + jid + ')', 'Trust Schedule', 'Chapter 736 schedule of the tangible personal property held in trust, at date-of-death carrying value — prepared to SUPPORT the trustee\'s accounting, never to be one') : '')
+        // ⚠⚠ EACH FILING INSTRUMENT ONLY WHERE THE MATTER HAS IT (P14 of the desk audit, 2026-10-28; EST-20), one answer,
+        // invInstrumentOffered: the Court Inventory on the probate track, the Trust Schedule where a trust holds property, both on
+        // a pour-over will, and both, with the line under them, while the matter type is unanswered. Until today both were
+        // offered on every decedent job and each refused on its own face (step 6's rule), so a wrong instrument was one tap from
+        // being handed over: a contested probate desk printed *Schedule of Tangible Personal Property Held in Trust … this estate
+        // has no trust in it*. The printers still refuse on their own face wherever another path reaches them.
+        + (invInstrumentOffered(job, 'court') ? btn('printCourtInventory(' + jid + ')', 'Court Inventory', '§733.604-style court / attorney inventory') : '')
+        + (invInstrumentOffered(job, 'trustee') ? btn('printTrustSchedule(' + jid + ')', 'Trust Schedule', 'Chapter 736 schedule of the tangible personal property held in trust, at date-of-death carrying value — prepared to SUPPORT the trustee\'s accounting, never to be one') : '')
+        + ((fid && !matterTypeOf(job) && (invInstrumentOffered(job, 'court') || invInstrumentOffered(job, 'trustee')))
+            ? '<div class="inv-matter-unset" style="font-size:10px;color:#8a6d3b;line-height:1.35;padding:0 2px 2px;max-width:220px;">' + esc(INV_MATTER_UNSET_TXT) + '</div>' : '')
         // The Disposition Ledger left this menu in P19 for its own card under the inventory (_renderLedgerCard), on every
         // job that keeps an item record: it is printed, filed and signed there, and no control renders twice.
         + btn('printAppraisalWorklist(' + jid + ')', 'Appraisal Worklist', fid
             ? 'Per-specialist packet of every item flagged for appraisal'
-            : 'Per-specialist packet of everything going out to an appraiser, auction house or dealer')
+            : 'Per-specialist packet of every item flagged for a specialist\u2019s appraisal')
         // The Incident Record (P26): where the job has an incident the client, counsel or an insurer may read.
         + ((typeof incidentReportsOf === 'function' && incidentReportsOf(job, { client: true }).length) ? btn('printIncidentRecord(' + jid + ')', 'Incident Record', 'Every incident reported on this job, each entry as written, with its photographs linked: for the client, counsel and the insurer') : '')
         + (fid ? btn('takeInventorySnapshot(' + jid + ')', 'Snapshot', 'Point-in-time copy of the inventory') : '')
@@ -44563,18 +44802,18 @@ function _renderInvPanel(job, ref) {
   var jid = job.id;
   var cols = _invPanelColsFor(job, ref);   // one box per value (P9, ROW-05)
   var secs = INV_PANEL_SECTIONS.map(function(sec){
-    var mine = cols.filter(function(c){ return _invPanelSection(c) === sec.key; });
+    var mine = cols.filter(function(c){ return _invPanelSection(c) === sec.key && _invPanelColShown(job, ref, c); });
     if (!mine.length) return '';
     var fields = mine.map(function(c){
       // A column that is not editable on this row (NFA on a sofa, MAIV class on a
       // non-MAIV article) renders as a read-only value rather than vanishing — absent is
       // indistinguishable from empty, and these carry legal meaning.
       return '<div style="min-width:0;">'
-        + '<div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;">' + c.header + '</div>'
+        + '<div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;">' + esc(_invColHeader(job, c)) + '</div>'
         + '<div style="font-size:11px;">' + _invCell(jid, ref, c, job, 0) + '</div></div>';
     }).join('');
     return '<div style="margin-bottom:10px;">'
-      + '<div style="font-size:10px;font-weight:700;color:var(--bronze);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;">' + sec.label + '</div>'
+      + '<div style="font-size:10px;font-weight:700;color:var(--bronze);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;">' + _invPanelSectionLabel(job, sec) + '</div>'
       + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px 10px;">' + fields + '</div></div>';
   }).join('');
   var nC = custodyEvents(ref).length;
@@ -53577,7 +53816,14 @@ function deskFoldState(jobId, job, fold, all, today) {
     var items = _invGuardrailItems(jobId);   // the guardrail's own list, so the bar's line and tone are the panel's
     var unlinked = items.filter(function (r) { return !invAppraisalInProgress(r, jobId); }).length;
     st.openByDefault = unlinked > 0;
-    if (items.length) bit(s(items.length, 'needs', 'need') + ' an appraisal'
+    // ⚠ ONE STATE, ONE NAME (P14, NEW-14): on living work the chip on the same desk says *To a specialist*, and the bar said
+    // *needs an appraisal*. ⚠ AND TWO STATES, TWO NAMES (P14's review, 2026-11-02): the chip counts every line going to a specialist
+    // (invNeedsAppraisal), this line the guardrail's, the ones still waiting on the specialist's figure (invAwaitingAppraisal), so
+    // P14's *✓ nothing to a specialist* sat beside a *To a specialist 1* chip once the figure had landed. It says what it counts.
+    if (!fid) {
+      if (items.length) bit(items.length + ' waiting on a specialist' + (unlinked ? ' (' + unlinked + ' with no specialist linked)' : ', each linked'), isFormalDoc(job) ? 'red' : 'amber');
+      else bit('✓ none waiting on a specialist', 'grey');
+    } else if (items.length) bit(s(items.length, 'needs', 'need') + ' an appraisal'
       + (unlinked ? ' (' + unlinked + ' with no appraiser linked)' : ', each linked'), isFormalDoc(job) ? 'red' : 'amber');
     else bit('✓ nothing needs an appraisal', 'grey');
     var outBy = {}, outOrder = [];

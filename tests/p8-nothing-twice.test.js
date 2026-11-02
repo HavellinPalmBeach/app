@@ -95,7 +95,7 @@ const ELLISON = () => [
 
 // ─── The papers: the trust-schedule test's lifts, with the double counts ───
 const PAPER_FNS = ['invLineReviewed', 'invLineOpen', '_invDocPartyHead', 'invConditionText',
-  'printTrustSchedule', 'printCourtInventory', '_avUnreviewedStamp', 'printEstateInventoryReport', 'jobOnProbateTrack', '_invScheduleSection', 'invValBasisWord',
+  'printTrustSchedule', 'printCourtInventory', '_avUnreviewedStamp', 'printEstateInventoryReport', 'invInventoryWord', 'invTrustOnlyMatter', 'invDriveFolderWords', 'jobOnProbateTrack', '_invScheduleSection', 'invValBasisWord',
   '_invTrack', '_invTrackDefault', '_invOnTrustSchedule', '_invOnProbateSchedule',
   '_invIsExempt', '_invIsProbateAsset', '_invExcludedTracks', '_invHasValue',
   'invDocContractBlock', 'docTierProduces', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror',
