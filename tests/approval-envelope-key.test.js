@@ -1068,4 +1068,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         'DocuSign\'s failure: said as DocuSign\'s, one stop');
     }
   });
+
+  // The sweep found nothing held the app to the deployment that refuses a second envelope (2026-11-02e): on one older, the banner
+  // must say so, and the gap leads its version line.
+  G('M · the app asks for the deployment that refuses a second envelope, and the banner names the gap first', () => {
+    const B = sandbox({ vars: ['BACKEND_MIN_VERSION', 'BACKEND_FEATURE_COST'] });
+    const gsv = (GS.match(/var BACKEND_VERSION = '([^']+)';/) || [])[1] || '';
+    ok(B.BACKEND_MIN_VERSION >= '2026-11-02b', '⚠⚠ BACKEND_MIN_VERSION is 2026-11-02b or later (' + B.BACKEND_MIN_VERSION + ')');
+    ok(gsv >= B.BACKEND_MIN_VERSION, 'main-sync.gs is at least what the app asks for (' + gsv + ')');
+    ok(String(B.BACKEND_FEATURE_COST.version || '').indexOf('on a deployment older than 2026-11-02b, ') === 0, '⚠ the banner\'s version line opens with the envelope\'s gap');
+  });
 };
