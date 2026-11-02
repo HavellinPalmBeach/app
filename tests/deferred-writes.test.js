@@ -304,6 +304,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const flush = code.lastIndexOf('SpreadsheetApp.flush();'), release = code.indexOf('releaseLock');
       ok(flush > 0 && (release < 0 || flush < code.lastIndexOf('finally')), f + ' flushes, inside its try');
     });
-    eq((GS.match(/var BACKEND_VERSION = '([^']+)';/) || [])[1], '2026-10-28', 'BACKEND_VERSION is 2026-10-28');
+    // RESTATED 2026-11-02: Agent Two's four page reads ride the next deployment, which carries this one.
+    ok(((GS.match(/var BACKEND_VERSION = '([^']+)';/) || [])[1] || '') >= '2026-10-28', 'BACKEND_VERSION is 2026-10-28 or later');
   });
 };

@@ -7,20 +7,28 @@
 // consignment, two lines to Goodwill, a line kept), and two inventory snapshots.
 //
 //   A. The Disposition Ledger card sits under the inventory (Print, File to Drive, File signed copy) and the strip's More
-//      menu no longer carries the ledger. Print: the close-out summary — item numbers, the proceeds net to the estate, the
-//      totals to the cent, and a sign-off line for each of the two fiduciaries; never "Fiduciary accounting".
+//      menu no longer carries the ledger. Print opens the ledger in the document viewer, and the viewer's Print / Save PDF
+//      prints the close-out summary — item numbers, the proceeds net to the estate, the totals to the cent, and a sign-off
+//      line for each of the two fiduciaries; never "Fiduciary accounting".
 //   B. Snapshots: Void asks for a reason (none given: not voided), then voids with one; the row reads VOIDED with the
-//      reason and still prints; Compare with now and Compare with previous print the what-changed page.
+//      reason and still prints; Compare with now and Compare with previous print the what-changed page (each through the
+//      document viewer).
 //   C. Proceeds: + Record a statement, the modal, the two auction lots ticked, a gross $12.50 over what the lines record:
 //      flagged on its row with both figures, on the ledger card, and on the desk's derived line. Correcting the line's
 //      gross in its record clears the flag without a reload.
-//   D. Donations: Print Donation Record for Goodwill; the charity's receipt filed through File charity receipt; the
-//      donation line reads every donated line receipted.
+//   D. Donations: Print Donation Record for Goodwill (through the document viewer); the charity's receipt filed through
+//      File charity receipt; the donation line reads every donated line receipted.
 //   E. Close job, from the desk's band: the one question names the unsigned ledger; OK closes; the ledger is filed to the
 //      Estate Inventory folder as "<HVL> - Havellin Disposition Ledger.html" and the card says so. File signed copy: the
 //      desk's line "Disposition Ledger signed by the Personal Representative" turns green.
 //   F. overflow at 1440 and 390 (the desk with the cards, the statement modal), the ledger at Letter width in print, and
 //      no page errors.
+//
+// Restated 2026-11-02: every card's paper opens on screen first. The Disposition Ledger's Print, a snapshot's Print, Compare
+// with now, Compare with previous and Print Donation Record no longer print at once: each opens the paper in the document
+// viewer (#doc-viewer-modal), titled by the paper, and nothing prints until the viewer's Print / Save PDF is pressed; that
+// press prints the page (what lastPrint reads), the viewer comes back once the dialog closes, and Close takes it away so the
+// desk under it can be pressed again.
 //
 //   NODE_PATH=/opt/node22/lib/node_modules node tests/browser/step58.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
@@ -135,6 +143,21 @@ const LINES = [
       d.innerHTML = String(h).replace(/<\/td>/g, ' </td>').replace(/<\/th>/g, ' </th>').replace(/<br>/g, ' '); return d.textContent.replace(/\s+/g, ' '); }, h);
     const lastPrint = () => p.evaluate(() => (window.__prints || []).slice(-1)[0] || { html: '', title: '', over: 0 });
     const printsN = () => p.evaluate(() => (window.__prints || []).length);
+    // Restated 2026-11-02: every card's paper opens on screen first. A card's paper opens in the document viewer, titled by
+    // the paper, and nothing prints until its Print / Save PDF is pressed; that press prints the page (what lastPrint reads),
+    // the viewer comes back once the dialog closes, and Close takes it away so the desk under it can be pressed again.
+    const viewerOpen = () => p.evaluate(() => { const o = document.getElementById('doc-viewer-modal'); return !!o && o.style.display === 'flex'; });
+    const printFromViewer = async (title, before) => {
+      await until(viewerOpen, 5000);   // a desk paper reads the sheet first (invReadFirst), so it opens a moment after the press
+      ok(await viewerOpen(), title + ' opens in the document viewer');
+      eq(await txt('#doc-viewer-title'), title, 'the viewer is titled by the paper');
+      eq(await printsN(), before, 'nothing printed before Print / Save PDF is pressed');
+      await press('#doc-viewer-print', 'Print / Save PDF, in the viewer');
+      await p.waitForSelector('#doc-viewer-modal', { state: 'visible', timeout: 4000 }).catch(() => ok(false, 'the viewer comes back after the print dialog'));
+      eq(await printsN(), before + 1, 'Print / Save PDF printed the page once');
+      await press('#doc-viewer-modal button[onclick="closeDocViewer()"]', 'Close the viewer');
+      ok(!(await viewerOpen()), 'Close takes the viewer away');
+    };
     const overflow = () => p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     const job = () => p.evaluate((id) => JSON.parse(JSON.stringify(jobs.find((j) => j.id === id) || null)), ID);
     const badge = () => p.evaluate(() => { const el = document.getElementById('sync-badge') || document.querySelector('.sync-badge'); return el ? el.textContent : ''; });
@@ -204,6 +227,7 @@ const LINES = [
       ok(await p.locator('#inv-workbar button[onclick^="printDispositionLedger("]').count() === 0, '⚠ and the strip\'s More menu no longer carries the ledger');
       const before = await printsN();
       await press('#inv-ledger-card button[onclick="printDispositionLedger(' + ID + ')"]', 'the card\'s Print');
+      await printFromViewer('Disposition Ledger', before);   // Restated 2026-11-02: every card's paper opens on screen first
       ok(await printsN() === before + 1, 'the ledger prints');
       const pg = await lastPrint();
       const t = await T(pg.html);
@@ -235,10 +259,14 @@ const LINES = [
       has(await txt('#inv-snapshots'), 'VOIDED', 'listed as VOIDED');
       has(await txt('#inv-snapshots'), 'taken twice by mistake', 'with the reason');
       ok(await p.locator('#inv-snapshots button[onclick="voidInventorySnapshot(' + ID + ',' + T0 + ')"]').count() === 0, 'and no Void on it now');
+      const snapBefore = await printsN();
       await press('#inv-snapshots button[onclick="printInventorySnapshot(' + ID + ',' + T0 + ')"]', 'the voided snapshot still prints');
+      await printFromViewer('Inventory Snapshot', snapBefore);   // Restated 2026-11-02: every card's paper opens on screen first
       has(await T((await lastPrint()).html), 'VOIDED — the snapshot of', 'marked VOIDED on the page');
       const older = T0 - 86400000;
+      const nowBefore = await printsN();
       await press('#inv-snapshots button[onclick="printSnapshotComparison(' + ID + ',' + older + ',\'now\')"]', 'Compare with now, on the walkthrough snapshot');
+      await printFromViewer('Inventory Snapshot Comparison', nowBefore);   // Restated 2026-11-02: every card's paper opens on screen first
       const cmp = await T((await lastPrint()).html);
       has(cmp, 'Inventory Snapshot — What Changed', 'the what-changed page prints');
       has(cmp, 'Items 5 → 6', 'with the totals before and after');
@@ -247,7 +275,9 @@ const LINES = [
       has(cmp, 'Value changed (1)Item # Item Was Now 5 Lamps (pair) no value $80', 'a value, old → new');
       has(cmp, 'Removed (1)', 'the line no longer on the inventory');
       ok(await p.locator('#inv-snapshots button[onclick="printSnapshotComparison(' + ID + ',' + T0 + ',\'prev\')"]').count() === 1, 'Compare with previous is offered on the later snapshot');
+      const prevBefore = await printsN();
       await press('#inv-snapshots button[onclick="printSnapshotComparison(' + ID + ',' + T0 + ',\'prev\')"]', 'Compare with previous');
+      await printFromViewer('Inventory Snapshot Comparison', prevBefore);   // Restated 2026-11-02: every card's paper opens on screen first
       has(await T((await lastPrint()).html), '(As of walkthrough) compared with the snapshot of', 'set against the snapshot before it');
     });
 
@@ -293,7 +323,9 @@ const LINES = [
       await toDesk();
       ok(await vis('#inv-donations-card'), 'the Donations card is on the desk');
       has(await txt('#inv-donations-card'), 'Goodwill · 2 lines · 0 of 2 receipted', 'Goodwill\'s two lines, none receipted');
+      const donBefore = await printsN();
       await press('#inv-donations-card button[onclick="printDonationRecord(' + ID + ',\'d1\')"]', 'Print Donation Record');
+      await printFromViewer('Donation Record - Goodwill', donBefore);   // Restated 2026-11-02: every card's paper opens on screen first
       const dr = await T((await lastPrint()).html);
       has(dr, 'Charity: Goodwill', 'the record names the charity');
       has(dr, 'Donated on behalf of the estate, by Rex Hale, Personal Representative and Dana Hale, Co-Personal Representative.', 'on whose behalf');
@@ -354,7 +386,17 @@ const LINES = [
       await p.setViewportSize({ width: 816, height: 1056 });
       await toDesk();
       await p.emulateMedia({ media: 'print' });
+      // Restated 2026-11-02: every card's paper opens on screen first. The printer (which reads the sheet first) opens the
+      // viewer and prints nothing; the viewer's Print / Save PDF (printDocViewer) prints the page at Letter width, and Close
+      // once the print is captured.
+      const fBefore = await printsN();
       await p.evaluate((id) => printDispositionLedger(id), ID); await p.waitForTimeout(500);
+      await until(viewerOpen, 5000);
+      eq([await viewerOpen(), await txt('#doc-viewer-title'), await printsN()], [true, 'Disposition Ledger', fBefore],
+        'the ledger opens in the viewer, titled by the paper, and nothing printed before Print / Save PDF');
+      await p.evaluate(() => printDocViewer()); await p.waitForTimeout(900);
+      ok(await printsN() === fBefore + 1, 'Print / Save PDF printed the ledger once');
+      await p.evaluate(() => closeDocViewer());
       const pr = await lastPrint();
       ok(pr.html.length > 0 && pr.over <= 0, 'the Disposition Ledger fits a Letter page in print (' + pr.over + ')');
       await p.emulateMedia({ media: 'screen' });

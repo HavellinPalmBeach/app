@@ -180,7 +180,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // The agreement forms, their call graph lifted once.
   let _agr = null;
   const agr = () => _agr || (_agr = lift(['agreementHtml', 'probateAgreementHtml', 'agrReferralFeeTxt', 'esignAnchorsPresent', 'esignCoSignerAnchors'], [],
-    { estimateStore: {}, currentEstimate: null, jobs: [], document: domStub({}) }));
+    // ⚠ THE CLOCK FIXED (2026-11-02): both forms print the month and year they are rendered in, so the byte-for-byte hashes below,
+    // recorded in October 2026, went red on 1 November. Rendered on NOW, as every other sandbox here is.
+    { estimateStore: {}, currentEstimate: null, jobs: [], document: domStub({}), Date: FixedDate(NOW) }));
 
   // ═══════════════════════════════════════════════════════════════════════════
   G('S1 · each co-signer\'s own markers: the app and the server agree for every n, and none sits inside another', () => {
