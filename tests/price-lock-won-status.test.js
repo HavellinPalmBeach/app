@@ -397,9 +397,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     'estPrepFeeOnTop', 'closeDiscountModal', 'dashNotice', 'notifyManagerForApproval', 'checkPin', 'estimateApprovalTierBlocker', 'resolvePin',
     'unscoredRoomNames', 'estimateContractBlocker', 'estimateContractMissing', 'isDecedentJob', 'svcHasDocStep', 'matterTypeOf',
     'docTierOf', 'docTierDef', 'buildLockSnapshot', 'submitDeny', 'isJobWon', '_jobStatusCell', 'jobStatusView', 'jobClosedRefunded', 'jobRefundedTotal', 'refundCounts', 'jobPayments',
-    'estimateEventStatus', 'submitForApproval', 'estimateSubmitBlocker', 'estimateNoteGaps', 'editEstimateFromCE',
+    'estimateEventStatus', 'submitForApproval', 'flushCalcAll', 'estimateSubmitBlocker', 'estimateNoteGaps', 'editEstimateFromCE',
     'revokeEstimateApproval', 'notePriceChange', 'draftIsStale', 'draftOutstanding', 'outstandingDrafts', 'docState', '_jobTouch', 'staleDraftNote', 'staleDraftsOf', 'staleDocName', '_draftDay', '_andJoin', 'staleDraftNotice', '_docNotice', 'priceAboveAcceptance', '_approvedPriceAbove', 'docDraftPending', 'estimateOutForApproval', 'priceRaiseSentence', 'priceAboveSent', 'fmt', 'estFixedLines', 'discountOnFixedFee', 'fixedDiscountBasisWords', 'estimateTierMoved', 'docTierScope', 'seedDocScopeFromJob', 'estimateDocScope', 'docScopeDef', 'docTierWord', 'docScopeWord', 'roundCents', 'fmtHrs'].concat(BLK_FNS);
-  const ST_VARS = ['MAX_DISCOUNT_PCT', 'RUSH_PCT', '_dashboardJobId', '_packetExported', 'currentAgrJobId', '_dashNotice', 'currentInvStage', 'estimateApproved', 'estimateSubmitted',
+  const ST_VARS = ['_calcAllT', 'MAX_DISCOUNT_PCT', 'RUSH_PCT', '_dashboardJobId', '_packetExported', 'currentAgrJobId', '_dashNotice', 'currentInvStage', 'estimateApproved', 'estimateSubmitted',
     'discountRevision', 'approvedBy', 'approvedAt', 'MANAGER_PINS', 'JOB_STATUS_LABELS', 'JOB_STATUS_DOT',
     'ESTIMATE_CONTRACT_FIELDS', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'DECEDENT_SERVICES', 'JOB_STEPS', '_dashShown', '_dashKeepNotice', 'ESTIMATE_OUT_FOR_APPROVAL_TXT'];
   function lifeBed(jobO) {

@@ -180,7 +180,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // The agreement forms, their call graph lifted once.
   let _agr = null;
   const agr = () => _agr || (_agr = lift(['agreementHtml', 'probateAgreementHtml', 'agrReferralFeeTxt', 'esignAnchorsPresent', 'esignCoSignerAnchors'], [],
-    { estimateStore: {}, currentEstimate: null, jobs: [], document: domStub({}) }));
+    // The clock pinned (2026-11-02): the forms' footer prints the month it is viewed, so the golden hashes below, taken in
+    // October with no clock pinned, went red on the first of November.
+    { estimateStore: {}, currentEstimate: null, jobs: [], document: domStub({}), Date: FixedDate(NOW) }));
 
   // ═══════════════════════════════════════════════════════════════════════════
   G('S1 · each co-signer\'s own markers: the app and the server agree for every n, and none sits inside another', () => {

@@ -195,9 +195,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The refusal lands on the strip that is now on the phone: driven, a save with nothing scored.
     const d = domStub({ 'e-job': '7', 'e-propval': '1500000' });
     const said = [];
-    const S = attempt(() => sandbox({ fns: ['saveEstimateAndPreview', 'estimateContractBlocker', 'estimateContractMissing', 'isDecedentJob',
+    const S = attempt(() => sandbox({ fns: ['saveEstimateAndPreview', 'flushCalcAll', 'estimateContractBlocker', 'estimateContractMissing', 'isDecedentJob',
       'matterTypeOf', 'matterDef', 'unscoredRoomNames', 'estimateRepriceRoute', 'roomScoreOf', 'roundCents', 'fmtHrs', 'fmt'].concat(TIER_FNS, ROUTE_FNS),
-      vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'ESTIMATE_CONTRACT_FIELDS', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESTIMATE_EDIT_ROUTE_TXT', 'ESTIMATE_OUT_FOR_APPROVAL_TXT'].concat(TIER_VARS),
+      vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'ESTIMATE_CONTRACT_FIELDS', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'ESTIMATE_EDIT_ROUTE_TXT', 'ESTIMATE_OUT_FOR_APPROVAL_TXT', '_calcAllT'].concat(TIER_VARS),
       stubs: { document: d, jobs: [{ id: 7, svc: 'downsizing', name: 'Pat' }], estimateStore: {}, estimateApproved: false,
         currentEstimate: { svc: 'downsizing', havellinTotal: 0, rooms: [] }, showFB: (id, k, m) => said.push({ id, k, m }) } }));
     ok(S.ok, 'the save handler lifts' + (S.ok ? '' : ' — ' + S.err));
@@ -479,7 +479,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const reopen = (est, job, approved) => {
       const r = attempt(() => {
         const c = sandbox({
-          fns: ['restoreEstimateToUI', '_fxAmtSet', '_fxAmtGet', 'moneyToNumber', 'fixedFeeForCharge', 'discountOnFixedFee', 'discountOnLabor',
+          fns: ['restoreEstimateToUI', '_privateNotePaint', '_fxAmtSet', '_fxAmtGet', 'moneyToNumber', 'fixedFeeForCharge', 'discountOnFixedFee', 'discountOnLabor',
                 'pinVendorLineHours', 'vendorDirectoryReady', 'vendorLineTCHrs', 'coordHrsFor', 'coordTouches', 'vendorGroupOfLine',
                 'vendorGroupCategories', 'directoryCategories', 'vendorCats', 'followDocTier', 'roundCents', 'fmt'].concat(TIER_FNS),
           vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'ROOMS', '_fixedAmountUserSet', '_fixedAmountBasis', '_fixedPrepMovedOut', '_fixedLinesRestated', 'RUSH_PCT',
@@ -652,7 +652,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(R.estimateRepriceRoute({ id: 1, status: 'pending' }, { submitted: true }), R.ESTIMATE_OUT_FOR_APPROVAL_TXT, 'out for approval: the manager');
     // Build Estimate's save refusal on an approved estimate.
     const said = [];
-    const S = sandbox({ fns: ['saveEstimateAndPreview', 'roundCents', 'fmtHrs', 'fmt'].concat(ROUTE_FNS), vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'ESTIMATE_EDIT_ROUTE_TXT', 'ESTIMATE_OUT_FOR_APPROVAL_TXT'],
+    const S = sandbox({ fns: ['saveEstimateAndPreview', 'flushCalcAll', 'roundCents', 'fmtHrs', 'fmt'].concat(ROUTE_FNS), vars: ['_calcAllT', 'AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'ESTIMATE_EDIT_ROUTE_TXT', 'ESTIMATE_OUT_FOR_APPROVAL_TXT'],
       stubs: { document: domStub({ 'e-job': '7' }), jobs: [{ id: 7, approved: true }], estimateStore: { 7: { approved: true } },
                estimateApproved: true, showFB: (id, k, m) => said.push(m) } });
     S.saveEstimateAndPreview();
