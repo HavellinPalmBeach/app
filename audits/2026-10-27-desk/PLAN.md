@@ -691,7 +691,7 @@ Publish that rate only as section (a) step 10 allows.
 - Closes: ACC-09, VAL-08, ACC-10, VAL-09, ACC-12, VAL-11, VAL-06, AGT-06, VAL-16, VAL-21.
 - Checks: a browser step; the harness (P3) scores the market change before and after.
 - Code: setValBasis, setEstateAVD, estateValueDate, _avSystem, _avTool, invNeedsAppraisal, agentValueNotices, printAppraisalWorklist, waiveAppraisal.
-- Decide first: Ask 14.
+- Decide first: Ask 14. ✓ **Ask 14 built 2026-11-02** with *Use a sale* (Q111; `invSaleFarOff`, `tests/use-a-sale.test.js`, browser step 124): the rest of P15 is not built.
 
 **P16. Approvals agree everywhere.** Fix now for the first two items; fix if cheap for the rest · S each, about a day.
 - **A line with the appraiser waits** on its leaving row ("check it back in first"); a line already gone leaves the hand-off (REL-06, NEW-03).
@@ -1054,7 +1054,7 @@ Why: a family signs a "final record" on what is still a working copy. Since 27 O
 Why: today it reads "Authorized by —" with no explanation.
 
 **Ask 14. A WorthPoint sale far from the line's figure: what happens?** (P15; ACC-04; revisits the 2026-10-06 rule)
-- ✓ **Answered 28 October:** ask once when the sale and the line's figure differ by more than 15%, as recommended: use the sale, or keep the figure and file the sale only.
+- ✓ **Answered 28 October:** ask once when the sale and the line's figure differ by more than 15%, as recommended: use the sale, or keep the figure and file the sale only. **Built 2026-11-02** (with *Use a sale*, Q111).
 - Ask once when they differ by more than 15%: use the sale, or keep the figure and file the sale only (Recommended)
 - Always replace the figure with the sale
 - As now: the figure is relabelled "WorthPoint comps"
@@ -1348,7 +1348,7 @@ Severity is the verifier's re-rating, or the reviewer's for RT rows. Pack is one
 |ACC-01|accuracy|fix-now|C|still|A figure built on invented comparables is kept, and its basis sentence still…|7|_avLineResult|
 |ACC-02|accuracy|fix-now|C|still|A FINAL, adoptable Court Inventory double counts a painting the room check…|8|printCourtInventory|
 |ACC-03|accuracy|high|C|still|§20.2031-6(b) 'does not require an expert appraisal' is concluded from…|7|maivAggregate|
-|ACC-04|accuracy|high|DC||Use a WorthPoint sale relabels Agent Two's figure as 'WorthPoint comps' even…|Ask 14|agentValueUseSale|
+|ACC-04|accuracy|high|DC|fixed 2 Nov|Use a WorthPoint sale relabels Agent Two's figure as 'WorthPoint comps' even…|Ask 14 · built 2 Nov|agentValueUseSale|
 |ACC-05|gap|med|C||An appraiser's figure erases the agent's prediction, and a TC's correction…|3|_avTakeValue|
 |ACC-06|gap|high|C||No measurement of the agents' accuracy, and the model upgrades itself with no…|3|testAgentIdentify|
 |ACC-07|accuracy|high|C||The papers carry no evidence: comparables, dates, range, confidence, method and…|17|_invScheduleSection|
