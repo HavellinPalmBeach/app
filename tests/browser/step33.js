@@ -20,6 +20,10 @@
 // box typed into), the client's row in the real list, + New on the Change Orders card, the real modal and
 // Create, the row's PDF through the real print path and its Get Acceptance through the real acceptance
 // panel, the real dashboard redrawn under each notice, the real client list, at 1440 and 390.
+// Restated 2026-11-02: every card's paper opens on screen first. The row's PDF no longer prints at once: it opens
+// the change order in the document viewer, titled by the paper, and the page is printed (and read here) only when
+// the viewer's Print / Save PDF is pressed; Close then takes the viewer off the dashboard, so the row's Get
+// Acceptance and the next + New can be pressed under it.
 //
 //   NODE_PATH=/path/to/node_modules node tests/browser/step33.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
@@ -115,6 +119,29 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
   });
   const fb = () => p.evaluate(() => { const e = document.getElementById('dash-fb');
     return { text: e ? e.textContent.replace(/\s+/g, ' ').trim() : '', visible: !!(e && e.offsetParent !== null) }; });
+  // Restated 2026-11-02: every card's paper opens on screen first. The row's PDF opens the change order in the document
+  // viewer, titled by the paper, with the change order on screen, and nothing prints until the viewer's Print / Save PDF is
+  // pressed; that press prints the page (what this helper hands back, as the PDF press did), the viewer comes back once the
+  // dialog closes, and Close takes it away so the dashboard under it can be pressed again (left open, its overlay took the
+  // next press).
+  const viewerOpen = () => p.evaluate(() => { const o = document.getElementById('doc-viewer-modal'); return !!o && o.style.display === 'flex'; });
+  async function pdf(coId) {
+    await p.evaluate(() => { window.__prints = []; });
+    await press('#client-dashboard-view button[onclick="printChangeOrder(' + coId + ')"]'); await p.waitForTimeout(400);
+    ok(await viewerOpen(), 'PDF opens the change order in the document viewer');
+    const vt = await text('#doc-viewer-title');
+    ok(vt === 'Change Order', 'the viewer is titled by the paper (' + vt + ')');
+    has(await text('#doc-viewer-body'), 'CO-' + String(coId).slice(-6), 'with this change order on screen');
+    const early = await p.evaluate(() => window.__prints.length);
+    ok(early === 0, 'nothing printed before Print / Save PDF is pressed (' + early + ')');
+    await press('#doc-viewer-print'); await p.waitForTimeout(400);
+    const got = await p.evaluate(() => window.__prints[0] || null);
+    await p.waitForTimeout(700);
+    ok(await viewerOpen(), 'the viewer comes back once the print dialog closes');
+    await press('#doc-viewer-modal button[onclick="closeDocViewer()"]'); await p.waitForTimeout(150);
+    ok(!(await viewerOpen()), 'Close takes the viewer away');
+    return got;
+  }
 
   // ── A. THE HOURLY JOB ────────────────────────────────────────────────────
   console.log('\n## A. Home Editing, time and materials, expedited, 10% preferred-client discount');
@@ -165,10 +192,10 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
 
   // ── C. PDF ───────────────────────────────────────────────────────────────
   console.log('\n## C. PDF — the client’s copy, and Q14 on it');
-  await p.evaluate(() => { window.__prints = []; });
-  await press('#client-dashboard-view button[onclick="printChangeOrder(' + coId + ')"]'); await p.waitForTimeout(400);
-  const pr = await p.evaluate(() => window.__prints[0] || null);
-  ok(!!(pr && pr.html), '⚠⚠ the PDF button prints the change order through the real print path');
+  // Restated 2026-11-02: every card's paper opens on screen first. The PDF button opens the viewer, and its Print / Save PDF
+  // prints the page this section reads (pdf, above).
+  const pr = await pdf(coId);
+  ok(!!(pr && pr.html), '⚠⚠ the PDF button, then the viewer’s Print / Save PDF, prints the change order through the real print path');
   ok(/^Havellin Change Order CO-\d{6} - 1 A St - /.test(pr ? pr.title : ''), 'named for what it is (' + (pr ? pr.title : '') + ')');
   const prt = pr ? await T(pr.html) : '';
   has(prt, 'This change order does not itself create a charge.', 'the T&M terms');
@@ -227,9 +254,8 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
   await p.fill('#co-tc-hrs', '8'); await p.fill('#co-ps-hrs', '8'); await p.fill('#co-description', 'Added the pool house to scope.'); await p.evaluate(() => { const s = document.getElementById('co-reason'); const vs = Array.from(s.options).map(o => o.value).filter(Boolean); s.value = vs.indexOf('scope_add') >= 0 ? 'scope_add' : vs[0]; });
   await press('#change-order-modal button:has-text("Create Change Order")'); await p.waitForTimeout(300);
   const coF = await p.evaluate((id) => changeOrders.filter(c => c.jobId === id).pop().id, idF);
-  await p.evaluate(() => { window.__prints = []; });
-  await press('#client-dashboard-view button[onclick="printChangeOrder(' + coF + ')"]'); await p.waitForTimeout(400);
-  const prF = await p.evaluate(() => window.__prints[0] || null);
+  // Restated 2026-11-02: every card's paper opens on screen first (pdf, above: the viewer, then its Print / Save PDF).
+  const prF = await pdf(coF);
   const prFt = prF ? await T(prF.html) : '';
   has(prFt, 'This change order adjusts your fixed project fee by the amount above.', 'the fixed terms');
   // Restated 2026-09-30 (P15, the Q14 follow-up): 8 × $150 + 8 × $100 = $2,000 at the rate card, plus the
@@ -252,9 +278,8 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
   await p.fill('#co-tc-hrs', '4'); await p.fill('#co-description', 'Garage shelving.'); await p.evaluate(() => { const s = document.getElementById('co-reason'); const vs = Array.from(s.options).map(o => o.value).filter(Boolean); s.value = vs.indexOf('scope_add') >= 0 ? 'scope_add' : vs[0]; });
   await press('#change-order-modal button:has-text("Create Change Order")'); await p.waitForTimeout(300);
   const coN = await p.evaluate((id) => changeOrders.filter(c => c.jobId === id).pop().id, idN);
-  await p.evaluate(() => { window.__prints = []; });
-  await press('#client-dashboard-view button[onclick="printChangeOrder(' + coN + ')"]'); await p.waitForTimeout(400);
-  const prN = await p.evaluate(() => window.__prints[0] || null);
+  // Restated 2026-11-02: every card's paper opens on screen first (pdf, above: the viewer, then its Print / Save PDF).
+  const prN = await pdf(coN);
   lacks(prN ? await T(prN.html) : 'x plain hourly rates', 'plain hourly rates', 'a fixed job with neither premium nor discount prints no such line');
   await p.waitForTimeout(700);
 

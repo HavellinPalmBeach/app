@@ -6,6 +6,10 @@
 // intake for a probate estate and a living client; the estimate, the agreement and the Disposition Ledger printed
 // through the real print path and read back. The estimate's auction-house row carries the note and the hauler's does
 // not; both agreements carry the disclosure and neither says it takes no percentage; the ledger names the ticked firm.
+// Restated 2026-11-02: every card's paper opens on screen first. The Disposition Ledger no longer prints at once: it
+// opens in the document viewer, titled by the paper, and prints only when the viewer's real Print / Save PDF is pressed,
+// which prints the page read here; the viewer comes back once the dialog closes and Close takes it away. The estimate
+// and the agreements are client documents (docAction's print) and still print at once.
 //
 //   NODE_PATH=/path/to/node_modules node tests/browser/step83.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
@@ -106,13 +110,28 @@ const T = (h) => String(h).replace(/<[^>]+>/g, ' ').replace(/&rsquo;|&#8217;/g, 
     has(agrL, 'Contractor may receive a referral fee from a vendor it recommends.', 'and its disclosure');
     lacks(agrL, 'does not take a percentage of auction or sale proceeds', 'the old §8 sentence is gone');
 
-    const ledger = T(await p.evaluate((id) => {
+    // Restated 2026-11-02: every card's paper opens on screen first. printDispositionLedger opens the document viewer
+    // (#doc-viewer-modal), titled by the paper, and prints nothing; the viewer's real Print / Save PDF prints the page it
+    // holds (what __prints reads), the viewer comes back once the dialog closes, and Close takes it away.
+    const ledgerView = await p.evaluate((id) => {
       const it = (k, o) => Object.assign({ stableId: id + '_' + k, label: 'inventory', roomIdx: 1, ts: 1, status: 'uploaded', category: 'Furniture', driveFileId: 'f' + k, driveFileUrl: 'https://drive.google.com/file/d/f' + k + '/view' }, o || {});
       _photoRefs[id] = [it('a', { objectName: 'Chesterfield sofa', disposition: 'Auction', channel: 'palm beach auctions', gross: 4000, fees: 400, dispDate: _todayStr() }),
                         it('b', { objectName: 'Bookcase', disposition: 'Donate', channel: 'Goodwill', dispDate: _todayStr() })];
       savePhotoRefs(id); window.__prints = []; printDispositionLedger(id);
-      return new Promise((res) => setTimeout(() => res(window.__prints[0] || ''), 500));
-    }, idE));
+      return new Promise((res) => setTimeout(() => { const ov = document.getElementById('doc-viewer-modal');
+        res({ open: !!ov && ov.style.display === 'flex', title: (document.getElementById('doc-viewer-title') || {}).textContent || '', prints: window.__prints.length }); }, 500));
+    }, idE);
+    ok(ledgerView.open, 'the Disposition Ledger opens in the document viewer first');
+    ok(ledgerView.title === 'Disposition Ledger', 'the viewer is titled by the paper (' + JSON.stringify(ledgerView.title) + ')');
+    ok(ledgerView.prints === 0, '⚠ nothing printed before Print / Save PDF was pressed (' + ledgerView.prints + ')');
+    if (ledgerView.open) { await p.click('#doc-viewer-print'); await p.waitForTimeout(500); }
+    const ledgerPrints = await p.evaluate(() => window.__prints.length);
+    const ledger = T(await p.evaluate(() => window.__prints[0] || ''));
+    ok(ledgerPrints === 1, 'Print / Save PDF, in the viewer, printed it once (' + ledgerPrints + ')');
+    const ledgerBack = await p.waitForSelector('#doc-viewer-modal', { state: 'visible', timeout: 4000 }).then(() => true, () => false);
+    ok(ledgerBack, 'the viewer comes back after the print dialog');
+    if (ledgerBack) { await p.click('#doc-viewer-modal button[onclick="closeDocViewer()"]'); await p.waitForTimeout(200); }
+    ok(await p.evaluate(() => { const o = document.getElementById('doc-viewer-modal'); return !!o && o.style.display === 'none'; }), 'and Close takes it away');
     ok(ledger.length > 500, 'the Disposition Ledger printed (' + ledger.length + ')');
     has(ledger, 'Palm Beach Auctions pays Havellin a referral fee out of its own commission; no figure here is reduced by it.', '⚠ the ticked firm is named, by the directory’s own name, off a line that typed it in lower case');
     lacks(ledger, 'Goodwill pays Havellin', 'the charity is not');

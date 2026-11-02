@@ -1,7 +1,9 @@
 // Step 44 — P15: Anthony's answers of 2026-09-30, and the small items he asked to be fixed.
 //
 // Drives the REAL page through its own controls: the real intake and Build Estimate, the dashboard's
-// Change Orders card (+ New, the modal, Create, Get Acceptance, the acceptance panel, PDF), the vendor
+// Change Orders card (+ New, the modal, Create, Get Acceptance, the acceptance panel, PDF; restated 2026-11-02:
+// every card's paper opens on screen first, so PDF opens the document viewer and the page is read from what its
+// Print / Save PDF prints, where it printed at once before), the vendor
 // cards on Build Estimate, the band's View on the signing packet, the Job Plan, the Job Admin & Inv tab's
 // When filter, and the Vendors and Referral Partners tabs' Full edit, Delete and the manager PIN dialog.
 // The Vendor Directory and the Referral Partners sheet are answered by routes, as the real Apps Script
@@ -90,6 +92,23 @@ const PARTNERS = [{ uid: 'p-dana', partner_name: 'Dana Broker', partner_type: 'R
     const T = (h) => p.evaluate((h) => { const d = document.createElement('div');
       d.innerHTML = String(h).replace(/<\/td>/g, ' </td>').replace(/<\/th>/g, ' </th>').replace(/<br>/g, ' ');
       return d.textContent.replace(/\s+/g, ' '); }, h);
+    // Restated 2026-11-02: every card's paper opens on screen first. The change order's PDF opens in the document viewer,
+    // titled by the paper with the client under it, and nothing prints until its Print / Save PDF is pressed; that press
+    // prints the page (what window.__prints records), the viewer comes back once the dialog closes, and Close takes it away
+    // so the dashboard under it can be pressed again.
+    const viewerOpen = () => p.evaluate(() => { const o = document.getElementById('doc-viewer-modal'); return !!o && o.style.display === 'flex'; });
+    const printCount = () => p.evaluate(() => (window.__prints || []).length);
+    const printFromViewer = async (title, who, before) => {
+      ok(await viewerOpen(), title + ' opens in the document viewer');
+      eq(await txt('#doc-viewer-title'), title, 'the viewer is titled by the paper');
+      has(await txt('#doc-viewer-sub'), who, 'and names the client under it');
+      eq(await printCount(), before, 'nothing printed before Print / Save PDF is pressed');
+      await press('#doc-viewer-print', 'Print / Save PDF, in the viewer');
+      await p.waitForSelector('#doc-viewer-modal', { state: 'visible', timeout: 4000 }).catch(() => ok(false, 'the viewer comes back after the print dialog'));
+      eq(await printCount(), before + 1, 'Print / Save PDF printed the page once');
+      await press('#doc-viewer-modal button[onclick="closeDocViewer()"]', 'Close the viewer');
+      ok(!(await viewerOpen()), 'Close takes the viewer away');
+    };
     const overflow = () => p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     const toDash = async (id) => { await p.evaluate((id) => goToClientDashboard(id), id); await p.waitForTimeout(400); };
     const coOf = (id) => p.evaluate((id) => { const c = changeOrders.filter((x) => x.jobId === id).pop();
@@ -164,6 +183,8 @@ const PARTNERS = [{ uid: 'p-dana', partner_name: 'Dana Broker', partner_type: 'R
       ok(!!(await coOf(idF) || {}).clientApproved, 'accepted');
       await p.evaluate(() => { window.__prints = []; });
       await press('#client-dashboard-view button[onclick="printChangeOrder(' + co.id + ')"]', 'the row\'s PDF');
+      // Restated 2026-11-02: every card's paper opens on screen first; the page read is the one its Print / Save PDF prints.
+      await printFromViewer('Change Order', 'Rushfix', 0);
       const pr = await T(await p.evaluate(() => window.__prints[0] || ''));
       has(pr, '+ $2,400', 'the page prints the price the client signed');
       has(pr, 'It is priced at the hourly rates shown plus the 20% expedited-delivery premium, as this engagement is expedited; the preferred-client discount on your fixed project fee does not apply to it.',
@@ -306,6 +327,8 @@ const PARTNERS = [{ uid: 'p-dana', partner_name: 'Dana Broker', partner_type: 'R
       has(await txt('#dash-fb'), 'Painting now sits with the prep vendors on the Job Plan, to be booked and quoted.', 'the notice says where it went');
       await p.evaluate(() => { window.__prints = []; });
       await press('#client-dashboard-view button[onclick="printChangeOrder(' + co.id + ')"]', 'the row\'s PDF');
+      // Restated 2026-11-02: every card's paper opens on screen first; the page read is the one its Print / Save PDF prints.
+      await printFromViewer('Change Order', 'Sam Marston', 0);
       const pr = await T(await p.evaluate(() => window.__prints[0] || ''));
       has(pr, 'Added preparation vendor: Painting', 'the page names the vendor');
       has(pr, 'The other preparation vendors’ costs are unaffected by this change.', 'and says the others are unaffected');
