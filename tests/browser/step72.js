@@ -106,7 +106,7 @@ const PB_COURT = 'Circuit Court for Palm Beach County, Florida, Probate Division
         walkthrough: '2026-09-22', estimateSentDate: 'September 24, 2026', tc: 'Ashley Jerome', city: 'Palm Beach', zip: '33480',
         docState: { estimate: { sentAt: '2026-09-24T14:00:00Z' }, agreement: { sentAt: '2026-09-26T14:00:00Z', sig: { signedBy: 'Client', signedAt: '2026-09-28' } },
           'invoice:deposit': { sentAt: '2026-09-29T14:00:00Z' } } };
-      const item = (job, id, o) => Object.assign({ stableId: id, label: 'inventory', roomIdx: 0, seq: 1, status: 'uploaded', category: 'Furniture',
+      const item = (job, id, o) => Object.assign({ stableId: id, label: 'inventory', reviewed: 1, roomIdx: 0, seq: 1, status: 'uploaded', category: 'Furniture', /* reviewed: checked on the desk (2026-11-02: a line still flagged for a look waits off the release request) */
         disposition: '', objectName: 'Line ' + id, ts: T0, updatedAt: T0, filename: 'HVL_' + job + '_INV_' + id + '.jpg', driveFileId: 'f-' + id }, o);
       const rooms = [{ idx: 0, name: 'Living Room', st: 'in', vol: 3, cplx: 3 }];
       // An active probate estate: an appraiser linked to a painting with no report yet, and firearms awaiting written authority.
@@ -119,7 +119,7 @@ const PB_COURT = 'Circuit Court for Palm Beach County, Florida, Probate Division
         estimate: { jobId: EST, svc: 'probate', havellinTotal: 40000, fixedPrice: true, fixedAmount: 40000, fixedLines: true, totTC: 100, totPS: 150,
           tcRate: 150, psRate: 100, days: 8, vendors: [], prepItems: [], pkgCost: 0, rooms: rooms } };
       _photoRefs[EST] = [
-        item(EST, 'art', { itemNo: 1, objectName: 'Oil on canvas, harbor scene', category: 'Art & Décor', fmv: '6500', valSource: 'Auction comps', valuedBy: 'agent', apprId: 'ap1', disposition: 'Auction', channel: 'Christie\'s' }),
+        item(EST, 'art', { itemNo: 1, objectName: 'Oil on canvas, harbor scene', category: 'Art & Décor', fmv: '6500', valSource: 'Auction comps', valuedBy: 'agent', valReviewed: true, apprId: 'ap1', disposition: 'Auction', channel: 'Christie\'s' }),   // ticked: the tick stamps its value too
         item(EST, 'g1', { itemNo: 2, objectName: 'Remington 870 shotgun', category: 'Firearms', serial: 'RS12345', disposition: 'Consign', channel: 'Palm Beach Arms (FFL)', fmv: '400' }),
         item(EST, 'g2', { itemNo: 3, objectName: 'Ruger revolver', category: 'Firearms', serial: '', disposition: 'Consign', channel: 'Palm Beach Arms (FFL)', fmv: '300' })];
       // An hourly walkaway: $9,000 in, 10 concierge and 20 specialist hours worked.
