@@ -836,7 +836,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // EVERY panel field must land in a section that is actually rendered, or it exists
     // in the data and nowhere on screen — the same unreachability the old view test guarded.
-    // RESTATED 2026-11-02m (the record's answer first): a field's place follows the line and the job (_invRecPlace), and a field
+    // RESTATED 2026-11-02n (the record's answer first): a field's place follows the line and the job (_invRecPlace), and a field
     // that does not apply to the line is not drawn; one holding a value always has a rendered place (tests/line-record.test.js R6).
     const sections = v.INV_PANEL_SECTIONS.map((s) => s.key);
     const FULL = { category: 'Art & Décor', disposition: 'Sell', channel: 'Kodner', serial: 'S1', flagNFA: true, flagMAIV: 'yes', maivCat: 'Painting',

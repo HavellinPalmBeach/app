@@ -1,5 +1,5 @@
 'use strict';
-// THE LINE'S RECORD, ANSWER FIRST (2026-11-02m; Anthony, off the record of seven cabbage-ware plates on a trust: "This whole thing is
+// THE LINE'S RECORD, ANSWER FIRST (2026-11-02n; Anthony, off the record of seven cabbage-ware plates on a trust: "This whole thing is
 // overwhelming … MAIV asset track trust exempt 732-402, all this stuff. I honestly have no idea", then "should things like condition
 // just default? some of these decisions are not decisions at all"; he took Answer first and the rule). Each field of a line's record
 // has one place, by the line and the job (_invRecPlace): what the app filled in is a sentence with its boxes folded under ✎ Correct
@@ -55,7 +55,7 @@ function rig(job, rows) {
     estimateStore: { [job.id]: { estimate: { svc: job.svc, rooms: [{ idx: 0, name: 'Kitchen' }, { idx: 1, name: 'Garage' }] } } },
     jobPlanStore: {}, vendorDirectory: [], document: domStub({}), window: { confirm: () => true },
     SHEETS_SYNC_URL: 'https://script.google.com/macros/s/REC/exec', _invCloudSeen: { [job.id]: true }, _invCloudFailed: {},
-    savePhotoRefs() {}, _scheduleInventorySync() {}, renderInventoryTab() {}, showSyncBadge() {}, _todayStr: () => '2026-11-02m',
+    savePhotoRefs() {}, _scheduleInventorySync() {}, renderInventoryTab() {}, showSyncBadge() {}, _todayStr: () => '2026-11-02n',
     saveJobs() {}, syncJobToSheets() {}, _invThumbHTML: () => '<i></i>', setTimeout: () => 1, clearTimeout() {}, alert() {},
     invReadFirst: () => false, refreshPhotoRefs() {}, fetch: () => ({ then() { return this; }, catch() { return this; } }),
     _estStoreState: 'ready', _avState: () => ({}), _avAfter: {},

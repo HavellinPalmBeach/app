@@ -46,10 +46,10 @@ const GS_VARS = ['AGENT_API', 'AGENT_API_VERSION', 'AGENT_MAX_IMG', 'AGENT_MODEL
   'AGENT_VALUE_MAX_TOKENS', 'AGENT_VALUE_PARALLEL', 'AGENT_VALUE_MAX_LINES', 'AGENT_VALUE_GENERAL_BATCH',
   'AGENT_VALUE_SEARCHES', 'AGENT_VALUE_FETCHES', 'AGENT_VALUE_CONTINUES', 'AGENT_VALUE_MAX_COMPS',
   'AGENT_VALUE_TIME_BUDGET', 'AGENT_VALUE_SOURCES', 'AGENT_VALUE_NOTICE_KINDS',
-  'AGENT_VALUE_CONF_DOWN', 'AGENT_VALUE_RESULTS_SEGMENTS', 'AGENT_VALUE_RESULTS_PARAMS', 'AGENT_VALUE_NO_PRICE_RE', 'AGENT_VALUE_TEXT_MAX', 'AGENT_VALUE_ABBREV_RE', 'AGENT_VALUE_SURVEY_MIN', 'AGENT_VALUE_ITEM_PATHS', 'AGENT_VALUE_ASKING_HOSTS', 'AGENT_VALUE_COUNT_WORDS', 'AGENT_VALUE_SALE_WORD_RE', 'AGENT_VALUE_SALE_NEGATION_RE', 'AGENT_VALUE_SALE_NOUN', 'AGENT_VALUE_NUM_WORDS'];
+  'AGENT_VALUE_CONF_DOWN', 'AGENT_VALUE_RESULTS_SEGMENTS', 'AGENT_VALUE_RESULTS_PARAMS', 'AGENT_VALUE_NO_PRICE_RE', 'AGENT_VALUE_TEXT_MAX', 'AGENT_VALUE_ABBREV_RE', 'AGENT_VALUE_SURVEY_MIN', 'AGENT_VALUE_ITEM_PATHS', 'AGENT_VALUE_ASKING_HOSTS', 'AGENT_VALUE_COUNT_WORDS', 'AGENT_VALUE_SALE_WORD_RE', 'AGENT_VALUE_SALE_NEGATION_RE', 'AGENT_VALUE_SALE_NOUN', 'AGENT_VALUE_NUM_WORDS', 'AGENT_VALUE_EBAY_PROPS'];
 const GS_FNS = ['_agProp', '_agMissingProps', '_agImageBlock', '_avCents', '_avTool', '_avTools', '_avSystem',
   '_avLineText', '_avUserContent', '_avBody', '_avHttp', '_avEcho', '_avReadResult', '_avSeenUrls', '_avUrlKey', '_avResultsPage', '_avClip',
-  '_avLineResult', 'agentValueLines', '_agModelVersion', '_agVerCmp', '_agNewestOf', '_agCache', '_agModelList', '_agDemoted', '_agDemote', '_agSlow', '_agModels', '_agSendAll', '_agHttpFailure', '_avSurvey', '_avHostOf', '_avListedHost', '_avAskingHost', '_avSalesNamed', '_avKeptBasis', '_avPageKey', '_avClaimsSale'];
+  '_avLineResult', 'agentValueLines', '_agModelVersion', '_agVerCmp', '_agNewestOf', '_agCache', '_agModelList', '_agDemoted', '_agDemote', '_agSlow', '_agModels', '_agSendAll', '_agHttpFailure', '_avSurvey', '_avHostOf', '_avListedHost', '_avAskingHost', '_avSalesNamed', '_avKeptBasis', '_avPageKey', '_avClaimsSale', '_avEbayOn', '_avMessages', '_avPushAssistant'];
 
 // `reply(body, i, call)` answers each request of each fetchAll; `throwOn(call)` makes a fetchAll throw, as
 // UrlFetchApp does when one request outruns its own limit. `tick` is the clock's step per reading.
@@ -862,7 +862,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(panel, 'SOLD', 'the comparables, sold'); has(panel, 'ASKING', 'and asking');
     has(panel, 'WorthPoint search: <code>Herend Rothschild</code>', 'the WorthPoint lookup');
     has(panel, 'Use this sale', 'the paste form');
-    // RESTATED 2026-11-02m (the record's answer first): the comparables and the lookup sit under See the research, and the photograph
+    // RESTATED 2026-11-02n (the record's answer first): the comparables and the lookup sit under See the research, and the photograph
     // link beside the lookup is gone (the photograph at the top of the record opens it in Drive).
     has(panel, '<details class="av-research"', 'the research is folded under See the research');
     lacks(panel, '>Photograph</a>', 'and no photograph link beside the lookup');

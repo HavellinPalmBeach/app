@@ -1,4 +1,4 @@
-// Step 133 — the line's record, answer first (2026-11-02m; Anthony, off the record of seven cabbage-ware plates on a trust: "This whole
+// Step 133 — the line's record, answer first (2026-11-02n; Anthony, off the record of seven cabbage-ware plates on a trust: "This whole
 // thing is overwhelming … I don't even know what to do with it", then "should things like condition just default? some of these
 // decisions are not decisions at all"; he took Answer first and the rule).
 //

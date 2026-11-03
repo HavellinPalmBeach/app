@@ -29548,7 +29548,7 @@ var INVENTORY_COLUMNS = [
 // The `group` metadata OUTLIVES the table it was written for. It used to drive a row of
 // buttons that swapped which slice of a 29-column spreadsheet was on screen — a control
 // that existed only to work around the width of the thing below it. The table is gone;
-// the groups once were the item panel's sections; since 2026-11-02m each field's place in the record is _invRecPlace.
+// the groups once were the item panel's sections; since 2026-11-02n each field's place in the record is _invRecPlace.
 // ⚠⚠ `fid` COLUMNS ARE AXIS 2 AND COME OFF A LIVING JOB ENTIRELY (2026-09-21). Every one of
 // them is court-and-fiduciary apparatus describing an estate that does not exist: the asset
 // track defaults to 'Probate' on a living owner's sofa, §732.402 is the surviving family's
@@ -29574,7 +29574,7 @@ function _invColHeader(job, col) {
   if (!col) return '';
   return (col.key === 'flagBequest' && !invFiduciaryMode(job)) ? 'Promised to someone' : col.header;
 }
-// ⚠ WHO APPROVED IT, ONLY WHERE THE LINE HAS SOMETHING TO SAY (P14, LIV-16; on every job since 2026-11-02m): *Approved by* is drawn
+// ⚠ WHO APPROVED IT, ONLY WHERE THE LINE HAS SOMETHING TO SAY (P14, LIV-16; on every job since 2026-11-02n): *Approved by* is drawn
 // where the line needs written approval (invWrittenReleaseNeeded: on an estate every line leaving the property; on a client's own
 // home a firearm, or someone who works with Havellin) or carries one already, a recorded approval, or one set aside, never hidden.
 // An estate's Undecided, Keep or Hold line read *No written approval recorded* under every line, about nothing. The approval's own
@@ -29606,7 +29606,7 @@ function _invPanelColsFor(job, ref) {
   var rowWho = !!ref && _invRowHasWho(ref.disposition);
   return _invPanelCols(job).filter(function(c) { return !(rowWho && c.key === 'channel'); });
 }
-// ⚠⚠ THE LINE'S RECORD SAYS WHAT THE APP WORKED OUT AND ASKS ONLY WHAT IT CANNOT (2026-11-02m; Anthony, off the record of seven
+// ⚠⚠ THE LINE'S RECORD SAYS WHAT THE APP WORKED OUT AND ASKS ONLY WHAT IT CANNOT (2026-11-02n; Anthony, off the record of seven
 // cabbage-ware plates on a trust: *"This whole thing is overwhelming … I open it up and I don't even know what to do with it … MAIV
 // asset track trust exempt 732-402, all this stuff. I honestly have no idea"*, then *"should things like condition just default? some
 // of these decisions are not decisions at all"*; he took *Answer first* and the rule). Every field has one place, by the line and the
@@ -31255,7 +31255,7 @@ function _invEdit(jobId, stableId, key, el) {
   // ⚠ A NAME CHANGED IS VALUED AGAIN, BY ITSELF (2026-10-25b): the wooden mirror that is Restoration Hardware. Sent before the
   // notices repaint (2026-10-26), so the note reads "Agent Two is valuing it again", never "open the line and Re-value it".
   if (key === 'objectName') agentValueAfterRename(jobId, stableId);
-  // The open record's sentence of what the app filled in follows the field just corrected (2026-11-02m): plain text, no control in it.
+  // The open record's sentence of what the app filled in follows the field just corrected (2026-11-02n): plain text, no control in it.
   var _saysEl = document.getElementById('inv-rec-says-' + stableId);
   if (_saysEl && typeof _invRecSaysHtml === 'function' && _invJob(jobId)) _saysEl.innerHTML = _invRecSaysHtml(_invJob(jobId), ref);
   if (key === 'objectName' && ref.valuedBy === 'agent') {
@@ -44513,7 +44513,7 @@ function _avPanelHtml(job, ref) {
   var _again = agentValueAgain(job, ref);
   var canAsk = !_again && !!String(ref.objectName || '').trim() && (!_avHasFigure(ref) || ref.valuedBy === 'agent');
   var internal = agentValueInternal(job);
-  // ⚠ THE FIGURE AND WHAT TO DO FIRST, THE RESEARCH FOLDED (2026-11-02m, the record's answer first; _invRecPlace): the comparables,
+  // ⚠ THE FIGURE AND WHAT TO DO FIRST, THE RESEARCH FOLDED (2026-11-02n, the record's answer first; _invRecPlace): the comparables,
   // the listings counted and the WorthPoint search sit under See the research, closed; the photograph link beside the search is gone
   // (the photograph at the top of the record opens it in Drive).
   var head = '<div style="font-size:10px;font-weight:700;color:var(--bronze);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;">What it\u2019s worth &middot; Agent Two</div>';
@@ -45376,7 +45376,7 @@ function _renderInvColHead(job, g) {
 // column switcher. One definition of a column, two surfaces.
 function _renderInvPanel(job, ref) {
   var jid = job.id;
-  // ⚠⚠ ANSWER FIRST, AND ONLY WHAT APPLIES (2026-11-02m; see _invRecPlace): the fields of the line and the job, each in its place.
+  // ⚠⚠ ANSWER FIRST, AND ONLY WHAT APPLIES (2026-11-02n; see _invRecPlace): the fields of the line and the job, each in its place.
   // A field not on this line is not drawn (NFA on a sofa was a read-only dash: absent read as empty, and nobody could tell what it
   // meant); every field holding a value is drawn somewhere.
   var cols = _invPanelColsFor(job, ref).filter(function(c){ return _invPanelColShown(job, ref, c); });   // one box per value (P9, ROW-05)

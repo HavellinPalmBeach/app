@@ -399,7 +399,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }
   group('H2 · the living line\'s record: Promised to someone, no estate fields, and who approved it only where it says something');
   {
-    // RESTATED 2026-11-02m (the record's answer first, tests/line-record.test.js): the record names its fields in plain words
+    // RESTATED 2026-11-02n (the record's answer first, tests/line-record.test.js): the record names its fields in plain words
     // (_invPanelLabel) and has no Flags or Flags & Track section; the exceptions sit under Something unusual about this item?,
     // the approval under Leaving the property, its date inside the approval's own line. The rule here is unchanged.
     const L = rig(MATTERS.living, ROWS());
