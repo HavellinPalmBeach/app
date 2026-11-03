@@ -1,4 +1,4 @@
-// Step 130 — The release request carries the stamp the other papers carry, and a figure typed on the desk says why (P10 of the desk
+// Step 135 — The release request carries the stamp the other papers carry, and a figure typed on the desk says why (P10 of the desk
 // audit, 2026-10-28; EST-04, NEW-02, VAL-28, LIV-22, DOC-14, DOC-15, LIV-01, VAL-07, ROW-10; Anthony's answer to Ask 8).
 //
 // Drives the REAL page with one probate estate on the values tier filing a Form 706 (so Formal): #1 a walnut dresser both agents
@@ -27,7 +27,7 @@
 //      "… with only Havellin's estimate on record" over Agent Two's figure.
 //   H: at 1440 and 390 px no horizontal overflow; zero page errors.
 //
-//   NODE_PATH=/path/to/node_modules node tests/browser/step130.js [/abs/path/to/havellin.html]
+//   NODE_PATH=/path/to/node_modules node tests/browser/step135.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
 const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/havellin.html'));
 let pass = 0, fail = 0;
@@ -438,10 +438,10 @@ const EST = 13001, LIV = 13002, CON = 13003;
     });
 
     await b.close();
-    console.log('\nstep130: ' + pass + ' passed, ' + fail + ' failed');
+    console.log('\nstep135: ' + pass + ' passed, ' + fail + ' failed');
     process.exit(fail ? 1 : 0);
   } catch (e) {
-    console.log('step130 crashed: ' + (e && e.stack || e));
+    console.log('step135 crashed: ' + (e && e.stack || e));
     if (b) await b.close().catch(() => {});
     process.exit(1);
   }
