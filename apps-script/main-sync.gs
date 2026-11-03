@@ -190,17 +190,23 @@
 // box or shelf), so the app can test a group recorded at a count of one against §20.2031-6(a)'s $100 an article (invLotSplitState
 // 'nocount'): the worklist printed its clearance over a mixed drawer it never tested. One field and one sentence of the prompt; no
 // action or type changes; it carries 2026-11-02's. Until it is live a group named at a count of one reads as one article.
-// ⚠ 2026-11-02d (the desk audit's P15, "The value follows the job's standard, market and date"; ACC-09, ACC-12, ACC-10): Agent Two's
+// ⚠ 2026-11-02e (the desk audit's P15, "The value follows the job's standard, market and date"; ACC-09, ACC-12, ACC-10): Agent Two's
 // standard follows the regulation's rule by class in place of a blanket "not retail" (auction with the buyer's premium for art,
 // antiques, silver and jewelry; the used or resale market for branded furniture, decor and electronics; the going used rate for
 // everyday things), each basis sentence names its market, and a comparable says whether its price includes the buyer's premium
 // (`premium`: included, added, hammer only, none), a hammer-only result grossed up by the house's stated premium or labelled as such;
 // a basis other than Fair Market Value gets a paragraph of its own and the range's words fit it, and on Replacement Value an asking
 // price of a like item is the evidence, never a general estimate for want of a sale; a line valued as of its own day (§2032(a)(1))
-// is told so (`valueDate`). No action or type changes; it carries 2026-11-02c's (and so 2026-11-02b's, 2026-11-02's and 2026-10-28's). Until it is live the prompt values every basis as
+// is told so (`valueDate`). No action or type changes; it carries 2026-11-02d's (and so 2026-11-02c's, 2026-11-02b's, 2026-11-02's and 2026-10-28's). Until it is live the prompt values every basis as
 // Fair Market Value at second-hand prices, says "not retail" of branded furniture, mixes hammer and all-in prices with no word, and
 // values a line that left inside the six months as of the alternate date.
-var BACKEND_VERSION = '2026-11-02d';
+// ⚠ 2026-11-02d (Anthony, once eBay had answered: Browse's search open, Marketplace Insights refused; "we take a low, medium, high
+// and try to find an average and get some signal out of this", and on the written AI consent eBay did not give, "if they cut us off,
+// who cares"): a research line may search eBay's current listings through a tool this script runs (ebay_listings, _avEbayAnswer),
+// and the listing survey counts what it showed: asking prices, never sales, no more listings than the search showed, the eBay search
+// page as the survey's page. Off unless EBAY_CLIENT_ID and EBAY_CLIENT_SECRET are in Script Properties; testEbayListings() checks
+// them. No action or type changes; carries 2026-11-02c's. Until it is live, or with no keys, Agent Two values as it did.
+var BACKEND_VERSION = '2026-11-02e';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive', 'esignSendRequest',
@@ -5147,7 +5153,7 @@ function _avCents(x) {
 // ⚠ `line` IS A PLAIN STRING, NOT AN ENUM OF THIS REQUEST'S LABELS. An enum would make the tool, and
 // with it the cached prefix, different on every request; the labels are checked here instead and an
 // answer for a line nobody asked about is dropped.
-function _avTool(mode, categories, conditions, basis) {
+function _avTool(mode, categories, conditions, basis, ebay) {
   var fmv = !basis || basis === 'Fair Market Value';
   var rv = basis === 'Replacement Value';   // what a like one costs, never what it sells for (P15's review, as _avSystem)
   var cats = (categories || []).filter(function (c) { return !!String(c || '').trim(); });
@@ -5219,7 +5225,8 @@ function _avTool(mode, categories, conditions, basis) {
         low:    { type: 'number', description: 'The lowest asking price among them, for one article as this line counts them, US dollars.' },
         median: { type: 'number', description: 'The middle asking price among them, for one article, US dollars.' },
         high:   { type: 'number', description: 'The highest asking price among them, for one article, US dollars.' },
-        url:    { type: 'string', description: 'The page you counted them on, copied exactly from what your search or fetch returned. A results page is fine here.' }
+        url:    { type: 'string', description: 'The page you counted them on, copied exactly from what your search or fetch returned'
+                                         + (ebay ? ', or the search page ebay_listings named' : '') + '. A results page is fine here.' }
       }
     };
     required.push('survey');
@@ -5275,11 +5282,193 @@ function _avTool(mode, categories, conditions, basis) {
 // tool the answer comes back through. ⚠ `_20260209` CARRIES DYNAMIC FILTERING ITSELF, so no
 // `code_execution` tool is declared beside it (a second execution environment confuses the model).
 // It runs on every model the agents choose (dynamic filtering is on Claude 4.6 and later, Anthropic's docs, 2026-10-26).
-function _avTools(mode, categories, conditions, basis) {
+function _avTools(mode, categories, conditions, basis, ebay) {
   var tools = [{ type: 'web_search_20260209', name: 'web_search', max_uses: AGENT_VALUE_SEARCHES[mode] || 1 }];
   if (mode === 'comps') tools.push({ type: 'web_fetch_20260209', name: 'web_fetch', max_uses: AGENT_VALUE_FETCHES });
-  tools.push(_avTool(mode, categories, conditions, basis));
+  // eBay's listings, on a research line, where the keys are in Script Properties (AGENT_VALUE_EBAY_PROPS): constant per depth and
+  // per deployment, so the cached prefix still holds.
+  if (mode === 'comps' && ebay) tools.push(_avEbayTool());
+  tools.push(_avTool(mode, categories, conditions, basis, ebay));
   return tools;
+}
+
+// ─── EBAY'S CURRENT LISTINGS (2026-11-02d) ────────────────────────────────────────
+// ⚠⚠ ASKING PRICES, NEVER SALES. Anthony, 2026-11-02, once eBay had answered both requests (Browse's search and getItem are not
+// restricted APIs; Marketplace Insights, the sold history, refused): *"Let's just assume we can get the listing prices and we take a
+// low, medium, high and try to find an average and get some signal out of this … I don't think we're going to get the sold
+// pricing"*, and on the written AI consent eBay did not give: *"if they cut us off, who cares? … We'll just do … what we're doing"*.
+// So a research line's request carries `ebay_listings`, a tool this script runs itself: the model names a search, the script asks
+// eBay's Browse API for the fixed-price listings, and the model counts the close matches into the listing survey it already keeps
+// (AGENT_VALUE_SURVEY_MIN, _avSurvey). Every listing it is shown is asking (_avLineResult), the survey's count can be no larger than
+// what the search showed, and a page the script did not show is not a page (the seen guard). Off unless both keys are set: no
+// keys, and the request, the prompt and the tool are exactly as before. Browse's search only (eBay: search and getItem are open);
+// nothing here asks for sold data, and no eBay seller or buyer is recorded.
+var AGENT_VALUE_EBAY_PROPS    = ['EBAY_CLIENT_ID', 'EBAY_CLIENT_SECRET'];
+var AGENT_VALUE_EBAY_TOKEN_URL = 'https://api.ebay.com/identity/v1/oauth2/token';
+var AGENT_VALUE_EBAY_SEARCH_URL = 'https://api.ebay.com/buy/browse/v1/item_summary/search';
+var AGENT_VALUE_EBAY_SCOPE    = 'https://api.ebay.com/oauth/api_scope';
+var AGENT_VALUE_EBAY_TOKEN_CACHE = 'agent_ebay_token';
+var AGENT_VALUE_EBAY_FETCH    = 50;   // listings asked of eBay a search
+var AGENT_VALUE_EBAY_SHOWN    = 40;   // listings shown to the model a search (about 25 tokens each)
+var AGENT_VALUE_EBAY_SEARCHES = 3;    // searches a research line may run in all
+var AGENT_VALUE_EBAY_ROUNDS   = 2;    // round trips a request may spend on them: each is one more request to the model
+
+function _avEbayOn() {
+  return AGENT_VALUE_EBAY_PROPS.every(function (k) { return !!_agProp(k); });
+}
+
+function _avEbayTool() {
+  return {
+    name: 'ebay_listings',
+    description: 'Search what is for sale on eBay right now. Shows each listing\'s title, asking price, condition and link, '
+               + 'and the search page. Every price it shows is an asking price, never a sale.',
+    strict: true,
+    input_schema: {
+      type: 'object',
+      additionalProperties: false,
+      required: ['query'],
+      properties: {
+        query: { type: 'string', description: 'The words a seller would use for this thing: maker, pattern or model, form. No condition words and no count. Under ten words.' }
+      }
+    }
+  };
+}
+
+// The page a person opens to see the same listings: eBay's own search, Buy It Now. It is the survey's page.
+function _avEbayPage(q) {
+  // Spaces as `+`, as eBay writes its own links, so a link the model copies back is the one it was shown.
+  return 'https://www.ebay.com/sch/i.html?_nkw=' + encodeURIComponent(String(q || '').trim()).replace(/%20/g, '+') + '&LH_BIN=1';
+}
+
+// The app's sign-in to eBay (client credentials), held for its life less five minutes. {token} | {error}.
+function _avEbayToken() {
+  var cache = null;
+  try { cache = CacheService.getScriptCache(); } catch (e) { cache = null; }
+  var hit = cache ? cache.get(AGENT_VALUE_EBAY_TOKEN_CACHE) : null;
+  if (hit) return { token: hit };
+  var id = _agProp('EBAY_CLIENT_ID'), secret = _agProp('EBAY_CLIENT_SECRET');
+  if (!id || !secret) return { error: 'eBay is not set up: EBAY_CLIENT_ID and EBAY_CLIENT_SECRET in Script Properties' };
+  var res;
+  try {
+    res = UrlFetchApp.fetch(AGENT_VALUE_EBAY_TOKEN_URL, {
+      method: 'post',
+      contentType: 'application/x-www-form-urlencoded',
+      headers: { Authorization: 'Basic ' + Utilities.base64Encode(id + ':' + secret) },
+      payload: 'grant_type=client_credentials&scope=' + encodeURIComponent(AGENT_VALUE_EBAY_SCOPE),
+      muteHttpExceptions: true
+    });
+  } catch (e) { return { error: 'eBay did not answer the sign-in (' + String(e.message || e).slice(0, 80) + ')' }; }
+  var code = res.getResponseCode(), body = {};
+  try { body = JSON.parse(res.getContentText()); } catch (e2) { body = {}; }
+  if (code >= 300 || !body.access_token) {
+    return { error: 'eBay refused the keys (HTTP ' + code + (body.error ? ': ' + body.error : '')
+                    + (body.error_description ? ', ' + String(body.error_description).slice(0, 120) : '') + ')' };
+  }
+  var life = Math.max(60, Math.min(21600, (Number(body.expires_in) || 7200) - 300));
+  if (cache) { try { cache.put(AGENT_VALUE_EBAY_TOKEN_CACHE, body.access_token, life); } catch (e3) { /* asked again next time */ } }
+  return { token: body.access_token };
+}
+
+function _avEbayRequest(q, token) {
+  return {
+    url: AGENT_VALUE_EBAY_SEARCH_URL + '?q=' + encodeURIComponent(String(q || '').trim().slice(0, 100))
+       + '&limit=' + AGENT_VALUE_EBAY_FETCH + '&filter=' + encodeURIComponent('buyingOptions:{FIXED_PRICE}'),
+    method: 'get',
+    headers: { Authorization: 'Bearer ' + token, 'X-EBAY-C-MARKETPLACE-ID': 'EBAY_US' },
+    muteHttpExceptions: true
+  };
+}
+
+// Low, middle (the median) and average of a set of prices, to the cent. The middle is the figure the survey uses: one listing
+// priced far above the rest moves the average and not the middle.
+function _avEbayStats(prices) {
+  var xs = (prices || []).filter(function (x) { return isFinite(x) && x > 0; }).sort(function (a, b) { return a - b; });
+  if (!xs.length) return null;
+  var n = xs.length, mid = n % 2 ? xs[(n - 1) / 2] : (xs[n / 2 - 1] + xs[n / 2]) / 2;
+  var sum = xs.reduce(function (a, b) { return a + b; }, 0);
+  return { n: n, low: _avCents(xs[0]), median: _avCents(mid), mean: _avCents(sum / n), high: _avCents(xs[n - 1]) };
+}
+
+// One search's answer, as the model reads it and as the checks remember it. {text, page, shown, items, error}.
+function _avEbayRead(res, q) {
+  var page = _avEbayPage(q);
+  var code = 0, body = {};
+  try { code = res.getResponseCode(); body = JSON.parse(res.getContentText()); } catch (e) { body = {}; }
+  if (code >= 300 || !body || typeof body !== 'object') {
+    var err = ((body && body.errors) || [])[0] || {};
+    return { error: 'eBay\'s search failed (HTTP ' + code + (err.message ? ': ' + String(err.message).slice(0, 120) : '') + ')', page: page };
+  }
+  var items = [];
+  (body.itemSummaries || []).forEach(function (it) {
+    if (!it || items.length >= AGENT_VALUE_EBAY_SHOWN) return;
+    var pr = it.price || {};
+    var price = _avCents(pr.value);
+    if (!(isFinite(price) && price > 0) || (pr.currency && pr.currency !== 'USD')) return;
+    var legacy = String(it.legacyItemId || '').replace(/\D/g, '');
+    var url = legacy ? 'https://www.ebay.com/itm/' + legacy : String(it.itemWebUrl || '').split('?')[0];
+    if (!/^https?:\/\//i.test(url)) return;
+    items.push({ title: String(it.title || '').replace(/\s+/g, ' ').trim().slice(0, 140), price: price,
+                 condition: String(it.condition || '').slice(0, 40), url: url });
+  });
+  var st = _avEbayStats(items.map(function (x) { return x.price; }));
+  var total = Number(body.total) || items.length;
+  var head = 'eBay listings for sale now (asking prices, never sales) for "' + String(q || '').trim().slice(0, 100) + '": '
+    + total + ' found, ' + items.length + ' shown. Search page: ' + page + '\n'
+    + (st ? 'The ' + st.n + ' shown, every one, before you pick the close matches: lowest $' + st.low + ', middle $' + st.median
+          + ', average $' + st.mean + ', highest $' + st.high + '.\n' : 'No fixed-price listing with a price in dollars.\n');
+  var rows = items.map(function (x, k) {
+    return (k + 1) + '. ' + x.title + ' | $' + x.price + (x.condition ? ' | ' + x.condition : '') + ' | ' + x.url;
+  });
+  return { text: head + rows.join('\n'), page: page, shown: items.length, items: items };
+}
+
+// Answer every eBay search the slice's turns asked for, in one fetchAll. `work` is [{p, calls: [{id, query}]}]; each `p` gets
+// the user turn carrying a tool_result per call, and what was shown (p.ebay: the pages with how many each showed, the listings).
+// A search past the line's allowance, past the time budget or with eBay unreachable is answered with why, so the model records
+// its values on what it has: an eBay failure never fails the line.
+function _avEbayAnswer(work, started) {
+  var late = new Date().getTime() - started > AGENT_VALUE_TIME_BUDGET;
+  var tok = null, asks = [], answers = {};
+  work.forEach(function (w) {
+    var p = w.p;
+    p.ebay = p.ebay || { pages: {}, items: {}, seen: {}, searches: 0, rounds: 0 };
+    p.ebay.rounds++;
+    w.calls.forEach(function (c) {
+      var q = String((c.input && c.input.query) || '').trim();
+      if (!q) { answers[c.id] = { error: 'No search words were given.' }; return; }
+      if (late) { answers[c.id] = { error: 'No time is left for eBay searches: record your values now on what you have.' }; return; }
+      if (p.ebay.rounds > AGENT_VALUE_EBAY_ROUNDS || p.ebay.searches >= AGENT_VALUE_EBAY_SEARCHES) {
+        answers[c.id] = { error: 'No more eBay searches on this line: record your values now on what you have.' }; return;
+      }
+      if (!tok) tok = _avEbayToken();
+      if (tok.error) { answers[c.id] = { error: tok.error + '. Value the line without eBay.' }; return; }
+      p.ebay.searches++;
+      asks.push({ id: c.id, q: q, p: p });
+    });
+  });
+  if (asks.length) {
+    var res = null;
+    try { res = UrlFetchApp.fetchAll(asks.map(function (a) { return _avEbayRequest(a.q, tok.token); })); }
+    catch (e) { res = null; Logger.log('ebay_listings: ' + e); }
+    asks.forEach(function (a, k) {
+      var r = res ? _avEbayRead(res[k], a.q) : { error: 'eBay\'s search took too long', page: _avEbayPage(a.q) };
+      if (!r.error) {
+        var pk = _avUrlKey(r.page);
+        a.p.ebay.pages[pk] = Math.max(a.p.ebay.pages[pk] || 0, r.shown);
+        a.p.ebay.seen[pk] = 1;
+        r.items.forEach(function (x) { a.p.ebay.items[_avPageKey(x.url)] = 1; a.p.ebay.seen[_avUrlKey(x.url)] = 1; });
+      }
+      answers[a.id] = r;
+    });
+  }
+  work.forEach(function (w) {
+    var blocks = w.calls.map(function (c) {
+      var r = answers[c.id] || { error: 'not answered' };
+      return r.error ? { type: 'tool_result', tool_use_id: c.id, content: r.error, is_error: true }
+                     : { type: 'tool_result', tool_use_id: c.id, content: r.text };
+    });
+    w.p.hist.push({ role: 'user', content: blocks });
+  });
 }
 
 // ⚠⚠ WHAT EACH BASIS MEANS, AND IN WHICH MARKET (P15, 2026-10-28; the desk audit's ACC-12 and ACC-09). Fair Market Value said "it is not
@@ -5452,6 +5641,15 @@ function _avSystem(ctx) {
           + 'thing listed means a soft market, so value such a line below where they are listed: at or under the middle price, '
           + 'nearer the low end, and say in the basis that it rests on that many listings and no sales. With '
           + AGENT_VALUE_SURVEY_MIN + ' or more close listings and no sale, confidence may be medium; with fewer, it is low.\n')
+    // 2026-11-02d (Anthony: "we take a low, medium, high and try to find an average and get some signal"): _avEbayAnswer.
+    + (ctx.ebay ? '- EBAY\'S LISTINGS. On a research line you also have ebay_listings, which searches what is for sale on eBay now '
+      + 'and shows each listing\'s asking price, condition and link, the search page, and the lowest, middle, average and highest '
+      + 'price of everything it showed. Search it first, with the words a seller would use (maker, pattern or model, form), '
+      + 'then do the rest of your research. If nothing close comes back, one broader search; ' + AGENT_VALUE_EBAY_SEARCHES
+      + ' at most. Those figures cover everything shown: count only the close matches into survey, by the rule above, '
+      + 'each priced for one article as this line counts them (a listing of a set of eight at $200 is $25 an article), with '
+      + 'the search page it named as survey\'s url. Every listing it shows is an asking price, never a sale; one may be '
+      + 'cited in comps as asking.\n' : '')
     + '- If a research line has no ' + (rv ? 'price for a like item' : 'sold comparable') + ' and no such survey, give your best reading with confidence low and say in the basis '
     + 'what it rests on. Put a line under unvalued only when you cannot tell what it is, or it is papers or records. Do '
     + 'not dress a guess up as research.\n\n'
@@ -5618,12 +5816,28 @@ function _avBody(unit, ctx, noFallbacks, model) {
     thinking: { type: 'adaptive' },
     output_config: { effort: AGENT_VALUE_EFFORT },
     system: [{ type: 'text', text: _avSystem(ctx), cache_control: { type: 'ephemeral' } }],
-    tools: _avTools(unit.mode, ctx.categories, ctx.conditions, ctx.basis),
+    tools: _avTools(unit.mode, ctx.categories, ctx.conditions, ctx.basis, ctx.ebay),
     tool_choice: { type: 'auto' },
     messages: [{ role: 'user', content: _avUserContent(unit) }]
   };
   if (!noFallbacks) body.fallbacks = 'default';
   return body;
+}
+
+// The conversation a request carries: the line's own first message, then every turn since (a paused turn, a turn that stopped
+// to search eBay and the searches' results), each assistant turn echoed by the rule below.
+function _avMessages(p) {
+  return [p.user].concat((p.hist || []).map(function (m) {
+    return m.role === 'assistant' ? { role: 'assistant', content: _avEcho(m.content) } : m;
+  }));
+}
+
+// A paused turn continues the assistant's turn; anything after a user turn (the searches' results) starts a new one.
+function _avPushAssistant(p, content) {
+  p.hist = p.hist || [];
+  var last = p.hist[p.hist.length - 1];
+  if (last && last.role === 'assistant') last.content = last.content.concat(content || []);
+  else p.hist.push({ role: 'assistant', content: (content || []).slice() });
 }
 
 function _avHttp(body, key) {
@@ -5682,6 +5896,11 @@ function _avReadResult(res) {
       return { ok: true, input: blocks[i].input || {}, content: blocks };
     }
   }
+  // ⚠ A TURN THAT STOPPED TO SEARCH EBAY (2026-11-02d): the script runs the searches and sends the turn on with their results
+  // (_avEbayAnswer); the caller decides whether any search is still allowed.
+  var ebay = blocks.filter(function (b) { return b && b.type === 'tool_use' && b.name === 'ebay_listings'; })
+    .map(function (b) { return { id: b.id, input: b.input || {} }; });
+  if (ebay.length) return { ebay: ebay, content: blocks };
   // ⚠ PROSE IS A FAILURE TO RECORD, NOT A FINDING THAT NOTHING IS WORTH ANYTHING (Agent One's rule).
   return { ok: false, error: 'the model answered in prose instead of recording a value' };
 }
@@ -5749,12 +5968,16 @@ var AGENT_VALUE_CONF_DOWN = { high: 'medium', medium: 'low', low: 'low' };
 
 // The listings a research line counted, checked (AGENT_VALUE_SURVEY_MIN): a whole count, the three prices for one article in
 // order, and the page a tool returned. null otherwise, so a survey the server cannot check is never on the line.
-function _avSurvey(s, seen) {
+function _avSurvey(s, seen, ebay) {
   if (!s || typeof s !== 'object') return null;
   var n = Number(s.count), lo = _avCents(s.low), md = _avCents(s.median), hi = _avCents(s.high);
   var url = String(s.url || '').trim();
   if (!(n >= 1 && n === Math.floor(n)) || !(lo > 0 && md >= lo && hi >= md)) return null;
   if (!/^https?:\/\//i.test(url) || !(seen || {})[_avUrlKey(url)]) return null;
+  // ⚠ NO MORE LISTINGS THAN THE SEARCH SHOWED (2026-11-02d): on an eBay search page the script ran, the count is checked against
+  // what it showed, so ten close listings are ten the model was shown.
+  var shown = ebay && ebay.pages ? ebay.pages[_avUrlKey(url)] : null;
+  if (shown != null && n > shown) return null;
   return { count: n, low: lo, median: md, high: hi, url: url.slice(0, 400) };
 }
 
@@ -5849,7 +6072,7 @@ function _avKeptBasis(sold, survey, asking, o) {
 
 // One line of the model's answer, checked. Returns the result the app writes, or {error}. `qty`, the line's count, reads the
 // figure for one article against a survey's prices (2026-10-27); absent, the line is one article.
-function _avLineResult(v, mode, seen, qty, basis) {
+function _avLineResult(v, mode, seen, qty, basis, ebay) {
   // Read before `basis` below names the sentence (a parameter and a var of one name are one binding).
   var rv = basis === 'Replacement Value';
   var fmv = _avCents(v.value), low = _avCents(v.low), high = _avCents(v.high);
@@ -5878,8 +6101,9 @@ function _avLineResult(v, mode, seen, qty, basis) {
       saleDate: (String(c.saleDate || '').trim().match(/^\d{4}(?:-\d{2}(?:-\d{2})?)?/) || [''])[0],
       price: price,
       url: String(c.url || '').slice(0, 400),
-      // A dealer's marketplace or a retail store asks; it never sold (P7, AGENT_VALUE_ASKING_HOSTS), whatever the model says.
-      kind: (c.kind === 'sold' && !_avAskingHost(c.url)) ? 'sold' : 'asking',
+      // A dealer's marketplace or a retail store asks; it never sold (P7, AGENT_VALUE_ASKING_HOSTS), whatever the model says. Nor
+      // did a listing eBay's search showed: every one is for sale now (2026-11-02d).
+      kind: (c.kind === 'sold' && !_avAskingHost(c.url) && !(ebay && ebay.items && ebay.items[_avPageKey(c.url)])) ? 'sold' : 'asking',
       // Whether the price includes the buyer's premium (P15, ACC-12); an answer off the list is said as not known, never guessed.
       premium: AGENT_VALUE_PREMIUMS.indexOf(c.premium) >= 0 ? c.premium : ''
     });
@@ -5896,7 +6120,7 @@ function _avLineResult(v, mode, seen, qty, basis) {
   // ⚠⚠ A LISTING SURVEY COUNTS (2026-10-27): no sale, but AGENT_VALUE_SURVEY_MIN close listings or more on a page a tool returned,
   // and one article's figure at or under their middle price. Medium at most, never lifted from the model's own low; anything else
   // with no sale stays low, as before.
-  var survey = mode === 'comps' ? _avSurvey(v.survey, seen) : null;
+  var survey = mode === 'comps' ? _avSurvey(v.survey, seen, ebay) : null;
   var each = fmv / Math.max(1, parseInt(qty, 10) || 1);
   var surveyed = mode === 'comps' && !soldKept && !!survey && survey.count >= AGENT_VALUE_SURVEY_MIN && each <= survey.median;
   if (mode === 'comps' && !soldKept) conf = surveyed ? (conf === 'high' ? 'medium' : conf) : 'low';
@@ -5960,6 +6184,9 @@ function agentValueLines(data) {
     var ctx = (data && data.context) || {};
     var items = (data && data.items) || [];
     if (!items.length) return { ok: true, success: true, results: {}, failed: {}, retry: {}, remaining: 0 };
+    // ⚠ EBAY IS THIS DEPLOYMENT'S TO SWITCH ON, never the caller's (2026-11-02d): the keys in Script Properties, whatever the
+    // context says.
+    ctx = Object.assign({}, ctx, { ebay: _avEbayOn() });
 
     var key = _agProp('ANTHROPIC_API_KEY');
     var started = new Date().getTime();
@@ -5992,7 +6219,7 @@ function agentValueLines(data) {
     var onFallback = function (p) {
       p.model = models.fallback;
       p.body = _avBody(p.unit, ctx, noFallbacks, p.model);
-      p.user = p.body.messages[0]; p.turns = []; p.said = []; p.cont = 0;
+      p.user = p.body.messages[0]; p.hist = []; p.said = []; p.cont = 0; p.ebay = null;
       return p;
     };
 
@@ -6003,7 +6230,7 @@ function agentValueLines(data) {
       slice.forEach(function (unit) {
         try {
           var body = _avBody(unit, ctx, noFallbacks, models.first);
-          pending.push({ unit: unit, body: body, user: body.messages[0], turns: [], said: [], model: models.first, cont: 0 });
+          pending.push({ unit: unit, body: body, user: body.messages[0], hist: [], said: [], model: models.first, cont: 0 });
         } catch (imgErr) {
           // A photograph that has not reached Drive yet is ordinary, not fatal (Agent One's rule).
           failUnit(unit, String(imgErr.message || imgErr));
@@ -6030,20 +6257,32 @@ function agentValueLines(data) {
           pending = again;
           continue;
         }
-        var next = [];
+        var next = [], ebayWork = [];
         responses.forEach(function (res, k) {
           var p = pending[k];
           var read = _avReadResult(res);
           if (read.pause) {
-            p.turns = p.turns.concat(read.content);
+            _avPushAssistant(p, read.content);
             p.said.push(read.content);
             if ((p.cont || 0) < AGENT_VALUE_CONTINUES) {
               p.cont = (p.cont || 0) + 1;
-              p.body.messages = [p.user, { role: 'assistant', content: _avEcho(p.turns) }];
+              p.body.messages = _avMessages(p);
               next.push(p);
             } else {
               failUnit(p.unit, 'the research ran long and stopped before it finished');
             }
+            return;
+          }
+          // A turn that stopped to search eBay goes on with the searches' results (_avEbayAnswer, below). One told it may search no
+          // more that searches again has stopped recording: failed, never sent round again.
+          if (read.ebay) {
+            if (p.ebay && p.ebay.rounds > AGENT_VALUE_EBAY_ROUNDS) {
+              failUnit(p.unit, 'the research kept searching eBay and never recorded a value');
+              return;
+            }
+            _avPushAssistant(p, read.content);
+            p.said.push(read.content);
+            ebayWork.push({ p: p, calls: read.ebay });
             return;
           }
           if (!read.ok) {
@@ -6069,6 +6308,8 @@ function agentValueLines(data) {
           if (p.rejected) _agDemote('value', 'the first choice rejected a request the fallback answered');
           p.said.push(read.content);
           var seen = _avSeenUrls(p.said);
+          // What eBay's search showed is what a tool returned too (2026-11-02d): its search pages and its listings.
+          if (p.ebay) Object.keys(p.ebay.seen).forEach(function (u) { seen[u] = 1; });
           var input = read.input || {};
           var byLine = {};
           (input.values || []).forEach(function (v) { if (v && byLine[v.line] == null) byLine[v.line] = { v: v }; });
@@ -6077,7 +6318,8 @@ function agentValueLines(data) {
             var hit = byLine[p.unit.labels[j]];
             if (!hit) { retry[it.stableId] = 'the model did not answer for this line'; return; }
             if (hit.why != null) { failed[it.stableId] = String(hit.why || 'could not be valued').slice(0, 200); return; }
-            var r = _avLineResult(hit.v, p.unit.mode, seen, it.qty, ctx.basis);
+            var r = _avLineResult(hit.v, p.unit.mode, seen, it.qty, ctx.basis, p.ebay);
+            if (!r.error && p.ebay && p.ebay.searches) r.ebaySearches = p.ebay.searches;
             // A grade only off a photograph this request carried, and only one of the grades it was sent (2026-10-26b).
             if (!r.error) r.condition = (p.unit.saw && p.unit.saw[p.unit.labels[j]] && (ctx.conditions || []).indexOf(hit.v.condition) >= 0) ? hit.v.condition : '';
             // A line filed Firearms is never moved out of it (2026-10-26, on review): the category is what switches the firearm
@@ -6087,6 +6329,10 @@ function agentValueLines(data) {
             else { r.model = p.model; results[it.stableId] = r; }
           });
         });
+        if (ebayWork.length) {
+          _avEbayAnswer(ebayWork, started);
+          ebayWork.forEach(function (w) { w.p.body.messages = _avMessages(w.p); next.push(w.p); });
+        }
         pending = next;
       }
       u += slice.length;
@@ -6137,6 +6383,7 @@ function testAgentValue() {
   var secs = Math.round((new Date().getTime() - t0) / 1000);
   if (!out.ok) { Logger.log('FAILED after ' + secs + 's: ' + out.error); return; }
   Logger.log((out.timedOut ? 'PARTLY TIMED OUT' : 'ANSWERED') + ' in ' + secs + 's — first choice ' + out.model);
+  Logger.log('eBay listings: ' + (_avEbayOn() ? 'on (run testEbayListings() to check the keys alone)' : 'off (no EBAY_CLIENT_ID and EBAY_CLIENT_SECRET in Script Properties)'));
   Object.keys(out.results).forEach(function (id) {
     var r = out.results[id];
     Logger.log('  ' + id + ' [' + (r.model || out.model) + ']: $' + r.fmv + ' ($' + r.low + '–$' + r.high + ', ' + r.confidence + ', ' + r.source + ') — ' + r.basis);
@@ -6149,10 +6396,32 @@ function testAgentValue() {
     if (r.dropped) Logger.log('      ' + r.dropped + ' comparable(s) dropped: no tool returned their link');
     if (r.unfit) Logger.log('      ' + r.unfit + ' comparable(s) left out: a search or results page, a page cited twice, or no price of its own');
     if (r.basisRewritten) Logger.log('      basis rewritten: it named more sales than were kept');
+    if (r.ebaySearches) Logger.log('      eBay searches: ' + r.ebaySearches);
     if (r.survey) Logger.log('      listing survey: ' + r.survey.count + ' listed, $' + r.survey.low + '-$' + r.survey.high + ' each, middle $' + r.survey.median + ' · ' + r.survey.url);
     if (r.lookup) Logger.log('      WorthPoint: ' + r.lookup);
   });
   Object.keys(out.failed).forEach(function (id) { Logger.log('  ' + id + ' NOT VALUED: ' + out.failed[id]); });
   Object.keys(out.retry || {}).forEach(function (id) { Logger.log('  ' + id + ' TO ASK AGAIN: ' + out.retry[id]); });
   if (out.remaining) Logger.log('  ' + out.remaining + ' line(s) left for another call (the time budget ran out)');
+}
+
+// ⚠ RUN THIS FROM THE EDITOR ONCE THE EBAY KEYS ARE IN SCRIPT PROPERTIES (2026-11-02d): the sign-in and one search, with no model
+// in the way, so a key, keyset or marketplace problem is never read as a valuing one. Argument-free, for the Run menu. It prints
+// what eBay answered and the low, middle, average and high of what it showed.
+function testEbayListings() {
+  var miss = AGENT_VALUE_EBAY_PROPS.filter(function (k) { return !_agProp(k); });
+  if (miss.length) { Logger.log('MISSING Script Property: ' + miss.join(', ') + ' (the production App ID and Cert ID, Application Keys on developer.ebay.com)'); return; }
+  try { CacheService.getScriptCache().remove(AGENT_VALUE_EBAY_TOKEN_CACHE); } catch (e) { /* a fresh sign-in is the point */ }
+  var t0 = new Date().getTime();
+  var tok = _avEbayToken();
+  if (tok.error) { Logger.log('SIGN-IN FAILED: ' + tok.error + '. Check the keys are the Production keyset, and that the keyset is not disabled on Application Keys (eBay asks for its marketplace-account-deletion notice, or an exemption, first).'); return; }
+  var q = 'Herend Rothschild Bird dinner plate';
+  // fetchAll takes a request object as documented; fetch's params are not meant to carry the url. Belt-and-braces: the tests' fake
+  // takes either form, so undoing this stays green.
+  var res = UrlFetchApp.fetchAll([_avEbayRequest(q, tok.token)])[0];
+  var r = _avEbayRead(res, q);
+  var secs = Math.round((new Date().getTime() - t0) / 1000);
+  if (r.error) { Logger.log('SEARCH FAILED after ' + secs + 's: ' + r.error); return; }
+  Logger.log('ANSWERED in ' + secs + 's');
+  Logger.log(r.text.split('\n').slice(0, 12).join('\n'));
 }

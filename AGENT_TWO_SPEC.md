@@ -82,7 +82,7 @@ A test holds the write path to the fields in §5 and fails on any key above.
 |---|---|---|
 | **Claude web search** (`web_search_20260209`, with `web_fetch_20260209` to read a results page) | Server tool on the Messages API; about $10 per 1,000 searches plus tokens | Every line. The default |
 | **WorthPoint** | Subscription only, no public API found. Browser automation ruled out: no server to run it on (Apps Script cannot drive a browser), the terms very likely forbid bots, and it breaks on every redesign | By hand on `comps` lines: the agent writes the lookup (§4a); a person pastes the best record back |
-| **eBay** | Sold data is closed: Marketplace Insights is not open to new developers, `findCompletedItems` was shut down in February 2025, the Browse API returns active listings only, and the sold search now needs a login | None. An active listing is an asking price; the agent may cite one only as `asking`. Since 2026-10-27 ten or more close listings and no sale are a listing survey (§4b). A developer account was opened that day: the Browse API could hand the survey its count, but eBay's 2025 license restricts sending its data to an outside AI, so nothing is built on it until eBay confirms in writing that it may |
+| **eBay** | Sold data is closed: Marketplace Insights is not open to new developers, `findCompletedItems` was shut down in February 2025, the Browse API returns active listings only, and the sold search now needs a login | None. An active listing is an asking price; the agent may cite one only as `asking`. Since 2026-10-27 ten or more close listings and no sale are a listing survey (§4b). A developer account was opened that day; on 2026-11-02 eBay opened the Browse API's search to it and refused Marketplace Insights, and since Apps Script `2026-11-02d` a research line searches eBay's fixed-price listings through a tool the script runs, counted into the survey (§13). eBay's written consent to send its data to an outside AI was asked for and not given; Anthony chose to go ahead |
 | **LiveAuctioneers, Invaluable** | No public API; third-party scrapers exist | Through web search only, on pages it can reach. Never a scraper: these numbers can end up in a court filing |
 
 ### 4a · The WorthPoint lookup
@@ -110,7 +110,8 @@ else in this design moves.
   highest asking price for one article, and the page counted, which may be a results page). Listings are a ceiling. With
   `AGENT_VALUE_SURVEY_MIN` (10) or more on a page a tool returned, and one article's figure at or under the middle price, the
   line is `medium` at most (never `high`, never lifted from the model's own `low`) and its source *Listing survey*; anything
-  less stays `low` and a *General estimate*. A sale found always decides.
+  less stays `low` and a *General estimate*. A sale found always decides. Since 2026-11-02d the listings can come from eBay's
+  own search (`ebay_listings`, §13): the page counted is then eBay's search page, and the count is no larger than it showed.
 - The point value is the agent's reading of the sold comps adjusted for condition, and `valNote`
   says how in one sentence (*"Median of 4 sold, 2024–2026; chip to rim, low end"*).
 
@@ -639,7 +640,7 @@ and browser step 69.
   drops it (*not stated* until a person names one), where *WorthPoint comps* stayed. **Server:** `AGENT_VALUE_FETCHES` 4 (was 2):
   more chances to open the lot itself from a results page; each research request runs longer, the fallback taking one that
   passes UrlFetchApp's limit. `tests/use-a-sale.test.js`, browser step 124.
-- **The value follows the job's standard, market and date (2026-10-28, Apps Script `2026-11-02d`, carrying `2026-11-02c`; the desk audit's P15:
+- **The value follows the job's standard, market and date (2026-10-28, Apps Script `2026-11-02e`, carrying `2026-11-02d` and `2026-11-02c`; the desk audit's P15:
   ACC-09, VAL-08, ACC-10, VAL-09, ACC-12, VAL-11, VAL-06, AGT-06, VAL-16, VAL-21).** Server: the basis paragraph is
   `_avBasisText(basis)`, one per basis. Fair Market Value carries the regulation's rule by class (the market where such a
   thing is most commonly sold to the public: art, antiques, silver and jewellery at auction at the price the buyer paid,
@@ -649,8 +650,8 @@ and browser step 69.
   The basis sentence names its market. Each comparable carries `premium` (`AGENT_VALUE_PREMIUMS`: `included`, `added`,
   `hammer only`, `none`; required in `record_values`, an answer off the list kept as `''`): a hammer-only result is grossed
   up by the house's stated premium (`added`) or labelled `hammer only`. On Replacement Value a kept asking price is evidence
-  (`_avLineResult(v, mode, seen, qty, basis)`: not a *General estimate* for want of a sale), and the range's words follow
-  the basis (`_avTool(mode, categories, conditions, basis)`). A line the app values as of its own day is told so
+  (`_avLineResult(v, mode, seen, qty, basis, ebay)`: not a *General estimate* for want of a sale), and the range's words follow
+  the basis (`_avTool(mode, categories, conditions, basis, ebay)`). A line the app values as of its own day is told so
   (`valueDate` on the item, `_avLineText`'s *Value as of …, the day it left the estate*). App: `_avWrite` records the basis
   each figure was made at (`valBasis`, on the save list and `AGENT_VALUE_OWN`; a typed figure drops it) and its date per
   line (`_avValDate(job, ref)` → `invLineValueDate`: under §2032 a line sold, distributed or otherwise disposed of inside
@@ -661,10 +662,10 @@ and browser step 69.
   appraisal (`invNeedsAppraisal`) and reaches the guardrail and the worklist marked *advised by Agent Two*; the note, the
   record and the guardrail carry **Add to appraisal list** (**Send to a specialist** on living work,
   `agentValueAdviceVerb`; `agentValueAddToAppraisal` sets `needsAppr` with who and when), until linked or waived. The
-  comparable's premium prints in the record (`AGENT_VALUE_PREMIUM_WORDS`). `BACKEND_MIN_VERSION` `2026-11-02d`.
-  `tests/p15-value-standard.test.js`, browser step 133 (130 until main's P14 took it, 132 until main's approval by where it goes took that). Counsel and an appraiser to confirm the standard by class
+  comparable's premium prints in the record (`AGENT_VALUE_PREMIUM_WORDS`). `BACKEND_MIN_VERSION` `2026-11-02e`.
+  `tests/p15-value-standard.test.js`, browser step 134 (130 until main's P14 took it, 132 until main's approval by where it goes took that, 133 until main's line record took that). Counsel and an appraiser to confirm the standard by class
   (bundle D23).
-- **Its review, the same day (2026-10-28, still `2026-11-02d`).** A figure is recorded at the standard its request asked for:
+- **Its review, the same day (2026-10-28, still `2026-11-02e`).** A figure is recorded at the standard its request asked for:
   `_avSendNext` keeps the basis and each line's date it sent (`asked`) and `_avWrite` writes those, never the job's as the answer
   lands, so a basis changed or the §2032 date elected while a run was out (here, or on another device and merged in) finds the
   figure moved (`invValueStandardMoved`) and listed for Re-value; and neither control changes while the agents are at work on
@@ -681,3 +682,25 @@ and browser step 69.
   times the count), and a recorded $0 is a figure the sale
   is weighed against. On a client's own home **Send to a specialist** records `toSpecialist` (with who and when), not
   `needsAppr`: the advice is decided, the line leaves the guardrail and counts under *To a specialist*.
+- **eBay's listings in the research (2026-11-02, Apps Script `2026-11-02d`):** eBay answered both Application Growth Check
+  requests that day (ticket 261102-000056: the Browse API's search and getItem are not restricted; 261102-000057: Marketplace
+  Insights refused). Anthony: *"Let's just assume we can get the listing prices and we take a low, medium, high and try to find
+  an average and get some signal out of this"*, and on the written consent eBay did not give to send its data to an outside AI:
+  *"if they cut us off, who cares? … We'll just do … what we're doing"*. **Server only; off unless `EBAY_CLIENT_ID` and
+  `EBAY_CLIENT_SECRET` are in Script Properties** (`_avEbayOn`, read by the server whatever the app's context says; no keys, and
+  the request, the prompt and the tools are exactly as before). A research request carries a strict tool, `ebay_listings`
+  (`_avEbayTool`: one `query`), before `record_values`; an ordinary lot does not (it keeps no survey). A turn that stops to call
+  it (`_avReadResult` → `{ebay}`) is answered by the script (`_avEbayAnswer`): one sign-in (client credentials,
+  `https://api.ebay.com/oauth/api_scope`, held in the script cache for the token's life less five minutes, `_avEbayToken`), every
+  search in the slice in one `fetchAll` (`_avEbayRequest`: `item_summary/search`, 50 asked, `buyingOptions:{FIXED_PRICE}`, the US
+  marketplace), each answered as a `tool_result` (`_avEbayRead`: the total found, up to 40 shown in dollars with title, price,
+  condition and a clean `/itm/<legacyItemId>` link, eBay's own Buy It Now search page, and the lowest, middle, average and highest
+  of what it showed, `_avEbayStats`). The conversation is kept as turns (`_avMessages`, `_avPushAssistant`: a paused turn continues
+  the assistant's turn; a search's results start a user turn). Limits: `AGENT_VALUE_EBAY_SEARCHES` (3) a line,
+  `AGENT_VALUE_EBAY_ROUNDS` (2) round trips a request, none past `AGENT_VALUE_TIME_BUDGET`, each refusal a `tool_result` error
+  telling it to record; a model that searches again after being told no is failed (*kept searching eBay*), never sent round for
+  ever; a refused sign-in or a failed search is an error result, never the line's failure. The checks: what eBay showed counts as
+  seen (its search pages and its listings); a listing it showed is always `asking` (`_avLineResult`'s `ebay`); a survey on an
+  eBay search page the script ran may count no more than it showed (`_avSurvey`'s `ebay`). `testEbayListings()` (editor) signs
+  in afresh and runs one search; `testAgentValue()` prints whether eBay is on and each line's searches. No app change: the
+  survey, its page and its source are drawn as before. `tests/ebay-listings.test.js`.

@@ -46,10 +46,10 @@ const GS_VARS = ['AGENT_API', 'AGENT_API_VERSION', 'AGENT_MAX_IMG', 'AGENT_MODEL
   'AGENT_VALUE_MAX_TOKENS', 'AGENT_VALUE_PARALLEL', 'AGENT_VALUE_MAX_LINES', 'AGENT_VALUE_GENERAL_BATCH',
   'AGENT_VALUE_SEARCHES', 'AGENT_VALUE_FETCHES', 'AGENT_VALUE_CONTINUES', 'AGENT_VALUE_MAX_COMPS',
   'AGENT_VALUE_TIME_BUDGET', 'AGENT_VALUE_SOURCES', 'AGENT_VALUE_NOTICE_KINDS', 'AGENT_VALUE_PREMIUMS',
-  'AGENT_VALUE_CONF_DOWN', 'AGENT_VALUE_RESULTS_SEGMENTS', 'AGENT_VALUE_RESULTS_PARAMS', 'AGENT_VALUE_NO_PRICE_RE', 'AGENT_VALUE_TEXT_MAX', 'AGENT_VALUE_ABBREV_RE', 'AGENT_VALUE_SURVEY_MIN', 'AGENT_VALUE_ITEM_PATHS', 'AGENT_VALUE_ASKING_HOSTS', 'AGENT_VALUE_COUNT_WORDS', 'AGENT_VALUE_SALE_WORD_RE', 'AGENT_VALUE_SALE_NEGATION_RE', 'AGENT_VALUE_SALE_NOUN', 'AGENT_VALUE_NUM_WORDS'];
+  'AGENT_VALUE_CONF_DOWN', 'AGENT_VALUE_RESULTS_SEGMENTS', 'AGENT_VALUE_RESULTS_PARAMS', 'AGENT_VALUE_NO_PRICE_RE', 'AGENT_VALUE_TEXT_MAX', 'AGENT_VALUE_ABBREV_RE', 'AGENT_VALUE_SURVEY_MIN', 'AGENT_VALUE_ITEM_PATHS', 'AGENT_VALUE_ASKING_HOSTS', 'AGENT_VALUE_COUNT_WORDS', 'AGENT_VALUE_SALE_WORD_RE', 'AGENT_VALUE_SALE_NEGATION_RE', 'AGENT_VALUE_SALE_NOUN', 'AGENT_VALUE_NUM_WORDS', 'AGENT_VALUE_EBAY_PROPS'];
 const GS_FNS = ['_agProp', '_agMissingProps', '_agImageBlock', '_avCents', '_avTool', '_avTools', '_avSystem', '_avBasisText',
   '_avLineText', '_avUserContent', '_avBody', '_avHttp', '_avEcho', '_avReadResult', '_avSeenUrls', '_avUrlKey', '_avResultsPage', '_avClip',
-  '_avLineResult', 'agentValueLines', '_agModelVersion', '_agVerCmp', '_agNewestOf', '_agCache', '_agModelList', '_agDemoted', '_agDemote', '_agSlow', '_agModels', '_agSendAll', '_agHttpFailure', '_avSurvey', '_avHostOf', '_avListedHost', '_avAskingHost', '_avSalesNamed', '_avKeptBasis', '_avPageKey', '_avClaimsSale'];
+  '_avLineResult', 'agentValueLines', '_agModelVersion', '_agVerCmp', '_agNewestOf', '_agCache', '_agModelList', '_agDemoted', '_agDemote', '_agSlow', '_agModels', '_agSendAll', '_agHttpFailure', '_avSurvey', '_avHostOf', '_avListedHost', '_avAskingHost', '_avSalesNamed', '_avKeptBasis', '_avPageKey', '_avClaimsSale', '_avEbayOn', '_avMessages', '_avPushAssistant'];
 
 // `reply(body, i, call)` answers each request of each fetchAll; `throwOn(call)` makes a fetchAll throw, as
 // UrlFetchApp does when one request outruns its own limit. `tick` is the clock's step per reading.
@@ -863,7 +863,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(panel, 'SOLD', 'the comparables, sold'); has(panel, 'ASKING', 'and asking');
     has(panel, 'WorthPoint search: <code>Herend Rothschild</code>', 'the WorthPoint lookup');
     has(panel, 'Use this sale', 'the paste form');
-    has(panel, 'href="https://drive.google.com', 'or the photograph link when the line carries one');
+    // RESTATED 2026-11-02n (the record's answer first): the comparables and the lookup sit under See the research, and the photograph
+    // link beside the lookup is gone (the photograph at the top of the record opens it in Drive).
+    has(panel, '<details class="av-research"', 'the research is folded under See the research');
+    lacks(panel, '>Photograph</a>', 'and no photograph link beside the lookup');
     const flags = sandbox({ vars: ['INV_WORK_FLAGS', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', '_agDupSetJob', 'INV_HOLD_WORDS', 'INV_OPEN_HOLDS', 'INV_ACCEPT_AMMO_RE'], fns: ['agentValueStale', '_agNameKey', 'invLineReviewed', 'invLineOpen', 'agentValueUnreviewed', '_avHasFigure', '_invHasValue', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invNeedsAppraisal', 'invAppraisalChosen', 'invIsIntrinsic', 'invCatMeta', 'invLineAcceptedOnly', '_invAcceptCtxOf', '_arDupEligible', 'invAcceptCtx', 'agentDuplicateGroups', '_arPair', '_arPairOpen', 'agentDupCleared', '_jobInvRefs', '_agDupEligible', 'agentNamedTwice'] }).INV_WORK_FLAGS;
     eq(flags[1].key, 'unreviewed', 'the Not reviewed chip sits beside Unnamed shots (2026-10-25b: it replaced Unreviewed values)');
     eq(flags[1].test(Object.assign({}, unrev, { reviewed: true })), true, 'and counts a line whose agent figure is not yet looked at, its name ticked or not');
@@ -885,7 +888,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const rowRig = (row, job) => sandbox({
       fns: ['invLineReviewed', 'invLineOpen', '_renderInvRow', 'invLineNothingToList', 'invLineUnread', 'invApprovalPrevWords', 'invApprovalMoved', '_invRowPhotoHtml', '_invRowHasWho', 'invOutForAppraisal', 'invPlanChannel', 'collectionLineUnshot', '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', 'invAppraisalSourceText', 'invAppraisalChosen', 'invLineAppraiser', '_invLinkedAppraiser', 'invAppraised', 'invAppraisalInProgress', '_invHasAppraisal', '_invPhotoOpenHtml', 'agentValueAgain', '_avState',
             '_avHasFigure', '_invHasValue', '_avSummary', 'fmt', 'roundCents', 'agentValueInternal', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep',
-            'invAppraisalThreshold', 'gateDispute', '_gateYes', '_agNameKey', '_invRowDomId', '_invRecipientInput', '_renderInvPanel', '_invPanelGroupHtml', 'invGroupUncounted', '_invPanelColsFor', '_invCloseUpAddHtml', 'invCloseUpRefusal', '_invCloseUpsHtml', '_invCloseUpTileHtml', '_agRecordNoticesHtml', '_avPanelHtml', '_invMoney', '_invDetailRefs', '_invPanelAppraisalHtml',
+            'invAppraisalThreshold', 'gateDispute', '_gateYes', '_agNameKey', '_invRowDomId', '_invRecipientInput', '_renderInvPanel', 'invRecFacts', '_invRecSaysHtml', 'estateValueDate', 'fmtDate2', '_invTrackWords', 'matterDef', 'matterTypeOf', 'jobOnProbateTrack', '_invTrack', '_invTrackDefault', 'maivFilingApplies', '_gate706', '_invPanelGroupHtml', 'invGroupUncounted', '_invPanelColsFor', '_invCloseUpAddHtml', 'invCloseUpRefusal', '_invCloseUpsHtml', '_invCloseUpTileHtml', '_agRecordNoticesHtml', '_avPanelHtml', '_invMoney', '_invDetailRefs', '_invPanelAppraisalHtml',
             '_invPhotoSiblings', '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef', '_invNamed', '_invItemNo',
             'invDealerRouteOffered', 'invDealerRoute', 'invDealerRouteText', '_invFirearmPanelHtml',
             'invBequestFor', 'jobListEntries', 'invApprovalGap', 'invReceiptOwed', '_invBenListAttr',
@@ -893,7 +896,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             // P22 (merged): the row reads a pickup record and a name left on a line moved off To a person.
             'invPickupRecord', 'signedRecordsOf', 'invChannelLeftover', 'invChannelLeftoverText', '_invPanelLeftoverHtml', 'invLineUnsure', '_invEachInput', 'invUnitValue', 'invLineQty', '_invInputStyle', '_invCtrlMinW', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invNeedsAppraisal', 'invIsIntrinsic', 'invCatMeta', 'invLineAcceptedOnly', '_invRevBoxHtml', 'invIsMAIV', 'invMAIVDefaultCat', '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_arPair', '_arPairOpen', 'agentDupCleared', '_jobInvRefs', '_agDupEligible', 'agentNamedTwice', 'agentNoticesOn', '_avSurveyOf', 'invFirearmClientTakes', 'invDealerWhy', 'invTransportDealer', 'invFirearmsDealerFirm', 'invFirearmsDealerFirms', '_vendorNameKey', 'vendorCats', 'invViaDealer', 'invDealerReleased', '_invRecipientListAttr', 'invDealerNamed', 'invDispGoesToDealer', 'invDealerUnchecked', 'invDealerDirState', 'invDealerUncheckedText', '_invDealerDirStaleText', 'agentValueAdvised', 'agentValueAdvice', 'agentValueAdviceVerb', 'invValueStandardMoved', 'invValueStandardWords', 'invLineValueDate', 'estateValueDate', 'estateAvdOn', 'resolveValBasis', 'invApprInProgressBadge'],
       vars: ['INV_PLAN_CHANNEL_KINDS', 'INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick', '_agDupSet', 'DECEDENT_SERVICES', 'INV_RELEASE_CAUTIONS', '_avRun', '_avAfter', '_avForceComps',
-             'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'INV_APPRAISAL_THRESHOLD', 'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', '_agDupSetJob', 'INV_HOLD_WORDS', 'INV_OPEN_HOLDS', 'INV_ACCEPT_AMMO_RE', 'INV_FIREARM_CLIENT_TXT', 'INV_SALE_DISPOSITIONS', 'FIREARMS_DEALER_CATEGORY'],
+             'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'INV_APPRAISAL_THRESHOLD', 'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', '_agDupSetJob', 'INV_HOLD_WORDS', 'INV_OPEN_HOLDS', 'INV_ACCEPT_AMMO_RE', 'INV_FIREARM_CLIENT_TXT', 'INV_SALE_DISPOSITIONS', 'FIREARMS_DEALER_CATEGORY'],
       stubs: {
         jobs: [job], _invInput: () => '<input>', _invThumbHTML: () => '<div></div>', _invRoomName: () => 'Dining Room',
         invIsFirearm: () => false, invReleaseBlocked: () => false, invAwaitingAppraisal: () => false,
@@ -911,7 +914,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(html, 'Agent Two</div>', 'a closed row draws no record');
     R._invOpen.s1 = 1;
     html = R._renderInvRow(ESTATE(), R._photoRefs[7][0]);
-    has(html, '>Agent Two</div>', 'the open record carries Agent Two\'s section');
+    has(html, 'Agent Two</div>', 'the open record carries Agent Two\'s section');
     has(html, 'Use this sale', 'with the WorthPoint paste');
     R = rowRig(ROW({ stableId: 's1', fmv: 900, valuedBy: 'desk' }), ESTATE());
     html = R._renderInvRow(ESTATE(), R._photoRefs[7][0]);

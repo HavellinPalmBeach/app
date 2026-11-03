@@ -1490,7 +1490,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.11.02 · 7:55pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.11.03 · 7:02am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6522,13 +6522,14 @@ var BACKEND_NEEDS_TYPES = ['saveMedia', 'saveInventory', 'job', 'saveAllJobs', '
 // out a second envelope while one is out. And (P13 of the desk audit) Agent One says whether a line holds more than one article
 // (`group`, kept as `agentGroup`), so a mixed group named at a count of one is tested against §20.2031-6(a) (invLotSplitState
 // 'nocount'). An older deployment sends no mark, so such a line reads as one article and the worklist's lot block passes over it untested.
-// 2026-11-02d (P15 of the desk audit), carrying 2026-11-02c: Agent Two values by the market each class sells in (auction with the buyer's
+// 2026-11-02e (P15 of the desk audit, built as 2026-10-28b and named 2026-11-02d until main's eBay listings took that version),
+// carrying 2026-11-02d (Agent Two's eBay listing tool, off without its keys; this build relies on nothing it does) and 2026-11-02c: Agent Two values by the market each class sells in (auction with the buyer's
 // premium for art, antiques, silver and jewelry; the resale market for branded furniture, decor and electronics), names the market
 // in its basis sentence, says whether a comparable's price includes the buyer's premium, values each basis on its own terms, and
 // values a line that left inside the §2032 six months as of the day it left. An older deployment values every basis as Fair Market
 // Value at second-hand prices, says "not retail" of branded furniture, mixes hammer and all-in auction prices with no word, and ends a
 // Replacement Value line resting on asking prices as a general estimate (P15's review: every Replacement Value sentence of the prompt).
-var BACKEND_MIN_VERSION = '2026-11-02d';
+var BACKEND_MIN_VERSION = '2026-11-02e';
 var _backendVersion = null;
 // The actions the deployment says it has (2026-10-26c), once the version probe answers; null until then. A route the app
 // offers only on a deployment that has it reads this (backendHas): the release request's DocuSign send.
@@ -6602,7 +6603,7 @@ var BACKEND_FEATURE_COST = {
   saveSnapshot:  'no inventory Snapshot can be taken (the deployment has nowhere to keep its lines)',
   // One line for any deployment older than BACKEND_MIN_VERSION, so it names the newest gap first and says
   // which vintage the older one belongs to (the banner's title prints the version that answered).
-  version:       'on a deployment older than 2026-11-02d, Agent Two values every basis as fair market value at second-hand prices, says \u201cnot retail\u201d of branded furniture, mixes hammer and all-in auction prices with no word, ends a Replacement Value line resting on asking prices as a general estimate, and values an item sold inside the \u00a72032 six months as of the alternate date; on a deployment older than 2026-11-02c, a copy of the app that has not been reloaded can send an estate\u2019s release request through DocuSign that this build never checks, records on the lines or files, and two devices pressing at once can put out a second envelope while one is out, and a drawer, box or shelf of things Agent One names as one line on a Form 706 estate is not marked as a group, so its line reads as one article and the $100-an-article lot test passes over it untested; on a deployment older than 2026-10-28, two devices saving at the same moment can lose one device\u2019s change on the sheet though both were told it saved, and an inventory or estimate store can become unreadable, refusing every save until it is restored from version history; on a deployment older than 2026-10-27e, a figure Agent Two researched can carry a basis sentence citing sales nobody could find (\u201cFour sold comparables at Christie\u2019s and Kodner\u201d under a general estimate) on the Estate Inventory Report, and an Etsy, 1stDibs, Chairish, Ruby Lane or Replacements asking price can stand as a sale behind \u201conline comps\u201d; on a deployment older than 2026-10-27d, a release approval recorded on one device can lose, on the sheet, the record of where the item was going, who was taking it and its value when it was signed, so another device reads the approval as covering the item wherever it goes now, and two devices\u2019 signatures given for different destinations can be counted as one approval; on a deployment older than 2026-10-27c, anyone who holds the Apps Script URL can read every client and inventory, share a client\u2019s folders with any address, trash any file and send a release request through DocuSign to anybody, with no device key asked for; on a deployment older than 2026-10-27b, a client too large for a sheet cell cuts the Jobs tab off at that client, possibly with no error shown, every client below it then reads as deleted (this device keeps its copy of them), and the next estimate, plan, hours or inventory save sweeps their records off the sheet; on a deployment older than 2026-10-27, an item Agent Two researched and found no sale for stays marked unsure, and its paper reads general estimate, however many close listings it counted; on a deployment older than 2026-10-26b, a search page, or a sale whose price was not shown, can stand as a sold comparable, so a researched figure resting on one prints \u201cauction comps\u201d; a long note from Agent Two stops mid-sentence; and neither agent grades an item\u2019s condition; on a deployment older than 2026-10-26, the agents never move to a newer model by themselves (Agent One still runs on the older Opus 5), Agent Two never looks at the photograph of an item whose name is a guess or fixes a wrong category, a figure with no sale behind it prints as \u201cauction comps\u201d, and one slow request can mark a whole batch \u201cnot valued\u201d or lose a batch of names; on a deployment older than 2026-10-25b, a name you type or review on the desk (a wooden mirror retyped as Restoration Hardware) can come back from Agent Two as the generic thing and be valued as that, and a brand the crew says at the camera is not put into the name; on a deployment older than 2026-10-25, Agent Two flags a name it disagrees with (\u201cName may be wrong\u201d) instead of correcting it, puts a note on nearly every item it values (no condition recorded, a rough count, a search that ran short), and Agent One files everyday dishes as collectibles; on a deployment older than 2026-10-24, a blank line added to a photograph already named (Another item in this photo) makes Agent One read the whole photograph again, so every object in it goes on the list a second time, and its names carry a count (\u201capprox. 7 in stack\u201d) that the Qty box contradicts once corrected; on a deployment older than 2026-10-19b, a client\u2019s inventory reset in the Apps Script editor (resetInventoryConfirm) is undone by the first device that saves a line from before it, unless every device reloads first; on a deployment older than 2026-10-16, an incident reported on one device, or a key or fob received there while another device records a handoff, can be dropped when the sheet merges the job (the Incidents and Keys & access cards\u2019 lists are not yet merged entry by entry); on a deployment older than 2026-10-06, two devices\u2019 release signers are not merged and the client\u2019s workbook rounds its money; on a deployment older than 2026-10-05, a co-executor or co-trustee is not put on the DocuSign envelope beside the client, so they sign a printed copy of the agreement and the page they signed has to be filed from the timeline; on a deployment older than 2026-10-03, a co-trustee, a beneficiary, a signed copy filed to Drive, a find on site or a proceeds statement added on one device can be dropped by another device saving an older copy of the job, and the client\u2019s inventory workbook heads a trust\u2019s net proceeds \u201cNet to Estate\u201d; on a deployment older than 2026-10-01, File signed copy adds a second copy of the signed agreement to the client\u2019s Agreement folder instead of replacing the one there; on a deployment older than 2026-09-30b, a payment voided or marked cleared on one device can come back as it was from another device that changed the same payment before reloading, and count again; a firearm\u2019s serial, recipient or dealer route, recorded on one device, can be dropped from the sheet by another device\u2019s older copy of the item, until the first device next saves the inventory; and on a deployment older than 2026-09-30, two people editing different parts of one job (a vendor quote here, the team there) can also undo each other\u2019s work, a damaged store tab is emptied by the next save instead of refused, and Agent One can stop mid-answer on a busy photograph',
+  version:       'on a deployment older than 2026-11-02e, Agent Two values every basis as fair market value at second-hand prices, says \u201cnot retail\u201d of branded furniture, mixes hammer and all-in auction prices with no word, ends a Replacement Value line resting on asking prices as a general estimate, and values an item sold inside the \u00a72032 six months as of the alternate date; on a deployment older than 2026-11-02c, a copy of the app that has not been reloaded can send an estate\u2019s release request through DocuSign that this build never checks, records on the lines or files, and two devices pressing at once can put out a second envelope while one is out, and a drawer, box or shelf of things Agent One names as one line on a Form 706 estate is not marked as a group, so its line reads as one article and the $100-an-article lot test passes over it untested; on a deployment older than 2026-10-28, two devices saving at the same moment can lose one device\u2019s change on the sheet though both were told it saved, and an inventory or estimate store can become unreadable, refusing every save until it is restored from version history; on a deployment older than 2026-10-27e, a figure Agent Two researched can carry a basis sentence citing sales nobody could find (\u201cFour sold comparables at Christie\u2019s and Kodner\u201d under a general estimate) on the Estate Inventory Report, and an Etsy, 1stDibs, Chairish, Ruby Lane or Replacements asking price can stand as a sale behind \u201conline comps\u201d; on a deployment older than 2026-10-27d, a release approval recorded on one device can lose, on the sheet, the record of where the item was going, who was taking it and its value when it was signed, so another device reads the approval as covering the item wherever it goes now, and two devices\u2019 signatures given for different destinations can be counted as one approval; on a deployment older than 2026-10-27c, anyone who holds the Apps Script URL can read every client and inventory, share a client\u2019s folders with any address, trash any file and send a release request through DocuSign to anybody, with no device key asked for; on a deployment older than 2026-10-27b, a client too large for a sheet cell cuts the Jobs tab off at that client, possibly with no error shown, every client below it then reads as deleted (this device keeps its copy of them), and the next estimate, plan, hours or inventory save sweeps their records off the sheet; on a deployment older than 2026-10-27, an item Agent Two researched and found no sale for stays marked unsure, and its paper reads general estimate, however many close listings it counted; on a deployment older than 2026-10-26b, a search page, or a sale whose price was not shown, can stand as a sold comparable, so a researched figure resting on one prints \u201cauction comps\u201d; a long note from Agent Two stops mid-sentence; and neither agent grades an item\u2019s condition; on a deployment older than 2026-10-26, the agents never move to a newer model by themselves (Agent One still runs on the older Opus 5), Agent Two never looks at the photograph of an item whose name is a guess or fixes a wrong category, a figure with no sale behind it prints as \u201cauction comps\u201d, and one slow request can mark a whole batch \u201cnot valued\u201d or lose a batch of names; on a deployment older than 2026-10-25b, a name you type or review on the desk (a wooden mirror retyped as Restoration Hardware) can come back from Agent Two as the generic thing and be valued as that, and a brand the crew says at the camera is not put into the name; on a deployment older than 2026-10-25, Agent Two flags a name it disagrees with (\u201cName may be wrong\u201d) instead of correcting it, puts a note on nearly every item it values (no condition recorded, a rough count, a search that ran short), and Agent One files everyday dishes as collectibles; on a deployment older than 2026-10-24, a blank line added to a photograph already named (Another item in this photo) makes Agent One read the whole photograph again, so every object in it goes on the list a second time, and its names carry a count (\u201capprox. 7 in stack\u201d) that the Qty box contradicts once corrected; on a deployment older than 2026-10-19b, a client\u2019s inventory reset in the Apps Script editor (resetInventoryConfirm) is undone by the first device that saves a line from before it, unless every device reloads first; on a deployment older than 2026-10-16, an incident reported on one device, or a key or fob received there while another device records a handoff, can be dropped when the sheet merges the job (the Incidents and Keys & access cards\u2019 lists are not yet merged entry by entry); on a deployment older than 2026-10-06, two devices\u2019 release signers are not merged and the client\u2019s workbook rounds its money; on a deployment older than 2026-10-05, a co-executor or co-trustee is not put on the DocuSign envelope beside the client, so they sign a printed copy of the agreement and the page they signed has to be filed from the timeline; on a deployment older than 2026-10-03, a co-trustee, a beneficiary, a signed copy filed to Drive, a find on site or a proceeds statement added on one device can be dropped by another device saving an older copy of the job, and the client\u2019s inventory workbook heads a trust\u2019s net proceeds \u201cNet to Estate\u201d; on a deployment older than 2026-10-01, File signed copy adds a second copy of the signed agreement to the client\u2019s Agreement folder instead of replacing the one there; on a deployment older than 2026-09-30b, a payment voided or marked cleared on one device can come back as it was from another device that changed the same payment before reloading, and count again; a firearm\u2019s serial, recipient or dealer route, recorded on one device, can be dropped from the sheet by another device\u2019s older copy of the item, until the first device next saves the inventory; and on a deployment older than 2026-09-30, two people editing different parts of one job (a vendor quote here, the team there) can also undo each other\u2019s work, a damaged store tab is emptied by the next save instead of refused, and Agent One can stop mid-answer on a busy photograph',
   preVersion:    'it predates the version check itself (2026-09-09), so client PDFs, photographs, DocuSign, Stripe and Agent One may all be missing as well'
 };
 
@@ -29764,7 +29765,7 @@ var INVENTORY_COLUMNS = [
 // The `group` metadata OUTLIVES the table it was written for. It used to drive a row of
 // buttons that swapped which slice of a 29-column spreadsheet was on screen — a control
 // that existed only to work around the width of the thing below it. The table is gone;
-// the groups are now the item panel's sections (see _invPanelSection).
+// the groups once were the item panel's sections; since 2026-11-02n each field's place in the record is _invRecPlace.
 // ⚠⚠ `fid` COLUMNS ARE AXIS 2 AND COME OFF A LIVING JOB ENTIRELY (2026-09-21). Every one of
 // them is court-and-fiduciary apparatus describing an estate that does not exist: the asset
 // track defaults to 'Probate' on a living owner's sofa, §732.402 is the surviving family's
@@ -29785,23 +29786,22 @@ function _invKeyOnJob(job, key) {
 }
 // ⚠ A COLUMN'S NAME FOLLOWS THE JOB (P14 of the desk audit, 2026-10-28; LIV-16): on living work a *Specific Bequest* is a
 // promise to someone (the desk's Summary and the client's workbook already say *Promised to someone*); everything else keeps its
-// catalogue header. Read by the line's record and the CSV's header row.
+// catalogue header. Read by the CSV's header row, and by the line's record through _invPanelLabel.
 function _invColHeader(job, col) {
   if (!col) return '';
   return (col.key === 'flagBequest' && !invFiduciaryMode(job)) ? 'Promised to someone' : col.header;
 }
-// A record's section label by the job: *Flags* on living work, which has no asset track (an estate's own column, `fid`).
-function _invPanelSectionLabel(job, sec) {
-  return (sec && sec.key === 'flags' && !invFiduciaryMode(job)) ? 'Flags' : (sec ? sec.label : '');
-}
-// ⚠ WHO APPROVED IT, ONLY WHERE A LIVING LINE HAS SOMETHING TO SAY (P14, LIV-16): on a client's own home their word approves an
-// everyday line (2026-10-26), so *Authorized By* and *Approval Date* sat empty on every line. They show where the line needs the
-// client's written approval (invWrittenReleaseNeeded: a firearm, or someone who works with Havellin) or carries one already
-// (a recorded approval is never hidden); on an estate always.
+// ⚠ WHO APPROVED IT, ONLY WHERE THE LINE HAS SOMETHING TO SAY (P14, LIV-16; on every job since 2026-11-02n): *Approved by* is drawn
+// where the line needs written approval (invWrittenReleaseNeeded: on an estate every line leaving the property; on a client's own
+// home a firearm, or someone who works with Havellin) or carries one already, a recorded approval, or one set aside, never hidden.
+// An estate's Undecided, Keep or Hold line read *No written approval recorded* under every line, about nothing. The approval's own
+// line names each signer with their day (invApprovalSignedText), so the date is never a field of its own in the record.
 function _invPanelColShown(job, ref, col) {
-  if (!col || (col.key !== 'authBy' && col.key !== 'approvalDate') || invFiduciaryMode(job)) return true;
-  return !!(String((ref && ref.authBy) || '').trim() || String((ref && ref.approvalDate) || '').trim()
-    || (typeof invWrittenReleaseNeeded === 'function' && invWrittenReleaseNeeded(ref, job)));
+  if (!col || (col.key !== 'authBy' && col.key !== 'approvalDate')) return true;
+  if (col.key === 'approvalDate') return false;
+  var r = ref || {};
+  if (String(r.authBy || '').trim() || String(r.approvalDate || '').trim() || (Array.isArray(r.authWas) && r.authWas.length)) return true;
+  return typeof invWrittenReleaseNeeded === 'function' && invWrittenReleaseNeeded(ref, job);
 }
 function _invPanelCols(job) {
   return INVENTORY_COLUMNS.filter(function(c) {
@@ -29823,16 +29823,121 @@ function _invPanelColsFor(job, ref) {
   var rowWho = !!ref && _invRowHasWho(ref.disposition);
   return _invPanelCols(job).filter(function(c) { return !(rowWho && c.key === 'channel'); });
 }
-function _invPanelSection(col) {
-  if (['objectName','category','room','qty','condition'].indexOf(col.key) >= 0) return 'item';
-  return col.group || 'val';
-}
+// ⚠⚠ THE LINE'S RECORD SAYS WHAT THE APP WORKED OUT AND ASKS ONLY WHAT IT CANNOT (2026-11-02n; Anthony, off the record of seven
+// cabbage-ware plates on a trust: *"This whole thing is overwhelming … I open it up and I don't even know what to do with it … MAIV
+// asset track trust exempt 732-402, all this stuff. I honestly have no idea"*, then *"should things like condition just default? some
+// of these decisions are not decisions at all"*; he took *Answer first* and the rule). Every field has one place, by the line and the
+// job, and the place says whether it is drawn at all:
+//   'fix'  filled in by the app, the camera or the agents (the room, the category, the condition, the value's date, source and
+//          basis, the Form 706 art mark): said in a sentence, each box under ✎ Correct what was filled in, closed;
+//   'go'   where it goes, only where it applies: the approval (_invPanelColShown), the sale's figures on a selling line, the day it
+//          left and its receipt on a line leaving the property, a name left in Who takes it on a line whose row has no box for it;
+//   'odd'  an exception a person flags (a bequest, a dispute, an appraiser, a serial number, the family's exempt property on the
+//          probate track, a line outside the estate or trust): under Something unusual about this item?, open where any is set;
+//   'main' a firearm's (or a vehicle's) serial and a firearm's NFA mark, as boxes in view;
+//   ''     not on this line: the photo link (the photograph above is the link), NFA off a firearm, the Form 706 marks where no
+//          return is filed, the exempt allowance off the probate track; each drawn wherever it holds a value.
+// Nothing is deleted and no paper changes: the papers, the CSV and the workbook read the catalogue, never this.
 var INV_PANEL_SECTIONS = [
-  {key:'item',  label:'Item'},
-  {key:'val',   label:'Valuation'},
-  {key:'disp',  label:'Disposition'},
-  {key:'flags', label:'Flags &amp; Track'}
+  {key:'main', label:''},
+  {key:'fix',  label:'&#9998; Correct what was filled in'},
+  {key:'go',   label:'Leaving the property'},
+  {key:'odd',  label:'Something unusual about this item?'}
 ];
+// A field holds something a person (or the app) recorded: a tick, or text that is not blank.
+function _invRecFilled(ref, key) {
+  var v = ref ? ref[key] : null;
+  return v === true || (v != null && v !== false && String(v).trim() !== '');
+}
+function _invRecPlace(job, ref, col) {
+  var k = col && col.key, r = ref || {};
+  var fire = invIsFirearm(r);
+  switch (k) {
+    case 'driveFileUrl': return '';
+    case 'category': case 'room': case 'condition': case 'valDate': case 'valSource': case 'valNote': return 'fix';
+    case 'flagMAIV': return (maivFilingApplies(job) || _invRecFilled(r, 'flagMAIV')) ? 'fix' : '';
+    case 'maivCat': return ((maivFilingApplies(job) && invIsMAIV(r)) || _invRecFilled(r, 'maivCat')) ? 'fix' : '';
+    case 'serial': return (fire || r.category === 'Vehicles & Watercraft') ? 'main' : 'odd';
+    case 'flagNFA': return fire ? 'main' : (_invRecFilled(r, 'flagNFA') ? 'odd' : '');
+    case 'flagExempt': return (jobOnProbateTrack(job) || _invRecFilled(r, 'flagExempt')) ? 'odd' : '';
+    case 'needsAppr': case 'apprDoc': case 'flagBequest': case 'flagDisputed': case 'assetTrack': return 'odd';
+    case 'channel': return _invRecFilled(r, 'channel') ? 'go' : '';
+    case 'authBy': case 'approvalDate': return 'go';
+    case 'gross': case 'fees': case 'net':
+      return (INV_SALE_DISPOSITIONS.indexOf(r.disposition) >= 0 || _invRecFilled(r, 'gross') || _invRecFilled(r, 'fees')) ? 'go' : '';
+    case 'dispDate': case 'receiptDoc':
+      return (INV_RELEASE_DISPOSITIONS.indexOf(r.disposition) >= 0 || r.disposition === 'Move' || _invRecFilled(r, k)) ? 'go' : '';
+  }
+  return 'fix';
+}
+// Whether Something unusual about this item? opens by itself: any of its fields holds something, so a flag that is set is never
+// folded away. A track equal to the matter's default is not an exception.
+function _invRecOddOpen(job, ref, cols) {
+  return (cols || []).some(function(c) {
+    if (c.key === 'assetTrack') return !!(ref && ref.assetTrack) && ref.assetTrack !== _invTrackDefault(job);
+    return _invRecFilled(ref, c.key);
+  });
+}
+// The record's words for a field, plain (the papers, the CSV and the workbook keep the catalogue's `header`).
+var INV_PANEL_LABELS = { category: 'Category', room: 'Room', condition: 'Condition', serial: 'Serial number',
+  valDate: 'Valued as of', valSource: 'Where the value came from', valNote: 'What the value rests on',
+  needsAppr: 'Send to an appraiser', apprDoc: 'Appraiser or report', flagMAIV: 'Art on the estate tax return (Form 706)',
+  maivCat: 'Kind of art (Form 706)', flagExempt: 'Kept by the family as exempt property (§732.402)',
+  flagDisputed: 'The family disagrees about it', flagNFA: 'NFA item (federally registered)', assetTrack: 'Belongs to',
+  channel: 'Who takes it', authBy: 'Approved by', approvalDate: 'Approved on', gross: 'Sold for', fees: 'Fees', net: 'Net',
+  dispDate: 'Date it left', receiptDoc: 'Receipt' };
+function _invPanelLabel(job, col) {
+  if (!col) return '';
+  if (col.key === 'flagBequest') {
+    if (!invFiduciaryMode(job)) return _invColHeader(job, col);   // Promised to someone (P14)
+    var d = matterDef(job);   // asked of the catalogue's flags, never a matter's name (matter-type.test.js)
+    if (d && d.trust && !d.onProbate) return 'Left to someone by name in the trust';
+    if (d && d.onProbate && !d.trust) return 'Left to someone by name in the will';
+    return 'Left to someone by name in the will or trust';
+  }
+  return INV_PANEL_LABELS[col.key] || _invColHeader(job, col);
+}
+// What the asset track says, in words; '' where the matter has neither a court nor a trust and nobody set one (the catalogue's
+// default there is Probate, which would read as a false statement).
+function _invTrackWords(job, ref) {
+  var d = matterDef(job);
+  if (!(ref && ref.assetTrack) && !jobOnProbateTrack(job) && !(d && d.trust)) return '';
+  return { 'Probate': 'in the probate estate', 'Trust': 'trust property', 'Non-probate': 'outside the estate (non-probate)',
+           'Homestead': 'homestead', 'Exempt': 'exempt property' }[_invTrack(ref, job)] || String(_invTrack(ref, job));
+}
+// Which of a record's folds a person opened or shut (`stableId + ':' + fold`: fix, research, odd), so a redraw (a category chosen
+// under ✎ Correct patches the row and its record) never shuts a fold under the person using it. Session only, never saved.
+var _invRecFold = {};
+function _invRecFoldSet(stableId, k, open) { _invRecFold[stableId + ':' + k] = !!open; }
+// The fold's state as drawn: the person's choice where there is one, else the default.
+function _invRecFoldIs(stableId, k, dflt) {
+  var st = (typeof _invRecFold === 'object' && _invRecFold) ? _invRecFold[stableId + ':' + k] : undefined;
+  return st === undefined ? !!dflt : st;
+}
+// The sentence's own host, repainted by id by _invEdit whatever the field (a condition corrected, a figure typed on the row).
+function _invRecSaysHtml(job, ref) {
+  var f = invRecFacts(job, ref);
+  return '<div>' + esc(f.first) + '</div>' + (f.second ? '<div style="color:var(--gray-dk);">' + esc(f.second) + '</div>' : '');
+}
+// The two sentences that say what the app filled in (DOM-free): the room, the category and the condition; on an estate, the
+// value's date and source, whose property it is and, where a Form 706 is filed, whether it counts toward the art total.
+function invRecFacts(job, ref) {
+  var r = ref || {};
+  var c = String(r.condition || '').trim();
+  var first = [_invRoomName(job.id, r.roomIdx) || r.room || 'No room', r.category || 'No category',
+    c ? c + ' condition' + (r.condBy === 'agent' ? ', graded from the photo' : '') : 'condition as photographed'];
+  var second = [];
+  if (invFiduciaryMode(job)) {
+    if (_invHasValue(r)) {
+      var vd = r.valDate || estateValueDate(job);
+      second.push((vd ? 'Valued as of ' + fmtDate2(vd) : 'Valued') + (String(r.valSource || '').trim() ? ' · ' + String(r.valSource).trim() : ''));
+    } else second.push('Not valued yet');
+    var tw = _invTrackWords(job, r);
+    if (tw) second.push(tw);
+    if (maivFilingApplies(job) && invIsMAIV(r)) second.push('counts toward the Form 706 art total');
+  }
+  return { first: first.join(' · '), second: second.join(' · ') };
+}
 
 function _invJob(jobId) { return jobs.find(function(j){ return j.id === jobId; }) || null; }
 
@@ -31367,6 +31472,9 @@ function _invEdit(jobId, stableId, key, el) {
   // ⚠ A NAME CHANGED IS VALUED AGAIN, BY ITSELF (2026-10-25b): the wooden mirror that is Restoration Hardware. Sent before the
   // notices repaint (2026-10-26), so the note reads "Agent Two is valuing it again", never "open the line and Re-value it".
   if (key === 'objectName') agentValueAfterRename(jobId, stableId);
+  // The open record's sentence of what the app filled in follows the field just corrected (2026-11-02n): plain text, no control in it.
+  var _saysEl = document.getElementById('inv-rec-says-' + stableId);
+  if (_saysEl && typeof _invRecSaysHtml === 'function' && _invJob(jobId)) _saysEl.innerHTML = _invRecSaysHtml(_invJob(jobId), ref);
   if (key === 'objectName' && ref.valuedBy === 'agent') {
     var _noteEl = document.getElementById('inv-value-notices'), _noteJob = _invJob(jobId);
     if (_noteEl && _noteJob) _invPatch(_noteEl, _avNoticesHtml(_noteJob, _jobInvRefs(jobId)), true);   // in place (P9, SYN-12)
@@ -45016,7 +45124,10 @@ function _avPanelHtml(job, ref) {
   var _again = agentValueAgain(job, ref);
   var canAsk = !_again && !!String(ref.objectName || '').trim() && (!_avHasFigure(ref) || ref.valuedBy === 'agent');
   var internal = agentValueInternal(job);
-  var head = '<div style="font-size:10px;font-weight:700;color:var(--bronze);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;">Agent Two</div>';
+  // ⚠ THE FIGURE AND WHAT TO DO FIRST, THE RESEARCH FOLDED (2026-11-02n, the record's answer first; _invRecPlace): the comparables,
+  // the listings counted and the WorthPoint search sit under See the research, closed; the photograph link beside the search is gone
+  // (the photograph at the top of the record opens it in Drive).
+  var head = '<div style="font-size:10px;font-weight:700;color:var(--bronze);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;">What it\u2019s worth &middot; Agent Two</div>';
   var acts = '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">'
     + (canAsk ? '<button class="btn-s" onclick="agentRevalue(' + jid + ',\'' + sid + '\')" title="Research this line again against sold comparables">Re-value</button>' : '')
     + '</div>';
@@ -45042,7 +45153,8 @@ function _avPanelHtml(job, ref) {
   // the rest here, and until this the notes were drawn nowhere else, so that sentence pointed at nothing.
   var notes = (ref.valNotices || []).filter(function(n) { return n && String(n.text || '').trim(); });
   if (notes.length) {
-    body += '<div class="av-notes" style="margin-top:4px;font-size:10.5px;">' + notes.map(function(n) {
+    body += '<div class="av-notes" style="margin-top:6px;font-size:10.5px;">'
+      + '<div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;">To do</div>' + notes.map(function(n) {
       return '<div style="color:var(--bronze);"><strong>' + esc(_avNoticeLabel(n.kind)) + '</strong> &middot; ' + esc(n.text) + '</div>';
     }).join('') + '</div>';
   }
@@ -45057,16 +45169,17 @@ function _avPanelHtml(job, ref) {
       + esc(invValueStandardWords(ref, job)) + '. ' + (_again ? 'Being valued again.' : 'Re-value it.') + '</div>';
   }
   // The listings it counted where no sale was found (2026-10-27): a ceiling, with the page to open.
+  var research = '';
   var sv = _avSurveyOf(ref.valSurvey);
   if (sv) {
-    body += '<div class="av-survey" style="margin-top:6px;font-size:10.5px;">'
+    research += '<div class="av-survey" style="margin-top:6px;font-size:10.5px;">'
       + '<span style="color:var(--gray);font-weight:700;">LISTED</span> '
       + esc(sv.count + ' close listing' + (sv.count === 1 ? '' : 's') + ' for sale, ' + fmt(sv.low) + ' to ' + fmt(sv.high) + ' each, middle ' + fmt(sv.median))
       + ' &middot; <a href="' + esc(sv.url) + '" target="_blank" rel="noopener">the page counted</a></div>';
   }
   var comps = ref.valComps || [];
   if (comps.length) {
-    body += '<div style="margin-top:6px;font-size:10.5px;">' + comps.map(function(c) {
+    research += '<div style="margin-top:6px;font-size:10.5px;">' + comps.map(function(c) {
       return '<div style="padding:2px 0;border-top:0.5px solid var(--border);">'
         + '<span style="color:' + (c.kind === 'sold' ? 'var(--ok-tx)' : 'var(--gray)') + ';font-weight:700;">' + (c.kind === 'sold' ? 'SOLD' : 'ASKING') + '</span> '
         + (c.price !== '' ? esc(fmt(c.price)) + (c.each ? ' each' : '') + ' &middot; ' : '')
@@ -45077,13 +45190,19 @@ function _avPanelHtml(job, ref) {
         + '</div>';
     }).join('') + '</div>';
   }
-  var photo = String(ref.driveFileUrl || '');
+  if (ref.valLookup) {
+    research += '<div style="margin-top:7px;font-size:10.5px;">WorthPoint search: <code>' + esc(ref.valLookup) + '</code> <button class="btn-s" style="font-size:9.5px;padding:1px 6px;" onclick="agentValueCopyLookup(' + jid + ',\'' + sid + '\')">Copy</button></div>';
+  }
+  if (research) {
+    var _rb = [];
+    if (comps.length) _rb.push(comps.length + ' price' + (comps.length === 1 ? '' : 's'));
+    if (sv) _rb.push('a count of listings');
+    var _ro = (typeof _invRecFoldIs === 'function') && _invRecFoldIs(sid, 'research', false);
+    body += '<details class="av-research"' + (_ro ? ' open' : '') + ' ontoggle="_invRecFoldSet(\'' + esc(sid) + '\',\'research\',this.open)" style="margin-top:6px;"><summary style="font-size:10.5px;cursor:pointer;color:var(--gray-dk);">See the research'
+      + (_rb.length ? ' (' + _rb.join(', ') + ')' : '') + '</summary>' + research + '</details>';
+  }
   if (ref.valLookup || comps.length || _avHasFigure(ref)) {
-    body += '<div style="margin-top:7px;font-size:10.5px;">'
-      + (ref.valLookup ? 'WorthPoint search: <code>' + esc(ref.valLookup) + '</code> <button class="btn-s" style="font-size:9.5px;padding:1px 6px;" onclick="agentValueCopyLookup(' + jid + ',\'' + sid + '\')">Copy</button>' : '')
-      + (/^https?:\/\//i.test(photo) ? ' <a href="' + esc(photo) + '" target="_blank" rel="noopener">Photograph</a>' : '')
-      + '</div>'
-      + '<details style="margin-top:5px;"><summary style="font-size:10.5px;cursor:pointer;color:var(--gray-dk);">Use a sale</summary>'
+    body += '<details style="margin-top:5px;"><summary style="font-size:10.5px;cursor:pointer;color:var(--gray-dk);">Use a sale</summary>'
       + '<div class="av-sale-hint" style="font-size:10px;color:var(--gray);margin-top:3px;">A sold price you found: eBay\u2019s Product Research (in Seller Hub), WorthPoint or an auction house\u2019s results. Its link says where it came from.</div>'
       + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:5px;margin-top:5px;">'
       + ['title:Title', 'price:Price', 'date:Sale date', 'venue:Venue', 'url:Link'].map(function(p) {
@@ -45882,22 +46001,38 @@ function _renderInvColHead(job, g) {
 // column switcher. One definition of a column, two surfaces.
 function _renderInvPanel(job, ref) {
   var jid = job.id;
-  var cols = _invPanelColsFor(job, ref);   // one box per value (P9, ROW-05)
-  var secs = INV_PANEL_SECTIONS.map(function(sec){
-    var mine = cols.filter(function(c){ return _invPanelSection(c) === sec.key && _invPanelColShown(job, ref, c); });
-    if (!mine.length) return '';
-    var fields = mine.map(function(c){
-      // A column that is not editable on this row (NFA on a sofa, MAIV class on a
-      // non-MAIV article) renders as a read-only value rather than vanishing — absent is
-      // indistinguishable from empty, and these carry legal meaning.
-      return '<div style="min-width:0;">'
-        + '<div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;">' + esc(_invColHeader(job, c)) + '</div>'
+  // ⚠⚠ ANSWER FIRST, AND ONLY WHAT APPLIES (2026-11-02n; see _invRecPlace): the fields of the line and the job, each in its place.
+  // A field not on this line is not drawn (NFA on a sofa was a read-only dash: absent read as empty, and nobody could tell what it
+  // meant); every field holding a value is drawn somewhere.
+  var cols = _invPanelColsFor(job, ref).filter(function(c){ return _invPanelColShown(job, ref, c); });   // one box per value (P9, ROW-05)
+  var placed = { main: [], fix: [], go: [], odd: [] };
+  cols.forEach(function(c){ var at = _invRecPlace(job, ref, c); if (placed[at]) placed[at].push(c); });
+  var secLabel = function(k) { var x = INV_PANEL_SECTIONS.filter(function(sec){ return sec.key === k; })[0]; return x ? x.label : ''; };
+  var grid = function(list) {
+    return '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px 10px;">' + list.map(function(c){
+      return '<div class="inv-rec-f" style="min-width:0;">'
+        + '<div style="font-size:9.5px;color:var(--gray);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;">' + esc(_invPanelLabel(job, c)) + '</div>'
         + '<div style="font-size:11px;">' + _invCell(jid, ref, c, job, 0) + '</div></div>';
-    }).join('');
-    return '<div style="margin-bottom:10px;">'
-      + '<div style="font-size:10px;font-weight:700;color:var(--bronze);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;">' + _invPanelSectionLabel(job, sec) + '</div>'
-      + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px 10px;">' + fields + '</div></div>';
-  }).join('');
+    }).join('') + '</div>';
+  };
+  var headCss = 'font-size:10px;font-weight:700;color:var(--bronze);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px;';
+  var sumCss = 'font-size:11px;cursor:pointer;color:var(--gray-dk);';
+  var sid = esc(ref.stableId);
+  var fold = function(k, dflt) {   // a fold's open state and the handler that remembers a person's choice
+    return (_invRecFoldIs(ref.stableId, k, dflt) ? ' open' : '') + ' ontoggle="_invRecFoldSet(\'' + sid + '\',\'' + k + '\',this.open)"';
+  };
+  var factsHtml = '<div class="inv-rec-facts" style="margin-bottom:10px;font-size:11.5px;line-height:1.5;">'
+    + '<div id="inv-rec-says-' + sid + '">' + _invRecSaysHtml(job, ref) + '</div>'
+    + (placed.main.length ? '<div style="margin-top:6px;">' + grid(placed.main) + '</div>' : '')
+    + (placed.fix.length ? '<details class="inv-rec-fix"' + fold('fix', false) + ' style="margin-top:5px;"><summary style="' + sumCss + '">' + secLabel('fix') + '</summary>'
+        + '<div style="margin-top:6px;">' + grid(placed.fix) + '</div></details>' : '')
+    + '</div>';
+  var goHtml = placed.go.length ? '<div class="inv-rec-go" style="margin-bottom:10px;"><div style="' + headCss + '">' + secLabel('go') + '</div>'
+    + grid(placed.go) + '</div>' : '';
+  var oddHtml = placed.odd.length ? '<details class="inv-rec-odd"' + fold('odd', _invRecOddOpen(job, ref, placed.odd)) + ' style="margin-bottom:6px;">'
+    + '<summary style="' + sumCss + '">' + secLabel('odd') + '</summary>'
+    + '<div style="font-size:10.5px;color:var(--gray);margin:3px 0 6px;">Only for the exceptions. Everything else on this item is already handled.</div>'
+    + grid(placed.odd) + '</details>' : '';
   var nC = custodyEvents(ref).length;
   // What the field recorded over this shot. The note is the concierge's own words ("signed on
   // the base", "Mom's from Italy", "promised to Karen") and the agent's first input; the
@@ -45946,7 +46081,7 @@ function _renderInvPanel(job, ref) {
     + _invPanelAppraisalHtml(job, ref)
     + _invPanelGroupHtml(job, ref)
     + _collPanelHtml(job, ref)
-    + fieldHtml + _avPanelHtml(job, ref) + secs + '</div>';
+    + _avPanelHtml(job, ref) + factsHtml + goHtml + fieldHtml + oddHtml + '</div>';
 }
 // ⚠ THE LIVING CLIENT'S CONFLICT OF INTEREST, IN THE LINE'S RECORD (P20, Q25), through the one rule, invReleaseCautions:
 // the same caution the row, the bulk bar and the request read. Nothing renders where it does not apply.

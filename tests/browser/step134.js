@@ -18,7 +18,7 @@
 // Use a sale form asks for the price for one, and one plate's sale at their value asks nothing; E carries the photograph inside
 // Carla's PDF, never a link into Havellin's Drive; L: on a client's own home Send to a specialist takes the item off the guardrail.
 //
-//   NODE_PATH=/path/to/node_modules node tests/browser/step133.js [/abs/path/to/havellin.html]
+//   NODE_PATH=/path/to/node_modules node tests/browser/step134.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
 const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/havellin.html'));
 let pass = 0, fail = 0;

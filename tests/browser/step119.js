@@ -348,6 +348,8 @@ const lacks = (t, n, m) => ok(String(t).indexOf(n) < 0, m + '  [present: ' + n +
       await openRec('p10');
       await p.evaluate(() => { window.__renders = 0; if (!window.__origRender) { window.__origRender = renderInventoryTab; window.renderInventoryTab = function () { window.__renders++; return window.__origRender.apply(this, arguments); }; } });
       const cat = '#inv-row-p10 select[onchange*="\'category\'"]';
+      // Since 2026-11-02n the category is under ✎ Correct what was filled in, shut until asked for: opened first (no render).
+      if (!(await vis(cat))) await p.click('#inv-row-p10 details.inv-rec-fix > summary');
       ok(await vis(cat), 'the record\'s Category select');
       await p.selectOption(cat, 'Firearms'); await p.waitForTimeout(900);
       const t = await txt('#inv-row-p10');

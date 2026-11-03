@@ -72,7 +72,7 @@ const PRINT_FNS = ['_invDocPartyHead', 'invLineReviewed', 'invLineOpen', 'invIni
   'invReleaseBlocked', 'invFirearmClientTakes', 'invFirearmDispRefusal', 'invFirearmsDealerFirm', 'invFirearmsDealerFirms', '_vendorNameKey', 'vendorCats', 'invIsIntrinsic', 'invCatMeta', 'invNeedsAppraisal', 'invAppraisalChosen', 'invAppraisalThreshold',
   'gateDispute', '_gateYes', 'invAwaitingAppraisal', 'invAppraised', '_invHasValue', '_invHasAppraisal', '_jobAppraisers',
   'invWorkFlags', '_invNeedsValue', '_invDispOptions', 'fieldDispChips', '_invPanelCols',
-  '_invPanelSection', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'estimateAppraiserNames', 'docScopeDef',
+  'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'estimateAppraiserNames', 'docScopeDef',
   // P16: the dealer route, the one field-on-this-job rule, and the photo folders the share names.
   'invDealerRoute', 'invDealerRouteOffered', 'invTransportDealer', 'invChannelLeftover', '_invColOnJob', 'photoSubfolder', 'roundCents', 'fmt',
   // P19: the bequest caution asks the job's bequest list; written authority is every fiduciary's.

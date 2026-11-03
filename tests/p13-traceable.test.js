@@ -419,7 +419,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // RESTATED on merging P15 (2026-11-02d, which carries 2026-11-02c): 2026-11-02c's vintage now follows P15's, and the gap is under it.
     const _c13 = _v13.indexOf('; on a deployment older than 2026-11-02c, ');
     ok(_c13 > 0 && _v13.indexOf('; on a deployment older than ') === _c13 && _at13 > _c13 && _v13.indexOf('; on a deployment older than ', _c13 + 1) > _at13,
-      'and the stale banner names it under 2026-11-02c\'s vintage, which carries it, after P15\'s 2026-11-02d');
+      'and the stale banner names it under 2026-11-02c\'s vintage, which carries it, after P15\'s 2026-11-02e');
     ok(_v13.indexOf('; on a deployment older than 2026-10-28, two devices saving') > _at13 && _at13 >= 0, '…then 2026-10-28\'s gap, by its vintage');
     has(B.BACKEND_FEATURE_COST.version, '; on a deployment older than 2026-10-27e, a figure Agent Two researched', '…then 2026-10-27e\'s gap, by its vintage');
     const A = sandbox({ fns: ['_agWrite', '_getPhotoRef', '_setPhotoRef', '_invAgentCondition', '_invCondIsAgents'], vars: ['INV_CATEGORIES', 'INV_TAXONOMY', 'INV_DEFAULT_CATEGORY', 'AGENT_CONDITIONS'],

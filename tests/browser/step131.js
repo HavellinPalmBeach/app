@@ -301,7 +301,12 @@ const DARK = 'Too dark to tell what is on the shelf: photograph it again';
       eq(boxes.who, 1, '⚠⚠ one Who takes it box, the row\'s');
       await press('#inv-row-a2 button.inv-c-open', 'shut it');
       await press('#inv-row-a3 button.inv-c-open', 'the candlesticks\' ▾ (Keep: the row has no Who takes it box)');
-      eq(await p.evaluate(() => document.getElementById('inv-row-a3').querySelectorAll('[onchange*="\'channel\'"]').length), 1, 'the Keep line\'s record keeps its Who takes it box');
+      // RESTATED 2026-11-02n (the record's answer first): the record carries Who takes it only where a name is left in it (P22's
+      // retyping case); an empty one on a line staying is not drawn. Still never a second box beside the row's.
+      eq(await p.evaluate(() => document.getElementById('inv-row-a3').querySelectorAll('[onchange*="\'channel\'"]').length), 0, 'the Keep line with nobody named: no Who takes it box');
+      await p.evaluate(() => { const r = Object.values(_photoRefs).flat().find((x) => x.stableId === 'a3'); r.channel = 'Marie Delgado'; renderInventoryTab(); });
+      await p.waitForTimeout(600);
+      eq(await p.evaluate(() => document.getElementById('inv-row-a3').querySelectorAll('[onchange*="\'channel\'"]').length), 1, '⚠ a name left on it: the record keeps its Who takes it box, so it can be put right');
       await press('#inv-row-a3 button.inv-c-open', 'shut it');
     });
 

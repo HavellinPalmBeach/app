@@ -2,7 +2,7 @@
 // P15 OF THE DESK AUDIT (2026-10-28): THE VALUE FOLLOWS THE JOB'S STANDARD, MARKET AND DATE. As the plan sets it (audits/2026-10-27-desk/
 // PLAN.md, P15; the findings ACC-09, VAL-08, ACC-10, VAL-09, ACC-12, VAL-11, VAL-06, AGT-06, VAL-16, VAL-21, and Ask 14, ACC-04):
 //
-//   S · the server (main-sync.gs, backend 2026-11-02d, carrying 2026-11-02c, 2026-11-02b, 2026-11-02 and the cell-cap fix's 2026-10-28): the standard by class in place of "not retail", each basis with its own words,
+//   S · the server (main-sync.gs, backend 2026-11-02e, carrying 2026-11-02d, 2026-11-02c, 2026-11-02b, 2026-11-02 and the cell-cap fix's 2026-10-28): the standard by class in place of "not retail", each basis with its own words,
 //       the buyer's premium on every comparable, a like item's asking price as Replacement Value's evidence, a line's own value date;
 //   B · the basis: asked first, "(counsel only)" where fair market value is the law's, the agent's figures made at another basis named
 //       with Re-value, the column and the total by the basis, a line's own basis printed where it differs;
@@ -206,18 +206,19 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq([onRv.source, onRv.confidence], ['Online comps', 'medium'], '⚠⚠ on Replacement Value the like item\'s asking price is the evidence: never forced to a general estimate');
     has(g._avLineText('L1', { name: 'Sofa', qty: 1, valueDate: '2026-07-10' }), 'Value as of 2026-07-10, the day it left the estate', 'a line valued as of its own day is told so');
     lacks(g._avLineText('L1', { name: 'Sofa', qty: 1, valueDate: '' }), 'Value as of', '…and a line with none reads as before');
-    has(gsFn('agentValueLines'), '_avLineResult(hit.v, p.unit.mode, seen, it.qty, ctx.basis)', 'the job\'s basis reaches the check');
+    has(gsFn('agentValueLines'), '_avLineResult(hit.v, p.unit.mode, seen, it.qty, ctx.basis, p.ebay)', 'the job\'s basis reaches the check');
   }
 
   group('S3 · the version, and the app\'s copy of the premium list held equal to the server\'s');
   {
     // RESTATED on merging main (2026-11-02): main took 2026-11-02, 2026-11-02b and 2026-11-02c first, so P15 is 2026-11-02d and carries them.
-    eq(g.BACKEND_VERSION, '2026-11-02d', 'the backend is 2026-11-02d (it carries 2026-11-02c, 2026-11-02b, 2026-11-02 and 2026-10-28)');
+    // RESTATED again on merging main (2026-11-03): main's eBay listings took 2026-11-02d, so P15 is 2026-11-02e and carries it.
+    eq(g.BACKEND_VERSION, '2026-11-02e', 'the backend is 2026-11-02e (it carries 2026-11-02d, 2026-11-02c, 2026-11-02b, 2026-11-02 and 2026-10-28)');
     const app = sandbox({ fns: [], vars: ['BACKEND_MIN_VERSION', 'AGENT_VALUE_PREMIUMS'] });
-    eq(app.BACKEND_MIN_VERSION, '2026-11-02d', 'the app asks for it');
+    eq(app.BACKEND_MIN_VERSION, '2026-11-02e', 'the app asks for it');
     eq(JSON.stringify(app.AGENT_VALUE_PREMIUMS), JSON.stringify(g.AGENT_VALUE_PREMIUMS), 'one list of premium answers on both sides');
-    // P15's review: the banner names the Replacement Value gap too, until 2026-11-02d is live.
-    has(sandbox({ vars: ['BACKEND_FEATURE_COST'] }).BACKEND_FEATURE_COST.version, 'on a deployment older than 2026-11-02d, Agent Two values every basis', 'the newest gap carries its vintage (the review\'s nit)');
+    // P15's review: the banner names the Replacement Value gap too, until 2026-11-02e is live.
+    has(sandbox({ vars: ['BACKEND_FEATURE_COST'] }).BACKEND_FEATURE_COST.version, 'on a deployment older than 2026-11-02e, Agent Two values every basis', 'the newest gap carries its vintage (the review\'s nit)');
     has(sandbox({ vars: ['BACKEND_FEATURE_COST'] }).BACKEND_FEATURE_COST.version, 'ends a Replacement Value line resting on asking prices as a general estimate',
       'the out-of-date banner names what stays wrong on Replacement Value');
   }

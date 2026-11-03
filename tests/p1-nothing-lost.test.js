@@ -1044,8 +1044,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         fetch: () => ({ then(f) { const r = f({ json: () => ({ ok: true, version: '2026-10-28', actions: C28.BACKEND_NEEDS, types: C28.BACKEND_NEEDS_TYPES }) }); return { then(g) { g(r); return { catch() {} }; } }; } }) } });
     C28.checkBackendVersion();
     eq(shown.slice(1).map((x) => [x.v, x.m]), [['2026-10-28', ['version']]], '⚠⚠ and so does a 2026-10-28 deployment, by version');
-    // RESTATED on merging P15 (2026-11-02d, which carries 2026-11-02c): P15's gap leads the line, then 2026-11-02c's.
-    ok(_v.indexOf('on a deployment older than 2026-11-02d, Agent Two values every basis as fair market value') === 0,
+    // RESTATED on merging P15 (2026-11-02e since main's eBay took 2026-11-02d; it carries 2026-11-02c): P15's gap leads the line, then 2026-11-02c's.
+    ok(_v.indexOf('on a deployment older than 2026-11-02e, Agent Two values every basis as fair market value') === 0,
       '⚠⚠ it names the newest gap first: Agent Two valuing every basis as fair market value');
     ok(_v.indexOf(_vint) === _v.indexOf(_vint + '2026-11-02c, a copy of the app that has not been reloaded can send an estate\u2019s release request through DocuSign'),
       '⚠⚠ then a release request a copy of the app not reloaded can send through DocuSign');

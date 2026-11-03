@@ -129,6 +129,8 @@ const EST = 12201;
       ok(await vis('#inv-row-sl'), 'the still life\'s row on the desk');
       await press('#inv-row-sl button[title="Open the full record"]', 'the row\'s ▾');
       const sel = '#inv-row-sl select[onchange*="\'valSource\'"]';
+      // Since 2026-11-02n the source is under ✎ Correct what was filled in, shut until asked for.
+      if (!(await vis(sel))) await press('#inv-row-sl details.inv-rec-fix > summary', '✎ Correct what was filled in');
       ok(await vis(sel), 'the record\'s Valuation Source');
       answer = false; said.length = 0;
       await p.selectOption(sel, 'Appraisal'); await p.waitForTimeout(700);
@@ -159,6 +161,7 @@ const EST = 12201;
       has(b0, 'need an appraisal', 'fixture: the Values bar counts it (' + b0 + ')');
       await press('#inv-row-so button[title="Open the full record"]', 'the sofa\'s ▾');
       const sel = '#inv-row-so select[onchange*="\'valSource\'"]';
+      if (!(await vis(sel))) await press('#inv-row-so details.inv-rec-fix > summary', '✎ Correct what was filled in');
       said.length = 0; answer = true;
       await p.selectOption(sel, 'Appraisal'); await p.waitForTimeout(900);
       has(said.join(' | '), 'carries Agent Two’s estimate of $9,000, not an appraisal', 'the dialog names the estimate');
