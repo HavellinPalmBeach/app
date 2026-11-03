@@ -1,4 +1,4 @@
-// Step 133 (130 until P14 took it, 132 until main's approval by where it goes took that) — The value follows the job's standard, market and date (P15 of the desk audit, 2026-10-28; ACC-09, VAL-08, ACC-10,
+// Step 134 (130 until P14 took it, 132 until main's approval by where it goes took that, 133 until main's line record took that) — The value follows the job's standard, market and date (P15 of the desk audit, 2026-10-28; ACC-09, VAL-08, ACC-10,
 // VAL-09, VAL-06, AGT-06, VAL-11, VAL-16, VAL-21, and Anthony's Ask 14).
 //
 // Drives the REAL page with one probate estate filing a Form 706, on the values tier, its date of death Apr 2, 2026: Agent Two's
@@ -129,7 +129,9 @@ const EST = 13001;
         item('br', agent({ itemNo: 1, objectName: 'Bronze figure of a dancer', category: 'Art & Décor', fmv: 1600, valLow: 800, valHigh: 2400, valNameAt: 'Bronze figure of a dancer',
           reviewed: false, valNotices: [{ kind: 'appraiser', text: 'Signed and the comparables disagree widely: a qualified appraisal is advisable.' }] })),
         item('oil', agent({ itemNo: 2, objectName: 'Oil on canvas, harbour scene', category: 'Art & Décor', fmv: 1600, valLow: 1200, valHigh: 2200, valNameAt: 'Oil on canvas, harbour scene',
-          apprId: 501, apprDoc: 'Carla Mendes · Mendes Fine Art (ISA)', disposition: 'Auction', channel: 'Kodner Galleries' })),
+          apprId: 501, apprDoc: 'Carla Mendes · Mendes Fine Art (ISA)', disposition: 'Auction', channel: 'Kodner Galleries',
+          // Ticked by a person (since main's approval by where it goes, an unreviewed line is held off the request; G reads the request).
+          valReviewed: true, valReviewedAt: T0, valReviewedBy: 'Ashley Jerome' })),
         item('ts', agent({ itemNo: 3, objectName: 'Sterling tea service', category: 'Silver & Precious Metal', fmv: 2000, valLow: 1500, valHigh: 2600, valNameAt: 'Sterling tea service',
           disposition: 'Auction', channel: 'Kodner Galleries', dispDate: '2026-07-10' })),
         item('pn', { itemNo: 4, objectName: 'Pearl necklace', category: 'Jewelry & Watches', fmv: 3500, valuedBy: 'desk', valSource: 'Dealer quote' }),
