@@ -84,7 +84,7 @@ const PAPER_FNS = ['invLineReviewed', 'invLineOpen', '_invDocPartyHead', 'invCon
   'invNeedsAppraisal', 'invIsIntrinsic', 'invCatMeta', 'invAppraisalThreshold',
   '_invHasAppraisal', '_jobAppraisers', 'resolveValBasis', 'estateValueDate', '_invMoney',
   '_invDocName', '_invItemNo', '_invGroupItems', 'invIsFirearm', '_invDispLabel', '_invRoomName', '_planRooms',
-  '_invProgressStamp', '_invReviewStats', '_invDocHead', '_invWaivedNoteHtml', 'invValBasisShort', 'invLineStandardNote', 'estateValueDateLabel', 'estateAvdOn', 'invAppraiserFor', '_invFileId', '_invNeedsValue',
+  '_invProgressStamp', 'fiduciaryCapacity', '_invStampIsReviewed', 'scheduleSignerCapacity', 'scheduleDraftState', '_invReviewStats', '_invDocHead', '_invWaivedNoteHtml', 'invValBasisShort', 'invLineStandardNote', 'estateValueDateLabel', 'estateAvdOn', 'invAppraiserFor', '_invFileId', '_invNeedsValue',
   'weArrangeAppraisals', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', 'jobAppraisalDuty', 'approvedEstimateFor', 'estimateDocScope', 'docScopeDef', '_agrOtherAppraisalsBy',
   'roundCents', 'fmt', 'trustInstrumentTitle', 'scheduleSigners', 'scheduleSignLines', 'jobFiduciaries', 'jobListEntries',
   'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invLineAcceptedOnly', '_invAcceptedStampWords',
@@ -100,7 +100,7 @@ const PAPER_FNS = ['invLineReviewed', 'invLineOpen', '_invDocPartyHead', 'invCon
   'invNumbersNotUsedHtml', 'invNumbersNotUsedText', 'invNumbersNotUsed', 'invRemovedWhyText', '_invRemovedRows', '_invTombstoneLine',
   // P13's review: the group mark's record and its answer.
   '_invPanelGroupHtml', 'invMarkOneArticle'];
-const PAPER_VARS = ['_agRun', '_avRun', '_arRun', '_avDupHeld', 'AGENT_NOTICE_KINDS',
+const PAPER_VARS = ['SCHEDULE_CAPACITY', 'FIDUCIARY_PR_ROLE_RE', 'FIDUCIARY_TRUSTEE_ROLE_RE', '_agRun', '_avRun', '_arRun', '_avDupHeld', 'AGENT_NOTICE_KINDS',
   'INV_CONTRACT_DOCS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DECEDENT_SERVICES',
   'MATTER_TYPES', 'INV_ASSET_TRACKS', 'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD',
   'EXEMPT_CAP_732_402', 'AGR_NOT_AN_ACCOUNTING', 'INV_CATEGORIES', '_invShowRoll', 'INV_GROUP_ORDER', 'INV_CAT_GLYPH', 'INV_UNDECIDED', 'INV_DISPOSITIONS', 'INV_DEFAULT_CATEGORY', 'DOC_SCOPES',

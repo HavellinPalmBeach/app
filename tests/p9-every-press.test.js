@@ -65,8 +65,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   // ═══ A. ONE PREDICATE, ITS OWN CHIP ═══
   G('A · a photograph Agent One found nothing in is its own pile, and Unnamed shots leaves it out', () => {
-    const s = sandbox({ fns: ['invLineNothingToList', 'invLineUnread', '_invNeedsValue', 'invWorkFlags', 'invFiduciaryMode', 'isDecedentJob', '_renderInvFlagStrip'],
-      vars: ['INV_WORK_FLAGS', 'DECEDENT_SERVICES'],
+    const s = sandbox({ fns: ['invLineNothingToList', 'invLineUnread', '_invNeedsValue', 'invWorkFlags', '_invHasValue', 'invBasisMissing', 'docTierOf', 'docTierDef', 'svcHasDocStep', 'agentValueInternal', 'docTierProduces', 'invFiduciaryMode', 'isDecedentJob', '_renderInvFlagStrip'],
+      vars: ['DOC_TIERS', 'JOB_STEPS', 'INV_WORK_FLAGS', 'DECEDENT_SERVICES'],
       stubs: { _invFilter: { flag: '' }, invLineReviewed: () => false, invLineUnsure: () => false, _invAcceptCtxOf: () => null, maivFilingApplies: () => false,
         invNeedsAppraisal: () => false, invReceiptOwed: () => false, invIsFirearm: () => false, invReleaseBlocked: () => false, INV_RELEASE_DISPOSITIONS: ['Donate'] } });
     const n = NOTHING('n'), u = UNREAD('u'), b = LINE('b', { objectName: '' }), named = LINE('m');

@@ -2448,12 +2448,14 @@ function groupL({ group, ok, eq, has, lacks }) {
     let B = bars(PROBATE(close), [LINE('a', { disposition: 'Keep' })]);
     eq(B.closing.bits.filter((x) => /Court Inventory/.test(x.text)).map((x) => [x.text, x.tone]), [['Court Inventory still a draft (1 item not yet valued)', 'amber']],
       '⚠ at the close: a Court Inventory still a draft says so, in amber');
-    B = bars(PROBATE(close), [LINE('a', { disposition: 'Keep', fmv: '400' })]);
+    // RESTATED on landing P10 with P12 (2026-11-03): on a Formal estate (this one, its Form 706 unanswered) a value with no basis keeps
+    // the schedule a draft (P10's reason, in scheduleDraftState since), so the FINAL fixtures state a basis.
+    B = bars(PROBATE(close), [LINE('a', { disposition: 'Keep', fmv: '400', valSource: 'Dealer quote' })]);
     const amb = B.closing.bits.filter((x) => /not filed yet/.test(x.text));
     eq(amb.map((x) => [x.text, x.tone]), [['Adopted Court Inventory not filed yet', 'amber']], '⚠ at the close, FINAL: the adopted Court Inventory owed, in amber');
     B = bars(PROBATE(Object.assign({ signedRecords: [{ id: 's', kind: 'schedule', ref: 'Court Inventory', filedAt: 1 }] }, close)), [LINE('a', { disposition: 'Keep' })]);
     eq(B.closing.bits.filter((x) => /signed schedule/.test(x.text)).map((x) => [x.text, x.tone]), [['1 of 1 signed schedule filed', 'grey']], 'filed: counted in grey');
-    B = bars(PROBATE(Object.assign({ matterType: 'both' }, close)), [LINE('a', { disposition: 'Keep', fmv: '400' }), LINE('b', { disposition: 'Keep', fmv: '300', assetTrack: 'Trust' })]);
+    B = bars(PROBATE(Object.assign({ matterType: 'both' }, close)), [LINE('a', { disposition: 'Keep', fmv: '400', valSource: 'Dealer quote' }), LINE('b', { disposition: 'Keep', fmv: '300', assetTrack: 'Trust', valSource: 'Dealer quote' })]);
     eq(B.closing.bits.filter((x) => /not filed yet/.test(x.text)).map((x) => x.text), ['Adopted Court Inventory not filed yet', 'Received Trust Schedule not filed yet'],
       'a pour-over: both instruments');
     const sched = (b) => b.closing.bits.filter((x) => /Court Inventory|Trust Schedule|signed schedule/.test(x.text)).map((x) => x.text);
