@@ -71,7 +71,8 @@ const ESTATE = { id: 7, name: 'Butler Estate', hvlId: 'HVL-0007', svc: 'probate'
 const LIVING = { id: 2, name: 'Margaret Ellsworth', hvlId: 'HVL-0002', svc: 'downsizing_move', addr: '14 Coconut Row',
                  destAddr: '801 Sunset Ave', won: true, status: 'won', tc: 'Ashley Jerome' };
 const ROOMS = [{ idx: 1, name: 'Study', st: 'in' }, { idx: 4, name: 'Kitchen', st: 'in' }];
-const LINE = (id, over) => Object.assign({
+// reviewed: checked on the desk (2026-11-02: a line still flagged for a look waits off the release request).
+const LINE = (id, over) => Object.assign({ reviewed: true,
   stableId: id, label: 'inventory', collId: null, roomIdx: 1, seq: 1, status: 'uploaded',
   objectName: 'Sideboard', category: 'Furniture', ts: 100, updatedAt: 100,
   driveFileId: 'f' + id, driveFileUrl: 'https://drive.google.com/file/d/f' + id + '/view',

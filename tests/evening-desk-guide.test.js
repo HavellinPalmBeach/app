@@ -227,7 +227,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(t, 'Opens by itself when items wait for written approval that no request has carried (3 items need written approval: send a request), when a drafted request waits for I’ve sent it, when an item changed after its request went, or when a signed approval has no copy filed.', 'the page’s rule');
     // An item changed after its request went (P5, 2026-10-27): the bar's own rule, driven in tests/approval-pinned.test.js group F.
     has(code(fn('deskFoldState')), "|| envEnded || changedSent.length > 0;", 'the bar opens on it');
-    const decided = [LINE('a', { disposition: 'Sell', channel: 'Sotheby’s' }), LINE('b', { disposition: 'Donate', channel: 'Goodwill' }), LINE('c', { disposition: 'Junk', channel: 'Haul-It' })];
+    // Checked on the desk (2026-11-02: a line still flagged for a look waits off the request, and the bar says so instead).
+    const decided = [LINE('a', { disposition: 'Sell', channel: 'Sotheby’s', reviewed: true }), LINE('b', { disposition: 'Donate', channel: 'Goodwill', reviewed: true }), LINE('c', { disposition: 'Junk', channel: 'Haul-It', reviewed: true })];
     let B = bars(ESTATE(), decided);
     ok(!B.releases.err, 'the bar answers (' + (B.releases.err || 'ok') + ')');
     eq([B.releases.openByDefault, B.line('releases').split(' · ')[0], B.tones('releases')[0]], [true, '3 items need written approval: send a request', 'amber'],
@@ -866,7 +867,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(card, "' for somebody to be named to take '", 'and the card counts them');
     has(card, "'Discard draft'", 'Discard draft');
     has(card, 'changed after it was made (where it goes, who takes it or its value). Not sent yet? Discard draft, then send a fresh request.', 'a draft whose item changed: the card says so');
-    has(t, 'It reads as a letter, one initial per group under $500. Items with nobody in Who takes it wait off it, and the card counts them. Changed an item before sending? The card says so: press Discard draft, delete it in Gmail and send again.', 'as the page says');
+    // RESTATED 2026-11-02: a flagged item waits off it too, and Get approval on a group's heading.
+    has(t, 'It reads as a letter, one initial per group under $500. Items with nobody in Who takes it, or still flagged, wait off it, and the card counts them. Get approval on a group’s heading sends that group. Changed an item before sending? The card says so: press Discard draft, delete it in Gmail and send again.', 'as the page says');
     // The sign-out rows.
     const row = code(fn('_leavingRowHtml'));
     has(row, "'Sign out ' + g.ready.length + ' to ' + g.taker", 'Sign out N to …');

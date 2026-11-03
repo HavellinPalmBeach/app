@@ -259,6 +259,8 @@ const EST = () => ({ approved: true, estimate: { jobId: 7, svc: 'cleanout', have
 const ROW = (id, over) => Object.assign({
   stableId: id, label: 'inventory', collId: null, roomIdx: 1, status: 'uploaded', ts: T0, updatedAt: T0,
   objectName: 'Sideboard', category: 'Furniture', qty: 1, condition: 'Good', fmv: 1200, valSource: 'Comparable sales',
+  // Checked on the desk (2026-11-02: a line still flagged for a look is not asked for, invReleaseChecked).
+  reviewed: true, reviewedBy: 'Anthony Graziano',
   driveFileId: 'f' + id, driveFileUrl: 'https://drive.google.com/file/d/f' + id + '/view',
 }, over || {});
 // Three lines waiting on the trustees' written approval (a sale, a donation, a gift) and one kept, never on a request.

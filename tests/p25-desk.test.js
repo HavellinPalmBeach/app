@@ -71,7 +71,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   const PROBATE = (o) => Object.assign({ id: 7, hvlId: 'HVL-0007', name: 'Margaret Doe', svc: 'probate', matterType: 'probate', executor: 'Tripp Butler',
     executorEmail: 'tripp@x.com', executorRole: 'Personal Representative', addr: '69 Beach Blvd', deathDate: '2026-01-15', docTier: 'values',
     won: true, status: 'active' }, o || {});
-  const L = (id, o) => Object.assign({ stableId: id, label: 'inventory', itemNo: 1, objectName: 'Item ' + id, category: 'Furniture', authBy: '', approvalDate: '' }, o || {});
+  // reviewed: checked on the desk (2026-11-02: a line still flagged for a look is not asked for, invReleaseChecked).
+  const L = (id, o) => Object.assign({ stableId: id, label: 'inventory', itemNo: 1, objectName: 'Item ' + id, category: 'Furniture', authBy: '', approvalDate: '', reviewed: true }, o || {});
 
   // ═══ Q46 · ONE INITIAL PER DESTINATION GROUP UNDER $500 ═══
   group('Q46 · every leaving line listed; a group initial under $500; a line\'s own at $500 and over, on a bequest, or with a caution');

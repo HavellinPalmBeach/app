@@ -114,7 +114,7 @@ const EST = 7401;
       estimateStore[EST] = { approved: true, submitted: true, approvedBy: 'Anthony Graziano', approvedAt: 'September 23, 2026', savedAt: T0,
         estimate: { jobId: EST, svc: 'probate', havellinTotal: 40000, fixedPrice: true, fixedAmount: 40000, fixedLines: true, totTC: 100, totPS: 150, tcRate: 150, psRate: 100,
           days: 8, vendors: [], prepItems: [], pkgCost: 0, rooms: [{ idx: 0, name: 'Living Room', st: 'in', vol: 3, cplx: 3 }] } };
-      const item = (id, o) => Object.assign({ stableId: id, label: 'inventory', roomIdx: 0, seq: 1, status: 'uploaded', category: 'Furniture', disposition: '',
+      const item = (id, o) => Object.assign({ stableId: id, label: 'inventory', reviewed: 1, roomIdx: 0, seq: 1, status: 'uploaded', category: 'Furniture', disposition: '', /* reviewed: checked on the desk (2026-11-02: a line still flagged for a look waits off the release request) */
         objectName: 'Line ' + id, ts: T0, updatedAt: T0, filename: 'HVL_' + EST + '_INV_' + id + '.jpg', driveFileId: 'f-' + id }, o);
       _photoRefs[EST] = [
         item('a', { itemNo: 1, objectName: 'Paperback books', fmv: '20', disposition: 'Donate', channel: 'Goodwill Palm Beach' }),

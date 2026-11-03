@@ -153,7 +153,7 @@ const PDF = { name: 'signed.pdf', mimeType: 'application/pdf', buffer: Buffer.fr
       const base = { status: 'active', won: true, wonAt: '2026-09-17', approved: true, tc: 'Ashley Jerome', city: 'Palm Beach', zip: '33480',
         created: '2026-09-10', start: '2026-09-21', driveFolder: 'https://drive.google.com/drive/folders/ROOT56', docTier: 'values',
         driveSubfolders: { 'Estate Inventory': 'SUB-INV', 'As-Found Record': 'SUB-AF', 'Signed Records': 'SIGNED-56' }, updatedAt: T0 };
-      const L = (id, o) => Object.assign({ stableId: id, label: 'inventory', collId: null, roomIdx: 1, seq: 1, status: 'uploaded', qty: 1,
+      const L = (id, o) => Object.assign({ stableId: id, label: 'inventory', reviewed: 1, collId: null, roomIdx: 1, seq: 1, status: 'uploaded', qty: 1, /* reviewed: checked on the desk (2026-11-02: a line still flagged for a look waits off the release request) */
         category: 'Furniture', condition: 'Good', ts: T0, updatedAt: T0, driveFileId: 'f-' + id, driveFileUrl: 'https://drive.google.com/file/d/f-' + id + '/view' }, o);
       const est = (id, svc) => ({ approved: true, submitted: true, approvedBy: 'Anthony Graziano', savedAt: T0,
         estimate: { jobId: id, svc, havellinTotal: 20000, totTC: 40, totPS: 80, days: 4, collections: [], vendors: [], prepItems: [],

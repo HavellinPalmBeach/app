@@ -178,7 +178,8 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
         E('e02', { itemNo: 2, roomIdx: 1, objectName: 'Sterling flatware service for 12', category: 'Silver & Precious Metal', fmv: '1800', valSource: 'Auction comps', disposition: 'Auction', channel: 'Kodner Galleries', authBy: 'Thomas Ashworth; Nora Ashworth', approvalDate: '2026-10-12', reviewed: 1, namedBy: 'desk' }),
         E('e04', { itemNo: 4, roomIdx: 0, objectName: 'Pair of brass table lamps', category: 'General/Household', fmv: '80', disposition: 'Donate', channel: 'Goodwill Palm Beach', reviewed: 1, namedBy: 'desk' }),
         E('e07', { itemNo: 7, roomIdx: 0, objectName: 'Grandfather clock', category: 'Antiques', fmv: '3500', disposition: 'Distribute', channel: 'Margaret Ashworth', flagBequest: true, needsAppr: true, apprId: 501, reviewed: 1, namedBy: 'desk' }),
-        E('e10', { itemNo: 10, roomIdx: 3, objectName: 'Walnut dresser', category: 'Furniture', fmv: '450', disposition: 'Sell', channel: 'Palm Beach Estate Buyers', namedBy: 'agent', reviewed: 0 }),
+        // Reviewed since 2026-11-02: a line still flagged for a look waits off the release request (invReleaseChecked).
+        E('e10', { itemNo: 10, roomIdx: 3, objectName: 'Walnut dresser', category: 'Furniture', fmv: '450', disposition: 'Sell', channel: 'Palm Beach Estate Buyers', namedBy: 'agent', reviewed: 1 }),
         E('e18', { itemNo: 18, roomIdx: 2, objectName: 'Stand mixer', category: 'Electronics & Appliances', fmv: '120', disposition: 'Keep', namedBy: 'desk', reviewed: 1 }),
         E('e20', { itemNo: 20, roomIdx: 3, objectName: 'Nightstand', category: 'Furniture', disposition: '', namedBy: 'agent', reviewed: 0, ts: T_Y, updatedAt: T_Y }),
         E('e23', { itemNo: 23, roomIdx: 2, objectName: 'Copper cookware set', category: 'General/Household', disposition: '', namedBy: 'agent', reviewed: 0, ts: T_TODAY, updatedAt: T_TODAY }),
@@ -204,7 +205,7 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
         L('l03', { itemNo: 3, roomIdx: 0, objectName: 'Oil landscape painting', category: 'Art & Décor', disposition: 'Sell', channel: 'Kodner Galleries', needsAppr: true, namedBy: 'desk', reviewed: 1 }),
         // A shotgun since 2026-10-26 (it was golf clubs): on a client's own home only a firearm, or an item going to someone who
         // works with Havellin, needs written approval (Anthony: "Drop it, firearms aside"), so it is what keeps a request owed here.
-        L('l07', { itemNo: 7, roomIdx: 2, objectName: 'Remington shotgun', category: 'Firearms', disposition: 'Distribute', channel: 'Susan Hale', namedBy: 'agent', reviewed: 0 }),
+        L('l07', { itemNo: 7, roomIdx: 2, objectName: 'Remington shotgun', category: 'Firearms', disposition: 'Distribute', channel: 'Susan Hale', namedBy: 'agent', reviewed: 1 }),
         L('l12', { itemNo: 12, roomIdx: 2, objectName: 'Lawn mower', category: 'Electronics & Appliances', disposition: '', namedBy: 'agent', reviewed: 0, ts: T_TODAY, updatedAt: T_TODAY }),
         L('l14', { itemNo: 14, roomIdx: 1, objectName: '', category: '', ts: T_TODAY + 1000, updatedAt: T_TODAY + 1000 }),
         L('b11', { label: 'before', roomIdx: 0, objectName: '', category: '' })];
@@ -398,7 +399,8 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
     await press('#panel-inventory button[onclick="setInvWhen(\'all\')"]', 'All, so the dresser is drawn');
     ok(await isOpen('values'), 'still open after the filter\'s redraw');
     await press('#inv-row-e10 input[onchange*="_invSetReviewed"]', 'Reviewed on the dresser');
-    ok(await p.evaluate((id) => !!(_photoRefs[id].find((r) => r.stableId === 'e10') || {}).reviewed, EST), 'fixture: the line is reviewed');
+    // RESTATED 2026-11-02: the dresser starts ticked (a line still flagged waits off the release request), so the press unticks it.
+    ok(await p.evaluate((id) => !(_photoRefs[id].find((r) => r.stableId === 'e10') || {}).reviewed, EST), 'fixture: the press moved the tick (off)');
     ok(await isOpen('values'), '⚠ still open after the redraw the tick made');
     // Another device names a line: the sheet's next read changes the manifest and the tab redraws by itself.
     sheet[EST].items = sheet[EST].items.map((r) => r.stableId === 'e26' ? Object.assign({}, r, { objectName: 'Silver candlesticks', updatedAt: Date.now() + 60000 }) : r);
@@ -421,7 +423,7 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
         _photoRefs[id] = ['n1', 'n2'].map((s, i) => ({ stableId: s, label: 'inventory', roomIdx: 0, seq: i + 1, itemNo: i + 1, status: 'uploaded', category: 'Furniture',
           objectName: i ? 'Bookcase' : 'Armchair', disposition: '', ts: T, updatedAt: T, filename: 'x' + s + '.jpg', driveFileId: 'f' + s }));
         // The first line on the new client is a rifle since 2026-10-26: an armchair leaving a client's own home goes on their word.
-        if (id === NEW) Object.assign(_photoRefs[id][0], { objectName: 'Browning rifle', category: 'Firearms' });
+        if (id === NEW) Object.assign(_photoRefs[id][0], { objectName: 'Browning rifle', category: 'Firearms', reviewed: 1 });   // ticked (2026-11-02: a firearm waits for its tick before it is asked for)
         savePhotoRefs(id);
       });
       saveJobs(); localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore));

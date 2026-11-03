@@ -662,7 +662,7 @@ and browser step 69.
   record and the guardrail carry **Add to appraisal list** (**Send to a specialist** on living work,
   `agentValueAdviceVerb`; `agentValueAddToAppraisal` sets `needsAppr` with who and when), until linked or waived. The
   comparable's premium prints in the record (`AGENT_VALUE_PREMIUM_WORDS`). `BACKEND_MIN_VERSION` `2026-11-02d`.
-  `tests/p15-value-standard.test.js`, browser step 132 (130 until main's P14 took it). Counsel and an appraiser to confirm the standard by class
+  `tests/p15-value-standard.test.js`, browser step 133 (130 until main's P14 took it, 132 until main's approval by where it goes took that). Counsel and an appraiser to confirm the standard by class
   (bundle D23).
 - **Its review, the same day (2026-10-28, still `2026-11-02d`).** A figure is recorded at the standard its request asked for:
   `_avSendNext` keeps the basis and each line's date it sent (`asked`) and `_avWrite` writes those, never the job's as the answer

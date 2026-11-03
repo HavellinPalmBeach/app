@@ -75,7 +75,8 @@ const PROBATE = () => ({ id: 8, name: 'Tripp Butler Sr', hvlId: 'HVL-0008', svc:
   addr: '12 Ocean Way', executor: 'Tripp Butler', deathDate: '2026-03-01', won: true, status: 'active', tc: 'Ashley Jerome', updatedAt: 1 });
 const LIVING = () => ({ id: 2, name: 'Margaret Ellsworth', hvlId: 'HVL-0002', svc: 'downsizing_move', addr: '14 Coconut Row',
   destAddr: '801 Sunset Ave', won: true, status: 'won', tc: 'Ashley Jerome', updatedAt: 1 });
-const LINE = (id, n, over) => Object.assign({
+// reviewed: checked on the desk (2026-11-02: a line still flagged for a look waits off the release request).
+const LINE = (id, n, over) => Object.assign({ reviewed: true,
   stableId: id, label: 'inventory', collId: null, roomIdx: 1, itemNo: n, status: 'uploaded', qty: 1,
   objectName: 'Line ' + n, category: 'Furniture', condition: 'Good', ts: 100 + n, updatedAt: 100 + n,
 }, over || {});
@@ -209,8 +210,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // P28 (2026-10-18): the sign-out dialog offers an estate's leaving line only once the approval is complete (signoutGroups).
     // P4 (2026-10-27): a firearm with a licensed dealer may go to it once approved, and its dealer's receipt is owed then (invDealerReleased).
     // P5 (2026-10-27): a selection's request names what it left out, an approved line among them (invWrittenReleaseLeftOutText).
+    // 2026-11-02: the row's ✓ Approved asks it too (invRowApprovedOn).
     eq(callers, ['_approvalLineOpen', '_invAwaitingApproval', 'collectionPartnerLines', 'invApprovalBatches', 'invApprovalLeftOpen', 'invDealerReleased', 'invFirearmAuthorized', 'invRatificationOwed',
-                 'invReleasedToPerson', 'invWrittenReleaseLeftOutText', 'planDerivedLines', 'signoutGroups'].sort(),
+                 'invReleasedToPerson', 'invRowApprovedOn', 'invWrittenReleaseLeftOutText', 'planDerivedLines', 'signoutGroups'].sort(),
        'the direct readers: the request\'s list, the desk\'s acts, the dialog, the firearm gate, ratification, what counts as released for a receipt, the Job Plan line');
     const viaFirearm = [...ALL_FNS].filter((n) => { try { return /\binvFirearmAuthorized\(/.test(noComments(fn(n))) && n !== 'invFirearmAuthorized'; } catch (e) { return false; } }).sort();
     eq(viaFirearm, ['invReleaseBlocked', 'invTransportBlocked'], 'and the two firearm gates read it through invFirearmAuthorized');

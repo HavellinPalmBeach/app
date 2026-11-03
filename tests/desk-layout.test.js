@@ -189,7 +189,8 @@ const textOf = (h) => String(h == null ? '' : h).replace(/<[^>]+>/g, ' ').replac
 // ⚠ SINCE THE BARS' LINES (2026-10-22): a line on the estate waits on written approval, so Releases opens by its own rule
 // (Anthony's Q89), and the job has a snapshot, so the history bar is drawn (shut: it never opens by itself).
 const ESTATE = () => ({ id: 7, name: 'Ashworth', svc: 'probate', won: true, invSnapshots: [{ ts: 1, label: 'Filed', count: 2 }] });
-const REFS = () => [{ stableId: 'a', label: 'inventory', objectName: 'Clock' }, { stableId: 'b', label: 'inventory', objectName: 'Desk', disposition: 'Donate', channel: 'Goodwill' }];   // named: a line with nobody to take it is never asked for (2026-10-26)
+// reviewed: checked on the desk (2026-11-02: a line still flagged for a look waits off the release request).
+const REFS = () => [{ stableId: 'a', label: 'inventory', objectName: 'Clock' }, { stableId: 'b', label: 'inventory', objectName: 'Desk', disposition: 'Donate', channel: 'Goodwill', reviewed: true }];   // named: a line with nobody to take it is never asked for (2026-10-26)
 function desk(jobO, cards, opt) {
   opt = opt || {};
   const dom = liveDom(7);
@@ -420,13 +421,14 @@ function groupB({ group, ok, eq, has, lacks }) {
     const at = (needle) => h.indexOf(needle);
     const seq = [['the client line', 'id="m-hdr"'], ['the band', 'id="jband-slot-admin"'], ['the must-finds', 'id="sf-host-desk"'], ['Job Admin', 'id="m-ja"'],
       ['the work bar', 'id="inv-workbar"'], ['the vehicles still to bring in', 'id="m-import"'], ['the chips', 'id="inv-flagstrip"'], ['the filter', 'id="m-filter"'],
-      ['the duplicate imports', 'id="m-dupimp"'], ['Possible duplicates', 'id="m-agdup"'], ['the rows', 'id="m-rows"'], ['the bulk bar', 'id="m-bulk"'],
+      // RESTATED 2026-11-02 (Anthony: "that brown bar is anchored to the bottom of the page"): the bulk bar above the rows, stuck at the top.
+      ['the duplicate imports', 'id="m-dupimp"'], ['Possible duplicates', 'id="m-agdup"'], ['the bulk bar', 'id="m-bulk"'], ['the rows', 'id="m-rows"'],
       ['Releases', 'id="desk-fold-releases-7"'], ['Values', 'id="desk-fold-values-7"'], ['Closing', 'id="desk-fold-closing-7"'],
       ['Removed items & snapshots', 'id="desk-fold-history-7"'], ['the summary', 'id="inv-summary"']];
     seq.forEach(([what, n]) => ok(at(n) > -1, what + ' is drawn'));
     for (let i = 1; i < seq.length; i++) ok(at(seq[i - 1][1]) < at(seq[i][1]), '⚠ ' + seq[i - 1][0] + ' comes before ' + seq[i][0]);
     const top0 = (n) => (at(n) < 0 ? -1 : depthAt(h, h.lastIndexOf('<', at(n))));
-    eq(top0('id="m-bulk"'), 0, '⚠⚠ the bulk bar is outside every wrapper, so it still sticks to the foot of the tab');
+    eq(top0('id="m-bulk"'), 0, '⚠⚠ the bulk bar is outside every wrapper, so it sticks at the top of the tab as the rows scroll');
     eq(top0('id="inv-summary"'), 0, 'the summary is outside every bar, last');
     eq(top0('id="m-import"'), 0, 'the vehicles sit in the items, not in a bar');
     eq(top0('id="desk-fold-releases-7"'), 0, 'and each bar is a direct child of the tab, not nested in another');
@@ -574,7 +576,8 @@ function groupB({ group, ok, eq, has, lacks }) {
 const TODAY = '2026-10-22';
 const T0 = Date.parse('2026-10-20T16:00:00Z');
 const ON = (d) => Date.parse(d + 'T16:00:00Z');
-const LINE = (id, o) => Object.assign({ stableId: id, label: 'inventory', collId: null, roomIdx: 0, status: 'uploaded', ts: T0, updatedAt: T0,
+// reviewed: checked on the desk (2026-11-02: a line still flagged for a look waits off the release request).
+const LINE = (id, o) => Object.assign({ reviewed: true, stableId: id, label: 'inventory', collId: null, roomIdx: 0, status: 'uploaded', ts: T0, updatedAt: T0,
   objectName: 'Thing ' + id, category: 'Furniture', qty: 1 }, o || {});
 const PROBATE = (o) => Object.assign({ id: 7, hvlId: 'HVL-0007', name: 'Ashworth', addr: '14 Seaspray Ave', svc: 'probate', status: 'active', won: true,
   matterType: 'probate', executor: 'Ruth Adler', executorEmail: 'ruth@adler.example', driveFolder: 'https://drive.google.com/drive/folders/R7',
@@ -2614,7 +2617,7 @@ function groupM({ group, ok, eq, has, lacks }) {
     const r = attempt(() => C._renderInvBulk(C.jobs[0]));
     ok(r.ok, 'the bar draws (' + (r.err || 'ok') + ')');
     const h = String(r.val || '');
-    has(h, '<div class="inv-bulk" id="inv-bulk-7" style="position:sticky;bottom:0;', 'the bar, by its id, still sticky at the foot');
+    has(h, '<div class="inv-bulk" id="inv-bulk-7" style="position:sticky;top:var(--topbar-h,0px);', 'the bar, by its id, still sticky, at the top since 2026-11-02');
     has(h, '<strong style="font-size:12px;">2 selected</strong><button type="button" class="inv-bulk-tog" id="inv-bulk-tog-7" onclick="toggleInvBulk(7)" aria-expanded="false" aria-controls="inv-bulk-ctl-7"',
       '⚠ "2 selected", then Actions, shut');
     has(h, '>Actions &#9662;</button><span class="inv-bulk-ctl" id="inv-bulk-ctl-7">', 'Actions ▾ opens the controls\' wrapper, which follows it');
