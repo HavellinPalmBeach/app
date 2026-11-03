@@ -296,7 +296,8 @@ const EST = 13001;
     await section('H. a sale far from the figure asks once; Cancel files the sale only (Ask 14, Use a sale\'s rule since the merge with main)', async () => {
       await p.evaluate(() => { _invOpen = {}; renderInventoryTab(); }); await p.waitForTimeout(500);
       await record('ch');
-      await press('#inv-row-ch details summary', 'Use a sale');
+      // Since main's line record (2026-11-02n) the record's first fold is See the research: Use a sale is found by its own summary.
+      await press('#inv-row-ch details > summary:has-text("Use a sale")', 'Use a sale');
       await p.fill('#av-wp-title-ch', 'Walnut chest on stand, 19th c.');
       await p.fill('#av-wp-price-ch', '1100');
       await p.fill('#av-wp-url-ch', 'https://www.worthpoint.com/worthopedia/walnut-chest-1');
@@ -323,8 +324,9 @@ const EST = 13001;
     await section('K. a set of eight: the Use a sale form asks for the price for one, weighed against one plate (P15\'s review)', async () => {
       await p.evaluate(() => { _invOpen = {}; _invFilter.when = 'all'; renderInventoryTab(); }); await p.waitForTimeout(500);
       await record('pl');
-      await press('#inv-row-pl details summary', 'Use a sale');
-      has(await txt('#inv-row-pl details'), 'Price is for', '⚠ the form asks what the price is for');
+      // Since main's line record (2026-11-02n) the record's first fold is See the research: Use a sale is found by its own summary.
+      await press('#inv-row-pl details > summary:has-text("Use a sale")', 'Use a sale');
+      has(await p.evaluate(() => { const d = [...document.querySelectorAll('#inv-row-pl details')].filter((x) => /^Use a sale/.test((x.querySelector('summary') || {}).textContent || ''))[0]; return d ? d.textContent : ''; }), 'Price is for', '⚠ the form asks what the price is for');
       eq(await val('#av-wp-per-pl'), 'each', '…one piece, as it opens');
       await p.fill('#av-wp-title-pl', 'Herend Rothschild Bird dinner plate');
       await p.fill('#av-wp-price-pl', '90');

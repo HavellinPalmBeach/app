@@ -60,6 +60,8 @@ const EST = 13001, LIV = 13002, CON = 13003;
         return json({ ok: true });
       }
       if (/action=loadMedia/.test(req.url())) return json({ ok: true, media: sheet });
+      // An estate's send reads the client from the sheet first (main's envelope fix, 2026-11-02): the sheet holds the page's own copy.
+      if (/action=loadJobs/.test(req.url())) return json({ ok: true, success: true, jobs: await p.evaluate(() => JSON.parse(JSON.stringify(jobs))), deletedJobs: [], recorded: [] });
       return json({ ok: true });
     });
     const p = await ctx.newPage();
@@ -157,7 +159,10 @@ const EST = 13001, LIV = 13002, CON = 13003;
         filename: 'HVL_' + id + '_INV_.jpg', driveFileId: 'f-' + id, namedBy: 'agent', agentConf: 'high', qty: 1, condition: 'Good' }, o);
       _photoRefs[EST] = [
         item('d1', { itemNo: 1, objectName: 'Walnut dresser', agentConf: 'low', fmv: 450, valLow: 300, valHigh: 600, valConf: 'low', valuedBy: 'agent', valSource: 'General estimate',
-          valAgentAt: T0, valNameAt: 'Walnut dresser', disposition: 'Sell', channel: 'Kodner Galleries' }),
+          valAgentAt: T0, valNameAt: 'Walnut dresser', disposition: 'Sell', channel: 'Kodner Galleries',
+          // RESTATED on landing with main (2026-11-03): a flagged line is held off the request until checked ("Hold unreviewed lines"),
+          // so the dresser, still flagged, has already gone: listed for ratification, where its mark and the question still reach it.
+          dispDate: '2026-10-20' }),
         item('d2', { itemNo: 2, objectName: 'Copper cookware set', category: 'General/Household', fmv: 40, valLow: 30, valHigh: 50, valConf: 'high', valuedBy: 'agent',
           valSource: 'General estimate', valAgentAt: T0, valNameAt: 'Copper cookware set', disposition: 'Donate', channel: 'Goodwill Palm Beach' }),
         item('d3', { itemNo: 3, objectName: 'Rolex Datejust', category: 'Jewelry & Watches', fmv: 4800, valuedBy: 'desk', apprWaived: true, apprWaiveReason: 'sold to a dealer',
@@ -169,7 +174,8 @@ const EST = 13001, LIV = 13002, CON = 13003;
           valuedBy: 'agent', valSource: 'Online comps', valAgentAt: T0, valNameAt: 'Oil painting, harbour scene', disposition: 'Sell', channel: 'Kodner Galleries' }),
         // ⚑ for sale to someone who works with Havellin: on a client's own home that needs the client's written approval, so it is on the request.
         item('l2', { itemNo: 2, objectName: 'Silver tea service', category: 'Silver', needsAppr: true, fmv: 800, valLow: 600, valHigh: 1000, valConf: 'high',
-          valuedBy: 'agent', valSource: 'Online comps', valAgentAt: T0, valNameAt: 'Silver tea service', disposition: 'Sell', channel: 'Ashley Jerome' })];
+          valuedBy: 'agent', valSource: 'Online comps', valAgentAt: T0, valNameAt: 'Silver tea service', disposition: 'Sell', channel: 'Ashley Jerome',
+          dispDate: '2026-10-20' })];   // gone, as the dresser: a flagged line reaches the request only for ratification (main's hold)
       _photoRefs[CON] = [item('c1', { itemNo: 1, objectName: 'Mahogany secretary desk', fmv: 650, valuedBy: 'desk', disposition: 'Donate', channel: 'Goodwill Palm Beach' })];
       savePhotoRefs(EST); savePhotoRefs(LIV); savePhotoRefs(CON);
       saveJobs(); localStorage.setItem('havellin_est_v4', JSON.stringify(estimateStore));
@@ -291,7 +297,8 @@ const EST = 13001, LIV = 13002, CON = 13003;
       await press('#inv-more button[onclick="printCourtInventory(' + EST + ')"]', 'Court Inventory');
       let t = await viewerText();
       has(t, 'DRAFT — 1 valued line with no basis stated (#3 Rolex Datejust)', '⚠⚠ DRAFT, naming the line (VAL-07)');
-      has(t, 'Rolex Datejust Good basis not stated $4,800', 'the basis column says so, in the row');
+      // RESTATED on landing with main (2026-11-03): P13's schedules name the Room after the item.
+      has(t, 'Rolex Datejust Study Good basis not stated $4,800', 'the basis column says so, in the row');
       await close();
       await press('#inv-why-d3 .inv-why-open', 'the Rolex\'s basis not stated ▾');
       await press('#inv-why-d3 button[onclick*="\'verbal\'"]', 'An appraiser’s verbal opinion');
@@ -386,6 +393,8 @@ const EST = 13001, LIV = 13002, CON = 13003;
       eq((await line(EST, 'd2')).valWhy, 'rate', 'fixture: the cookware carries The going rate from A');
       await press('#inv-row-d2 button[title="Open the full record"]', 'the cookware\'s ▾');
       const sel = 'select[onchange^="_invSetAppraiser(' + EST + ',\'d2\'"]';
+      // Since main's line record (2026-11-02n) the appraiser is under Something unusual about this item?, shut where nothing is set there.
+      if (!(await vis(sel))) await press('#inv-row-d2 details.inv-rec-odd > summary', 'Something unusual about this item?');
       ok(await vis(sel), 'its record\'s appraiser picker');
       await p.selectOption(sel, 'ap1'); await p.waitForTimeout(900);
       eq((await line(EST, 'd2')).apprId, 'ap1', 'Carla Mendes linked');
