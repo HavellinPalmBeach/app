@@ -169,6 +169,7 @@
   },
   {
    "id": "DOC-09",
+   "fixed": "2026-10-28 (P10: CLAUDE.md, Inventory and estate documentation, the release request carries the stamp the other papers carry, and a figure typed on the desk says why, Ask 8; tests/p10-request-stamp.test.js, browser step 135)",
    "title": "A figure the TC types prints 'not stated' in red on the court schedule, and the source list has no choice for Havellin's own estimate",
    "kind": "accuracy",
    "severity": "high",
@@ -254,6 +255,7 @@
   },
   {
    "id": "DOC-14",
+   "fixed": "2026-10-28 (P10: CLAUDE.md, Inventory and estate documentation, the release request carries the stamp the other papers carry, and a figure typed on the desk says why, Ask 8; tests/p10-request-stamp.test.js, browser step 135)",
    "title": "Every value on a fiduciary's paper is unmarked as reviewed or not, so 'N values not yet reviewed' names no lines",
    "kind": "accuracy",
    "severity": "high",
@@ -271,6 +273,7 @@
   },
   {
    "id": "DOC-15",
+   "fixed": "2026-10-28 (P10: CLAUDE.md, Inventory and estate documentation, the release request carries the stamp the other papers carry, and a figure typed on the desk says why, Ask 8; tests/p10-request-stamp.test.js, browser step 135)",
    "title": "The request's footer says values are 'not appraisals unless an appraisal is noted against the line', but no line ever notes one",
    "kind": "inconsistency",
    "severity": "medium",

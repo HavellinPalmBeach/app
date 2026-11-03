@@ -750,8 +750,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // is named too.
     eq(G2.probatePackageGaps(7), ['1 room not yet locked', '1 line with no disposition', '1 line with no value', '1 line flagged for a look and not yet ticked'], 'the Study unlocked, the chairs undecided and unvalued, the portrait not yet ticked');
     G2.jobPlanStore[7] = { rooms: { 1: { status: 'locked' } } };
+    // Each value with its basis (P10's review, 2026-10-28): on this Formal job (the Form 706 unanswered counts as yes) a value with
+    // none keeps the Trust Schedule DRAFT, so the package names it with the other gaps.
     G2._photoRefs[7] = INVENTORY().map((r) => Object.assign({}, r, r.label === 'inventory' ? { disposition: 'Auction', fmv: 100 } : {}));
-    eq(G2.probatePackageGaps(7), [], 'locked, decided, valued: nothing to ask');
+    eq(G2.probatePackageGaps(7), ['1 valued line with no basis stated (#2 Dining chairs (8))'], 'valued with no basis on Formal: the schedule\'s DRAFT reason, named');
+    G2._photoRefs[7] = INVENTORY().map((r) => Object.assign({}, r, r.label === 'inventory' ? { disposition: 'Auction', fmv: 100, valSource: r.valSource || 'Dealer quote' } : {}));
+    eq(G2.probatePackageGaps(7), [], 'locked, decided, valued with a basis: nothing to ask');
     G2.jobs[0].docTier = 'contents';
     G2._photoRefs[7] = INVENTORY();
     eq(G2.probatePackageGaps(7), ['1 line with no disposition', '1 line flagged for a look and not yet ticked'], 'a contents tier states no values, so a missing one is no gap');

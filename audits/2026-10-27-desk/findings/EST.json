@@ -79,6 +79,7 @@
   },
   {
    "id": "EST-04",
+   "fixed": "2026-10-28 (P10: CLAUDE.md, Inventory and estate documentation, the release request carries the stamp the other papers carry, and a figure typed on the desk says why, Ask 8; tests/p10-request-stamp.test.js, browser step 135)",
    "title": "The Release Approval Request carries unreviewed agent names and values with no stamp",
    "kind": "accuracy",
    "severity": "high",

@@ -1042,7 +1042,9 @@ function groupE({ group, ok, eq, has, lacks }) {
       resolveSubfolderId: (j, n, cb) => cb('INV7'), uploadHtmlToDrive: (f, n, h, cb) => cb(true, 'https://drive.google.com/file/d/REQ/view'),
       _exportDoc: () => '', docPdfBase64: (spec, html, cb) => cb('QUJD'), buildMimeMessage: () => 'MIME', gmailCreateDraft: (m, cb) => cb(true, { messageId: 'm1' }),
       setTimeout: () => 0, clearTimeout() {}, _docNotice: (t, m) => notices.push(String(m)), _dashSendState() {}, showSyncBadge() {},
-      saveJobs() {}, syncJobToSheets() {}, dashNotice() {}, _dashRedraw() {}, window: { open() {} } } });
+      saveJobs() {}, syncJobToSheets() {}, dashNotice() {}, _dashRedraw() {}, window: { open() {} },
+      // The send asks once where a line on it is still flagged (P10, 2026-10-28): the person answers OK.
+      confirm: () => true } });
     D.render();
     const r0 = heads(D.dom.html).filter((x) => x.f === 'releases')[0];
     eq([r0.open, r0.line], [true, '2 items need written approval: send a request · no beneficiaries recorded'], 'fixture: owed a request, so open (Q89)');
@@ -1909,7 +1911,9 @@ function groupI({ group, ok, eq, has, lacks }) {
     eq(callersOf('mustFindAllFound'), ['agentNoticeQuiet', 'standingFlagsBlock'], 'every must-find found: the desk\'s brief and the Must find notices');
     has(noComments(fn('_invEarlierUndecided')), "INV_WORK_FLAGS.filter(function(x){ return x.key === 'undecided'; })[0]", 'the hint reads the Not yet decided chip\'s own test');
     lacks(noComments(fn('_invEarlierUndecided')), '!r.disposition', 'never a copy of it');
-    eq(callersOf('deskShowLine'), [], 'Show the item is pressed, never called by code');
+    // RESTATED (P10, 2026-10-28): the send's one question opens its flagged lines when a person presses Cancel, through Show the
+    // item's own steps (approvalRequestOpenGaps); nothing else calls it.
+    eq(callersOf('deskShowLine'), ['approvalRequestOpenGaps'], 'Show the item is pressed, never called by code (but by the send\'s Cancel, a person\'s press)');
     eq(callersOf('_deskShowBtnHtml'), ['_agNoticesHtml', '_avNoticesHtml'], 'and drawn on both agents\' notices, nowhere else');
     ok(/\.desk-show\{[^}]*border:1px solid var\(--bronze\)[^}]*background:var\(--white\)[^}]*color:var\(--bronze\)/.test(CSS),
       'the outline has its own class: a bronze border and bronze words on white');

@@ -194,13 +194,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const rows = (list) => s._invScheduleSection('Furniture', list).html;
     // The line carries its number (P13, 2026-10-28: the schedules lead with Item #, and a line on a schedule always has one).
     const none = rows([{ objectName: 'Sideboard', itemNo: 1, qty: 1, fmv: 1200, valSource: '' }]);
-    has(none, '<span style="color:#A32D2D;">not stated</span>', '⚠⚠ a valued line with no basis reads not stated, in red');
+    // RESTATED (P10, 2026-10-28; Anthony, Ask 8): a missing basis reads *basis not stated* in amber on every paper that prints one,
+    // through one renderer (_invBasisCellHtml); it read *not stated* in red.
+    has(none, '<span class="inv-basis-missing" style="color:#8a5a1e;">basis not stated</span>', '⚠⚠ a valued line with no basis reads basis not stated, in amber');
     lacks(text(none), '—', 'never a dash');
     const named = rows([{ objectName: 'Sideboard', qty: 1, fmv: 1200, valSource: 'Appraisal' }]);
     // RESTATED (P7, 2026-10-27; VAL-02): an appraisal with nobody recorded as its appraiser says so.
     has(named, '>appraisal (appraiser not named)</td>', 'a basis prints its word');
     lacks(named, 'not stated', '…and nothing else');
-    eq(noComments(fn('printEstateInventoryReport')).split('<span style="color:#A32D2D;">not stated</span>').length - 1, 1, 'the report prints the same words');
+    eq(noComments(fn('printEstateInventoryReport')).split('<span class="inv-basis-missing" style="color:#8a5a1e;">basis not stated</span>').length - 1, 1, 'the report prints the same words');
+    lacks(noComments(fn('printEstateInventoryReport')), '<span style="color:#A32D2D;">not stated</span>', '…and never the old red ones');
   });
 
   // ═════════════════════════════════════════════════════════════════

@@ -112,7 +112,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // cannot (the desk audit's SYN-16: the page said nothing about two devices); Anthony to confirm.
     // 2,925 from 2026-10-28 (P9): the photos with nothing to list off in one press, a photo too dark to read, and the ticks clearing
     // after each press (the page described the selection that stayed); Anthony to confirm.
-    ok(words < 2925, 'short: ' + words + ' words');
+    // 2,975 from 2026-10-28 (P10): a value typed asks why, No basis, the release request stamped like the other papers and the
+    // send's one question, and a Formal schedule's DRAFT for a value with no basis (the desk audit's P10, Ask 8); Anthony to confirm.
+    // 3,025 on landing both (2026-11-03): P9's fifty words and P10's hundred, each over the 2,875 before them; Anthony to confirm.
+    ok(words < 3025, 'short: ' + words + ' words');
     ['photography-guide.html', 'incident-guide.html', 'sorting-guide.html', 'packing-guide.html', 'move-day-guide.html', 'first-night-guide.html',
      'firearms-protocol.html', 'concierge-guide.html'].forEach((f) => has(html, '<a href="' + f + '">', 'names ' + f));
     has(t, 'Linked from the top of the Job Admin & Inv tab.', 'and says where the app links it');
@@ -685,8 +688,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(attempt(() => RV.invListReadRefusal(7)).val, 'the sheet is unreachable: this is this device’s copy', '…or while the sheet is unreachable');
     RV.SHEETS_SYNC_URL = ''; delete RV._invCloudFailed[7];
     has(t, 'Last, read the whole list against what you saw and press ✓ I’ve read the list on the Inventory Review bar: it records who and when, for the list as it stood. Change anything printed about an item after, or remove one, anywhere, and it says changed since: press it again. A tick changes nothing. While the list is loading, the sheet is unreachable or Agent One or Agent Two is at work, the press waits.', 'as the page says');
-    eq(sandbox({ vars: ['INV_READ_FIELDS'] }).INV_READ_FIELDS.join(','), 'objectName,category,qty,fmv,valLow,valHigh,valSource,disposition,channel,condition,roomIdx,valNote,valDate,apprId,apprDoc,assetTrack,flagExempt,serial',
-      '…"anything printed about an item": what the press reads is what the papers print of a line (the merge\'s review added the basis, the date, the appraiser, the track, the exempt mark and the serial)');
+    eq(sandbox({ vars: ['INV_READ_FIELDS'] }).INV_READ_FIELDS.join(','), 'objectName,category,qty,fmv,valLow,valHigh,valSource,disposition,channel,condition,roomIdx,valNote,valDate,apprId,apprDoc,assetTrack,flagExempt,serial,valWhy,valWhyBy,valWhyUrl',
+      '…"anything printed about an item": what the press reads is what the papers print of a line (the merge\'s review added the basis, the date, the appraiser, the track, the exempt mark and the serial; P10 a desk figure\'s reason, who gave it and a sale\'s link)');
     RV._agRun = { 7: { running: true } };
     eq(attempt(() => RV.invListReadRefusal(7)).val, 'the agents are still at work on this list', '…and while Agent One or Agent Two is at work, as the page says');
     RV._agRun = {};

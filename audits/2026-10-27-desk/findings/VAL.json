@@ -131,6 +131,7 @@
   },
   {
    "id": "VAL-07",
+   "fixed": "2026-10-28 (P10: CLAUDE.md, Inventory and estate documentation, the release request carries the stamp the other papers carry, and a figure typed on the desk says why, Ask 8; tests/p10-request-stamp.test.js, browser step 135)",
    "title": "A figure the concierge types over Agent Two's prints 'not stated' in red, and FINAL ignores it",
    "kind": "accuracy",
    "severity": "high",
@@ -492,6 +493,7 @@
   },
   {
    "id": "VAL-28",
+   "fixed": "2026-10-28 (P10: CLAUDE.md, Inventory and estate documentation, the release request carries the stamp the other papers carry, and a figure typed on the desk says why, Ask 8; tests/p10-request-stamp.test.js, browser step 135)",
    "title": "The release request and the Donation Record print unreviewed agent figures as 'Havellin's estimates'",
    "kind": "accuracy",
    "severity": "low",

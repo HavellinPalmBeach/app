@@ -981,8 +981,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(/^3:[0-9a-f]{1,8}$/.test(String(f0)), '⚠⚠ "<count>:<hex>": three lines (the removed one counted), never a shot or a collection document (' + f0 + ')');
     eq(val(attempt(() => JSON.parse(JSON.stringify(R.ctx.INV_READ_FIELDS)))),
       ['objectName', 'category', 'qty', 'fmv', 'valLow', 'valHigh', 'valSource', 'disposition', 'channel', 'condition', 'roomIdx',
-        'valNote', 'valDate', 'apprId', 'apprDoc', 'assetTrack', 'flagExempt', 'serial'],
-      '⚠ INV_READ_FIELDS: what the papers print of a line (the merge\'s review added the basis, the date, the appraiser, the track, the §732.402 mark and the serial)');
+        'valNote', 'valDate', 'apprId', 'apprDoc', 'assetTrack', 'flagExempt', 'serial', 'valWhy', 'valWhyBy', 'valWhyUrl'],
+      '⚠ INV_READ_FIELDS: what the papers print of a line (the merge\'s review added the basis, the date, the appraiser, the track, the §732.402 mark and the serial; P10 a typed figure\'s reason, who picked it and its sale\'s link)');
     eq(fp(rig(ESTATE(), [])), '0:811c9dc5', 'no lines: a count of 0 and FNV-1a\'s offset basis');
     eq(fp(rig(ESTATE(), M().reverse())), f0, '⚠⚠ the same list on two copies built in different orders: the same fingerprint');
     eq(fp(rig(ESTATE(), M().filter((r) => r.label !== 'inventory' || r.stableId !== 'cp').filter((r) => r.label === 'inventory'))), f0, 'the shots and the collection document change nothing');
@@ -1616,8 +1616,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The rule: one, with its first reason and the open ones its readers.
     // RESTATED 2026-10-28 (P9 of the desk audit, INV-07, NEW-07): the package's question counts the lines flagged for a look that
     // nobody has ticked, less the reasons it names in words of its own, so it asks the rule for every reason.
-    eq(callersOf('_invLineHolds'), ['_invRevBoxHtml', 'invLineHold', 'invLineOpen', 'probatePackageGaps'], '⚠ _invLineHolds\' readers: the first reason, the open ones, the box that names every one and the package\'s question');
-    eq(calls('_invLineHolds'), 5, '…and nothing else (the definition and four calls)');
+    // RESTATED (P10, 2026-10-28; DOC-14, NEW-02): a line still flagged is marked on the paper's row with the box's reasons
+    // (invHoldPaperText), and the release request's send names each flagged line's first reason (approvalRequestGaps).
+    eq(callersOf('_invLineHolds'), ['_invRevBoxHtml', 'approvalRequestGaps', 'invHoldPaperText', 'invLineHold', 'invLineOpen', 'probatePackageGaps'], '⚠ _invLineHolds\' readers: the first reason, the open ones, the box that names every one, the papers\' row mark, the send\'s question and the package\'s question');
+    eq(calls('_invLineHolds'), 7, '…and nothing else (the definition and six calls)');
     eq(live(fn('invLineHold')).replace(/\s+/g, ' ').trim(), "function invLineHold(ref, fc) { return _invLineHolds(ref, fc)[0] || ''; }", 'invLineHold is the rule\'s first reason, nothing of its own');
     eq(callersOf('invLineHold'), ['invLineAccepted'], '⚠ invLineHold\'s reader: the yes/no');
     eq(calls('invLineHold'), 2, '…and nothing else');
@@ -1631,11 +1633,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(callersOf('invLineAcceptedOnly'), ['_avStampCounts', '_invRevBoxHtml', '_invReviewStats'], 'the accepted count\'s readers');
     // RESTATED (P7): the §20.2031-6(b) aggregate carries the stamp's words where an agent figure is among its articles, so it asks the context.
     // RESTATED 2026-11-02: the release request holds a line still flagged for a look (invReleaseChecked, its state and its printer).
-    eq(callersOf('invAcceptCtx'), ['_invAcceptCtxOf', '_invBulkApply', 'approvalRequestState', 'invReleaseChecked', 'maivAggregate', 'printApprovalRequest', 'printContentsList', 'printContentsRecord', 'printCourtInventory', 'printDispositionLedger',
-      'printEstateInventoryReport', 'printTrustSchedule', 'probatePackageGaps'], '⚠ invAcceptCtx\'s: the desk\'s context, Mark reviewed, the §20.2031-6(b) aggregate, the release request\'s check, the six printers and the package\'s gaps');
+    // RESTATED (P10, 2026-10-28; EST-04, NEW-02, VAL-28, LIV-22): the release request and the Donation Record print the stamp too, the
+    // schedules mark their rows, and the request's send asks off the same facts.
+    eq(callersOf('invAcceptCtx'), ['_invAcceptCtxOf', '_invBulkApply', 'approvalRequestGaps', 'approvalRequestState', 'invReleaseChecked', 'maivAggregate', 'printApprovalRequest', 'printContentsList', 'printContentsRecord', 'printCourtInventory', 'printDispositionLedger',
+      'printDonationRecord', 'printEstateInventoryReport', 'printTrustSchedule', 'probatePackageGaps'], '⚠ invAcceptCtx\'s: the desk\'s context, Mark reviewed, the §20.2031-6(b) aggregate, the release request\'s check, the eight printers, the package\'s gaps and the request\'s question');
     // RESTATED 2026-10-28 (P9): the package's question asks it twice, over every line for the flagged count and over the named lines
-    // for the read, as the read always did. And (2026-11-02) the release request's check three times.
-    eq(calls('invAcceptCtx'), 15, '…and nothing else (the definition and fourteen calls)');
+    // for the read, as the read always did. And (2026-11-02) the release request's check three times, and P10's five.
+    eq(calls('invAcceptCtx'), 20, '…and nothing else (the definition and nineteen calls)');
     eq(callersOf('_invAcceptCtxOf'), ['_invEdit', '_invGroupItems', '_invReadLineRepaint', '_invRevBoxHtml', '_renderInvRow', '_renderInvWorkbar'], 'the desk\'s context: its readers');
     has(live(decl('INV_WORK_FLAGS')), 'return !invLineReviewed(r, _invAcceptCtxOf(job));', '…and the Not reviewed chip');
     ['printContentsList', 'printEstateInventoryReport', 'printCourtInventory', 'printTrustSchedule', 'printDispositionLedger', 'printContentsRecord']
@@ -1668,7 +1672,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const asked = [...H.matchAll(/ask\('([a-z]+)'\)/g)].map((m) => m[1]);
     eq(asked.length, new Set(asked).size, 'each reason asked once');
     ok(Object.keys(vm.runInNewContext(decl('INV_OPEN_HOLDS') + '; INV_OPEN_HOLDS')).every((k) => words.indexOf(k) >= 0), 'every open reason is a reason with words');
-    eq((L.match(/\bINV_HOLD_WORDS\b/g) || []).length, 2, 'INV_HOLD_WORDS: declared once, read once (by the box)');
+    // RESTATED (P10, 2026-10-28): the papers' row mark (behind INV_HOLD_PAPER_WORDS) and the request's question read the same words.
+    eq((L.match(/\bINV_HOLD_WORDS\b/g) || []).length, 4, 'INV_HOLD_WORDS: declared once, read by the box, the papers\' row mark and the request\'s question');
+    has(live(fn('invHoldPaperText')), 'INV_HOLD_PAPER_WORDS[k] || INV_HOLD_WORDS[k]', '…the row mark taking the desk\'s instructions off first');
     has(live(fn('_invRevBoxHtml')), 'INV_HOLD_WORDS[k]', '…the box\'s tooltip');
     eq((L.match(/\bINV_OPEN_HOLDS\b/g) || []).length, 5, 'INV_OPEN_HOLDS: declared once, read by invLineOpen and the box alone');
     eq(count(live(fn('invLineOpen')), 'INV_OPEN_HOLDS') + count(live(fn('_invRevBoxHtml')), 'INV_OPEN_HOLDS'), 4, '…twice each');
@@ -1686,15 +1692,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // RESTATED (P7, 2026-10-27): the §20.2031-6(b) sentence carries the pill's words in text (_avStampText; p7-evidence.test.js holds
     // the two equal), so it reads the list's read too; and (P7's review) the worklist asks whether its figures are still nobody's look
     // (_avStampUnread), so a list read is never said to be unread.
-    eq(callersOf('invListRead'), ['_avAcceptedPill', '_avStampText', '_avStampUnread', '_invListReadHtml', '_invProgressStamp', '_invReadKey', '_renderInvWorkbar', 'probatePackageGaps'],
-      '⚠ invListRead: the stamp, the pill and its words in text, whether the figures are still unread, the work bar\'s line, its key and its sentence, and the package\'s gaps');
+    // RESTATED (P10, 2026-10-28; NEW-02): the release request's send asks too, as the package does.
+    eq(callersOf('invListRead'), ['_avAcceptedPill', '_avStampText', '_avStampUnread', '_invListReadHtml', '_invProgressStamp', '_invReadKey', '_renderInvWorkbar', 'approvalRequestGaps', 'probatePackageGaps'],
+      '⚠ invListRead: the stamp, the pill and its words in text, whether the figures are still unread, the work bar\'s line, its key and its sentence, and the package\'s and the request\'s questions');
     eq(callersOf('invListReadRefusal'), ['_invListReadHtml', '_invReadKey', 'invMarkListRead'], 'the refusal: the press, its line and its key');
     eq(callersOf('invListReadWords'), ['_avAcceptedPill', '_avStampText', '_invListReadHtml', '_invProgressStamp'], 'the read\'s words: the pill (and its words in text), the line and the stamp');
     eq(callersOf('invMarkListRead'), ['_invListReadHtml'], 'the press: the work bar\'s button alone');
     eq(callersOf('_invListReadHtml'), ['_renderInvWorkbar'], 'the line: the work bar alone (_invEdit redraws the bar, never the line)');
     eq(callersOf('_invReadKey'), ['_invListReadHtml', '_invReadLineRepaint'], 'the key: drawn on the host, compared by the one repaint');
-    eq(callersOf('_invReadLineRepaint'), ['_agRepaint', '_arRepaint', '_avRepaint', '_invEdit', '_invRefreshFromCloud'],
-      '⚠ the repaint: after an edit, after a sheet read that changed nothing (the build\'s browser step), and as each agent\'s run moves (the merge\'s review)');
+    // RESTATED (P10, 2026-10-28; Ask 8): a figure's reason picked moves what the papers print (INV_READ_FIELDS), so its press repaints the line.
+    eq(callersOf('_invReadLineRepaint'), ['_agRepaint', '_arRepaint', '_avRepaint', '_invEdit', '_invRefreshFromCloud', 'invPickValueWhy'],
+      '⚠ the repaint: after an edit, after a sheet read that changed nothing (the build\'s browser step), as each agent\'s run moves (the merge\'s review), and after a figure\'s reason is picked');
     eq(callersOf('_avAcceptedPill'), ['_avUnreviewedStamp'], 'the standing values\' pill: the value stamp alone');
     eq(callersOf('_invReviewRepaint'), ['_invEdit', 'waiveAppraisal'], 'the box\'s repaint by id: the edit and the waiver');
     // The time-stamped read is gone, in every form it took; so is the floor.
