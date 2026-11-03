@@ -279,7 +279,7 @@ const HOUSE = ['Living Room', 'Kitchen', 'Dining Room', 'Primary Suite', 'Bedroo
       await press('#doc-viewer-modal button[onclick="closeDocViewer()"]', 'Close the viewer');
       for (let i = 0; i < 20 && (await p.evaluate(() => (window.__prints || []).length)) === before; i++) await p.waitForTimeout(150);
       const pr = await lastPrint();
-      ok(pr.html.indexOf('Estate Inventory — Tangible Personal Property') >= 0, 'fixture: the Court Inventory printed');
+      ok(pr.html.indexOf('Court Inventory (§733.604) — Tangible Personal Property') >= 0, 'fixture: the Court Inventory printed');   // its own name since P14
       eq(count(pr.text, 'Reviewed and adopted by'), 2, '⚠⚠ two personal representatives: two adoption lines');
       has(pr.text, 'Ruth Adler · Personal Representative / authorized fiduciary', 'each named');
       has(pr.text, 'Paul Finch · Personal Representative / authorized fiduciary', 'the co-personal representative too');

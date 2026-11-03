@@ -83,7 +83,7 @@ function app(refs, over) {
     fns: ['agentListedOff', 'agentNameableRefs', 'agentShotGroups', '_agDetailRefs', '_agShotPayload', '_agContext', '_agWrite', '_invCondIsAgents', '_invAgentCondition',
       'agentApplyResult', '_agState', '_agSendNext', 'invSplitItemN', '_invSplitSource', '_getPhotoRef', '_setPhotoRef', '_jobInvRefs', '_invFileId', '_photoUid',
       '_invPhotoSource', '_invRoomName', 'agentNamedTwice', 'agentDuplicateGroups', '_arPair', '_arPairOpen', 'agentDupCleared', '_agDupEligible', '_arDupEligible', '_agNameKey',
-      '_agDupIndex', '_agDupHtml', '_agDupHandle', '_agDupUnhandle', 'agentDropDuplicate', 'agentNotDuplicate', 'agentValueWaiting', '_avDupReleased', '_avHasFigure', '_invHasValue', '_invItemNo',
+      '_agDupIndex', '_agDupHtml', '_agDupHandle', '_agDupUnhandle', 'agentDropDuplicate', 'agentDupPartner', 'agentNotDuplicate', 'agentValueWaiting', '_avDupReleased', '_avHasFigure', '_invHasValue', '_invItemNo',
       'savePhotoRefs', 'collectionLineWithPhoto', '_withDeviceKey', 'deviceKey', '_invJob', 'invFirearmSettle', 'invIsFirearm', 'invFirearmDispRefusal', 'isDecedentJob'],
     vars: ['_agRun', '_arRun', '_avDupHeld', 'AGENT_CONDITIONS', 'AGENT_MAX_DETAILS', 'AGENT_LISTED_MAX', 'AGENT_BATCH', 'AGENT_PASS_GAP_MS', 'AGENT_ROOM_CONF_RANK', 'AGENT_ROOM_CONF_WORDS',
       'INV_TAXONOMY', 'INV_CATEGORIES', 'INV_DEFAULT_CATEGORY', 'INV_SPLIT_MAX', '_photoUidSeq', 'INV_FIREARM_NEVER', 'DECEDENT_SERVICES'],

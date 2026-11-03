@@ -139,7 +139,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         'because the tab-open refresh bails on "Select client" — the one moment a job '
         + 'becomes current was the one moment nothing fetched');
     const r = src.slice(src.indexOf('function renderInventoryTab('));
-    has(r.slice(0, 900), '_invEnsureLoaded(jobId)', 'and the render hydrates before it draws');
+    // 1,300 since P9's review (2026-10-28): the render now opens on the press hold (_invPressHolds) and the epoch, ahead of the hydrate.
+    has(r.slice(0, 1300), '_invEnsureLoaded(jobId)', 'and the render hydrates before it draws');
   }
 
   group('inventory: the destructive write waits for the full picture');

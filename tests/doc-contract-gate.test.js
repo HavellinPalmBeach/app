@@ -9,12 +9,12 @@ const { sandbox, source, domStub } = require('./harness.js');
 const FNS = ['scheduleSignLines', '_invDocPartyHead', 'invLineReviewed', 'invLineOpen', 'invConditionText', '_invScheduleSection', 'invValBasisWord', '_invTrackDefault', 
   'invDocContractBlock', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep',
   'printEstateInventoryReport', 'jobOnProbateTrack', 'printCourtInventory', '_avUnreviewedStamp', 'printContentsList', 'contentsList',
-  'printContentsRecord', '_invHasPhoto', 'photoShareLive', 'photoSharesOf', 'printApprovalRequest', '_lotSplitWorklistBlock', 'invLotSplitState', 'invLotArticleValue', 'invLotSplitSentence', 'invLotsToSplit', 'invLotsUntestable', 'printAppraisalWorklist', 'printDispositionLedger',
+  'printContentsRecord', '_invHasPhoto', 'photoShareLive', 'photoSharesOf', 'printApprovalRequest', 'invGroupUncounted', '_lotSplitWorklistBlock', 'invLotSplitState', 'invLotArticleValue', 'invLotSplitSentence', 'invLotsToSplit', 'invLotsUntestable', 'printAppraisalWorklist', 'printDispositionLedger',
   'agentShotGroups', 'agentNameableRefs', '_agState', '_agStateHtml', '_agNoticesHtml', 'agentNotices',
-  '_clFlags', '_renderInvWorkbar', 'invColdWords', '_arCheckButtonHtml', '_arState', 'agentRoomsToCheck', '_arCheckable', '_arStateHtml', '_avValueButtonHtml', 'agentValueWaiting', 'agentValueableRefs', '_avHasFigure', '_avStateHtml', '_avState', '_avNoticesHtml', 'agentValueNotices', '_avNoticeKinds', '_avNoticeLabel', 'agentValueInternal', 'agentValueUnreviewed', 'agentValueStale', 'agentValueSpecialistWorth', 'invPrimaryDoc', '_invProgressBar', 'invWorkFlags', '_invNeedsValue',
+  '_clFlags', '_renderInvWorkbar', 'invDriveFolderWords', 'invTrustOnlyMatter', 'invInventoryWord', 'invInstrumentOffered', '_invNothingLineHtml', 'invLineNothingToList', 'invColdWords', '_arCheckButtonHtml', '_arState', 'agentRoomsToCheck', '_arCheckable', '_arStateHtml', '_avValueButtonHtml', 'agentValueWaiting', 'agentValueableRefs', '_avHasFigure', '_avStateHtml', '_avState', '_avNoticesHtml', 'agentValueNotices', '_avNoticeKinds', '_avNoticeLabel', 'agentValueInternal', 'agentValueUnreviewed', 'agentValueStale', 'agentValueSpecialistWorth', 'invPrimaryDoc', '_invProgressBar', 'invWorkFlags', '_invNeedsValue',
   '_invAssignItemNos', '_jobInvRefs', '_invItemNo', '_invRoomName', '_planRooms', '_invFileId',
   '_invTouch', 'savePhotoRefs', '_warnPhotoStoreFull', '_invDocHead', '_invDocName',
-  '_invPrintThumb', '_invProgressStamp', '_invReviewStats', '_invThumbFor', '_invThumbCache',
+  '_invPrintThumb', '_invPrintThumbSrc', '_invPaperPhotoUrl', '_invProgressStamp', '_invReviewStats', '_invThumbFor', '_invThumbCache',
   '_invThumbKey', 'invFiduciaryMode', 'isDecedentJob', 'svcFamily', '_invGroupItems',
   '_invDispLabel', '_invIsExempt', '_invIsProbateAsset', '_invTrack', '_invHasAppraisal',
   '_jobAppraisers', 'invAppraiserFor', 'resolveValBasis', 'estateValueDate', 'invNeedsAppraisal', 'invAppraisalChosen',
@@ -250,8 +250,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(h, 'not being administered through probate', '… and says so on its face');
     has(h, 'not ready to be adopted', 'refusing to finalise');
     lacks(h, 'Reviewed and adopted by', 'with no signature block');
-    has(bar(ESTATE({ docTier: 'values', matterType: 'trust' })), 'printCourtInventory(7)',
-        '⚠ and the button is still offered, because the document is the explanation');
+    // Restated 2026-10-28 (P14 of the desk audit, EST-20): More ▾ offers each instrument only where the matter has it
+    // (invInstrumentOffered), so a trust matter's desk offers the Trust Schedule and no Court Inventory; the page above still
+    // explains itself for any path that reaches it round the menu, which is why it is rendered here directly.
+    lacks(bar(ESTATE({ docTier: 'values', matterType: 'trust' })), 'printCourtInventory(7)',
+        '⚠ and the button is offered only where the matter has the instrument (P14)');
+    has(bar(ESTATE({ docTier: 'values', matterType: 'trust' })), 'printTrustSchedule(7)', 'the trust matter is offered its own');
   }
 
   // ───────────────────────────────────────────────────────────────────────────

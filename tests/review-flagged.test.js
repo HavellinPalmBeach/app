@@ -1389,9 +1389,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(gaps([DRAWER(), TICKED({ stableId: 't' })], { read: true, after: (R) => { R.ref('d1').condition = 'Fair'; } }), ['the list not yet read since it last changed'],
       '⚠ read, then changed: "since it last changed"');
     eq(gaps([TICKED({ stableId: 't' })]), [], 'nothing standing: no read owed');
-    eq(gaps([DRAWER({ stableId: 'f', needsAppr: true })]), [], 'a flag open, nothing standing: no read owed (the flag is the desk\'s)');
+    // RESTATED 2026-10-28 (P9 of the desk audit, INV-07, NEW-07): the question counts what the desk counts, so the flag the desk
+    // holds open is named as one, and still no read is owed.
+    eq(gaps([DRAWER({ stableId: 'f', needsAppr: true })]), ['1 line flagged for a look and not yet ticked'], 'a flag open, nothing standing: no read owed (the flag is named, as the desk counts it)');
     eq(gaps([DRAWER(), DRAWER({ stableId: 'u', disposition: '' })]), ['1 line with no disposition', 'the list not yet read'], 'beside the other gaps, last');
-    eq(gaps([DRAWER()], { after: (R) => { R.job.gateDispute = 'yes'; } }), [], 'a disputed estate: nothing stands, no read owed');
+    eq(gaps([DRAWER()], { after: (R) => { R.job.gateDispute = 'yes'; } }), ['1 line flagged for a look and not yet ticked'], 'a disputed estate: nothing stands, no read owed (every line flagged, and named so)');
   }
 
   // ═══════════════════════════════ C · THE PAPERS ═══════════════════════════════
@@ -1618,8 +1620,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     };
     const calls = (name) => (L.match(new RegExp('\\b' + name + '\\(', 'g')) || []).length;
     // The rule: one, with its first reason and the open ones its readers.
-    eq(callersOf('_invLineHolds'), ['_invRevBoxHtml', 'invLineHold', 'invLineOpen'], '⚠ _invLineHolds\' readers: the first reason, the open ones, and the box that names every one');
-    eq(calls('_invLineHolds'), 4, '…and nothing else (the definition and three calls)');
+    // RESTATED 2026-10-28 (P9 of the desk audit, INV-07, NEW-07): the package's question counts the lines flagged for a look that
+    // nobody has ticked, less the reasons it names in words of its own, so it asks the rule for every reason.
+    eq(callersOf('_invLineHolds'), ['_invRevBoxHtml', 'invLineHold', 'invLineOpen', 'probatePackageGaps'], '⚠ _invLineHolds\' readers: the first reason, the open ones, the box that names every one and the package\'s question');
+    eq(calls('_invLineHolds'), 5, '…and nothing else (the definition and four calls)');
     eq(live(fn('invLineHold')).replace(/\s+/g, ' ').trim(), "function invLineHold(ref, fc) { return _invLineHolds(ref, fc)[0] || ''; }", 'invLineHold is the rule\'s first reason, nothing of its own');
     eq(callersOf('invLineHold'), ['invLineAccepted'], '⚠ invLineHold\'s reader: the yes/no');
     eq(calls('invLineHold'), 2, '…and nothing else');
@@ -1634,7 +1638,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // RESTATED (P7): the §20.2031-6(b) aggregate carries the stamp's words where an agent figure is among its articles, so it asks the context.
     eq(callersOf('invAcceptCtx'), ['_invAcceptCtxOf', '_invBulkApply', 'maivAggregate', 'printContentsList', 'printContentsRecord', 'printCourtInventory', 'printDispositionLedger',
       'printEstateInventoryReport', 'printTrustSchedule', 'probatePackageGaps'], '⚠ invAcceptCtx\'s: the desk\'s context, Mark reviewed, the §20.2031-6(b) aggregate, the six printers and the package\'s gaps');
-    eq(calls('invAcceptCtx'), 11, '…and nothing else (the definition and ten calls)');
+    // RESTATED 2026-10-28 (P9): the package's question asks it twice, over every line for the flagged count and over the named lines
+    // for the read, as the read always did.
+    eq(calls('invAcceptCtx'), 12, '…and nothing else (the definition and eleven calls)');
     eq(callersOf('_invAcceptCtxOf'), ['_invEdit', '_invGroupItems', '_invReadLineRepaint', '_invRevBoxHtml', '_renderInvRow', '_renderInvWorkbar'], 'the desk\'s context: its readers');
     has(live(decl('INV_WORK_FLAGS')), 'return !invLineReviewed(r, _invAcceptCtxOf(job));', '…and the Not reviewed chip');
     ['printContentsList', 'printEstateInventoryReport', 'printCourtInventory', 'printTrustSchedule', 'printDispositionLedger', 'printContentsRecord']
@@ -1647,7 +1653,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(L, 'agentNoticeLoud', 'agentNoticeLoud gone from live code: every note outlives its line');
     // And since P4 (2026-10-27) by the firearms on the job (jobFirearmLines: a Firearm or NFA note on an unreviewed line lights the
     // crew's banner), reading the same answer, never a copy of it.
-    eq(callersOf('agentNoticesOn'), ['_agRecordNoticesHtml', 'agentNotices', 'jobFirearmLines'], 'what a removed photograph line\'s notes ride on: one answer, read by the list above the rows, the record and the firearms on the job');
+    // RESTATED 2026-10-28 (P9 of the desk audit, AGT-02): Remove line's question names the notes that go off the list with the line.
+    eq(callersOf('agentNoticesOn'), ['_agRecordNoticesHtml', 'agentNotices', 'invRemoveLine', 'jobFirearmLines'], 'what a removed photograph line\'s notes ride on: one answer, read by the list above the rows, the record, the firearms on the job and Remove line\'s question');
     lacks(live(fn('_invPhotoNoteOpen')), 'deletedAt', '…and the rule holds on the photograph\'s notes whether or not its line was removed');
     // ⚠ The hint is the line's alone (Q108): one reader, handed no facts.
     // Restated on the merge of main (2026-10-26): the hint is read by the row, by main's Unsure chip on the work bar (INV_WORK_FLAGS)

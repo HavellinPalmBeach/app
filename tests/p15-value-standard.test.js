@@ -2,7 +2,7 @@
 // P15 OF THE DESK AUDIT (2026-10-28): THE VALUE FOLLOWS THE JOB'S STANDARD, MARKET AND DATE. As the plan sets it (audits/2026-10-27-desk/
 // PLAN.md, P15; the findings ACC-09, VAL-08, ACC-10, VAL-09, ACC-12, VAL-11, VAL-06, AGT-06, VAL-16, VAL-21, and Ask 14, ACC-04):
 //
-//   S · the server (main-sync.gs, backend 2026-11-02c, carrying 2026-11-02b, 2026-11-02 and the cell-cap fix's 2026-10-28): the standard by class in place of "not retail", each basis with its own words,
+//   S · the server (main-sync.gs, backend 2026-11-02d, carrying 2026-11-02c, 2026-11-02b, 2026-11-02 and the cell-cap fix's 2026-10-28): the standard by class in place of "not retail", each basis with its own words,
 //       the buyer's premium on every comparable, a like item's asking price as Replacement Value's evidence, a line's own value date;
 //   B · the basis: asked first, "(counsel only)" where fair market value is the law's, the agent's figures made at another basis named
 //       with Re-value, the column and the total by the basis, a line's own basis printed where it differs;
@@ -211,13 +211,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('S3 · the version, and the app\'s copy of the premium list held equal to the server\'s');
   {
-    // RESTATED on merging main (2026-11-02): main took 2026-11-02 and 2026-11-02b first, so P15 is 2026-11-02c and carries both.
-    eq(g.BACKEND_VERSION, '2026-11-02c', 'the backend is 2026-11-02c (it carries 2026-11-02b, 2026-11-02 and 2026-10-28)');
+    // RESTATED on merging main (2026-11-02): main took 2026-11-02, 2026-11-02b and 2026-11-02c first, so P15 is 2026-11-02d and carries them.
+    eq(g.BACKEND_VERSION, '2026-11-02d', 'the backend is 2026-11-02d (it carries 2026-11-02c, 2026-11-02b, 2026-11-02 and 2026-10-28)');
     const app = sandbox({ fns: [], vars: ['BACKEND_MIN_VERSION', 'AGENT_VALUE_PREMIUMS'] });
-    eq(app.BACKEND_MIN_VERSION, '2026-11-02c', 'the app asks for it');
+    eq(app.BACKEND_MIN_VERSION, '2026-11-02d', 'the app asks for it');
     eq(JSON.stringify(app.AGENT_VALUE_PREMIUMS), JSON.stringify(g.AGENT_VALUE_PREMIUMS), 'one list of premium answers on both sides');
-    // P15's review: the banner names the Replacement Value gap too, until 2026-11-02c is live.
-    has(sandbox({ vars: ['BACKEND_FEATURE_COST'] }).BACKEND_FEATURE_COST.version, 'on a deployment older than 2026-11-02c, Agent Two values every basis', 'the newest gap carries its vintage (the review\'s nit)');
+    // P15's review: the banner names the Replacement Value gap too, until 2026-11-02d is live.
+    has(sandbox({ vars: ['BACKEND_FEATURE_COST'] }).BACKEND_FEATURE_COST.version, 'on a deployment older than 2026-11-02d, Agent Two values every basis', 'the newest gap carries its vintage (the review\'s nit)');
     has(sandbox({ vars: ['BACKEND_FEATURE_COST'] }).BACKEND_FEATURE_COST.version, 'ends a Replacement Value line resting on asking prices as a general estimate',
       'the out-of-date banner names what stays wrong on Replacement Value');
   }
@@ -316,6 +316,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const E = rig(ESTATE({ deathDate: '2026-06-01' }), []);
     eq(E.setEstateAVD(7, true, '2026-10-28'), false, 'and before the date');
     has(E.said[0], 'The alternate valuation date is Dec 1, 2026, six months after death. It can be chosen once that day has passed.', '…by name');
+  }
+
+  group('⚠ D3 · P14\'s value-as-of words read the election only where it stands (the merge with main, 2026-11-02)');
+  {
+    const C = rig(ESTATE(), []);
+    ok(typeof C.invValueAsOfWords === 'function', 'fixture: the rig lifts P14\'s words');
+    has(C.invValueAsOfWords(ESTATE({ avd: true })), 'the alternate valuation date', 'elected on a 706 estate: the alternate date');
+    const off = C.invValueAsOfWords(ESTATE({ avd: true, gate706: 'no' }));
+    ok(off.indexOf('the date of death') === 0 && off.indexOf('alternate') < 0, '⚠ a tick left on after the 706 answer moved off Yes reads as the date of death, as its date does (' + off + ')');
   }
 
   group('⚠⚠ D2 · elected: asked first, every value stated as of that day, an item that left inside it as of its day');
@@ -714,7 +723,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const r = ref(C);
     eq([r.toSpecialist, r.toSpecialistBy, r.needsAppr], [true, 'Ashley Jerome', undefined], '⚠⚠ recorded as going to a specialist, with who, never as needing an appraisal');
     eq(C._invGuardrailItems(7).length, 0, '⚠⚠ off the guardrail');
-    eq([bar().openByDefault, bar().bits[0].text], [false, '✓ nothing needs an appraisal'], '⚠⚠ the Values bar no longer opens for it');
+    // RESTATED on merging P14 (its living bar reads *waiting on a specialist*).
+    eq([bar().openByDefault, bar().bits[0].text], [false, '✓ none waiting on a specialist'], '⚠⚠ the Values bar no longer opens for it');
     eq(chip().test(r, C.jobs[0]), true, '…and it is counted under To a specialist');
     ok(C.invLineHold(r, C.invAcceptCtx(C.jobs[0])) !== 'appraisal', '…no longer held as waiting on an appraisal');
     has(textOf(C._invPanelAppraisalHtml(C.jobs[0], r)), 'Going to a specialist off Agent Two’s advice: recorded by Ashley Jerome', 'its record says who sent it');

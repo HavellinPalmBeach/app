@@ -396,7 +396,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const found = { stableId: 'af1', label: 'before', roomIdx: 4, seq: 1, status: 'uploaded', ts: 900, filename: 'af.jpg', driveFileId: 'FAF' };
     const refs = [mk('l1'), mk('l2', { derivedFrom: 'l1', driveFileId: 'Fl1' }), mk('l3'), found];
     const ctx = sandbox({
-      fns: ['invBulkRemove', '_invPicked', '_invTombstoneLine', '_jobInvRefs', '_getPhotoRef', '_setPhotoRef', '_invItemNo', '_invJob'],
+      fns: ['invBulkRemove', '_invPickedAsked', '_invPicked', '_invTombstoneLine', '_jobInvRefs', '_getPhotoRef', '_setPhotoRef', '_invItemNo', '_invJob'],
       vars: ['_invPick', '_invBulkLast'],
       stubs: { jobs: [{ id: 7, hvlId: 'HVL-0007', svc: 'cleanout' }], _photoRefs: { 7: refs },
         savePhotoRefs() { saves++; }, _invTouch(r) { r.updatedAt = 1; return r; }, _scheduleInventorySync() {}, renderInventoryTab() {},

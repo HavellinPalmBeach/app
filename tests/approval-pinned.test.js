@@ -158,9 +158,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const dom = domStub({});
     const c = lift(['sendApprovalRequest', 'invMarkRequestSent', '_renderInvReleasesCard', 'printApprovalRequest', '_invAwaitingApproval',
       'approvalRequestState', 'approvalRequestChanged', 'deskFoldState', 'invRecordRequestApproval', 'invRecordApproval', 'invSaveApproval',
-      'invApprovalDialogNote', 'closeInvApproval', 'invApprovalComplete', 'signoutGroups', 'printDispositionLedger', '_invEdit', '_invBulkApply',
+      'invApprovalDialogNote', 'closeInvApproval', 'invApprovalComplete', 'signoutGroups', 'printDispositionLedger', '_invEdit', '_invPatch', '_invBulkApply', '_invPickedAsked', '_invBulkDone', '_invNoNameLeftText',
       '_renderInvBulk', '_invCell', 'invCorrectApproval', 'invSaveApprovalFix', 'invApplyApproval', 'invWrittenReleasePicked',
-      'invWrittenReleaseLeftOutText', 'invTransportBlocked', 'invTransportReason', '_renderInvRow', 'approvalEnvelopeApply', 'approvalEnvelopeChanged',
+      'invWrittenReleaseLeftOutText', 'invTransportBlocked', 'invTransportReason', '_renderInvRow', 'invLineNothingToList', 'invLineUnread', 'approvalEnvelopeApply', 'approvalEnvelopeChanged',
       'mergeMediaItems', '_invExportValue', 'invApprovalWithSigners', 'invApprovalLeftOpen'].concat(o.roots),
       BOUNDARY, Object.assign({
         jobs: [o.job], estimateStore: { 7: EST() }, jobPlanStore: {}, _photoRefs: { 7: JSON.parse(JSON.stringify(o.rows)) }, changeOrders: [],

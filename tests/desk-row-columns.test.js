@@ -51,7 +51,7 @@ function callersOf(name) {
 }
 
 // The row, lifted as photo-split.test.js lifts it, with the two helpers it reads since 2026-10-24.
-const ROW_FNS = ['invLineReviewed', 'invLineOpen', '_renderInvRow', 'invApprovalPrevWords', 'invApprovalMoved', '_invRowPhotoHtml', '_invRowHasWho', 'invOutForAppraisal', 'collectionLineUnshot', '_invPhotoOpenHtml',
+const ROW_FNS = ['invLineReviewed', 'invLineOpen', '_renderInvRow', 'invLineNothingToList', 'invLineUnread', 'invApprovalPrevWords', 'invApprovalMoved', '_invRowPhotoHtml', '_invRowHasWho', 'invOutForAppraisal', 'collectionLineUnshot', '_invPhotoOpenHtml',
   '_invHasPhoto', '_collPanelHtml', '_arDupEligible', '_avRowBadges', 'agentValueStale', 'agentValueUnreviewed', 'agentValueSpecialistWorth', 'invPickupRecord', 'signedRecordsOf', '_invRowDomId', '_invRecipientInput', 'invPlanChannel', '_invDetailRefs',
   '_invPhotoSiblings', '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef', '_invItemNo', 'invDealerRouteOffered', 'invDealerRoute',
   'invDealerRouteText', 'invBequestFor', 'jobListEntries', 'invApprovalGap', 'invReceiptOwed', '_invBenListAttr', 'invRatificationOwed', 'invWrittenReleaseNeeded',
@@ -157,7 +157,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       const hh = attempt(() => H._renderInvColHead({ id: 7 }, G(d)));
       eq(cols(rr.ok ? rr.val : '').indexOf('who') >= 0, cols(hh.ok ? hh.val : 'x').indexOf('who') >= 0, (d || 'blank') + ': the heading and the row agree on Who takes it');
     });
-    eq(callersOf('_invRowHasWho'), ['_renderInvColHead', '_renderInvRow'], 'the one answer, read by the row and the headings and nothing else');
+    // RESTATED 2026-10-28 (P9 of the desk audit, ROW-05): the record reads it too, to leave out its own Who takes it box where the
+    // row carries one (_invPanelColsFor: one box per value). Still the one answer, now for three readers.
+    eq(callersOf('_invRowHasWho'), ['_invPanelColsFor', '_renderInvColHead', '_renderInvRow'], 'the one answer, read by the row, the headings and the record and nothing else');
     // Drawn once per open group, between the group's head and its rooms; none on a folded group.
     const grp = attempt(() => H._renderInvGroup({ id: 7 }, G('Donate')));
     const g = grp.ok ? grp.val : '';

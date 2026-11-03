@@ -55,14 +55,14 @@ const ITEM = (id, over) => Object.assign({
 const PRINT_FNS = ['_invDocPartyHead', 'invLineReviewed', 'invLineOpen', 'invInitialGroupWords', 'invOwnInitial', 'invInitialGroupKey', 'invDocContractBlock', 'invReleaseRecipientNamed',
   'printContentsRecord', 'contentsRecordSignoff', 'dispositionRecord', 'printApprovalRequest', 'invDispDocWord', 'printCourtInventory', 'jobOnProbateTrack', '_avUnreviewedStamp',
   'agentShotGroups', 'agentNameableRefs', '_agState', '_agStateHtml', '_agNoticesHtml', 'agentNotices',
-  'printDispositionLedger', 'referralFeeVendorsNote', 'vendorPaysReferral', '_vendorByName', '_vendorNameKey', '_andJoin', '_renderInvWorkbar', 'invColdWords', '_arCheckButtonHtml', '_arState', 'agentRoomsToCheck', '_arCheckable', '_arStateHtml', '_avValueButtonHtml', 'agentValueWaiting', 'agentValueableRefs', '_avHasFigure', '_invHasValue', '_avStateHtml', '_avState', '_avNoticesHtml', 'agentValueNotices', '_avNoticeKinds', '_avNoticeLabel', 'agentValueInternal', 'agentValueUnreviewed', 'agentValueStale', 'agentValueSpecialistWorth', 'invPrimaryDoc', '_invReviewStats', '_invProgressStamp',
-  '_invDocName', '_invDocHead', '_invPrintThumb', '_invRecipient', '_jobDestLabel',
+  'printDispositionLedger', 'referralFeeVendorsNote', 'vendorPaysReferral', '_vendorByName', '_vendorNameKey', '_andJoin', '_renderInvWorkbar', 'invInstrumentOffered', '_invNothingLineHtml', 'invLineNothingToList', 'invColdWords', '_arCheckButtonHtml', '_arState', 'agentRoomsToCheck', '_arCheckable', '_arStateHtml', '_avValueButtonHtml', 'agentValueWaiting', 'agentValueableRefs', '_avHasFigure', '_invHasValue', '_avStateHtml', '_avState', '_avNoticesHtml', 'agentValueNotices', '_avNoticeKinds', '_avNoticeLabel', 'agentValueInternal', 'agentValueUnreviewed', 'agentValueStale', 'agentValueSpecialistWorth', 'invPrimaryDoc', '_invReviewStats', '_invProgressStamp',
+  '_invDocName', '_invDocHead', '_invPrintThumb', '_invPrintThumbSrc', '_invPaperPhotoUrl', '_invRecipient', '_jobDestLabel',
   '_jobHasDestination', 'invFiduciaryMode', 'isDecedentJob', '_invJob', '_jobInvRefs',
   '_invAssignItemNos', '_invItemNo', '_invNamed', '_invRoomName', '_invDispLabel',
   '_invCautionBadges', 'invReleaseCautions', '_invTouch', 'savePhotoRefs', '_warnPhotoStoreFull',
   '_invProgressBar', 'invIsFirearm', 'invTransportBlocked', 'invFirearmAuthorized',
   '_invCautionNotices', '_invPicked', '_invAwaitingApproval', 'invWrittenReleaseNeeded',
-  '_renderInventorySummary', '_maivWorklistBlock', '_invDateTime', 'maivStatement_', '_avdDate',
+  'invGroupUncounted', '_renderInventorySummary', '_maivWorklistBlock', '_invDateTime', 'maivStatement_', '_avdDate',
   // 2026-10-22: the summary states the basis and the value date as text; their controls head the desk's Values bar.
   'invStatesEstateValues', '_invValueAsOfHtml', '_renderValueSettings', 'estateAvdOn', 'estateTaxReturn', 'invValBasisLocked', 'estateAvdOffered', 'invValueStandardStale', 'invValueStandardMoved', 'invLineValueDate',
   'invProbateRows', 'matterDef', 'matterTypeOf',
@@ -92,7 +92,7 @@ const PRINT_VARS = ['INV_LINE_INITIAL_MIN', 'INV_DISP_DOC_WORDS', 'CONTENTS_SIGN
   '_agRun', '_avRun', '_arRun', 'AGENT_NOTICE_KINDS', 
   'INV_DISPOSITIONS', 'INV_GROUP_ORDER', 'INV_RELEASE_DISPOSITIONS', 'INV_RELEASE_CAUTIONS',
   'INVENTORY_COLUMNS', 'INV_PANEL_SECTIONS', 'INV_WORK_FLAGS', 'FIELD_DISPOSITIONS',
-  'DECEDENT_SERVICES', 'MATTER_TYPES', 'CONTENTS_RECORD_GLOSS', 'INV_CAT_GLYPH', 'INV_TAXONOMY',
+  'DECEDENT_SERVICES', 'MATTER_TYPES', 'INV_MATTER_UNSET_TXT', 'CONTENTS_RECORD_GLOSS', 'INV_CAT_GLYPH', 'INV_TAXONOMY',
   'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'INV_FIREARM_CLIENT_TXT', 'FIREARMS_DEALER_CATEGORY', 'INV_TRANSPORT_REASONS', 'INV_UNDECIDED',
   'estimateStore', '_invFilter', '_invShowRoll', '_invOpen', '_invPick',
   'INV_VAL_BASES', 'MAIV_AGGREGATE_THRESHOLD', 'INV_CONDITIONS', 'INV_VAL_SOURCES', 'INV_CATEGORIES',
@@ -319,7 +319,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         ok(estate.indexOf(k) >= 0, 'and still on an estate one');
       });
     // Axis 1 is the record itself and does not move.
-    ['objectName', 'category', 'room', 'channel', 'serial', 'flagBequest', 'flagDisputed',
+    // RESTATED 2026-10-28 (P9 of the desk audit, ROW-05): the name is on both as the row's own box, never the record's (one box
+    // per value), so it is held off both here as the count is.
+    ok(living.indexOf('objectName') < 0 && estate.indexOf('objectName') < 0, 'objectName is on both, on the row and off the record');
+    ['category', 'room', 'channel', 'serial', 'flagBequest', 'flagDisputed',
      'dispDate', 'receiptDoc'].forEach((k) => {
       ok(living.indexOf(k) >= 0 && estate.indexOf(k) >= 0, k + ' is on both');
     });
@@ -435,7 +438,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(Eh, 'Specific Bequests', 'and a will term on an estate');
     // The footer's whole subject is what counsel files instead; it has no living counterpart.
     lacks(L, 'court inventory', '⚠ and the §733.604 footer simply goes rather than being reworded');
-    has(L, 'Total Items', 'while the record itself is on both');
+    // RESTATED (P13, INV-20): the summary counts lines and articles, both; "Total Items" counted lines.
+    has(L, 'Total Lines', 'while the record itself is on both');
+    has(L, 'Total Articles', 'and the articles the lines hold');
   }
 
   group('⚠ THE MAIV AGGREGATE NEVER REACHES A LIVING JOB');

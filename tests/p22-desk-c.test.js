@@ -354,7 +354,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   G('9f · the worklist points at Record approval; the request agrees with its count', () => {
     const w = noComments(fn('printAppraisalWorklist'));
-    has(w, 'Record approval</strong> on Job Admin', '⚠ the withheld-firearms block names the control');
+    // Restated 2026-10-28 (P14 of the desk audit, DOC-20): the worklist goes in the package to counsel and the trustee, so the
+    // withheld-firearms block states what clears a firearm and names no control on the desk (the desk's row and record do).
+    lacks(w, 'Record approval</strong> on Job Admin', '⚠ the withheld-firearms block names no control on the desk (P14)');
+    has(w, 'Once the authority, the serial and the dealer are all on the record', 'it states what clears a firearm');
     lacks(w, 'Authorized By and Approval Date', 'not the raw boxes');
     const S = desk(['printApprovalRequest'], PROBATE(), [LINE('a', 1, { disposition: 'Sell', channel: 'Kodner' })]);
     S.printApprovalRequest(8);
@@ -374,8 +377,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     S._invPick.a = 1; S._invPick.b = 1;
     S._invBulkApply(8, 'disposition', 'Keep');
     has(S.__log.badges.map((b) => b.m).pop(), 'Keep set on 2 items', '⚠⚠ Keep is named, never "2 items updated"');
+    // RESTATED 2026-10-28 (P9 of the desk audit, LIV-02): the selection clears after each bulk action, so the two are picked again.
+    eq(Object.keys(S._invPick).length, 0, 'the selection is cleared after the sweep');
+    S._invPick.a = 1; S._invPick.b = 1;
     S._invBulkApply(8, 'disposition', 'Hold');
     has(S.__log.badges.map((b) => b.m).pop(), 'Hold set on 2 items', 'Hold too');
+    S._invPick.a = 1; S._invPick.b = 1;
     S._invBulkApply(8, 'reviewed', true);
     eq(S.__log.badges.map((b) => b.m).pop(), '2 items marked reviewed.', '⚠⚠ Mark reviewed says so');
   });

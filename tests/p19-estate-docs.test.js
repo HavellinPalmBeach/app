@@ -87,7 +87,7 @@ const phaseText = (P) => JSON.stringify(P);
 
 // ── The two schedules: the Trust Schedule suite's lift list, the real date formatter, and the signers.
 const SCH_FNS = ['invIsFirearm', '_invLineHolds', 'invConditionText', 'invAcceptCtx', 'agentDuplicateGroups', '_arPair', '_arPairOpen', 'agentDupCleared', '_agDupEligible', 'agentNamedTwice', 
-  '_invDocPartyHead', 'printTrustSchedule', 'printCourtInventory', '_avUnreviewedStamp', 'agentValueUnreviewed', '_invScheduleSection', 'invValBasisWord', 'invLineAppraiser', '_invLinkedAppraiser', '_apprLabel', '_invTrack', '_invTrackDefault', '_invOnTrustSchedule',
+  '_invDocPartyHead', 'printTrustSchedule', 'printCourtInventory', 'jobOnProbateTrack', '_avUnreviewedStamp', 'agentValueUnreviewed', '_invScheduleSection', '_invItemNo', 'invValBasisWord', 'invLineAppraiser', '_invLinkedAppraiser', '_apprLabel', '_invTrack', '_invTrackDefault', '_invOnTrustSchedule',
   '_invOnProbateSchedule', '_invIsExempt', '_invIsProbateAsset', '_invExcludedTracks', '_invHasValue', 'invDocContractBlock',
   'docTierProduces', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'matterDef', 'matterTypeOf',
   'invProbateRows', 'invFiduciaryMode', 'isDecedentJob', '_invAssignItemNos', '_jobInvRefs', '_invTouch', 'savePhotoRefs',
@@ -525,7 +525,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // RESTATED (2026-10-10): the one recorded representative is named on the adoption line too.
     lacks(one, OLD, 'one personal representative: the line is no longer blank');
     has(one, 'Reviewed and adopted by: __________________________________ &nbsp; Date: ____________<br><span style="color:#888;">Ruth Adler &middot; Personal Representative / authorized fiduciary</span>', '…it names the representative');
-    eq(sched('court', JOB(''), items()), one, '⚠ an unanswered matter renders the court schedule exactly as probate');
+    // Restated 2026-10-28 (P14 of the desk audit, EST-20): this job's service is an Estate Settlement, so with no matter answered
+    // it is off the probate track and its page says the matter type is not recorded, in one note (`inv-matter-unset-note`); the
+    // rest is the probate page byte for byte.
+    const _un = sched('court', JOB(''), items());
+    const _uAt = _un.indexOf('<div class="inv-matter-unset-note"');
+    eq(_uAt < 0 ? _un : _un.slice(0, _uAt) + _un.slice(_un.indexOf('</div>', _uAt) + 6), one,
+       '⚠ an unanswered matter renders the court schedule exactly as probate, the unanswered note aside');
     const COPR = [{ id: 'c1', name: 'Paul Adler', role: 'Personal Representative' }];
     const two = sched('court', JOB('probate', { coFiduciaries: COPR }), items());
     eq(count(two, 'Reviewed and adopted by'), 2, '⚠⚠ a co-personal representative recorded: two adoption lines');

@@ -53,7 +53,7 @@ function gsCtx() {
 }
 
 // ─── THE REAL APP SIDE ───────────────────────────────────────────────────────
-const AV_FNS = ['invHavellinRecipient', 'invAwaitingAppraisal', 'invBequestElsewhere', 'invReleaseCautions', '_invPhotoNoteOpen', 'invLineOpen', '_gate706', 'maivFilingApplies', 'invLotSplitState', 'agentValueMode', 'agentValueInternal', '_avHasFigure', 'agentValueableRefs', 'agentValueUnreviewed',
+const AV_FNS = ['invHavellinRecipient', 'invAwaitingAppraisal', 'invBequestElsewhere', 'invReleaseCautions', '_invPhotoNoteOpen', 'invLineOpen', '_gate706', 'maivFilingApplies', 'invGroupUncounted', 'invLotSplitState', 'agentValueMode', 'agentValueInternal', '_avHasFigure', 'agentValueableRefs', 'agentValueUnreviewed',
   'agentValueStale', 'agentValueSpecialistWorth', '_avValDate', '_avContext', '_avItemPayload', '_avComp', '_avWrite', '_avRename', '_avNameIsAgents', 'agentValueGradesCondition', '_invCondIsAgents', '_invAgentCondition', 'agentValueWhole',
   '_avNoteFailure', 'agentValueApply', '_avTakeValue', '_avStampReviewed', '_invStampBy', 'deviceUser', '_avStart',
   '_avSendNext', '_avFinish', '_avRepaint', '_avStateHtml', '_avState', 'agentValueAuto', 'agentValueWaiting', 'agentValueAfterRename', 'agentValueUseSale',
@@ -334,7 +334,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const refreshes = { summary: 0, guard: 0 };
     const R = rig(ESTATE(), [SURE({ fmv: 25, valLow: 15, valHigh: 40, qty: 1 })], {
-      fns: ['_invEdit', 'invUnitValue', 'invLineQty', '_invQtyCarriesValue', '_invPaintFigures', 'agentValueAfterRename', 'invAppraised', 'agentValueStale', '_avHasFigure', '_invAcceptCtxOf', 'invAcceptCtx', '_invListReadHtml', 'invListRead', 'invAppraisalSourceAsk'],
+      fns: ['_invEdit', '_invPatch', 'invUnitValue', 'invLineQty', '_invQtyCarriesValue', '_invPaintFigures', 'agentValueAfterRename', 'invAppraised', 'agentValueStale', '_avHasFigure', '_invAcceptCtxOf', 'invAcceptCtx', '_invListReadHtml', 'invListRead', 'invAppraisalSourceAsk'],
       stubs: { _invRefreshSummary: () => refreshes.summary++, _invRefreshGuardrail: () => refreshes.guard++, _invRefreshFlagStrip() {},
         _invRefreshRecords() {}, _invRefreshReleases() {}, INV_STICKY_FIELDS: [], invStaffRefused: () => '', invBequestFor: () => null,
         invNoteDispositionMove: () => false, invFillPlanChannel: () => false, _invRowDomId: (s) => 'inv-row-' + s, _renderInvRow: () => '<div></div>',
@@ -366,7 +366,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══ A11 · WHAT THE BUILD'S REVIEW FOUND (2026-10-25b) ═══
   group('⚠⚠ A11 · the review: a renamed line\'s accepted figure, the automatic run\'s lines, a failed check, an answer for a line not sent, the redraw that waits');
   {
-    const EDIT_FNS = ['_invEdit', 'invUnitValue', 'invLineQty', '_invQtyCarriesValue', '_invPaintFigures', 'agentValueAfterRename', 'invAppraised', 'agentValueStale', '_avHasFigure', '_invAcceptCtxOf', 'invAcceptCtx', '_invListReadHtml', 'invListRead', 'invAppraisalSourceAsk'];
+    const EDIT_FNS = ['_invEdit', '_invPatch', 'invUnitValue', 'invLineQty', '_invQtyCarriesValue', '_invPaintFigures', 'agentValueAfterRename', 'invAppraised', 'agentValueStale', '_avHasFigure', '_invAcceptCtxOf', 'invAcceptCtx', '_invListReadHtml', 'invListRead', 'invAppraisalSourceAsk'];
     const EDIT_STUBS = { _invRefreshSummary() {}, _invRefreshGuardrail() {}, _invRefreshFlagStrip() {}, _invRefreshRecords() {}, _invRefreshReleases() {},
       INV_STICKY_FIELDS: [], invStaffRefused: () => '', invBequestFor: () => null, invNoteDispositionMove: () => false, invFillPlanChannel: () => false,
       _invRowDomId: (s) => 'inv-row-' + s, _renderInvRow: () => '<div></div>', _invRefreshAgentNotices() {}, SHEETS_SYNC_URL: '' };

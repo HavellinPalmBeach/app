@@ -112,11 +112,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // Restated 2026-10-27 (Anthony, asked whether the work bar's papers should open the same way: "Yes"): the Contents List, the
   // Estate Inventory PDF, the Release Approval Request (the bar's and the selection's, one printer) and the Contents Record.
   // Restated 2026-11-02 (Anthony: "yes, do the cards' papers too"): every card's paper opens on screen first as well.
+  // Restated 2026-10-28 (P14 of the desk audit, DOC-28): the Estate Inventory PDF is named by the matter (invInventoryWord:
+  // *Inventory* on a trust-only matter, else *Estate Inventory*), its viewer title with it.
   group('V5 · the More ▾ papers, the work bar’s and every card’s open in the viewer; only the client documents’ Print and the viewer’s own print straight away');
   {
     const VIEW = { printAsFoundRecord: "'As-Found Record'", printCourtInventory: "'Court Inventory'", printTrustSchedule: "'Trust Schedule'",
                    printAppraisalWorklist: "'Appraisal Worklist'", printIncidentRecord: 'title',
-                   printContentsList: "'Contents List'", printEstateInventoryReport: "'Estate Inventory'",
+                   printContentsList: "'Contents List'", printEstateInventoryReport: 'invInventoryWord(job)',
                    printApprovalRequest: "'Release Approval Request'", printContentsRecord: "'Contents Record'",
                    printDispositionLedger: "'Disposition Ledger'", printBeneficiaryReceipt: "'Receipt - ' + g.name",
                    printDonationRecord: 'title', printInventorySnapshot: "'Inventory Snapshot'",

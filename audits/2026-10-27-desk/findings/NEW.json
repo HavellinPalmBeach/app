@@ -252,6 +252,7 @@
   },
   {
    "id": "NEW-14",
+   "fixed": "2026-10-28 (P14: the living Values bar reads \"to a specialist\", the chip's name; the roster's note and the effective-date box \"usually the day the appraiser inspects it\" (_apprEffDateWords); CLAUDE.md, Each paper says the right thing for its matter; tests/p14-papers.test.js, browser step 124)",
    "title": "The living client's desk says an appraisal is 'usually the date of death', and names one state two ways",
    "kind": "inconsistency",
    "severity": "medium",

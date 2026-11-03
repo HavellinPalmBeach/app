@@ -639,7 +639,7 @@ and browser step 69.
   drops it (*not stated* until a person names one), where *WorthPoint comps* stayed. **Server:** `AGENT_VALUE_FETCHES` 4 (was 2):
   more chances to open the lot itself from a results page; each research request runs longer, the fallback taking one that
   passes UrlFetchApp's limit. `tests/use-a-sale.test.js`, browser step 124.
-- **The value follows the job's standard, market and date (2026-10-28, Apps Script `2026-11-02c`, carrying `2026-11-02b`; the desk audit's P15:
+- **The value follows the job's standard, market and date (2026-10-28, Apps Script `2026-11-02d`, carrying `2026-11-02c`; the desk audit's P15:
   ACC-09, VAL-08, ACC-10, VAL-09, ACC-12, VAL-11, VAL-06, AGT-06, VAL-16, VAL-21).** Server: the basis paragraph is
   `_avBasisText(basis)`, one per basis. Fair Market Value carries the regulation's rule by class (the market where such a
   thing is most commonly sold to the public: art, antiques, silver and jewellery at auction at the price the buyer paid,
@@ -661,10 +661,10 @@ and browser step 69.
   appraisal (`invNeedsAppraisal`) and reaches the guardrail and the worklist marked *advised by Agent Two*; the note, the
   record and the guardrail carry **Add to appraisal list** (**Send to a specialist** on living work,
   `agentValueAdviceVerb`; `agentValueAddToAppraisal` sets `needsAppr` with who and when), until linked or waived. The
-  comparable's premium prints in the record (`AGENT_VALUE_PREMIUM_WORDS`). `BACKEND_MIN_VERSION` `2026-11-02c`.
-  `tests/p15-value-standard.test.js`, browser step 130. Counsel and an appraiser to confirm the standard by class
+  comparable's premium prints in the record (`AGENT_VALUE_PREMIUM_WORDS`). `BACKEND_MIN_VERSION` `2026-11-02d`.
+  `tests/p15-value-standard.test.js`, browser step 132 (130 until main's P14 took it). Counsel and an appraiser to confirm the standard by class
   (bundle D23).
-- **Its review, the same day (2026-10-28, still `2026-11-02c`).** A figure is recorded at the standard its request asked for:
+- **Its review, the same day (2026-10-28, still `2026-11-02d`).** A figure is recorded at the standard its request asked for:
   `_avSendNext` keeps the basis and each line's date it sent (`asked`) and `_avWrite` writes those, never the job's as the answer
   lands, so a basis changed or the §2032 date elected while a run was out (here, or on another device and merged in) finds the
   figure moved (`invValueStandardMoved`) and listed for Re-value; and neither control changes while the agents are at work on

@@ -113,6 +113,7 @@
   },
   {
    "id": "EST-06",
+   "fixed": "2026-10-28 in part (P13: every paper gathers its own lines' photographs before it prints, uncapped and in memory only, invPhotosFirst; each line's photograph and number links to its Drive file; a photograph Drive cannot serve reads \"photo\", linked; the \"this device\" sentence and \"reference-numbered\" are gone; tests/p13-traceable.test.js, browser step 129). Open: the request's send does not share the photograph folder with the fiduciaries.",
    "title": "Photographs on the papers come from a capped device cache (124 of 300); no paper links an item to its photograph, yet the papers say they are 'reference-numbered'",
    "kind": "accuracy",
    "severity": "high",
@@ -351,6 +352,7 @@
   },
   {
    "id": "EST-20",
+   "fixed": "2026-10-28 (P14: More ▾ offers each instrument only where the matter has it, both under \"Matter type not recorded\" while unanswered (invInstrumentOffered); an unanswered Estate Settlement's Court Inventory says the record does not confirm probate; CLAUDE.md, Each paper says the right thing for its matter; tests/p14-papers.test.js, browser step 124)",
    "title": "The Trust Schedule is offered and prints 'Held in Trust' on probate-only, contested and unanswered desks; the Court Inventory on an unanswered Estate Settlement prints as a §733.604 filing",
    "kind": "inconsistency",
    "severity": "low",

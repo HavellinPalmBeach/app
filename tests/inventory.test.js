@@ -226,7 +226,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines',
       'estimateAppraiserNames', 'docTierProduces', 'docScopeDef', 'roundCents', 'fmt',
       'scheduleSigners', 'jobFiduciaries'
-    , 'invFirearmClientTakes', '_avStampCounts', 'invTotalFloor', '_invFloorTotalHtml', 'estateValueDateLabel', '_invWaivedNoteHtml', 'invApprWaiverText', 'invValBasisShort', 'invLineStandardNote']);
+    , 'invFirearmClientTakes', '_avStampCounts', 'invTotalFloor', '_invFloorTotalHtml', '_invExemptClaimTotalHtml', 'estateValueDateLabel', '_invWaivedNoteHtml', 'invApprWaiverText', 'invValBasisShort', 'invLineStandardNote']);
     const COURT_VARS = INV_VARS.concat(['INV_VAL_BASES', 'DECEDENT_SERVICES', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MATTER_TYPES',
                                         'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DOC_SCOPES']);
 
@@ -410,9 +410,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             '_jobAppraisers', '_apprLabel', '_jobInvRefs', 'invNeedsAppraisal', 'invAppraisalChosen', 'invFiduciaryMode', 'isDecedentJob',
             '_invJob', 'invAppraisalThreshold', 'gateDispute', '_gateYes',
             'invIsIntrinsic', 'invCatMeta', 'invAppraiserFor', 'isFormalDoc',
-            'resolveDocLevel', 'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', '_gate706', 'isDecedentJob', 'roundCents', 'fmt'],
+            'resolveDocLevel', 'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', '_gate706', 'isDecedentJob', 'roundCents', 'fmt', '_apprFirmOf', '_apprGuardrailHead', 'jobAppraisalDuty', 'approvedEstimateFor', 'docTierProduces', '_agrOtherAppraisalsBy', 'matterDef', 'matterTypeOf'],
       vars: ['INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED',
-             'DECEDENT_SERVICES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
+             'DECEDENT_SERVICES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'MATTER_TYPES'],
     });
     const job = { id: 5, svc: 'cleanout', gate706: 'yes',
                   appraisers: [{ id: 77, name: 'Marie Wayland', firm: 'Appraisals by the Sea', credential: 'ISA' }] };
@@ -459,7 +459,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('appraisal worklist: the permanent item number, not the row position');
   {
     const WL_FNS = INV_FNS.concat(['_invDocPartyHead', 'invConditionText', 
-      '_lotSplitWorklistBlock', 'invLotSplitState', 'invLotArticleValue', 'invLotSplitSentence', 'invLotsToSplit', 'invLotsUntestable', 'printAppraisalWorklist', 'invAppraisalInProgress', 'invAppraised', '_invHasAppraisal', 'invLineAppraiser', '_invLinkedAppraiser', '_jobAppraisers', '_apprLabel', 'signedRecordsOf', 'invOutForAppraisal', 'jobOnProbateTrack', '_invDocName', '_apprTransport', 'invTransportBlocked', 'invTransportReason', '_apprEstimateFlags', 'collectionsAwaitingPhoto', '_invHasPhoto', '_collLinesOf', 'collectionLineId', '_invJob',
+      'invGroupUncounted', '_lotSplitWorklistBlock', 'invLotSplitState', 'invLotArticleValue', 'invLotSplitSentence', 'invLotsToSplit', 'invLotsUntestable', 'printAppraisalWorklist', 'invAppraisalInProgress', 'invAppraised', '_invHasAppraisal', 'invLineAppraiser', '_invLinkedAppraiser', '_jobAppraisers', '_apprLabel', 'signedRecordsOf', 'invOutForAppraisal', 'jobOnProbateTrack', '_invDocName', '_apprTransport', 'invTransportBlocked', 'invTransportReason', '_apprEstimateFlags', 'collectionsAwaitingPhoto', '_invHasPhoto', '_collLinesOf', 'collectionLineId', '_invJob',
       // P16: the gate reads the dealer route, and the flags count only what the import panel still offers.
       'invDealerRoute', 'invDealerRouteOffered', 'invDealerRouteText', 'invTransportDealer', 'invChannelLeftover', '_importableFromEstimate', '_importedSourceSet', '_invRoomName', '_invMoney',
       'maivAggregate', '_maivWorklistBlock', 'maivFilingApplies', 'maivStatement',
@@ -467,7 +467,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'isDecedentJob', '_gate706', 'roundCents', 'fmt',
       // P19: the firearm gate asks every fiduciary's approval against the job, and the withheld block names who authorises.
       'invApprovalMissing', 'invApprovalGap', 'jobFiduciaries', 'jobListEntries', 'invRepresentativeTitle', 'matterDef', 'matterTypeOf', 'invDealerNamed', 'invDispGoesToDealer', 'invDealerUnchecked', 'invDealerDirState', 'invDealerUncheckedText', '_invDealerDirStaleText', 'invDealerWhy', 'invFirearmsDealerFirm', 'invFirearmsDealerFirms', 'vendorCats', '_vendorNameKey'
-    , 'invLineQty', 'maivOwedLines', 'maivOwedText', '_avStampText', '_avStampCounts', '_apprGroupList']);
+    , 'invLineQty', 'maivOwedLines', 'maivOwedText', '_avStampText', '_avStampCounts', 'invValueAsOfWords', 'estateValueDate', 'invTransportFact', 'invNfaTransferText', '_apprGroupList']);
     const WL_VARS = INV_VARS.concat([
       'INV_FIREARM_CLIENT_TXT', 'FIREARMS_DEALER_CATEGORY', 'INV_TRANSPORT_REASONS', 'MATTER_TYPES', 'INV_SALE_DISPOSITIONS',
       'MAIV_AGGREGATE_THRESHOLD', 'MAIV_CATEGORIES', 'MAIV_OTHER', 'MAIV_BY_CATEGORY',
@@ -591,7 +591,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('a cleared value stays blank, and money shows as money');
   {
-    const m = sandbox({ fns: ['_invEdit', '_invAcceptCtxOf', 'invLineReviewed', 'invLineOpen', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invLineAcceptedOnly', 'agentValueUnreviewed', '_avTakeValue', '_getPhotoRef', '_setPhotoRef', 'savePhotoRefs',
+    const m = sandbox({ fns: ['_invEdit', '_invPatch', '_invAcceptCtxOf', 'invLineReviewed', 'invLineOpen', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invLineAcceptedOnly', 'agentValueUnreviewed', '_avTakeValue', '_getPhotoRef', '_setPhotoRef', 'savePhotoRefs',
                               '_warnPhotoStoreFull', '_invTouch', 'moneyToNumber', '_invHasVal', 'invAppraised', '_invHasValue', '_invJob', 'invUnitValue', 'invLineQty', '_invQtyCarriesValue', '_invPaintFigures', 'agentValueAfterRename', 'agentValueStale', '_avHasFigure', 'invAcceptCtx', '_arDupEligible', 'invFirearmSettle', 'invIsFirearm', 'invFirearmDispRefusal', 'invFiduciaryMode', 'isDecedentJob', 'invFirearmSettleText', '_invNamed', '_invItemNo', 'invTransportDealer', 'invFirearmsDealerFirm', 'invFirearmsDealerFirms', '_vendorNameKey', 'vendorCats', 'invChannelLeftover', 'invDealerRoute', 'invDealerRouteOffered', 'invDealerNamed', 'invDispGoesToDealer', 'invAppraisalSourceAsk'],
                         vars: ['_agDupSetJob', 'INV_ACCEPT_AMMO_RE', 'INV_STICKY_FIELDS', 'INV_FIREARM_NEVER', 'DECEDENT_SERVICES', 'INV_SALE_DISPOSITIONS', 'FIREARMS_DEALER_CATEGORY'],
                         // _invRefreshReleases with its sibling repaints: _invEdit runs it on every edit since the desk build's review (2026-10-23).
@@ -804,6 +804,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(panel.indexOf('disposition') < 0, 'and so is the disposition');
     // 2026-10-24 (Anthony: the count "viewable at the headline level"): the count moved onto the row too.
     ok(panel.indexOf('qty') < 0 && living.indexOf('qty') < 0, 'and so is the count, on both');
+    // RESTATED 2026-10-28 (P9 of the desk audit, ROW-05): the name too. The row has carried it in a box of its own since
+    // 2026-10-24, and a name typed in the record left the row's box with the old one, written back by the next edit there.
+    ok(living.indexOf('objectName') < 0, 'and so is the name, on a living job');
+    ok(panel.indexOf('objectName') < 0, '…and on an estate job');
     ok(panel.indexOf('valNote') >= 0, 'the valuation basis / comps note is in the panel');
     ok(panel.indexOf('gross') >= 0, 'the proceeds are');
     ok(panel.indexOf('flagMAIV') >= 0, 'and the flags');
@@ -815,7 +819,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ['assetTrack', 'flagExempt', 'flagMAIV', 'maivCat', 'valDate', 'valSource', 'valNote']
       .forEach((k) => ok(living.indexOf(k) < 0, k + ' is off a living job'));
     // The converse is the half that matters: the record itself is untouched on both.
-    ['objectName', 'category', 'room', 'condition', 'serial', 'channel', 'needsAppr',
+    ['category', 'room', 'condition', 'serial', 'channel', 'needsAppr',
      'flagBequest', 'flagDisputed', 'flagNFA', 'dispDate', 'receiptDoc', 'gross', 'fees']
       .forEach((k) => {
         ok(living.indexOf(k) >= 0, k + ' is on a living job');
@@ -886,7 +890,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const a = sandbox({ fns: ['_invSetAppraiser', 'invAppraised', '_invHasValue', '_jobAppraisers', '_apprLabel', '_getPhotoRef',
                               '_setPhotoRef', 'savePhotoRefs', '_warnPhotoStoreFull', '_invTouch', '_invDropBareAppraisal', 'invLineAppraiser',
-                              '_invLinkedAppraiser', '_invNamed', '_invItemNo'],
+                              '_invLinkedAppraiser', '_invNamed', '_invItemNo', '_apprFirmOf'],
                         stubs: { renderInventoryTab() {}, _scheduleInventorySync() {},
                                  _invRefreshGuardrail() {}, _invRefreshSummary() {}, _invRefreshFlagStrip() {}, _invRefreshRecords() {} } });
     a.jobs.push({ id: 1, appraisers: [{ id: 7, name: 'Marie Wayland', firm: 'Appraisals by the Sea' }] });

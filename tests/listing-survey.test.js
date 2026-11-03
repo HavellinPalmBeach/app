@@ -88,7 +88,7 @@ const RES = (over) => Object.assign({ name: '', fmv: 240, low: 160, high: 320, c
   basis: 'No sales found; twelve close listings at $25 to $120 each; valued below them', comps: [], lookup: 'franciscan desert rose', notices: [],
   survey: SURVEY(), mode: 'comps' }, over || {});
 // The agents-in-concert sandbox's lists (agents-together.test.js), with the survey's own check.
-const APP_FNS = ['invHavellinRecipient', 'invAwaitingAppraisal', 'invBequestElsewhere', 'invReleaseCautions', '_invPhotoNoteOpen', 'invLineOpen', '_gate706', 'maivFilingApplies', 'invLotSplitState', 'agentValueMode', 'agentValueInternal', '_avHasFigure', 'agentValueableRefs', 'agentValueUnreviewed',
+const APP_FNS = ['invHavellinRecipient', 'invAwaitingAppraisal', 'invBequestElsewhere', 'invReleaseCautions', '_invPhotoNoteOpen', 'invLineOpen', '_gate706', 'maivFilingApplies', 'invGroupUncounted', 'invLotSplitState', 'agentValueMode', 'agentValueInternal', '_avHasFigure', 'agentValueableRefs', 'agentValueUnreviewed',
   'agentValueStale', 'agentValueSpecialistWorth', '_avValDate', '_avContext', '_avItemPayload', '_avComp', '_avWrite', '_avRename', '_avNameIsAgents', 'agentValueGradesCondition', '_invCondIsAgents', '_invAgentCondition', 'agentValueWhole',
   '_avNoteFailure', 'agentValueApply', '_avTakeValue', '_avStampReviewed', '_invStampBy', 'deviceUser', '_avStart',
   '_avSendNext', '_avFinish', '_avRepaint', '_avStateHtml', '_avState', 'agentValueAuto', 'agentValueWaiting', 'agentValueAfterRename', 'agentValueUseSale',
@@ -254,7 +254,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const R = rig(ESTATE(), []);
     ok(R.INV_VAL_SOURCES.indexOf('Listing survey') >= 0, 'on the source list a person picks from too');
     eq(R.invValBasisWord({ fmv: 240, valSource: 'Listing survey' }), 'listing survey', 'its word on a schedule');
-    const sec = sandbox({ fns: ['invConditionText', '_invScheduleSection', 'invValBasisWord', 'invAppraised', 'invLineAppraiser', '_invHasValue', '_invMoney', 'fmt', 'roundCents', 'invValBasisShort', 'invLineStandardNote'],
+    const sec = sandbox({ fns: ['invConditionText', '_invScheduleSection', 'invValBasisWord', 'invAppraised', 'invLineAppraiser', '_invHasValue', '_invMoney', 'fmt', 'roundCents', '_invItemNo', 'invValBasisShort', 'invLineStandardNote'],
       stubs: { esc: (x) => String(x == null ? '' : x) } })._invScheduleSection('Tangible Personal Property', [ROW({ fmv: 240, valSource: 'Listing survey' })]);
     has(sec.html, '>listing survey</td>', '⚠ the Court Inventory\'s and the Trust Schedule\'s table prints it in the Basis column');
   }
