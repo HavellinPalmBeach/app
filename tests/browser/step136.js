@@ -1,4 +1,4 @@
-// Step 130 — P12 of the desk audit (2026-10-28): the close and the ledger tell the whole truth.
+// Step 136 — P12 of the desk audit (2026-10-28): the close and the ledger tell the whole truth.
 //
 // Drives the REAL page with two clients at the close (every room cleared, the midpoint paid), on a sheet answered by the route:
 //   • the Ashworth estate (probate, values tier): two representatives, Thomas and Nora; a portrait both signed for and gone, lamps
@@ -29,7 +29,7 @@
 //      recorded as Family Member and Nora as Other, the ledger card and the printed signature lines name them in a capacity.
 //   At 1440 and 390 px no horizontal overflow; zero page errors throughout.
 //
-//   NODE_PATH=/path/to/node_modules node tests/browser/step130.js [/abs/path/to/havellin.html]
+//   NODE_PATH=/path/to/node_modules node tests/browser/step136.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
 const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/havellin.html'));
 const SYNC = 'https://sync.example.test/exec';
