@@ -77,7 +77,7 @@ const res = (obj, status) => ({ ok: (status || 200) < 300, status: status || 200
 
 const SYNC = 'https://script.google.com/macros/s/P10STAMP/exec';
 const BOX = 'anthony@havellinpalmbeach.com';
-function net(media) {
+function net(media, sheetJobs) {
   const log = { uploads: [], pdfs: [], drafts: [], esign: [] };
   let n = 0;
   const fetch = (url, init) => {
@@ -91,6 +91,8 @@ function net(media) {
       return sp(res({ ok: true }));
     }
     if (u.indexOf(SYNC) === 0) {
+      // An estate's send reads the client from the sheet first (main's 2026-11-02 envelope fix, approvalRecordFromSheet).
+      if (/action=loadJobs/.test(u)) return sp(res(sheetJobs ? { ok: true, jobs: sheetJobs() } : { ok: false, error: 'offline' }));
       if (/action=loadMedia/.test(u)) return sp(res({ ok: true, media: { 7: { items: JSON.parse(JSON.stringify(media())) } } }));
       return sp(res({ ok: false }));
     }
@@ -158,6 +160,10 @@ function papers(over) {
 }
 // The list read as it now stands (Q107), recorded by Anthony.
 const readNow = (P) => { P.job().invRead = { at: NOW, by: 'Anthony Graziano', seen: P.c.invListSeen(7) }; };
+// RESTATED on landing with main's approval by where it goes (2026-11-02f; Anthony: "Hold unreviewed lines"): a line still flagged
+// for a look is held off the request (invReleaseChecked) and reaches it only once it has gone, for ratification. So where these checks
+// read a flagged line's marks on the request, that line has already left (a disposition date): still flagged, listed for ratification.
+const GONE = (rows, ids) => rows.map((x) => ((ids || ['a', 'c']).indexOf(x.stableId) >= 0 ? Object.assign(x, { dispDate: '2026-10-20' }) : x));
 const tick = (P, id) => { const r = P.ref(id); r.reviewed = true; r.reviewedBy = 'Ashley Jerome'; r.reviewedAt = NOW; if (r.valuedBy === 'agent') { r.valReviewed = true; r.valReviewedBy = 'Ashley Jerome'; } };
 
 module.exports = function ({ group, ok, eq, has, lacks }) {
@@ -165,9 +171,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   // ═══════════════════════════════════════════════════════════════════════
   G('A · one reader for every stamp: the request (both copies), the Donation Record and the living request print the Report\'s words', () => {
-    const P = papers();
+    const P = papers({ rows: GONE(ROWS()) });
     const r = P.req();
     ok(!!(r && r.html), 'the request builds');
+    const H0 = papers();
+    has(H0.req().html.indexOf('Walnut dresser') < 0 ? 'held' : 'on it', 'held', '⚠ not yet gone, the flagged dresser is held off the request (main\'s rule)');
     const lines = r.asked.concat(r.ratify);
     const want = P.c._invProgressStamp(lines, { fc: P.fc(), namesOnly: false });
     ok(want.length > 40, 'fixture: the reader stamps the request\'s lines');
@@ -197,7 +205,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(dLines.length, 2, 'fixture: two lines to Goodwill');
     has(text(dr.html), 'IN PROGRESS', 'and reads IN PROGRESS while its list is unread');
     // A living request (a firearm needs the client's written approval on their own home): the same stamp.
-    const L = papers({ job: LIVING(), rows: [ROW('g', { itemNo: 1, objectName: 'Remington 870 pump shotgun', category: 'Firearms', fmv: 500, valuedBy: 'agent', valSource: 'General estimate', valConf: 'high', valNameAt: 'Remington 870 pump shotgun', disposition: 'Sell', channel: 'Palm Beach Guns', serial: 'A123' })] });
+    const L = papers({ job: LIVING(), rows: [ROW('g', { dispDate: '2026-10-20', itemNo: 1, objectName: 'Remington 870 pump shotgun', category: 'Firearms', fmv: 500, valuedBy: 'agent', valSource: 'General estimate', valConf: 'high', valNameAt: 'Remington 870 pump shotgun', disposition: 'Sell', channel: 'Palm Beach Guns', serial: 'A123' })] });
     const lr = L.req();
     ok(!!(lr && lr.html), 'the living request builds: ' + (lr && lr.why || ''));
     has(text(lr.html), 'IN PROGRESS', '⚠⚠ the living request is stamped too (LIV-22)');
@@ -223,7 +231,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     Q.ref('b').disposition = 'Undecided';
     eq(Q.c.invHoldPaperText(Q.ref('b'), Q.fc()), 'Needs a look: no destination yet', 'the desk\'s instructions are left off the paper ("choose where it goes")');
     // On every paper that prints a value per line.
-    const R = papers();
+    const R = papers({ rows: GONE(ROWS()) });
     const req = text(R.req().html);
     has(req, 'Walnut dresser Furniture · Study Needs a look: both agents were guessing', '⚠⚠ the request marks the flagged line under its name');
     lacks(req, 'Brass lamp Furniture · Study Needs a look', 'and not the line that stands');
@@ -239,7 +247,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   // ═══════════════════════════════════════════════════════════════════════
   G('C · each request value shows its basis, so the footer\'s "unless an appraisal is noted against the line" can be kept', () => {
-    const P = papers({ rows: ROWS().concat([ROW('f', { itemNo: 6, objectName: 'Harbour painting', category: 'Art & Décor', fmv: 3200, valuedBy: 'appraiser', valSource: 'Appraisal', apprDoc: 'Carla Mendes ASA', disposition: 'Consign', channel: 'Kodner Galleries' })]) });
+    const P = papers({ rows: GONE(ROWS()).concat([ROW('f', { itemNo: 6, objectName: 'Harbour painting', category: 'Art & Décor', fmv: 3200, valuedBy: 'appraiser', valSource: 'Appraisal', apprDoc: 'Carla Mendes ASA', disposition: 'Consign', channel: 'Kodner Galleries' })]) });
     const t = text(P.req().html);
     has(t, '$450 general estimate', 'Agent Two\'s figure: its source');
     has(t, '$900 the going rate · Ashley Jerome', '⚠⚠ a reason picked on the desk, with who picked it (Ask 8)');
@@ -396,14 +404,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════
   // The send, over the real printer, filing, PDF and Gmail code (release-request-letter's rig, shortened).
   function sendRig(over) {
-    const o = Object.assign({ job: ESTATE(), rows: ROWS(), answer: true }, over || {});
+    const o = Object.assign({ job: ESTATE(), rows: GONE(ROWS()), answer: true }, over || {});
     let sheet = JSON.parse(JSON.stringify(o.rows));
-    const N = net(() => sheet);
+    let PP = null;
+    const N = net(() => sheet, () => [JSON.parse(JSON.stringify(PP.job()))]);
     const shows = [], timers = [];
     const P = papers({ job: o.job, rows: o.rows, url: SYNC, answer: o.answer,
       roots: ['sendApprovalRequest', 'sendApprovalRequestEsign'], stop: ['deskShowLine', 'deskFoldOpen'],
       stubs: Object.assign({ fetch: N.fetch, deskShowLine: (j, id) => { shows.push(id); return true; }, deskFoldOpen() {}, backendHas: () => true,
         setTimeout: (f, ms) => { timers.push(ms); return timers.length; } }, o.stubs || {}) });
+    PP = P;
     P.timers = timers;
     P.c._invCloudSeen = { 7: true };
     P.N = N; P.shows = shows; P.setSheet = (rows) => { sheet = JSON.parse(JSON.stringify(rows)); };
@@ -425,7 +435,6 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const Y = sendRig({ answer: true });
     Y.c.sendApprovalRequest(7);
     eq(Y.N.log.drafts.length, 1, 'OK: the draft is made');
-    eq(Y.timers.filter((ms) => ms === Y.c.APPROVAL_REQ_WATCHDOG_MS).length, 2, 'the send\'s watchdog armed again once the question was answered (the time reading it is not the send\'s)');
     has(text(Y.N.log.pdfs[0] || ''), 'IN PROGRESS', 'and the PDF the fiduciaries get is stamped');
     has(text(Y.N.log.pdfs[0] || ''), 'Needs a look: both agents were guessing', 'with the flagged line marked');
     // Nothing flagged, the list read: no question.
@@ -437,6 +446,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     C.c.sendApprovalRequest(7);
     eq(C.seen.asked.length, 0, '⚠ every flagged line checked and the list read: nothing is asked (no tick on the rest, Q106)');
     eq(C.N.log.drafts.length, 1, 'and it goes');
+    // RESTATED on landing with main (the send arms its watchdog again after the client's read and around the photographs): measured
+    // against the same send with nothing to ask, the question arms it once more.
+    const _wd = (X) => X.timers.filter((ms) => ms === X.c.APPROVAL_REQ_WATCHDOG_MS).length;
+    eq(_wd(Y), _wd(C) + 1, 'the send\'s watchdog armed again once the question was answered (the time reading it is not the send\'s)');
     // Only the read owed: Cancel goes to the read's line.
     const R = sendRig({ answer: false });
     tick(R, 'a'); tick(R, 'c');
@@ -465,7 +478,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(W.INV_DESK_BASIS_MIN, 500, '…the $500 the page names');
     has(text(page), 'Skip it and it prints as Havellin estimate (staff) under $500, or basis not stated from $500 until you pick; No basis gathers those.', '…unpicked, as the papers print it');
     has(noComments(SRC), "label:'No basis'", '…and No basis is the work bar\'s label');
-    const P = papers();
+    const P = papers({ rows: GONE(ROWS()) });
     has(text(P.req().html), 'IN PROGRESS', 'with a flagged line the request is IN PROGRESS');
     tick(P, 'a'); tick(P, 'c'); readNow(P);
     lacks(text(P.req().html), 'IN PROGRESS', 'every flagged item checked and the list read: not IN PROGRESS');
@@ -532,6 +545,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(dlg.asked.join(' '), 'Cancel takes the appraisal off', 'fixture: unlinking asked whether to keep the appraisal');
     eq([b.valuedBy, b.valSource, b.fmv, b.valWhy], ['desk', undefined, 5200, undefined], 'Cancel: the desk\'s figure, no source, no reason');
     eq(L.c.invValBasisWord(b, 7), '', '⚠⚠ so it has no basis: nobody gave a reason for $5,200');
+    L.ref('b').dispDate = '2026-10-20';   // gone: still waiting on an appraisal, so listed for ratification only (main's rule)
     has(text(L.req().html), '$5,200 basis not stated', 'and the request says so, never "the going rate · Ashley Jerome"');
     // Belt-and-braces: a line the first P10 build wrote, its appraiser's figure still carrying the desk's reason; the Cancel takes it off.
     dlg.answer = false;
@@ -550,7 +564,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(L.c.invValBasisWord(L.ref('c'), 7), 'WorthPoint comps', 'and the papers print the sale');
 
     // ── 3 · the living ⚑ caution's heading follows its lines (should-fix): it said "no value recorded" over Agent Two's $1,200.
-    const flag = (id, o) => ROW(id, Object.assign({ objectName: 'Oil painting, harbour scene', category: 'Art & Décor', needsAppr: true, disposition: 'Sell', channel: 'Ashley Jerome' }, o));
+    const flag = (id, o) => ROW(id, Object.assign({ dispDate: '2026-10-20', objectName: 'Oil painting, harbour scene', category: 'Art & Décor', needsAppr: true, disposition: 'Sell', channel: 'Ashley Jerome' }, o));
     const est = { fmv: 1200, valuedBy: 'agent', valSource: 'Online comps', valConf: 'high', valNameAt: 'Oil painting, harbour scene' };
     const H1 = papers({ job: LIVING(), rows: [flag('l', Object.assign({ itemNo: 3 }, est))] });
     const h1 = text((H1.req() || {}).html);
@@ -568,7 +582,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(text(creq.html), '$650', 'fixture: the request still prints the typed figure on the contents tier (VAL-03 is P7\'s remainder)');
     lacks(creq.html, 'inv-req-basis', '⚠⚠ and no basis under any value there');
     lacks(text(creq.html), 'basis not stated', 'never a "basis not stated" with no press behind it');
-    has(text(papers().req().html), '$4,800 basis not stated', 'the values tier keeps its basis line');
+    has(text(papers({ rows: GONE(ROWS()) }).req().html), '$4,800 basis not stated', 'the values tier keeps its basis line');
 
     // ── 5 · the package's question names a value with no basis on Formal (should-fix): the Court Inventory inside prints DRAFT for it.
     const K5 = papers({ roots: ['probatePackageGaps'] });
@@ -583,7 +597,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const S = papers({ job: ESTATE({ docLevel: '', gate706: 'no' }), rows: [
       ROW('a', { itemNo: 1, objectName: 'Walnut dresser', agentConf: 'low', fmv: 450, valuedBy: 'agent', valSource: 'General estimate', valConf: 'low', valNameAt: 'Walnut dresser', disposition: 'Sell', channel: 'Kodner Galleries' }),
       ROW('g', { itemNo: 2, objectName: 'Remington 870 pump shotgun', category: 'Firearms', serial: 'A123', fmv: 400, valuedBy: 'agent', valSource: 'General estimate', valConf: 'high', valNameAt: 'Remington 870 pump shotgun', disposition: 'Hold' }),
-      ROW('k', { itemNo: 3, objectName: 'Cameo brooch', category: 'Jewelry & Watches', fmv: 300, valuedBy: 'agent', valSource: 'General estimate', valConf: 'high', valNameAt: 'Cameo brooch', flagBequest: true, disposition: 'Distribute', channel: 'Nora Hale' })] });
+      ROW('k', { itemNo: 3, objectName: 'Cameo brooch', category: 'Jewelry & Watches', fmv: 300, valuedBy: 'agent', valSource: 'General estimate', valConf: 'high', valNameAt: 'Cameo brooch', flagBequest: true, disposition: 'Distribute', channel: 'Nora Hale', dispDate: '2026-10-20' })] });
     const sci = text((S.c.printCourtInventory(7, { asHtml: true }) || {}).html);
     has(sci, 'FINAL', 'fixture: a FINAL Court Inventory, adopted above a signature');
     has(sci, 'Walnut dresser Needs a look: both agents were guessing', 'a guess at the figure is still marked');
@@ -608,7 +622,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq((W.c.buildMediaPayload(7).items.filter((r) => r.stableId === 'c')[0] || {}).valWhy, 'own', 'and the write carries the reason');
     has(text(W.c.document.getElementById('inv-flagstrip').innerHTML), 'No basis 0', '⚠⚠ the No basis count drops at once');
     // A request with no value column, and a Donation Record of lines with no figure, say what they carry: names, not values.
-    const NV = papers({ job: LIVING(), rows: [ROW('g', { itemNo: 1, objectName: 'Remington 870 pump shotgun', category: 'Firearms', fmv: '', valuedBy: '', namedBy: 'agent', disposition: 'Sell', channel: 'Palm Beach Guns', serial: 'A123' })] });
+    const NV = papers({ job: LIVING(), rows: [ROW('g', { dispDate: '2026-10-20', itemNo: 1, objectName: 'Remington 870 pump shotgun', category: 'Firearms', fmv: '', valuedBy: '', namedBy: 'agent', disposition: 'Sell', channel: 'Palm Beach Guns', serial: 'A123' })] });
     const nv = text((NV.req() || {}).html);
     has(nv, 'IN PROGRESS', 'fixture: a living request of a firearm with no figure, stamped');
     has(nv, 'Dispositions on unreviewed lines may still change.', '⚠⚠ no value column: its caveat speaks of dispositions alone');
