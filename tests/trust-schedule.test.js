@@ -9,7 +9,7 @@
 const { sandbox, source, fn, domStub } = require('./harness.js');
 
 const FNS = ['invLineReviewed', 'invLineOpen', '_invDocPartyHead', 'invConditionText', 
-  'printTrustSchedule', 'printCourtInventory', '_avUnreviewedStamp', 'printEstateInventoryReport', 'jobOnProbateTrack', '_invScheduleSection', 'invValBasisWord',
+  'printTrustSchedule', 'scheduleDraftState', 'printCourtInventory', '_avUnreviewedStamp', 'printEstateInventoryReport', 'jobOnProbateTrack', '_invScheduleSection', 'invValBasisWord',
   '_invTrack', '_invTrackDefault', '_invOnTrustSchedule', '_invOnProbateSchedule',
   '_invIsExempt', '_invIsProbateAsset', '_invExcludedTracks', '_invHasValue',
   'invDocContractBlock', 'docTierProduces', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror',
@@ -20,7 +20,7 @@ const FNS = ['invLineReviewed', 'invLineOpen', '_invDocPartyHead', 'invCondition
   'invNeedsAppraisal', 'invAppraisalChosen', 'invIsIntrinsic', 'invCatMeta', 'invAppraisalThreshold',
   '_invHasAppraisal', '_jobAppraisers', 'resolveValBasis', 'estateValueDate', '_invMoney',
   '_invDocName', '_invItemNo', '_invGroupItems', 'invIsFirearm', '_invDispLabel', '_invRoomName', '_planRooms',
-  '_invPrintThumb', '_invPrintThumbSrc', '_invPaperPhotoUrl', '_invThumbFor', '_invThumbCache', '_invThumbKey', '_invProgressStamp',
+  '_invPrintThumb', '_invPrintThumbSrc', '_invPaperPhotoUrl', '_invThumbFor', '_invThumbCache', '_invThumbKey', '_invProgressStamp', '_invStampIsReviewed',
   'agentShotGroups', 'agentNameableRefs', '_agState', '_agStateHtml', '_agNoticesHtml', 'agentNotices',
   '_invReviewStats', '_invDocHead', 'invAppraiserFor', '_renderInvWorkbar', '_invNothingLineHtml', 'invLineNothingToList', 'invColdWords', '_invManifestUnread', '_invAwaitingApproval', 'invWrittenReleaseNeeded', '_arCheckButtonHtml', '_arState', 'agentRoomsToCheck', '_arCheckable', '_arStateHtml', '_avValueButtonHtml', 'agentValueWaiting', 'agentValueableRefs', '_avHasFigure', '_avStateHtml', '_avState', '_avNoticesHtml', 'agentValueNotices', '_avNoticeKinds', '_avNoticeLabel', 'agentValueInternal', 'agentValueUnreviewed', 'agentValueStale', 'agentValueSpecialistWorth', 'invPrimaryDoc', '_invProgressBar',
   '_agrProbateCompliance', '_agrComplianceHeading', '_agrComplianceLead', '_agrApprover',

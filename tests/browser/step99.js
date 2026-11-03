@@ -1238,19 +1238,24 @@ const has = (t, n, m) => ok(String(t).indexOf(n) >= 0, m + '  [missing: ' + n + 
     has(await p.evaluate((id) => document.getElementById('desk-ttl-closing-' + id).textContent, RLV), 'Disposition Ledger, signed schedules', 'the Closing title names them');
     eq(await p.locator('#inv-releases').evaluate((el) => el.textContent.indexOf('Court Inventory') >= 0), false, 'and the Releases card no longer carries them');
     const up8 = uploads.length;
-    const lbl8 = '#inv-schedules-card label:has-text("File the adopted copy")';
+    // RESTATED 2026-10-28 (P12, EST-13): the card names each signer and the press files the copy signed by whoever is still to
+    // sign (the representative here), recorded as signed by them; it read "File the adopted copy" and recorded nobody.
+    const lbl8 = '#inv-schedules-card label:has-text("File the copy signed by Ruth Gale")';
     const lblVis8 = await p.locator(lbl8).isVisible();
-    ok(lblVis8, 'File the adopted copy is on screen');
+    ok(lblVis8, 'File the copy signed by Ruth Gale is on screen');
+    has(await p.locator('#inv-schedules-card').textContent(), 'Ruth Gale, Personal Representative — not signed on a copy filed yet', 'the card names who is to sign');
     if (lblVis8) {
       const [fc8] = await Promise.all([p.waitForEvent('filechooser'), p.click(lbl8)]);
       await fc8.setFiles({ name: 'court-inventory-adopted.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4 step99 adopted ' + 'x'.repeat(200)) });
     }
     ok(await until(async () => (await p.evaluate((id) => (jobs.find((x) => x.id === id).signedRecords || []).filter((r) => r.kind === 'schedule').length, RLV)) === 1), 'the adopted copy is filed');
     eq(uploads.length - up8, 1, 'one upload');
+    eq(await p.evaluate((id) => ((jobs.find((x) => x.id === id).signedRecords || []).filter((r) => r.kind === 'schedule')[0] || {}).signedBy, RLV), 'Ruth Gale', '⚠ the copy records who signed it');
     await p.waitForTimeout(400);
     ok(await isOpen('closing', RLV), 'the Closing bar stays open across the filing\'s redraw');
     has(await p.locator('#inv-schedules-card').textContent(), 'Adopted Court Inventory', 'the filed copy is listed');
     has(await p.locator('#inv-schedules-card').textContent(), 'File another copy', 'and another copy offered');
+    has(await p.locator('#inv-schedules-card').textContent(), 'Ruth Gale, Personal Representative — signed copy filed', 'and the card says she is on it');
     has(String(await stat('closing', RLV)), '1 of 1 signed schedule filed', 'the Closing bar\'s line counts it');
     // At 390, both bars open: nothing off the edge.
     await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(600);

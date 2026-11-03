@@ -1635,15 +1635,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // RESTATED 2026-11-02: the release request holds a line still flagged for a look (invReleaseChecked, its state and its printer).
     // RESTATED (P10, 2026-10-28; EST-04, NEW-02, VAL-28, LIV-22): the release request and the Donation Record print the stamp too, the
     // schedules mark their rows, and the request's send asks off the same facts.
-    eq(callersOf('invAcceptCtx'), ['_invAcceptCtxOf', '_invBulkApply', 'approvalRequestGaps', 'approvalRequestState', 'invReleaseChecked', 'maivAggregate', 'printApprovalRequest', 'printContentsList', 'printContentsRecord', 'printCourtInventory', 'printDispositionLedger',
-      'printDonationRecord', 'printEstateInventoryReport', 'printTrustSchedule', 'probatePackageGaps'], '⚠ invAcceptCtx\'s: the desk\'s context, Mark reviewed, the §20.2031-6(b) aggregate, the release request\'s check, the eight printers, the package\'s gaps and the request\'s question');
+    // P12 (2026-10-28): the close's list asks it too, for the lines standing as the agents left them (the list's read).
+    eq(callersOf('invAcceptCtx'), ['_invAcceptCtxOf', '_invBulkApply', 'approvalRequestGaps', 'approvalRequestState', 'closeReadiness', 'invReleaseChecked', 'maivAggregate', 'printApprovalRequest', 'printContentsList', 'printContentsRecord', 'printCourtInventory', 'printDispositionLedger',
+      'printDonationRecord', 'printEstateInventoryReport', 'printTrustSchedule', 'probatePackageGaps'], '⚠ invAcceptCtx\'s: the desk\'s context, Mark reviewed, the close\'s list, the §20.2031-6(b) aggregate, the release request\'s check, the eight printers, the package\'s gaps and the request\'s question');
     // RESTATED 2026-10-28 (P9): the package's question asks it twice, over every line for the flagged count and over the named lines
-    // for the read, as the read always did. And (2026-11-02) the release request's check three times, and P10's five.
-    eq(calls('invAcceptCtx'), 20, '…and nothing else (the definition and nineteen calls)');
+    // for the read, as the read always did. And (2026-11-02) the release request's check three times, P10's five and P12's one.
+    eq(calls('invAcceptCtx'), 21, '…and nothing else (the definition and twenty calls)');
     eq(callersOf('_invAcceptCtxOf'), ['_invEdit', '_invGroupItems', '_invReadLineRepaint', '_invRevBoxHtml', '_renderInvRow', '_renderInvWorkbar'], 'the desk\'s context: its readers');
     has(live(decl('INV_WORK_FLAGS')), 'return !invLineReviewed(r, _invAcceptCtxOf(job));', '…and the Not reviewed chip');
     ['printContentsList', 'printEstateInventoryReport', 'printCourtInventory', 'printTrustSchedule', 'printDispositionLedger', 'printContentsRecord']
-      .forEach((p) => ok(/fc: (invAcceptCtx\(job\)|_ac\b)/.test(live(fn(p))), p + ' hands its stamps the facts'));
+      // RESTATED 2026-10-28 (P12): the ledger and the Contents Record read the context once (`_fc`), their sign-off asking the same stamp.
+      .forEach((p) => ok(/fc: (invAcceptCtx\(job\)|_ac\b|_fc\b)/.test(live(fn(p))), p + ' hands its stamps the facts'));
     eq(callersOf('_invPhotoNoteOpen'), ['_invLineHolds'], 'the photograph\'s note: the rule alone');
     has(live(fn('_invPhotoNoteOpen')), 'fc.byId[ref.derivedFrom]', '…reading the facts\' lines by id first');
     // Restated on the merge of main (2026-10-26): agentNoticeLoud is gone. Main's agentNoticesOn carries every note of a removed
@@ -1693,8 +1695,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // the two equal), so it reads the list's read too; and (P7's review) the worklist asks whether its figures are still nobody's look
     // (_avStampUnread), so a list read is never said to be unread.
     // RESTATED (P10, 2026-10-28; NEW-02): the release request's send asks too, as the package does.
-    eq(callersOf('invListRead'), ['_avAcceptedPill', '_avStampText', '_avStampUnread', '_invListReadHtml', '_invProgressStamp', '_invReadKey', '_renderInvWorkbar', 'approvalRequestGaps', 'probatePackageGaps'],
-      '⚠ invListRead: the stamp, the pill and its words in text, whether the figures are still unread, the work bar\'s line, its key and its sentence, and the package\'s and the request\'s questions');
+    // P12 (2026-10-28): the close's list names an unread list, and the sign-off's words ask the stamp's answer (invStampReviewed).
+    eq(callersOf('invListRead'), ['_avAcceptedPill', '_avStampText', '_avStampUnread', '_invListReadHtml', '_invProgressStamp', '_invReadKey', '_renderInvWorkbar', 'approvalRequestGaps', 'closeReadiness', 'invStampReviewed', 'probatePackageGaps'],
+      '⚠ invListRead: the stamp, the pill and its words in text, whether the figures are still unread, the work bar\'s line, its key and its sentence, the close\'s list, the sign-off, and the package\'s and the request\'s questions');
     eq(callersOf('invListReadRefusal'), ['_invListReadHtml', '_invReadKey', 'invMarkListRead'], 'the refusal: the press, its line and its key');
     eq(callersOf('invListReadWords'), ['_avAcceptedPill', '_avStampText', '_invListReadHtml', '_invProgressStamp'], 'the read\'s words: the pill (and its words in text), the line and the stamp');
     eq(callersOf('invMarkListRead'), ['_invListReadHtml'], 'the press: the work bar\'s button alone');

@@ -217,7 +217,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('court inventory: exempt property');
   {
     const COURT_FNS = INV_FNS.concat(['_invAcceptCtxOf', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invLineAcceptedOnly', '_invDocPartyHead', 'invAcceptCtx', '_arDupEligible', 'agentDuplicateGroups', '_arPair', '_arPairOpen', 'agentDupCleared', '_agDupEligible', 'agentNamedTwice', 'invConditionText', 
-      '_invMoney', '_invDocName', 'printCourtInventory', 'jobOnProbateTrack', '_avUnreviewedStamp', 'agentValueUnreviewed', '_invScheduleSection', 'invValBasisWord', 'invLineAppraiser', '_invLinkedAppraiser', '_apprLabel', 'isFormalDoc', 'resolveDocLevel',
+      '_invMoney', '_invDocName', 'printCourtInventory', 'scheduleDraftState', 'fiduciaryCapacity', 'jobOnProbateTrack', '_avUnreviewedStamp', 'agentValueUnreviewed', '_invScheduleSection', 'invValBasisWord', 'invLineAppraiser', '_invLinkedAppraiser', '_apprLabel', 'isFormalDoc', 'resolveDocLevel',
       'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'docLevelFloorReason', '_gate706', 'isDecedentJob',
       'resolveValBasis', 'estateValueDate', '_avdDate',
       '_invGuardrailItems', 'invAwaitingAppraisal', 'invAppraised', '_invHasValue', '_invHasAppraisal', '_jobAppraisers',

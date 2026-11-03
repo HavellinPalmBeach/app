@@ -56,7 +56,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('review state gates nothing and locks nothing');
   {
-    const ctx = sandbox({ vars: ['MAIV_OTHER', 'MAIV_BY_CATEGORY'], fns: ['invLineReviewed', 'invLineOpen', '_invReviewStats', '_invProgressStamp', 'agentValueUnreviewed', '_avHasFigure', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invNeedsAppraisal', 'invAppraisalChosen', 'invFiduciaryMode', 'isDecedentJob', '_invHasValue', 'invIsFirearm', 'invLineAcceptedOnly', '_invAcceptedStampWords', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible'] });
+    const ctx = sandbox({ vars: ['MAIV_OTHER', 'MAIV_BY_CATEGORY'], fns: ['invLineReviewed', 'invLineOpen', '_invReviewStats', '_invProgressStamp', '_invStampIsReviewed', 'agentValueUnreviewed', '_avHasFigure', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invNeedsAppraisal', 'invAppraisalChosen', 'invFiduciaryMode', 'isDecedentJob', '_invHasValue', 'invIsFirearm', 'invLineAcceptedOnly', '_invAcceptedStampWords', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible'] });
 
     eq(ctx._invReviewStats([{ reviewed: true }, {}, {}]), { done: 1, total: 3, complete: false, accepted: 0 },
        'progress is counted');

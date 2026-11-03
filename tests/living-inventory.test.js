@@ -53,7 +53,7 @@ const ITEM = (id, over) => Object.assign({
 }, over || {});
 
 const PRINT_FNS = ['_invDocPartyHead', 'invLineReviewed', 'invLineOpen', 'invInitialGroupWords', 'invOwnInitial', 'invInitialGroupKey', 'invDocContractBlock', 'invReleaseRecipientNamed',
-  'printContentsRecord', 'contentsRecordSignoff', 'dispositionRecord', 'printApprovalRequest', 'invDispDocWord', 'printCourtInventory', 'jobOnProbateTrack', '_avUnreviewedStamp',
+  'printContentsRecord', 'invStampReviewed', '_invStampIsReviewed', 'contentsRecordSignoff', 'dispositionRecord', 'printApprovalRequest', 'invDispDocWord', 'printCourtInventory', 'jobOnProbateTrack', '_avUnreviewedStamp',
   'agentShotGroups', 'agentNameableRefs', '_agState', '_agStateHtml', '_agNoticesHtml', 'agentNotices',
   'printDispositionLedger', 'referralFeeVendorsNote', 'vendorPaysReferral', '_vendorByName', '_vendorNameKey', '_andJoin', '_renderInvWorkbar', 'invInstrumentOffered', '_invNothingLineHtml', 'invLineNothingToList', 'invColdWords', '_arCheckButtonHtml', '_arState', 'agentRoomsToCheck', '_arCheckable', '_arStateHtml', '_avValueButtonHtml', 'agentValueWaiting', 'agentValueableRefs', '_avHasFigure', '_invHasValue', '_avStateHtml', '_avState', '_avNoticesHtml', 'agentValueNotices', '_avNoticeKinds', '_avNoticeLabel', 'agentValueInternal', 'agentValueUnreviewed', 'agentValueStale', 'agentValueSpecialistWorth', 'invPrimaryDoc', '_invReviewStats', '_invProgressStamp',
   '_invDocName', '_invDocHead', '_invPrintThumb', '_invPrintThumbSrc', '_invPaperPhotoUrl', '_invRecipient', '_jobDestLabel',
@@ -79,7 +79,7 @@ const PRINT_FNS = ['_invDocPartyHead', 'invLineReviewed', 'invLineOpen', 'invIni
   'invBequestElsewhere', 'invBequestFor', 'jobListEntries', 'invApprovalComplete', 'invApprovalMoved', 'invApprovalPrevWords', 'invApprovalSetAside', 'invApprovalMovedText',
   'invApprovalGap', 'jobFiduciaries', '_andJoin', 'invPropertyNoun', 'estateProceedsHolder', 'inventoryNetLabel', 'invRepresentativeTitle',
   // P19: the Disposition Ledger's card on the desk, on living work as on an estate.
-  '_renderLedgerCards', '_renderContentsCard', 'ledgerApplies', '_renderLedgerCard', '_renderProceedsCard', '_renderDonationsCard', 'dispositionLedger', 'ledgerSignedCopies',
+  '_renderLedgerCards', '_renderContentsCard', 'ledgerApplies', '_renderLedgerCard', 'signedCopySignersHtml', '_renderProceedsCard', '_renderDonationsCard', 'dispositionLedger', '_approvalLineOpen', 'ledgerSignedCopies', 'ledgerSignState', 'signedCopySignState', 'signedByNames', 'ledgerSigners', 'fiduciaryCapacity', 'ledgerSignerRole', 'scheduleSignerCapacity',
   'signedCopyControlHtml', '_localDateOf', 'signedRecordLinksHtml', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsReconciliation',
   'signedRecordsOf', '_reconFlagText', '_ledgerNames', 'donationGroups', '_ymdLocal', 'invDonationReceipted',
   // P20: a living client's line going to one of ours is flagged, and who signed prints readably.
@@ -87,7 +87,7 @@ const PRINT_FNS = ['_invDocPartyHead', 'invLineReviewed', 'invLineOpen', 'invIni
   // The job-flow audit (2026-10-08): the Contents Record says every line was photographed, and shared, only where it was.
   '_invHasPhoto', 'photoShareLive',
   // 2026-10-22: the signed schedules, beside the ledger in the close-out papers.
-  '_renderSignedSchedulesCard', 'signedScheduleRows', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invLineAcceptedOnly', '_invAcceptedStampWords', 'invListReadRefusal', '_invManifestUnread', '_arDupEligible', '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_arPair', '_arPairOpen', 'agentDupCleared', '_agDupEligible', 'agentNamedTwice', '_invListReadHtml', '_invReadKey', 'invListRead', 'agentNoticesOn', 'invDealerNamed', 'invDispGoesToDealer', 'invDealerUnchecked', 'invDealerDirState', '_avStampCounts', 'invTotalFloor', '_invFloorTotalHtml', 'maivOwedLines', 'maivOwedText', 'invLineQty', '_avStampText'];
+  '_renderSignedSchedulesCard', 'signedScheduleRows', 'scheduleSigners', 'scheduleDraftState', '_invOnProbateSchedule', '_invTrack', '_invTrackDefault', '_invGuardrailItems', 'isFormalDoc', 'resolveDocLevel', 'docLevelFloor', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invLineAcceptedOnly', '_invAcceptedStampWords', 'invListReadRefusal', '_invManifestUnread', '_arDupEligible', '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_arPair', '_arPairOpen', 'agentDupCleared', '_agDupEligible', 'agentNamedTwice', '_invListReadHtml', '_invReadKey', 'invListRead', 'agentNoticesOn', 'invDealerNamed', 'invDispGoesToDealer', 'invDealerUnchecked', 'invDealerDirState', '_avStampCounts', 'invTotalFloor', '_invFloorTotalHtml', 'maivOwedLines', 'maivOwedText', 'invLineQty', '_avStampText'];
 const PRINT_VARS = ['INV_LINE_INITIAL_MIN', 'INV_DISP_DOC_WORDS', 'CONTENTS_SIGNED_REF',  'INV_CONTRACT_DOCS',
   '_agRun', '_avRun', '_arRun', 'AGENT_NOTICE_KINDS', 
   'INV_DISPOSITIONS', 'INV_GROUP_ORDER', 'INV_RELEASE_DISPOSITIONS', 'INV_RELEASE_CAUTIONS',
@@ -100,7 +100,7 @@ const PRINT_VARS = ['INV_LINE_INITIAL_MIN', 'INV_DISP_DOC_WORDS', 'CONTENTS_SIGN
   'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DOC_SCOPES', 'AS_FOUND_SUBFOLDER', 'PHOTO_SUBFOLDER',
   'LEDGER_DOC_KEY', 'LEDGER_SIGNED_REF', 'SIGNED_RECORD_KINDS', 'INV_SALE_DISPOSITIONS', '_signedCopyKeys', '_signedCopySpecs', 'INV_NET_LABELS',
   // P20 vars: the names the living client's staff caution reads.
-  'PERSON_NAME_ALIASES', '_agDupSetJob', 'INV_OPEN_HOLDS', 'INV_ACCEPT_AMMO_RE',
+  'PERSON_NAME_ALIASES', '_agDupSetJob', 'INV_OPEN_HOLDS', 'INV_ACCEPT_AMMO_RE', 'FIDUCIARY_PR_ROLE_RE', 'FIDUCIARY_TRUSTEE_ROLE_RE', 'SCHEDULE_CAPACITY',
   // 2026-10-26: what a living client's request refuses with (only a firearm, or someone who works with Havellin, needs it).
   'INV_LIVING_RELEASE_TXT'];
 
@@ -229,7 +229,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // channel, so it IS a release with nobody recorded as taking it — which is precisely the
     // gap the count exists to surface. The Move row is excluded because its destination is the
     // job's own recorded address, and the undecided row has not left anywhere.
-    eq(rec.noRecipient, 1, 'the Donate row has left with nobody named, and is counted');
+    // ⚠ RESTATED 2026-10-28 (P12, LIV-21), NOT DELETED. This pinned the Donate row as "left with nobody named". It has not left:
+    // nothing records it gone, and the Contents Record told the client it had. It waits for a taker, counted apart; "left"
+    // is for a line recorded as gone (below).
+    eq(rec.noRecipient, 0, '⚠ the Donate row is still in the house: it has not left with nobody named');
+    eq(rec.waitTaker, 1, '…it waits for somebody to be named to take it, and is counted');
 
     // The recipient is DERIVED for a Move and never written onto the row.
     const table = ctx._photoRefs[2].filter((r) => r.stableId === 'b')[0];
@@ -239,7 +243,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // The gap the whole decision turns on: it left and nobody wrote down who took it.
     const g = rig(LIVING, [ITEM('x', { objectName: 'Armchair', disposition: 'Distribute' })]);
-    eq(g.ctx.dispositionRecord(2).noRecipient, 1, 'a Distribute with no name is counted');
+    // RESTATED 2026-10-28 (P12, LIV-21): still in the house it waits for a taker; recorded as gone with nobody named, it has left.
+    eq(g.ctx.dispositionRecord(2).waitTaker, 1, 'a Distribute with no name is counted, waiting for a taker');
+    eq(g.ctx.dispositionRecord(2).noRecipient, 0, '…and not as gone while nothing records it gone');
+    const gone = rig(LIVING, [ITEM('x', { objectName: 'Armchair', disposition: 'Distribute', dispDate: '2026-10-10' })]);
+    eq(gone.ctx.dispositionRecord(2).noRecipient, 1, '⚠ recorded as gone with nobody named, it has left with no recipient recorded');
+    eq(gone.ctx.dispositionRecord(2).waitTaker, 0, '…and no longer waits');
     const chip = g.ctx.invWorkFlags(LIVING).filter((f) => f.key === 'norecip')[0];
     ok(!!chip, 'and the desk carries a "No recipient" count');
     eq(chip.test(g.ctx._photoRefs[2][0]), true, 'which fires on exactly that row');

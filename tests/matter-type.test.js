@@ -198,7 +198,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('the Court Inventory stops being signed on a matter with no probate in it');
   {
-    const FNS = ['_invDocPartyHead', 'invConditionText', '_invScheduleSection', '_invItemNo', 'invValBasisWord', 'invLineAppraiser', '_invLinkedAppraiser', '_jobAppraisers', '_apprLabel', 'invProbateRows', '_invTrackDefault', 'printCourtInventory', '_avUnreviewedStamp', 'agentValueUnreviewed', '_invAssignItemNos', '_jobInvRefs', '_invTouch',
+    const FNS = ['_invDocPartyHead', 'invConditionText', '_invScheduleSection', '_invItemNo', 'invValBasisWord', 'invLineAppraiser', '_invLinkedAppraiser', '_jobAppraisers', '_apprLabel', 'invProbateRows', '_invTrackDefault', 'printCourtInventory', 'scheduleDraftState', 'fiduciaryCapacity', '_avUnreviewedStamp', 'agentValueUnreviewed', '_invAssignItemNos', '_jobInvRefs', '_invTouch',
                  'savePhotoRefs', 'isFormalDoc', 'resolveDocLevel', 'docLevelFloor', 'docTierOf', 'docTierDef', 'docTierScope', 'docTierScopeMirror', 'svcHasDocStep', 'gateDispute',
                  '_gateYes', '_gate706', 'isDecedentJob', '_invGuardrailItems',
                  'invAwaitingAppraisal', '_invJob', 'invNeedsAppraisal', 'invAppraisalChosen', 'invFiduciaryMode',

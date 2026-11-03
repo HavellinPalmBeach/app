@@ -623,6 +623,7 @@ Publish that rate only as section (a) step 10 allows.
 - Decide first: Ask 9, Ask 10, Ask 11.
 
 **P12. The close and the ledger tell the whole truth.** Fix now · M.
+- ✓ **Built 2026-10-28** (Asks 12 and 13 answered that morning; no backend change; CLAUDE.md, Lifecycle and Inventory and estate documentation; `tests/p12-close-truth.test.js`, browser step 136; `BUILD_HISTORY.md`, 2026-10-28 · P12). One DOM-free list, `closeReadiness`, feeds Close job's question, the Closing bar at the close and a fifth step of the Close-out card, *Before you close*, each entry with its count and first item numbers, in the order below (rooms first, as the question had them; the lines with nobody named and the lines out with an appraiser kept beside their neighbours). Close job reads the inventory first where the device has not. The ledger's Authorized by, its gap lines, its sign-off by the stamp's state (Ask 12) and the ratification sentence above it (Ask 13, counsel bundle D23); the package's record the same; every fiduciary's signature on a copy, each signer in their own role, a DRAFT schedule said as one; Hold and *left* on the Contents Record, whose stamp already took the no-values words (namesOnly, since 2026-10-26). **Left for Anthony:** whether a fiduciary's signature on the ledger counts as their ratification wherever ratification is read. Not by one rule: `invRatificationOwed` would clear while `_approvalLineOpen`, the request and the firearm gates still read the approval incomplete, so the line would come back on the next request as owed a release rather than a ratification. **Its review, 2026-10-28** (`BUILD_HISTORY.md`, 2026-11-02e · P12's review): Close job reads first on every press (it read only where the device never had), names the client, is not asked where another client is on screen when the read lands, and says a failed read as this device's copy; the ledger's signers and Ask 13's sentence name a capacity, never *Family Member* or *Estate Attorney*, and a co-representative with none signs as a co-representative there and on the schedules, whose card names each signer as the paper does; the ledger and the Contents Record read *the record to date* while their own *not yet complete* lists anything, REVIEWED or not (Ask 12's follow-up, built as recommended, for Anthony to confirm); the package's record carries the ledger's second sentence (counsel bundle D23 corrected).
 - TC: one close-readiness list feeds the Closing bar, the Close-out card and **Close job**'s question. Each item comes with its count and first item numbers:
   - lines with no disposition (Hold included on living work);
   - photographs not named;
@@ -1046,6 +1047,7 @@ Why: the plan asks the concierge to tick "read" for a paper the app never asks f
 
 **Ask 12. A Disposition Ledger or Contents Record still marked IN PROGRESS: what does the sign-off say?** (P12; DOC-27, LIV-03)
 - ✓ **Answered 28 October:** words that fit its state, as recommended: *approved as the record to date* while IN PROGRESS, *the final record* once every flagged line is checked and the list is read.
+- **Follow-up, for Anthony to confirm (P12's review, 2026-10-28):** a ledger stamped REVIEWED can still list, under its own *This ledger is not yet complete*, an item leaving without approval or a sale with no proceeds. Built as recommended: *the record to date* while that block lists anything, as well as while IN PROGRESS. The alternative is the stamp alone (*the final record* under the block).
 - Words that fit its state: "approved as the record to date" (Recommended)
 - Withhold the sign-off until every flagged line is checked and the list is read; the page still prints
 - As now: "the final record"
@@ -1282,8 +1284,8 @@ Severity is the verifier's re-rating, or the reviewer's for RT rows. Pack is one
 |EST-10|gap|med|C||The desk cannot send the inventory itself to the fiduciary or counsel; there is…|24|probatePackageCardHtml|
 |EST-11|accuracy|med|C||The vendor pickup sheet is 'Signed by: Kodner Galleries' with no person's name…|30|openSignoutDialog|
 |EST-12|inconsistency|med|C||Same-day signatures merge into one act: the header overstates who approved, and…|16|invApprovalBatches|
-|EST-13|gap|med|C|still|The Disposition Ledger's signed copy records no signer, so one signature passes…|12|signedCopyControlHtml|
-|EST-14|gap|med|C|still|Closing an estate does not name outstanding release paperwork (approvals…|12|closeOpenWorkFlag|
+|EST-13|gap|med|C|still; fixed P12|The Disposition Ledger's signed copy records no signer, so one signature passes…|12|signedCopyControlHtml|
+|EST-14|gap|med|C|still; fixed P12|Closing an estate does not name outstanding release paperwork (approvals…|12|closeOpenWorkFlag|
 |EST-15|gap|low|C||On a values tier the Disposition Ledger carries no carrying value or gain/loss…|Ask 21, then 21|printDispositionLedger|
 |EST-16|gap|med|C||Fiduciaries approve a sale with no price: there is no offer or reserve on a…|26|printApprovalRequest|
 |EST-17|gap|low|C||Junk lines on an estate need written approval but have no sign-out, so nothing…|30|signoutLineKind|
@@ -1299,7 +1301,7 @@ Severity is the verifier's re-rating, or the reviewer's for RT rows. Pack is one
 |REL-05|accuracy|med|C|still|A name typed into Authorized By counts as written approval: the sign-out opens…|5 · built 27 Oct|_invEdit|
 |REL-06|inconsistency|high|C|still|An item recorded as with the appraiser can be signed out to a beneficiary; it…|16|signoutGroups|
 |REL-07|defect|high|C|still|The bulk bar's request and Record approval on an estate take Keep and…|5 · built 27 Oct|invWrittenReleasePicked|
-|REL-08|gap|high|C|still|The Disposition Ledger and the close question say nothing about lines that left…|12|dispositionLedger|
+|REL-08|gap|high|C|still; fixed P12|The Disposition Ledger and the close question say nothing about lines that left…|12|dispositionLedger|
 |REL-09|accuracy|med|C||A co-trustee or co-representative receiving an item approves their own…|26|INV_RELEASE_CAUTIONS|
 |REL-10|gap|med|C||Record the signed request never asks about the initials the paper asks for|26|invRecordApproval|
 |REL-11|inconsistency|med|C||A co-representative recorded after a request went out is offered as a signer of…|16|approvalRequestCardHtml|
@@ -1333,7 +1335,7 @@ Severity is the verifier's re-rating, or the reviewer's for RT rows. Pack is one
 |VAL-11|inconsistency|high|C|still|The appraiser's packet leaves out lines linked to them; the hand-off sheet…|15|printAppraisalWorklist|
 |VAL-12|gap|high|C||No paper shows the evidence or who stands behind a value|17|valComps|
 |VAL-13|accuracy|med|C|still|The Court Inventory and Trust Schedule carry no item numbers|13|_invScheduleSection|
-|VAL-14|gap|med|C|still|Close job asks about the midpoint and the ledger but not about the inventory…|12|applyJobTransition|
+|VAL-14|gap|med|C|still; fixed P12|Close job asks about the midpoint and the ledger but not about the inventory…|12|applyJobTransition|
 |VAL-15|inconsistency|med|C||The Court Inventory says FINAL while the Estate Inventory Report of the same…|decided (Q109)|printCourtInventory|
 |VAL-16|gap|med|C||Waive records no who or when, cannot be undone, and never prints on the…|15|waiveAppraisal|
 |VAL-17|gap|med|C|still|On Contents and None tiers no line can earn its own initial on the release…|7|invOwnInitial|
@@ -1345,7 +1347,7 @@ Severity is the verifier's re-rating, or the reviewer's for RT rows. Pack is one
 |VAL-23|inconsistency|low|C||Agent Two's confirms say 'Nothing else on the line changes' but it rewrites…|33|agentValueRun|
 |VAL-24|docs|low|C||Estate-only wording on living jobs: 'date of death' and 'reasonable estimates…|14|printAppraisalWorklist|
 |VAL-25|inconsistency|low|DK||On a Contents-tier estate the Formal guardrail says appraisals are needed…|14|_renderAppraisalGuardrail|
-|VAL-26|inconsistency|low|C||The Closing bar asks for an adopted Court Inventory while the schedule is still…|12|signedScheduleRows|
+|VAL-26|inconsistency|low|C|fixed P12|The Closing bar asks for an adopted Court Inventory while the schedule is still…|12|signedScheduleRows|
 |VAL-27|inconsistency|low|C|still|The Estate Inventory Report presents a floor as the total|7|printEstateInventoryReport|
 |VAL-28|accuracy|low|C||The release request and the Donation Record print unreviewed agent figures as…|10|_avUnreviewedStamp|
 |VAL-29|inconsistency|low|C||Schedules say 'valued as a lot' and hide the per-article value the lot rule…|13|_invScheduleSection|
@@ -1385,9 +1387,9 @@ Severity is the verifier's re-rating, or the reviewer's for RT rows. Pack is one
 |DOC-08|gap|high|C||The evidence behind a value never leaves the app: no comparables, range…|17|valComps|
 |DOC-09|accuracy|med|DC||A figure the TC types prints 'not stated' in red on the court schedule, and the…|Ask 8|_avTakeValue|
 |DOC-10|gap|med|C||Nothing flags a fiduciary receiving or buying estate or trust property|26|INV_RELEASE_CAUTIONS|
-|DOC-11|accuracy|high|C|still|The ledger the PR signs 'as the final record' hides a release that left without…|12|printDispositionLedger|
-|DOC-12|accuracy|med|C||The ledger says a line 'left the property with no recipient recorded' while the…|12|dispositionLedger|
-|DOC-13|inconsistency|med|C|still|The schedules' signature lines print a fixed capacity: a Co-Trustee signs as…|12|scheduleSignLines|
+|DOC-11|accuracy|high|C|still; fixed P12|The ledger the PR signs 'as the final record' hides a release that left without…|12|printDispositionLedger|
+|DOC-12|accuracy|med|C|fixed P12|The ledger says a line 'left the property with no recipient recorded' while the…|12|dispositionLedger|
+|DOC-13|inconsistency|med|C|still; fixed P12|The schedules' signature lines print a fixed capacity: a Co-Trustee signs as…|12|scheduleSignLines|
 |DOC-14|accuracy|med|C||Every value on a fiduciary's paper is unmarked as reviewed or not, so 'N values…|10|_avUnreviewedStamp|
 |DOC-15|inconsistency|med|C||The request's footer says values are 'not appraisals unless an appraisal is…|10|printApprovalRequest|
 |DOC-16|gap|med|C||Property outside the probate estate is put to the PRs for release, and onto the…|26|printApprovalRequest|
@@ -1401,7 +1403,7 @@ Severity is the verifier's re-rating, or the reviewer's for RT rows. Pack is one
 |DOC-24|friction|low|C||The Estate Inventory Report is long and hard to scan: 28 pages for 300 lines, a…|24|printEstateInventoryReport|
 |DOC-25|accuracy|med|C||Grouped lots over $100 an article on a Form 706 estate are flagged only on the…|13|_invScheduleSection|
 |DOC-26|gap|med|C||Marks and makers Agent One read off a photograph never reach a paper|24|agentBasis|
-|DOC-27|inconsistency|med|C||Sign-off blocks are offered under an IN PROGRESS stamp that says values and…|12|printDispositionLedger|
+|DOC-27|inconsistency|med|C|fixed P12|Sign-off blocks are offered under an IN PROGRESS stamp that says values and…|12|printDispositionLedger|
 |DOC-28|inconsistency|low|C||Trust-only packages still call the papers and folders 'Estate Inventory' and…|14|printEstateInventoryReport|
 |INV-01|accuracy|fix-now|C|still|The Court Inventory and Trust Schedule print FINAL with adoption lines over a…|8|printCourtInventory|
 |INV-02|defect|fix-now|C|still|One snapshot of a full house pushes the job record past the Jobs sheet's…|1 · built 27 Oct|takeInventorySnapshot|
@@ -1462,7 +1464,7 @@ Severity is the verifier's re-rating, or the reviewer's for RT rows. Pack is one
 |FLD-16|gap|low|C||New-home lines on a Home Transition carry no room at the new home|32|FIELD_DISPOSITIONS|
 |LIV-01|accuracy|high|C|still|The ⚑ 'flagged for appraisal, no value recorded' warning disappears from the…|10|INV_RELEASE_CAUTIONS|
 |LIV-02|defect|high|C|still|The selection survives bulk actions and filter changes, so Remove lines removes…|9|_invPickGroup|
-|LIV-03|inconsistency|med|DC||The Contents Record the client signs can carry 'IN PROGRESS … may still change'…|Ask 12|printContentsRecord|
+|LIV-03|inconsistency|med|DC|fixed P12|The Contents Record the client signs can carry 'IN PROGRESS … may still change'…|Ask 12|printContentsRecord|
 |LIV-04|gap|med|C||Home Transition and Home Editing sell through auction houses but have no…|32|jobTakesProceedsStatements|
 |LIV-05|defect|med|C|fixed P4|A living client's own firearm on Keep or Move is 'held' for good, and the way…|4|_renderInvRow|
 |LIV-06|friction|low|DC||On living jobs, 'Unsure' flags sit on values for Keep, Move and Junk lines that…|not built|INV_WORK_FLAGS|
@@ -1470,9 +1472,9 @@ Severity is the verifier's re-rating, or the reviewer's for RT rows. Pack is one
 |LIV-08|automation|med|C|still|Photographs Agent One found nothing in stay as lines in Unnamed shots and block…|9|INV_WORK_FLAGS|
 |LIV-09|automation|low|C||The one paper a living client signs has no iPad signing and no send|30|_renderContentsCard|
 |LIV-10|gap|med|C||The donation papers do not give a donor's CPA what a deduction needs|30|printDonationRecord|
-|LIV-11|inconsistency|med|C||Hold lines print as 'not recorded' on the Contents Record, but the sign-off is…|12|printContentsRecord|
+|LIV-11|inconsistency|med|C|fixed P12|Hold lines print as 'not recorded' on the Contents Record, but the sign-off is…|12|printContentsRecord|
 |LIV-12|inconsistency|low|C||On living jobs the Disposition Ledger card says the client signs it, then that…|32|_renderLedgerCard|
-|LIV-13|gap|low|C||Closing a living job never mentions an unsigned or incomplete Contents Record|12|applyJobTransition|
+|LIV-13|gap|low|C|fixed P12|Closing a living job never mentions an unsigned or incomplete Contents Record|12|applyJobTransition|
 |LIV-14|inconsistency|low|C||Living client papers print the desk's words 'Distribute' and 'Move'|32|invDispDocWord|
 |LIV-15|inconsistency|low|C||A Move row's 'Who takes it' box looks empty, and typing in it replaces the new…|32|_invRecipientInput|
 |LIV-16|inconsistency|low|C||Estate-only fields and wording leak into the living line record, the CSV and…|14|INVENTORY_COLUMNS|
@@ -1480,7 +1482,7 @@ Severity is the verifier's re-rating, or the reviewer's for RT rows. Pack is one
 |LIV-18|automation|med|DC||The person the crew names at the camera for 'To a person' is typed again at the…|not built|_invEdit|
 |LIV-19|gap|low|C||The Home Transition's move pile records no room in the new home and produces no…|32||
 |LIV-20|friction|low|C||On the iPad the desk's controls are mouse-sized, and every disposition change…|28|_invEdit|
-|LIV-21|accuracy|low|C||A mid-job Contents Record says items 'have left the property' when they are…|12|dispositionRecord|
+|LIV-21|accuracy|low|C|fixed P12|A mid-job Contents Record says items 'have left the property' when they are…|12|dispositionRecord|
 |LIV-22|accuracy|low|C||Unreviewed Agent Two figures print on living client papers with no mark|10|printApprovalRequest|
 |LIV-23|inconsistency|low|DK||Grammar on the request card: '1 line await written approval'|16|approvalRequestCardHtml|
 |LIV-24|friction|low|C||A line set to Consign at the desk does not take the confirmed auction house|32|INV_PLAN_CHANNEL_KINDS|
@@ -1517,7 +1519,7 @@ Severity is the verifier's re-rating, or the reviewer's for RT rows. Pack is one
 |NEW-01|accuracy|fix-now|C|changed|A line with no name and no value can be ticked Reviewed, and the inventory then…|9|invLineReviewed|
 |NEW-02|accuracy|high|C|still|The release request the fiduciaries sign carries agent values nobody reviewed…|10|printApprovalRequest|
 |NEW-03|defect|high|C|still|After a bequest awaiting appraisal is signed out to its beneficiary, the desk…|16|signoutGroups|
-|NEW-04|gap|high|C|still|Close job's question leaves out most open work, and a living job closed with an…|12|applyJobTransition|
+|NEW-04|gap|high|C|still; fixed P12|Close job's question leaves out most open work, and a living job closed with an…|12|applyJobTransition|
 |NEW-05|accuracy|high|C|fixed|A room-check double can be ticked Reviewed on both lines and then prints…|built 27 Oct|_invSetReviewed|
 |NEW-06|docs|med|C||Sending the inventory to the estate attorney cannot be found from the guide or…|33||
 |NEW-07|inconsistency|low|C|still|The package's 'still being built' question counts only named lines, so it…|9|probatePackageGaps|

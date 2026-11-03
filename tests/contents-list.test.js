@@ -10,7 +10,7 @@ const FNS = ['invLineReviewed', 'invLineOpen', '_invDocPartyHead', 'invCondition
   'contentsList', 'printContentsList', '_clFlags',
   '_invAssignItemNos', '_jobInvRefs', '_invItemNo', '_invRoomName', '_planRooms',
   '_invFileId', '_invTouch', 'savePhotoRefs', '_warnPhotoStoreFull',
-  '_invDocHead', '_invDocName', '_invPrintThumb', '_invPrintThumbSrc', '_invPaperPhotoUrl', '_invProgressStamp', '_invReviewStats', 'invLineReviewed', 'invLineOpen',
+  '_invDocHead', '_invDocName', '_invPrintThumb', '_invPrintThumbSrc', '_invPaperPhotoUrl', '_invProgressStamp', '_invStampIsReviewed', '_invReviewStats', 'invLineReviewed', 'invLineOpen',
   '_invThumbFor', '_invThumbCache', '_invThumbKey',
   'invFiduciaryMode', 'isDecedentJob', 'svcFamily',
   'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep',
@@ -245,7 +245,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ───────────────────────────────────────────────────────────────────────────
   group('⚠ THE PROGRESS STAMP NAMES WHAT THIS DOCUMENT CARRIES');
   {
-    const p = sandbox({ vars: ['MAIV_OTHER', 'MAIV_BY_CATEGORY'], fns: ['_invProgressStamp', '_invReviewStats', 'invLineReviewed', 'invLineOpen', 'agentValueUnreviewed', '_avHasFigure', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invReleaseCautions', '_invPhotoNoteOpen', 'agentValueSpecialistWorth', 'invIsFirearm', 'invLineAcceptedOnly', '_invAcceptedStampWords', 'invListReadRefusal', '_invManifestUnread', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible'] });
+    const p = sandbox({ vars: ['MAIV_OTHER', 'MAIV_BY_CATEGORY'], fns: ['_invProgressStamp', '_invStampIsReviewed', '_invReviewStats', 'invLineReviewed', 'invLineOpen', 'agentValueUnreviewed', '_avHasFigure', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invReleaseCautions', '_invPhotoNoteOpen', 'agentValueSpecialistWorth', 'invIsFirearm', 'invLineAcceptedOnly', '_invAcceptedStampWords', 'invListReadRefusal', '_invManifestUnread', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible'] });
     const plain = p._invProgressStamp([{ reviewed: true }, {}]);
     const noVal = p._invProgressStamp([{ reviewed: true }, {}], { noValues: true });
     has(plain, 'Values and dispositions on unreviewed lines may still change',

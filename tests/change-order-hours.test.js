@@ -385,11 +385,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // the same dependency list job-desk-scope lifts.
     function desk(cos, est) {
       const D = sandbox({
-        fns: ['estatePackageRoute', 'estateDeliveryLine', 'proceedsReceivedLine', 'logisticsLineOn', 'planTaskApplies', 'planDerivedLines', 'jobListEntries', 'jobOnProbateTrack', 'planTaskCtx', 'invFiduciaryMode', 'isDecedentJob', '_planRooms', 'donationReceiptLine', 'ledgerDerivedLines', 'ledgerSignedCopies', 'signedRecordsOf', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine',
+        fns: ['estatePackageRoute', 'estateDeliveryLine', 'proceedsReceivedLine', 'logisticsLineOn', 'planTaskApplies', 'planDerivedLines', 'jobListEntries', 'jobOnProbateTrack', 'planTaskCtx', 'invFiduciaryMode', 'isDecedentJob', '_planRooms', 'donationReceiptLine', 'ledgerDerivedLines', 'ledgerSignedCopies', 'ledgerSignState', 'signedCopySignState', 'signedByNames', 'ledgerSigners', 'jobFiduciaries', 'fiduciaryCapacity', 'samePerson', 'canonPersonName', 'signedRecordsOf', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine',
               'roomStatusNormalize', 'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs',
               '_srcLineKey', 'matterTypeOf', 'matterDef', 'docTierOf', 'docTierDef',
               'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobIsFeeOnly', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'prepVendorsConfirmed', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs', 'fmt', '_hrsTxt'].concat(CO),
-        vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'LEDGER_SIGNED_REF', 'INV_SALE_DISPOSITIONS', 'DECEDENT_SERVICES', 'jobPlanStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES',
+        vars: ['PERSON_NAME_ALIASES', 'AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'LEDGER_SIGNED_REF', 'INV_SALE_DISPOSITIONS', 'DECEDENT_SERVICES', 'jobPlanStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES',
                'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY', 'INV_RELEASE_DISPOSITIONS',
                'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'MATTER_TYPES',
                'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'DOC_SCOPES'],

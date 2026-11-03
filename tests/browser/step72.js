@@ -252,7 +252,10 @@ const PB_COURT = 'Circuit Court for Palm Beach County, Florida, Probate Division
       const rec = await lastPrint();
       has(rec, 'Disposed of', '⚠ the family reads "Disposed of"');
       lacks(rec, 'Junk', '…never "Junk"');
-      has(rec, 'Reviewed and accepted as the record of what stayed and what left the property', '⚠⚠ and signs it');
+      // RESTATED 2026-10-28 (P12; Anthony, Ask 12): the sign-off's words follow the stamp, the record to date while it reads
+      // IN PROGRESS and the final record once REVIEWED.
+      const want72 = /IN PROGRESS/.test(rec) ? 'the record to date' : 'the final record';
+      has(rec, 'Reviewed and accepted as ' + want72 + ' of what stayed and what left the property', '⚠⚠ and signs it, in the words its stamp allows (' + want72 + ')');
       await toDesk(EST);
       has(await txt('#inv-guardrail'), 'Appraisal in progress', '⚠⚠ a linked painting with no report reads as in progress, not appraised');
       // Restated 2026-10-27: the work bar's papers open on screen first; the page read is the one its Print / Save PDF prints.

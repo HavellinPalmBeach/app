@@ -430,8 +430,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        '⚠ once approved, an appraiser on the estimate is ours on the desk as in the contract');
     eq(mk({ 1: { estimate: estWith({ vendors: [ART] }), approved: false } }).jobAppraisalDuty(job), '',
        'an unapproved estimate is not the contract yet');
-    has(fn('printCourtInventory'), "Havellin schedules the appraiser on the estimate where it covers the item", 'the Court Inventory\'s DRAFT fix has the listed arm');
-    has(fn('printTrustSchedule'), "the trustee or their counsel arranges any other", 'and the Trust Schedule\'s');
+    // P12 (2026-10-28): a schedule's DRAFT reasons and fix are one answer, scheduleDraftState, which both printers read.
+    has(fn('scheduleDraftState'), "Havellin schedules the appraiser on the estimate where it covers the item", 'the Court Inventory\'s DRAFT fix has the listed arm');
+    has(fn('scheduleDraftState'), "the trustee or their counsel arranges any other", 'and the Trust Schedule\'s');
+    has(fn('printCourtInventory'), "scheduleDraftState(job, 'court'", 'and the Court Inventory reads it');
+    has(fn('printTrustSchedule'), "scheduleDraftState(job, 'trustee'", 'and the Trust Schedule reads it');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════════════════════════

@@ -275,7 +275,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠ M5 — the Job Plan asks the court questions on a probate matter, and the attorney only where there is one to name');
   {
     const P = sandbox({
-      fns: ['planDerivedLines', 'prepVendorsConfirmed', 'estateAuthority', 'estateTaxReturn', 'planTaskCtx', 'planTaskApplies', 'logisticsLineOn', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', '_planRooms', 'donationReceiptLine', 'ledgerDerivedLines', 'ledgerSignedCopies', 'signedRecordsOf', 'jobListEntries', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine',
+      fns: ['planDerivedLines', 'prepVendorsConfirmed', 'estateAuthority', 'estateTaxReturn', 'planTaskCtx', 'planTaskApplies', 'logisticsLineOn', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', '_planRooms', 'donationReceiptLine', 'ledgerDerivedLines', 'ledgerSignedCopies', 'ledgerSignState', 'signedCopySignState', 'signedByNames', 'ledgerSigners', 'fiduciaryCapacity', 'jobFiduciaries', 'signedRecordsOf', 'jobListEntries', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine',
             'roomStatusNormalize', 'firearmsFlaggedAtIntake', 'houseFlagsOf', '_jobInvRefs', '_srcLineKey', 'matterTypeOf', 'matterDef',
             'docTierOf', 'docTierDef', 'docTierProduces', 'svcHasDocStep', 'estimateIsFeeOnly', 'estDeclutterHrs', 'coAcceptedHours',
             'coHoursTotal', 'coHours', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs', 'fmt', '_hrsTxt'],

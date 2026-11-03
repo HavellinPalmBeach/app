@@ -194,13 +194,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // RESTATED 2026-10-05 (P20, Q24): who authorized a line prints through invApprovalSignedText, each signer with the day
     // they signed, so "Rex Hale Sep 25, 2026" reads "Rex Hale (Sep 25, 2026)" (and two signers on two days each with theirs).
     has(t, '1 Sargent portrait Auction Kodner Galleries Rex Hale (Sep 25, 2026) Sep 30, 2026 $1,000 $250 $750', 'a line: number, item, disposition, recipient, authority, date, gross, fees, net');
-    has(t, '2 Silver tea set Auction Kodner Galleries — Sep 30, 2026 $237.50 $59.38 $178.12', 'to the cent');
+    // RESTATED 2026-10-28 (P12, DOC-11): a line that left with no written approval reads "ratification owed" under Authorized by.
+    has(t, '2 Silver tea set Auction Kodner Galleries ratification owed Sep 30, 2026 $237.50 $59.38 $178.12', 'to the cent');
     has(t, '3 Tabriz rug Consign Palm Consign — — — — pending', '⚠ a consignment with nothing recorded reads pending, not $0');
     has(t, 'Totals $1,237.50 $309.38 $928.12', 'the totals add the lines: $1,237.50 less $309.38');
     has(t, 'This ledger is not yet complete.', 'its gaps are named');
     ok(html.indexOf('This ledger is not yet complete.') < html.indexOf('<th style="padding:2px 5px;">Item #</th>'), '⚠ above the table, before anyone signs');
     has(t, '1 line has no disposition recorded: #8 Desk clock. The sign-off below is withheld until every line has one.', 'an undecided line, by number');
-    has(t, '1 item left the property with no recipient recorded: #6 Bookcase.', 'a donation with no charity named');
+    // RESTATED 2026-10-28 (P12, DOC-12): the bookcase has not left (no date, no receipt), so it waits for a taker; "left" is said
+    // only of what has (p12-close-truth.test.js C).
+    has(t, '1 item waits for somebody to be named to take it: #6 Bookcase.', 'a donation with no charity named');
     has(t, '1 line sold, consigned or at auction with no proceeds recorded yet: #3 Tabriz rug.', 'a sale with nothing received');
     has(t, 'The Kodner Galleries statement of Oct 1, 2026 does not agree with this ledger: Gross: $1,250 on the statement, $1,237.50 on its lines ($12.50 apart).',
         '⚠⚠ a statement $12.50 over its lines, with both figures');
@@ -224,7 +227,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   G('E1 · the sign-off: one line per fiduciary, the client on living work, withheld while a line is undecided', () => {
     const co = [{ id: 'c1', name: 'Daniel Hale', role: 'Co-Personal Representative' }, { id: 'c2', name: 'Voided Person', voidedAt: 5 }];
     const est = ledgerRig(ESTATE({ coFiduciaries: co }), LINES({ undecided: false })).printDispositionLedger(7, { asHtml: true }).html;
-    has(text(est), 'Sign-off Reviewed and approved as the final record of the disposition of the property listed above.', 'the sign-off says what is approved');
+    // RESTATED 2026-10-28 (P12; Anthony, Ask 12): the stamp reads IN PROGRESS (nobody has checked these lines), so the sign-off
+    // approves the record to date; "the final record" once every flagged line is checked and the list read (p12-close-truth C).
+    has(text(est), 'Sign-off Reviewed and approved as the record to date of the disposition of the property listed above.', 'the sign-off says what is approved');
     eq(count(est, 'Signature: __'), 2, '⚠⚠ one signature line per fiduciary: the representative and the live co-representative');
     has(text(est), 'Rex Hale, Personal Representative', 'the representative by name and role');
     has(text(est), 'Daniel Hale, Co-Personal Representative', 'the co-representative too');
@@ -332,10 +337,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         _docNotice(t, m) { log.notices.push({ t, m: String(m) }); }, openJobPlanFor() { return false; }, _dashRedraw() { return true; },
         renderClientDashboard() {}, savePhotoRefs() {}, loadPhotoRefs() {}, jobCloseBlockers: () => [],
         confirm(m) { log.asked.push(String(m)); return answer; }, alert() {}, _todayStr: () => '2026-10-03',
-        SHEETS_SYNC_URL: o.url, fetch, document: domStub({}), jobs: [job], _photoRefs: {}, estimateStore: {}, jobPlanStore: {} });
+        SHEETS_SYNC_URL: o.url, fetch, document: domStub({}), jobs: [job], _photoRefs: {}, estimateStore: {}, jobPlanStore: {},
+        // P12 (2026-10-28): Close job reads the inventory first where this device has not (p12-close-truth.test.js B). These checks
+        // are of the question and the filing on a device that has read it (and found nothing on this device's copy).
+        _invCloudSeen: { 7: true } });
     c.jobs = [job]; c._photoRefs = {};
     return { c, log, job, answer: (a) => { answer = a; } };
   }
+  // RESTATED (P12's review, 2026-10-28): Close job's own read says *Reading the inventory from the sheet first…* before the question
+  // (p12-close-truth R1); these checks are of what the filing says after it.
+  const fb = (r) => r.log.badges.filter((b) => b.m !== 'Reading the inventory from the sheet first…');
   const PAID = [{ uid: 'd1', stage: 'deposit', amount: 5000, receivedOn: '2026-09-20', method: 'wire' },
                 { uid: 'm1', stage: 'midpoint', amount: 2500, receivedOn: '2026-09-28', method: 'wire' }];
 
@@ -357,8 +368,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(r.log.asked.length, 1, 'no midpoint and no signature: still one question');
     has(r.log.asked[0] || '', 'No midpoint payment is recorded', 'the midpoint paragraph');
     has(r.log.asked[0] || '', 'The Disposition Ledger has no signed copy on file', 'and the ledger\'s');
-    // Signed: nothing to ask on a paid job.
-    r = closeRig(ESTATE({ payments: PAID, signedRecords: [{ id: 's1', kind: 'ledger', ref: 'ledger', filedAt: T0 }] }));
+    // Signed: nothing to ask on a paid job. (Since P12, 2026-10-28, the copy records who signed it: Rex Hale, the one fiduciary.)
+    r = closeRig(ESTATE({ payments: PAID, signedRecords: [{ id: 's1', kind: 'ledger', ref: 'ledger', signedBy: 'Rex Hale', filedAt: T0 }] }));
     r.c.applyJobTransition(r.job);
     eq(r.log.asked.length, 0, 'a signed ledger on file: the paid close asks nothing');
     // A voided copy is no signature.
@@ -372,10 +383,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   });
 
   G('E2 · closing files the ledger to Drive, recorded as a person\'s edit', () => {
-    const r = closeRig(ESTATE({ payments: PAID, signedRecords: [{ id: 's1', kind: 'ledger', ref: 'ledger', filedAt: T0 }] }));
+    const r = closeRig(ESTATE({ payments: PAID, signedRecords: [{ id: 's1', kind: 'ledger', ref: 'ledger', signedBy: 'Rex Hale', filedAt: T0 }] }));
     r.c.activateOrCycle(7);
     eq(r.job.status, 'closed', 'the job closes');
-    eq(r.log.gets, 1, '⚠ the manifest is read from the sheet first');
+    // RESTATED (P12's review, 2026-10-28): Close job reads the inventory before its question on every press (p12-close-truth R1),
+    // and the filing then reads it again for itself, so two reads; the filing's own is the one this group is about.
+    eq(r.log.gets, 2, '⚠ the manifest is read from the sheet first (the close\'s read, then the filing\'s own)');
     eq(r.log.uploads.length, 1, 'one filing');
     const up = r.log.uploads[0] || {};
     eq([up.folderId, up.filename], ['INV7', 'HVL-0007 - Havellin Disposition Ledger.html'], 'to Estate Inventory, under the undated name the package uses');
@@ -386,7 +399,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(/^\d{4}-\d{2}-\d{2}T/.test(st.filedAt || ''), 'with when');
     ok(typeof (r.job.at || {})['docState:dispositionLedger'] === 'number', '⚠ stamped on its own key, so a stale device cannot drop it');
     ok(r.log.syncs >= 2, 'and synced (the close, then the filing)');
-    eq(r.log.badges.map((b) => b.m), ['Disposition Ledger filed to Drive ✓'], 'reported through the sync badge');
+    eq(fb(r).map((b) => b.m), ['Disposition Ledger filed to Drive ✓'], 'reported through the sync badge');
     eq(Object.keys(r.c._ledgerFiling).length, 0, 'the in-flight mark is cleared');
     // A re-open is not a close.
     const r2 = closeRig(ESTATE({ status: 'closed', deliveredOn: '2026-10-02', payments: PAID }));
@@ -398,27 +411,27 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     let r = closeRig(ESTATE({ payments: PAID }), { url: '' });
     r.c.activateOrCycle(7);
     eq([r.job.status, r.log.uploads.length], ['closed', 0], 'no Apps Script URL: the job still closes, nothing is filed');
-    has((r.log.badges[0] || {}).m, 'no Apps Script URL in Settings. Press File to Drive on the Disposition Ledger card (under Closing the job on Job Admin & Inv) once one is set.', 'the badge says why and where to go');
-    eq((r.log.badges[0] || {}).err, true, 'as an error');
+    has((fb(r)[0] || {}).m, 'no Apps Script URL in Settings. Press File to Drive on the Disposition Ledger card (under Closing the job on Job Admin & Inv) once one is set.', 'the badge says why and where to go');
+    eq((fb(r)[0] || {}).err, true, 'as an error');
     r = closeRig(ESTATE({ payments: PAID }), { media: 'fail' });
     r.c.activateOrCycle(7);
     eq(r.log.uploads.length, 0, '⚠⚠ the manifest could not be read: nothing is filed (an empty ledger would replace a true one)');
-    has((r.log.badges[0] || {}).m, 'the inventory could not be read from the sheet', 'and the badge says so');
+    has((fb(r)[0] || {}).m, 'the inventory could not be read from the sheet', 'and the badge says so');
     ok(!(r.job.docState || {}).dispositionLedger, 'nothing recorded');
     r = closeRig(ESTATE({ payments: PAID }), { upload: 'fail' });
     r.c.activateOrCycle(7);
-    has((r.log.badges[0] || {}).m, 'The Disposition Ledger was not filed to Drive — Drive said no. Press File to Drive on the Disposition Ledger card (under Closing the job on Job Admin & Inv) to try again.', 'a failed upload names the fix');
+    has((fb(r)[0] || {}).m, 'The Disposition Ledger was not filed to Drive — Drive said no. Press File to Drive on the Disposition Ledger card (under Closing the job on Job Admin & Inv) to try again.', 'a failed upload names the fix');
     ok(!(r.job.docState || {}).dispositionLedger, 'and records nothing, so the card offers File to Drive');
     eq(Object.keys(r.c._ledgerFiling).length, 0, 'and the next press is not refused as in flight');
     r = closeRig(ESTATE({ payments: PAID, driveFolder: '' }));
     r.c.activateOrCycle(7);
-    has((r.log.badges[0] || {}).m, 'this client has no Drive folder yet', 'no Drive folder: said');
+    has((fb(r)[0] || {}).m, 'this client has no Drive folder yet', 'no Drive folder: said');
     r = closeRig(ESTATE({ svc: 'prep', matterType: '', payments: PAID }));
     r.c.activateOrCycle(7);
     eq([r.log.gets, r.log.uploads.length, r.log.badges.length], [0, 0, 0], 'a Home Prep close files nothing and says nothing: it has no inventory');
     r = closeRig(ESTATE({ payments: PAID }), { rows: [] });
     r.c.activateOrCycle(7);
-    eq([r.log.uploads.length, r.log.badges.length], [0, 0], 'an inventory with no lines: nothing to file, nothing said');
+    eq([r.log.uploads.length, fb(r).length], [0, 0], 'an inventory with no lines: nothing to file, nothing said');
     // One at a time, and on demand from the desk.
     r = closeRig(ESTATE({ status: 'closed', deliveredOn: '2026-10-02' }), { upload: 'hang' });
     eq(r.c.fileDispositionLedger(7), true, 'File to Drive from the desk starts a filing');
@@ -483,7 +496,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     vm.runInContext([gsVar(GS, 'JOB_KEYED_LISTS'), gsVar(GS, 'JOB_KEYED_MAPS'), gsVar(GS, 'JOB_LIST_KEY'), gsVar(GS, 'JOB_PAYMENT_STICKY'),
       gsFn(GS, '_paymentSticky'), gsFn(GS, '_jobStamp'), gsFn(GS, '_jobListKey'), gsFn(GS, '_mergeJobKeyed'), gsFn(GS, '_mergeJobRecord'),
       'this.merge = _mergeJobRecord;'].join('\n\n'), ctx);
-    const r = closeRig(ESTATE({ payments: PAID, signedRecords: [{ id: 's1', kind: 'ledger', ref: 'ledger', filedAt: T0 }] }));
+    const r = closeRig(ESTATE({ payments: PAID, signedRecords: [{ id: 's1', kind: 'ledger', ref: 'ledger', signedBy: 'Rex Hale', filedAt: T0 }] }));
     r.c.activateOrCycle(7);
     const desk = JSON.parse(JSON.stringify(r.job));
     const stale = Object.assign(JSON.parse(JSON.stringify(ESTATE({ payments: PAID }))), { updatedAt: desk.updatedAt + 1000, note: 'edited later on a morning copy' });
@@ -980,12 +993,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       .forEach((n) => eq((SRC.match(new RegExp('\\nfunction ' + n + '\\(', 'g')) || []).length, 1, n + ' is defined once'));
     eq((SRC.match(/\nfunction removeInventorySnapshot\(/g) || []).length, 0, '⚠ there is no removeInventorySnapshot');
     const callers = (name) => Object.keys(BODY).filter((f) => f !== name && new RegExp('\\b' + name + '\\(').test(codeOnly(BODY[f]))).sort();
-    eq(callers('ledgerSignedCopies'), ['_renderLedgerCard', 'ledgerCloseFlag', 'ledgerDerivedLines'], 'whether the ledger is signed: one answer, three readers');
+    // RESTATED 2026-10-28 (P12, EST-13): who has signed is ledgerSignState (every fiduciary on a copy), which the close's sentence
+    // and the derived line read; the card lists the copies.
+    eq(callers('ledgerSignedCopies'), ['_renderLedgerCard', 'ledgerSignState'], 'whether the ledger is signed: one answer, read by the card and ledgerSignState');
     eq(callers('donationReceiptLine'), ['ledgerDerivedLines', 'planDerivedLines'], 'the donation line: built once, read by the Job Plan and the desk');
-    eq(callers('ledgerCloseFlag'), ['applyJobTransition'], 'the close question reads the flag');
+    // RESTATED 2026-10-28 (P12): the close question reads it through the one list (closeReadiness); applyJobTransition keeps it as
+    // the fallback for a sandbox that lifts the transition without the list.
+    eq(callers('ledgerCloseFlag'), ['applyJobTransition', 'closeReadiness'], 'the close question reads the flag');
     eq(callers('fileDispositionLedger'), ['activateOrCycle'], 'the close files the ledger (the desk\'s button is the other caller)');
     // ⚠ restated 2026-10-22: the desk's Closing bar reads the first line (signed or not) for its shut line, at the close.
-    eq(callers('ledgerDerivedLines'), ['deskFoldState', 'planDerivedLines'], 'the derived lines are drawn once, by planDerivedLines, and the Closing bar reads them');
+    // RESTATED 2026-10-28 (P12): the Closing bar reads the one list of what the close leaves open (closeReadiness), not the line.
+    eq(callers('ledgerDerivedLines'), ['planDerivedLines'], 'the derived lines are drawn once, by planDerivedLines');
     const saleReaders = Object.keys(BODY).filter((f) => /\bINV_SALE_DISPOSITIONS\b/.test(codeOnly(BODY[f]))).sort();
     // P25 (Q51): ledgerApplies reads it too, where the ledger is kept on living work (something sold).
     // P25 (Q43): proceedsReceivedLine reads it too, for the sold lines a paid statement must cover.

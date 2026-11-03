@@ -703,9 +703,12 @@ function groupC({ group, ok, eq, has, lacks }) {
     eq(B.closing.openByDefault, true, '⚠⚠ the Close-out stage opens it');
     // RESTATED BY G8 (2026-10-22): the adopted Court Inventory is filed beside the ledger now, a close-out paper, so at the
     // close the line names it too while no copy is filed, as it names the ledger's signature.
-    eq(B.line('closing'), '1 vendor not yet rated · 1 key or access item still held · 1 incident open · Disposition Ledger not signed yet · '
-      + 'Adopted Court Inventory not filed yet · close-out 0 of 3 done',
-      'naming the vendor, the key, the incident, the ledger to be signed and the schedule to be filed');
+    // RESTATED 2026-10-28 (P12, VAL-26): at the close the line after the refusals is the close's one list (closeReadiness), in its
+    // order; a Court Inventory still DRAFT (this line has no value) is said as a draft, never as a copy owed (it withholds its
+    // signature block), and comes before the ledger's signature.
+    eq(B.line('closing'), '1 vendor not yet rated · 1 key or access item still held · 1 incident open · Court Inventory still a draft (1 item not yet valued) · '
+      + 'Disposition Ledger not signed yet · close-out 0 of 3 done',
+      'naming the vendor, the key, the incident, the schedule still a draft and the ledger to be signed');
     // RESTATED BY Q92 (2026-10-23): the vendor in red, as the Close-out card's scorecard paints an unrated vendor at the close
     // (jobCloseBlockers' 'bits'); the key, the incident, the ledger and the schedule amber, as before.
     eq(B.tones('closing').slice(0, 5), ['red', 'amber', 'amber', 'amber', 'amber'], 'the vendor red, as the scorecard is at the close; the rest amber');
@@ -851,7 +854,9 @@ function groupD({ group, ok, eq, has, lacks }) {
      '_invGuardrailItems', 'invAppraisalInProgress', 'isFormalDoc', 'invOutForAppraisal', '_jobAppraisers', 'proceedsReconciliation', 'closeoutState',
      // RESTATED ON THE BUILD'S REVIEW (2026-10-23): the close's refusals are read off jobCloseBlockers' own list (its short
      // words), where the line read unratedVendorsForJob, accessHeldItems and openIncidents itself, a second copy of the list.
-     'jobCloseBlockers', 'ledgerDerivedLines', 'invRecordedGone', 'invDonationReceipted', 'donationGroups',
+     // RESTATED 2026-10-28 (P12): at the close the ledger's signature is said off the close's one list (closeReadiness, whose entry
+     // reads ledgerSignState, the rule ledgerDerivedLines reads), never a reading of its own.
+     'jobCloseBlockers', 'closeReadiness', 'invRecordedGone', 'invDonationReceipted', 'donationGroups',
      // RESTATED BY Q92 (2026-10-23): the close is jobAtClose, the one answer the Close-out card's scorecard reads too; the plan's
      // stage is read there (tests/q92-closeout-tone.test.js), never here.
      'jobAtClose', '_invRemovedRows'].forEach((r) => ok(new RegExp('\\b' + r + '\\(').test(body), 'reads ' + r));
@@ -2154,7 +2159,11 @@ function groupJ({ group, ok, eq, has, lacks }) {
     // CSV and + Add line item ask (invColdRefusal) asks the same answer, and so do the work bar's and the list's words (invColdWords).
     // RESTATED 2026-10-27 (P6): a read copy whose last read failed says so under the count (invSheetStaleWords), and only once
     // it is not unread, which is the same answer asked.
-    eq(callersOf('_invManifestUnread'), ['_apprFormIsOpen', '_invCloudRetryArm', '_invRefreshFromCloud', 'deskFoldState', 'invColdRefusal', 'invColdWords', 'invListReadRefusal', 'invSheetStaleWords'],
+    // P12 (2026-10-28): Close job reads the inventory first where this device has not (activateOrCycle), and the close's list says an
+    // unread inventory as one (closeReadiness).
+    // RESTATED (P12's review, 2026-10-28): Close job reads first on every press, so activateOrCycle no longer asks; the question does
+    // (applyJobTransition), to say a failed read's list is this device's copy only where there is one.
+    eq(callersOf('_invManifestUnread'), ['_apprFormIsOpen', '_invCloudRetryArm', '_invRefreshFromCloud', 'applyJobTransition', 'closeReadiness', 'deskFoldState', 'invColdRefusal', 'invColdWords', 'invListReadRefusal', 'invSheetStaleWords'],
       '⚠ an unread manifest: one answer, read by the bars, the form, the read that asks the sheet again, the list read\'s refusal and the cold desk\'s');
     eq(callersOf('_bqFormIsOpen'), ['_renderInvBequestCard'], 'the bequests card\'s two forms: the same');
     eq(callersOf('_invBqClear'), ['invSaveBeneficiary', 'invSaveBequest', 'invToggleBqForm'], 'the boxes a save and Cancel clear: one list (INV_BQ_FORM_FIELDS)');
@@ -2405,7 +2414,9 @@ function groupL({ group, ok, eq, has, lacks }) {
     const at = (id) => rec.indexOf('id="' + id + '"');
     ok(at('inv-schedules-card') > at('inv-ledger-card') && at('inv-ledger-card') >= 0, '⚠⚠ the schedules card is in #inv-records, after the ledger');
     ok(at('inv-schedules-card') < at('inv-donations-card'), 'and before the donations');
-    has(readL(inner(html, 'inv-schedules-card')), 'Court Inventory, once the representative has adopted it File the adopted copy', 'the adopted Court Inventory, filed here');
+    // RESTATED 2026-10-28 (P12, EST-13): the card names who signs, and the press files the copy signed by whoever is still to sign.
+    has(readL(inner(html, 'inv-schedules-card')), 'Court Inventory, once the representative has adopted it', 'the adopted Court Inventory, filed here');
+    has(readL(inner(html, 'inv-schedules-card')), 'File the copy signed by Ruth Adler', '…by the copy its signer signed');
     lacks(textOf(inner(html, 'desk-body-releases-7') || ''), 'Court Inventory', '⚠ and no longer in the Releases bar');
     const C0 = heads(html).filter((x) => x.f === 'closing')[0] || {};
     has(C0.title, 'Disposition Ledger, signed schedules', '⚠ the Closing title names the schedules beside the ledger');
@@ -2423,13 +2434,17 @@ function groupL({ group, ok, eq, has, lacks }) {
     D.render();
     eq((heads(D.dom.html).filter((x) => x.f === 'closing')[0] || {}).line, C1.line, 'as a full render draws it');
     // The line at the close: each schedule with no copy named in amber, as the ledger's signature is; once filed, grey.
+    // RESTATED 2026-10-28 (P12, VAL-26): a schedule still DRAFT is said as one (its line has no value), never as a copy owed.
     const close = { deliveredOn: '2026-10-21', status: 'closed' };
     let B = bars(PROBATE(close), [LINE('a', { disposition: 'Keep' })]);
+    eq(B.closing.bits.filter((x) => /Court Inventory/.test(x.text)).map((x) => [x.text, x.tone]), [['Court Inventory still a draft (1 item not yet valued)', 'amber']],
+      '⚠ at the close: a Court Inventory still a draft says so, in amber');
+    B = bars(PROBATE(close), [LINE('a', { disposition: 'Keep', fmv: '400' })]);
     const amb = B.closing.bits.filter((x) => /not filed yet/.test(x.text));
-    eq(amb.map((x) => [x.text, x.tone]), [['Adopted Court Inventory not filed yet', 'amber']], '⚠ at the close: the adopted Court Inventory owed, in amber');
+    eq(amb.map((x) => [x.text, x.tone]), [['Adopted Court Inventory not filed yet', 'amber']], '⚠ at the close, FINAL: the adopted Court Inventory owed, in amber');
     B = bars(PROBATE(Object.assign({ signedRecords: [{ id: 's', kind: 'schedule', ref: 'Court Inventory', filedAt: 1 }] }, close)), [LINE('a', { disposition: 'Keep' })]);
     eq(B.closing.bits.filter((x) => /signed schedule/.test(x.text)).map((x) => [x.text, x.tone]), [['1 of 1 signed schedule filed', 'grey']], 'filed: counted in grey');
-    B = bars(PROBATE(Object.assign({ matterType: 'both' }, close)), [LINE('a', { disposition: 'Keep' })]);
+    B = bars(PROBATE(Object.assign({ matterType: 'both' }, close)), [LINE('a', { disposition: 'Keep', fmv: '400' }), LINE('b', { disposition: 'Keep', fmv: '300', assetTrack: 'Trust' })]);
     eq(B.closing.bits.filter((x) => /not filed yet/.test(x.text)).map((x) => x.text), ['Adopted Court Inventory not filed yet', 'Received Trust Schedule not filed yet'],
       'a pour-over: both instruments');
     const sched = (b) => b.closing.bits.filter((x) => /Court Inventory|Trust Schedule|signed schedule/.test(x.text)).map((x) => x.text);
@@ -2464,7 +2479,8 @@ function groupL({ group, ok, eq, has, lacks }) {
     const lg = codeOnly(fn('leavingGroups'));
     ['invReceiptGroups', 'signoutGroups', 'donationGroups'].forEach((x) => ok(new RegExp('\\b' + x + '\\(').test(lg), 'the rows are the groupers\' own: ' + x));
     ['authBy', 'approvalDate', 'disposition', 'channel', 'invApprovalComplete'].forEach((x) => ok(!new RegExp('\\b' + x + '\\b').test(lg), 'no rule of its own: no ' + x));
-    eq(callersOf('signedScheduleRows'), ['_renderSignedSchedulesCard', 'deskFoldState'], 'the schedules: one list, the card and the Closing line');
+    // P12 (2026-10-28): the close's list (closeReadiness) reads it too, to say a schedule still a draft, not filed or not signed by somebody.
+    eq(callersOf('signedScheduleRows'), ['_renderSignedSchedulesCard', 'closeReadiness', 'deskFoldState'], 'the schedules: one list, the card, the Closing line and the close\'s list');
     eq(callersOf('_renderSignedSchedulesCard'), ['_renderLedgerCards'], 'drawn with the close-out papers, nowhere else');
     const live = SRC.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
     eq((live.match(/Leaving the property &middot; sign out on the iPad/g) || []).length, 1, 'the section keeps P28\'s heading, drawn once');
@@ -2973,7 +2989,10 @@ function groupO({ group, ok, eq, has, lacks }) {
   {
     const rows = [LINE('a', { disposition: 'Donate', channel: 'Goodwill' })];
     const seen = {}, failed = {}, timers = [];
-    const armed = () => timers.filter((t) => !t.cleared);
+    // RESTATED 2026-10-28 (P12): a by-id repaint of the bars also asks the Close-out card's list to repaint once a burst of edits
+    // settles (_closeReadyRepaint, CLOSE_READY_REPAINT_MS, 250 ms). That timer is the list's, not the desk's read: the timers
+    // counted here are the read's (its retry, its watchdog, the minute's re-read).
+    const armed = () => timers.filter((t) => !t.cleared && t.ms !== 250);
     let reads = 0, answer = 'fail', active = true;
     const D = desk(PROBATE({ invSnapshots: [{ ts: 1 }] }), {}, { refs: rows, roots: ['_invRefreshFromCloud'], stubs: {
       SHEETS_SYNC_URL: URL, _invCloudSeen: seen, _invCloudFailed: failed,

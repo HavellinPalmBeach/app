@@ -1490,7 +1490,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.11.03 · 7:07am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.11.03 · 7:23am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -18155,9 +18155,16 @@ function probatePackageRecordHtml(jobId) {
   var byNo = function (a, b) { return (parseInt(a.itemNo, 10) || 0) - (parseInt(b.itemNo, 10) || 0); };
   var td = 'padding:3px 6px;border-bottom:1px solid #eee;vertical-align:top;';
   var th = 'padding:2px 6px;';
-  var approved = items.filter(function (r) { return r.authBy || r.approvalDate; }).sort(function (a, b) {
+  // ⚠ AND EVERY LINE THAT LEFT BEFORE ITS APPROVAL WAS COMPLETE (2026-10-28, P12; DOC-11: a lamp donated with no written approval
+  // was left out of this record altogether). Its Approved by reads as the ledger's Authorized by does (invAuthorityText).
+  var approved = items.filter(function (r) { return r.authBy || r.approvalDate || invRatificationOwed(r, job); }).sort(function (a, b) {
     return String(a.approvalDate || '').localeCompare(String(b.approvalDate || '')) || byNo(a, b);
   });
+  var _rat = items.filter(function (r) { return invRatificationOwed(r, job); }).sort(byNo);
+  // ⚠ AND THE LINES LEAVING WITH NO COMPLETE APPROVAL YET, IN THE LEDGER'S SENTENCE (P12's review, 2026-10-28: counsel bundle D23 said
+  // this record lists the ledger's lines in the ledger's words, and it carried only the ratification sentence). The ledger's rule
+  // (dispositionLedger's `incomplete`); the table still lists each line with an approval recorded or a ratification owed.
+  var _inc = items.filter(function (r) { return _approvalLineOpen(r, job) && !invRatificationOwed(r, job); }).sort(byNo);
   var held = items.filter(function (r) { return custodyEvents(r).length; }).sort(byNo);
   var head = function (t) {
     return '<div style="font-family:\'Cormorant Garamond\',serif;font-size:15px;color:#3c3228;border-bottom:1px solid #bbb;margin:16px 0 4px;">' + t + '</div>';
@@ -18172,12 +18179,9 @@ function probatePackageRecordHtml(jobId) {
             + '<td style="' + td + '">' + esc(r.objectName || '—') + '</td>'
             + '<td style="' + td + '">' + esc(r.disposition || '—')
               + (r.channel ? '<div style="color:#888;font-size:10px;">' + esc(r.channel) + '</div>' : '') + '</td>'
-            // Each signer with their own day (P20): the one readable form, never the raw field.
-            + '<td style="' + td + '">' + esc(invApprovalPaperText(r, job) || '—')
-              // ⚠ AN APPROVAL WITHOUT EVERY FIDUCIARY IS RECORDED AS WHAT IT IS (P19, call 4): not complete, and who is missing.
-              // (One that no longer covers the line says so in its own words above, P5.)
-              + (invApprovalGap(r, job) && !invApprovalMoved(r, job) ? '<div style="color:#8a6d3b;font-size:10px;">Not complete: no approval recorded from '
-                  + esc(_andJoin(invApprovalMissing(r, job))) + '</div>' : '') + '</td>'
+            // Each signer with their own day (P20): the one readable form, never the raw field; and since P12 what is owed, in the
+            // ledger's words (invAuthorityText: ratification owed; signed so far by …; still to sign: …).
+            + '<td style="' + td + '">' + esc(invAuthorityText(r, job) || '—') + '</td>'
             + '<td style="' + td + '">' + (r.approvalDate ? esc(fmtDate2(r.approvalDate)) : '—') + '</td></tr>';
         }).join('') + '</tbody></table>';
   var custTable = !held.length ? none
@@ -18202,6 +18206,10 @@ function probatePackageRecordHtml(jobId) {
     + _invDocHead(job, PROBATE_PKG_RECORD_TITLE, 'Written release approvals and custody events recorded on the inventory')
     + head('Release approvals')
     + '<div style="font-size:10.5px;color:#666;margin-bottom:4px;">Who signed the written release approval for each item, and the date it was signed, as recorded from the signed approval returned to Havellin.</div>'
+    + (_rat.length ? '<div style="font-size:10.5px;color:#8a6d3b;margin-bottom:4px;"><strong>' + _rat.length + ' item' + (_rat.length === 1 ? '' : 's')
+        + ' left the property before ' + (_rat.length === 1 ? 'its' : 'their') + ' written approval was complete</strong> (ratification owed): ' + esc(_ledgerNames(_rat)) + '.</div>' : '')
+    + (_inc.length ? '<div style="font-size:10.5px;color:#8a6d3b;margin-bottom:4px;"><strong>' + _inc.length + (_inc.length === 1 ? ' item leaving the property does' : ' items leaving the property do')
+        + ' not yet have the written approval of ' + esc(_ledgerApproverWords(job, ledgerSigners(job), true)) + '</strong>: ' + esc(_ledgerNames(_inc)) + '.</div>' : '')
     + apprTable
     + head('Chain of custody')
     + custTable
@@ -21179,7 +21187,7 @@ function agreementCoSignState(job) {
   co.forEach(function (f) {
     var e = esigned.filter(function (x) { return is(f, x); })[0] || null;
     var p = e ? null : (out.pages.filter(function (r) {
-      return String(r.signedBy || '').split(';').some(function (n) { return samePerson(n, f.name); });
+      return signedByNames(r).some(function (n) { return samePerson(n, f.name); });
     })[0] || null);
     var c = { id: f.id, name: f.name, email: f.email || '', onEnvelope: env.some(function (x) { return is(f, x); }),
               how: e ? (e.how === 'ipad' ? 'ipad' : 'esign') : (p ? 'filed' : ''), signedOn: (e && e.signedOn) || '' };
@@ -24992,27 +25000,202 @@ function _reopenTransition(j) {
 // the close outright (and keeps a record of it) rather than editing its date.
 // ⚠ WHAT THE CLOSE LEAVES OPEN, NAMED IN ITS QUESTION (2026-10-10, the core-jobs run): a Home Cleanout closed on the second
 // press with four of seven rooms never locked or cleared and two leaving lines with no recipient, and the question asked
-// only about the midpoint. Rooms in scope not marked cleared, and lines leaving the property (INV_RELEASE_DISPOSITIONS)
-// with nobody named, are named here; an estate's unsigned ledger stays its own line (ledgerCloseFlag). '' when nothing is
-// open. A flag, never a refusal: the family may have taken the last room's contents themselves.
+// only about the midpoint. A flag, never a refusal: the family may have taken the last room's contents themselves.
+// ⚠⚠ SINCE 2026-10-28 (P12 of the desk audit) IT IS THE ONE LIST BELOW, closeReadiness, in its sentences: '' when nothing is open.
 function closeOpenWorkFlag(job) {
   if (!job) return '';
-  var out = [];
-  var rs = _planRooms(job.id).rooms;
-  var open = rs.filter(function (r) { return _planRoomStatus(job.id, r.idx) !== 'cleared'; });
-  if (rs.length && open.length) out.push(open.length + ' of ' + rs.length + ' rooms ' + (open.length === 1 ? 'is' : 'are') + ' not marked cleared ('
-    + open.slice(0, 4).map(function (r) { return r.name; }).join(', ') + (open.length > 4 ? ' and ' + (open.length - 4) + ' more' : '') + ').');
-  var noRecip = (typeof _jobInvRefs === 'function' ? _jobInvRefs(job.id) : []).filter(function (r) {
-    return INV_RELEASE_DISPOSITIONS.indexOf(r.disposition) >= 0 && !String(r.channel || '').trim();
-  });
-  if (noRecip.length) out.push(noRecip.length + ' line' + (noRecip.length === 1 ? '' : 's') + ' leaving the property ' + (noRecip.length === 1 ? 'has' : 'have') + ' no recipient recorded.');
-  // P28: a line handed to an appraiser and not checked back in is still out of the house.
-  var away = (typeof _jobInvRefs === 'function' && typeof invOutForAppraisal === 'function' ? _jobInvRefs(job.id) : []).filter(function (r) { return invOutForAppraisal(r, job); });
-  if (away.length) out.push(away.length + ' line' + (away.length === 1 ? ' is' : 's are') + ' still out with an appraiser ('
-    + away.slice(0, 4).map(function (r) { return '#' + _invItemNo(r) + ' with ' + (invOutForAppraisal(r, job).ref || 'the appraiser'); }).join(', ') + (away.length > 4 ? ' and ' + (away.length - 4) + ' more' : '') + ').');
-  return out.join(' ');
+  var CR = closeReadiness(job.id, job);
+  return CR.items.map(function (x) { return '• ' + x.long; }).join('\n');
 }
-function applyJobTransition(j) {
+
+// ═══ WHAT THE CLOSE LEAVES OPEN: ONE LIST (2026-10-28, P12 of the desk audit) ═══
+// ⚠⚠ THE CLOSE KNEW LESS THAN THE DESK. Close job's question named the rooms, the lines leaving with nobody named, the lines
+// out with an appraiser and an estate's unsigned ledger; the Closing bar named the ledger and the schedules at the close.
+// Measured on the audit's Ashworth estate, the question named 2 matters while 3 undecided lines, 3 approvals owed, 1 pending
+// appraisal and 3 sold lines on no statement went unmentioned, and a living job closed with a shotgun that had no written
+// authority, two undecided lines, no hours logged and an unsigned Contents Record (NEW-04, VAL-14, EST-14, LIV-13). One list
+// now, DOM-free, read by Close job's question (closeOpenWorkFlag), the Closing bar's line at the close (deskFoldState) and the
+// Close-out card (closeReadinessHtml); each entry with its count and its first item numbers, in this order. EVERY ENTRY IS A
+// FLAG: Close job refuses only what jobCloseBlockers refuses, as before.
+//   items: [{key, n, short, long, tone}]: `short` the bar's words, `long` the question's and the card's sentence (plain text).
+// `all`: the live inventory lines (the desk hands its own; else _jobInvRefs). `opt.evenUnread`: name what this device's copy
+// holds although the sheet's has not been read (the bar, which says so in front); otherwise an inventory not yet read is one
+// entry saying so (`unread`), never "nothing open". Home Prep has no inventory (the desk's rule).
+var CLOSE_READY_NOS = 4;   // the first item numbers each entry names
+function _closeNos(list, word) {
+  var nos = list.slice(0, CLOSE_READY_NOS).map(function (r) {
+    var n = _invItemNo(r);
+    var no = n === '\u2014' ? ((r && r.objectName) || 'an unnumbered line') : '#' + n;   // a line not yet numbered goes by its name
+    return word ? word(r, no) : no;
+  });
+  return nos.join(', ') + (list.length > CLOSE_READY_NOS ? ' and ' + (list.length - CLOSE_READY_NOS) + ' more' : '');
+}
+function closeReadiness(jobId, job, all, opt) {
+  var out = { unread: false, items: [] };
+  if (!job) return out;
+  opt = opt || {};
+  var fid = invFiduciaryMode(job);
+  var s = function (k, one, many) { return k + ' ' + (k === 1 ? one : many); };
+  var add = function (key, n, short, long, tone) { out.items.push({ key: key, n: n, short: short, long: long, tone: tone || 'amber' }); };
+  var byNo = function (a, b) { return (parseInt(a.itemNo, 10) || 0) - (parseInt(b.itemNo, 10) || 0); };
+  var readItem = null;
+  // ── the rooms (the Job Plan's) ──
+  var rs = _planRooms(jobId).rooms;
+  var open = rs.filter(function (r) { return _planRoomStatus(jobId, r.idx) !== 'cleared'; });
+  if (rs.length && open.length) add('rooms', open.length, open.length + ' of ' + rs.length + ' rooms not marked cleared',
+    open.length + ' of ' + rs.length + ' rooms ' + (open.length === 1 ? 'is' : 'are') + ' not marked cleared ('
+      + open.slice(0, 4).map(function (r) { return r.name; }).join(', ') + (open.length > 4 ? ' and ' + (open.length - 4) + ' more' : '') + ').');
+  // ── the inventory ──
+  if (job.svc !== 'prep' && typeof _jobInvRefs === 'function') (function () {
+    out.unread = typeof _invManifestUnread === 'function' && _invManifestUnread(jobId);
+    if (out.unread && !opt.evenUnread) {
+      add('unread', 0, 'inventory not read from the sheet', 'The inventory has not been read from the sheet on this device yet, so what its lines leave open is not counted here.', 'grey');
+      return;
+    }
+    var L = (all || _jobInvRefs(jobId)).filter(function (r) { return r && !r.deletedAt; }).slice().sort(byNo);
+    if (!L.length) return;
+    // Lines with no disposition; on living work a line on Hold too, which the Contents Record holds its sign-off for (LIV-11).
+    var und = L.filter(function (r) { return !r.disposition || (!fid && r.disposition === 'Hold'); });
+    if (und.length) {
+      var held = und.filter(function (r) { return r.disposition === 'Hold'; }).length;
+      add('undecided', und.length, fid ? s(und.length, 'line', 'lines') + ' with no disposition (' + _closeNos(und) + ')'
+          : s(und.length, 'item', 'items') + ' with no destination (' + _closeNos(und) + ')',
+        fid ? s(und.length, 'line has', 'lines have') + ' no disposition (' + _closeNos(und) + '), so the Disposition Ledger’s sign-off is withheld.'
+          : s(und.length, 'item has', 'items have') + ' no destination yet (' + _closeNos(und) + (held ? '; ' + held + ' of them on Hold' : '')
+            + '), so the Contents Record’s sign-off is withheld.');
+    }
+    var unnamed = L.filter(function (r) { return !r.objectName; });
+    if (unnamed.length) add('unnamed', unnamed.length, s(unnamed.length, 'line', 'lines') + ' not yet named (' + _closeNos(unnamed) + ')',
+      s(unnamed.length, 'line is', 'lines are') + ' not yet named (' + _closeNos(unnamed) + ').');
+    var noRecip = L.filter(function (r) { return INV_RELEASE_DISPOSITIONS.indexOf(r.disposition) >= 0 && !String(r.channel || '').trim(); });
+    if (noRecip.length) add('norecip', noRecip.length, s(noRecip.length, 'line', 'lines') + ' leaving with nobody named (' + _closeNos(noRecip) + ')',
+      s(noRecip.length, 'line', 'lines') + ' leaving the property ' + (noRecip.length === 1 ? 'has' : 'have') + ' no recipient recorded (' + _closeNos(noRecip) + ').');
+    // The written approval a leaving line needs (invWrittenReleaseNeeded), firearms first; a line already gone owes a ratification.
+    var fa = function (r, no) { return invIsFirearm(r) ? no + ' (a firearm)' : no; };
+    var appr = L.filter(function (r) { return _approvalLineOpen(r, job) && !invRatificationOwed(r, job); })
+      .sort(function (a, b) { return (invIsFirearm(b) ? 1 : 0) - (invIsFirearm(a) ? 1 : 0) || byNo(a, b); });
+    if (appr.length) add('approval', appr.length, s(appr.length, 'item', 'items') + ' leaving without the written approval needed (' + _closeNos(appr, fa) + ')',
+      s(appr.length, 'item', 'items') + ' leaving the property ' + (appr.length === 1 ? 'does' : 'do') + ' not have the written approval '
+        + (appr.length === 1 ? 'it needs' : 'they need') + ' (' + _closeNos(appr, fa) + ').');
+    var rat = L.filter(function (r) { return invRatificationOwed(r, job); });
+    if (rat.length) add('ratify', rat.length, s(rat.length, 'ratification', 'ratifications') + ' owed (' + _closeNos(rat, fa) + ')',
+      s(rat.length, 'item', 'items') + ' left the property before ' + (rat.length === 1 ? 'its' : 'their') + ' written approval was complete: '
+        + (rat.length === 1 ? 'a ratification is' : 'ratifications are') + ' owed (' + _closeNos(rat, fa) + ').');
+    var rc = L.filter(function (r) { return invReceiptOwed(r, job); });
+    if (rc.length) add('receipt', rc.length, s(rc.length, 'signed receipt', 'signed receipts') + ' owed (' + _closeNos(rc) + ')',
+      s(rc.length, 'item', 'items') + ' released ' + (rc.length === 1 ? 'has' : 'have') + ' no signed receipt on file (' + _closeNos(rc) + ').');
+    var don = L.filter(function (r) { return r.disposition === 'Donate' && !invDonationReceipted(job, r); });
+    if (don.length) add('donation', don.length, s(don.length, 'donated line', 'donated lines') + ' with no charity receipt (' + _closeNos(don) + ')',
+      s(don.length, 'donated line has', 'donated lines have') + ' no charity receipt (' + _closeNos(don) + ').');
+    var unf = invApprovalBatches(job, L).filter(function (b) { return !b.filed.length && b.date; });
+    if (unf.length) add('apprfile', unf.length, s(unf.length, 'signed approval', 'signed approvals') + ' not filed to Drive',
+      s(unf.length, 'signed release approval is', 'signed release approvals are') + ' not filed to Drive ('
+        + unf.map(function (b) { return fmtDate2(b.date) + (b.names && b.names.length ? ' by ' + _andJoin(b.names) : ''); }).join('; ') + ').');
+    if (jobTakesProceedsStatements(job)) {
+      var R = proceedsReconciliation(job, L);
+      var dis = R.statements.filter(function (x) { return !x.agrees; });
+      if (dis.length) add('sold_disagree', dis.length, s(dis.length, 'proceeds statement disagrees', 'proceeds statements disagree') + ' with ' + (dis.length === 1 ? 'its' : 'their') + ' lines',
+        s(dis.length, 'proceeds statement disagrees', 'proceeds statements disagree') + ' with the lines on ' + (dis.length === 1 ? 'it' : 'them') + ' ('
+          + dis.map(function (x) { return (x.st.vendor || 'a statement') + ': ' + x.lines.map(function (l) { return '#' + (l.ref ? _invItemNo(l.ref) : (l.itemNo || '?')); }).join(', '); }).join('; ') + ').', 'red');
+      var unl = R.unlisted.slice().sort(byNo);
+      if (unl.length) add('sold_unlisted', unl.length, s(unl.length, 'sold line', 'sold lines') + ' on no statement (' + _closeNos(unl) + ')',
+        s(unl.length, 'sold line is', 'sold lines are') + ' on no proceeds statement (' + _closeNos(unl) + ').');
+      if (R.unfiled) add('stmt_unfiled', R.unfiled, s(R.unfiled, 'statement', 'statements') + ' not filed to Drive',
+        s(R.unfiled, 'proceeds statement is', 'proceeds statements are') + ' not filed to Drive.');
+      if (R.twice.length) add('sold_twice', R.twice.length, s(R.twice.length, 'line', 'lines') + ' on two statements (' + _closeNos(R.twice) + ')',
+        s(R.twice.length, 'line is', 'lines are') + ' on two proceeds statements (' + _closeNos(R.twice) + ').');
+    }
+    var pend = L.filter(function (r) { return invAwaitingAppraisal(r, jobId); });
+    if (pend.length) add('appr_pending', pend.length, s(pend.length, 'appraisal', 'appraisals') + ' pending (' + _closeNos(pend) + ')',
+      s(pend.length, 'item is', 'items are') + ' still waiting on ' + (pend.length === 1 ? 'its appraisal' : 'their appraisals') + ' (' + _closeNos(pend) + ').');
+    var rep = L.filter(function (r) { return invAppraisalReportOwed(r, job); });
+    if (rep.length) add('appr_report', rep.length, s(rep.length, 'appraisal report', 'appraisal reports') + ' not filed (' + _closeNos(rep) + ')',
+      s(rep.length, 'appraised item has', 'appraised items have') + ' no appraisal report filed (' + _closeNos(rep) + ').');
+    // P28: a line handed to an appraiser and not checked back in is still out of the house.
+    var away = L.filter(function (r) { return invOutForAppraisal(r, job); });
+    if (away.length) add('appr_out', away.length, s(away.length, 'line', 'lines') + ' still out with an appraiser (' + _closeNos(away) + ')',
+      s(away.length, 'line is', 'lines are') + ' still out with an appraiser ('
+        + _closeNos(away, function (r, no) { return no + ' with ' + (invOutForAppraisal(r, job).ref || 'the appraiser'); }) + ').');
+    // The signed schedules: one still DRAFT says why (VAL-26: the bar asked for an adopted Court Inventory the page withheld), one
+    // FINAL with no copy filed asks for it, and one filed names whoever has not signed it (EST-13).
+    signedScheduleRows(job, L, true).forEach(function (x) {
+      var S = x.signs;
+      if (x.draft.length) add('schedule', 1, x.ref + ' still a draft (' + x.draft.join(' · ') + ')',
+        'The ' + x.ref + ' is still a draft (' + x.draft.join('; ') + '), so it cannot be ' + x.act + ' yet.');
+      else if (!x.filed.length) add('schedule', 1, x.label + ' not filed yet', 'The ' + x.label.charAt(0).toLowerCase() + x.label.slice(1) + ' is not filed yet.');
+      else if (S && S.owed.length && S.named) add('schedule', 1, x.label + ' not signed by ' + _andJoin(S.owed.map(function (f) { return f.name; })),
+        'The ' + x.ref + ' on file is not signed by ' + _andJoin(S.owed.map(function (f) { return f.name; })) + '.');
+    });
+    // The Contents Record, the paper a living client signs at the close (the ledger's, an estate's, is below: it needs no line).
+    if (!fid) { var cf = contentsCloseFlag(job, L); if (cf) add('signed', 1, 'Contents Record not signed yet', cf); }
+    // The list's read (Q107), where a line stands as the agents left it: the package's question asks it too (probatePackageGaps).
+    // Said last, after the signature and the hours.
+    var st = _invReviewStats(L, invAcceptCtx(job, L)), rd = invListRead(job);
+    if (st.accepted && !(rd && rd.current)) readItem = { key: 'read', n: st.accepted, tone: 'amber', short: 'the list not yet read' + (rd ? ' since it last changed' : ''),
+      long: 'The list has not been read' + (rd ? ' since it last changed' : '') + ': ' + s(st.accepted, 'line stands', 'lines stand') + ' as the agents left ' + (st.accepted === 1 ? 'it' : 'them') + '.' };
+  })();
+  // ── the Disposition Ledger, every fiduciary's signature on an estate: a fact of the job, said whether or not the lines are read ──
+  if (fid) {
+    var LS = ledgerSignState(job);
+    if (!LS.complete) add('signed', 1, LS.recs.length && LS.named ? 'Disposition Ledger not signed by ' + _andJoin(LS.owed.map(function (f) { return f.name; }))
+        : 'Disposition Ledger not signed yet', ledgerCloseFlag(job));
+  }
+  // ── the hours an hourly final is priced on (finalAwaitsHours), once the estimate and the log are on this device ──
+  var _est = (typeof estimateStore !== 'undefined' && estimateStore[jobId]) ? estimateStore[jobId].estimate : null;
+  if (_est && typeof finalAwaitsHours === 'function' && (typeof hoursLogReady !== 'function' || hoursLogReady()) && finalAwaitsHours(job, _est)) {
+    add('hours', 0, 'no hours logged', 'No hours are logged yet, so the final invoice cannot be priced.');
+  }
+  if (readItem) out.items.push(readItem);
+  return out;
+}
+// ⚠ THE CONTENTS RECORD'S TWIN OF ledgerCloseFlag (LIV-13): the client's one paper, unsigned at the close, named and never refused.
+function contentsCloseFlag(job, all) {
+  if (!job || invFiduciaryMode(job) || !(all || []).length) return '';
+  if (signedRecordsOf(job, 'contents', CONTENTS_SIGNED_REF).length) return '';
+  return 'The Contents Record has no signed copy on file. It is filed to Drive as the job closes; have the client sign it, '
+    + 'then file the signed copy on the Contents Record card, under Closing the job on Job Admin & Inv.';
+}
+// The Close-out card's fifth step (P12): the list, each entry in its tone; the card is drawn on the Job Plan and on the desk, one
+// body for both, so the block carries its host in its id and is repainted by id (_closeReadyRepaint).
+function closeReadinessHtml(jobId, job, host) {
+  return '<div class="co-step" id="close-ready-' + (host || 'card') + '-' + jobId + '">' + _closeReadyInner(jobId, job) + '</div>';
+}
+function _closeReadyInner(jobId, job) {
+  var CR = closeReadiness(jobId, job);
+  var tone = { red: 'var(--err-tx)', amber: '#8a6d3b', grey: 'var(--gray)' };
+  var done = !CR.items.length;
+  return '<span class="co-num' + (done ? ' co-num-done' : '') + '">' + (done ? '&#10003;' : 5) + '</span>'
+    + '<div class="co-main"><div class="co-ttl">Before you close' + (done ? '' : ' <span class="co-meta">' + CR.items.length + ' open</span>') + '</div>'
+    + '<div class="co-sub">What Close job names in its question. None of it stops the close: finish it, or close with it named.</div>'
+    + (done ? '<div class="co-sub" style="color:var(--ok-tx);">Nothing the close asks about is open.</div>'
+      : '<ul class="close-ready-list" style="margin:0 0 4px 16px;padding:0;font-size:11.5px;line-height:1.5;">' + CR.items.map(function (x) {
+          return '<li style="color:' + (tone[x.tone] || tone.amber) + ';">' + esc(x.long) + '</li>';
+        }).join('') + '</ul>')
+    + '</div>';
+}
+// ⚠ ONCE A BURST OF EDITS HAS SETTLED (P12): the list walks every line (about 150 ms on a 600-line estate, measured on a loaded
+// machine), and the desk's by-id repaints run on every edit; a quarter of a second later it paints once. `now` paints at once.
+var _closeReadyTimer = {};
+var CLOSE_READY_REPAINT_MS = 250;
+function _closeReadyRepaint(jobId, now) {
+  if (typeof document === 'undefined' || !document || !document.getElementById) return;
+  if (!now && typeof setTimeout === 'function') {
+    if (_closeReadyTimer[jobId]) return;
+    _closeReadyTimer[jobId] = setTimeout(function () { delete _closeReadyTimer[jobId]; _closeReadyRepaint(jobId, true); }, CLOSE_READY_REPAINT_MS) || 0;
+    return;
+  }
+  var job = typeof _invJob === 'function' ? _invJob(jobId) : null;
+  if (!job) return;
+  ['plan', 'admin'].forEach(function (host) {
+    var el = document.getElementById('close-ready-' + host + '-' + jobId);
+    if (!el) return;
+    var html = _closeReadyInner(jobId, job);
+    if (el.innerHTML !== html) el.innerHTML = html;
+  });
+}
+// `how` (P12's review): what Close job's read of the inventory came to, from activateOrCycle; `how.failed` where the sheet did not
+// answer, and the question then says its list is this device's copy. Absent (every other caller): asked as before.
+function applyJobTransition(j, how) {
   var next = JOB_TRANSITIONS[j.status];
   if (!next) {
     alert('This job is ' + (j.status === 'lost' ? 'marked Lost' : 'closed with the deposit retained')
@@ -25046,14 +25229,24 @@ function applyJobTransition(j) {
     // ⚠ AND AN ESTATE WHOSE DISPOSITION LEDGER HAS NO SIGNED COPY ON FILE IS NAMED IN THE SAME QUESTION (P19), never
     // refused: the close is often the day the representative signs, and the page goes to Drive as the job closes.
     var _noMid = !j.deliveredOn && !(stagePaidTotal(j, 'midpoint') > 0);
-    var _ledg = j.deliveredOn ? '' : ledgerCloseFlag(j);
-    var _openWork = (j.deliveredOn || typeof closeOpenWorkFlag !== 'function') ? '' : closeOpenWorkFlag(j);   // rooms and lines left open (2026-10-10)
-    if ((_noMid || _ledg || _openWork)
-        && !confirm('Close this job now?\n\n'
+    // ⚠⚠ EVERYTHING ELSE STILL OPEN IS ONE LIST (2026-10-28, P12): closeReadiness through closeOpenWorkFlag, the ledger's and the
+    // Contents Record's signatures among it, each with its count and first item numbers. It said "finish the rooms and name the
+    // recipients" whatever was open (NEW-04). A sandbox that lifts this transition without the list still hears the ledger.
+    var _openWork = j.deliveredOn ? '' : (typeof closeOpenWorkFlag === 'function' ? closeOpenWorkFlag(j) : ledgerCloseFlag(j));
+    // ⚠ A READ THAT DID NOT LAND IS SAID (P12's review, 2026-10-28): Close job reads the inventory first on every press, and where
+    // the sheet did not answer, the list below is this device's copy, which another device may have moved past; the question is
+    // asked for it even with nothing else to ask. A device that has never read the inventory says so in the list itself (unread).
+    var _copy = (how && how.failed && !(typeof _invManifestUnread === 'function' && _invManifestUnread(j.id)))
+      ? 'The sheet did not answer just now, so what is open on the inventory is read off this device’s copy, which may be behind.\n\n' : '';
+    // ⚠ AND IT NAMES THE CLIENT, by the name the client list shows (P12's review): the read can take seconds, and the question
+    // arrived over another client's screen as "Close this job now?", naming nobody.
+    var _who = String(j.name || '').trim();
+    if ((_noMid || _openWork || _copy)
+        && !confirm('Close ' + (_who ? _who + '\'s' : 'this') + ' job now?\n\n'
+          + _copy
           + (_noMid ? 'No ' + _mwc.noun + ' payment is recorded. That is fine: the final invoice bills everything not yet '
           + 'paid, the ' + _mwc.noun + '\'s share included, against the payments actually received.\n\n' : '')
-          + (_ledg ? _ledg + '\n\n' : '')
-          + (_openWork ? _openWork + ' Closing does not change them; finish the rooms and name the recipients, or close now.\n\n' : '')
+          + (_openWork ? 'Still open:\n' + _openWork + '\nClosing does not change any of these: finish them, or close now.\n\n' : '')
           + 'Closing records today, ' + fmtDate2(_todayStr()) + ', as the day the work was handed over. '
           + 'Until the final invoice goes out, Re-open can undo the close.\n\n'
           + 'If the work is not finished, press Cancel.')) {
@@ -25105,10 +25298,49 @@ function applyJobTransition(j) {
   return true;
 }
 
-function activateOrCycle(jobId) {
+var _closeReading = {};   // never saved: a Close job waiting on its quiet read of the inventory (P12)
+var CLOSE_READING_TXT = 'Reading the inventory from the sheet first…';
+// Whether the screen showing a job's band right now is this client's (_jobBandHost: the Job Plan, the desk or the dashboard).
+function _closeOnScreen(jobId) {
+  var h = typeof _jobBandHost === 'function' ? _jobBandHost() : null;
+  return !!(h && h.jobId === jobId);
+}
+function activateOrCycle(jobId, read) {
   var j = jobs.find(function(x){ return x.id===jobId; });
   if (!j) return;
-  if (!applyJobTransition(j)) return;
+  // ⚠ CLOSE JOB READS THE INVENTORY FIRST, QUIETLY (2026-10-28, P12): its question names what the lines leave open, and the
+  // dashboard's band is pressed on a device that may never have opened the desk for this client. Whether the read lands or not
+  // the question follows (a failed read is said in it), so it adds no refusal. One read per client at a time; the toast says why
+  // nothing opened yet.
+  // ⚠⚠ ON EVERY PRESS, AND NEVER OVER ANOTHER CLIENT (P12's review, 2026-10-28). It read only where this device had never read the
+  // client's inventory, so a copy read in the morning answered the close in the evening, and a failed read was not said. Now every
+  // Close job on a job with an inventory reads first (`read` is what came of it: {failed} where the sheet did not answer, and the
+  // question says the list is this device's copy). The read can take seconds (INV_READ_WATCHDOG_MS at most), and the question
+  // arrived over another client's desk and named nobody, so OK closed a job not on screen: it names the client now, and where the
+  // press was made on this client's screen and another is showing when the read lands, it is not asked at all, and the toast
+  // says so. A second press while the read is out says the toast again (it did nothing).
+  if (!read && typeof invReadQuiet === 'function' && typeof SHEETS_SYNC_URL !== 'undefined' && SHEETS_SYNC_URL
+      && j.status === 'active' && !j.deliveredOn && j.svc !== 'prep') {
+    if (_closeReading[jobId]) { showSyncBadge(CLOSE_READING_TXT); return; }
+    _closeReading[jobId] = true;
+    var _here = _closeOnScreen(jobId);
+    showSyncBadge(CLOSE_READING_TXT);
+    var again = function (failed) {
+      return function () {
+        delete _closeReading[jobId];
+        if (_here && !_closeOnScreen(jobId)) {
+          var nm = String(j.name || '').trim() || 'the client';
+          showSyncBadge('Close job was not asked: another screen is showing now. Open ' + nm + ' and press Close job again.');
+          return;
+        }
+        activateOrCycle(jobId, { failed: failed });
+      };
+    };
+    if (typeof _invEnsureLoaded === 'function') _invEnsureLoaded(jobId);
+    invReadQuiet(jobId, again(false), again(true));
+    return;
+  }
+  if (!applyJobTransition(j, read && typeof read === 'object' ? read : null)) return;
   j.updatedAt = Date.now(); saveJobs(); syncJobToSheets(j);
   // ⚠ THE DISPOSITION LEDGER GOES TO DRIVE AS THE JOB CLOSES (P19). `closed` after a transition can only mean it just
   // closed (closed → active is the Re-open). It runs in the background and reports through the sync badge, the way an
@@ -26400,7 +26632,9 @@ var _signedCopySpecs = [];
 var _signedCopyKeys = [];
 function signedCopyControlHtml(jobId, kind, meta, label, after) {
   meta = meta || {};
-  var key = jobId + '|' + kind + '|' + String(meta.ref || '');
+  // ⚠ WHO SIGNED IS PART OF THE PRESS (2026-10-28, P12): the ledger's card offers the copy signed by both and the copy signed by
+  // one, and one spec per paper filed every press as the last one drawn.
+  var key = jobId + '|' + kind + '|' + String(meta.ref || '') + (meta.signedBy ? '|' + String(meta.signedBy) : '');
   var i = _signedCopyKeys.indexOf(key);
   if (i < 0) { i = _signedCopyKeys.length; _signedCopyKeys.push(key); }
   _signedCopySpecs[i] = { jobId: jobId, kind: kind, meta: meta, after: after || null };
@@ -32661,6 +32895,16 @@ function _invMoney(v) { var n = parseFloat(v); return isNaN(n) ? '—' : fmt(n);
 // work to clients during an engagement." A document that refuses to print until the
 // review is finished is precisely what stops that. So an unfinished review is STAMPED,
 // never gated — the reader is told what they are holding and can act on it either way.
+// ⚠ WHETHER A PAPER'S STAMP READS REVIEWED (2026-10-28, P12; Anthony, Ask 12): every line checked by a person or standing with
+// nothing flagged, and, where any stands as the agents left it, the list read since it last changed (invListRead). The one answer
+// the stamp below and the sign-offs under it read (the Disposition Ledger's and the Contents Record's: "the final record" only then,
+// "the record to date" while it reads IN PROGRESS). `_invStampIsReviewed` takes the stamp's own counts; invStampReviewed works them out.
+function _invStampIsReviewed(st, rd) { return !!(st && st.complete && (!st.accepted || (rd && rd.current))); }
+function invStampReviewed(items, opts) {
+  opts = opts || {};
+  var st = _invReviewStats(items || [], opts.fc, !!(opts.noValues || opts.namesOnly));
+  return _invStampIsReviewed(st, opts.fc && opts.fc.job ? invListRead(opts.fc.job) : null);
+}
 function _invProgressStamp(items, opts) {
   opts = opts || {};
   // `fc` (invAcceptCtx): the job's facts the review rule reads; a printer that hands none in counts no line as standing by
@@ -32672,7 +32916,7 @@ function _invProgressStamp(items, opts) {
   var items_ = function(n) { return n + ' item' + (n === 1 ? '' : 's'); };
   // `read` (invListRead, Q107): a REVIEWED stamp over lines standing as the agents left them names who read the list and when.
   var rd = opts.fc && opts.fc.job ? invListRead(opts.fc.job) : null;
-  if (st.complete && (!fw || (rd && rd.current))) {
+  if (_invStampIsReviewed(st, rd)) {
     return '<div style="display:inline-block;font-size:11px;font-weight:700;color:#fff;background:#357a50;'
       + 'border-radius:3px;padding:1px 8px;margin-bottom:12px;">REVIEWED &mdash; '
       + (!fw ? (st.total === 1 ? '1 item' : 'all ' + st.total + ' items')
@@ -37960,10 +38204,33 @@ function scheduleSigners(job, kind) {
 }
 // The named signature lines: the act ("Reviewed and adopted by"), a line and a date, and under it who signs and in what
 // capacity. Each line kept whole on a printed page.
-function scheduleSignLines(signers, act, capacity) {
+// ⚠ EACH IN THEIR OWN ROLE (2026-10-28, P12; DOC-13): a Co-Trustee printed as "Successor Trustee" and a co-representative as the
+// representative. The paper's word stands where a signer's role is not recorded, or is no capacity on it (fiduciaryCapacity).
+// ⚠ AND A CO-REPRESENTATIVE WITH NO SUCH ROLE SIGNS AS ONE (P12's review, 2026-10-28): recorded as Other, she adopted the Court
+// Inventory as "Personal Representative / authorized fiduciary", the representative's capacity, and the signed schedules' card
+// named each signer by the raw role recorded ("Ruth Gale, Family Member"). One answer per signer and paper, read by the signature
+// lines and the card: the role recorded where it is a capacity on this paper, else the paper's word for the representative or for
+// a co-representative.
+var SCHEDULE_CAPACITY = {
+  court:   { word: 'Personal Representative / authorized fiduciary', co: 'Co-Personal Representative' },
+  trustee: { word: 'Successor Trustee', co: 'Co-Trustee' }
+};
+function scheduleSignerCapacity(f, kind) {
+  var C = SCHEDULE_CAPACITY[kind] || SCHEDULE_CAPACITY.court;
+  var fits = kind === 'trustee' ? FIDUCIARY_TRUSTEE_ROLE_RE : FIDUCIARY_PR_ROLE_RE;
+  var role = fiduciaryCapacity(f, '');
+  if (role && fits.test(role)) return role;
+  return (f && f.primary === false) ? C.co : C.word;
+}
+// `kind` the paper: 'court' (the Court Inventory) or 'trustee' (the Trust Schedule), invDocContractBlock's names.
+function scheduleSignLines(signers, act, kind) {
+  // ⚠ EACH SIGNER IN THEIR OWN ROLE WHERE IT IS A CAPACITY FOR THIS PAPER (2026-10-28, P12, DOC-13: a Co-Trustee received the Trust
+  // Schedule as "Successor Trustee"). A trustee's role on the Trust Schedule, a personal representative's (an executor's, an
+  // administrator's, a curator's) on the Court Inventory; none, Other, or a role that is no capacity here (Family Member, Estate
+  // Attorney) signs in the paper's own word (scheduleSignerCapacity).
   return signers.map(function (f, i) {
     return '<div style="margin-top:' + (i ? '14px' : '18px') + ';font-size:11px;break-inside:avoid;page-break-inside:avoid;">' + act
-      + ': __________________________________ &nbsp; Date: ____________<br><span style="color:#888;">' + esc(f.name) + ' &middot; ' + capacity + '</span></div>';
+      + ': __________________________________ &nbsp; Date: ____________<br><span style="color:#888;">' + esc(f.name) + ' &middot; ' + esc(scheduleSignerCapacity(f, kind)) + '</span></div>';
   }).join('');
 }
 
@@ -38094,33 +38361,55 @@ function _invExemptClaimTotalHtml(fl) {
           + (n ? ' on the recorded figures alone' : '') + ' &mdash; confirm the composition of this claim with counsel. Motor vehicles are a separate allowance and are not counted here.</div>'
         : '');
 }
-function printCourtInventory(jobId, opt) {
-  var job = jobs.find(function(j){ return j.id === jobId; });
-  var _blocked = invDocContractBlock(job, 'court') || (typeof invColdRefusal === 'function' ? invColdRefusal(jobId) : '');   // and a cold desk (2026-10-27, P1)
-  if (_blocked) { if (opt && opt.asHtml) return { why: _blocked }; alert(_blocked); return; }
-  if (typeof invReadFirst === 'function' && invReadFirst(jobId, 'The Court Inventory', function () { printCourtInventory(jobId, _invReadOpt(opt)); }, opt)) return;   // P6
-  var pt = document.getElementById('print-target');
-  if (!job || !pt) return;
-  var items = _invAssignItemNos(jobId);
+// ⚠⚠ WHY A VALUED SCHEDULE IS STILL DRAFT, AND WHAT UNBLOCKS EACH REASON (2026-10-28, P12): the one answer for the Court
+// Inventory ('court') and the Trust Schedule ('trustee'), read by both printers and by the close's list (closeReadiness, through
+// signedScheduleRows; VAL-26: the Closing bar asked for an adopted Court Inventory while the page withheld its signature block).
+// DOM-free. {why, fix, dbl, draft}: the reasons in the page's words, the fix for each, the open double counts (invDoubleCounts).
+function scheduleDraftState(job, kind, items) {
+  var jobId = job.id;
+  items = items || _invAssignItemNos(jobId);
   var formal = isFormalDoc(job);
   var guard = _invGuardrailItems(jobId);
-  // ⚠⚠ A TOTAL THAT OMITS LINES IS A FLOOR, AND A FLOOR STAMPED FINAL READS AS A CLEARANCE.
-  // `section()` adds `parseFloat(r.fmv)` only when it is a number, so an unvalued line
-  // contributes nothing to the total while printing "—" in the value column on the same
-  // page. Until 2026-09-11 that document went out stamped **FINAL** with a signature block
-  // under it: a personal representative adopting it files an understated §733.604 schedule,
-  // and the one thing on the page that could have warned them said the opposite.
-  //
-  // ⚠ THE APPRAISAL GUARDRAIL DID NOT COVER THIS and must not be conflated with it.
-  // `_invGuardrailItems` answers a VALUATION-SUPPORT question — intrinsic category, over the
-  // threshold, no appraisal attached. An ordinary chair with an empty value is on nobody's
-  // worklist and was reported nowhere. Same silent-omission shape as the $900 shotgun.
-  //
-  // This is the rule MAIV already follows and the wording is deliberately the same: while
-  // anything is blank the app reports a floor and REFUSES TO CONCLUDE. An unvalued line
-  // makes the schedule provisional whether or not the estate is on the formal standard —
-  // `formal` gates the appraisal half only, because that is a documentation-standard
-  // question; arithmetic is not.
+  if (kind === 'trustee') {
+    var onSched = items.filter(function(r){ return _invOnTrustSchedule(r, job); });
+    var unvalued = onSched.filter(function(r){ return !_invHasValue(r); });
+    var _mt = matterDef(job);
+    var _noTrust = !!(_mt && !_mt.trust);
+    // The same four-reason discipline the probate schedule carries, and each reason brings the fix
+    // that unblocks IT — a fix that does not describe the blocker is read, followed, and wastes the
+    // one person who could have corrected it.
+    var _draftWhy = [], _draftFix = [];
+    if (!onSched.length) {
+      _draftWhy.push(items.length ? 'no recorded item is on the trust schedule' : 'nothing is recorded on this estate yet');
+      _draftFix.push(items.length
+        ? 'set the Asset Track to Trust on the property the trust holds, or issue the right instrument for this estate'
+        : 'the schedule is issued once the contents are recorded');
+    }
+    if (formal && guard.length) {
+      _draftWhy.push(guard.length + ' item' + (guard.length > 1 ? 's' : '') + ' pending appraisal');
+      var _apDutyT = jobAppraisalDuty(job);
+      _draftFix.push(_apDutyT === 'all'
+        ? 'Havellin engages the specialist and a final copy follows the report'
+        : _apDutyT === 'listed'
+        ? 'Havellin schedules the appraiser on the estimate where it covers the item (' + esc(estimateAppraiserNames(approvedEstimateFor(job.id))) + '), the trustee or their counsel arranges any other, and a final copy follows the report'
+        : 'the trustee or their counsel arranges the appraisal on this engagement');
+    }
+    if (unvalued.length) {
+      _draftWhy.push(unvalued.length + ' item' + (unvalued.length > 1 ? 's' : '') + ' not yet valued');
+      _draftFix.push('a final copy is issued once the outstanding items are valued');
+    }
+    // An open possible duplicate on the schedule (P8, invDoubleCounts): the probate schedule's rule, the same words.
+    var _dbl = typeof invDoubleCounts === 'function' ? invDoubleCounts(job, onSched) : null;
+    if (_dbl) { _draftWhy.push(_dbl.why); _draftFix.push(_dbl.fix); }
+    // On Formal, a value with no basis (P10, invBasisDraft): the probate schedule's rule, the same words.
+    var _nob = typeof invBasisDraft === 'function' ? invBasisDraft(job, onSched) : null;
+    if (_nob) { _draftWhy.push(_nob.why); _draftFix.push(_nob.fix); }
+    if (_noTrust) {
+      _draftWhy.push('this estate has no trust in it');
+      _draftFix.push('no final copy of THIS schedule will follow — the estate’s own inventory is the right instrument for it');
+    }
+    return { why: _draftWhy, fix: _draftFix, dbl: _dbl, draft: _draftWhy.length > 0 };
+  }
   var unvalued = items.filter(function(r){ return _invOnProbateSchedule(r, job) && !_invHasValue(r); });
   var _draftWhy = [];
   // ⚠⚠ WHAT UNBLOCKS IT FOLLOWS THE REASON, AND UNTIL 2026-09-21 IT WAS ONE CONSTANT SENTENCE
@@ -38193,6 +38482,46 @@ function printCourtInventory(jobId, opt) {
   var _mtUnsetDefault = _mtUnset && onSched.some(function(r){ return !r.assetTrack; });
   if (_mtUnsetDefault) _draftWhy.push('the matter type is not recorded');
   if (_mtUnsetDefault) _draftFix.push('a final copy follows once the estate is recorded as administered through probate');
+  return { why: _draftWhy, fix: _draftFix, dbl: _dbl, draft: _draftWhy.length > 0 };
+}
+function printCourtInventory(jobId, opt) {
+  var job = jobs.find(function(j){ return j.id === jobId; });
+  var _blocked = invDocContractBlock(job, 'court') || (typeof invColdRefusal === 'function' ? invColdRefusal(jobId) : '');   // and a cold desk (2026-10-27, P1)
+  if (_blocked) { if (opt && opt.asHtml) return { why: _blocked }; alert(_blocked); return; }
+  if (typeof invReadFirst === 'function' && invReadFirst(jobId, 'The Court Inventory', function () { printCourtInventory(jobId, _invReadOpt(opt)); }, opt)) return;   // P6
+  var pt = document.getElementById('print-target');
+  if (!job || !pt) return;
+  var items = _invAssignItemNos(jobId);
+  // ⚠⚠ A TOTAL THAT OMITS LINES IS A FLOOR, AND A FLOOR STAMPED FINAL READS AS A CLEARANCE.
+  // `section()` adds `parseFloat(r.fmv)` only when it is a number, so an unvalued line
+  // contributes nothing to the total while printing "—" in the value column on the same
+  // page. Until 2026-09-11 that document went out stamped **FINAL** with a signature block
+  // under it: a personal representative adopting it files an understated §733.604 schedule,
+  // and the one thing on the page that could have warned them said the opposite.
+  //
+  // ⚠ THE APPRAISAL GUARDRAIL DID NOT COVER THIS and must not be conflated with it.
+  // `_invGuardrailItems` answers a VALUATION-SUPPORT question — intrinsic category, over the
+  // threshold, no appraisal attached. An ordinary chair with an empty value is on nobody's
+  // worklist and was reported nowhere. Same silent-omission shape as the $900 shotgun.
+  //
+  // This is the rule MAIV already follows and the wording is deliberately the same: while
+  // anything is blank the app reports a floor and REFUSES TO CONCLUDE. An unvalued line
+  // makes the schedule provisional whether or not the estate is on the formal standard —
+  // `formal` gates the appraisal half only, because that is a documentation-standard
+  // question; arithmetic is not.
+  var onSched = items.filter(function(r){ return _invOnProbateSchedule(r, job); });
+  // Why it is still DRAFT, and what unblocks each reason: one answer (scheduleDraftState), read by the close's list too (P12).
+  var _sd = scheduleDraftState(job, 'court', items);
+  var _draftWhy = _sd.why, _draftFix = _sd.fix, _dbl = _sd.dbl;
+  var _mt = matterDef(job);
+  var _mtOff = !!(_mt && !_mt.onProbate);
+  // ⚠⚠ AN UNANSWERED MATTER OFF THE PROBATE TRACK, OVER LINES NOBODY TRACKED, IS A DRAFT (P14's review, 2026-11-02; EST-20): an
+  // Estate Settlement with no matter recorded printed FINAL with an adoption line, though its lines reached this schedule by
+  // `_invTrack`'s default alone (the Trust Schedule's reasoning, that somebody tracked what is on it, does not hold here, where the
+  // default is Probate). Where every line on it carries an asset track a person set to Probate, somebody did put it there, and the
+  // page stays as P14 built it (FINAL, with the note); where any rests on the default it is a draft until the matter is answered.
+  var _mtUnset = !_mt && !jobOnProbateTrack(job);
+  var _mtUnsetDefault = _mtUnset && onSched.some(function(r){ return !r.assetTrack; });
   var draft = _draftWhy.length > 0;
   // ⚠ PRINTED ESCAPED (P10's review): since invBasisDraft a reason names its lines (#3 and the name a person typed or Agent One
   // read), so the pill escapes it as every record's field is escaped; the block under the table escapes its own join.
@@ -38270,7 +38599,7 @@ function printCourtInventory(jobId, opt) {
         // ⚠ The recorded representative is named alone too (2026-10-10, the core-jobs run): the FINAL schedule's adoption
         // line was blank beside a ledger that named them.
         : scheduleSigners(job, 'court').length >= 1
-        ? scheduleSignLines(scheduleSigners(job, 'court'), 'Reviewed and adopted by', 'Personal Representative / authorized fiduciary')
+        ? scheduleSignLines(scheduleSigners(job, 'court'), 'Reviewed and adopted by', 'court')
         : '<div style="margin-top:18px;font-size:11px;">Reviewed and adopted by: __________________________________ &nbsp; Date: ____________<br><span style="color:#888;">Personal Representative / authorized fiduciary</span></div>')
     + '</div>';
   // ⚠ THE PROBATE PACKAGE ASKS FOR THE PAGE ITSELF (`opt.asHtml`, 2026-10-01, P17), so what counsel receives is byte for
@@ -38312,49 +38641,16 @@ function printTrustSchedule(jobId, opt) {
   var pt = document.getElementById('print-target');
   if (!job || !pt) return;
   var items = _invAssignItemNos(jobId);
-  var formal = isFormalDoc(job);
-  var guard = _invGuardrailItems(jobId);
   // ⚠ ONE TRACK, NEVER THE NEGATION OF THE PROBATE TEST — see _invOnTrustSchedule. Non-probate
   // and homestead property is on neither schedule and that is correct, so this document has to
   // say what it left out just as the probate one does.
   var onSched = items.filter(function(r){ return _invOnTrustSchedule(r, job); });
-  var unvalued = onSched.filter(function(r){ return !_invHasValue(r); });
   var excluded = items.filter(function(r){ return !_invOnTrustSchedule(r, job); });
   var _mt = matterDef(job);
   var _noTrust = !!(_mt && !_mt.trust);
-  // The same four-reason discipline the probate schedule carries, and each reason brings the fix
-  // that unblocks IT — a fix that does not describe the blocker is read, followed, and wastes the
-  // one person who could have corrected it.
-  var _draftWhy = [], _draftFix = [];
-  if (!onSched.length) {
-    _draftWhy.push(items.length ? 'no recorded item is on the trust schedule' : 'nothing is recorded on this estate yet');
-    _draftFix.push(items.length
-      ? 'set the Asset Track to Trust on the property the trust holds, or issue the right instrument for this estate'
-      : 'the schedule is issued once the contents are recorded');
-  }
-  if (formal && guard.length) {
-    _draftWhy.push(guard.length + ' item' + (guard.length > 1 ? 's' : '') + ' pending appraisal');
-    var _apDutyT = jobAppraisalDuty(job);
-    _draftFix.push(_apDutyT === 'all'
-      ? 'Havellin engages the specialist and a final copy follows the report'
-      : _apDutyT === 'listed'
-      ? 'Havellin schedules the appraiser on the estimate where it covers the item (' + esc(estimateAppraiserNames(approvedEstimateFor(job.id))) + '), the trustee or their counsel arranges any other, and a final copy follows the report'
-      : 'the trustee or their counsel arranges the appraisal on this engagement');
-  }
-  if (unvalued.length) {
-    _draftWhy.push(unvalued.length + ' item' + (unvalued.length > 1 ? 's' : '') + ' not yet valued');
-    _draftFix.push('a final copy is issued once the outstanding items are valued');
-  }
-  // An open possible duplicate on the schedule (P8, invDoubleCounts): the probate schedule's rule, the same words.
-  var _dbl = typeof invDoubleCounts === 'function' ? invDoubleCounts(job, onSched) : null;
-  if (_dbl) { _draftWhy.push(_dbl.why); _draftFix.push(_dbl.fix); }
-  // On Formal, a value with no basis (P10, invBasisDraft): the probate schedule's rule, the same words.
-  var _nob = typeof invBasisDraft === 'function' ? invBasisDraft(job, onSched) : null;
-  if (_nob) { _draftWhy.push(_nob.why); _draftFix.push(_nob.fix); }
-  if (_noTrust) {
-    _draftWhy.push('this estate has no trust in it');
-    _draftFix.push('no final copy of THIS schedule will follow — the estate’s own inventory is the right instrument for it');
-  }
+  // Why it is still DRAFT, and what unblocks each reason: one answer (scheduleDraftState), read by the close's list too (P12).
+  var _sd = scheduleDraftState(job, 'trustee', items);
+  var _draftWhy = _sd.why, _draftFix = _sd.fix, _dbl = _sd.dbl;
   var draft = _draftWhy.length > 0;
   // Printed escaped, as the probate schedule's pill (P10's review): a reason can name a line.
   var status = draft ? 'DRAFT — ' + _draftWhy.join(' · ') : 'FINAL';
@@ -38423,7 +38719,7 @@ function printTrustSchedule(jobId, opt) {
         // signature line is the same class of claim the $0 FINAL was.
         // ⚠ ONE LINE PER TRUSTEE once a co-trustee is recorded (P19, scheduleSigners); the one blank line otherwise.
         : scheduleSigners(job, 'trustee').length >= 1   // the one recorded trustee is named too (2026-10-10)
-        ? scheduleSignLines(scheduleSigners(job, 'trustee'), 'Received for the trust&rsquo;s records by', 'Successor Trustee')
+        ? scheduleSignLines(scheduleSigners(job, 'trustee'), 'Received for the trust&rsquo;s records by', 'trustee')
         : '<div style="margin-top:18px;font-size:11px;">Received for the trust&rsquo;s records by: __________________________________ &nbsp; Date: ____________<br><span style="color:#888;">Successor Trustee</span></div>')
     + '</div>';
   // The probate package asks for the page itself (`opt.asHtml`, P17) — see printCourtInventory.
@@ -38482,7 +38778,15 @@ function dispositionLedger(jobId, items, jobIn) {
     job: job, items: all, rows: rows, gross: gross, fees: fees, net: roundCents(gross - fees),
     holder: estateProceedsHolder(job),
     undecided: all.filter(function (r) { return !r.disposition; }).sort(byNo),
-    noRecipient: all.filter(function (r) { return INV_RELEASE_DISPOSITIONS.indexOf(r.disposition) >= 0 && !_invRecipient(job, r); }).sort(byNo),
+    // ⚠ "LEFT THE PROPERTY" ONLY FOR WHAT HAS LEFT (2026-10-28, P12; DOC-12: a Donate line still in the kitchen, with nobody named
+    // yet, was printed as an item that had left with no recipient). Gone (invRecordedGone) with nobody named is `noRecipient`; a
+    // leaving line still in the house with nobody named yet waits for a taker (`waitTaker`), the Releases card's words.
+    noRecipient: all.filter(function (r) { return INV_RELEASE_DISPOSITIONS.indexOf(r.disposition) >= 0 && !_invRecipient(job, r) && invRecordedGone(r, job); }).sort(byNo),
+    waitTaker: all.filter(function (r) { return INV_RELEASE_DISPOSITIONS.indexOf(r.disposition) >= 0 && !_invRecipient(job, r) && !invRecordedGone(r, job); }).sort(byNo),
+    // ⚠ AND WHAT LEFT BEFORE ITS WRITTEN APPROVAL WAS COMPLETE (2026-10-28, P12; DOC-11, REL-08): ratification owed, and the leaving
+    // lines still short of a complete approval. The rules the Releases card reads (invRatificationOwed, _approvalLineOpen).
+    ratify: all.filter(function (r) { return invRatificationOwed(r, job); }).sort(byNo),
+    incomplete: all.filter(function (r) { return _approvalLineOpen(r, job) && !invRatificationOwed(r, job); }).sort(byNo),
     pending: all.filter(function (r) { return INV_SALE_DISPOSITIONS.indexOf(r.disposition) >= 0 && num(r.gross) === null; }).sort(byNo),
     // Statements are recorded on the disposal services only (jobTakesProceedsStatements), and only there is a sold line
     // on no statement a gap.
@@ -38508,14 +38812,105 @@ function ledgerSigners(job) {
   if (!invFiduciaryMode(job)) return [];   // the family signs the Contents Record (P25, Q51)
   var f = jobFiduciaries(job);
   if (!f.length) return [{ name: '', role: _agrApprover(job) }];
-  return f.map(function (x) { return { name: x.name, role: x.role || _agrApprover(job) }; });
+  return f.map(function (x) { return { name: x.name, role: ledgerSignerRole(job, x) }; });
 }
+// ⚠ EACH SIGNER PRINTS IN THEIR OWN ROLE (2026-10-28, P12; DOC-13: a Co-Trustee signed the Trust Schedule as "Successor Trustee").
+// The role recorded on the representative or the co-representative's row, else the paper's own word for the signer; "Other"
+// names no capacity, so it takes the paper's word too. Read by the ledger's signers and the schedules' signature lines.
+function fiduciaryCapacity(f, fallback) {
+  var r = String((f && f.role) || '').trim();
+  return (r && r !== 'Other') ? r : (fallback || '');
+}
+// The roles that are a capacity to sign for an estate's property: a personal representative's (an executor's, an administrator's,
+// a curator's), and a trustee's. One pair, read by the schedules (each paper its own) and the ledger (either).
+var FIDUCIARY_PR_ROLE_RE = /personal representative|executor|administrator|curator/i;
+var FIDUCIARY_TRUSTEE_ROLE_RE = /trustee/i;
+// ⚠⚠ THE LEDGER'S SIGNER IN A CAPACITY, NEVER A RELATIONSHIP OR A PROFESSION (P12's review, 2026-10-28): a representative recorded as
+// Family Member or Estate Attorney (both on EXECUTOR_ROLES) signed the ledger as one, and Ask 13's sentence above the sign-off read
+// "the Family Member also ratifies …"; a co-representative recorded as Other signed as the "Personal Representative". A recorded
+// role that is a capacity (above) prints as recorded; otherwise the representative signs as the matter's approver (_agrApprover:
+// the words the agreement names that person by), and a co-representative as the matter's co-representative (Co-Personal
+// Representative, Co-Trustee, both on a pour-over, Co-Representative where there is neither a court nor a trust).
+function ledgerSignerRole(job, f) {
+  var r = fiduciaryCapacity(f, '');
+  if (r && (FIDUCIARY_PR_ROLE_RE.test(r) || FIDUCIARY_TRUSTEE_ROLE_RE.test(r))) return r;
+  if (!f || f.primary !== false) return _agrApprover(job);
+  var d = matterDef(job);
+  if (!d || (d.onProbate && !d.trust)) return 'Co-Personal Representative';
+  if (d.onProbate && d.trust) return 'Co-Personal Representative or Co-Trustee';
+  return d.trust ? 'Co-Trustee' : 'Co-Representative';
+}
+// ⚠⚠ WHO SIGNED A FILED COPY (2026-10-28, P12; EST-13: one signature turned "Disposition Ledger signed" green on a two-fiduciary
+// estate, and the record could not say whose). A copy's signers ride its record's `signedBy` ('; ' between names), set by the
+// press that filed it; one parser, read here and by agreementCoSignState.
+function signedByNames(rec) {
+  return String((rec && rec.signedBy) || '').split(';').map(function (n) { return n.trim(); }).filter(Boolean);
+}
+// Whose signature a paper every fiduciary signs carries on file: each signer with the newest live copy naming them (`rec`), those
+// still to sign (`owed`), and `complete` once every one is on a copy. With nobody recorded (`named` false: the one blank line) any
+// copy is the signature. DOM-free; the ledger and the signed schedules read it.
+function signedCopySignState(recs, signers) {
+  recs = recs || [];
+  var named = (signers || []).filter(function (x) { return String(x.name || '').trim(); });
+  var out = { recs: recs, named: named.length > 0, signers: [], owed: [], complete: false };
+  if (!named.length) {
+    out.signers = (signers || []).map(function (x) { return { name: '', role: x.role || '', rec: recs[recs.length - 1] || null }; });
+    out.owed = recs.length ? [] : out.signers;
+    out.complete = recs.length > 0;
+    return out;
+  }
+  named.forEach(function (x) {
+    var rec = recs.filter(function (r) { return signedByNames(r).some(function (n) { return samePerson(n, x.name); }); }).pop() || null;
+    var e = { name: x.name, role: x.role || '', rec: rec };
+    out.signers.push(e);
+    if (!rec) out.owed.push(e);
+  });
+  out.complete = !out.owed.length;
+  return out;
+}
+function ledgerSignState(job) { return signedCopySignState(ledgerSignedCopies(job), ledgerSigners(job)); }
 // ⚠ AT CLOSE, AN ESTATE WHOSE LEDGER IS UNSIGNED IS NAMED IN THE CLOSE QUESTION — never refused (P19; the close is
 // often the day the representative signs, and the page is filed to Drive as the job closes either way). '' otherwise.
+// ⚠ AND A LEDGER SOME OF THEM HAVE SIGNED NAMES WHO HAS NOT (2026-10-28, P12, EST-13).
 function ledgerCloseFlag(job) {
-  if (!job || !invFiduciaryMode(job) || ledgerSignedCopies(job).length) return '';
-  return 'The Disposition Ledger has no signed copy on file. It is filed to Drive as the job closes; have the '
-    + _agrApprover(job) + ' sign it, then file the signed copy on the Disposition Ledger card, under Closing the job on Job Admin & Inv.';
+  if (!job || !invFiduciaryMode(job)) return '';
+  var LS = ledgerSignState(job);
+  if (LS.complete) return '';
+  if (LS.recs.length && LS.named) {
+    var miss = LS.owed.map(function (f) { return f.name; });
+    return 'The Disposition Ledger on file is not signed by ' + _andJoin(miss) + '. Have ' + (miss.length === 1 ? 'them' : 'each of them')
+      + ' sign it, then file the copy they signed on the Disposition Ledger card, under Closing the job on Job Admin & Inv.';
+  }
+  var who = LS.signers.length > 1 ? _andJoin(LS.signers.map(function (f) { return f.name; })) + ' each' : 'the ' + _agrApprover(job);
+  return 'The Disposition Ledger has no signed copy on file. It is filed to Drive as the job closes; have '
+    + who + ' sign it, then file the signed copy on the Disposition Ledger card, under Closing the job on Job Admin & Inv.';
+}
+// ⚠⚠ WHAT A LEAVING LINE'S AUTHORITY READS ON THE CLOSE-OUT RECORD (2026-10-28, P12; DOC-11, REL-08: a lamp that left with no
+// written approval read "Authorized by —" on the ledger the representatives sign, a line one of two had signed read as complete,
+// and the package's Release Approvals record left the first out altogether). One answer, plain text, read by the Disposition
+// Ledger and probatePackageRecordHtml: the approval where it covers the line (invApprovalPaperText); "ratification owed" on a line
+// that left before its approval was complete (invRatificationOwed); "signed so far by …; still to sign: …" where some fiduciaries
+// have signed and others have not. '' where there is nothing to say (no approval, and none owed yet).
+function invAuthorityText(ref, job) {
+  var paper = invApprovalPaperText(ref, job);
+  if (!ref || !job || invApprovalComplete(ref, job) || !invWrittenReleaseNeeded(ref, job)) return paper;
+  var bits = [];
+  if (invRatificationOwed(ref, job)) bits.push('ratification owed');
+  var signed = invApprovalMoved(ref, job) ? '' : invApprovalSignedText(ref, job);
+  var miss = invApprovalMissing(ref, job);
+  if (signed && miss.length) bits.push('signed so far by ' + signed + '; still to sign: ' + _andJoin(miss));
+  else if (paper) bits.push(paper);
+  return bits.join(' \u2014 ');
+}
+// Whom a leaving line's written approval comes from, as the ledger's gap lines say it: every signer below where two or more sign,
+// the one signer by their role, the client on living work.
+// `byName` (P12's review): the package's record, which carries no signature lines, names them ("each of Thomas Ashworth and Nora
+// Ashworth") where the ledger says "every signer below".
+function _ledgerApproverWords(job, signers, byName) {
+  if (!invFiduciaryMode(job)) return 'the client';
+  var named = (signers || []).filter(function (x) { return x.name; });
+  if (named.length > 1) return byName ? 'each of ' + _andJoin(named.map(function (x) { return x.name; })) : 'every signer below';
+  return 'the ' + (((signers || [])[0] || {}).role || _agrApprover(job));
 }
 // A short list of lines for a gap sentence: "#3 Lamp, #7 Chair and 4 more".
 function _ledgerNames(list, max) {
@@ -38546,6 +38941,7 @@ function printDispositionLedger(jobId, opt) {
   // Inventory Report refuses, so the package leaves it out by name.
   if (!L.items.length) { if (opt && opt.asHtml) return { why: 'There is nothing in the inventory to record yet.' }; alert('There is nothing in the inventory to record yet.'); return; }
   var holder = L.holder;
+  var _fc = invAcceptCtx(job);
   var td = 'padding:2px 5px;border-bottom:1px solid #eee;vertical-align:top;';
   var noLink = typeof _invItemNoLinkHtml === 'function' ? _invItemNoLinkHtml : function (r) { return esc(_invItemNo(r)); };   // to its photograph (P13)
   var rows = L.rows.map(function(r){
@@ -38565,7 +38961,8 @@ function printDispositionLedger(jobId, opt) {
       + '<td style="' + td + '">' + esc(_invRecipient(job, r) || '—') + '</td>'
       // Who authorized it, each signer with their own day (P20): the one readable form, never the raw field.
       // On a client's own home an everyday line is approved by their word (2026-10-26), so it reads "the client", never "—".
-      + '<td style="' + td + '">' + esc(invApprovalPaperText(r, job) || (!invFiduciaryMode(job) && INV_RELEASE_DISPOSITIONS.indexOf(r.disposition) >= 0
+      // ⚠ AND WHAT IS OWED, SINCE 2026-10-28 (P12): ratification owed, or who has signed and who has not (invAuthorityText).
+      + '<td style="' + td + '">' + esc(invAuthorityText(r, job) || (!invFiduciaryMode(job) && INV_RELEASE_DISPOSITIONS.indexOf(r.disposition) >= 0
           && !invWrittenReleaseNeeded(r, job) ? 'the client' : '—')) + '</td>'
       + '<td style="' + td + 'white-space:nowrap;">' + (r.dispDate ? esc(fmtDate2(r.dispDate)) : '—') + '</td>'
       + '<td style="' + td + 'text-align:right;">' + _invMoney(r.gross) + '</td>'
@@ -38579,7 +38976,14 @@ function printDispositionLedger(jobId, opt) {
   var n = function (k, one, many) { return k + ' ' + (k === 1 ? one : many); };
   if (L.undecided.length) gaps.push('<strong>' + n(L.undecided.length, 'line has', 'lines have') + ' no disposition recorded</strong>: '
     + esc(_ledgerNames(L.undecided)) + '. The sign-off below is withheld until every line has one.');
+  var signers = ledgerSigners(job);
+  if (L.ratify.length) gaps.push('<strong>' + n(L.ratify.length, 'item', 'items') + ' left the property before ' + (L.ratify.length === 1 ? 'its' : 'their')
+    + ' written approval was complete</strong> (ratification owed): ' + esc(_ledgerNames(L.ratify)) + '.');
+  if (L.incomplete.length) gaps.push('<strong>' + n(L.incomplete.length, 'item leaving the property does', 'items leaving the property do')
+    + ' not yet have the written approval of ' + esc(_ledgerApproverWords(job, signers)) + '</strong>: ' + esc(_ledgerNames(L.incomplete)) + '.');
   if (L.noRecipient.length) gaps.push('<strong>' + n(L.noRecipient.length, 'item', 'items') + '</strong> left the property with no recipient recorded: ' + esc(_ledgerNames(L.noRecipient)) + '.');
+  if (L.waitTaker.length) gaps.push('<strong>' + n(L.waitTaker.length, 'item waits', 'items wait') + '</strong> for somebody to be named to take '
+    + (L.waitTaker.length === 1 ? 'it' : 'them') + ': ' + esc(_ledgerNames(L.waitTaker)) + '.');
   if (L.pending.length) gaps.push('<strong>' + n(L.pending.length, 'line', 'lines') + '</strong> sold, consigned or at auction with no proceeds recorded yet: ' + esc(_ledgerNames(L.pending)) + '.');
   if (L.recon) {
     L.recon.statements.forEach(function (x) {
@@ -38616,7 +39020,24 @@ function printDispositionLedger(jobId, opt) {
   }
   // The sign-off: one line per signer, or withheld while a line has no disposition. On living work nobody signs the ledger:
   // the family signs the Contents Record (P25, Q51), and the page says so.
-  var signers = ledgerSigners(job);
+  // ⚠⚠ ITS WORDS FIT THE PAGE'S STATE (2026-10-28, P12; Anthony, Ask 12: "approved as the record to date" while the stamp above reads
+  // IN PROGRESS, "the final record" only once every flagged line is checked and the list read, invStampReviewed. DOC-27: a family
+  // was asked to sign "the final record" on a page that said it was a working copy).
+  // ⚠⚠ AND NEVER UNDER ITS OWN "NOT YET COMPLETE" (P12's review, 2026-10-28, put to Anthony as Ask 12's follow-up; built as
+  // recommended): a REVIEWED stamp with a line leaving unapproved, or a sale with no proceeds, signed off as "the final record"
+  // under the block above that said the ledger was not yet complete. "The final record" only where that block is empty too.
+  var _final = !gaps.length && invStampReviewed(L.items, { namesOnly: true, fc: _fc });
+  // ⚠⚠ AND THE SIGNATURE RATIFIES WHAT LEFT EARLY (2026-10-28, P12; Anthony, Ask 13: print the gap, and the representatives'
+  // signature on the ledger at close ratifies it, a sentence above the sign-off; drafted, not reviewed: counsel bundle D23). It
+  // names every such item by number, never "and N more": a ratification covers what it names.
+  var _several = signers.filter(function (x) { return x.name; }).length > 1;
+  var ratifyNote = (invFiduciaryMode(job) && L.ratify.length)
+    ? '<div class="ledger-ratify" style="margin-top:14px;font-size:11px;line-height:1.55;border:1px solid #8a6d3b;border-radius:3px;padding:8px 11px;break-inside:avoid;">'
+      + 'By signing below, ' + (_several ? 'each signer' : 'the ' + esc((signers[0] && signers[0].role) || _agrApprover(job))) + ' also ratifies the release of '
+      + (L.ratify.length === 1 ? 'the item' : 'the ' + L.ratify.length + ' items') + ' marked <em>ratification owed</em> above ('
+      + esc(_andJoin(L.ratify.map(function (r) { return '#' + _invItemNo(r); }))) + '), which left the property before '
+      + (_several ? 'every signer&rsquo;s' : 'their') + ' written approval was recorded.</div>'
+    : '';
   var signoff = !invFiduciaryMode(job)
     ? '<div class="ledger-living-note" style="margin-top:18px;font-size:11px;line-height:1.55;color:#555;">This ledger records what the sold items brought. '
       + 'The Contents Record is the paper the client signs at close-out.</div>'
@@ -38624,9 +39045,9 @@ function printDispositionLedger(jobId, opt) {
     ? '<div style="margin-top:18px;font-size:11px;border:1px solid #A32D2D;border-radius:4px;padding:10px 12px;color:#7a2020;">'
       + '<strong>The sign-off is withheld.</strong> This page cannot be approved as the final record of the disposition of the property while '
       + n(L.undecided.length, 'line has', 'lines have') + ' no disposition recorded. Record one on every line, then print the ledger again.</div>'
-    : '<div style="margin-top:20px;font-size:11px;line-height:1.6;break-inside:avoid;">'
+    : ratifyNote + '<div style="margin-top:20px;font-size:11px;line-height:1.6;break-inside:avoid;">'
       + '<div style="font-weight:700;">Sign-off</div>'
-      + '<div>Reviewed and approved as the final record of the disposition of the property listed above.</div>'
+      + '<div>Reviewed and approved as ' + (_final ? 'the final record' : 'the record to date') + ' of the disposition of the property listed above.</div>'
       + signers.map(function (s) {
           return '<div style="margin-top:20px;">Signature: __________________________________ &nbsp; Date: ______________<br>'
             + '<span style="color:#888;">' + esc([s.name, s.role].filter(Boolean).join(', ')) + '</span></div>';
@@ -38634,7 +39055,7 @@ function printDispositionLedger(jobId, opt) {
       + '</div>';
   var html = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
     + _invDocHead(job, 'Disposition Ledger', 'Where each item went and what it brought &middot; proceeds net to ' + esc(holder))
-    + (L.items.length ? _invProgressStamp(L.items, { namesOnly: true, fc: invAcceptCtx(job) }) : '')
+    + (L.items.length ? _invProgressStamp(L.items, { namesOnly: true, fc: _fc }) : '')
     + gapBlock
     + (L.rows.length
         ? '<table style="width:100%;border-collapse:collapse;font-size:10.5px;"><thead><tr style="color:#888;text-align:left;">'
@@ -38786,7 +39207,12 @@ function _renderLedgerCard(job, all) {
   var n = function (k, one, many) { return k + ' ' + (k === 1 ? one : many); };
   var gaps = '';
   if (L.undecided.length) gaps += amber(n(L.undecided.length, 'line has', 'lines have') + ' no disposition yet &mdash; the sign-off is withheld until every line has one.');
+  // The page's gap lines, in its order (P12): what left before its approval was complete, what still lacks it, and "left" only for
+  // what has left.
+  if (L.ratify.length) gaps += amber(n(L.ratify.length, 'item', 'items') + ' left before ' + (L.ratify.length === 1 ? 'its' : 'their') + ' written approval was complete: ratification owed.');
+  if (L.incomplete.length) gaps += amber(n(L.incomplete.length, 'item leaving does', 'items leaving do') + ' not yet have every written approval.');
   if (L.noRecipient.length) gaps += amber(n(L.noRecipient.length, 'item', 'items') + ' left with no recipient recorded.');
+  if (L.waitTaker.length) gaps += amber(n(L.waitTaker.length, 'item waits', 'items wait') + ' for somebody to be named to take ' + (L.waitTaker.length === 1 ? 'it' : 'them') + '.');
   if (L.pending.length) gaps += amber(n(L.pending.length, 'line', 'lines') + ' sold, consigned or at auction with no proceeds recorded.');
   if (L.recon && L.recon.disagree) gaps += amber(n(L.recon.disagree, 'proceeds statement disagrees', 'proceeds statements disagree') + ' with the ledger &mdash; see Proceeds statements.');
   return '<div class="card" id="inv-ledger-card" style="margin-bottom:1rem;">'
@@ -38797,17 +39223,44 @@ function _renderLedgerCard(job, all) {
     + '<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:7px;">'
       + '<button class="btn-s" onclick="printDispositionLedger(' + jid + ')">Print</button>'
       + '<button class="btn-s" onclick="fileDispositionLedger(' + jid + ')">' + (filed ? 'Update the filed copy' : 'File to Drive') + '</button>'
-      + (invFiduciaryMode(job) ? signedCopyControlHtml(jid, 'ledger', { ref: LEDGER_SIGNED_REF, label: SIGNED_RECORD_KINDS.ledger.label }, 'File signed copy') : '')
     + '</div>'
     + '<div style="font-size:11px;margin-top:6px;">' + (filed
         ? 'Filed to Drive ' + esc(fmtDate2(_localDateOf(st.filedAt))) + (st.filedHow === 'close' ? ', as the job closed' : '')
           + (st.filedUrl ? ' &middot; <a href="' + esc(st.filedUrl) + '" target="_blank" rel="noopener" style="color:var(--bronze);">Filed copy</a>' : '')
         : '<span style="color:var(--gray);">Not in Drive yet' + (job.status === 'closed' ? '.' : ' &mdash; it is filed when the job closes, or now with File to Drive.') + '</span>')
     + '</div>'
-    + (signed.length ? signedRecordLinksHtml(jid, signed)
-        : invFiduciaryMode(job) ? '<div style="font-size:11px;color:var(--gray);margin-top:3px;">No signed copy on file &mdash; the ' + esc(_agrApprover(job)) + ' signs it at close-out.</div>'
-        : '<div style="font-size:11px;color:var(--gray);margin-top:3px;">The client signs the Contents Record, not this ledger.</div>')
+    // ⚠ EVERY FIDUCIARY SIGNS IT, AND THE CARD SAYS WHO HAS (2026-10-28, P12; EST-13): one row per signer with whether their
+    // signature is on a filed copy, and the press that files the copy signed by whoever is still to sign.
+    + (invFiduciaryMode(job)
+        ? '<div style="margin-top:6px;">' + signedCopySignersHtml(jid, 'ledger', { ref: LEDGER_SIGNED_REF, label: SIGNED_RECORD_KINDS.ledger.label }, ledgerSignState(job), 'File signed copy') + '</div>'
+          + (signed.length ? signedRecordLinksHtml(jid, signed)
+             : '<div style="font-size:11px;color:var(--gray);margin-top:3px;">No signed copy on file &mdash; ' + (ledgerSigners(job).filter(function (x) { return x.name; }).length > 1
+                 ? 'each signer signs it' : 'the ' + esc(_agrApprover(job)) + ' signs it') + ' at close-out.</div>')
+        : (signed.length ? signedRecordLinksHtml(jid, signed) : '<div style="font-size:11px;color:var(--gray);margin-top:3px;">The client signs the Contents Record, not this ledger.</div>'))
     + '</div>';
+}
+// ⚠⚠ WHO HAS SIGNED A PAPER EVERY FIDUCIARY SIGNS, AND THE PRESS FOR WHOEVER HAS NOT (2026-10-28, P12; EST-13): the ledger's and
+// the signed schedules'. One row per signer (✓ on the copy filed, or still to sign), then **File the copy signed by …** naming
+// everyone still to sign; where two or more are, each row carries its own press too (a co-trustee who signs on another day). With
+// nobody recorded (the one blank line) it is the plain control, `label`, as before. The signers ride the record's `signedBy`.
+function signedCopySignersHtml(jid, kind, meta, S, label) {
+  if (!S || !S.named) return signedCopyControlHtml(jid, kind, meta, label || 'File signed copy');
+  var owed = S.owed.map(function (x) { return x.name; });
+  var per = owed.length > 1;
+  var rows = S.signers.map(function (x) {
+    var day = x.rec ? (x.rec.signedOn || (x.rec.filedAt ? _ymdLocal(new Date(Number(x.rec.filedAt))) : '')) : '';
+    return '<div class="sc-signer" style="font-size:11px;line-height:1.6;' + (x.rec ? '' : 'color:#8a6d3b;') + '">'
+      + (x.rec ? '&#10003; ' : '&#9888; ') + esc(x.name) + (x.role ? ', ' + esc(x.role) : '') + ' &mdash; '
+      + (x.rec ? 'signed copy filed' + (day ? ' ' + esc(fmtDate2(day)) : '') : 'not signed on a copy filed yet')
+      + (!x.rec && per ? ' ' + signedCopyControlHtml(jid, kind, Object.assign({}, meta, { signedBy: x.name }), 'File the copy ' + x.name + ' signed') : '')
+      + '</div>';
+  }).join('');
+  // Every signer on a copy: a fresh copy may still be filed (a better scan), recorded as signed by them all, as the card offered
+  // before it named its signers.
+  var all = S.signers.map(function (x) { return x.name; });
+  return rows + '<div style="margin-top:4px;">' + (owed.length
+      ? signedCopyControlHtml(jid, kind, Object.assign({}, meta, { signedBy: owed.join('; ') }), 'File the copy signed by ' + _andJoin(owed))
+      : signedCopyControlHtml(jid, kind, Object.assign({}, meta, { signedBy: all.join('; ') }), 'File another copy')) + '</div>';
 }
 
 // ═══════════ DONATIONS: A RECEIPT FOR EVERY LINE, AND A RECORD PER CHARITY (P19) ═══════════
@@ -39215,10 +39668,16 @@ function ledgerDerivedLines(jobId, job, phase) {
   var out = [];
   if (!job) return out;
   if (invFiduciaryMode(job)) {
-    var sc = ledgerSignedCopies(job), last = sc[sc.length - 1];
-    out.push({ key: 'ledger_signed', ok: sc.length > 0, label: 'Disposition Ledger signed by the ' + _agrApprover(job),
-               detail: last ? 'signed copy filed ' + esc(fmtDate2(_ymdLocal(new Date(last.filedAt)))) + (last.filedBy ? ' by ' + esc(last.filedBy) : '')
-                            : 'not yet — print it from the Disposition Ledger card, under Closing the job on Job Admin & Inv, have it signed, and file the signed copy there' });
+    // ⚠ GREEN ONLY ONCE EVERY FIDUCIARY HAS SIGNED (2026-10-28, P12; EST-13: one signature turned it green on a two-fiduciary
+    // estate). Who is still to sign is named; with nobody recorded, any copy is the signature (ledgerSignState).
+    var LS = ledgerSignState(job), sc = LS.recs, last = sc[sc.length - 1];
+    var several = LS.signers.length > 1;
+    out.push({ key: 'ledger_signed', ok: LS.complete, label: several ? 'Disposition Ledger signed by each of ' + esc(_andJoin(LS.signers.map(function (x) { return x.name; })))
+                 : 'Disposition Ledger signed by the ' + _agrApprover(job),
+               detail: LS.complete ? 'signed copy filed ' + esc(fmtDate2(_ymdLocal(new Date(last.filedAt)))) + (last.filedBy ? ' by ' + esc(last.filedBy) : '')
+                 : (sc.length && LS.named) ? 'still to sign: ' + esc(_andJoin(LS.owed.map(function (x) { return x.name; })))
+                   + ' — file the copy they signed on the Disposition Ledger card, under Closing the job on Job Admin & Inv'
+                 : 'not yet — print it from the Disposition Ledger card, under Closing the job on Job Admin & Inv, have it signed, and file the signed copy there' });
   } else if (_jobInvRefs(jobId).length) {
     // ⚠ ON LIVING WORK THE CLIENT SIGNS THE CONTENTS RECORD (P25, Q51; P22 asked for a signed ledger here, which since
     // Q51 nobody signs). Asked only where the job has an inventory, as its card is drawn only there; a reminder, never a
@@ -39289,28 +39748,41 @@ function _renderLedgerCards(job, all) {
 // Court Inventory where invProbateRows holds (probate, both, or an unanswered matter) and the tier states values; the Trust
 // Schedule where the matter holds a trust and the tier states values; on an estate with a line on the inventory. `filed`:
 // the copies filed for each (kind `schedule`, ref the instrument).
-function signedScheduleRows(job, all) {
+function signedScheduleRows(job, all, full) {
   if (!job || !invFiduciaryMode(job) || !all || !all.length) return [];
   var d = matterDef(job), out = [];
   if (!invDocContractBlock(job, 'court') && invProbateRows(job)) {
-    out.push({ ref: 'Court Inventory', when: 'once the representative has adopted it', btn: 'File the adopted copy', label: 'Adopted Court Inventory' });
+    out.push({ ref: 'Court Inventory', kind: 'court', act: 'adopted', when: 'once the representative has adopted it', btn: 'File the adopted copy', label: 'Adopted Court Inventory' });
   }
   if (!invDocContractBlock(job, 'trustee') && d && d.trust) {
-    out.push({ ref: 'Trust Schedule', when: 'once the trustee has signed it as received', btn: 'File the received copy', label: 'Received Trust Schedule' });
+    out.push({ ref: 'Trust Schedule', kind: 'trustee', act: 'received', when: 'once the trustee has signed it as received', btn: 'File the received copy', label: 'Received Trust Schedule' });
   }
-  out.forEach(function (x) { x.filed = signedRecordsOf(job, 'schedule', x.ref); });
+  // With `full` (P12): `draft`, why the page is still DRAFT (scheduleDraftState: then it withholds its signature block and nothing is
+  // to be filed), and `signs`, who has signed the filed copies and who has not (signedCopySignState over scheduleSigners). Asked by
+  // the card and the close's list; the bar's own counts need neither, and the DRAFT reasons walk every line.
+  out.forEach(function (x) {
+    x.filed = signedRecordsOf(job, 'schedule', x.ref);
+    x.draft = full ? scheduleDraftState(job, x.kind, all).why : [];
+    // Each signer in the capacity the paper prints them in (scheduleSignerCapacity; P12's review: the raw role recorded).
+    var who = full ? scheduleSigners(job, x.kind).map(function (f) { return { name: f.name, role: scheduleSignerCapacity(f, x.kind) }; }) : [];
+    x.signs = full ? signedCopySignState(x.filed, who.length ? who : [{ name: '', role: '' }]) : null;
+  });
   return out;
 }
 function _renderSignedSchedulesCard(job, all) {
-  var rows = signedScheduleRows(job, all);
+  var rows = signedScheduleRows(job, all, true);
   if (!rows.length) return '';
   var jid = job.id;
   var row = 'padding:7px 0;border-bottom:0.5px solid var(--border);font-size:11.5px;line-height:1.5;';
   return '<div class="card" id="inv-schedules-card" style="margin-bottom:1rem;">'
     + '<div class="sec" style="margin-bottom:4px;">Signed schedules <span style="font-size:9px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(the copy the representative or trustee signs at close-out)</span></div>'
     + rows.map(function (x) {
-        return '<div class="inv-rel-row" style="' + row + '"><div><strong>' + esc(x.ref) + '</strong>, ' + esc(x.when) + '</div>'
-          + '<div class="inv-rel-ctl">' + signedCopyControlHtml(jid, 'schedule', { ref: x.ref, label: x.label }, x.filed.length ? 'File another copy' : x.btn)
+        // ⚠ A DRAFT IS SAID AS ONE, NOT "NOT FILED YET" (P12, VAL-26), and each signer is named with whether their signature is on a
+        // copy filed (P12, EST-13): the press files the copy signed by whoever is still to sign.
+        return '<div class="inv-rel-row" style="' + row + '"><div><strong>' + esc(x.ref) + '</strong>, ' + esc(x.when)
+          + (x.draft.length ? '<div style="font-size:10.5px;color:#8a6d3b;">Still a draft (' + esc(x.draft.join('; ')) + '): it withholds its signature block until then.</div>' : '')
+          + '</div>'
+          + '<div class="inv-rel-ctl">' + signedCopySignersHtml(jid, 'schedule', { ref: x.ref, label: x.label }, x.signs, x.filed.length ? 'File another copy' : x.btn)
           + signedRecordLinksHtml(jid, x.filed) + '</div></div>';
       }).join('')
     + '</div>';
@@ -39323,7 +39795,7 @@ function _renderContentsCard(job, all) {
   var st = (job.docState && job.docState[CONTENTS_DOC_KEY]) || null;
   var filed = !!(st && st.filedAt);
   var signed = signedRecordsOf(job, 'contents', CONTENTS_SIGNED_REF);
-  var undecided = all.filter(function (r) { return !r.disposition; }).length;
+  var undecided = all.filter(function (r) { return !r.disposition || r.disposition === 'Hold'; }).length;   // Hold too (P12, LIV-11)
   return '<div class="card" id="inv-contents-card" style="margin-bottom:1rem;">'
     + '<div class="sec" style="margin-bottom:4px;">Contents Record <span style="font-size:9px;font-weight:400;color:var(--gray);text-transform:none;letter-spacing:0;">(the record the client signs at close-out)</span></div>'
     + (undecided ? '<div style="font-size:10.5px;color:#8a6d3b;">' + undecided + ' item' + (undecided === 1 ? ' has' : 's have') + ' no destination yet &mdash; the sign-off is withheld until every item has one.</div>' : '')
@@ -39723,11 +40195,16 @@ function dispositionRecord(jobId) {
     groups: groups,
     total: items.length,
     undecided: items.filter(function(r){ return !r.disposition; }).length,
+    // ⚠ A LINE ON HOLD HAS NO DESTINATION YET (2026-10-28, P12; LIV-11: a held side table printed "not recorded" under "Where it
+    // went" while the sign-off below it was offered). On this paper Hold counts with the undecided: named, and the sign-off waits.
+    held: items.filter(function(r){ return r.disposition === 'Hold'; }).length,
     unnamed: items.filter(function(r){ return !r.objectName; }).length,
     leaving: leaving.length,
     // The gap this document exists to close: it left the property and nobody wrote down who
     // took it. Move is excluded — its destination is the job's own recorded new address.
-    noRecipient: leaving.filter(function(r){ return !_invRecipient(job, r); }).length
+    // ⚠ "LEFT" ONLY FOR WHAT HAS LEFT (2026-10-28, P12; LIV-21): a line still in the house with nobody named yet waits for a taker.
+    noRecipient: leaving.filter(function(r){ return !_invRecipient(job, r) && invRecordedGone(r, job); }).length,
+    waitTaker: leaving.filter(function(r){ return !_invRecipient(job, r) && !invRecordedGone(r, job); }).length
   };
 }
 
@@ -39755,6 +40232,7 @@ function printContentsRecord(jobId, opt) {
   // not anyone shared it). Each is said only where it is true; a line with no photograph is named with the gaps.
   var unshot = rec.items.filter(function(r){ return !_invHasPhoto(r); }).length;
   var shared = !fid && photoShareLive(job).length > 0;
+  var _fc = invAcceptCtx(job);
 
   // ⚠ THE GAP BLOCK GOES ABOVE THE INDEX, the As-Found Record's rule and the release-cautions
   // rule: a reader works down this page, so a caveat printed under the list has arrived after
@@ -39762,11 +40240,18 @@ function printContentsRecord(jobId, opt) {
   var gaps = [];
   if (rec.undecided) gaps.push('<strong>' + rec.undecided + '</strong> item' + (rec.undecided === 1 ? '' : 's')
     + ' with no destination recorded yet — listed at the end under &ldquo;Not yet decided&rdquo;');
+  if (rec.held) gaps.push('<strong>' + rec.held + '</strong> item' + (rec.held === 1 ? '' : 's')
+    + ' held back with no destination yet — listed under &ldquo;Hold&rdquo;');
   if (rec.unnamed) gaps.push('<strong>' + rec.unnamed + '</strong> photographed item'
     + (rec.unnamed === 1 ? '' : 's') + ' not yet named');
   if (rec.noRecipient) gaps.push('<strong>' + rec.noRecipient + '</strong> item'
     + (rec.noRecipient === 1 ? ' that has' : 's that have') + ' left the property with no recipient recorded');
+  if (rec.waitTaker) gaps.push('<strong>' + rec.waitTaker + '</strong> item'
+    + (rec.waitTaker === 1 ? ' waits' : 's wait') + ' for somebody to be named to take ' + (rec.waitTaker === 1 ? 'it' : 'them'));
   if (unshot) gaps.push('<strong>' + unshot + '</strong> item' + (unshot === 1 ? '' : 's') + ' listed with no photograph');
+  // The sign-off's words follow the stamp's state (Ask 12, invStampReviewed), and never "the final record" under this page's own
+  // "not yet complete" (P12's review, 2026-10-28, as the ledger): handed to contentsRecordSignoff on the record.
+  rec.final = !gaps.length && invStampReviewed(rec.items, { namesOnly: true, fc: _fc });
   var gapBlock = gaps.length
     ? '<div style="border:1px solid #8a6d3b;border-radius:3px;padding:9px 12px;margin-bottom:12px;font-size:11px;color:#3c3228;line-height:1.55;">'
       + '<strong style="color:#8a6d3b;">This record is not yet complete.</strong><ul style="margin:5px 0 0 16px;padding:0;">'
@@ -39808,7 +40293,7 @@ function printContentsRecord(jobId, opt) {
 
   var html = '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
     + head
-    + _invProgressStamp(rec.items, { namesOnly: true, fc: invAcceptCtx(job) })
+    + _invProgressStamp(rec.items, { namesOnly: true, fc: _fc })
     + gapBlock
     + (rec.total
         ? body
@@ -39833,16 +40318,21 @@ function printContentsRecord(jobId, opt) {
 // of what stayed and what went, withheld while any line has no destination (as the Disposition Ledger withholds its
 // sign-off), and on living work only: an estate signs its Disposition Ledger. DOM-free markup; '' on an estate or with
 // nothing recorded.
+// ⚠ ITS WORDS FIT THE PAGE'S STATE (2026-10-28, P12; Anthony, Ask 12): "the record to date" while the stamp above reads IN PROGRESS,
+// "the final record" once every flagged line is checked and the list read (`rec.final`, invStampReviewed; DOC-27, LIV-03), and the
+// page's own gap block is empty (P12's review). And a line on Hold has no destination yet, so the sign-off waits for it as for an
+// undecided one (LIV-11).
 function contentsRecordSignoff(job, rec) {
   if (!job || invFiduciaryMode(job) || !rec || !rec.total) return '';
-  if (rec.undecided) {
+  var open = (rec.undecided || 0) + (rec.held || 0);
+  if (open) {
     return '<div class="contents-signoff-held" style="margin-top:18px;font-size:11px;border:1px solid #A32D2D;border-radius:4px;padding:10px 12px;color:#7a2020;">'
-      + '<strong>The sign-off is withheld.</strong> ' + rec.undecided + ' item' + (rec.undecided === 1 ? ' has' : 's have')
-      + ' no destination recorded yet. Record one on every item, then print this record again for signature.</div>';
+      + '<strong>The sign-off is withheld.</strong> ' + open + ' item' + (open === 1 ? ' has' : 's have')
+      + ' no destination recorded yet' + (rec.held ? ' (' + rec.held + ' on Hold)' : '') + '. Record one on every item, then print this record again for signature.</div>';
   }
   return '<div class="contents-signoff" style="margin-top:20px;font-size:11px;line-height:1.6;break-inside:avoid;">'
     + '<div style="font-weight:700;">Sign-off</div>'
-    + '<div>Reviewed and accepted as the record of what stayed and what left the property, and where each item went.</div>'
+    + '<div>Reviewed and accepted as ' + (rec.final ? 'the final record' : 'the record to date') + ' of what stayed and what left the property, and where each item went.</div>'
     + '<div style="margin-top:20px;">Signature: __________________________________ &nbsp; Date: ______________<br>'
     + '<span style="color:#888;">' + esc([String(job.name || '').trim(), 'Client'].filter(Boolean).join(', ')) + '</span></div>'
     + '</div>';
@@ -39852,6 +40342,7 @@ function contentsRecordSignoff(job, rec) {
 var CONTENTS_RECORD_GLOSS = {
   'Move': 'went with you to the new home',
   'Distribute': 'given to a named person',
+  'Hold': 'held back for now: no destination yet',   // 2026-10-28, P12 (LIV-11): it printed as a pile with no word
   '': 'no destination recorded yet'
 };
 
@@ -51674,7 +52165,7 @@ function loadJobPlanTab() {
   // ...and pull anything another device captured, redrawing once it lands. The local
   // copy renders immediately either way, so this never blocks the plan appearing.
   // P24: the first read of the sheet also lets the walkthrough's collections join the inventory (they are briefed in rooms).
-  refreshPhotoRefs(jobId, function(changed){ if (collectionLinesEnsure(jobId) || changed) loadJobPlanTab(); });
+  refreshPhotoRefs(jobId, function(changed){ if (collectionLinesEnsure(jobId) || changed) loadJobPlanTab(); else if (typeof _closeReadyRepaint === 'function') _closeReadyRepaint(jobId); });
 
   // Home Prep for Sale gets a stripped-down plan: no PS crew, room phases, or end-of-job
   // logistics — just vendor sourcing, budget, and a coordination checklist.
@@ -54858,25 +55349,29 @@ function deskFoldState(jobId, job, fold, all, today) {
     // typeof, as the bar's other late readers are: belt-and-braces for a pinned sandbox that lifts this line without the list.
     var SC = typeof signedScheduleRows === 'function' ? signedScheduleRows(job, all) : [];
     var scOpen = SC.filter(function (x) { return !x.filed.length; });
-    if (R && R.disagree) { st.openByDefault = true; bit(R.disagree === 1 ? '1 proceeds statement disagrees with its lines' : R.disagree + ' proceeds statements disagree with their lines', 'red'); }
+    var soldGone = 0;
+    // At the close the list says it, in its place (closeReadiness's `sold_disagree`, red); before it the bar opens on it, red, first.
+    if (R && R.disagree) { st.openByDefault = true; if (!atClose) bit(R.disagree === 1 ? '1 proceeds statement disagrees with its lines' : R.disagree + ' proceeds statements disagree with their lines', 'red'); }
     if (atClose) {
       // Everything Close job refuses on, each by name, off the refusal's own list in its short words (jobCloseBlockers(job,
       // 'short'), 2026-10-23): a refusal added there is named here without a second copy of it. Each in the list's own tone
       // ('bits'): the vendors red, as the Close-out card's scorecard is at the close (Q92), the rest amber.
       jobCloseBlockers(job, 'bits').forEach(function (b) { bit(b.text, b.tone); });
-      var sig = all.length ? ledgerDerivedLines(jobId, job)[0] : null;
-      if (sig && !sig.ok) bit((sig.key === 'ledger_signed' ? 'Disposition Ledger' : 'Contents Record') + ' not signed yet', 'amber');
-      scOpen.forEach(function (x) { bit(x.label + ' not filed yet', 'amber'); });
+      // ⚠⚠ THEN EVERYTHING ELSE CLOSE JOB'S QUESTION NAMES, OFF THE SAME LIST (2026-10-28, P12: closeReadiness, each with its count
+      // and first item numbers, in its tone). It replaces this bar's own lines for the ledger, the schedules, the donations and
+      // the sold lines, which the list carries; a schedule still DRAFT says so rather than "not filed yet" (VAL-26).
+      if (typeof closeReadiness === 'function') closeReadiness(jobId, job, all, { evenUnread: true }).items.forEach(function (x) { bit(x.short, x.tone); });
+    } else {
+      var donGone = all.filter(function (r) { return r.disposition === 'Donate' && invRecordedGone(r, job) && !invDonationReceipted(job, r); }).length;
+      if (donGone) bit(s(donGone, 'donated line', 'donated lines') + ' gone with no receipt', 'amber');
+      var soldGone = R ? R.unlisted.filter(function (r) { return invRecordedGone(r, job); }).length : 0;
+      if (soldGone) bit(s(soldGone, 'sold line', 'sold lines') + ' gone on no statement', 'amber');
+      // ⚠ A STATEMENT RECORDED AND NOT FILED, AND A LINE ON TWO (2026-10-23, the desk's review): proceedsLine's own two gaps,
+      // read off the same reconciliation. Recording a statement cleared "gone on no statement", so the line went all grey just
+      // as File the statement became the next press, and until the scan is filed the sold line is not counted as gone.
+      if (R && R.unfiled) bit(s(R.unfiled, 'statement', 'statements') + ' not filed to Drive', 'amber');
+      if (R && R.twice.length) bit(s(R.twice.length, 'line', 'lines') + ' on two statements', 'amber');
     }
-    var donGone = all.filter(function (r) { return r.disposition === 'Donate' && invRecordedGone(r, job) && !invDonationReceipted(job, r); }).length;
-    if (donGone) bit(s(donGone, 'donated line', 'donated lines') + ' gone with no receipt', 'amber');
-    var soldGone = R ? R.unlisted.filter(function (r) { return invRecordedGone(r, job); }).length : 0;
-    if (soldGone) bit(s(soldGone, 'sold line', 'sold lines') + ' gone on no statement', 'amber');
-    // ⚠ A STATEMENT RECORDED AND NOT FILED, AND A LINE ON TWO (2026-10-23, the desk's review): proceedsLine's own two gaps,
-    // read off the same reconciliation. Recording a statement cleared "gone on no statement", so the line went all grey just
-    // as File the statement became the next press, and until the scan is filed the sold line is not counted as gone.
-    if (R && R.unfiled) bit(s(R.unfiled, 'statement', 'statements') + ' not filed to Drive', 'amber');
-    if (R && R.twice.length) bit(s(R.twice.length, 'line', 'lines') + ' on two statements', 'amber');
     if (co) {
       var c = closeoutState(jobId, job);
       bit('close-out ' + [c.sat, c.reviewSent, c.referral].filter(Boolean).length + ' of 3 done', 'grey');
@@ -54886,7 +55381,7 @@ function deskFoldState(jobId, job, fold, all, today) {
     donationGroups(job, all).forEach(function (g) { don += g.lines.length; donRc += g.receipted; });
     if (don) bit(donRc + ' of ' + s(don, 'donated line', 'donated lines') + ' receipted', 'grey');
     if (R && R.statements.length) bit(s(R.statements.length, 'statement', 'statements') + ' recorded', 'grey');
-    if (R && R.unlisted.length - soldGone > 0) bit(s(R.unlisted.length - soldGone, 'sold line', 'sold lines') + ' on no statement yet', 'grey');
+    if (!atClose && R && R.unlisted.length - soldGone > 0) bit(s(R.unlisted.length - soldGone, 'sold line', 'sold lines') + ' on no statement yet', 'grey');
     return fin();
   }
 
@@ -54919,6 +55414,8 @@ function _deskFoldHeadsRepaint(jobId) {
   if (!sel || (parseInt(sel.value) || 0) !== jobId) return false;
   // The top of the tab first, Home Prep's too: the Urgent strip and Job Admin's count and lines (2026-10-22).
   if (typeof _deskNowRepaint === 'function') _deskNowRepaint(jobId);
+  // And the Close-out card's list of what the close leaves open (P12), wherever the card is drawn for this client.
+  if (typeof _closeReadyRepaint === 'function') _closeReadyRepaint(jobId);
   var job = _invJob(jobId);
   if (!job || job.svc === 'prep') return false;
   var all = null, any = false;
@@ -56212,7 +56709,7 @@ function closeoutMeta(jobId, job) {
 
 function _coFmt(iso) { return iso ? fmtDate2(_localDateOf(iso)) : ''; }
 
-function renderCloseoutBody(jobId, job) {
+function renderCloseoutBody(jobId, job, host) {
   var c = closeoutState(jobId, job);
   var ra = job.reviewAsk || {};
   var num = function(n, done){ return '<span class="co-num' + (done ? ' co-num-done' : '') + '">' + (done ? '&#10003;' : n) + '</span>'; };
@@ -56245,21 +56742,24 @@ function renderCloseoutBody(jobId, job) {
       + chkGrid(planChk(jobId, 'referral_ask', 'Referral ask made — who else could use us?')) + '</div></div>'
     + '<div class="co-step">' + num(4, c.vendors > 0 && c.rated === c.vendors) + '<div class="co-main"><div class="co-ttl">Vendor scorecard <span class="co-meta">' + scoreHd + '</span></div>'
       + '<div class="co-sub">One to five stars on every vendor used. Each rating saves straight to the Vendor Directory&rsquo;s rolling score.</div>'
-      + renderVendorScorecard(jobId, job) + '</div></div>';
+      + renderVendorScorecard(jobId, job) + '</div></div>'
+    // ⚠ AND WHAT THE CLOSE LEAVES OPEN (2026-10-28, P12): the one list Close job's question and the Closing bar read (closeReadiness),
+    // on both hosts; its own id per host, repainted by id (_closeReadyRepaint). typeof: a sandbox that lifts this body alone.
+    + (typeof closeReadinessHtml === 'function' ? closeReadinessHtml(jobId, job, host) : '');
 }
 // `host`: 'plan' or 'admin' — two copies can be in the DOM at once (both tabs are panels), so each
 // carries its own id and a repaint reaches both.
 function renderCloseoutCard(jobId, job, host) {
   return '<div class="card co-card" style="margin-bottom:1rem;">'
     + '<div class="co-hd"><span class="co-hd-t">Close-out</span><span class="co-hd-m" id="closeout-meta-' + host + '-' + jobId + '">' + closeoutMeta(jobId, job) + '</span></div>'
-    + '<div id="closeout-' + host + '-' + jobId + '">' + renderCloseoutBody(jobId, job) + '</div></div>';
+    + '<div id="closeout-' + host + '-' + jobId + '">' + renderCloseoutBody(jobId, job, host) + '</div></div>';
 }
 function _repaintCloseout(jobId) {
   var job = jobs.find(function(j){ return j.id === jobId; });
   if (!job) return;
   ['plan', 'admin'].forEach(function(host){
     var el = document.getElementById('closeout-' + host + '-' + jobId);
-    if (el) el.innerHTML = renderCloseoutBody(jobId, job);
+    if (el) el.innerHTML = renderCloseoutBody(jobId, job, host);
     var m = document.getElementById('closeout-meta-' + host + '-' + jobId);
     if (m) m.innerHTML = closeoutMeta(jobId, job);
   });
@@ -58878,7 +59378,7 @@ function renderJobPlan(jobId, job, est) {
     // The client half of the close — the call, the review ask, the referral ask and the required
     // vendor scorecard — is ONE renderer, shared with Job Admin & Inv. See renderCloseoutBody.
     planSubsec('Client &amp; vendors') +
-    '<div id="closeout-plan-' + jobId + '">' + renderCloseoutBody(jobId, job) + '</div>' +
+    '<div id="closeout-plan-' + jobId + '">' + renderCloseoutBody(jobId, job, 'plan') + '</div>' +
     '<div style="font-size:11px;color:var(--gray);margin-top:10px;line-height:1.5;">Financial close' + (ctx.probateTrack ? ', the §733.604 filing list' : '') +
       (ctx.trustTrack ? ', the trustee&rsquo;s list' : '') +   // P19: the trust track has a desk list of its own
       ' and records are desk work: they are under <strong>Job Admin</strong>, at the top of the <strong>Job Admin &amp; Inv</strong> tab.</div>';

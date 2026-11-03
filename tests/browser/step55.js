@@ -229,8 +229,10 @@ const HOUSE = ['Living Room', 'Kitchen', 'Dining Room', 'Primary Suite', 'Bedroo
       // RESTATED (2026-10-10): the schedule heads with the trust (the one party rule), the decedent in brackets after it.
       ok(pr.text.indexOf('The Adler Family Trust') < pr.text.indexOf('Margaret Doe'), 'the trust heads the page, the decedent after it');
       eq(count(pr.text, 'Received for the trust’s records by'), 2, '⚠⚠ two trustees recorded: two lines');
-      has(pr.text, 'Ruth Adler · Successor Trustee', 'the representative named under hers');
-      has(pr.text, 'Daniel Adler · Successor Trustee', 'and the co-trustee under his');
+      // RESTATED (P12, 2026-10-28; DOC-13): each signs in the role recorded on them where it is a capacity on this paper (both
+      // recorded as Trustee); the paper's word only where none is.
+      has(pr.text, 'Ruth Adler · Trustee', 'the representative named under hers');
+      has(pr.text, 'Daniel Adler · Trustee', 'and the co-trustee under his');
       // Under print media at Letter width, through the same printer.
       await p.waitForTimeout(800); await hook();
       await p.setViewportSize({ width: 816, height: 1056 });
@@ -281,8 +283,10 @@ const HOUSE = ['Living Room', 'Kitchen', 'Dining Room', 'Primary Suite', 'Bedroo
       const pr = await lastPrint();
       ok(pr.html.indexOf('Court Inventory (§733.604) — Tangible Personal Property') >= 0, 'fixture: the Court Inventory printed');   // its own name since P14
       eq(count(pr.text, 'Reviewed and adopted by'), 2, '⚠⚠ two personal representatives: two adoption lines');
-      has(pr.text, 'Ruth Adler · Personal Representative / authorized fiduciary', 'each named');
-      has(pr.text, 'Paul Finch · Personal Representative / authorized fiduciary', 'the co-personal representative too');
+      // RESTATED (P12, 2026-10-28; DOC-13): each in the role recorded on them (both recorded as Personal Representative).
+      has(pr.text, 'Ruth Adler · Personal Representative', 'each named');
+      has(pr.text, 'Paul Finch · Personal Representative', 'the co-personal representative too');
+      lacks(pr.text, 'Paul Finch · Personal Representative / authorized fiduciary', '…in the role recorded, not the paper\'s word');
       await p.waitForTimeout(800); await hook();
     });
 

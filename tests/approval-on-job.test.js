@@ -524,7 +524,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       fns: AGR_FNS.concat(['_actor', '_invStampBy', 'deviceUser', '_handoverBy', 'docRecordSent', 'markDocSent', 'applyJobTransition', 'paymentStageWord', 'docState',
         '_jobTouch', '_ymdLocal', '_stamp', '_todayStr', 'fmtDate2', 'stagePaidTotal', 'paymentCounts', 'jobPayments', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'noDraftToConfirm', 'docDraftPending', 'roundCents', 'paymentLive', 'isRefundRecord',
         // P19: an estate's close names its unsigned Disposition Ledger.
-        'ledgerCloseFlag', 'ledgerSignedCopies', 'signedRecordsOf', 'jobListEntries', '_agrApprover']),
+        'ledgerCloseFlag', 'ledgerSignedCopies', 'ledgerSignState', 'signedCopySignState', 'signedByNames', 'ledgerSigners', 'jobFiduciaries', 'invFiduciaryMode', 'fiduciaryCapacity', 'signedRecordsOf', 'jobListEntries', '_agrApprover']),
       vars: AGR_VARS.concat(['DOC_SEND_PROVIDERS', 'JOB_TRANSITIONS', 'LEDGER_SIGNED_REF']),
       stubs: {
         document: domStub({}), currentEstimate: null,

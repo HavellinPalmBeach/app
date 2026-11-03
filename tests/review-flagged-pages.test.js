@@ -437,8 +437,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The printers hand in what the pages say: the three pages that print no value ask for names, the Estate Inventory PDF names
     // them once, and every printer hands in the job's facts (and so the read).
     has(live(fn('printContentsList')), '_invProgressStamp(rec.items, { noValues: true, fc: invAcceptCtx(job) })', 'the Contents List asks without values');
-    has(live(fn('printDispositionLedger')), '_invProgressStamp(L.items, { namesOnly: true, fc: invAcceptCtx(job) })', 'the Disposition Ledger asks for names');
-    has(live(fn('printContentsRecord')), '_invProgressStamp(rec.items, { namesOnly: true, fc: invAcceptCtx(job) })', 'the Contents Record asks for names');
+    // RESTATED 2026-10-28 (P12; Anthony, Ask 12): the context is read once (`_fc`), since the sign-off's words ask the same stamp
+    // (invStampReviewed) with it.
+    has(live(fn('printDispositionLedger')), '_invProgressStamp(L.items, { namesOnly: true, fc: _fc })', 'the Disposition Ledger asks for names');
+    has(live(fn('printDispositionLedger')), 'var _fc = invAcceptCtx(job);', '…with the job\'s context');
+    has(live(fn('printDispositionLedger')), 'invStampReviewed(L.items, { namesOnly: true, fc: _fc })', '…and its sign-off asks the same stamp');
+    has(live(fn('printContentsRecord')), '_invProgressStamp(rec.items, { namesOnly: true, fc: _fc })', 'the Contents Record asks for names');
+    has(live(fn('printContentsRecord')), 'var _fc = invAcceptCtx(job);', '…with the job\'s context');
     has(live(fn('printEstateInventoryReport')), '_avUnreviewedStamp(all, { noAccepted: true, fc: _ac })', 'the Estate Inventory PDF prints no second count');
 
     PAGES.forEach(([f]) => {

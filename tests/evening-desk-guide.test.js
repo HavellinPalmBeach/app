@@ -934,6 +934,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(t, 'Close job, in the band, refuses until every vendor used is rated, every key is returned or recorded lost, and no incident is open.', 'as the page says');
     const tr = code(fn('applyJobTransition'));
     ['ledgerCloseFlag(', 'closeOpenWorkFlag('].forEach((w) => has(tr, w, 'and names, without refusing: ' + w));
+    // P12 (2026-10-28): what it names is the one list the Closing bar reads at the close (closeReadiness).
+    has(code(fn('closeOpenWorkFlag')), 'closeReadiness(job.id, job)', 'the question names the one list…');
+    has(code(fn('deskFoldState')), 'closeReadiness(jobId, job, all, { evenUnread: true })', '…the Closing bar reads at the close');
+    has(t, 'It names everything else, without refusing, as the Closing bar does.', 'as the page says');
+    lacks(t, 'It names, without refusing, an unsigned ledger, rooms not cleared and items leaving with nobody named.', '⚠ never the old, short list');
+    has(code(fn('signedCopySignersHtml')), "'File the copy signed by ' + _andJoin(owed)", 'on an estate the ledger\'s press names who signed');
+    has(t, 'File the copy signed by …, each representative', 'as the page says');
     has(code(fn('activateOrCycle')), 'fileDispositionLedger(jobId, { auto: true }); fileContentsRecord(jobId, { auto: true });', 'closing files the closing papers by itself');
     has(t, 'Closing files the closing papers to Drive by itself.', 'as the page says');
   }
