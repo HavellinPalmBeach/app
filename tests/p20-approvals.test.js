@@ -300,7 +300,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(text(Q._renderInvPanel(Q.jobs[0], Q._photoRefs[7][1])), 'Signed: Ruth Adler (Oct 1, 2026); Sam Adler (Oct 3, 2026) · still to sign: Daniel Adler',
         'and, where it is open, who is still to sign');
     // The Appraisal Worklist's firearm line.
-    const Wk = desk(['printAppraisalWorklist', 'guideLinkHtml'], TRUST(), lines(), { maivAggregate: () => ({ count: 0, total: 0, settled: true, over: false, unvalued: 0 }) });
+    const Wk = desk(['printAppraisalWorklist', 'guideLinkHtml', '_apprGroupList'], TRUST(), lines(), { maivAggregate: () => ({ count: 0, total: 0, settled: true, over: false, unvalued: 0 }) });
     const wr = attempt(() => Wk.printAppraisalWorklist(7));
     const wt = wr.ok ? text((Wk.__log.printed[0] || {}).html) : 'threw: ' + wr.err;
     has(wt, '#4 Remington 870 — Written authority is not complete. Daniel Adler has not approved it, and every co-trustee must. Signed so far by Ruth Adler (Oct 1, 2026).',
@@ -463,7 +463,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                       LINE('v4', 4, { objectName: 'Clock', disposition: 'Keep', channel: 'Ashley Jerome', flagDisputed: true })];
     const lines = mk();
     const S = desk(['_invEdit', '_invBulkApply', 'invReleaseCautions', '_renderInvRow', '_renderInvPanel', 'printApprovalRequest', 'invHavellinRecipient',
-                    'invStaffRefused', 'havellinPeople'], LIVING(), lines,
+                    'invStaffRefused', 'havellinPeople', 'invAppraisalInProgress', 'invApprInProgressBadge'], LIVING(), lines,
                    { contractors: [{ id: 'c9', name: 'Carla Ortiz', role: 'PS', status: 'inactive' }], _invDetailRefs: () => [], _invPhotoSiblings: () => [] });
     const job = S.jobs[0];
     const el = (v) => ({ value: v, type: 'text' });
@@ -519,7 +519,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(dl.ok, 'the Disposition Ledger prints' + (dl.ok ? '' : ': ' + dl.err));
     has((CR.__log.printed[1] || {}).html, 'GOING TO ASHLEY JEROME, WHO WORKS WITH HAVELLIN', '⚠ and so does the Disposition Ledger the client signs');
     // An estate keeps P19's refusal, unchanged, and never prints the living caution.
-    const E = desk(['_invEdit', '_invBulkApply', 'invReleaseCautions', 'printApprovalRequest'], PROBATE(), mk(),
+    const E = desk(['_invEdit', '_invBulkApply', 'invReleaseCautions', 'printApprovalRequest', 'invAppraisalInProgress', 'invApprInProgressBadge'], PROBATE(), mk(),
       { contractors: [{ id: 'c9', name: 'Carla Ortiz', role: 'PS', status: 'inactive' }] });
     E._invEdit(8, 'v1', 'channel', el('Ashley Jerome'));
     eq(E._photoRefs[8][0].channel, undefined, '⚠ an estate still refuses the write');

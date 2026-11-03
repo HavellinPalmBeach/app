@@ -1078,7 +1078,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const gsv = (GS.match(/var BACKEND_VERSION = '([^']+)';/) || [])[1] || '';
     ok(B.BACKEND_MIN_VERSION >= '2026-11-02c', '⚠⚠ BACKEND_MIN_VERSION is 2026-11-02c or later (it carries both 2026-11-02b builds) (' + B.BACKEND_MIN_VERSION + ')');
     ok(gsv >= B.BACKEND_MIN_VERSION, 'main-sync.gs is at least what the app asks for (' + gsv + ')');
-    // RESTATED on the merge with P13 (both named 2026-11-02b; 2026-11-02c carries both): the line opens with 2026-11-02c and the envelope.
-    ok(String(B.BACKEND_FEATURE_COST.version || '').indexOf('on a deployment older than 2026-11-02c, a copy of the app that has not been reloaded') === 0, '⚠ the banner\'s version line opens with the envelope\'s gap');
+    // RESTATED on the merge with P13 (both named 2026-11-02b; 2026-11-02c carries both), and again on merging P15 (2026-11-02e since main's eBay took 2026-11-02d; it
+    // carries 2026-11-02c): P15's gap leads, and 2026-11-02c's envelope follows it at once.
+    const _vl = String(B.BACKEND_FEATURE_COST.version || ''), _vi = '; on a deployment older than ';
+    ok(_vl.indexOf('on a deployment older than 2026-11-02e, Agent Two values every basis') === 0 && _vl.indexOf(_vi) === _vl.indexOf(_vi + '2026-11-02c, a copy of the app that has not been reloaded'), '⚠ the banner\'s version line names the envelope\'s gap first after P15\'s');
   });
 };

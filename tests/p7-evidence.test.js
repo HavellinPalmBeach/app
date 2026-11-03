@@ -125,7 +125,7 @@ const ROOTS = ['invListSeen', '_invEdit', '_invBulkApply', '_renderInvBulk', '_a
   'agentValueableRefs', '_avWrite', 'maivAggregate', 'maivStatement_', 'maivOwedLines', 'maivOwedText', '_maivWorklistBlock', '_maivSummaryNotice',
   '_apprGroups', 'printAppraisalWorklist', '_renderInventorySummary', '_avUnreviewedStamp', '_avStampText', '_avStampCounts', 'invAcceptCtx',
   'printEstateInventoryReport', 'printCourtInventory', 'printTrustSchedule', 'invTotalFloor', '_invFloorTotalHtml', '_invScheduleSection',
-  'invAwaitingAppraisal', 'invNeedsAppraisal'];
+  'invAwaitingAppraisal', 'invNeedsAppraisal', 'resolveValBasis', 'estateValueDateLabel', '_invWaivedNoteHtml', 'invApprWaiverText', 'invValBasisShort', 'invLineStandardNote', 'apprReportOverdue', '_apprGroupList'];
 let _cl = null;
 function rig(job, rows, o) {
   o = o || {};
@@ -177,7 +177,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const gen = g._avLineResult(VAL({ basis: 'The going used rate for everyday stainless flatware.', source: 'General estimate' }), 'general', {}, 60);
     eq(gen.basis, 'The going used rate for everyday stainless flatware.', 'an ordinary lot\'s going-rate sentence, citing no sale, is left alone');
     const genCount = g._avLineResult(VAL({ basis: 'Three similar sets sold on eBay for about $40.', source: 'General estimate' }), 'general', {}, 60);
-    eq(genCount.basis, 'No sale the research could show: a best estimate of what this kind of thing sells for.', '…but an ordinary lot naming sales it did not list is the server\'s sentence too');
+    // P15's review (2026-10-28): kept at medium, an ordinary lot's going rate is reasonably known, so the server's sentence never calls it
+    // "a best estimate" (p15-value-standard S5 holds the low arm).
+    eq(genCount.basis, 'No sale the research could show: the going rate for this kind of thing.', '…but an ordinary lot naming sales it did not list is the server\'s sentence too');
     // A survey stands: the sentence says what the figure rests on.
     const SURVEY_URL = 'https://www.ebay.com/sch/i.html?_nkw=desert+rose+plate';
     const sv = g._avLineResult(VAL({ value: 30, low: 20, high: 45, basis: 'Two sold comparables on eBay; valued below the listings.', comps: [COMP({ url: 'https://made.up/x' })],
@@ -533,7 +535,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(attempt(() => L.maivOwedLines(L.jobs[0], L.maivAggregate(L._photoRefs[7]))).val.length, 0, 'a living client: nobody');
     const Under = rig(ESTATE(), [LINE({ stableId: 'x', category: 'Art & Décor', fmv: 900, valuedBy: 'desk' })]);
     eq(attempt(() => Under.maivOwedLines(Under.jobs[0], Under.maivAggregate(Under._photoRefs[7]))).val.length, 0, 'under the aggregate: nobody');
-    eq(callersOf('maivOwedLines'), ['_apprGroups', '_maivSummaryNotice', '_maivWorklistBlock', 'printAppraisalWorklist'], 'one rule, read by the packets, the worklist and the desk\'s notice');
+    // RESTATED (P15, 2026-10-28): the packets are built by _apprGroupList now (by appraiser, then by specialist); _apprGroups reads it.
+    eq(callersOf('maivOwedLines'), ['_apprGroupList', '_maivSummaryNotice', '_maivWorklistBlock', 'printAppraisalWorklist'], 'one rule, read by the packets, the worklist and the desk\'s notice');
   }
 
   group('⚠⚠ F3 · an open double count is counted once: never "already over … must be filed" by counting one painting twice (the integration\'s review)');
@@ -610,7 +613,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq([una.over, una.waits], [false, false], 'under counting both lines: under');
     has(attempt(() => Un.maivStatement_(una)).val, 'total $2,000, under the $3,000 aggregate.', '…said with every line counted, the larger figure');
     has(code(fn('maivAggregate')), 'invDoubleCountUnits(job, refs)', 'the aggregate reads the schedules\' own double counts');
-    has(code(fn('_apprGroups')), 'maivAggregate(_all, _j)', 'and the packets read it with the job, as the worklist\'s block does');
+    has(code(fn('_apprGroupList')), 'maivAggregate(_all, _j)', 'and the packets read it with the job, as the worklist\'s block does (in _apprGroupList since P15)');
   }
 
   // ═══════════════════════════════ E · A FLOOR IS A FLOOR (DOC-01, VAL-27) ═══════════════════════════════
@@ -678,6 +681,6 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     });
     const bundle = read('COUNSEL_REVIEW_BUNDLE.md');
     has(bundle, '### D22. The §20.2031-6(b) aggregate: over $3,000 whatever the rest are worth, and every such article owed the sworn appraisal', '⚠ the bundle\'s D22');
-    has(bundle, '| **4** | the first **706 estate** | D3, D22 |', '…under the first 706 estate\'s priority');
+    has(bundle, '| **4** | the first **706 estate** | D3, D22', '…under the first 706 estate\'s priority (D23 beside it since P15)');
   }
 };

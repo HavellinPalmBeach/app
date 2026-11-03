@@ -347,7 +347,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const IT = (id, o) => Object.assign({ stableId: id, label: 'inventory', roomIdx: 0, seq: 1, status: 'uploaded', objectName: 'Sofa', category: 'Furniture',
       ts: Date.UTC(2026, 9, 1), updatedAt: 1, driveFileId: 'f' + id, driveFileUrl: 'https://drive.google.com/file/d/f' + id + '/view', namedBy: 'desk' }, o || {});
     const printed = [];
-    const mk = (job, items, extra) => lift(['printApprovalRequest', 'printContentsRecord', 'referralFeeVendorsNote', 'vendorPaysReferral', '_vendorByName', '_vendorNameKey', '_andJoin', 'printTrustSchedule', 'printCourtInventory', '_apprGroups', '_invDocHead', 'clientEstimateHtml'],
+    const mk = (job, items, extra) => lift(['printApprovalRequest', 'printContentsRecord', 'referralFeeVendorsNote', 'vendorPaysReferral', '_vendorByName', '_vendorNameKey', '_andJoin', 'printTrustSchedule', 'printCourtInventory', '_apprGroups', '_invDocHead', 'clientEstimateHtml', 'estateValueDateLabel', '_invWaivedNoteHtml', 'invApprWaiverText', 'invValBasisShort', 'invLineStandardNote', '_apprGroupList'],
       STATE.concat(['_printDocument', 'alert']),
       Object.assign(BASE(), { jobs: [job], _photoRefs: { 7: items }, estimateStore: { 7: { approved: true, estimate: Object.assign({}, EST_HR, { rooms: [{ idx: 0, name: 'Living Room', st: 'in', vol: 3, cplx: 3 }] }) } },
         _printDocument: (h, t) => printed.push(h), alert: (m) => printed.push('ALERT ' + m) }, extra || {}));

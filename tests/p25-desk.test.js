@@ -109,7 +109,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // is still initialled on its own: the bequest arm, not the caution, decides it.
     const bqJob = PROBATE({ beneficiaries: [{ id: 'bn1', name: 'Marie Doe' }], bequests: [{ id: 'bq1', beneficiaryId: 'bn1', description: 'my pearls', stableIds: ['g'] }] });
     const pearls = L('g', { itemNo: 7, objectName: 'Pearl earrings', category: 'Jewelry', fmv: '120', disposition: 'Distribute', channel: 'Marie Doe', flagBequest: true });
-    const SB = lift(['invOwnInitial', 'invReleaseCautions'], STATE, Object.assign(BASE(), { jobs: [bqJob], _photoRefs: { 7: [pearls] } }));
+    const SB = lift(['invOwnInitial', 'invReleaseCautions', 'invAppraisalInProgress', 'invApprInProgressBadge'], STATE, Object.assign(BASE(), { jobs: [bqJob], _photoRefs: { 7: [pearls] } }));
     eq(attempt(() => SB.invReleaseCautions(pearls, 7).length).val, 0, 'fixture: a bequest carried out raises no caution');
     eq(attempt(() => SB.invOwnInitial(pearls, bqJob)).val, true, '⚠ and is still initialled on its own, as a bequest');
     // Grouped: Goodwill's lines run together whatever order they were found in.

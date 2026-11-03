@@ -51,7 +51,7 @@ const FIND_FNS = ['_invDocPartyHead', 'siteFindsCardHtml', '_siteFindRowHtml', '
   'willReceiptHtml', 'cashReceiptHtml', 'printSiteFindReceipt', '_siteFindFormRow', '_siteFindSigLine', '_invDocHead', '_invDocName',
   'jobListPut', 'jobListGet', 'jobListVoid', 'newJobListId', '_saveJobEdit', '_jobTouch', '_actor', '_invStampBy', 'deviceUser', 'samePerson', 'canonPersonName',
   'isCrewPlaceholder', '_andJoin', 'showFB', 'fileSignedCopy', '_armFiling', '_signedCopyName', '_jobRootFolderId', 'signedCopyControlHtml',
-  'fileSignedCopyFromInput', 'signedRecordLinksHtml'];
+  'fileSignedCopyFromInput', 'signedRecordLinksHtml', 'estateValueDateLabel'];
 const FIND_VARS = ['JOB_RECORD_LISTS', 'SIGNED_RECORD_KINDS', 'SIGNED_COPY_MAX_BYTES', '_signedFiling', 'FILING_WATCHDOG_MS', 'SIGNED_RECORDS_SUBFOLDER',
   '_signedCopySpecs', '_signedCopyKeys', 'PERSON_NAME_ALIASES', 'CONTRACTOR_TC_NAME', 'LOG_PLACEHOLDER_NAMES', '_SITE_FIND_BLANK',
   'WILL_RECEIPT_STATEMENT', 'CASH_RECEIPT_STATEMENT'];

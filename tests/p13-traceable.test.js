@@ -84,7 +84,7 @@ const PAPER_FNS = ['invLineReviewed', 'invLineOpen', '_invDocPartyHead', 'invCon
   'invNeedsAppraisal', 'invIsIntrinsic', 'invCatMeta', 'invAppraisalThreshold',
   '_invHasAppraisal', '_jobAppraisers', 'resolveValBasis', 'estateValueDate', '_invMoney',
   '_invDocName', '_invItemNo', '_invGroupItems', 'invIsFirearm', '_invDispLabel', '_invRoomName', '_planRooms',
-  '_invProgressStamp', '_invReviewStats', '_invDocHead', 'invAppraiserFor', '_invFileId', '_invNeedsValue',
+  '_invProgressStamp', '_invReviewStats', '_invDocHead', '_invWaivedNoteHtml', 'invValBasisShort', 'invLineStandardNote', 'estateValueDateLabel', 'estateAvdOn', 'invAppraiserFor', '_invFileId', '_invNeedsValue',
   'weArrangeAppraisals', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', 'jobAppraisalDuty', 'approvedEstimateFor', 'estimateDocScope', 'docScopeDef', '_agrOtherAppraisalsBy',
   'roundCents', 'fmt', 'trustInstrumentTitle', 'scheduleSigners', 'scheduleSignLines', 'jobFiduciaries', 'jobListEntries',
   'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invLineAcceptedOnly', '_invAcceptedStampWords',
@@ -416,8 +416,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // RESTATED on the merge with main's envelope fix (both named 2026-11-02b; 2026-11-02c carries both): the gap is named under
     // 2026-11-02c's vintage, the first, after the envelope's.
     const _at13 = _v13.indexOf(', and ' + _p13);
-    ok(_v13.indexOf('on a deployment older than 2026-11-02c, ') === 0 && _at13 > 0 && _v13.indexOf('; on a deployment older than ') > _at13,
-      'and the stale banner names it under the newest vintage, 2026-11-02c, which carries it');
+    // RESTATED on merging P15 (2026-11-02d, which carries 2026-11-02c): 2026-11-02c's vintage now follows P15's, and the gap is under it.
+    const _c13 = _v13.indexOf('; on a deployment older than 2026-11-02c, ');
+    ok(_c13 > 0 && _v13.indexOf('; on a deployment older than ') === _c13 && _at13 > _c13 && _v13.indexOf('; on a deployment older than ', _c13 + 1) > _at13,
+      'and the stale banner names it under 2026-11-02c\'s vintage, which carries it, after P15\'s 2026-11-02e');
     ok(_v13.indexOf('; on a deployment older than 2026-10-28, two devices saving') > _at13 && _at13 >= 0, '…then 2026-10-28\'s gap, by its vintage');
     has(B.BACKEND_FEATURE_COST.version, '; on a deployment older than 2026-10-27e, a figure Agent Two researched', '…then 2026-10-27e\'s gap, by its vintage');
     const A = sandbox({ fns: ['_agWrite', '_getPhotoRef', '_setPhotoRef', '_invAgentCondition', '_invCondIsAgents'], vars: ['INV_CATEGORIES', 'INV_TAXONOMY', 'INV_DEFAULT_CATEGORY', 'AGENT_CONDITIONS'],
@@ -484,7 +486,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('J · the summary counts lines and articles (INV-20)');
   {
     const S = sandbox({ fns: ['invGroupUncounted', '_renderInventorySummary', 'invLineQty', 'invFiduciaryMode', 'isDecedentJob', 'invProbateRows', 'matterDef', 'matterTypeOf', 'invStatesEstateValues',
-      'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep', 'roundCents', 'resolveValBasis'],
+      'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep', 'roundCents', 'resolveValBasis', 'invValBasisShort'],
       vars: ['INV_CATEGORIES', 'INV_TAXONOMY', 'INV_DISPOSITIONS', 'DECEDENT_SERVICES', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
       stubs: { invNeedsAppraisal: () => false, _money: (v) => '$' + v, _invMoney: (v) => '$' + v, fmtDate2: (d) => d, _invValueAsOfHtml: () => '', _invDateTime: () => 'now',
         maivAggregate: () => ({ count: 0, total: 0, settled: true }), inventoryNetLabel: () => 'Net to Estate', _maivSummaryNotice: () => '' } });
@@ -616,7 +618,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('N · ⚠ the summary counts a group with no count apart, and says so (the review: "Total Articles 3" over a drawer)');
   {
     const S = sandbox({ fns: ['invGroupUncounted', '_renderInventorySummary', 'invLineQty', 'invFiduciaryMode', 'isDecedentJob', 'invProbateRows', 'matterDef', 'matterTypeOf', 'invStatesEstateValues',
-      'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep', 'roundCents', 'resolveValBasis'],
+      'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep', 'roundCents', 'resolveValBasis', 'invValBasisShort'],
       vars: ['INV_CATEGORIES', 'INV_TAXONOMY', 'INV_DISPOSITIONS', 'DECEDENT_SERVICES', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS'],
       stubs: { invNeedsAppraisal: () => false, _money: (v) => '$' + v, _invMoney: (v) => '$' + v, fmtDate2: (d) => d, _invValueAsOfHtml: () => '', _invDateTime: () => 'now',
         maivAggregate: () => ({ count: 0, total: 0, settled: true }), inventoryNetLabel: () => 'Net to Estate', _maivSummaryNotice: () => '' } });

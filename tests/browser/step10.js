@@ -43,6 +43,8 @@ const APP = process.env.APP || 'file:///home/user/app/havellin.html';
     set('i-probate-atty-lname', 'Comiter'); set('i-probate-atty-phone', '(561) 626-2101');
     set('i-probate-atty-email', 'r@x.com');
     set('i-doc-tier', 'values');
+    // P15 (2026-10-28): the §2032 date is offered only on an estate filing a Form 706.
+    set('i-gate-706', 'yes');
     saveIntake();
     if (!jobs.length) return { err: (document.getElementById('i-fb') || {}).textContent };
     const j = jobs[0]; j.won = true; j.status = 'won';
@@ -110,11 +112,12 @@ const APP = process.env.APP || 'file:///home/user/app/havellin.html';
       //   Values & appraisals bar, and the summary states the basis as text. Each control is looked for where it now lives,
       //   and the summary is held to carrying no control at all and to naming the basis only where values are stated.
       basis: !!panel.querySelector('[id^="desk-body-values-"] select[onchange^="setValBasis"]'),
-      avd: !!panel.querySelector('[id^="desk-body-values-"] input[onchange^="setEstateAVD"]'),
+      // P15 (2026-10-28): on an estate filing a 706 the §2032 date is the tick once its day has passed, its date in grey before.
+      avd: !!panel.querySelector('[id^="desk-body-values-"] input[onchange^="setEstateAVD"], [id^="desk-body-values-"] .inv-val-avd-later'),
       // …and counted across the WHOLE panel, as the absence checks searched it before the move (the G6 review, 2026-10-23):
       //   one of each where values are stated, none anywhere at a capture tier, so a control drawn outside the bar is caught.
       basisN: panel.querySelectorAll('select[onchange^="setValBasis"]').length,
-      avdN: panel.querySelectorAll('input[onchange^="setEstateAVD"]').length,
+      avdN: panel.querySelectorAll('input[onchange^="setEstateAVD"], .inv-val-avd-later').length,
       sumCtl: !!panel.querySelector('#inv-summary select, #inv-summary input'),
       sumBasis: ((document.getElementById('inv-summary') || {}).textContent || '').indexOf('Valuation Basis') >= 0,
       fmvTotal: has('Total Estimated FMV'),

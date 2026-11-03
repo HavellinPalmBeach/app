@@ -685,7 +685,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════
   // P18 lead, found by W-A: _invDocHead headed every desk document with any recorded case number, whatever the matter.
   G('lead · a desk document names a probate case only where the estate goes through probate', () => {
-    const X = lift(['_invDocHead'], [], { Date: FixedDate(NOW) });
+    const X = lift(['_invDocHead', 'estateValueDateLabel'], [], { Date: FixedDate(NOW) });
     const head = (j) => { try { return X._invDocHead(j, 'Estate Inventory Report'); } catch (e) { return 'threw: ' + e.message; } };
     lacks(head(TRUST()), 'Case 2026-CP-001234', '⚠⚠ a trust matter still carrying an old case number prints none');
     lacks(head(TRUST({ matterType: 'neither' })), 'Case 2026-CP-001234', 'nor does a Neither matter');

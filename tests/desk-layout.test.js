@@ -1953,7 +1953,9 @@ function groupJ({ group, ok, eq, has, lacks }) {
 
   group('J1 · the Values bar opens on the valuation settings, then the roster, then the guardrail; an estate at a values tier only');
   {
-    const D = desk({ deathDate: '2026-04-02' });
+    // RESTATED (P15, 2026-10-28): the §2032 tick is drawn only on an estate filing a Form 706, once the alternate date has passed, so
+    // this estate files one and the desk is drawn on TODAY (Oct 22, after Oct 2).
+    const D = desk({ deathDate: '2026-04-02', gate706: 'yes' }, undefined, { stubs: { _todayStr: () => TODAY } });
     const h = D.render();
     ok(!D.log.renderErr, 'the desk renders (' + (D.log.renderErr || 'ok') + ')');
     const vals = inner(h, 'desk-body-values-7') || '';
@@ -1961,18 +1963,20 @@ function groupJ({ group, ok, eq, has, lacks }) {
     ok(iSet > -1 && iSet < iRos && iRos < iGr, '⚠⚠ the valuation card first, then the roster, then the guardrail  [' + [iSet, iRos, iGr] + ']');
     has(vals, 'onchange="setValBasis(7,this.value)"', 'the basis select, on its own handler');
     has(vals, 'onchange="setEstateAVD(7,this.checked)"', 'the §2032 tick, on its own handler');
-    has(textOf(vals), 'Use the §2032 alternate valuation date: six months after death, taxable estates only', '⚠ its words on screen, never a tooltip (unreachable on an iPad)');
+    has(textOf(vals), 'Use the §2032 alternate valuation date, Oct 2, 2026: six months after death, elected on the Form 706', '⚠ its words on screen, never a tooltip (unreachable on an iPad)');
     has(textOf(vals), 'Value as of Apr 2, 2026 (date of death)', 'and the date the values are stated as of');
     eq((h.match(/onchange="setValBasis\(/g) || []).length, 1, '⚠ one basis control on the whole tab: not in the summary as well');
     eq((h.match(/onchange="setEstateAVD\(/g) || []).length, 1, 'one §2032 tick');
     eq(textOf(inner(h, 'desk-ttl-values-7')), 'Values & appraisals', 'the bar keeps its catalogue title');
     // ⚠ The one control that sets a basis with legal effect shows the basis the job records (the G6 review: no test held it).
-    eq((vals.match(/<option selected>[^<]*</g) || []), ['<option selected>Fair Market Value<'], 'nothing recorded: the default basis selected, and only it');
+    // Each option carries its basis as its value since P15 (its words may add "(counsel only)").
+    const selectedOf = (x) => [...String(x).matchAll(/<option value="([^"]*)" selected>/g)].map((m) => m[1]);
+    eq(selectedOf(vals), ['Fair Market Value'], 'nothing recorded: the default basis selected, and only it');
     eq(INV_BASES.length, 4, 'fixture: the four bases');
     INV_BASES.filter((b) => b !== 'Fair Market Value').forEach((b) => {
-      const R = desk({ deathDate: '2026-04-02', valBasis: b });
+      const R = desk({ deathDate: '2026-04-02', valBasis: b }, undefined, { stubs: { _todayStr: () => TODAY } });
       const rv = inner(R.render(), 'inv-val-settings') || '';
-      eq((rv.match(/<option selected>[^<]*</g) || []), ['<option selected>' + b + '<'], '⚠⚠ a job recording ' + b + ': the select shows it, and only it');
+      eq(selectedOf(rv), [b], '⚠⚠ a job recording ' + b + ': the select shows it, and only it');
     });
     // At the Contents list tier the agreement says counsel values: there is no valuation for the settings to govern.
     const C = desk({ docTier: 'contents' });
@@ -1990,12 +1994,14 @@ function groupJ({ group, ok, eq, has, lacks }) {
     has(t, 'Valuation Basis Fair Market Value', '⚠ the basis, as text');
     has(t, 'Value as of Apr 2, 2026 (date of death)', 'and the date, as text');
     ['<select', 'setValBasis', 'setEstateAVD', 'type="checkbox"'].forEach((n) => lacks(sum(est), n, '⚠ no control in the summary: ' + n));
-    has(textOf(sum(Object.assign({}, est, { valBasis: 'Replacement Value', avd: true }))), 'Valuation Basis Replacement Value Value as of Oct 2, 2026 (alt. valuation date)',
+    // RESTATED (P15): the election is in force on an estate filing a Form 706 (gate706 yes), as it is elected only there.
+    has(textOf(sum(Object.assign({}, est, { valBasis: 'Replacement Value', avd: true, gate706: 'yes' }))), 'Valuation Basis Replacement Value Value as of Oct 2, 2026 (alt. valuation date)',
       'a basis and an election made in the bar read back in the summary');
     // The card and the summary name one day: the same sentence, under the same predicate.
-    has(S._renderValueSettings(Object.assign({}, est, { avd: true })), S._invValueAsOfHtml(Object.assign({}, est, { avd: true })), 'the bar\'s card prints the summary\'s sentence');
+    has(S._renderValueSettings(Object.assign({}, est, { avd: true, gate706: 'yes' }), TODAY), S._invValueAsOfHtml(Object.assign({}, est, { avd: true, gate706: 'yes' })), 'the bar\'s card prints the summary\'s sentence');
     eq(callersOf('_invValueAsOfHtml'), ['_renderInventorySummary', '_renderValueSettings'], 'one sentence for the value date, two readers');
-    eq(callersOf('invStatesEstateValues'), ['_renderInventorySummary', '_renderValueSettings'], '⚠ one predicate for where the settings apply, two readers');
+    // RESTATED (P15): the Values bar's stale line and the standard's own test read it too.
+    eq(callersOf('invStatesEstateValues'), ['_renderInventorySummary', '_renderValueSettings', 'deskFoldState', 'invValueStandardMoved'], '⚠ one predicate for where the settings apply: the two readers, the Values bar\'s line and a value made at another standard');
     [['a living job', LIVING()], ['the Contents list tier', PROBATE({ docTier: 'contents' })], ['None', PROBATE({ docTier: 'none' })]].forEach(([w, j]) => {
       eq(S._renderValueSettings(j), '', 'no settings card on ' + w);
       lacks(sum(j), 'Valuation Basis', 'and no basis row in its summary');
@@ -2005,8 +2011,8 @@ function groupJ({ group, ok, eq, has, lacks }) {
 
   group('J3 · the basis changed from the bar writes the job and the open summary reads it; the §2032 tick redraws the date');
   {
-    const D = desk({ deathDate: '2026-04-02' }, {}, { real: ['_renderInventorySummary'], roots: ['setValBasis', 'setEstateAVD'],
-      stubs: { saveJobs() {}, syncJobToSheets() {}, _scheduleInventorySync() {} } });
+    const D = desk({ deathDate: '2026-04-02', gate706: 'yes' }, {}, { real: ['_renderInventorySummary'], roots: ['setValBasis', 'setEstateAVD'],
+      stubs: { saveJobs() {}, syncJobToSheets() {}, _scheduleInventorySync() {}, _todayStr: () => TODAY } });
     D.C._invShowRoll = true;
     D.render();
     has(textOf(inner(D.dom.html, 'inv-summary')), 'Valuation Basis Fair Market Value', 'fixture: the summary open, on the default basis');
@@ -2018,8 +2024,10 @@ function groupJ({ group, ok, eq, has, lacks }) {
     eq(D.job.valBasis, 'Replacement Value', '⚠ the job records the basis chosen in the bar');
     ok((D.job.updatedAt || 0) > t0, 'a person\'s edit: the job\'s clock moves');
     has(textOf(inner(D.dom.html, 'inv-summary')), 'Valuation Basis Replacement Value', '⚠⚠ and the open summary says so at once, by id');
-    eq(D.log.renders, before, 'without a redraw of the tab (the select already shows it)');
-    attempt(() => D.C.setEstateAVD(7, true));
+    // RESTATED (P15, 2026-10-28): asked first, then one redraw of the tab, so the Valuation card's list, the Values bar's line and
+    // every row's hold follow the new basis (a select: nothing typed is lost).
+    eq(D.log.renders, before + 1, 'and one redraw of the tab');
+    attempt(() => D.C.setEstateAVD(7, true, TODAY));
     eq(D.job.avd, true, 'the §2032 election is recorded');
     has(textOf(inner(D.dom.html, 'inv-val-settings')), 'Value as of Oct 2, 2026 (alt. valuation date)', '⚠ the bar\'s card names the alternate date');
     has(tagOf(D.dom.html, 'inv-avd-7'), ' checked', 'its tick drawn ticked');
@@ -2163,7 +2171,8 @@ function groupJ({ group, ok, eq, has, lacks }) {
     // unread inventory as one (closeReadiness).
     // RESTATED (P12's review, 2026-10-28): Close job reads first on every press, so activateOrCycle no longer asks; the question does
     // (applyJobTransition), to say a failed read's list is this device's copy only where there is one.
-    eq(callersOf('_invManifestUnread'), ['_apprFormIsOpen', '_invCloudRetryArm', '_invRefreshFromCloud', 'applyJobTransition', 'closeReadiness', 'deskFoldState', 'invColdRefusal', 'invColdWords', 'invListReadRefusal', 'invSheetStaleWords'],
+    // RESTATED (P15, 2026-10-28): the Valuation card's list of values to re-value and an appraiser's Send worklist ask it too.
+    eq(callersOf('_invManifestUnread'), ['_apprFormIsOpen', '_apprWorklistCellHtml', '_invCloudRetryArm', '_invRefreshFromCloud', '_renderValueSettings', 'applyJobTransition', 'closeReadiness', 'deskFoldState', 'invColdRefusal', 'invColdWords', 'invListReadRefusal', 'invSheetStaleWords'],
       '⚠ an unread manifest: one answer, read by the bars, the form, the read that asks the sheet again, the list read\'s refusal and the cold desk\'s');
     eq(callersOf('_bqFormIsOpen'), ['_renderInvBequestCard'], 'the bequests card\'s two forms: the same');
     eq(callersOf('_invBqClear'), ['invSaveBeneficiary', 'invSaveBequest', 'invToggleBqForm'], 'the boxes a save and Cancel clear: one list (INV_BQ_FORM_FIELDS)');

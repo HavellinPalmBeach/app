@@ -172,9 +172,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // match the real constant is what hid the &amp;amp; defect on 2026-09-09; a stubbed
     // conflict list would let the app's own list drift out from under this whole group.
     const ctx = withDirectory(DIR, ['apprConflictCats', '_appraiserVendors', '_apprPickerHtml',
-                                    '_apprPickVendor', 'esc'],
+                                    '_apprPickVendor', 'esc', 'vendorContacts'],
                               ['APPRAISER_CONFLICT_CATEGORIES', 'APPRAISER_DIR_CATEGORIES',
-                               'INV_APPRAISER_CREDS']);
+                               'INV_APPRAISER_CREDS', 'VENDOR_CONTACT_SLOTS']);
     ok(ctx.APPRAISER_CONFLICT_CATEGORIES.length > 0, 'the real conflict list is loaded');
     has(ctx.APPRAISER_CONFLICT_CATEGORIES.join('|'), 'Jewelry & Watch Buyer',
         "and it carries Anthony's example — the trade that makes the appraisal indefensible");

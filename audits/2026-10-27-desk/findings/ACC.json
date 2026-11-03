@@ -86,6 +86,7 @@
   },
   {
    "id": "ACC-04",
+   "fixed": "2026-10-28 (P15, Ask 14 as recommended: a sale more than 15% from the line's figure asks once, OK uses it, Cancel files it with the comparables only; CLAUDE.md, Agent Two's figures; tests/p15-value-standard.test.js, browser step 130)",
    "title": "Use a WorthPoint sale relabels Agent Two's figure as 'WorthPoint comps' even when the sale contradicts it",
    "kind": "accuracy",
    "severity": "high",
@@ -171,6 +172,7 @@
   },
   {
    "id": "ACC-09",
+   "fixed": "2026-10-28 (P15: the basis asked first, naming Agent Two's figures made at the old basis, with Re-value N lines on the Valuation card; each basis its own paragraph in the prompt, backend 2026-10-28; CLAUDE.md, The value follows the job's standard; tests/p15-value-standard.test.js, browser step 130)",
    "title": "Changing the valuation basis relabels the schedule without revaluing, and the prompt cannot value anything but FMV",
    "kind": "accuracy",
    "severity": "high",
@@ -188,6 +190,7 @@
   },
   {
    "id": "ACC-10",
+   "fixed": "2026-10-28 (P15: the §2032 date offered only on a 706 estate once its day has passed, a line that left inside the six months valued as of that day, values made at another date listed with Re-value; CLAUDE.md, The value follows the job's standard; tests/p15-value-standard.test.js, browser step 130)",
    "title": "The §2032 tick dates the schedule to a future day and leaves every line's date and figure as of death",
    "kind": "accuracy",
    "severity": "high",
@@ -223,6 +226,7 @@
   },
   {
    "id": "ACC-12",
+   "fixed": "2026-10-28 (P15: Agent Two's standard by class and market, the buyer's premium on every comparable, backend 2026-10-28; counsel and an appraiser to confirm, bundle D23; CLAUDE.md, Agent Two; tests/p15-value-standard.test.js, browser step 130)",
    "title": "The standard of value in Agent Two's prompt says 'not retail' and is silent on buyer's premium",
    "kind": "accuracy",
    "severity": "high",

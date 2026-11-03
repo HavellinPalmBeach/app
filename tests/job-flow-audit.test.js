@@ -372,7 +372,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══ 10 · THE TRUST PACKAGE CARRIES NO PROBATE WORDS ═══════════════════════
   group('10 · the Estate Inventory Report and the worklist name the probate filing only on the probate track');
   {
-    const R = lift(['printEstateInventoryReport', '_maivWorklistBlock'],
+    const R = lift(['printEstateInventoryReport', '_maivWorklistBlock', 'invValBasisShort', 'invLineStandardNote', 'invApprWaiverText', 'apprReportOverdue'],
       ['jobs', '_photoRefs', 'estimateStore', 'mediaStore', 'jobPlanStore', 'contractors', 'changeOrders', '_printDocument', '_invThumbCache', 'savePhotoRefs'],
       { jobs: [], _photoRefs: {}, estimateStore: {}, mediaStore: {}, jobPlanStore: {}, contractors: [], changeOrders: [], _invThumbCache: () => ({}),
         _printDocument: () => true, savePhotoRefs: () => {}, setTimeout: () => 0, clearTimeout: () => {}, document: domStub({}) });

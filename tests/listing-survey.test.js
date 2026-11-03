@@ -101,7 +101,7 @@ const APP_FNS = ['invHavellinRecipient', 'invAwaitingAppraisal', 'invBequestElse
   'invFiduciaryMode', 'isDecedentJob', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep', 'estateValueDate',
   '_avdDate', '_ymdLocal', 'resolveValBasis', '_agNameKey', '_agDetailRefs', 'invLineCloseUps', '_invFileId', 'invAppraisalThreshold',
   'gateDispute', '_gateYes', 'invNeedsAppraisal', 'invAppraisalChosen', 'fmt', '_invMoney', '_invNamed', '_invItemNo', '_andJoin',
-  'moneyToNumber', '_readAppsScriptJson', '_invJob', '_invRenderWhenIdle', '_invHasPhoto', 'invIsFirearm', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat', 'agentValueLooks', '_avPhotoContext', '_invPhotoSource', '_invRoomName', 'agentListedOff', 'agentValueAgain', 'invSaleSource', 'invSaleVenue', 'invSaleFarOff', '_invSaleHost'].concat(['_avSurveyOf']);
+  'moneyToNumber', '_readAppsScriptJson', '_invJob', '_invRenderWhenIdle', '_invHasPhoto', 'invIsFirearm', 'invLineAccepted', 'invLineHold', '_invLineHolds', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat', 'agentValueLooks', '_avPhotoContext', '_invPhotoSource', '_invRoomName', 'agentListedOff', 'agentValueAgain', 'invSaleSource', 'invSaleVenue', 'invSaleFarOff', '_invSaleHost'].concat(['_avSurveyOf', 'agentValueAdvised', 'agentValueAdvice', 'agentValueAdviceVerb', 'invValueStandardMoved', 'invValueStandardWords', 'invLineValueDate', 'estateAvdOn', 'invAppraisalInProgress', 'invApprInProgressBadge']);
 const APP_VARS = ['INV_LOT_ARTICLE_CAP', 'INV_RELEASE_CAUTIONS', 'INV_ACCEPT_AMMO_RE', '_agDupSetJob', 'INV_OPEN_HOLDS', '_avRun', '_avForceComps', '_avAfter', 'AGENT_VALUE_BATCH', 'AGENT_VALUE_GENERAL_CEILING', 'AGENT_VALUE_WHOLE_FROM', 'AGENT_VALUE_MAX_COMPS', 'AGENT_CONDITIONS',
   'AGENT_VALUE_MARK_RE', 'AGENT_VALUE_NO_MARK_RE', 'AGENT_VALUE_CONFS', 'AGENT_VALUE_SOURCES', 'AGENT_VALUE_OWN', 'AGENT_VALUE_SALE_DATE_RE',
   'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'DECEDENT_SERVICES', 'DOC_TIERS',
@@ -254,7 +254,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const R = rig(ESTATE(), []);
     ok(R.INV_VAL_SOURCES.indexOf('Listing survey') >= 0, 'on the source list a person picks from too');
     eq(R.invValBasisWord({ fmv: 240, valSource: 'Listing survey' }), 'listing survey', 'its word on a schedule');
-    const sec = sandbox({ fns: ['invConditionText', '_invScheduleSection', 'invValBasisWord', 'invAppraised', 'invLineAppraiser', '_invHasValue', '_invMoney', 'fmt', 'roundCents', '_invItemNo'],
+    const sec = sandbox({ fns: ['invConditionText', '_invScheduleSection', 'invValBasisWord', 'invAppraised', 'invLineAppraiser', '_invHasValue', '_invMoney', 'fmt', 'roundCents', '_invItemNo', 'invValBasisShort', 'invLineStandardNote'],
       stubs: { esc: (x) => String(x == null ? '' : x) } })._invScheduleSection('Tangible Personal Property', [ROW({ fmv: 240, valSource: 'Listing survey' })]);
     has(sec.html, '>listing survey</td>', '⚠ the Court Inventory\'s and the Trust Schedule\'s table prints it in the Basis column');
   }
@@ -299,6 +299,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq((live.match(/_avSurveyOf\(/g) || []).length, 3, 'the app\'s check: its definition, the writer and the record');
     const gsLive = liveLines(GS);
     eq((gsLive.match(/_avSurvey\(/g) || []).length, 2, 'the server\'s: its definition and _avLineResult');
-    eq((gsLive.match(/AGENT_VALUE_SURVEY_MIN/g) || []).length, 4, 'the constant: declared, the rule, the prompt\'s rule and the confidence scale');
+    // Six since P15's review (2026-10-28): the prompt's rule and the confidence scale each in Replacement Value's words and in the other bases'.
+    eq((gsLive.match(/AGENT_VALUE_SURVEY_MIN/g) || []).length, 6, 'the constant: declared, the rule, and the prompt\'s rule and the confidence scale, each in Replacement Value\'s words and the other bases\'');
   }
 };

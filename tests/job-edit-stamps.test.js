@@ -144,12 +144,18 @@ const DEVICE_FNS = ['saveJobs', 'syncJobToSheets', 'syncToSheets', '_jobTouch', 
   'unfilledPlannedPS', 'plannedPSCount', 'isCrewPlaceholder', 'samePerson', 'canonPersonName', 'isJobWon', 'jobLogEntries',
   'setVendorRating', 'setVendorRatingNote', '_ratingJob', '_writeVendorScore', 'computeVendorAvg',
   'draftReviewRequest', 'markReviewRequestSent', 'setValBasis', 'setEstateAVD',
+  // P15's review (2026-10-28): neither while the agents are at work on the list.
+  'invValStandardBusy', '_invValStandardBusyText',
+  // P15 (2026-10-28): both ask first and read the job's standard (counsel only, the §2032 date only on a 706 estate once it has passed).
+  'resolveValBasis', 'invValBasisLocked', 'invFiduciaryMode', 'isDecedentJob', 'jobOnProbateTrack', '_gate706', 'matterDef', 'matterTypeOf',
+  '_invStandardCounts', '_jobInvRefs', '_invHasValue', 'invValueStandardMoved', 'invStatesEstateValues', 'invLineValueDate', 'estateAvdOffered',
+  'estateTaxReturn', 'estateValueDate', 'estateAvdOn', '_avdDate', 'fmtDate2', '_invStampBy', 'deviceUser',
   '_attachPaymentEvidence', '_driveFolderFailed', 'fetchSubfolderIds', '_normalizeSubfolders', 'applyEsignStatus', 'docState',
   'docStateBare', '_saveArrivalCheck', 'applyStripePayments', '_stripeRecordPayment', '_stripeHandMatch', '_handAchAwaitingStripe', 'paymentCounts', 'paymentLive', 'isRefundRecord', '_paymentKey', 'jobPayments', '_localDateOf', '_ymdLocal', '_stampChangedKeys', '_crewSnap', 'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'isHalfHours', '_coordHrsRefusal',
   // P17: the real money formatter, since removeLogisticsLine now prints its quote through it; the two Stripe devices
   // below stubbed it as '$' + n and read nothing it printed, so their stubs went rather than shadow it.
   'fmt', '_withDeviceKey', 'deviceKey'];
-const DEVICE_VARS = ['SMF_PCT', 'PREP_FEE_RATE', 'LOGISTICS_CATEGORIES', '_srcLidSeq', 'VENDOR_CONTACT_SLOTS',
+const DEVICE_VARS = ['SMF_PCT', 'PREP_FEE_RATE', 'LOGISTICS_CATEGORIES', '_srcLidSeq', 'VENDOR_CONTACT_SLOTS', 'DECEDENT_SERVICES', 'MATTER_TYPES',
   'CONTRACTOR_TC_NAME', 'LOG_PLACEHOLDER_NAMES', 'PERSON_NAME_ALIASES', 'VENDOR_RATING_WINDOW'];
 
 // A synchronous thenable, so fetchSubfolderIds' `.then` chain runs inside the call and the
@@ -172,7 +178,7 @@ function device(jobList, stubs) {
       _repaintCloseout() {}, _todayStr: () => '2026-09-29', _actor: () => 'Ashley Jerome',
       _planTaskDone: () => true, bestClientEmail: () => 'tripp@example.com', gmailConfigured: () => false,
       _reviewMailtoUrl: () => 'mailto:tripp@example.com', _coNotice() {},
-      renderClientDashboard() {}, _invRefreshSummary() {}, _scheduleInventorySync() {}, renderInventoryTab() {},
+      renderClientDashboard() {}, _invRefreshSummary() {}, _scheduleInventorySync() {}, renderInventoryTab() {}, _photoRefs: {},
       showSyncBadge() {}, updateAgrUI() {},
       compressImage: (d, w, q, cb) => cb(d), resolveSubfolderId: (job, name, cb) => cb('folder-invoice'),
       _jobRootFolderId: () => 'root', uploadToDrive: (t, n, d, cb) => cb(true, 'https://drive/evidence.jpg'),
@@ -420,7 +426,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       // client documents' own stamped writers. Its record surviving a stale device's save is driven through the real
       // sheet merge in p17-documents-drive.test.js.
       ['setValBasis', (A) => A.setValBasis(7, 'Replacement Value'), (j) => j.valBasis === 'Replacement Value'],
-      ['setEstateAVD', (A) => A.setEstateAVD(7, true), (j) => j.avd === true],
+      // Since P15 (2026-10-28) the §2032 date is elected only on an estate filing a Form 706, once the date has passed: an estate that
+      // does, its date of death long enough ago (the device's day is 2026-09-29).
+      ['setEstateAVD', (A) => { Object.assign(A.jobs[0], { svc: 'probate', deathDate: '2026-01-10', gate706: 'yes' }); A.setEstateAVD(7, true); },
+        (j) => j.avd === true],
     ];
     CASES.forEach(([label, act, check]) => {
       const r = twoDevices(null, act);

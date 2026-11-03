@@ -375,7 +375,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(S.invTransportable(gun, job), 'transportable');
     eq(S.invTransportBlocked(Object.assign({}, gun, { authBy: 'Ruth Adler' })), '', 'without the job, the rule before P19 (a name and a date)');
     // The Appraisal Worklist's withheld block: a firearm one co-trustee authorised stays on it, and it names who authorises.
-    const wl = (job, g) => { const W = desk(['printAppraisalWorklist', 'guideLinkHtml'], job, [g], { maivAggregate: () => ({ count: 0, total: 0, settled: true, over: false, unvalued: 0 }) });
+    const wl = (job, g) => { const W = desk(['printAppraisalWorklist', 'guideLinkHtml', '_apprGroupList'], job, [g], { maivAggregate: () => ({ count: 0, total: 0, settled: true, over: false, unvalued: 0 }) });
       const r2 = attempt(() => W.printAppraisalWorklist(job.id)); return r2.ok ? text((W.__log.printed[0] || {}).html) : 'threw: ' + r2.err; };
     const held = (o) => LINE('h', 6, Object.assign({ category: 'Firearms', objectName: 'Shotgun', fmv: '900', disposition: 'Consign', authBy: 'Ruth Adler', approvalDate: '2026-10-01' }, o || {}));
     has(wl(TRUST(), held()), '1 firearm is awaiting written authority', '⚠ one co-trustee\'s approval leaves the firearm withheld on the worklist');
@@ -493,7 +493,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       return { job, lines };
     };
     const { job, lines } = mk();
-    const S = desk(['invReleaseCautions', '_invCautionBadges', '_invCautionNotices', '_renderInvBequestCard', '_renderInvRow', 'printApprovalRequest', '_invBulkApply'], job, lines);
+    const S = desk(['invReleaseCautions', '_invCautionBadges', '_invCautionNotices', '_renderInvBequestCard', '_renderInvRow', 'printApprovalRequest', '_invBulkApply', 'invAppraisalInProgress', 'invApprInProgressBadge'], job, lines);
     const keys = (r) => S.invReleaseCautions(r, 7).map((c) => c.key);
     eq(keys(lines[0]), ['bequestElsewhere'], '⚠⚠ a matched line proposed for Auction carries the bequest caution (and not the generic one)');
     eq(keys(lines[1]), [], 'a matched line going to the person its bequest names carries none: the bequest is being carried out');

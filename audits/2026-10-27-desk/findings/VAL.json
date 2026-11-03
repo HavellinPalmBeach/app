@@ -114,6 +114,7 @@
   },
   {
    "id": "VAL-06",
+   "fixed": "2026-10-28 (P15: the advice is routing, never quieted by a tick: Add to appraisal list / Send to a specialist, the guardrail and the worklist; CLAUDE.md, Appraisal; tests/p15-value-standard.test.js, browser step 130)",
    "title": "Agent Two's 'Appraisal advised' is silenced by the review tick and never reaches the guardrail or the worklist",
    "kind": "accuracy",
    "severity": "high",
@@ -149,6 +150,7 @@
   },
   {
    "id": "VAL-08",
+   "fixed": "2026-10-28 (P15: another basis reads counsel only where a court, a 706 or a trust expects fair market value, the question says why first; the papers labelled by basis; CLAUDE.md, The value follows the job's standard; tests/p15-value-standard.test.js, browser step 130)",
    "title": "A probate schedule can be stated at Liquidation or Replacement Value, silently, over figures made as FMV",
    "kind": "accuracy",
    "severity": "high",
@@ -166,6 +168,7 @@
   },
   {
    "id": "VAL-09",
+   "fixed": "2026-10-28 (P15: the §2032 date only where it applies, a line's own date printed where it differs, an appraisal in progress said on the request and the sign-out sheet; CLAUDE.md, The value follows the job's standard and the release cautions; tests/p15-value-standard.test.js, browser step 130)",
    "title": "The §2032 date and the appraisers' value dates do not follow the job",
    "kind": "accuracy",
    "severity": "high",
@@ -200,6 +203,7 @@
   },
   {
    "id": "VAL-11",
+   "fixed": "2026-10-28 (P15: the worklist groups linked lines under their appraiser, Send worklist on the roster row; the appraisal in progress caution on the request and the sign-out sheet; CLAUDE.md, Appraisal; tests/p15-value-standard.test.js, browser step 130)",
    "title": "The appraiser's packet leaves out lines linked to them; the hand-off sheet includes them, and they can go to auction mid-appraisal",
    "kind": "inconsistency",
    "severity": "high",
@@ -286,6 +290,7 @@
   },
   {
    "id": "VAL-16",
+   "fixed": "2026-10-28 (P15: Waive records who and when, Undo waiver in the record, the waived lines printed on the Court Inventory and the Trust Schedule; CLAUDE.md, Appraisal; tests/p15-value-standard.test.js, browser step 130)",
    "title": "Waive records no who or when, cannot be undone, and never prints on the schedules",
    "kind": "gap",
    "severity": "medium",
@@ -371,6 +376,7 @@
   },
   {
    "id": "VAL-21",
+   "fixed": "2026-10-28 (P15: a report past its due date reads N days overdue on the roster row, the Values bar and the Report's flag list; Send worklist; CLAUDE.md, Appraisal; tests/p15-value-standard.test.js, browser step 130)",
    "title": "Appraiser due dates are never chased, and the flag list prints a stale 'Expected back'",
    "kind": "automation",
    "severity": "medium",

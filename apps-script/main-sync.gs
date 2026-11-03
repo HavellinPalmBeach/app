@@ -190,13 +190,23 @@
 // box or shelf), so the app can test a group recorded at a count of one against §20.2031-6(a)'s $100 an article (invLotSplitState
 // 'nocount'): the worklist printed its clearance over a mixed drawer it never tested. One field and one sentence of the prompt; no
 // action or type changes; it carries 2026-11-02's. Until it is live a group named at a count of one reads as one article.
+// ⚠ 2026-11-02e (the desk audit's P15, "The value follows the job's standard, market and date"; ACC-09, ACC-12, ACC-10): Agent Two's
+// standard follows the regulation's rule by class in place of a blanket "not retail" (auction with the buyer's premium for art,
+// antiques, silver and jewelry; the used or resale market for branded furniture, decor and electronics; the going used rate for
+// everyday things), each basis sentence names its market, and a comparable says whether its price includes the buyer's premium
+// (`premium`: included, added, hammer only, none), a hammer-only result grossed up by the house's stated premium or labelled as such;
+// a basis other than Fair Market Value gets a paragraph of its own and the range's words fit it, and on Replacement Value an asking
+// price of a like item is the evidence, never a general estimate for want of a sale; a line valued as of its own day (§2032(a)(1))
+// is told so (`valueDate`). No action or type changes; it carries 2026-11-02d's (and so 2026-11-02c's, 2026-11-02b's, 2026-11-02's and 2026-10-28's). Until it is live the prompt values every basis as
+// Fair Market Value at second-hand prices, says "not retail" of branded furniture, mixes hammer and all-in prices with no word, and
+// values a line that left inside the six months as of the alternate date.
 // ⚠ 2026-11-02d (Anthony, once eBay had answered: Browse's search open, Marketplace Insights refused; "we take a low, medium, high
 // and try to find an average and get some signal out of this", and on the written AI consent eBay did not give, "if they cut us off,
 // who cares"): a research line may search eBay's current listings through a tool this script runs (ebay_listings, _avEbayAnswer),
 // and the listing survey counts what it showed: asking prices, never sales, no more listings than the search showed, the eBay search
 // page as the survey's page. Off unless EBAY_CLIENT_ID and EBAY_CLIENT_SECRET are in Script Properties; testEbayListings() checks
 // them. No action or type changes; carries 2026-11-02c's. Until it is live, or with no keys, Agent Two values as it did.
-var BACKEND_VERSION = '2026-11-02d';
+var BACKEND_VERSION = '2026-11-02e';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive', 'esignSendRequest',
@@ -5121,6 +5131,8 @@ var AGENT_VALUE_SOURCES = { comps: ['Auction comps', 'Online comps'], general: [
 // "worthpoint" and "name" went on 2026-10-25: the desk shows the confidence and the WorthPoint terms beside every
 // figure, and a name Agent Two would change it now changes (`name` in the answer; Anthony: "No need to flag").
 var AGENT_VALUE_NOTICE_KINDS = ['appraiser', 'specialist', 'other'];
+// Whether a comparable's price includes the buyer's premium (P15, ACC-12; the app's own list, held equal by a test).
+var AGENT_VALUE_PREMIUMS = ['included', 'added', 'hammer only', 'none'];
 
 // Money to the cent, half away from zero, read at fifteen significant digits so 1.005 is 1.01: the
 // app's `roundCents`, which this file cannot lift. A test holds the two to the same answers.
@@ -5141,35 +5153,46 @@ function _avCents(x) {
 // ⚠ `line` IS A PLAIN STRING, NOT AN ENUM OF THIS REQUEST'S LABELS. An enum would make the tool, and
 // with it the cached prefix, different on every request; the labels are checked here instead and an
 // answer for a line nobody asked about is dropped.
-function _avTool(mode, categories, conditions, ebay) {
+function _avTool(mode, categories, conditions, basis, ebay) {
+  var fmv = !basis || basis === 'Fair Market Value';
+  var rv = basis === 'Replacement Value';   // what a like one costs, never what it sells for (P15's review, as _avSystem)
   var cats = (categories || []).filter(function (c) { return !!String(c || '').trim(); });
   var conds = (conditions || []).filter(function (c) { return !!String(c || '').trim(); });
   var props = {
     line:       { type: 'string', description: 'The label the line was given, for example L1.' },
     name:       { type: 'string', description: 'The line\'s name as you value it: the name given where it is right (always the name given on a line whose name a person checked), else your corrected name. One short line, about fifteen words, never with a count.' },
     value:      { type: 'number', description: 'Your point value for the WHOLE line, in US dollars: every article on it together, never a per-piece price.' },
-    low:        { type: 'number', description: 'The low end of the range it would realistically sell for, whole line, US dollars.' },
+    // On another basis the range is that basis's (P15, ACC-09): "sell for" is Fair Market Value's words.
+    low:        { type: 'number', description: (fmv ? 'The low end of the range it would realistically sell for' : 'The low end of the range of its value on the basis given') + ', whole line, US dollars.' },
     high:       { type: 'number', description: 'The high end of that range, whole line, US dollars.' },
     confidence: { type: 'string', enum: ['high', 'medium', 'low'] },
     source:     { type: 'string', enum: AGENT_VALUE_SOURCES[mode] || AGENT_VALUE_SOURCES.general },
     // ⚠ PRINTED, NOT DESK SHORTHAND (2026-10-26): it is the line's valNote, printed under the line on the Estate Inventory Report
     // the attorney reads and in the workbook, and since the desk rescales a figure when a person corrects the count, it must
     // never carry the count (a "seven plates at $8" sentence printed beside Qty 8).
-    basis:      { type: 'string', description: 'One plain sentence, about twenty words at most, saying what the figure rests on ("Four sold comparables, 2025 to 2026; the median, less for one chipped rim"; "The going used rate for everyday stainless flatware"), with the valuation-date caveat where the instructions ask for one, and never with this line\'s count or its name. It names no more sales than comps lists. It is printed beside the figure on the inventory the family, their attorney or a trustee reads.' },
+    // ⚠ IT NAMES ITS MARKET (P15, ACC-12): "at auction, buyer's premium included", "on the resale market", "the going used rate".
+    basis:      { type: 'string', description: 'One plain sentence, about twenty words at most, saying what the figure rests on and in which market ('
+                  + (rv ? '"The retail price of the same model new"; "Three dealers\' asking prices for like pieces"; "What a like set costs from a resale shop"'
+                        : '"Four sold comparables at auction, 2025 to 2026, buyer\'s premium included; the median, less for one chipped rim"; "The going used rate for everyday stainless flatware"; "Three resale sales of the same model"')
+                  + '), with the valuation-date caveat where the instructions ask for one, and never with this line\'s count or its name. It names no more ' + (rv ? 'prices' : 'sales') + ' than comps lists. It is printed beside the figure on the inventory the family, their attorney or a trustee reads.' },
     comps: {
       type: 'array',
-      description: 'The sales you relied on. Each must be one item\'s own page (the lot, the listing) that your search or fetch returned, with its URL copied exactly: never a search or results page, and never a sale whose page shows no price.',
+      description: (rv ? 'The prices you relied on' : 'The sales you relied on') + '. Each must be one item\'s own page (the lot, the listing) that your search or fetch returned, with its URL copied exactly: never a search or results page, and never a sale whose page shows no price.',
       items: {
         type: 'object',
         additionalProperties: false,
-        required: ['title', 'venue', 'saleDate', 'price', 'url', 'kind'],
+        required: ['title', 'venue', 'saleDate', 'price', 'url', 'kind', 'premium'],
         properties: {
           title:    { type: 'string' },
           venue:    { type: 'string', description: 'Who sold it: the auction house, the platform or the dealer.' },
           saleDate: { type: 'string', description: 'YYYY-MM-DD, or YYYY-MM, or empty when the page gives no date.' },
           price:    { type: 'number', description: 'The price that page shows: realised (sold) or asked (asking), US dollars, for what that listing covered. Never one filled in from a range, an estimate or another lot.' },
           url:      { type: 'string' },
-          kind:     { type: 'string', enum: ['sold', 'asking'] }
+          kind:     { type: 'string', enum: ['sold', 'asking'] },
+          // Whether an auction price includes the buyer's premium (P15, ACC-12): `included` where the page shows the price the buyer
+          // paid; `added` where it showed the hammer alone and you added the house's stated premium to the price above; `hammer only`
+          // where it showed the hammer alone and no premium is stated; `none` for a sale or listing with no buyer's premium.
+          premium:  { type: 'string', enum: AGENT_VALUE_PREMIUMS }
         }
       }
     },
@@ -5259,13 +5282,13 @@ function _avTool(mode, categories, conditions, ebay) {
 // tool the answer comes back through. ⚠ `_20260209` CARRIES DYNAMIC FILTERING ITSELF, so no
 // `code_execution` tool is declared beside it (a second execution environment confuses the model).
 // It runs on every model the agents choose (dynamic filtering is on Claude 4.6 and later, Anthropic's docs, 2026-10-26).
-function _avTools(mode, categories, conditions, ebay) {
+function _avTools(mode, categories, conditions, basis, ebay) {
   var tools = [{ type: 'web_search_20260209', name: 'web_search', max_uses: AGENT_VALUE_SEARCHES[mode] || 1 }];
   if (mode === 'comps') tools.push({ type: 'web_fetch_20260209', name: 'web_fetch', max_uses: AGENT_VALUE_FETCHES });
   // eBay's listings, on a research line, where the keys are in Script Properties (AGENT_VALUE_EBAY_PROPS): constant per depth and
   // per deployment, so the cached prefix still holds.
   if (mode === 'comps' && ebay) tools.push(_avEbayTool());
-  tools.push(_avTool(mode, categories, conditions, ebay));
+  tools.push(_avTool(mode, categories, conditions, basis, ebay));
   return tools;
 }
 
@@ -5448,6 +5471,40 @@ function _avEbayAnswer(work, started) {
   });
 }
 
+// ⚠⚠ WHAT EACH BASIS MEANS, AND IN WHICH MARKET (P15, 2026-10-28; the desk audit's ACC-12 and ACC-09). Fair Market Value said "it is not
+// retail" of everything and nothing of the buyer's premium, where the regulation values a thing in the market where it is most commonly
+// sold to the public (Treas. Reg. 20.2031-1(b)): art, antiques, silver and jewelry at auction with the premium the buyer paid, branded
+// furniture, decor and electronics on the resale market. Every other basis got one sentence ("Value every line on that basis") over a
+// prompt that otherwise spoke only of second-hand sale prices. Drafted with counsel and an appraiser to confirm (COUNSEL_REVIEW_BUNDLE.md).
+function _avBasisText(basis) {
+  if (basis === 'Fair Market Value') {
+    return ' That is the price at which the property would change hands between a willing buyer and a willing seller, neither being '
+      + 'under any compulsion and both having reasonable knowledge of the facts. It is the price in the market where such a thing is '
+      + 'most commonly sold to the public, where the property is: art, antiques, silver and jewellery at auction, at the price the '
+      + 'buyer paid (the hammer plus the buyer\'s premium); branded furniture, decor and electronics on the used or resale market '
+      + '(consignment, resale shops and online resale), at what they sell for there; everyday things at the going used rate. It is '
+      + 'never a retailer\'s price for a new one, an asking price or an insurance replacement figure. Name the market in the basis '
+      + 'sentence ("at auction, buyer\'s premium included", "on the resale market", "the going used rate").';
+  }
+  if (basis === 'Replacement Value') {
+    return ' That is what it would cost to replace the thing with one of like kind and quality, bought in its usual market today: new '
+      + 'where the same thing is still made and sold, else a like one from a dealer or resale shop. The asking prices of like items '
+      + 'are the evidence here, and a retailer\'s own price for a new one counts. It is not what the thing would fetch if sold. Name '
+      + 'the market in the basis sentence ("the retail price of the same model new", "dealers\' asking prices for like pieces").';
+  }
+  if (basis === 'Marketable Cash Value') {
+    return ' That is the cash the owner would receive from selling the thing in its usual market within a reasonable time, after the '
+      + 'seller\'s commission and fees: fair market value less the costs of selling it. Read sold results as for fair market value, '
+      + 'take off the seller\'s usual costs in that market, and say so in the basis sentence, naming the market.';
+  }
+  if (basis === 'Liquidation Value') {
+    return ' That is what the thing would fetch in a quick sale, within a short time and with little marketing, the seller taking what '
+      + 'is offered: usually well below fair market value. Read sold results at their low end, and say so in the basis sentence, '
+      + 'naming the market.';
+  }
+  return ' Value every line on that basis and say so in the basis sentence, naming the market.';
+}
+
 // ─── THE SYSTEM PROMPT ────────────────────────────────────────────────────────────
 // Stable for every request on one job, so it carries `cache_control`: the valuation date, the basis
 // and whether this is an estate are constant within a job, which is the span the cache has to cover.
@@ -5456,23 +5513,22 @@ function _avSystem(ctx) {
   var basis = String(ctx.basis || 'Fair Market Value');
   var vdate = String(ctx.valuationDate || '');
   var cats = (ctx.categories || []).length > 0;
+  // ⚠⚠ ON REPLACEMENT VALUE EVERY SENTENCE SAYS WHAT A LIKE ONE COSTS, NEVER WHAT THE THING SELLS FOR (P15's review, 2026-10-28): its
+  // paragraph said a retailer's price for a new one counts, and the rest of the prompt still told it to value a branded piece at what it
+  // fetches second-hand, never at a retailer's price, to search for SOLD results and to value listings below where they are listed, so
+  // an insurance schedule headed Replacement Value would have carried second-hand prices (the Restoration Hardware mirror). Each such
+  // sentence follows the basis, as the range's words do (_avTool); every other basis reads exactly as it did.
+  var rv = basis === 'Replacement Value';
   var s = ''
     + 'You are putting a value on the contents of a home so that a concierge can complete '
     + (estate ? 'an estate inventory' : 'an inventory for a client who is moving or clearing their home')
     + '. Each line has already been named by someone else from the photograph. Your job is to confirm or '
-    + 'correct that name, say what each line is WORTH, show the sales that figure rests on, and say plainly '
+    + 'correct that name, ' + (rv ? 'say what each line would cost to replace, show the prices that figure rests on'
+                                   : 'say what each line is WORTH, show the sales that figure rests on') + ', and say plainly '
     + 'when you cannot tell.\n\n'
 
     + 'WHAT A VALUE MEANS HERE\n'
-    + 'The basis is ' + basis + '.'
-    + (basis === 'Fair Market Value'
-        ? ' That is the price at which the property would change hands between a willing buyer and a '
-        + 'willing seller, neither being under any compulsion and both having reasonable knowledge of the '
-        + 'facts. In practice it is what the thing actually SELLS for on the secondary market: auction '
-        + 'prices realised and completed sales. It is not retail, not an asking price and not an insurance '
-        + 'replacement figure.'
-        : ' Value every line on that basis and say so in the basis sentence where it matters.')
-    + '\n'
+    + 'The basis is ' + basis + '.' + _avBasisText(basis) + '\n'
     + (vdate
         ? 'Value as of ' + vdate + (estate ? ', the valuation date for this estate' : '') + '. Prefer sales '
         + 'near that date; if the only good comparables are much later, say so in the basis sentence.\n'
@@ -5484,11 +5540,17 @@ function _avSystem(ctx) {
     + 'is regional; small valuable things sell nationally.\n'
     // 2026-10-26 (the Restoration Hardware mirror, *"maybe it's worth $1500 new, and then not $25 used"*): a search for a branded
     // piece finds the brand's own retail page first, and nothing said how a retail brand's used price relates to it.
-    + 'Furniture and decor from a retail or designer brand (Restoration Hardware, Pottery Barn, Crate & Barrel, Arhaus, '
-    + 'Ethan Allen and the like) sells used for a fraction of its retail price: value it at what that brand fetches '
-    + 'second-hand, never at the price its own site or a retailer asks. Mass-market and dated furniture often fetches '
-    + 'little. Modern electronics and appliances lose most of their value within a few years, while vintage audio and '
-    + 'other collected electronics can hold theirs: the model and its age matter as much as the brand.\n'
+    + (rv
+        ? 'Furniture and decor from a retail or designer brand (Restoration Hardware, Pottery Barn, Crate & Barrel, Arhaus, '
+          + 'Ethan Allen and the like) is replaced at what the same piece costs new from the brand or a retailer where it is still '
+          + 'made, else at what a like one costs from a dealer or a resale shop. Modern electronics and appliances are replaced at the '
+          + 'price of a current model of like kind and quality; vintage audio and other collected electronics at what a like one '
+          + 'costs from a dealer: the model and its age matter as much as the brand.\n'
+        : 'Furniture and decor from a retail or designer brand (Restoration Hardware, Pottery Barn, Crate & Barrel, Arhaus, '
+          + 'Ethan Allen and the like) sells used for a fraction of its retail price: value it at what that brand fetches '
+          + 'second-hand, never at the price its own site or a retailer asks. Mass-market and dated furniture often fetches '
+          + 'little. Modern electronics and appliances lose most of their value within a few years, while vintage audio and '
+          + 'other collected electronics can hold theirs: the model and its age matter as much as the brand.\n')
     + 'A line is a whole lot. "Sterling flatware service" with Quantity 72 is ONE figure for all 72 '
     + 'pieces, never a per-piece price. Value the quantity on the line as given: a stack or a box hides '
     + 'what is under the top one, so never question the count from the photograph. The desk reads one '
@@ -5516,18 +5578,26 @@ function _avSystem(ctx) {
     // no longer only "a line that may be worth real money", and branded furniture and electronics sell through resale, not auctions.
     + 'A request marked RESEARCH is one line to look at closely: it may be worth real money (art, antiques, jewellery, '
     + 'silver, rugs, collectibles, firearms, wine, instruments, or anything carrying a maker, a model or a mark), its name '
-    + 'may be a guess for you to confirm from the photograph, or a person may have just named it. Search for SOLD results '
-    + 'where that kind of thing actually sells: auction prices realised (LiveAuctioneers and Invaluable results pages, '
-    + 'auction house archives) and dealer sales for art, antiques, silver, jewellery and rugs; resale and consignment '
-    + 'sales for branded furniture, decor and electronics. Find three or more sold comparables where they '
-    + 'exist and read the photographs, because the maker\'s mark is what makes a comparable a match. '
-    + 'Your value is your reading of those sales, adjusted for condition and for any difference between '
-    + 'them and this line.\n'
+    + 'may be a guess for you to confirm from the photograph, or a person may have just named it. '
+    + (rv
+        ? 'Search for what the same thing, or one of like kind and quality, costs to buy today where it is usually bought: the '
+          + 'maker\'s or a retailer\'s price for a new one where it is still made; dealers\' and galleries\' prices for like pieces of '
+          + 'art, antiques, silver, jewellery and rugs; resale and consignment shops\' prices for a like one where it is no longer made. '
+          + 'Find three or more such prices where they exist and read the photographs, because the maker\'s mark is what makes a '
+          + 'like item a match. Your value is your reading of those prices, adjusted for any difference between them and this line.\n'
+        : 'Search for SOLD results '
+          + 'where that kind of thing actually sells: auction prices realised, the price the buyer paid with the buyer\'s premium '
+          + '(LiveAuctioneers and Invaluable results pages, auction house archives), and dealer sales for art, antiques, silver, '
+          + 'jewellery and rugs; resale and consignment sales for branded furniture, decor and electronics. Find three or more sold comparables where they '
+          + 'exist and read the photographs, because the maker\'s mark is what makes a comparable a match. '
+          + 'Your value is your reading of those sales, adjusted for condition and for any difference between '
+          + 'them and this line.\n')
     + 'A request marked ORDINARY is a batch of everyday lots: kitchenware, linens, books, everyday '
-    + 'furniture and decor. Search for the going used rate of each kind of lot in the batch, not of each line: lots of '
+    + 'furniture and decor. Search for ' + (rv ? 'what it costs to replace each kind of lot in the batch with like ones' : 'the going used rate of each kind of lot in the batch')
+    + ', not of each line: lots of '
     + 'one kind (kitchenware, linens, books) share one search. You need not cite a comparable. This is a figure for a '
-    + 'schedule, not research: "Stainless flatware, everyday brand", Quantity 60, $40 to $60 for the lot, is the whole '
-    + 'job. A maker or brand in the name is '
+    + 'schedule, not research' + (rv ? '. ' : ': "Stainless flatware, everyday brand", Quantity 60, $40 to $60 for the lot, is the whole '
+    + 'job. ') + 'A maker or brand in the name is '
     + 'part of what the lot is: price that brand ("Henckels kitchen shears"), never the generic kind.\n'
     // ⚠ AGENT ONE GUESSES, AGENT TWO LOOKS (2026-10-26; Anthony, 2026-10-25: "agent 1 guess and agent 2 confirm or update upon
     // pricing"): an ordinary lot whose name is Agent One's hedged guess comes with its photograph (the app's agentValueLooks).
@@ -5545,19 +5615,32 @@ function _avSystem(ctx) {
     + 'you never fill one in from a range, an estimate or another lot. Comparables that fail this are thrown away.\n'
 
     + '- Say whether each comparable SOLD or was only ASKING. An asking price is not a sale. You may cite '
-    + 'one as "asking", but never set the value on a few asking prices alone.\n'
+    + 'one as "asking", but never set the value on a few asking prices alone'
+    + (basis === 'Replacement Value' ? ', except on Replacement Value, where the asking price of a like item is what it costs to replace it' : '') + '.\n'
+    // 2026-10-28 (P15, ACC-12; R2 C): hammer-only results (LiveAuctioneers shows the hammer) mixed with all-in prices with no rule.
+    + '- An auction price is the price the buyer paid: the hammer plus the buyer\'s premium. Where a page shows the hammer alone, add '
+    + 'the premium the house states in its terms and record premium "added", or record "hammer only" where no premium is stated; '
+    + 'record "included" where the page shows the price the buyer paid, and "none" for a sale or listing with no premium. Say it in '
+    + 'the basis sentence where it matters.\n'
     // 2026-10-27, the desk audit's P7 (GAP1-05, ACC-01): the server holds both rules too (AGENT_VALUE_ASKING_HOSTS, _avSalesNamed).
     + '- Etsy, 1stDibs, Chairish, Ruby Lane, Replacements and retail stores show asking prices, never sales, whatever the page '
-    + 'says. Cite each page once. The basis names only the sales you list in comps: never more, and none you did not list.\n'
+    + 'says. Cite each page once. The basis names only the ' + (rv ? 'prices' : 'sales') + ' you list in comps: never more, and none you did not list.\n'
     // 2026-10-27 (Anthony: "A listing survey counts"): AGENT_VALUE_SURVEY_MIN, checked again in _avLineResult.
-    + '- LISTINGS ARE A CEILING. Where a research line has no sale but you can count many close listings of the same thing '
-    + 'still for sale (a results page your search or fetch returned may be the page you count them on), record them in '
-    + 'survey: how many, and the lowest, middle and highest asking price for one article as this line counts them, with '
-    + 'that page\'s URL. Count only listings of the same thing: the same maker, pattern, form and size, in condition close '
-    + 'to this one, never everything a search turned up. Things sell for less than they are listed at, and many of one '
-    + 'thing listed means a soft market, so value such a line below where they are listed: at or under the middle price, '
-    + 'nearer the low end, and say in the basis that it rests on that many listings and no sales. With '
-    + AGENT_VALUE_SURVEY_MIN + ' or more close listings and no sale, confidence may be medium; with fewer, it is low.\n'
+    + (rv
+        ? '- LISTINGS. Where a research line has no single price to cite but you can count many close listings of a like item for '
+          + 'sale (a results page your search or fetch returned may be the page you count them on), record them in survey: how many, '
+          + 'and the lowest, middle and highest asking price for one article as this line counts them, with that page\'s URL. Count '
+          + 'only listings of the same thing or one of like kind and quality, never everything a search turned up. They are what a like '
+          + 'one costs: value the line at about the middle price, never above it, and say in the basis that it rests on that many '
+          + 'listings. With ' + AGENT_VALUE_SURVEY_MIN + ' or more close listings, confidence may be medium; with fewer, it is low.\n'
+        : '- LISTINGS ARE A CEILING. Where a research line has no sale but you can count many close listings of the same thing '
+          + 'still for sale (a results page your search or fetch returned may be the page you count them on), record them in '
+          + 'survey: how many, and the lowest, middle and highest asking price for one article as this line counts them, with '
+          + 'that page\'s URL. Count only listings of the same thing: the same maker, pattern, form and size, in condition close '
+          + 'to this one, never everything a search turned up. Things sell for less than they are listed at, and many of one '
+          + 'thing listed means a soft market, so value such a line below where they are listed: at or under the middle price, '
+          + 'nearer the low end, and say in the basis that it rests on that many listings and no sales. With '
+          + AGENT_VALUE_SURVEY_MIN + ' or more close listings and no sale, confidence may be medium; with fewer, it is low.\n')
     // 2026-11-02d (Anthony: "we take a low, medium, high and try to find an average and get some signal"): _avEbayAnswer.
     + (ctx.ebay ? '- EBAY\'S LISTINGS. On a research line you also have ebay_listings, which searches what is for sale on eBay now '
       + 'and shows each listing\'s asking price, condition and link, the search page, and the lowest, middle, average and highest '
@@ -5567,14 +5650,17 @@ function _avSystem(ctx) {
       + 'each priced for one article as this line counts them (a listing of a set of eight at $200 is $25 an article), with '
       + 'the search page it named as survey\'s url. Every listing it shows is an asking price, never a sale; one may be '
       + 'cited in comps as asking.\n' : '')
-    + '- If a research line has no sold comparable and no such survey, give your best reading with confidence low and say in the basis '
+    + '- If a research line has no ' + (rv ? 'price for a like item' : 'sold comparable') + ' and no such survey, give your best reading with confidence low and say in the basis '
     + 'what it rests on. Put a line under unvalued only when you cannot tell what it is, or it is papers or records. Do '
     + 'not dress a guess up as research.\n\n'
 
     + 'THE RANGE AND CONFIDENCE\n'
-    + 'low and high bracket where the line would realistically sell; your value sits inside them. high '
-    + 'confidence = several close sold comparables agree. medium = the comparables are near but not exact, '
-    + 'or few, or there is no sale but ' + AGENT_VALUE_SURVEY_MIN + ' or more close listings and the value sits below them. '
+    + 'low and high bracket ' + (basis === 'Fair Market Value' ? 'where the line would realistically sell' : 'its value on that basis') + '; your value sits inside them. high '
+    + (rv
+        ? 'confidence = several close prices for like items agree. medium = the prices are near but not exact, or few, or there are '
+          + AGENT_VALUE_SURVEY_MIN + ' or more close listings and no single price to cite. '
+        : 'confidence = several close sold comparables agree. medium = the comparables are near but not exact, '
+          + 'or few, or there is no sale but ' + AGENT_VALUE_SURVEY_MIN + ' or more close listings and the value sits below them. ')
     + 'low = a best estimate on thin or indirect evidence.'
     // 2026-10-26: the only scale was about comparables, which an ordinary lot is told it need not cite, so a literal reading put
     // every everyday lot at low, and the desk marked each one unsure.
@@ -5667,6 +5753,8 @@ function _avLineText(label, it) {
   // 2026-10-26: the room (Agent One had it, Agent Two did not), and on a photograph several lines share, the crew's note said over
   // it, marked as possibly about another thing, and what else is listed off it.
   if (it.room)       t += ' | Room: ' + String(it.room).slice(0, 60);
+  // A line valued as of its own day (P15, §2032(a)(1)): sold or given out inside the six months, valued as of the day it left.
+  if (/^\d{4}-\d{2}-\d{2}$/.test(String(it.valueDate || ''))) t += ' | Value as of ' + it.valueDate + ', the day it left the estate, not the valuation date above';
   if (it.fieldNote)  t += ' | The crew noted: "' + String(it.fieldNote).slice(0, 300) + '"';
   if (it.photoNote)  t += ' | The crew said over the photograph this line shares (it may be about another thing in it): "' + String(it.photoNote).slice(0, 300) + '"';
   var also = (it.alsoListed || []).filter(function (n) { return !!String(n || '').trim(); }).slice(0, 12);
@@ -5728,7 +5816,7 @@ function _avBody(unit, ctx, noFallbacks, model) {
     thinking: { type: 'adaptive' },
     output_config: { effort: AGENT_VALUE_EFFORT },
     system: [{ type: 'text', text: _avSystem(ctx), cache_control: { type: 'ephemeral' } }],
-    tools: _avTools(unit.mode, ctx.categories, ctx.conditions, ctx.ebay),
+    tools: _avTools(unit.mode, ctx.categories, ctx.conditions, ctx.basis, ctx.ebay),
     tool_choice: { type: 'auto' },
     messages: [{ role: 'user', content: _avUserContent(unit) }]
   };
@@ -5949,25 +6037,44 @@ function _avClaimsSale(text) {
 }
 // The sentence the server writes in place of one that claimed more sales than it kept: the sales kept, by venue and date, or none.
 var AGENT_VALUE_NUM_WORDS = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six'];
-function _avKeptBasis(sold, survey, asking) {
+// `o` (P15's review, 2026-10-28): `rv` and `kept`, on Replacement Value, where every price kept, sold or asking, is the evidence and is
+// named as the sales are ("Two asking prices for a like item the research could show: Restoration Hardware; 1stDibs."); `sure`, a
+// figure the server kept at medium or high, which is never called "a best estimate" (an ordinary lot's confidence is how well the
+// going rate is known). Absent, the sentences read as they did.
+function _avKeptBasis(sold, survey, asking, o) {
+  o = o || {};
+  var where = function (list) {
+    return list.slice(0, 3).map(function (c) {
+      return (String(c.venue || '').trim() || _avHostOf(c.url) || 'a sale') + (c.saleDate ? ', ' + c.saleDate : '');
+    }).join('; ') + (list.length > 3 ? '; and ' + (list.length - 3) + ' more' : '');
+  };
+  var mid = survey ? '$' + (survey.median % 1 ? survey.median.toFixed(2) : survey.median) : '';
+  if (o.rv) {
+    var k = o.kept || [], m = k.length;
+    if (m) {
+      var allAsk = k.every(function (c) { return c.kind !== 'sold'; });
+      return (AGENT_VALUE_NUM_WORDS[m] || String(m)) + (allAsk ? ' asking price' : ' price') + (m === 1 ? '' : 's')
+        + ' for a like item the research could show: ' + where(k) + '.';
+    }
+    return survey ? survey.count + ' close listings of a like item were counted, the middle asking price ' + mid + ' each.'
+      : 'No price for a like item the research could show: ' + (o.sure ? 'the going price of a like one.' : 'a best estimate of what a like one costs.');
+  }
   if (!sold.length) {
     return survey
-      ? 'No sale the research could show; ' + survey.count + ' close listings for sale were counted, the middle asking price $'
-        + (survey.median % 1 ? survey.median.toFixed(2) : survey.median) + ' each.'
+      ? 'No sale the research could show; ' + survey.count + ' close listings for sale were counted, the middle asking price ' + mid + ' each.'
       : asking
-      ? 'No sale the research could show: a best estimate, with ' + asking + ' asking price' + (asking === 1 ? '' : 's') + ' on the record.'
-      : 'No sale the research could show: a best estimate of what this kind of thing sells for.';
+      ? 'No sale the research could show: ' + (o.sure ? 'the going rate' : 'a best estimate') + ', with ' + asking + ' asking price' + (asking === 1 ? '' : 's') + ' on the record.'
+      : 'No sale the research could show: ' + (o.sure ? 'the going rate for this kind of thing.' : 'a best estimate of what this kind of thing sells for.');
   }
   var n = sold.length;
-  return (AGENT_VALUE_NUM_WORDS[n] || String(n)) + ' sale' + (n === 1 ? '' : 's') + ' the research could show: '
-    + sold.slice(0, 3).map(function (c) {
-        return (String(c.venue || '').trim() || _avHostOf(c.url) || 'a sale') + (c.saleDate ? ', ' + c.saleDate : '');
-      }).join('; ') + (n > 3 ? '; and ' + (n - 3) + ' more' : '') + '.';
+  return (AGENT_VALUE_NUM_WORDS[n] || String(n)) + ' sale' + (n === 1 ? '' : 's') + ' the research could show: ' + where(sold) + '.';
 }
 
 // One line of the model's answer, checked. Returns the result the app writes, or {error}. `qty`, the line's count, reads the
 // figure for one article against a survey's prices (2026-10-27); absent, the line is one article.
-function _avLineResult(v, mode, seen, qty, ebay) {
+function _avLineResult(v, mode, seen, qty, basis, ebay) {
+  // Read before `basis` below names the sentence (a parameter and a var of one name are one binding).
+  var rv = basis === 'Replacement Value';
   var fmv = _avCents(v.value), low = _avCents(v.low), high = _avCents(v.high);
   if (!isFinite(fmv) || fmv < 0) return { error: 'the answer carried no usable value' };
   if (!isFinite(low) || low < 0) low = fmv;
@@ -5996,12 +6103,16 @@ function _avLineResult(v, mode, seen, qty, ebay) {
       url: String(c.url || '').slice(0, 400),
       // A dealer's marketplace or a retail store asks; it never sold (P7, AGENT_VALUE_ASKING_HOSTS), whatever the model says. Nor
       // did a listing eBay's search showed: every one is for sale now (2026-11-02d).
-      kind: (c.kind === 'sold' && !_avAskingHost(c.url) && !(ebay && ebay.items && ebay.items[_avPageKey(c.url)])) ? 'sold' : 'asking'
+      kind: (c.kind === 'sold' && !_avAskingHost(c.url) && !(ebay && ebay.items && ebay.items[_avPageKey(c.url)])) ? 'sold' : 'asking',
+      // Whether the price includes the buyer's premium (P15, ACC-12); an answer off the list is said as not known, never guessed.
+      premium: AGENT_VALUE_PREMIUMS.indexOf(c.premium) >= 0 ? c.premium : ''
     });
   });
   kept = kept.slice(0, AGENT_VALUE_MAX_COMPS);
   var conf = ['high', 'medium', 'low'].indexOf(v.confidence) >= 0 ? v.confidence : 'low';
-  var soldKept = kept.some(function (c) { return c.kind === 'sold'; });
+  // ⚠ ON REPLACEMENT VALUE A LIKE ITEM'S ASKING PRICE IS THE EVIDENCE (P15, ACC-09): what it costs to replace is what it is offered
+  // at, so a line resting on kept asking prices is not "no sale" there. Every other basis reads sales, as before.
+  var soldKept = kept.some(function (c) { return c.kind === 'sold' || (rv && c.kind === 'asking'); });
   // ⚠ A DROPPED COMPARABLE COSTS THE LINE A LEVEL OF CONFIDENCE: the model cited something no tool
   // returned, so the rest of its reading is worth less too. And at the research depth a line with no
   // sold comparable left is low whatever else it found (§4b).
@@ -6029,10 +6140,15 @@ function _avLineResult(v, mode, seen, qty, ebay) {
   // whose sentence speaks of a sale at all (_avClaimsSale, the review). Printed on the Estate Inventory Report beside the figure, so
   // it says only what a person can check on the line's record.
   var soldList = kept.filter(function (c) { return c.kind === 'sold'; });
+  // ⚠⚠ ON REPLACEMENT VALUE THE PRICES KEPT ARE THE EVIDENCE (P15's review, 2026-10-28): a like item's asking price is what it costs to
+  // replace it, so a sentence is held to every price kept, sold or asking, and a page the model called sold that the host rule made
+  // asking is still evidence. The sales test turned "The retail price new, and one comparable dealer listing" into "No sale the research
+  // could show: a best estimate", printed beside a high-confidence Replacement Value figure resting on exactly those prices.
+  var evidence = rv ? kept : soldList;
   var basis = _avClip(v.basis), rewrote = false;
-  if (_avSalesNamed(basis, mode === 'comps') > soldList.length || (citedSold > 0 && !soldList.length)
-      || (mode === 'comps' && !soldList.length && _avClaimsSale(basis))) {
-    basis = _avKeptBasis(soldList, surveyed ? survey : null, kept.length - soldList.length);
+  if (_avSalesNamed(basis, mode === 'comps') > evidence.length || (citedSold > 0 && !evidence.length)
+      || (mode === 'comps' && !evidence.length && _avClaimsSale(basis))) {
+    basis = _avKeptBasis(soldList, surveyed ? survey : null, kept.length - soldList.length, { rv: rv, kept: kept, sure: conf !== 'low' });
     rewrote = true;
   }
   return {
@@ -6202,7 +6318,7 @@ function agentValueLines(data) {
             var hit = byLine[p.unit.labels[j]];
             if (!hit) { retry[it.stableId] = 'the model did not answer for this line'; return; }
             if (hit.why != null) { failed[it.stableId] = String(hit.why || 'could not be valued').slice(0, 200); return; }
-            var r = _avLineResult(hit.v, p.unit.mode, seen, it.qty, p.ebay);
+            var r = _avLineResult(hit.v, p.unit.mode, seen, it.qty, ctx.basis, p.ebay);
             if (!r.error && p.ebay && p.ebay.searches) r.ebaySearches = p.ebay.searches;
             // A grade only off a photograph this request carried, and only one of the grades it was sent (2026-10-26b).
             if (!r.error) r.condition = (p.unit.saw && p.unit.saw[p.unit.labels[j]] && (ctx.conditions || []).indexOf(hit.v.condition) >= 0) ? hit.v.condition : '';

@@ -640,6 +640,48 @@ and browser step 69.
   drops it (*not stated* until a person names one), where *WorthPoint comps* stayed. **Server:** `AGENT_VALUE_FETCHES` 4 (was 2):
   more chances to open the lot itself from a results page; each research request runs longer, the fallback taking one that
   passes UrlFetchApp's limit. `tests/use-a-sale.test.js`, browser step 124.
+- **The value follows the job's standard, market and date (2026-10-28, Apps Script `2026-11-02e`, carrying `2026-11-02d` and `2026-11-02c`; the desk audit's P15:
+  ACC-09, VAL-08, ACC-10, VAL-09, ACC-12, VAL-11, VAL-06, AGT-06, VAL-16, VAL-21).** Server: the basis paragraph is
+  `_avBasisText(basis)`, one per basis. Fair Market Value carries the regulation's rule by class (the market where such a
+  thing is most commonly sold to the public: art, antiques, silver and jewellery at auction at the price the buyer paid,
+  the hammer plus the buyer's premium; branded furniture, decor and electronics on the used or resale market; everyday
+  things at the going used rate; never a new retail price, an asking price or an insurance figure), where it had said *"not
+  retail"* of everything; Replacement, Marketable Cash and Liquidation each say what they mean and which evidence they read.
+  The basis sentence names its market. Each comparable carries `premium` (`AGENT_VALUE_PREMIUMS`: `included`, `added`,
+  `hammer only`, `none`; required in `record_values`, an answer off the list kept as `''`): a hammer-only result is grossed
+  up by the house's stated premium (`added`) or labelled `hammer only`. On Replacement Value a kept asking price is evidence
+  (`_avLineResult(v, mode, seen, qty, basis, ebay)`: not a *General estimate* for want of a sale), and the range's words follow
+  the basis (`_avTool(mode, categories, conditions, basis, ebay)`). A line the app values as of its own day is told so
+  (`valueDate` on the item, `_avLineText`'s *Value as of …, the day it left the estate*). App: `_avWrite` records the basis
+  each figure was made at (`valBasis`, on the save list and `AGENT_VALUE_OWN`; a typed figure drops it) and its date per
+  line (`_avValDate(job, ref)` → `invLineValueDate`: under §2032 a line sold, distributed or otherwise disposed of inside
+  the six months is valued as of that day, §2032(a)(1)); `invValueStandardMoved(ref, job)` (`'basis'`, `'date'` or `''`)
+  holds an agent figure made at another basis or date (`_invLineHolds`' `standard`), the record says so with Re-value, and
+  the Valuation card lists them with **Re-value N lines** (`agentValueRevalueStandard`). Agent Two's `appraiser` and
+  `specialist` notes are routing (`agentValueAdvice`, `agentValueAdvised`): on an estate the line counts as needing an
+  appraisal (`invNeedsAppraisal`) and reaches the guardrail and the worklist marked *advised by Agent Two*; the note, the
+  record and the guardrail carry **Add to appraisal list** (**Send to a specialist** on living work,
+  `agentValueAdviceVerb`; `agentValueAddToAppraisal` sets `needsAppr` with who and when), until linked or waived. The
+  comparable's premium prints in the record (`AGENT_VALUE_PREMIUM_WORDS`). `BACKEND_MIN_VERSION` `2026-11-02e`.
+  `tests/p15-value-standard.test.js`, browser step 134 (130 until main's P14 took it, 132 until main's approval by where it goes took that, 133 until main's line record took that). Counsel and an appraiser to confirm the standard by class
+  (bundle D23).
+- **Its review, the same day (2026-10-28, still `2026-11-02e`).** A figure is recorded at the standard its request asked for:
+  `_avSendNext` keeps the basis and each line's date it sent (`asked`) and `_avWrite` writes those, never the job's as the answer
+  lands, so a basis changed or the §2032 date elected while a run was out (here, or on another device and merged in) finds the
+  figure moved (`invValueStandardMoved`) and listed for Re-value; and neither control changes while the agents are at work on
+  the list (`invValStandardBusy`, read by `setValBasis` and `setEstateAVD`, as Re-value refuses). On Replacement Value every
+  sentence of `_avSystem` that spoke of a sale says what a like one costs (a branded piece at what the same piece costs new,
+  never what it fetches second-hand; research looks for the price of the same or a like item, never SOLD results; listings
+  are what a like one costs, valued at about their middle and never above it, the survey rule unchanged), and `_avTool`'s
+  `comps` and `basis` say *prices*. `_avLineResult` holds a Replacement Value sentence to every price kept, sold or asking
+  (`evidence`), so one naming the retail price and a dealer's listing stands, and a rewrite names them (`_avKeptBasis(…, {rv,
+  kept, sure})`: *Two asking prices for a like item the research could show: Restoration Hardware; 1stDibs.*); and no rewrite
+  calls a figure kept at medium or high *a best estimate* (*No sale the research could show: the going rate for this kind of
+  thing.*). App, in main's one rule for *Use a sale* (Ask 14, built 2026-11-02; P15's own copy dropped on the merge): on a line of several articles the form asks what the price is for (*Price is for* one piece, as it
+  opens, or all of them) and weighs the sale against that (one piece's against `invUnitValue`; OK writes Each, the total that
+  times the count), and a recorded $0 is a figure the sale
+  is weighed against. On a client's own home **Send to a specialist** records `toSpecialist` (with who and when), not
+  `needsAppr`: the advice is decided, the line leaves the guardrail and counts under *To a specialist*.
 - **eBay's listings in the research (2026-11-02, Apps Script `2026-11-02d`):** eBay answered both Application Growth Check
   requests that day (ticket 261102-000056: the Browse API's search and getItem are not restricted; 261102-000057: Marketplace
   Insights refused). Anthony: *"Let's just assume we can get the listing prices and we take a low, medium, high and try to find

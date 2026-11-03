@@ -45,9 +45,9 @@ function gsVar(name) {
 const GS_VARS = ['AGENT_API', 'AGENT_API_VERSION', 'AGENT_MAX_IMG', 'AGENT_MODELS_API', 'AGENT_MODEL_FLOORS', 'AGENT_MODEL_LINES', 'AGENT_MODEL_LIST_SECS', 'AGENT_MODEL_DEMOTE_SECS', 'AGENT_MODEL_SLOW_LIMIT', 'AGENT_FALLBACK_BETA', 'AGENT_VALUE_EFFORT',
   'AGENT_VALUE_MAX_TOKENS', 'AGENT_VALUE_PARALLEL', 'AGENT_VALUE_MAX_LINES', 'AGENT_VALUE_GENERAL_BATCH',
   'AGENT_VALUE_SEARCHES', 'AGENT_VALUE_FETCHES', 'AGENT_VALUE_CONTINUES', 'AGENT_VALUE_MAX_COMPS',
-  'AGENT_VALUE_TIME_BUDGET', 'AGENT_VALUE_SOURCES', 'AGENT_VALUE_NOTICE_KINDS',
+  'AGENT_VALUE_TIME_BUDGET', 'AGENT_VALUE_SOURCES', 'AGENT_VALUE_NOTICE_KINDS', 'AGENT_VALUE_PREMIUMS',
   'AGENT_VALUE_CONF_DOWN', 'AGENT_VALUE_RESULTS_SEGMENTS', 'AGENT_VALUE_RESULTS_PARAMS', 'AGENT_VALUE_NO_PRICE_RE', 'AGENT_VALUE_TEXT_MAX', 'AGENT_VALUE_ABBREV_RE', 'AGENT_VALUE_SURVEY_MIN', 'AGENT_VALUE_ITEM_PATHS', 'AGENT_VALUE_ASKING_HOSTS', 'AGENT_VALUE_COUNT_WORDS', 'AGENT_VALUE_SALE_WORD_RE', 'AGENT_VALUE_SALE_NEGATION_RE', 'AGENT_VALUE_SALE_NOUN', 'AGENT_VALUE_NUM_WORDS', 'AGENT_VALUE_EBAY_PROPS'];
-const GS_FNS = ['_agProp', '_agMissingProps', '_agImageBlock', '_avCents', '_avTool', '_avTools', '_avSystem',
+const GS_FNS = ['_agProp', '_agMissingProps', '_agImageBlock', '_avCents', '_avTool', '_avTools', '_avSystem', '_avBasisText',
   '_avLineText', '_avUserContent', '_avBody', '_avHttp', '_avEcho', '_avReadResult', '_avSeenUrls', '_avUrlKey', '_avResultsPage', '_avClip',
   '_avLineResult', 'agentValueLines', '_agModelVersion', '_agVerCmp', '_agNewestOf', '_agCache', '_agModelList', '_agDemoted', '_agDemote', '_agSlow', '_agModels', '_agSendAll', '_agHttpFailure', '_avSurvey', '_avHostOf', '_avListedHost', '_avAskingHost', '_avSalesNamed', '_avKeptBasis', '_avPageKey', '_avClaimsSale', '_avEbayOn', '_avMessages', '_avPushAssistant'];
 
@@ -109,7 +109,7 @@ const CTXP = { estate: true, basis: 'Fair Market Value', valuationDate: '2026-06
 const AV_FNS = ['_avValueButtonHtml', 'agentValueWaiting', 'agentDuplicateGroups', '_arPair', '_arPairOpen', 'agentDupCleared', 'agentNamedTwice', '_agDupEligible', 'agentValueMode', 'agentValueInternal', '_avHasFigure', 'agentValueableRefs', 'agentValueUnreviewed',
   'agentValueStale', 'agentValueSpecialistWorth', '_avValDate', '_avContext', '_avItemPayload', 'agentValueGradesCondition', '_avComp', '_avWrite', '_invCondIsAgents', '_invAgentCondition', 'agentValueWhole',
   '_avNoteFailure', 'agentValueApply', '_avTakeValue', '_avStampReviewed', '_invStampBy', 'deviceUser', 'agentValueRun', 'agentRevalue', '_avStart',
-  '_avSendNext', '_avFinish', '_avRepaint', '_avStateHtml', '_avState', 'agentValueUseSale',
+  '_avSendNext', '_avFinish', '_avRepaint', '_avStateHtml', '_avState', 'agentValueUseSale', 'invUnitValue',
   'agentValueNotices', '_avNoticeKinds', '_avNoticeLabel', '_avRename', '_avNoticesHtml', '_deskShowBtnHtml', '_avSummary', '_avRowBadges', '_avPanelHtml',
   'invValBasisWord', '_avUnreviewedStamp', 'invAppraised', 'invLineAppraiser', '_invLinkedAppraiser', '_jobAppraisers', '_apprLabel', '_invHasAppraisal',
   // the real rules they read, never stubs of them
@@ -117,8 +117,8 @@ const AV_FNS = ['_avValueButtonHtml', 'agentValueWaiting', 'agentDuplicateGroups
   'invFiduciaryMode', 'isDecedentJob', 'docTierProduces', 'docTierOf', 'docTierDef', 'svcHasDocStep', 'estateValueDate',
   '_avdDate', '_ymdLocal', 'resolveValBasis', '_agNameKey', '_agDetailRefs', 'invLineCloseUps', '_invFileId', 'invAppraisalThreshold',
   'gateDispute', '_gateYes', 'invNeedsAppraisal', 'invAppraisalChosen', 'fmt', '_invMoney', '_invNamed', '_invItemNo', '_andJoin',
-  'moneyToNumber', '_readAppsScriptJson', '_invJob', '_avNameIsAgents', '_invStampLineReviewed', '_invRenderWhenIdle', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', 'agentValueLooks', '_avPhotoContext', '_invPhotoSource', '_invRoomName', 'agentListedOff', 'agentValueAgain', 'invLineQty', 'invLineReviewed', 'invLineOpen', '_avSurveyOf', '_withDeviceKey', 'deviceKey', 'invFirearmSettle', 'invFirearmDispRefusal', 'invIsFirearm', '_avStampCounts', 'invSaleSource', 'invSaleVenue', 'invSaleFarOff', '_invSaleHost'];
-const AV_VARS = ['_avRun', '_avForceComps', '_avAfter', 'AGENT_VALUE_BATCH', 'AGENT_VALUE_GENERAL_CEILING', 'AGENT_VALUE_WHOLE_FROM', 'AGENT_VALUE_MAX_COMPS', 'AGENT_CONDITIONS', 'INV_FIREARM_NEVER',
+  'moneyToNumber', '_readAppsScriptJson', '_invJob', '_avNameIsAgents', '_invStampLineReviewed', '_invRenderWhenIdle', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', 'agentValueLooks', '_avPhotoContext', '_invPhotoSource', '_invRoomName', 'agentListedOff', 'agentValueAgain', 'invLineQty', 'invLineReviewed', 'invLineOpen', '_avSurveyOf', '_withDeviceKey', 'deviceKey', 'invFirearmSettle', 'invFirearmDispRefusal', 'invIsFirearm', '_avStampCounts', 'invSaleSource', 'invSaleVenue', 'invSaleFarOff', '_invSaleHost', 'agentValueAdvised', 'agentValueAdvice', 'agentValueAdviceVerb', 'invValueStandardMoved', 'invValueStandardWords', 'invLineValueDate', 'estateAvdOn'];
+const AV_VARS = ['_avRun', '_avForceComps', '_avAfter', 'AGENT_VALUE_BATCH', 'AGENT_VALUE_GENERAL_CEILING', 'AGENT_VALUE_WHOLE_FROM', 'AGENT_VALUE_MAX_COMPS', 'AGENT_CONDITIONS', 'INV_FIREARM_NEVER', 'AGENT_VALUE_PREMIUMS', 'AGENT_VALUE_PREMIUM_WORDS',
   'AGENT_VALUE_MARK_RE', 'AGENT_VALUE_NO_MARK_RE', 'AGENT_VALUE_CONFS', 'AGENT_VALUE_SOURCES', 'AGENT_VALUE_OWN', 'AGENT_VALUE_SALE_DATE_RE',
   'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'DECEDENT_SERVICES', 'DOC_TIERS',
   'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'AGENT_MAX_DETAILS', 'INV_VAL_SOURCES', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', 'AGENT_VALUE_READ_RE', 'AGENT_VALUE_HEDGE_RE', 'AGENT_LISTED_MAX', '_avAutoAgain', 'INV_CATEGORIES', 'AGENT_PASS_GAP_MS', 'AGENT_ROOM_CONF_RANK', 'INV_SALE_AUCTION_HOSTS', 'INV_SALE_ASK_PCT'];
@@ -788,8 +788,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     R.ctx.agentValueUseSale(7, 's1');
     has(R.alerts[0], 'its title, its price and its link', 'refused by name, everything missing at once');
     eq(R.ctx._getPhotoRef(7, 's1').valComps.length, 1, 'and nothing written');
+    // A sale of the whole set of eight, said so on the form (P15's review: on a line of several the price is one piece's unless it says all).
     Object.assign(seed, { 'av-wp-title-s1': 'Herend Rothschild Bird, 8 dinner plates', 'av-wp-price-s1': '$725.50',
-      'av-wp-date-s1': '2026-02-01', 'av-wp-url-s1': 'https://www.worthpoint.com/worthopedia/herend-123' });
+      'av-wp-date-s1': '2026-02-01', 'av-wp-url-s1': 'https://www.worthpoint.com/worthopedia/herend-123', 'av-wp-per-s1': 'all' });
     R.ctx.agentValueUseSale(7, 's1');
     const r = R.ctx._getPhotoRef(7, 's1');
     eq(r.valComps[0], { title: 'Herend Rothschild Bird, 8 dinner plates', venue: 'WorthPoint', saleDate: '2026-02-01', price: 725.5,
@@ -797,7 +798,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(r.valSource, 'WorthPoint comps', 'the source names it');
     eq(r.valReviewed, true, 'and the value is reviewed');
     eq(r.fmv, 640, 'the figure is the person\'s to change, not the paste\'s');
-    Object.assign(seed, { 'av-wp-title-n': 'x', 'av-wp-price-n': '120', 'av-wp-url-n': 'https://www.worthpoint.com/w/1' });
+    Object.assign(seed, { 'av-wp-title-n': 'x', 'av-wp-price-n': '120', 'av-wp-url-n': 'https://www.worthpoint.com/w/1', 'av-wp-per-n': 'all' });
     R.ctx.agentValueUseSale(7, 'n');
     const n = R.ctx._getPhotoRef(7, 'n');
     eq([n.fmv, n.valuedBy, n.valSource], [120, 'desk', 'WorthPoint comps'], 'a line with no figure takes the sale\'s price as a person\'s value');
@@ -831,7 +832,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(liveLines(fn('printCourtInventory')), '_avUnreviewedStamp(onSched, { fc: invAcceptCtx(job) })', 'the Court Inventory counts its own lines');
     has(liveLines(fn('printTrustSchedule')), '_avUnreviewedStamp(onSched, { fc: invAcceptCtx(job) })', 'the Trust Schedule too');
     has(liveLines(fn('printEstateInventoryReport')), '_avUnreviewedStamp(all, { noAccepted: true, fc: _ac })', 'and the Estate Inventory Report (its own stamp counts the lines that stand, so the pill leaves them out)');
-    const sec = sandbox({ fns: ['invConditionText', '_invScheduleSection', 'invValBasisWord', 'invAppraised', 'invLineAppraiser', '_invHasValue', '_invMoney', 'fmt', 'roundCents', '_invItemNo'],
+    const sec = sandbox({ fns: ['invConditionText', '_invScheduleSection', 'invValBasisWord', 'invAppraised', 'invLineAppraiser', '_invHasValue', '_invMoney', 'fmt', 'roundCents', '_invItemNo', 'invValBasisShort', 'invLineStandardNote'],
       stubs: { esc: (x) => String(x == null ? '' : x) } })._invScheduleSection('Tangible Personal Property',
       [ROW({ fmv: 640, valSource: 'Auction comps' }), ROW({ stableId: 'b', fmv: 40, valSource: 'General estimate', category: 'General/Household', qty: 60 })]);
     has(sec.html, '<th style="padding:2px 6px;">Basis</th>', 'the table has a Basis column');
@@ -893,7 +894,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             'invBequestFor', 'jobListEntries', 'invApprovalGap', 'invReceiptOwed', '_invBenListAttr',
             'invRatificationOwed', 'invFiduciaryMode', 'isDecedentJob', 'invReleaseCautions', 'invBequestElsewhere', '_invJob', 'invHavellinRecipient', 'invWrittenReleaseNeeded',
             // P22 (merged): the row reads a pickup record and a name left on a line moved off To a person.
-            'invPickupRecord', 'signedRecordsOf', 'invChannelLeftover', 'invChannelLeftoverText', '_invPanelLeftoverHtml', 'invLineUnsure', '_invEachInput', 'invUnitValue', 'invLineQty', '_invInputStyle', '_invCtrlMinW', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invNeedsAppraisal', 'invIsIntrinsic', 'invCatMeta', 'invLineAcceptedOnly', '_invRevBoxHtml', 'invIsMAIV', 'invMAIVDefaultCat', '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_arPair', '_arPairOpen', 'agentDupCleared', '_jobInvRefs', '_agDupEligible', 'agentNamedTwice', 'agentNoticesOn', '_avSurveyOf', 'invFirearmClientTakes', 'invDealerWhy', 'invTransportDealer', 'invFirearmsDealerFirm', 'invFirearmsDealerFirms', '_vendorNameKey', 'vendorCats', 'invViaDealer', 'invDealerReleased', '_invRecipientListAttr', 'invDealerNamed', 'invDispGoesToDealer', 'invDealerUnchecked', 'invDealerDirState', 'invDealerUncheckedText', '_invDealerDirStaleText'],
+            'invPickupRecord', 'signedRecordsOf', 'invChannelLeftover', 'invChannelLeftoverText', '_invPanelLeftoverHtml', 'invLineUnsure', '_invEachInput', 'invUnitValue', 'invLineQty', '_invInputStyle', '_invCtrlMinW', 'invLineAccepted', 'invLineHold', '_invLineHolds', '_invPhotoNoteOpen', 'invNeedsAppraisal', 'invIsIntrinsic', 'invCatMeta', 'invLineAcceptedOnly', '_invRevBoxHtml', 'invIsMAIV', 'invMAIVDefaultCat', '_invAcceptCtxOf', 'invAcceptCtx', 'agentDuplicateGroups', '_arPair', '_arPairOpen', 'agentDupCleared', '_jobInvRefs', '_agDupEligible', 'agentNamedTwice', 'agentNoticesOn', '_avSurveyOf', 'invFirearmClientTakes', 'invDealerWhy', 'invTransportDealer', 'invFirearmsDealerFirm', 'invFirearmsDealerFirms', '_vendorNameKey', 'vendorCats', 'invViaDealer', 'invDealerReleased', '_invRecipientListAttr', 'invDealerNamed', 'invDispGoesToDealer', 'invDealerUnchecked', 'invDealerDirState', 'invDealerUncheckedText', '_invDealerDirStaleText', 'agentValueAdvised', 'agentValueAdvice', 'agentValueAdviceVerb', 'invValueStandardMoved', 'invValueStandardWords', 'invLineValueDate', 'estateValueDate', 'estateAvdOn', 'resolveValBasis', 'invApprInProgressBadge'],
       vars: ['INV_PLAN_CHANNEL_KINDS', 'INV_RELEASE_DISPOSITIONS', 'INVENTORY_COLUMNS', '_invOpen', '_invPick', '_agDupSet', 'DECEDENT_SERVICES', 'INV_RELEASE_CAUTIONS', '_avRun', '_avAfter', '_avForceComps',
              'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS', 'INV_APPRAISAL_THRESHOLD', 'INV_TAXONOMY', 'INV_APPRAISAL_THRESHOLD_DISPUTED', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', '_agDupSetJob', 'INV_HOLD_WORDS', 'INV_OPEN_HOLDS', 'INV_ACCEPT_AMMO_RE', 'INV_FIREARM_CLIENT_TXT', 'INV_SALE_DISPOSITIONS', 'FIREARMS_DEALER_CATEGORY'],
       stubs: {

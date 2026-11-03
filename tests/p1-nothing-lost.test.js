@@ -646,7 +646,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     });
     has(fn('snapshotRefusal'), 'invColdRefusal(jobId)', 'Snapshot through snapshotRefusal');
     // Drive one paper and + Add line item on a cold device.
-    const P = sandbox({ fns: ['printEstateInventoryReport', 'invAppraisalChosen', 'invColdRefusal', '_invManifestUnread', 'addInventoryManualItem', 'invTotalFloor', '_invFloorTotalHtml', '_invOnProbateSchedule'], vars: ['INV_COLD_TXT'],
+    const P = sandbox({ fns: ['printEstateInventoryReport', 'invAppraisalChosen', 'invColdRefusal', '_invManifestUnread', 'addInventoryManualItem', 'invTotalFloor', '_invFloorTotalHtml', '_invOnProbateSchedule', 'invValBasisShort', 'invLineStandardNote', 'invApprWaiverText', 'apprReportOverdue'], vars: ['INV_COLD_TXT'],
       stubs: { SHEETS_SYNC_URL: SYNC, _invCloudSeen: {}, jobs: [{ id: 7 }], invDocContractBlock: () => '', _setPhotoRef() { throw new Error('a line was minted'); },
         alert: (m) => { P.__said = m; }, window: { prompt: () => 'Cash on hand' } } });
     eq(P.printEstateInventoryReport(7, { asHtml: true }), { why: P.INV_COLD_TXT }, 'the report hands back the refusal');
@@ -1044,10 +1044,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         fetch: () => ({ then(f) { const r = f({ json: () => ({ ok: true, version: '2026-10-28', actions: C28.BACKEND_NEEDS, types: C28.BACKEND_NEEDS_TYPES }) }); return { then(g) { g(r); return { catch() {} }; } }; } }) } });
     C28.checkBackendVersion();
     eq(shown.slice(1).map((x) => [x.v, x.m]), [['2026-10-28', ['version']]], '⚠⚠ and so does a 2026-10-28 deployment, by version');
-    ok(_v.indexOf('on a deployment older than 2026-11-02c, a copy of the app that has not been reloaded can send an estate\u2019s release request through DocuSign') === 0,
-      '⚠⚠ it names the newest gap first: a release request a copy of the app not reloaded can send through DocuSign');
+    // RESTATED on merging P15 (2026-11-02e since main's eBay took 2026-11-02d; it carries 2026-11-02c): P15's gap leads the line, then 2026-11-02c's.
+    ok(_v.indexOf('on a deployment older than 2026-11-02e, Agent Two values every basis as fair market value') === 0,
+      '⚠⚠ it names the newest gap first: Agent Two valuing every basis as fair market value');
+    ok(_v.indexOf(_vint) === _v.indexOf(_vint + '2026-11-02c, a copy of the app that has not been reloaded can send an estate\u2019s release request through DocuSign'),
+      '⚠⚠ then a release request a copy of the app not reloaded can send through DocuSign');
     const _d28 = _v.indexOf(_vint + '2026-10-28, two devices saving at the same moment can lose one device\u2019s change on the sheet though both were told it saved');
-    ok(_d28 > 0 && _v.indexOf(_vint) === _d28, '⚠⚠ then the lost change, at once after it, under its own vintage');
+    ok(_d28 > 0 && _v.indexOf(_vint, _v.indexOf(_vint) + 1) === _d28, '⚠⚠ then the lost change, at once after it, under its own vintage');
     ok(_v.indexOf(_vint + '2026-10-27e, a figure Agent Two researched') > 0 && _v.indexOf(_vint, _d28 + 1) === _v.indexOf(_vint + '2026-10-27e, '),
       'then 2026-10-27e\'s gap, under its own vintage');
     // The rule, one definition with its readers counted.

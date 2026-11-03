@@ -303,7 +303,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(bad.__calls.log.join('\n'), 'SIGN-IN FAILED: eBay refused the keys (HTTP 401: invalid_client)', 'a refused key named');
     has(bad.__calls.log.join('\n'), 'marketplace-account-deletion notice, or an exemption', '…with the keyset\'s likely cause');
     const v = GS.match(/var BACKEND_VERSION = '([^']+)'/)[1];
-    eq(v, '2026-11-02d', 'the version moved');
+    // RESTATED on the merge with P15 (2026-11-02e, which carries this 2026-11-02d).
+    ok(v >= '2026-11-02d', 'the version moved (' + v + ')');
     has(GS, '⚠ 2026-11-02d', 'and says why');
     const props = (GS.match(/getProperty\('EBAY_[A-Z_]+'\)|_agProp\('EBAY_[A-Z_]+'\)/g) || []);
     ok(props.length >= 2, 'the keys read from Script Properties only');
