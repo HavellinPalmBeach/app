@@ -1347,7 +1347,9 @@ schedule is not held at DRAFT for it); and where the engagement gives valuation 
   *appraisal*, *auction comps*, *online comps*, *general estimate*, *WorthPoint comps*, *dealer quote*, *PR estimate*, and since
   2026-10-27 *listing survey*: no sale found, but ten or more close listings of the same thing counted and the figure set at or
   under their middle asking price (Anthony, Q110: *"A listing survey counts"*), its basis sentence saying so (*No sales found;
-  twelve close listings at $25 to $120 each; valued below them*).
+  twelve close listings at $25 to $120 each; valued below them*). Since 2026-11-02d the listings counted may be eBay's own,
+  read through its developer API (fixed-price listings only; eBay refused its sold history), the page counted being eBay's
+  search page.
 - **Court Inventory, Trust Schedule and Estate Inventory PDF:** a stamp beside the DRAFT / FINAL status reading
   *"N values not yet reviewed"* when software figures nobody at Havellin has looked at are on lines that do not stand (flagged,
   or not yet decided), and since 2026-10-26 a grey *"N accepted as valued · list read by …"* for the figures on lines nothing
@@ -1371,7 +1373,9 @@ schedule is not held at DRAFT for it); and where the engagement gives valuation 
 5. (2026-10-27) Fair market value is what a thing sells for, not what it is offered at. Is *listing survey*, a figure set
    below where ten or more like items are listed with no sale found, an acceptable stated basis on a Court Inventory or a
    Trust Schedule, or should such a line print as an estimate without a basis word of its own, or be held for an appraisal
-   above some figure?
+   above some figure? (2026-11-02) The listings may now come from eBay's developer API, whose 2025 license restricts sending
+   its data to an outside AI without eBay's written consent; eBay was asked and did not give it, and Anthony chose to go ahead
+   (eBay may revoke the keys; no client data goes to eBay). Is there anything in that for the firm beyond the keys?
 
 ### D14. A living client signs the Contents Record, not a ledger ⚠ NEW P25 (2026-10-09)
 
