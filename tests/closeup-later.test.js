@@ -146,8 +146,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const ctx = sandbox({
       fns: ['_renderInvPanel', '_invPanelGroupHtml', 'invGroupUncounted', '_invPanelColsFor', '_invRowHasWho', '_invCloseUpAddHtml', 'invCloseUpRefusal', '_invHasPhoto', '_invCloseUpsHtml', '_invCloseUpTileHtml', '_invPhotoOpenHtml', '_invDetailRefs',
             '_invPhotoSiblings', '_invPhotoSource', '_invDerivedRefs', '_getPhotoRef', '_agRecordNoticesHtml', 'agentNoticeQuiet', 'invLineReviewed',
-            '_invPanelAppraisalHtml', '_invHasAppraisal', 'invAppraisalInProgress', 'invAppraised', '_invLinkedAppraiser', 'invLineAppraiser', 'invAppraisalSourceText', 'invAppraisalChosen', 'agentValueUnreviewed', '_avHasFigure', 'invLineAccepted', 'invLineHold', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', 'agentNoticesOn'],
-      vars: ['AGENT_NOTICE_KINDS', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', 'INV_RELEASE_DISPOSITIONS'],
+            '_invPanelAppraisalHtml', '_invHasAppraisal', 'invAppraisalInProgress', 'invAppraised', '_invLinkedAppraiser', 'invLineAppraiser', 'invAppraisalSourceText', 'invAppraisalChosen', 'agentValueUnreviewed', '_avHasFigure', 'invLineAccepted', 'invLineHold', 'invLineAcceptedOnly', 'invIsMAIV', 'invMAIVDefaultCat', '_arDupEligible', 'agentNoticesOn', 'invRecFacts', '_invRecSaysHtml', 'invFiduciaryMode', 'isDecedentJob'],
+      vars: ['AGENT_NOTICE_KINDS', 'MAIV_OTHER', 'MAIV_BY_CATEGORY', 'INV_RELEASE_DISPOSITIONS', 'DECEDENT_SERVICES'],
       stubs: {
         _photoRefs: { 1: PLATES().concat([
           { stableId: 'dx', label: 'detail', groupId: 'p', status: 'failed', ts: 1002 },
@@ -155,7 +155,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
         _invThumbHTML: (j, r, px) => '<div data-thumb-id="' + (r.driveFileId || '') + '" style="w:' + px + '"></div>',
         _invPanelCols: () => [], INV_PANEL_SECTIONS: [], custodyEvents: () => [], _invNamed: (r) => '#' + r.itemNo,
         _invFirearmPanelHtml: () => '', _invPanelCautionHtml: () => '', _invPanelLeftoverHtml: () => '', _collPanelHtml: () => '',
-        _avPanelHtml: () => '', mustFindAllFound: () => false,
+        _avPanelHtml: () => '', mustFindAllFound: () => false, _invRoomName: () => 'Kitchen',
       },
     });
     const job = { id: 1 };

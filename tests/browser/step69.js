@@ -198,7 +198,9 @@ const COMP = { title: 'Herend Rothschild Bird dinner plates, set of 8', venue: '
     ok(/Agent Two/.test(rec), 'the record has Agent Two\'s section');
     ok(/SOLD/.test(rec) && /Mahogany pedestal dining table/.test(rec), 'with its comparable');
     ok(/WorthPoint search: mahogany pedestal dining table/.test(rec), 'and the WorthPoint search');
-    ok(/Photograph/.test(rec), 'beside the photograph');
+    // RESTATED 2026-11-02m (the record's answer first): the search sits under See the research, and the photograph link beside it is
+    // gone (the photograph at the top of the record opens it in Drive).
+    ok(/See the research/.test(rec) && !/>Photograph</.test(await p.evaluate(() => (document.getElementById('inv-row-c') || {}).innerHTML || '')), 'under See the research, with no second photograph link');
     // Restated 2026-11-02: the form is Use a sale (any sale, its source by its link); this one is WorthPoint's.
     await p.click('#inv-row-c summary:has-text("Use a sale")');
     await p.fill('#av-wp-title-c', 'Antique mahogany pedestal table, 72in');

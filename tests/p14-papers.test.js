@@ -397,26 +397,28 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const pl = attempt(() => L.buildInventoryPayload(14)).val || { columns: [] };
     eq(pl.columns.length, 1 + (attempt(() => L.INVENTORY_COLUMNS).val || []).length, 'the workbook\'s payload keeps every column');
   }
-  group('H2 · the living line\'s record: Flags, Promised to someone, and who approved it only where it says something');
+  group('H2 · the living line\'s record: Promised to someone, no estate fields, and who approved it only where it says something');
   {
+    // RESTATED 2026-11-02m (the record's answer first, tests/line-record.test.js): the record names its fields in plain words
+    // (_invPanelLabel) and has no Flags or Flags & Track section; the exceptions sit under Something unusual about this item?,
+    // the approval under Leaving the property, its date inside the approval's own line. The rule here is unchanged.
     const L = rig(MATTERS.living, ROWS());
     const plain = textOf(attempt(() => L._renderInvPanel(MATTERS.living, L._photoRefs[14][0])).val);
     has(plain, 'Promised to someone', 'living: the promise, in the desk\'s words');
     lacks(plain, 'Specific Bequest', '…never a bequest');
-    has(plain, ' Flags ', 'the section is Flags');
-    lacks(plain, 'Flags & Track', '…with no track on living work');
-    lacks(plain, 'Authorized By', '⚠ an everyday line the client approves by word: no Authorized By');
-    lacks(plain, 'Approval Date', '…and no Approval Date');
+    lacks(plain, 'Left to someone by name', '…nor the estate\'s words for one');
+    lacks(plain, 'Belongs to', '…with no track on living work');
+    lacks(plain, 'Approved by', '⚠ an everyday line the client approves by word: no approval line');
     const fire = LINE({ stableId: 'w1', objectName: 'Remington 870 shotgun', category: 'Firearms', disposition: 'Sell', channel: '' });
     const F = rig(MATTERS.living, [fire]);
     const fp = textOf(attempt(() => F._renderInvPanel(MATTERS.living, F._photoRefs[14][0])).val);
-    has(fp, 'Authorized By', 'a living firearm, which needs the client\'s written approval: shown');
+    has(fp, 'Approved by', 'a living firearm, which needs the client\'s written approval: shown');
     const signed = LINE({ stableId: 'w2', authBy: 'Robert Hale', approvalDate: '2026-10-01', disposition: 'Keep' });
     const S = rig(MATTERS.living, [signed]);
-    has(textOf(attempt(() => S._renderInvPanel(MATTERS.living, S._photoRefs[14][0])).val), 'Approval Date', 'a recorded approval is never hidden');
-    const E = rig(MATTERS.probate, ROWS());
+    has(textOf(attempt(() => S._renderInvPanel(MATTERS.living, S._photoRefs[14][0])).val), 'Robert Hale (Oct 1, 2026)', 'a recorded approval is never hidden, its date in its line');
+    const E = rig(MATTERS.probate, ROWS().map((r) => Object.assign(r, { disposition: 'Sell', channel: 'Kodner' })));
     const ep = textOf(attempt(() => E._renderInvPanel(MATTERS.probate, E._photoRefs[14][0])).val);
-    ['Specific Bequest', 'Flags & Track', 'Authorized By', 'Approval Date'].forEach((h) => has(ep, h, 'an estate\'s record keeps "' + h + '"'));
+    ['Left to someone by name in the will', 'Belongs to', 'Approved by', 'Something unusual about this item?'].forEach((h) => has(ep, h, 'an estate\'s record keeps "' + h + '"'));
   }
 
   // ═══════════════════════════════ I · THE PAPER OUTSIDE THE APP ═══════════════════════════════

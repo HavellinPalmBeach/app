@@ -895,8 +895,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(cap, [cols.indexOf('Net Proceeds') + 1], '⚠⚠ the deployed workbook writes its Net formula on the Net column under that name');
     // The panel reads the header.
     // Restated 2026-10-28 (P14 of the desk audit, LIV-16): the panel heads a field through _invColHeader, which reads `header` (a
-    // living line's bequest flag reads *Promised to someone*).
-    has(noComments(fn('_renderInvPanel')), 'esc(_invColHeader(job, c))', 'the item panel heads the field through the catalogue\'s namer');
+    // living line's bequest flag reads *Promised to someone*). Restated 2026-11-02m (the record's answer first): the record names a
+    // field in plain words (_invPanelLabel), which falls back on the catalogue's namer for every field it does not reword.
+    has(noComments(fn('_renderInvPanel')), 'esc(_invPanelLabel(job, c))', 'the item panel heads the field through the record\'s namer');
+    has(noComments(fn('_invPanelLabel')), '_invColHeader(job, col)', '…which falls back on the catalogue\'s');
     has(noComments(fn('_invColHeader')), ': col.header', 'which reads `header`');
   });
 
@@ -988,7 +990,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // P4 (2026-10-27): a firearm's dealer is read only on a sale or a route (one answer since the P4 review, invDispGoesToDealer, which
     // invTransportDealer and invDealerWhy ask), and its row and its Who takes it box ask whether it is sold to one (_renderInvRow,
     // _invRecipientListAttr).
-    eq(saleReaders, ['_invRecipientListAttr', '_renderInvRow', '_renderProceedsCard', 'dispositionLedger', 'invDispGoesToDealer', 'invHavellinRecipient', 'invPickupLine', 'ledgerApplies', 'openProceedsStatement', 'printDispositionLedger', 'proceedsLine', 'proceedsReceivedLine', 'proceedsReconciliation'], 'the sale dispositions: one list (P19 W3\'s staff rule reads it too)');
+    // _invRecPlace since 2026-11-02m: the line's record draws the sale's figures only on a selling line (the record's answer first).
+    eq(saleReaders, ['_invRecPlace', '_invRecipientListAttr', '_renderInvRow', '_renderProceedsCard', 'dispositionLedger', 'invDispGoesToDealer', 'invHavellinRecipient', 'invPickupLine', 'ledgerApplies', 'openProceedsStatement', 'printDispositionLedger', 'proceedsLine', 'proceedsReceivedLine', 'proceedsReconciliation'], 'the sale dispositions: one list (P19 W3\'s staff rule reads it too)');
     eq(count(live, "['Auction', 'Consign', 'Sell']"), 1, 'and no second copy of it written out');
   });
 };

@@ -386,6 +386,8 @@ const DAY = (at) => new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_Yo
     // ── D ─────────────────────────────────────────────────────────────────────────────────────
     await section('D. Specific Bequest ticked in the drawer\'s record: its box unticked by id, no full render', async () => {
       await press('#inv-row-cut button[onclick="_invToggleOpen(\'cut\')"]', 'the drawer\'s ▾');
+      // Since 2026-11-02m the flag is under Something unusual about this item?, shut on a line with nothing unusual: opened first.
+      await press('#inv-row-cut details.inv-rec-odd > summary', 'Something unusual about this item?, in the drawer\'s record');
       const BQ = '#inv-row-cut input[type="checkbox"][onchange*="\'flagBequest\'"]';
       await watchRenders();
       await p.evaluate(() => { window.__box = document.getElementById('inv-rev-cut'); window.__row = document.getElementById('inv-row-cut'); });

@@ -178,7 +178,9 @@ const MODEL = {
       eq(svAny, 'LISTED 12 close listings for sale, $25 to $120 each, middle $48 · the page counted', '⚠⚠ how many, at what prices, in plain words');
       const link = await p.evaluate(() => { const a = document.querySelector('.av-survey a'); return a ? [a.getAttribute('href'), a.getAttribute('target'), a.getAttribute('rel')] : null; });
       eq(link, [RESULTS, '_blank', 'noopener'], 'the page counted opens the results page in a new tab');
-      const panel = await p.evaluate(() => { const el = document.querySelector('.av-survey'); return el ? el.parentElement.textContent.replace(/\s+/g, ' ') : ''; });
+      // Since 2026-11-02m the count is under See the research (a fold inside Agent Two's section): the section is the fold's parent.
+      const panel = await p.evaluate(() => { const el = document.querySelector('.av-survey'); const d = el && el.closest('details.av-research');
+        return el ? (d || el).parentElement.textContent.replace(/\s+/g, ' ') : ''; });
       has(panel, 'Listing survey', 'the source beside the figure');
       has(panel, 'medium confidence', 'and its confidence');
       const src = await p.evaluate(() => { const s = [...document.querySelectorAll('select')].find((x) => /_invEdit\(\d+,'rose','valSource'/.test(x.getAttribute('onchange') || ''));

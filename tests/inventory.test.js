@@ -788,8 +788,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('the column switcher is gone — the groups are the item panel now');
   {
-    const v = sandbox({ fns: ['_invPanelCols', '_invColOnJob', '_invPanelSection', 'invFiduciaryMode', 'isDecedentJob'],
-                        vars: ['INVENTORY_COLUMNS', 'INV_PANEL_SECTIONS', 'DECEDENT_SERVICES'] });
+    const v = sandbox({ fns: ['_invPanelCols', '_invColOnJob', '_invRecPlace', '_invRecFilled', 'invFiduciaryMode', 'isDecedentJob', 'invIsFirearm',
+                              'maivFilingApplies', '_gate706', 'invIsMAIV', 'invMAIVDefaultCat', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf'],
+                        vars: ['INVENTORY_COLUMNS', 'INV_PANEL_SECTIONS', 'DECEDENT_SERVICES', 'INV_SALE_DISPOSITIONS', 'INV_RELEASE_DISPOSITIONS',
+                               'MATTER_TYPES', 'MAIV_OTHER', 'MAIV_BY_CATEGORY'] });
     // ⚠ THE PANEL IS PER JOB SINCE 2026-09-21 — this called _invPanelCols() bare and broke
     // correctly. Axis 2 columns come off a living job; everything else is on both.
     const ESTATE = { id: 1, svc: 'probate' };
@@ -834,13 +836,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // EVERY panel field must land in a section that is actually rendered, or it exists
     // in the data and nowhere on screen — the same unreachability the old view test guarded.
+    // RESTATED 2026-11-02m (the record's answer first): a field's place follows the line and the job (_invRecPlace), and a field
+    // that does not apply to the line is not drawn; one holding a value always has a rendered place (tests/line-record.test.js R6).
     const sections = v.INV_PANEL_SECTIONS.map((s) => s.key);
-    const orphan = v._invPanelCols(ESTATE).filter((c) => sections.indexOf(v._invPanelSection(c)) < 0);
-    eq(orphan.map((c) => c.key), [], 'no panel field falls outside a rendered section');
-
-    eq(v._invPanelSection({ key: 'objectName' }), 'item', 'identity fields head the panel');
-    eq(v._invPanelSection({ key: 'room', group: 'val' }), 'item', 'room is an identity field, not a valuation one');
-    eq(v._invPanelSection({ key: 'gross', group: 'disp' }), 'disp', 'otherwise the column group decides');
+    const FULL = { category: 'Art & Décor', disposition: 'Sell', channel: 'Kodner', serial: 'S1', flagNFA: true, flagMAIV: 'yes', maivCat: 'Painting',
+      flagExempt: true, gross: 500, fees: 50, dispDate: '2026-10-09', receiptDoc: 'R-1' };
+    const orphan = v._invPanelCols(ESTATE).filter((c) => c.key !== 'driveFileUrl' && sections.indexOf(v._invRecPlace(ESTATE, FULL, c)) < 0);
+    eq(orphan.map((c) => c.key), [], 'no panel field holding a value falls outside a rendered section');
+    eq(v._invRecPlace(ESTATE, {}, { key: 'driveFileUrl' }), '', 'the photo link is not drawn: the photograph above it is the link');
+    eq(v._invRecPlace(ESTATE, {}, { key: 'room' }), 'fix', 'the room is filled in by the camera');
+    eq(v._invRecPlace(ESTATE, {}, { key: 'gross' }), '', 'the sale\'s figures are not drawn on a line that is not selling');
+    eq(v._invRecPlace(ESTATE, { disposition: 'Auction' }, { key: 'gross' }), 'go', '…and are on one that is');
 
     // The EXPORT is unaffected — the workbook always carries every column.
     // ⚠ THIS PINNED A LITERAL 30 AND BROKE CORRECTLY when Needs Appraisal was added on
