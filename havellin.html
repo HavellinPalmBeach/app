@@ -1490,7 +1490,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.11.03 · 7:25am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.11.04 · 5:05pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -4510,6 +4510,8 @@ var ROOMS = [
     {name:'Other',tc:0.70,ps:1.05,custom:true}
   ]},
   {section:'Exterior & Auxiliary',rooms:[
+    {name:'Front Yard',tc:0.55,ps:1.25},
+    {name:'Back Yard',tc:0.55,ps:1.25},
     {name:'Balcony',tc:0.30,ps:0.55},
     {name:'Boat House',tc:0.85,ps:1.95},
     // Casita is gone from the grid entirely (2026-09-18). It moved from this list into
@@ -4614,6 +4616,11 @@ var ROOM_WEIGHT = {
   'Bonus Room':1.8,'Additional Office':1.8,'Additional Sitting Room':1.6,
   'Garage (1-car)':2.5,'Garage (2-car)':3.5,'Garage (3+ car)':4.5,
   'Storage Room / Oversized Closets':2.5,'Storage Unit (offsite)':2.5,'Mechanical / Utility Room':0.5,
+  // The yards (2026-11-04; Anthony, off the first live walkthrough: a playset to come down and a back yard full of things to
+  // clear, and nowhere to price it): one row each, an absolute load added on top of the house like a shed (1.65) or a
+  // furnished patio (2.2), and scored by volume. A playset, a hot tub or anything that needs tools and a truck is a vendor
+  // line, never these hours.
+  'Front Yard':2.0,'Back Yard':2.0,
   'Balcony':0.5,'Boat House':2.0,'Furnished Patio':2.2,'Outdoor Kitchen':1.0,
   // Cabana powder room: towels, toiletries, a small cabinet. Sits between the interior
   // Half Bath (0.4, which only modulates the sqft baseline) and a full bath in guest
@@ -4641,7 +4648,7 @@ var ROOM_WEIGHT = {
 };
 // Exterior / non-under-air spaces — added on top of the sqft-anchored interior.
 var EXTERIOR_ROOMS = {
-  'Garage (1-car)':1,'Garage (2-car)':1,'Garage (3+ car)':1,'Balcony':1,'Boat House':1,
+  'Garage (1-car)':1,'Garage (2-car)':1,'Garage (3+ car)':1,'Front Yard':1,'Back Yard':1,'Balcony':1,'Boat House':1,
   'Furnished Patio':1,'Outdoor Kitchen':1,'Pool / Cabana Half Bath':1,
   'Pool House — with living quarters':1,'Screened Porch':1,'Shed':1,'Storage Unit (offsite)':1,
   'Guest House — 1 bedroom':1,'Guest House — 2 bedroom':1,'Guest House — 3 bedroom':1,
@@ -5790,10 +5797,12 @@ function buildRoomTable() {
         '<td class="calc" id="ps-'+id+'" style="text-align:center;font-size:12px;">—</td>' +
         '<td style="padding:3px 4px;text-align:center;">' +
           '<input type="hidden" id="note-'+id+'" value="">' +
+          '<input type="hidden" id="wph-'+id+'" value="">' +
           '<span style="display:none;" id="el-'+id+'">0.0</span>' +
           '<div id="room-media-btns-'+id+'" style="display:none;flex-wrap:wrap;gap:5px;align-items:center;justify-content:center;">' +
             '<button id="notes-btn-'+id+'" onclick="openNotesModal(\''+id+'\')" style="font-size:16px;background:none;border:none;cursor:pointer;color:var(--gray);padding:1px;" title="Walkthrough note">&#128221;</button>' +
             '<button id="mic-btn-'+id+'" onclick="startRoomTranscription(\''+id+'\')" style="font-size:16px;background:none;border:none;cursor:pointer;color:var(--gray);padding:1px;" title="Walkthrough note (voice)">&#127908;</button>' +
+            walkPhotoControlsHtml(id) +
           '</div>' +
           '<div id="mic-status-'+id+'" style="font-size:9px;color:var(--bronze);font-style:italic;min-height:10px;max-width:88px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;margin:1px auto 0;"></div>' +
         '</td>' +
@@ -5839,12 +5848,6 @@ function buildRoomTable() {
       // walkthrough note doesn't run the full estimate engine on every keystroke
       // (which made notes feel like they could only be typed one word at a time).
       scheduleCalcAll();
-    }
-  });
-  document.getElementById('room-table-wrap').addEventListener('click', function(e) {
-    var btn = e.target.closest ? e.target.closest('.rm-photo') : null;
-    if (btn && btn.getAttribute('data-rmid')) {
-      removeRoomPhoto(btn.getAttribute('data-rmid'));
     }
   });
   // Launch collapsed on first build — the TC opens each section as they walk the
@@ -5973,6 +5976,7 @@ function setRoomState(id, state) {
   if (mediaBtns) mediaBtns.style.display = active ? 'flex' : 'none';
   if (!active) {
     note.value = '';
+    _walkPhotosClear(id);   // with the note: the files stay in Drive (walkPhotosOf)
     // The "this room has a note" colour and label go with the note. Left lit, they told the NEXT
     // client's estimator that an empty room carried a note — the last client's, cleared a moment ago.
     // (saveNotesModal relabels the button "📝 Walkthrough"; the grid draws it as the bare glyph.)
@@ -7910,14 +7914,14 @@ function calcAll() {
         var effCpx = Math.min(5, cplx + (spcl ? 1 : 0));
         engineRooms.push({name: roomName, vol: vol, cplx: effCpx});
         roomMeta.push({id:id, ri:ri, name:roomName, vol:volScore, cplx:cplxScore, spcl:spcl, note:note, section:sec.section,
-          volSet: !!_volHandSet[id]});
+          volSet: !!_volHandSet[id], photos: walkPhotosOf(id)});
         totalVol += vol; includedRoomCount++;
       } else if (st === 'excl') {
         // Out of scope: not fed to the pricing engine, but still recorded so it
         // surfaces in the client estimate and the job plan.
         var exNameEl = document.getElementById('name-'+id);
         var exRoomName = exNameEl.tagName === 'INPUT' ? exNameEl.value : exNameEl.textContent;
-        excludedMeta.push({ri:ri, name:exRoomName, note:document.getElementById('note-'+id).value, section:sec.section});
+        excludedMeta.push({ri:ri, name:exRoomName, note:document.getElementById('note-'+id).value, section:sec.section, photos: walkPhotosOf(id)});
         ['el-','tc-','ps-'].forEach(function(p){
           var el=document.getElementById(p+id);
           el.textContent = p==='tc-' ? '—' : p==='ps-' ? '—' : '0.0';
@@ -8228,12 +8232,14 @@ function calcAll() {
       // preset press flattens the estimator's own scores back to a guess.
       volSet: !!m.volSet,
       roomDollar:roundCents(tcH*tcRate + psH*psRate), note:m.note, section:m.section});
+    _walkPhotosOnto(includedRooms[includedRooms.length - 1], m.photos);
   });
   // Excluded (homeowner-handled) rooms — carried through with zero hours/dollars so
   // they show up flagged in the client estimate, agreements, and job plan.
   excludedMeta.forEach(function(m) {
     includedRooms.push({idx:m.ri, name:m.name, vol:0, cplx:0, spcl:false, mult:1,
       elapsed:0, tcH:0, psH:0, roomDollar:0, note:m.note, section:m.section, excluded:true});
+    _walkPhotosOnto(includedRooms[includedRooms.length - 1], m.photos);
   });
 
   var svcType = document.getElementById('e-svc').value;
@@ -14417,6 +14423,7 @@ function buildLockSnapshot(est, lockedBy) {
       excluded: !!r.excluded,   // homeowner-handled / out of scope
       estimated_tc_hours: r.tcH,
       estimated_ps_hours: r.psH,
+      photos: (r.photos || []).slice(),
       locked_at: ts,
       locked_by: lockedBy || ''
     };
@@ -15150,6 +15157,7 @@ function restoreEstimateToUI(est) {
             // estimate behaved on the day it was priced. Nothing to migrate.
             if (savedRoom.volSet) _volHandSet[id] = true; else delete _volHandSet[id];
           }
+          if (savedRoom.photos && savedRoom.photos.length) _walkPhotosSet(id, savedRoom.photos);
           if (noteEl && savedRoom.note) {
             noteEl.value = savedRoom.note;
             // Light up the note icon so a restored note is visible at a glance —
@@ -48961,6 +48969,7 @@ function _paintRoomWorkspace() {
     // two taps back on the plan header. Firearms stays pinned above, where a scroll cannot hide it.
     + _sfHost('sf-host-ws', job);
   if (room.note) h += '<div style="font-size:11.5px;color:var(--gray);font-style:italic;margin-bottom:6px;">&#128203; ' + esc(room.note) + '</div>';
+  h += walkPhotoBriefHtml(jobId, room);
   h += '<div style="font-size:11.5px;color:var(--gray-dk);line-height:1.5;">'
     + '<strong>1. As found</strong> \u2014 wide shots from the corners, then every drawer, cabinet and closet open, contents undisturbed. '
     + (decedent ? '<strong>Mandatory on this job.</strong> ' : '')
@@ -49947,6 +49956,8 @@ function _syncOwedOnUnload() {
   } catch (e) {}
   try { if (Object.keys(_outbox).length || _outboxSending || _flushing) return true; } catch (e) {}
   try { if (Object.keys(_invSyncTimer).some(function(id){ return !!_invSyncTimer[id]; })) return true; } catch (e) {}
+  // A walkthrough photo held on the page, Drive not answering yet or refused (2026-11-04): its bytes live nowhere else.
+  try { if (typeof walkPhotosOwed === 'function' && walkPhotosOwed()) return true; } catch (e) {}
   return false;
 }
 // The page is going (or hidden, which on an iPad is often the last moment it runs): what waits goes now, the inventory's
@@ -60235,7 +60246,9 @@ function resolveSubfolderId(job, name, cb) {
                   // exactly as it did and only new jobs are split. To split an old job, create
                   // the folder by hand in Drive: resolveSubfolderId re-reads from Drive when a
                   // name is missing, so the app picks it up with nothing to run.
-                  'As-Found Record': ['Estate Inventory', 'Photos', 'Asset Documentation'] };
+                  'As-Found Record': ['Estate Inventory', 'Photos', 'Asset Documentation'],
+                  // A client folder made before 2026-11-04 has no Walkthrough Photos folder: the photos go beside the estimate.
+                  'Walkthrough Photos': ['Estimates', 'Estimate'] };
   function look() {
     var id = _subfolderId(job, name);
     if (!id && ALIASES[name]) {
@@ -60749,7 +60762,7 @@ function createDriveJobFolder(job) {
       svc: job.svc || '',
       // Signed Records since P19 (fileSignedCopy); a folder made before it has none, and filing falls back to the root.
       // Incident Reports since P26 (incidentUploadPhotos, fileIncidentRecord); older folders fall back to the root the same way.
-      subfolders: ['Estate Inventory','As-Found Record','Estimates','Agreement','Change Orders','Invoice', SIGNED_RECORDS_SUBFOLDER, INCIDENT_SUBFOLDER]
+      subfolders: ['Estate Inventory','As-Found Record','Estimates','Agreement','Change Orders','Invoice', SIGNED_RECORDS_SUBFOLDER, INCIDENT_SUBFOLDER, WALK_PHOTO_SUBFOLDER]
     })
   })
   .then(function(r){ return r.json(); })
@@ -63264,6 +63277,230 @@ function saveNotesModal() {
   // The note rides the estimate's Save; it is no longer filed to Drive as a .txt per save (2026-10-06).
 }
 
+
+// ─── WALKTHROUGH PHOTOS (2026-11-04) ─────────────────────────────────────────
+// ⚠⚠ THE WALKTHROUGH HAS ITS OWN CAMERA, AND ITS PHOTOS ARE NEVER INVENTORY (Anthony, off the first live walkthrough: "we
+// really needed to take pictures of each room and the yard at the walkthrough/estimate phase"). Build Estimate once had room
+// photos (a dead click handler for them, `.rm-photo` / `removeRoomPhoto`, was still in buildRoomTable); the in-app camera has
+// only ever filed on a won client (`_photoCaptureJob`), so nothing photographed a prospect's house. Now each room row on Build
+// Estimate carries 📷 (a file chooser with no `capture`, so the iPad offers its camera or its library, several at once), from the
+// moment the client exists: no won gate, since the walkthrough comes before the yes.
+// They file to the client's Walkthrough Photos folder (made at intake from today; an older folder files them beside the
+// estimate, `resolveSubfolderId`'s alias) and ride the estimate's room as `photos` [{fileId, url, ts, by, name}], read and written
+// like the room's walkthrough note: the hidden `wph-<row>` box, which calcAll reads, the restore writes, and a room turned off
+// clears (the files stay in Drive). They are never in `_photoRefs`, so Agent One, the room check, the desk and every paper never
+// see them; the Job Plan's room brief and the photo viewer do (the dashboard's Walkthrough page does not yet). A photo is recorded only once Drive has it: until then it is
+// held in this page (`_walkShotsLive`, memory only, with its bytes for Retry) and the page asks before it is closed.
+var WALK_PHOTO_SUBFOLDER = 'Walkthrough Photos';
+var WALK_PHOTO_MAX_W = 1200, WALK_PHOTO_QUALITY = 0.8;
+var _walkShotsLive = {};   // row id -> [{uid, jobId, room, data, status: 'uploading' | 'failed'}]
+var _walkThumbs = {};      // Drive file id -> data URL (this session)
+var _walkThumbAsked = {};
+var _walkSeq = 0;
+
+function _walkRoomName(rowId) {
+  var el = document.getElementById('name-' + rowId);
+  return el ? String(el.tagName === 'INPUT' ? el.value : el.textContent).trim() : '';
+}
+function walkPhotosOf(rowId) {
+  var el = document.getElementById('wph-' + rowId);
+  if (!el || !el.value) return [];
+  try { var a = JSON.parse(el.value); return Array.isArray(a) ? a.filter(function (p) { return p && p.fileId; }) : []; }
+  catch (e) { return []; }
+}
+// On the estimate's room record only where it has some, so a room with none saves exactly as it always did.
+function _walkPhotosOnto(room, photos) {
+  if (room && photos && photos.length) room.photos = photos.slice();
+}
+function _walkPhotosSet(rowId, photos) {
+  var el = document.getElementById('wph-' + rowId);
+  if (el) el.value = (photos && photos.length) ? JSON.stringify(photos) : '';
+  _walkPhotoPaint(rowId);
+}
+function _walkPhotosClear(rowId) {
+  _walkPhotosSet(rowId, []);
+  delete _walkShotsLive[rowId];
+  _walkPhotoPaint(rowId);
+}
+// Why a walkthrough photo cannot be taken on this screen now, or '' when it can.
+function walkPhotoRefusal(job, locked) {
+  if (!job) return 'Choose the client first: a walkthrough photo is filed to their Drive folder.';
+  if (locked) return 'This estimate is submitted or approved, so its rooms are locked. Photograph the house on the Job Plan once the job is won.';
+  if (!SHEETS_SYNC_URL) return 'No Apps Script URL is set in Settings, so the photo cannot reach Drive.';
+  if (!job.driveFolder) return 'This client has no Google Drive folder yet. Open their dashboard and press Create Drive folder, then take the photo again.';
+  return '';
+}
+function walkPhotoControlsHtml(rowId) {
+  return '<label id="wph-add-' + rowId + '" title="Walkthrough photo" style="font-size:16px;cursor:pointer;color:var(--gray);padding:1px;margin:0;display:inline-block;width:auto;">&#128247;'
+    + '<input type="file" accept="image/*" multiple style="display:none;" onchange="walkPhotoPicked(\'' + rowId + '\', this)"></label>'
+    + '<button type="button" id="wph-n-' + rowId + '" onclick="openWalkPhotos(\'' + rowId + '\')" title="Walkthrough photos" '
+    + 'style="display:none;font-size:11px;font-weight:600;background:none;border:1px solid var(--border-md);border-radius:10px;cursor:pointer;color:var(--bronze);padding:0 6px;"></button>';
+}
+function _walkPhotoPaint(rowId) {
+  var b = document.getElementById('wph-n-' + rowId);
+  if (!b) return;
+  var n = walkPhotosOf(rowId).length, live = _walkShotsLive[rowId] || [];
+  var up = live.filter(function (x) { return x.status === 'uploading'; }).length;
+  var bad = live.filter(function (x) { return x.status === 'failed'; }).length;
+  var txt = n ? String(n) : '';
+  if (up) txt += (txt ? ' · ' : '') + 'uploading ' + up;
+  if (bad) txt += (txt ? ' · ' : '') + '⚠ ' + bad + ' not saved';
+  b.textContent = txt ? '📷 ' + txt : '';
+  b.style.display = txt ? 'inline-block' : 'none';
+  b.style.color = bad ? 'var(--red, #b3261e)' : 'var(--bronze)';
+}
+function _walkPhotoName(job, room, n) {
+  var clean = String(room || 'Room').replace(/[^A-Za-z0-9]+/g, ' ').trim();
+  return (job.hvlId || ('job' + job.id)) + ' Walkthrough ' + clean + ' ' + n + '.jpg';
+}
+function walkPhotoPicked(rowId, input) {
+  var files = input && input.files ? Array.prototype.slice.call(input.files) : [];
+  if (input) input.value = '';
+  if (!files.length) return;
+  var jobId = parseInt((document.getElementById('e-job') || {}).value) || 0;
+  var job = jobs.find(function (j) { return j.id === jobId; });
+  var why = walkPhotoRefusal(job, estimateApproved || estimateSubmitted);
+  if (why) { alert('Photo not taken.\n\n' + why); return; }
+  var room = _walkRoomName(rowId);
+  files.forEach(function (f) {
+    if (!/^image\//.test(f.type || '')) { showSyncBadge(f.name + ' is not a photograph, so it was not filed.', true); return; }
+    var rd = new FileReader();
+    rd.onload = function () {
+      compressImage(rd.result, WALK_PHOTO_MAX_W, WALK_PHOTO_QUALITY, function (data) {
+        var shot = { uid: _photoUid(), jobId: jobId, room: room, data: data, status: 'uploading' };
+        (_walkShotsLive[rowId] = _walkShotsLive[rowId] || []).push(shot);
+        _walkPhotoPaint(rowId);
+        _walkPhotoSend(rowId, shot);
+      });
+    };
+    rd.onerror = function () { showSyncBadge('That photo could not be read on this device, so it was not filed. Take it again.', true); };
+    rd.readAsDataURL(f);
+  });
+}
+// One upload. Its answer is recorded only on the screen it was taken for: the same client, the same room on the grid.
+function _walkPhotoSend(rowId, shot) {
+  var job = jobs.find(function (j) { return j.id === shot.jobId; });
+  if (!job) { shot.status = 'failed'; _walkPhotoPaint(rowId); return; }
+  var n = walkPhotosOf(rowId).length + (_walkShotsLive[rowId] || []).indexOf(shot) + 1;
+  var name = _walkPhotoName(job, shot.room, n + '-' + (++_walkSeq));
+  resolveSubfolderId(job, WALK_PHOTO_SUBFOLDER, function (folderId) {
+    if (!folderId) {
+      shot.status = 'failed'; _walkPhotoPaint(rowId);
+      showSyncBadge('The walkthrough photo could not be filed: no Drive folder was found for this client. Press the 📷 count to retry.', true);
+      return;
+    }
+    uploadToDrive(folderId, name, shot.data, function (ok, url, fileId) {
+      if (!ok || !fileId) {
+        shot.status = 'failed'; _walkPhotoPaint(rowId);
+        showSyncBadge('A walkthrough photo of ' + (shot.room || 'a room') + ' did not reach Drive. It is held on this page: press the 📷 count to retry.', true);
+        return;
+      }
+      var list = _walkShotsLive[rowId] || [];
+      var i = list.indexOf(shot); if (i >= 0) list.splice(i, 1);
+      var onScreen = (parseInt((document.getElementById('e-job') || {}).value) || 0) === shot.jobId && _walkRoomName(rowId) === shot.room;
+      if (!onScreen) {
+        showSyncBadge('A walkthrough photo of ' + (shot.room || 'a room') + ' reached ' + (job.name || 'the client') + '’s Drive folder after their estimate was left, so it is in Drive but not on the estimate.', true);
+        _walkPhotoPaint(rowId);
+        return;
+      }
+      _walkThumbs[fileId] = shot.data;
+      var cur = walkPhotosOf(rowId);
+      cur.push({ fileId: fileId, url: url || ('https://drive.google.com/file/d/' + fileId + '/view'), ts: new Date().toISOString(),
+                 by: _invStampBy(job), name: name });
+      _walkPhotosSet(rowId, cur);
+      scheduleCalcAll();   // onto the estimate, and so onto the device's unsaved-draft copy
+      _walkPhotoViewerRepaint(rowId);
+    });
+  });
+}
+function walkPhotoRetry(rowId, uid) {
+  var shot = (_walkShotsLive[rowId] || []).find(function (x) { return x.uid === uid; });
+  if (!shot || shot.status !== 'failed') return;
+  shot.status = 'uploading'; _walkPhotoPaint(rowId); _walkPhotoViewerRepaint(rowId);
+  _walkPhotoSend(rowId, shot);
+}
+// Whether this page holds a walkthrough photo Drive does not have yet (the guard as the page goes asks it).
+function walkPhotosOwed() {
+  return Object.keys(_walkShotsLive).some(function (k) { return (_walkShotsLive[k] || []).length > 0; });
+}
+function _walkThumbsFetch(ids, done) {
+  var want = ids.filter(function (id) { return !_walkThumbs[id] && !_walkThumbAsked[id]; });
+  if (!want.length || !SHEETS_SYNC_URL) return;
+  want.forEach(function (id) { _walkThumbAsked[id] = 1; });
+  fetch(_withDeviceKey(SHEETS_SYNC_URL), {
+    method: 'POST', mode: 'cors', redirect: 'follow', headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ action: 'getThumbnails', fileIds: want.slice(0, 24) })
+  }).then(_readAppsScriptJson).then(function (d) {
+    Object.keys((d && d.thumbs) || {}).forEach(function (id) { _walkThumbs[id] = d.thumbs[id]; });
+    if (done) done();
+  }).catch(function () {});
+}
+function _walkTileHtml(p) {
+  var img = _walkThumbs[p.fileId]
+    ? '<img src="' + esc(_walkThumbs[p.fileId]) + '" alt="" style="width:100%;height:120px;object-fit:cover;border-radius:4px;display:block;">'
+    : '<div style="width:100%;height:120px;border-radius:4px;background:var(--cream);display:flex;align-items:center;justify-content:center;font-size:22px;color:var(--gray);">&#128247;</div>';
+  return '<a href="' + esc(p.url) + '" target="_blank" rel="noopener" style="display:block;text-decoration:none;color:inherit;">' + img
+    + '<span style="font-size:10px;color:var(--gray);">' + esc(fmtDate2(p.ts)) + (p.by ? ' · ' + esc(p.by) : '') + ' · Open in Drive ↗</span></a>';
+}
+// The viewer: the room's photos, each opening its file in Drive; on Build Estimate the ones still held, with Retry.
+function walkPhotoViewerHtml(title, photos, live, rowId) {
+  var tiles = (photos || []).map(function (p) { return '<div>' + _walkTileHtml(p) + '</div>'; });
+  (live || []).forEach(function (x) {
+    tiles.push('<div><img src="' + esc(x.data) + '" alt="" style="width:100%;height:120px;object-fit:cover;border-radius:4px;display:block;opacity:.6;">'
+      + (x.status === 'failed'
+        ? '<span style="font-size:10px;color:var(--red, #b3261e);">⚠ Not saved · <button type="button" class="btn-s" style="font-size:10px;padding:1px 6px;" onclick="walkPhotoRetry(\'' + rowId + '\',\'' + x.uid + '\')">Retry</button></span>'
+        : '<span style="font-size:10px;color:var(--gray);">Uploading…</span>') + '</div>');
+  });
+  return '<div style="font-size:14px;font-weight:600;color:var(--gray-dk);margin-bottom:4px;">' + esc(title) + '</div>'
+    + '<div style="font-size:11px;color:var(--gray);margin-bottom:10px;">Walkthrough photos are for the estimate and the crew’s brief. They are not the inventory and never go on a client paper.</div>'
+    + (tiles.length ? '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;max-height:60vh;overflow-y:auto;">' + tiles.join('') + '</div>'
+                    : '<div style="font-size:12px;color:var(--gray);">No walkthrough photos of this room.</div>')
+    + '<div style="display:flex;justify-content:flex-end;margin-top:12px;"><button class="btn-p" onclick="closeWalkPhotos()">Close</button></div>';
+}
+var _walkViewer = null;   // {rowId} on Build Estimate, {jobId, idx} on the Job Plan
+function _walkViewerOpen(html) {
+  var m = document.getElementById('wph-modal');
+  if (!m) {
+    m = document.createElement('div');
+    m.id = 'wph-modal';
+    m.setAttribute('style', 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;');
+    m.innerHTML = '<div id="wph-modal-box" style="background:var(--white);border-radius:10px;padding:1.25rem;max-width:760px;width:92%;box-shadow:0 8px 32px rgba(0,0,0,.2);"></div>';
+    document.body.appendChild(m);
+  }
+  document.getElementById('wph-modal-box').innerHTML = html;
+  m.style.display = 'flex';
+}
+function openWalkPhotos(rowId) {
+  _walkViewer = { rowId: rowId };
+  _walkPhotoViewerRepaint(rowId);
+  _walkThumbsFetch(walkPhotosOf(rowId).map(function (p) { return p.fileId; }), function () { _walkPhotoViewerRepaint(rowId); });
+}
+function _walkPhotoViewerRepaint(rowId) {
+  if (!_walkViewer || _walkViewer.rowId !== rowId) return;
+  _walkViewerOpen(walkPhotoViewerHtml('Walkthrough photos — ' + _walkRoomName(rowId), walkPhotosOf(rowId), _walkShotsLive[rowId] || [], rowId));
+}
+function openPlanWalkPhotos(jobId, roomIdx) {
+  var room = _planRoom(jobId, roomIdx);
+  var photos = (room && room.photos) || [];
+  var paint = function () {
+    if (!_walkViewer || _walkViewer.jobId !== jobId || _walkViewer.idx !== roomIdx) return;
+    _walkViewerOpen(walkPhotoViewerHtml('Walkthrough photos — ' + ((room && room.name) || 'Room'), photos, [], ''));
+  };
+  _walkViewer = { jobId: jobId, idx: roomIdx };
+  paint();
+  _walkThumbsFetch(photos.map(function (p) { return p.fileId; }), paint);
+}
+function closeWalkPhotos() {
+  _walkViewer = null;
+  var m = document.getElementById('wph-modal'); if (m) m.style.display = 'none';
+}
+// The Job Plan's room brief: the walkthrough's photos of this room, a press away, never drawn open on the iPad in the house.
+function walkPhotoBriefHtml(jobId, room) {
+  var n = (room && room.photos && room.photos.length) || 0;
+  if (!n) return '';
+  return '<div style="margin-bottom:6px;"><button type="button" class="btn-s" style="font-size:11px;" onclick="openPlanWalkPhotos(' + jobId + ',' + room.idx + ')">'
+    + '&#128247; Walkthrough photos (' + n + ')</button></div>';
+}
 
 // ─── PS SLOT HELPERS ─────────────────────────────────────────────────────────
 function getPSCostRate(name) {

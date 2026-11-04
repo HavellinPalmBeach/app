@@ -473,7 +473,15 @@ During the site visit, use the **📝** (notes) and **🎙** (voice-to-text) but
 
 > **⚠ A DICTATED NOTE WAS NOT SAVED UNTIL 2026-11-02.** The 🎙 put the words in the box, but Save wrote the note as it stood before the dictation, so a note spoken and then saved came back empty when the estimate was opened again. The same was true of a room's note dictated through its own 🎙, and of a note typed and saved within a quarter of a second. Save and Submit now take what is in the box. The box also grew: it used to stay five lines tall with the rest scrolling inside it, and it now opens about eight lines tall and lengthens with the note. *A note dictated and saved before this date is gone; say it again and save.*
 
-> 📷 Photos are NOT captured during the estimate stage. Photo capture opens once the job is **Won** (§10): a shot taken before that is not saved, and the camera says why. *Corrected 2026-09-30:* this note said *only after job activation*, which has not been the rule since 2026-08-03.
+### 5b. Walkthrough Photos (since 2026-11-04)
+
+Each room row carries **📷** beside 📝 and 🎙, from the moment the client exists: there is no won gate, because the walkthrough comes before the yes. On the iPad it offers the camera or the photo library, several at once. Each photo goes to the client's *Walkthrough Photos* folder in Drive (made at intake since 2026-11-04; on an older client folder they go into *Estimates*, or create a *Walkthrough Photos* folder there by hand and the app uses it). The row then counts them (**📷 3**), and pressing the count shows them, each opening its file in Drive. They are saved with the estimate when you press **Save Estimate**, on the room, like its note, and the Job Plan's room brief offers them as **📷 Walkthrough photos (N)**.
+
+They are **never the inventory**: Agent One never reads them, they make no line on the desk, and no client paper prints them. The in-house camera on the Job Plan (§10), which opens once the job is **Won**, is still the record of the house as found and of every item.
+
+> **A photo is recorded only once Drive has it.** Until then the row reads *uploading 1*; if Drive refuses it, *⚠ 1 not saved*, and the photo is held on this page with **Retry** under the count. The page asks before it is closed while a photo is held. A room turned off loses its photos from the estimate, as it loses its note; the files stay in Drive. A photo that lands after you have moved to another client's estimate is in their Drive folder but not on their estimate, and the badge says so. Photos cannot be added once the estimate is submitted or approved.
+
+> *Changed 2026-11-04:* this section said photos are not captured during the estimate stage. They are now, through the room row's 📷; the Job Plan's camera is unchanged.
 
 ### 5b. Room Scoring
 
@@ -525,6 +533,8 @@ Room sections launch **collapsed** so the estimate opens compact, and run **two 
 It is a *flag, not a gate* — a concierge mid-walkthrough knows the estimate is incomplete and does not need to be stopped. Saving with *zero* rooms is already refused, which is the case worth blocking. The check goes quiet if intake never captured bed/bath counts, so fill those in at intake (§4) or this check has nothing to compare against.
 
 > **The badge counts grid rows, so intake can only ask for what the grid can reach.** Each bedroom and bath is counted by matching the room's name against the rows you scored, which means the highest number reachable for a given kind is the number of *rows carrying that name* — not the number of rooms the house has. Reachable today: **8 bedrooms and 14 full baths**, all *main-house* rows across the First Floor and Second Floor sections, and **5 half baths**: the four *Half Bath* rows and the *Pool / Cabana Half Bath* (below). Until 2026-08-03 *Half Bath* existed in exactly one section, so the half-bath count was capped at **1** and any property with two powder rooms stayed flagged no matter how completely it was walked. If a count is ever raised at intake beyond what the grid can reach, the badge becomes unclearable and stops meaning anything — add the rows in the same change.
+
+**The yards (2026-11-04).** *Front Yard* and *Back Yard* are rows under **Exterior & Auxiliary**, each weighted 2.0 and, like every exterior row, added on top of the house rather than averaged into its square footage: score how much is out there with Volume. A playset, a hot tub or anything else that needs tools and a truck to come down is a vendor line (a junk hauler or a removal company), never these hours.
 
 **Where the half baths are.** *Half Bath* now appears in **Entry & Living** (the powder room off the foyer), **Kitchen & Utility**, and both **First Floor** and **Second Floor Bedrooms & Bathrooms**. A fifth, **Pool / Cabana Half Bath**, sits in **Exterior & Auxiliary** — it is an exterior room, so it adds load on top of the under-air baseline rather than modulating it (§5i), which is right for a cabana bath that is not inside the square footage. All five open at 1/1 and count toward the intake half-bath tally.
 
