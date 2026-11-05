@@ -35,11 +35,11 @@ function gsVar(name) {
 const AW_VARS = ['AGENT_API', 'AGENT_API_VERSION', 'AGENT_MODELS_API', 'AGENT_MODEL_FLOORS', 'AGENT_MODEL_LINES', 'AGENT_MODEL_LIST_SECS',
   'AGENT_MODEL_DEMOTE_SECS', 'AGENT_MODEL_SLOW_LIMIT', 'AGENT_FALLBACK_BETA', 'AGENT_MAX_IMG',
   'AGENT_WALK_EFFORT_LOOK', 'AGENT_WALK_EFFORT_PLAN', 'AGENT_WALK_MAX_TOKENS', 'AGENT_WALK_PHOTOS_PER_ROOM', 'AGENT_WALK_MAX_ROOMS',
-  'AGENT_WALK_PARALLEL', 'AGENT_WALK_LOOK_BUDGET', 'AGENT_WALK_TIME_BUDGET', 'AGENT_WALK_TEXT_MAX', 'AGENT_WALK_LIST_MAX', 'AGENT_WALK_SCALE'];
-const AW_FNS = ['_agProp', '_agMissingProps', '_agImageBlock', '_agModelVersion', '_agVerCmp', '_agNewestOf', '_agCache', '_agModelList',
+  'AGENT_WALK_PARALLEL', 'AGENT_WALK_LOOK_BUDGET', 'AGENT_WALK_TIME_BUDGET', 'AGENT_WALK_TEXT_MAX', 'AGENT_WALK_LIST_MAX', 'AGENT_WALK_SCALE', 'AGENT_WALK_SOURCES', 'AGENT_WALK_WORK_SOURCE', 'AGENT_WALK_SERVICE_SCOPE'];
+const AW_FNS = ['_awServiceScope', '_agProp', '_agMissingProps', '_agImageBlock', '_agModelVersion', '_agVerCmp', '_agNewestOf', '_agCache', '_agModelList',
   '_agDemoted', '_agDemote', '_agSlow', '_agModels', '_agSendAll', '_agHttpFailure',
   '_awClip', '_awList', '_awLookTool', '_awLookSystem', '_awLookContent', '_awRequest', '_awReadTool', '_awLookOf',
-  '_awPlanTool', '_awPlanSystem', '_awPlanContent', '_awPlanOf', 'agentWalkthroughReview'];
+  '_awSourced', '_awSourcesOf', '_awSourcedList', '_awPlanTool', '_awPlanSystem', '_awPlanContent', '_awPlanOf', 'agentWalkthroughReview'];
 
 function gs(opts) {
   opts = opts || {};
@@ -77,11 +77,11 @@ function gs(opts) {
 const TOOL = (name, input) => ({ code: 200, body: { stop_reason: 'tool_use', content: [{ type: 'tool_use', name: name, input: input }] } });
 const LOOK = (over) => TOOL('record_room_look', Object.assign({ seen: 'Boxes to the ceiling.', volume_to: 0, complexity_to: 0, vendor: '', why: '', vendor_why: '' }, over || {}));
 const PLAN = (over) => TOOL('record_crew_plan', Object.assign({
-  context: ['She tires after lunch: sort with her in the mornings only.'],
+  context: [{ text: 'She tires after lunch: sort with her in the mornings only.', from: 'walkthrough note' }],
   order: [{ step: 'Sort the papers with her', room: 'Office 1', after: '', vendor: '' },
           { step: 'Donation run', room: '', after: 'Office 1', vendor: 'Donation Pickup' },
           { step: 'Closets', room: 'Walk-in Closet', after: '', vendor: '' }],
-  conditions: ['Sorting with her mornings only, until 12.'],
+  conditions: [{ text: 'Sorting with her mornings only, until 12.', from: 'walkthrough note' }],
   if_cant: ['Rain: work the closets.'],
   length: 'About 3 days with 3 of us, 4 to 5 with 2.',
   rooms: [{ room: 'Office 1', lines: ['Shred pile by the door.'] }, { room: 'Attic', lines: ['nothing'] }]
@@ -189,7 +189,6 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(N.agentWalkthroughReview({ rooms: ROOMS }).error || '', 'ANTHROPIC_API_KEY', 'no key is named');
     has(GS, "if (data.action === 'agentWalkthroughReview') { return jsonOut(agentWalkthroughReview(data)); }", 'the router reaches it');
     ok(/var BACKEND_ACTIONS = \[[\s\S]*?'agentWalkthroughReview'[\s\S]*?\];/.test(GS), 'the deployment says it has the action');
-    has(GS, "var BACKEND_VERSION = '2026-11-05c';", 'the backend version moved');
     has(GS, 'function testWalkthroughReview()', 'an editor probe times one call');
     // 2026-11-05b, Anthony's first run: the probe found no photo. It reads Estimates too (an older client's walkthrough photos file
     // there) and reads the room off the name the app writes, "<id> Walkthrough <room> <n>-<k>.jpg".
@@ -327,6 +326,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     E.walkReviewRun(7, 'plan', 'Anthony Jr cannot make it.');
     eq(E.posts[2] && E.posts[2].mode, 'plan', 'Re-plan from the Job Plan: the plan only');
     eq(E.posts[2] && E.posts[2].update, 'Anthony Jr cannot make it.', '…with what changed');
+    ok(E.posts[2] && E.posts[2].planEdited === true, '⚠ a plan a person edited goes marked so (only then may the agent cite it)');
+    E._crewPlanWrite(7, plan, { edited: false }); delete E._walkReviewOut[7];
+    E.walkReviewRun(7, 'plan', 'x');
+    ok(E.posts[3] && E.posts[3].planEdited === false, '…and the agent\'s own plan goes marked as not a source');
     eq(E.posts[0].rooms[0].photos.length, 4, 'four photos a room at most');
     eq(E.posts[0].context.house, ['Pets: A dog in the yard.'], 'the house questions go along');
     eq(E.posts[0].context.vendorsOn, ['Junk Removal'], 'the vendor lines on the estimate');
@@ -382,5 +385,56 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const stale = { savedAt: 20, notes: { crewPlan: { v: 1, context: ['old'] } }, at: { 'notes:crewPlan': 2 }, rooms: { 0: { status: 'locked' } } };
     eq(ctx._mergePlanRecord(stale, mine).notes.crewPlan.context, ['new'], '⚠ the newer stamp wins the plan, though the other record saved later');
     eq(ctx._mergePlanRecord(mine, { savedAt: 30, notes: {}, at: {} }).notes.crewPlan.context, ['new'], 'a copy that never had it does not take it away');
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  group('H · the plan from the record only: each line names its source, and one the job does not have is dropped');
+  {
+    // 2026-11-05f. Anthony, off the first live plan ("she sorts every room herself", rules about a son): "where are we just making
+    // up these rules". He chose "Check it, don't show it".
+    const S = gs();
+    const L = (text, from) => ({ text: text, from: from });
+    const has1 = S._awSourcesOf({ context: { privateNote: 'Landscaping in front. Clean out. Mulch.' }, rooms: [{ name: 'Office 1', note: '' }] }, { 'Office 1': 'Toys everywhere.' });
+    eq(Object.keys(has1).sort(), ['photos', 'walkthrough note'], 'a job with a walkthrough note and photos has those two sources, no more');
+    const p1 = S._awPlanOf({ context: [L('She sorts every room herself.', 'intake notes'), L('Mulch the front beds.', 'walkthrough note'),
+                                       L('A dry day for the yard.', 'the work itself'), 'a bare string'],
+                             conditions: [L('Her son must be out.', 'house questions'), L('A dry day for the yard and the beds.', 'the work itself')],
+                             order: [], if_cant: [], length: '', rooms: [] }, ['Office 1'], has1);
+    eq(p1.context, ['Mulch the front beds.'], '⚠ a context line citing intake notes the job does not have is dropped, the work itself is no context, a bare line has no source');
+    eq(p1.conditions, ['A dry day for the yard and the beds.'], '⚠ a condition citing house questions the job does not have is dropped; the work itself may make one');
+    eq(S._awPlanOf({ context: [L('x', 'what changed')], conditions: [], order: [], if_cant: [], length: '', rooms: [] }, [], S._awSourcesOf({ context: {}, update: 'Not the kitchen.' }, {})).context,
+       ['x'], 'what the concierge typed in Something changed is a source');
+    eq(S._awPlanOf({ context: [L('y', 'edited plan')], conditions: [], order: [], if_cant: [], length: '', rooms: [] }, [], S._awSourcesOf({ context: {}, plan: 'CONTEXT\ny', planEdited: false }, {})).context,
+       [], '⚠ the agent\'s own earlier plan is never a source');
+    eq(S._awPlanOf({ context: [L('y', 'edited plan')], conditions: [], order: [], if_cant: [], length: '', rooms: [] }, [], S._awSourcesOf({ context: {}, plan: 'CONTEXT\ny', planEdited: true }, {})).context,
+       ['y'], '…a plan a person edited is');
+    const tool = S._awPlanTool(['Office 1']);
+    const props = tool.input_schema.properties;
+    ok(props.context.items.required.join() === 'text,from' && props.context.items.properties.from.enum.indexOf('the work itself') < 0, 'context names its source, never the work itself');
+    ok(props.conditions.items.properties.from.enum.indexOf('the work itself') >= 0, 'a condition may come from the work itself');
+    const sys = S._awPlanSystem({});
+    ok(!/\b(son|daughter|husband|wife|she|her|he|his)\b/i.test(sys), '⚠ no example about a person in the prompt, so none can leak into a plan');
+    // 2026-11-05f (Anthony: "if we're just editing down the house … don't invent stuff and assume that we're moving everyone out").
+    const ed = S._awPlanSystem({ service: 'Home Editing', newHome: false });
+    has(ed, 'there is no move', '⚠ Home Editing: no move, nothing packed out or to storage beyond what she lets go');
+    has(ed, 'No new home is recorded', '…and the plan is told there is no new home');
+    has(ed, 'only where the service, the notes or what has changed say so, and then plan it fully', '…a pod or a move only where the notes say so, then planned fully');
+    const tr = S._awPlanSystem({ service: 'Home Transition', newHome: true });
+    has(tr, 'moving to a new home', 'Home Transition: the move');
+    has(tr, 'A new home is recorded', '…with the new home recorded');
+    eq(Object.keys(S.AGENT_WALK_SERVICE_SCOPE).sort(), ['Contested Probate Estate Settlement', 'Estate Settlement', 'Home Cleanout', 'Home Editing',
+       'Home Prep for Sale', 'Home Transition', 'Probate Estate Settlement'], 'every service has its scope, named as the app names it');
+    const LB = sandbox({ vars: ['SVC_LABELS'] });
+    eq(Object.keys(LB.SVC_LABELS).map((k) => LB.SVC_LABELS[k]).sort(), Object.keys(S.AGENT_WALK_SERVICE_SCOPE).sort(), '⚠ …held to the app\'s SVC_LABELS');
+    lacks(sys, 'when the client can make decisions', '…nor an invitation to make rules about the client');
+    has(sys, 'Nothing about the client, the family or anyone in the house', 'nothing about the people unless the notes say it');
+    has(sys, 'Never assume what happens in a room', 'no room assumed emptied or packed out');
+    has(sys, 'confirm the room\'s scope with the client', '…its scope confirmed instead');
+    has(sys, 'unless the notes or what has changed say Havellin takes it down itself', '⚠ the concierge taking the playset down wins over the vendor rule');
+    has(sys, 'wins over anything else here', 'the notes and what changed win over the agent\'s rules');
+    const pc = JSON.stringify(S._awPlanContent({ context: {}, rooms: [], plan: 'CONTEXT\nold' }, {}));
+    has(pc, 'written by you earlier, never a source', 'the agent\'s earlier plan is sent as not a source');
+    has(JSON.stringify(S._awPlanContent({ context: {}, rooms: [], plan: 'CONTEXT\nold', planEdited: true }, {})), 'a person edited it', '…a person\'s as one');
+    has(GS, "var BACKEND_VERSION = '2026-11-05d';", 'the backend version moved');
   }
 };

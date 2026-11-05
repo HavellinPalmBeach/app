@@ -1498,7 +1498,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.11.05 · 5:26pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.11.05 · 5:45pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -63752,11 +63752,14 @@ function walkReviewPayload(job, est, opt) {
       crew: tc + ' concierge' + (tc === 1 ? '' : 's') + ' and ' + ps + ' specialist' + (ps === 1 ? '' : 's'),
       days: days ? days + ' working day' + (days === 1 ? '' : 's') : '',
       notes: (job && job.notes) || '', house: house, privateNote: est.privateNote || '',
+      // Whether a new home is recorded (the move's destination), so the plan plans a move only where there is one (2026-11-05f).
+      newHome: !!(job && (String(job.destAddr || '').trim() || String(job.destCity || '').trim())),
       vendorsOn: types(est.vendors).concat(types(est.prepItems)),
       vendorChoices: opt.vendorChoices || []
     },
     rooms: rooms,
     plan: opt.plan || '',
+    planEdited: !!opt.planEdited,     // only a plan a person edited is a source the agent may cite (2026-11-05f)
     update: opt.update || ''
   };
 }
@@ -63795,7 +63798,7 @@ function walkReviewRun(jobId, where, update) {
     if (!ok) { if (mode === 'full') mode = 'check'; else return false; }
   }
   var body = walkReviewPayload(job, est, { mode: mode, vendorChoices: mode === 'plan' ? [] : walkReviewVendorChoices(),
-                                           plan: prev ? crewPlanText(prev) : '', update: update || '' });
+                                           plan: prev ? crewPlanText(prev) : '', planEdited: !!(prev && prev.edited), update: update || '' });
   var nPhotos = body.rooms.reduce(function (n, r) { return n + r.photos.length; }, 0);
   var out = _walkReviewOut[jobId] = { at: Date.now(), where: where };
   out.timer = setTimeout(function () {

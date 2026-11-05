@@ -170,4 +170,17 @@ with), *Conditions*, *If you can't*, *Length*, and a few lines per key room. It 
     next to the start over button"*). The day as he sees it: walk the house, score it and take the photos, save on site; at home
     or the office that night, review the estimate and press **Review walkthrough**.
 
+25. **The plan says only what the record says** (after the first live plan, which made up that the client sorts every room herself
+    and rules about a son: *"where are we just making up these rules, or did you get that from somewhere?"*). Every context line and
+    condition names its source (the notes, the house questions, a room's note, the photos, what changed, a plan a person edited, or
+    for a condition the work itself), the server drops one the job does not have, and the plan shows none (*Check it, don't show
+    it*). Nothing about the people unless the notes say it.
+26. **The plan keeps to the service** (*"if we're just editing down the house … don't invent stuff and assume that we're moving
+    everyone out … if it's a home edit and transition, obviously there's a move"*): Home Editing has no move and packs nothing out;
+    a pod, a pack-out or a move out only where the notes or what changed say so (*"we're going to empty the whole house out and put
+    it in a pod in the driveway"*), and then it is planned fully. No room is assumed emptied; where the notes are silent, its scope is
+    confirmed with the client.
+27. **What the concierge writes beats the agent's rules** (*"I was actually thinking of taking apart the swing set myself"*): a
+    playset is the hauler's unless the notes or what changed say Havellin takes it down.
+
 Nothing is left open in the design. It is built on Anthony's go.
