@@ -437,6 +437,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(sys, 'confirm the room\'s scope with the client', '…its scope confirmed instead');
     has(sys, 'unless the notes or what has changed say Havellin takes it down itself', '⚠ the concierge taking the playset down wins over the vendor rule');
     has(sys, 'wins over anything else here', 'the notes and what changed win over the agent\'s rules');
+    // 2026-11-05 (Anthony, off "not touching the kitchen unless she asks" written back as rules about cooking and cabinets: "we never
+    // said any of that … this is like some weird directive that's a bit extreme").
+    has(sys, 'Say what the source says, and no more', '⚠ a line says what its source says, never rules or details of its own');
     const pc = JSON.stringify(S._awPlanContent({ context: {}, rooms: [], plan: 'CONTEXT\nold' }, {}));
     has(pc, 'written by you earlier, never a source', 'the agent\'s earlier plan is sent as not a source');
     has(JSON.stringify(S._awPlanContent({ context: {}, rooms: [], plan: 'CONTEXT\nold', planEdited: true }, {})), 'a person edited it', '…a person\'s as one');
