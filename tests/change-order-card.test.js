@@ -60,7 +60,7 @@ const DASH_FNS = ['jobIsFeeOnly', '_dashUtilityBarHtml', '_jtDocViews', '_jtDraf
   'discountOfferBlocker', 'jobTimelineNext',
   'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly',
   'agreementReady', 'jobTimelineDoc',
-  'jobSchedule', 'jtScheduleHtml', '_jtSchedDeadlinesHtml', 'estWorkingDays', '_todayStr', '_ymdLocal', 'addWorkingDays', 'jobProgress',
+  'jobSchedule', '_workingDayOnOrAfter', '_nextWorkingDay', 'jtScheduleHtml', '_jtSchedDeadlinesHtml', 'estWorkingDays', '_todayStr', '_ymdLocal', 'addWorkingDays', 'jobProgress',
   'workingDaysInclusive', 'approvedEstimateFor',
   'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'jobIsTest', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'walkawaySettlementHtml', 'walkawaySettlement', 'jobRefundedTotal', 'refundCounts', 'jobPaymentsListHtml', '_paymentKey', 'paymentStageLabel', 'paymentMethodLabel', 'fmt', 'coCardActions', 'sectionHdr', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord',
   'standingFlagLines', 'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'guideLinkHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle',

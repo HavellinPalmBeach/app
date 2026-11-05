@@ -78,7 +78,7 @@ const TL_FNS = ['refundCounts', 'jobRefundedTotal', 'jobTimeline', 'estimateNote
   'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'depositPaidTotal', 'depositTargetFor', 'docSentAt',
   'draftOutstanding', 'draftIsStale', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'staleDocName', '_draftDay',
   '_andJoin', 'docKeyFor', 'agreementSignature', 'isAgreementSigned', 'esignProviderKey', 'esignAvailable', 'esignJobWatches',
-  'isAgreementSent', 'jobSchedule', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jobProgress', 'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'workingDaysInclusive',
+  'isAgreementSent', 'jobSchedule', '_workingDayOnOrAfter', '_nextWorkingDay', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jobProgress', 'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'workingDaysInclusive',
   'coWorkingDays', '_coPaceFix', 'roomStatusNormalize',
   // The re-acceptance build (2026-09-29, merged here): the rail asks whether a raise reopens the send or the
   // acceptance, withholds Edit estimate while a manager has it, and reads a draft newer than the last send as
@@ -532,7 +532,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'docKeyFor', 'docSentAt', 'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'field', 'getJobActuals',
       'jobLogEntries', 'houseFlagsOf', 'isAgreementSigned', 'isJobFunded', 'isJobWon', 'jobActivationBlockers', 'jobPayments',
       'jobTimeline', 'estimateNoteGaps', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineActions', 'esignSignedCopyGaps', 'jobTimelineNext', 'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'depositVoidFlag', 'agreementHandedOverInPerson',
-      'docWord', '_jtDocSecondaries', 'agreementReady', 'jobTimelineDoc', 'jobSchedule', 'jobOnProbateTrack', 'estatePackageRoute', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jtScheduleHtml', '_jtSchedDeadlinesHtml', 'estWorkingDays',
+      'docWord', '_jtDocSecondaries', 'agreementReady', 'jobTimelineDoc', 'jobSchedule', '_workingDayOnOrAfter', '_nextWorkingDay', 'jobOnProbateTrack', 'estatePackageRoute', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jtScheduleHtml', '_jtSchedDeadlinesHtml', 'estWorkingDays',
       'addWorkingDays', '_ymdLocal', 'jobProgress', 'workingDaysInclusive', 'approvedEstimateFor', 'roomStatusNormalize',
       'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'jobIsTest', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'walkawaySettlementHtml', 'walkawaySettlement', 'jobRefundedTotal', 'refundCounts', 'jobPaymentsListHtml', '_paymentKey', 'paymentStageLabel', 'paymentMethodLabel', 'fmt', 'sectionHdr', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'standingFlagLines',
       'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'guideLinkHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle',

@@ -237,15 +237,21 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('jobSchedule reads it — and the WORK against the calendar is a new flag');
   {
     const S = sandbox({
-      fns: ['jobSchedule', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'workingDaysInclusive',
+      fns: ['jobSchedule', '_workingDayOnOrAfter', '_nextWorkingDay', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'workingDaysInclusive',
             'docSentAt', 'docKeyFor', 'coWorkingDays', '_coPaceFix', 'estateTaxReturnDue', 'estateTaxReturn'],
       vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'PRODUCTIVE_HRS_PER_DAY'],
     });
     // A 6-day job that activated on its target start. `today` is the fourth working day.
     const JOB = (over) => Object.assign({ id: 7, svc: 'cleanout', start: '2026-09-21',
       status: 'active', activatedOn: '2026-09-21' }, over || {});
-    const sch = (pr, over, today) =>
-      S.jobSchedule(JOB(over), { days: 6, svc: 'cleanout' }, today || '2026-09-24', pr);
+    // ⚠ Days worked come off the hours log (2026-11-05): unless a test says otherwise the crew worked every working day
+    // from the activation to today, handed in on the progress reading as jobProgress lists them.
+    const workedTo = (from, to) => { const out = [], d = new Date(from + 'T12:00:00'), e = new Date(to + 'T12:00:00');
+      for (; from && d <= e; d.setDate(d.getDate() + 1)) if (d.getDay() % 6) out.push(d.toISOString().slice(0, 10));
+      return out; };
+    const sch = (pr, over, today) => { const j = JOB(over), t = today || '2026-09-24';
+      const p2 = pr && !pr.workedDates ? Object.assign({ workedDates: workedTo(j.activatedOn, t) }, pr) : pr;
+      return S.jobSchedule(j, { days: 6, svc: 'cleanout' }, t, p2); };
     // workPct 0.25 on working day 4 of a 6-day plan → tracking to 16 working days.
     const BEHIND = { has: true, aboveFloor: true, workPct: 0.25, hoursPct: 0.5, actHrs: 16, estHrs: 33 };
 
@@ -254,9 +260,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(b.pace, 'behind', '⚠⚠ a quarter of the work done on day 4 of 6 is BEHIND');
     eq(b.paceBy, 10, '…tracking to 16 working days against a 6-day plan');
     eq(b.paceEnd, '2026-10-12', '…and to a real date, not a count');
-    has(b.paceTxt, '25% of the work is done on working day 4 of 6',
+    has(b.paceTxt, '25% of the work is done after 4 of 6 days worked',
         '…and it names exactly what it compared');
     has(b.paceFix, 'change order carries HOURS', 'with the fix on screen');
+    // ⚠ A job that lost days: four worked by the 29th, a quarter done. The twelve days it still tracks to are counted from
+    // the 30th, the next day it can be worked, never from the activation (2026-11-05).
+    const lost = sch(Object.assign({ workedDates: ['2026-09-21', '2026-09-22', '2026-09-28', '2026-09-29'] }, BEHIND), {}, '2026-09-29');
+    eq(lost.paceEnd, '2026-10-15', '⚠⚠ the projected end of a job that lost days counts forward from where it is');
 
     // ── the floors. Below either one the rate says nothing, and so does the strip. ──
     eq(sch({ has: true, aboveFloor: true, workPct: 0.20, hoursPct: 0.5, actHrs: 16 }).pace, 'behind',
@@ -313,8 +323,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // ── the optional argument really is optional ──
     const bare = sch(undefined);
-    eq(bare.progress, false, 'with no progress handed over the strip behaves exactly as before');
-    eq(bare.pace, 'halfway_late', '…including its old calendar flag');
+    eq(bare.progress, false, 'with no progress handed over there is no progress reading');
+    eq(bare.elapsed, 0, '⚠ …and no day worked is counted (2026-11-05: days worked come off the hours log)');
+    eq(bare.pace, '', '…so no halfway has passed either');
     eq(bare.paceEnd, '', '…and it projects nothing');
 
     // ⚠ IT STILL NEVER FORMATS A DATE. `paceEnd` is yyyy-mm-dd; the renderer owns how it looks.
@@ -337,7 +348,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(both, '25% of the work done', 'the work done is on the strip');
     has(both, '48%', '…and so are the hours burned');
     has(both, 'of the estimated hours logged', '…named as hours, never as progress');
-    has(both, 'Working day 4 of 6', '…beside where the job actually is');
+    has(both, 'Day 4 of 6 worked', '…beside where the job actually is');
 
     // ⚠ 0% IS WITHHELD. A job with no room marked done is far more often a crew that has not
     // touched the statuses than a crew that has done nothing, and "0% of the work done" on a
@@ -383,7 +394,7 @@ const DFNS = ['jobIsFeeOnly', 'renderClientDashboard', 'jobIsTest', 'coFiduciary
       'dashUtilityBar', 'walkthroughOffered', '_dashUtilityBarHtml', 'driveFolderPending', 'agrApprovalWithdrawn', 'jobTimeline', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineNext', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'esignSignedCopyGaps', 'depositVoidFlag', 'agreementHandedOverInPerson',
       'jobTimelineDoc', 'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord',
       '_jtDocSecondaries', 'docPreviewOnly', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', '_jtSendAction',
-      'jobSchedule', 'jobOnProbateTrack', 'estatePackageRoute', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jtScheduleHtml', '_jtSchedDeadlinesHtml', 'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'jobProgress',
+      'jobSchedule', '_workingDayOnOrAfter', '_nextWorkingDay', 'jobOnProbateTrack', 'estatePackageRoute', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jtScheduleHtml', '_jtSchedDeadlinesHtml', 'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'jobProgress',
       'workingDaysInclusive', 'approvedEstimateFor', 'paymentSplit', 'unscoredRoomNames',
       'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord',
       'depositPaidTotal', 'depositTargetFor', 'agreementSignature', 'isAgreementSigned',
@@ -431,14 +442,15 @@ const DFNS = ['jobIsFeeOnly', 'renderClientDashboard', 'jobIsTest', 'coFiduciary
       walkthrough: '2020-01-01', created: 'Sep 8, 2026', start: '2026-09-21',
       activatedOn: '2026-09-21',
       payments: [{ id: 1, stage: 'deposit', amount: 12857, date: '2026-09-19', method: 'wire' }] };
-    const LOGS = (tc, ps) => ([{ id: 1, date: '2026-09-22',
-      members: [{ name: 'Ashley', role: 'TC', hours: tc }, { name: 'Crew', role: 'PS', hours: ps }] }]);
+    // The hours spread over the four working days the crew has been in (days worked come off the log, 2026-11-05).
+    const LOGS = (tc, ps) => ['2026-09-21', '2026-09-22', '2026-09-23', '2026-09-24'].map((date, i) => ({ id: i + 1, date,
+      members: [{ name: 'Ashley', role: 'TC', hours: tc / 4 }, { name: 'Crew', role: 'PS', hours: ps / 4 }] }));
 
     // ── the floor, on the real screen. 3 of 63 hours earned = 5%, and a projection off a
     // twentieth of a job is noise, so the figure prints and the verdict does not.
     const early = paint({ 2: 'complete' }, LOGS(4, 8));
     has(early, 'jt-sched', 'the strip renders on the real dashboard');
-    has(early, 'Working day 4 of 6', 'with the job where it actually is');
+    has(early, 'Day 4 of 6 worked', 'with the job where it actually is');
     has(early, '5% of the work done',
         '⚠⚠ and the WORK DONE really reaches the screen — this is the assertion the sweep wanted');
     // ⚠ THE TWO HALVES ARE ASSERTED SEPARATELY because the renderer bolds the FIGURE and

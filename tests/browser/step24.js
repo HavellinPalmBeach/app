@@ -176,15 +176,19 @@ let b = null;
       const plan = getJobPlan(id);
       e.rooms.forEach(r => { plan.rooms[r.idx] = Object.assign(plan.rooms[r.idx] || {}, { status: 'cleared' }); });
       const tc = Math.ceil((e.totTC || 0) * 1.3), ps = Math.ceil((e.totPS || 0) * 1.3);
-      jobLogs[id] = [{ id: Date.now(), date: _todayStr(), activity: 'Rooms', members: [
-        { name: 'Anthony Graziano', role: 'TC', hours: tc }, { name: 'Anthony Graziano Jr', role: 'PS', hours: ps }] }];
       const days = estWorkingDays(e), today = _todayStr();
       let d = new Date(today + 'T12:00:00');
       const iso = (x) => x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0');
       for (let guard = 0; guard < 60 && workingDaysInclusive(iso(d), today) < days + 1; guard++) d.setDate(d.getDate() - 1);
       const job = jobs.find(j => j.id === id);
       job.start = iso(d); job.activatedOn = iso(d);
-      return { tc, ps, days, start: job.start, elapsed: workingDaysInclusive(job.start, today) };
+      // ⚠ The day count is the days the hours log holds hours on (2026-11-05): the hours are spread over every working
+      // day from the start to today, so the crew has worked the day after the plan's last.
+      const dates = [];
+      for (const x = new Date(d); iso(x) <= today; x.setDate(x.getDate() + 1)) if (x.getDay() % 6) dates.push(iso(x));
+      jobLogs[id] = dates.map((date, i) => ({ id: Date.now() + i, date, activity: 'Rooms', members: [
+        { name: 'Anthony Graziano', role: 'TC', hours: tc / dates.length }, { name: 'Anthony Graziano Jr', role: 'PS', hours: ps / dates.length }] }));
+      return { tc, ps, days, start: job.start, elapsed: dates.length };
     }, [id, e]);
   }
   async function readScreens(id) {
@@ -233,7 +237,7 @@ let b = null;
   lacks(after.proj, 'STOP', '⚠⚠ the projection no longer says STOP');
   has(after.proj, 'from accepted change orders', 'the projection says its estimated figures carry the change order');
   lacks(after.sched, 'past the proposed length', '⚠⚠ the schedule overrun clears — the advice finally clears the flag it gave');
-  has(after.sched, 'Working day ' + o.elapsed + ' of ' + (o.days + coDays), 'the strip counts against the lengthened plan');
+  has(after.sched, 'Day ' + o.elapsed + ' of ' + (o.days + coDays) + ' worked', 'the strip counts against the lengthened plan');
   has(after.sched, 'incl. ' + coDays + ' day' + (coDays === 1 ? '' : 's') + ' by change order', 'and says the change order lengthened it');
 
   // A second change order is measured from where the first left the job, and its printed page says so.

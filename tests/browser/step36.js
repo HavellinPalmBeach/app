@@ -104,7 +104,7 @@ const HOUSE = ['Entryway / Foyer', 'Living Room', 'Dining Room', 'Family Room / 
   has(plan, '100% of the work done', 'the Job Plan header reads 100% of the work done');
   lacks(plan, 'past the planned end', 'and does not say the job will run past its planned end');
   lacks(plan, `${oldPct}% of the work done`, `where the old basis read ${oldPct}%`);
-  has(plan, 'Working day 3', 'it is working day 3');
+  has(plan, 'Day 2 of 4 worked', 'it is day 2 worked: two days of hours are logged (the day count is the log’s since 2026-11-05)');
 
   await p.evaluate(() => openClientDashboard(7101));
   await p.waitForTimeout(800);

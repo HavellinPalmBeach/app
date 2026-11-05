@@ -49,7 +49,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly',
     'agreementReady', 'jobTimelineDoc',
     // The schedule strip and the planned dates the rail now carries.
-    'jobSchedule', 'jtScheduleHtml', '_jtSchedDeadlinesHtml', 'estWorkingDays', '_todayStr', '_ymdLocal', 'addWorkingDays', 'jobProgress',
+    'jobSchedule', '_workingDayOnOrAfter', '_nextWorkingDay', 'jtScheduleHtml', '_jtSchedDeadlinesHtml', 'estWorkingDays', '_todayStr', '_ymdLocal', 'addWorkingDays', 'jobProgress',
     // Lifted, never stubbed (2026-09-29): jobProgress counts every in-scope room's status before its hours.
     'roomStatusNormalize',
     'workingDaysInclusive', 'approvedEstimateFor',

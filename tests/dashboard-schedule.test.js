@@ -101,11 +101,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('jobSchedule — the plan, the actual, and the two independent flags');
   {
     const S = sandbox({
-      fns: ['jobSchedule', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'workingDaysInclusive', 'docSentAt', 'docKeyFor', 'coWorkingDays', '_coPaceFix', 'estateTaxReturnDue', 'estateTaxReturn'],
+      fns: ['jobSchedule', '_workingDayOnOrAfter', '_nextWorkingDay', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'workingDaysInclusive', 'docSentAt', 'docKeyFor', 'coWorkingDays', '_coPaceFix', 'estateTaxReturnDue', 'estateTaxReturn'],
       vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'PRODUCTIVE_HRS_PER_DAY'],
     });
     const EST = { days: 6, svc: 'cleanout' };
-    const sched = (job, today) => S.jobSchedule(Object.assign({ id: 7, svc: 'cleanout' }, job), EST, today);
+    // ⚠ Days worked are the days the hours log holds hours on (2026-11-05), handed in on `prog` as jobProgress lists them.
+    const W = (...d) => ({ workedDates: d });
+    const sched = (job, today, prog) => S.jobSchedule(Object.assign({ id: 7, svc: 'cleanout' }, job), EST, today, prog);
 
     // ── the plan ──
     const p = sched({ start: '2026-09-21' }, '2026-09-14');
@@ -133,10 +135,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        '…and it carries the fix on screen, not in a title=');
 
     // ── running ──
-    const r = sched({ start: '2026-09-21', status: 'active', activatedOn: '2026-09-21' }, '2026-09-24');
+    const r = sched({ start: '2026-09-21', status: 'active', activatedOn: '2026-09-21' }, '2026-09-24',
+                    W('2026-09-21', '2026-09-22', '2026-09-23', '2026-09-24'));
     eq(r.state, 'running', 'an active job is running');
     eq(r.actualStartKind, 'activated', 'anchored on the write-once activation stamp');
-    eq(r.elapsed, 4, 'and elapsed counts inclusive working days');
+    eq(r.elapsed, 4, 'and elapsed counts the days the hours log holds hours on');
+    eq(r.halfway, '2026-09-23', '…the halfway is the day the third day was worked');
     eq(r.pace, 'halfway_late', '⚠ past the halfway point with no midpoint invoice sent');
     // ⚠ IT NAMES EXACTLY WHAT IT COMPARED, AND WHAT IT COMPARED IS A CALENDAR. This arm is a
     // statement about BILLING — money not yet asked for — and must never read as one about how
@@ -152,9 +156,36 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       EST, '2026-09-24');
     eq(rSent.pace, '', '…and it goes quiet the moment that invoice is sent');
 
-    const over = sched({ start: '2026-09-21', status: 'active', activatedOn: '2026-09-21' }, '2026-10-05');
+    // ⚠⚠ DAYS WORKED, NEVER THE CALENDAR (2026-11-05; Anthony, off test clients reading "day 14 of 9": "we weren't in the
+    // house for 3 days because something came up … I'm logging my 3rd day of work, not my 13th"). Activated on the 21st,
+    // eleven working days later, three days worked: day 3 of 6, nothing red, and the dates ahead counted from tomorrow.
+    const paused = sched({ start: '2026-09-21', status: 'active', activatedOn: '2026-09-21' }, '2026-10-05',
+                         W('2026-09-21', '2026-09-22', '2026-10-05'));
+    eq(paused.elapsed, 3, '⚠⚠ eleven working days since activation, three worked: day 3');
+    eq(paused.overBy, 0, '…so nothing is past the proposed length');
+    eq(paused.pace, '', '…and nothing is flagged: the halfway is still ahead');
+    eq(paused.remaining, 3, 'three days of work to go');
+    eq(paused.halfway, '2026-10-05', '…the halfway is the day the third day was worked: today');
+    eq(paused.planEnd, '2026-10-08', 'and the end is three working days after today, whose hours are in');
+    const notYet = sched({ start: '2026-09-21', status: 'active', activatedOn: '2026-09-21' }, '2026-09-24',
+                         W('2026-09-21', '2026-09-22'));
+    eq(notYet.halfway, '2026-09-24', 'two days worked, today not logged: the third day can still be today');
+    eq(notYet.pace, '', '⚠ …so a job that lost two days is not "past the halfway point"');
+    eq(notYet.planEnd, '2026-09-29', 'and four days of work from today end on the 29th');
+    eq(sched({ start: '2026-09-21', status: 'active', activatedOn: '2026-09-21' }, '2026-09-24',
+             { workedDates: ['2026-09-21', '2026-09-25'] }).elapsed, 1, 'a day after today is not a day worked');
+    const sat = sched({ start: '2026-09-21', status: 'active', activatedOn: '2026-09-21' }, '2026-09-26', W('2026-09-21', '2026-09-22'));
+    eq(sat.planEnd, '2026-10-01', '⚠ on a Saturday the days still to work are counted from Monday, never from the weekend');
+    eq(sched({ start: '2026-09-21', status: 'active', activatedOn: '2026-09-21' }, '2026-09-24').elapsed, 0,
+       'with no hours log handed in, no day is counted');
+
+    const over = sched({ start: '2026-09-21', status: 'active', activatedOn: '2026-09-21' }, '2026-10-05',
+      W('2026-09-21', '2026-09-22', '2026-09-23', '2026-09-24', '2026-09-25', '2026-09-28', '2026-09-29', '2026-09-30',
+        '2026-10-01', '2026-10-02', '2026-10-05'));
     eq(over.pace, 'overrun', 'past the proposed length is the worse flag and wins');
-    eq(over.overBy, 5, 'and it says by how many working days');
+    eq(over.overBy, 5, 'and it says by how many days of work');
+    has(over.paceTxt, 'Day 11 of 6 worked', '…in days worked');
+    eq(over.planEnd, '2026-09-28', '…and the planned end is the day the sixth day was worked');
 
     // ⚠ A DEPOSIT DATE MAY ANCHOR `elapsed` AND MAY NEVER SUPPORT A SLIP CLAIM — it says when
     // work COULD start, not when it did. Every job active before the stamp shipped is in that case.
@@ -162,32 +193,34 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // the 21st the slip is 0 whether the rule fires or not — caught by reverting. Here the
     // deposit landed a week late, so an unguarded rule would claim a 5-day slip off a date that
     // only says when work COULD have started.
-    const legacy = sched({ start: '2026-09-21', status: 'active', depositReceivedAt: '2026-09-28' }, '2026-09-30');
+    const legacy = sched({ start: '2026-09-21', status: 'active', depositReceivedAt: '2026-09-28' }, '2026-09-30',
+                         W('2026-09-28', '2026-09-29', '2026-09-30'));
     eq(legacy.actualStartKind, 'deposit', 'a legacy active job falls back to the deposit date');
-    eq(legacy.elapsed, 3, 'it may anchor the elapsed reading');
+    eq(legacy.elapsed, 3, 'it counts its days worked like any other');
     // ⚠⚠ …AND NOTHING ELSE. Since 2026-09-23 the plan follows a RECORDED start; a deposit date is
     // not one, so a legacy job keeps its target as the anchor and its dates do not move off a proxy.
     eq(legacy.anchor, '2026-09-21', '⚠⚠ a deposit date never ANCHORS the plan — it is a proxy, not a record');
     eq(legacy.anchorKind, 'target', '…the plan still counts from the target start');
-    eq(legacy.planEnd, '2026-09-28', 'and its end is the target end');
+    eq(legacy.planEnd, '2026-10-05', 'and its end is counted forward from the days worked: three more after today');
 
     // ⚠⚠ THE PLAN FOLLOWS THE RECORDED START (2026-09-23), AND THIS REVERSES A DECISION. It used to
     // stay anchored on job.start and print a second, slipped end beside it; Anthony, off the Job
     // Plan header reading "target was Oct 5 · Halfway Oct 7 · Target end Oct 12 · now ending Sep 30":
     // "you need to do away with the old ones like the target start date and target midpoint
     // because it's very confusing." One start, one halfway, one end — counted from the day it began.
-    const late = sched({ start: '2026-09-21', status: 'active', activatedOn: '2026-09-28' }, '2026-09-29');
+    const late = sched({ start: '2026-09-21', status: 'active', activatedOn: '2026-09-28' }, '2026-09-29',
+                       W('2026-09-28', '2026-09-29'));
     eq(late.anchor, '2026-09-28', '⚠⚠ a job that started late is counted from the day it STARTED');
     eq(late.anchorKind, 'actual', '…and says so');
     eq(late.planEnd, '2026-10-05', 'so its end moves with it — six working days from the 28th');
     eq(late.halfway, '2026-09-30', 'and so does its halfway');
-    eq(late.elapsed, 2, 'while elapsed still counts from the recorded start');
+    eq(late.elapsed, 2, 'and two days worked');
     // Anthony's own case: a job activated TWELVE days AHEAD of its target start.
-    const early = sched({ start: '2026-10-05', status: 'active', activatedOn: '2026-09-23' }, '2026-09-23');
+    const early = sched({ start: '2026-10-05', status: 'active', activatedOn: '2026-09-23' }, '2026-09-23', W('2026-09-23'));
     eq(early.anchor, '2026-09-23', '⚠ an EARLY start moves the plan too — the direction that produced the report');
     eq(early.halfway, '2026-09-25', '…the halfway is day 3 from the real start, not from the old target');
     eq(early.planEnd, '2026-09-30', '…and the end is the one the strip already called "now ending"');
-    eq(early.remaining, 5, 'working day 1 of 6 has five to go');
+    eq(early.remaining, 5, 'day 1 of 6 worked has five to go');
     ['projectedEnd', 'startSlip'].forEach((k) =>
       ok(!(k in late), `⚠ \`${k}\` is GONE from the descriptor — two ends for one job is the thing removed`));
     lacks(noComments(fn('jobSchedule')), 'projectedEnd', 'and no live line computes a second end');
@@ -232,9 +265,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(S.jobSchedule({ id: 7, svc: 'cleanout', start: '2026-09-21' }, { days: 0, totTC: 0, totPS: 0 }, '2026-09-14').why,
        'no-days', 'an estimate with no derivable length says so rather than printing 0 days');
 
-    const done = sched({ start: '2026-09-21', status: 'closed', activatedOn: '2026-09-21', deliveredOn: '2026-10-02' }, '2026-10-10');
+    const done = sched({ start: '2026-09-21', status: 'closed', activatedOn: '2026-09-21', deliveredOn: '2026-10-02' }, '2026-10-10',
+                       W('2026-09-21', '2026-09-22', '2026-09-24', '2026-10-01'));
     eq(done.state, 'done', 'a delivered job is history');
-    eq(done.workedDays, 10, 'and it reports what it actually took');
+    eq(done.workedDays, 4, 'and it reports the days it was worked, not the calendar it spanned');
 
     // ⚠ DOM-FREE AND CLOCK-FREE, the same rule jobTimeline follows.
     const sb = noComments(fn('jobSchedule'));
@@ -271,7 +305,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const running = V.jtScheduleHtml(Object.assign({}, base, { state: 'running', elapsed: 4,
       actualStart: '2026-09-21', actualStartKind: 'activated' }));
     has(running, 'Started', 'a running job says Started — the one word that names a fact');
-    has(running, 'Working day 4 of 6', 'and leads with where the job actually is');
+    has(running, 'Day 4 of 6 worked', 'and leads with where the job actually is, in days worked');
     has(running, 'jt-sched-lead', 'in the bronze lead slot');
     has(V.jtScheduleHtml(Object.assign({}, base, { state: 'running', elapsed: 2,
       actualStart: '2026-09-21', actualStartKind: 'deposit' })), '(from the deposit)',
@@ -280,7 +314,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // calendar. A job cannot be on day zero of itself.
     const zero = V.jtScheduleHtml(Object.assign({}, base, { state: 'running', elapsed: 0,
       actualStart: '2026-09-21', actualStartKind: 'activated' }));
-    lacks(zero, 'Working day 0', '⚠ a job that has not had a working day yet never says day 0');
+    lacks(zero, 'Day 0', '⚠ a job with no day worked yet never says day 0');
     has(zero, '6 working days', '…it falls back to the proposed length, which is the honest reading');
     has(zero, 'Started', 'while still saying it has started');
 
@@ -313,8 +347,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(slipped, 'target was', '⚠⚠ and NOT the target it replaced — that is the line that confused the crew');
     lacks(slipped, 'D:2026-09-21', '…no date counted from the old target survives anywhere on it');
     has(slipped, 'Today <span class="jt-sched-v">D:2026-09-24</span>', 'today, so the working day is anchored on a date');
-    has(slipped, 'Working day 3 of 6', 'where the job is');
-    has(slipped, '3 working days to go', 'and the working days after today');
+    has(slipped, 'Day 3 of 6 worked', 'where the job is');
+    has(slipped, '3 days of work to go', 'and the days of work still to go');
     has(slipped, 'Halfway D:2026-09-24', 'the halfway counted from the real start');
     has(slipped, 'Planned end <span class="jt-sched-v">D:2026-09-29</span>', '⚠ ONE end, named "Planned end" once the job runs on its real start');
     lacks(slipped, 'now ending', '⚠⚠ and never a second end beside it');
@@ -433,7 +467,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'dashUtilityBar', 'walkthroughOffered', '_dashUtilityBarHtml', 'driveFolderPending', 'agrApprovalWithdrawn', 'jobTimeline', 'estimateNoteGaps', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'jobTimelineNext', 'jobTimelineActions', 'docReadOnlyWord', 'discountOfferBlocker', 'esignSignedCopyGaps', 'depositVoidFlag', 'agreementHandedOverInPerson',
       'jobTimelineDoc', 'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord',
       '_jtDocSecondaries', 'docPreviewOnly', '_jtDocViews', '_jtDraftLink', '_jtDriveLink', '_jtSendAction',
-      'jobSchedule', 'jobOnProbateTrack', 'estatePackageRoute', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jtScheduleHtml', '_jtSchedDeadlinesHtml', 'estWorkingDays', '_todayStr', '_ymdLocal', 'addWorkingDays', 'jobProgress',
+      'jobSchedule', '_workingDayOnOrAfter', '_nextWorkingDay', 'jobOnProbateTrack', 'estatePackageRoute', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jtScheduleHtml', '_jtSchedDeadlinesHtml', 'estWorkingDays', '_todayStr', '_ymdLocal', 'addWorkingDays', 'jobProgress',
       // Lifted, never stubbed (2026-09-29): jobProgress now counts every in-scope room's status before it
       // checks the room's hours, for the every-room-locked midpoint, so it reaches this on every fixture.
       'roomStatusNormalize',
@@ -881,7 +915,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('P22 — the court deadline and the Form 706 date print before an estimate and before a target start');
   {
     const S = sandbox({
-      fns: ['jobSchedule', 'jtScheduleHtml', '_jtSchedDeadlinesHtml', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob',
+      fns: ['jobSchedule', '_workingDayOnOrAfter', '_nextWorkingDay', 'jtScheduleHtml', '_jtSchedDeadlinesHtml', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob',
         'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'workingDaysInclusive', 'docSentAt', 'docKeyFor', 'coWorkingDays', '_coPaceFix',
         'estateTaxReturnDue', 'estateTaxReturn', 'estateTaxReturnWords', 'esc'],
       vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'PRODUCTIVE_HRS_PER_DAY', 'ESTATE_TAX_RETURN_WARN_DAYS'],

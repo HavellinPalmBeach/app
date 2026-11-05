@@ -111,18 +111,18 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const prevTZ = process.env.TZ;
     process.env.TZ = 'America/New_York';
     try {
-      const S = sandbox({ fns: ['jobSchedule', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jtScheduleHtml', '_jtSchedDeadlinesHtml', 'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'workingDaysInclusive',
+      const S = sandbox({ fns: ['jobSchedule', '_workingDayOnOrAfter', '_nextWorkingDay', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jtScheduleHtml', '_jtSchedDeadlinesHtml', 'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'workingDaysInclusive',
                                 'docSentAt', 'docKeyFor', 'fmtDate2', 'coWorkingDays', '_coPaceFix', 'estateTaxReturnDue', 'estateTaxReturn'], vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'PRODUCTIVE_HRS_PER_DAY'] });
       const est = { svc: 'downsizing_move', days: 6 };
       const job = { id: 7, svc: 'downsizing_move', status: 'active', start: '2026-10-05', activatedOn: '2026-09-23' };
-      const d = S.jobSchedule(job, est, '2026-09-23');
+      const d = S.jobSchedule(job, est, '2026-09-23', { workedDates: ['2026-09-23'] });
       eq(d.anchor, '2026-09-23', 'the plan counts from the day the job started');
       eq(d.halfway, '2026-09-25', 'halfway is day 3 of 6 from the 23rd');
       eq(d.planEnd, '2026-09-30', 'and the end is day 6 — the date the old strip already called "now ending"');
       const strip = S.jtScheduleHtml(d).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
       has(strip, 'Started Sep 23, 2026', 'the recorded start');
-      has(strip, 'Working day 1 of 6', 'where the job is');
-      has(strip, '5 working days to go', 'and what is left');
+      has(strip, 'Day 1 of 6 worked', 'where the job is');
+      has(strip, '5 days of work to go', 'and what is left');
       has(strip, 'Halfway Sep 25, 2026', '⚠⚠ the halfway, from the real start');
       has(strip, 'Planned end Sep 30, 2026', '⚠⚠ ONE end, from the real start');
       // The four dates his screenshot printed off a start that never happened:
@@ -152,7 +152,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('#3 — the hard target is tested against the start the job really had');
   {
-    const S = sandbox({ fns: ['jobSchedule', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'workingDaysInclusive', 'docSentAt', 'docKeyFor', 'coWorkingDays', '_coPaceFix', 'estateTaxReturnDue', 'estateTaxReturn'],
+    const S = sandbox({ fns: ['jobSchedule', '_workingDayOnOrAfter', '_nextWorkingDay', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'workingDaysInclusive', 'docSentAt', 'docKeyFor', 'coWorkingDays', '_coPaceFix', 'estateTaxReturnDue', 'estateTaxReturn'],
                         vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'PRODUCTIVE_HRS_PER_DAY'] });
     const est = { svc: 'cleanout', days: 6 };
     // Target start the 21st, a hard target of the 25th — reachable on paper — but the job only

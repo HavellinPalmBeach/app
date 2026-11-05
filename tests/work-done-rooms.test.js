@@ -112,7 +112,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   // ═══════════════════════════════════════════════════════════════════════════
   group('the pace verdict: a job finished early is not "behind"');
   {
-    const S = sandbox({ fns: ['jobSchedule', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'workingDaysInclusive', 'docSentAt', 'docKeyFor',
+    const S = sandbox({ fns: ['jobSchedule', '_workingDayOnOrAfter', '_nextWorkingDay', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'workingDaysInclusive', 'docSentAt', 'docKeyFor',
                               'coWorkingDays', '_coPaceFix', 'estateTaxReturnDue', 'estateTaxReturn'],
                         vars: ['DECEDENT_SERVICES', 'PRODUCTIVE_HRS_PER_DAY'] });
     const est = Object.assign({}, built.home_cleanout, { days: 4 });

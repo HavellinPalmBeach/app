@@ -152,8 +152,8 @@ const APP = process.env.APP || ('file://' + (process.argv[2] || '/home/user/app/
   eq(j1.panel, 'panel-job-plan', '⚠⚠ #1 THE ACTIVATION LANDS ON THE JOB PLAN');
   eq(j1.planJob, '7001', '…on this client');
   has(j1.sched, 'Started Sep 23, 2026', '#3 the strip reads the start this press stamped');
-  has(j1.sched, 'Working day 1 of 6', '…where the job is');
-  has(j1.sched, '5 working days to go', '…what is left');
+  has(j1.sched, '6 working days', '…no hours logged yet, so the strip states the length (the day count is the log’s since 2026-11-05)');
+  lacks(j1.sched, 'Day 0', '…and never a day 0');
   has(j1.sched, 'Halfway Sep 25, 2026', '⚠⚠ …the halfway, counted from the REAL start');
   has(j1.sched, 'Planned end Sep 30, 2026', '⚠⚠ …and ONE end, counted from it');
   ['target was', 'now ending', 'Oct 5, 2026', 'Oct 7, 2026', 'Oct 12, 2026', 'Target end', 'Target start'].forEach((s) =>

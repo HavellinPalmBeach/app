@@ -2589,7 +2589,11 @@ const M_JOB = () => ({ id: 7, name: 'Hale', svc: 'downsizing_move', status: 'act
 const M_EST = () => ({ 7: { approved: true, submitted: true, estimate: { jobId: 7, svc: 'downsizing_move', havellinTotal: 18000, totTC: 40, totPS: 80, tcRate: 150, psRate: 100,
   days: 6, vendors: [], prepItems: [], pkgCost: 0, rooms: [] } } });
 function band(job, dom) {
-  return lift(['jobProgressBlockHtml', '_repaintJobBand', 'toggleDeskTimeline'], { jobs: [job], estimateStore: M_EST(), jobPlanStore: {}, jobLogs: [], changeOrders: [],
+  // The crew worked every working day from the activation (the day count is the hours log's since 2026-11-05).
+  const worked = [];
+  for (const d = new Date('2026-10-05T12:00:00'), e = new Date(DAY_M + 'T12:00:00'); d <= e; d.setDate(d.getDate() + 1))
+    if (d.getDay() % 6) worked.push({ id: worked.length + 1, date: d.toISOString().slice(0, 10), members: [{ role: 'PS', hours: 1 }] });
+  return lift(['jobProgressBlockHtml', '_repaintJobBand', 'toggleDeskTimeline'], { jobs: [job], estimateStore: M_EST(), jobPlanStore: {}, jobLogs: { 7: worked }, changeOrders: [],
     document: dom || domStub({}), _dashboardJobId: 0, _todayStr: () => DAY_M });
 }
 

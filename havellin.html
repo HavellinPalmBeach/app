@@ -1498,7 +1498,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.11.05 · 9:17am ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.11.05 · 12:53pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -6318,6 +6318,23 @@ function addWorkingDays(startDateStr, days) {
     if (d.getDay() !== 0 && d.getDay() !== 6) remaining--;
   }
   return _ymdLocal(d);
+}
+
+// The first working day on or after a day, and the first after it: where jobSchedule counts the days still to work
+// from (2026-11-05). Clock-free; yyyy-mm-dd in, yyyy-mm-dd out.
+function _workingDayOnOrAfter(dateStr) {
+  if (!dateStr) return dateStr;
+  var d = new Date(dateStr + 'T12:00:00');
+  if (isNaN(d.getTime())) return dateStr;
+  while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
+  return _ymdLocal(d);
+}
+function _nextWorkingDay(dateStr) {
+  if (!dateStr) return dateStr;
+  var d = new Date(dateStr + 'T12:00:00');
+  if (isNaN(d.getTime())) return dateStr;
+  d.setDate(d.getDate() + 1);
+  return _workingDayOnOrAfter(_ymdLocal(d));
 }
 
 // ─── THE PROPOSED LENGTH OF A JOB ────────────────────────────────────────────
@@ -18800,9 +18817,9 @@ function jtScheduleHtml(sched) {
   if (sched.state === 'done') {
     h += I('Started ' + esc(fmtDate2(sched.actualStart || sched.start)));
     if (sched.delivered) h += I('Delivered ' + V(fmtDate2(sched.delivered)));
-    // `workedDays` is the working days the job took (P16: "1 working days" on a one-day job — pluralised now). It was
-    // named `endVariance`, which it never held (P22).
-    if (sched.workedDays) h += I(sched.workedDays + ' working day' + (sched.workedDays === 1 ? '' : 's') + ' against a ' + sched.days + '-day plan');
+    // `workedDays` is the days the hours log holds hours on (2026-11-05; the calendar from start to delivery until then).
+    // It was named `endVariance`, which it never held (P22).
+    if (sched.workedDays) h += I(sched.workedDays + ' day' + (sched.workedDays === 1 ? '' : 's') + ' worked against a ' + sched.days + '-day plan');
     return h + '</div>';   // flat grey, no flag: history is not an instruction
   }
 
@@ -18816,13 +18833,12 @@ function jtScheduleHtml(sched) {
     // Anthony, 2026-09-20: *"target start date was September 21st, actual start date September
     // 22nd, projected six days, today is the 24th, three more days … lets you know where you stand."*
     if (sched.today) h += I('Today ' + V(fmtDate2(sched.today)));
-    // ⚠ NEVER "Working day 0 of 6". `elapsed` is 0 whenever today is before the recorded start
-    // — an activation stamped ahead of the calendar, or a clock-skewed device — and a job
-    // cannot be on day zero of itself. Measured in a browser, not reasoned about: a job
+    // ⚠ NEVER "Day 0 of 6 worked". `elapsed` is 0 until the first hours are logged (2026-11-05: it counts days
+    // worked), and a job cannot be on day zero of itself. Measured in a browser, not reasoned about: a job
     // activated on a future date printed exactly that. It falls back to the proposed length,
     // which is the honest reading of a job that has not had a working day yet.
     h += (sched.elapsed >= 1)
-      ? '<span class="jt-sched-i jt-sched-lead">' + V('Working day ' + sched.elapsed + ' of ' + sched.days) + '</span>'
+      ? '<span class="jt-sched-i jt-sched-lead">' + V('Day ' + sched.elapsed + ' of ' + sched.days + ' worked') + '</span>'
       : I(V(dayTxt));
     h += coDayChip;
     // "N to go" counts the working days AFTER today (jobSchedule's `remaining`), and is withheld
@@ -18830,7 +18846,7 @@ function jtScheduleHtml(sched) {
     // "2 days past" would be two readings of one fact.
     if (sched.elapsed >= 1 && !sched.overBy && typeof sched.remaining === 'number') {
       h += I(sched.remaining > 0
-        ? V(sched.remaining + ' working day' + (sched.remaining === 1 ? '' : 's') + ' to go')
+        ? V(sched.remaining + ' day' + (sched.remaining === 1 ? '' : 's') + ' of work to go')
         : V('last planned day'));
     }
     // ⚠⚠ TWO FIGURES, NEVER ONE. Work DONE and hours BURNED answer different questions and
@@ -19150,7 +19166,7 @@ function jobProgress(est, plan, logs, coHrs) {
             coTC:0, coPS:0, coHrs:0, authTC:0, authPS:0, authHrs:0,
             planTC:0, planPS:0, doneTC:0, donePS:0, doneHrs:0, planHrs:0,
             workPct:0, tcPct:0, psPct:0,
-            nRooms:0, nLocked:0, aboveFloor:false, invalidRooms:[] };
+            nRooms:0, nLocked:0, aboveFloor:false, invalidRooms:[], workedDates:[], daysWorked:0 };
   // ⚠ ACCEPTED CHANGE-ORDER HOURS ARE PASSED IN (`coAcceptedHours(jobId)`), never read here — the
   // same rule as the plan and the log, so the tests drive this with no globals. They are set BEFORE
   // the early return because the schedule reads them to lengthen the plan, and a job whose estimate
@@ -19159,6 +19175,20 @@ function jobProgress(est, plan, logs, coHrs) {
   P.coTC = Number(_co.tc) || 0;
   P.coPS = Number(_co.ps) || 0;
   P.coHrs = P.coTC + P.coPS;
+  // ⚠⚠ THE DAYS WORKED ARE THE DAYS THE LOG HOLDS HOURS ON (2026-11-05; Anthony, off test clients reading "day 14 of 9":
+  // *"we weren't in the house for 3 days because something came up … I'm logging my 3rd day of work, not my 13th"*). One
+  // entry per distinct day with any hours on it, sorted; jobSchedule counts the job's days off this list, never the
+  // calendar since activation, so a rain day, a day the family keeps the crew out or a week's break is not a day of the
+  // job. Set BEFORE the early return: an estimate with no rooms still has a schedule.
+  var _dset = {};
+  (logs || []).forEach(function(e) {
+    if (!e || !/^\d{4}-\d{2}-\d{2}$/.test(String(e.date || ''))) return;
+    var h = 0;
+    ((e.members) || []).forEach(function(m) { h += (m && Number(m.hours)) || 0; });
+    if (h > 0) _dset[e.date] = true;
+  });
+  P.workedDates = Object.keys(_dset).sort();
+  P.daysWorked = P.workedDates.length;
   if (!est || !est.rooms || !est.rooms.length) return P;
 
   (logs || []).forEach(function(e) {
@@ -19385,16 +19415,32 @@ function jobSchedule(job, est, todayStr, prog) {
   S.planEnd = addWorkingDays(S.anchor, S.days);
   S.halfway = (S.days >= 3) ? addWorkingDays(S.anchor, Math.ceil(S.days / 2)) : '';
 
+  // ⚠⚠ A RUNNING JOB IS COUNTED IN DAYS WORKED, NEVER IN CALENDAR DAYS (2026-11-05; Anthony: *"there's just no way to
+  // say, oh, well, we weren't in the house for 3 days because something came up"*). `elapsed` is the days the hours log
+  // holds hours on (jobProgress's `workedDates`, passed in on `prog`; none passed, none counted), so "Day 3 of 4 worked"
+  // after three days in the house whatever the calendar says, and a day nobody worked moves nothing but the dates still
+  // ahead. The halfway and the planned end are counted FORWARD from the next day that can be worked (today, or the next
+  // working day once today's hours are in) by the days still to go, and once reached they are the day they were reached,
+  // so the midpoint invoice, the court deadline and the hard target are tested against where the job really is.
+  var _wd = ((prog && prog.workedDates) || []).filter(function(d) { return !S.today || d <= S.today; });
+  var _fromDay = '';
   if (job.deliveredOn) {
     S.state = 'done';
-    if (S.actualStart) S.workedDays = workingDaysInclusive(S.actualStart, job.deliveredOn);
+    S.workedDays = _wd.length;
   } else if (job.status === 'active') {
     S.state = 'running';
-    if (S.actualStart && S.today) S.elapsed = workingDaysInclusive(S.actualStart, S.today);
+    S.elapsed = _wd.length;
     S.overBy = Math.max(0, S.elapsed - S.days);
-    // The working days AFTER today: on day 3 of 6 there are three more. Clock-free like the rest —
-    // it is arithmetic on `elapsed`, which the caller's `todayStr` already fixed.
+    // The days still to work: on day 3 of 6 worked there are three more.
     S.remaining = Math.max(0, S.days - S.elapsed);
+    if (S.today) {
+      var _base = S.today < S.anchor ? S.anchor : S.today;
+      var _from = _wd.indexOf(_base) >= 0 ? _nextWorkingDay(_base) : _workingDayOnOrAfter(_base);
+      var _hDay = Math.ceil(S.days / 2);
+      S.planEnd = S.elapsed >= S.days ? _wd[S.days - 1] : addWorkingDays(_from, S.days - S.elapsed);
+      S.halfway = (S.days >= 3) ? (S.elapsed >= _hDay ? _wd[_hDay - 1] : addWorkingDays(_from, _hDay - S.elapsed)) : '';
+      _fromDay = _from;
+    }
   } else {
     S.state = 'planned';
   }
@@ -19448,7 +19494,7 @@ function jobSchedule(job, est, todayStr, prog) {
   var _trackDays = _rateOK ? Math.ceil(S.elapsed / prog.workPct) : 0;
   if (S.state === 'running' && S.overBy > 0) {
     S.pace = 'overrun';
-    S.paceTxt = 'Working day ' + S.elapsed + ' of ' + S.days + ' — ' + S.overBy + ' working day' + (S.overBy === 1 ? '' : 's') + ' past the proposed length.';
+    S.paceTxt = 'Day ' + S.elapsed + ' of ' + S.days + ' worked — ' + S.overBy + ' day' + (S.overBy === 1 ? '' : 's') + ' of work past the proposed length.';
     S.paceFix = _coPaceFix(est);
   } else if (_rateOK && _trackDays > S.days) {
     // ⚠⚠ THE ONE FLAG ANTHONY ASKED FOR: *"where we are versus the deliverable timeline we
@@ -19462,9 +19508,9 @@ function jobSchedule(job, est, todayStr, prog) {
     // standing rule's exact failure — a line explaining what the reader can already see.
     S.pace = 'behind';
     S.paceBy = _trackDays - S.days;
-    S.paceEnd = addWorkingDays(S.actualStart, _trackDays);
-    S.paceTxt = Math.round(prog.workPct * 100) + '% of the work is done on working day '
-              + S.elapsed + ' of ' + S.days + '.';
+    S.paceEnd = addWorkingDays(_fromDay || S.actualStart, _trackDays - S.elapsed);
+    S.paceTxt = Math.round(prog.workPct * 100) + '% of the work is done after '
+              + S.elapsed + ' of ' + S.days + ' days worked.';
     S.paceFix = _coPaceFix(est)
               + (midSent ? '' : ' The midpoint invoice has not gone out either.');
   } else if (S.state === 'running' && S.halfway && S.today && S.today > S.halfway && !midSent) {
@@ -25313,8 +25359,8 @@ function applyJobTransition(j, how) {
     if (!j.activatedOn && j.start && _today < j.start
         && !confirm('Activate this job today?\n\n'
           + 'Its target start is ' + fmtDate2(j.start) + '. Activating it now starts its schedule today, '
-          + fmtDate2(_today) + ' — the working days, the halfway point and the planned end are counted '
-          + 'from today, and that start date cannot be changed afterwards.\n\n'
+          + fmtDate2(_today) + ' — it records today as the day the job started, '
+          + 'and that start date cannot be changed afterwards.\n\n'
           + 'If work is not starting today, press Cancel and activate it on the day the crew begins.')) {
       return false;
     }

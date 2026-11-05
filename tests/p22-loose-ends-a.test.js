@@ -265,8 +265,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(SRC, 'Link a partner to a job at intake so referrals', 'and not intake alone');
     const S = lift(['jobSchedule'], [], {});
     const done = inEastern(() => S.jobSchedule({ id: 1, svc: 'downsizing', status: 'closed', activatedOn: '2026-09-01', deliveredOn: '2026-09-03', start: '2026-09-01' },
-      { days: 6 }, '2026-09-10'));
-    eq([done.workedDays, 'endVariance' in done], [3, false], '⚠ the working days the job took, under a name that says so');
+      { days: 6 }, '2026-09-10', { workedDates: ['2026-09-01', '2026-09-02', '2026-09-03'] }));
+    eq([done.workedDays, 'endVariance' in done], [3, false], '⚠ the days the job was worked (2026-11-05: off the hours log), under a name that says so');
     lacks(noComments(SRC), 'endVariance', 'no reader of the old name survives');
   });
 

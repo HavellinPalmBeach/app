@@ -330,10 +330,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('⚠ the schedule strip on the plan header — the dashboard’s own, never a second reading of the dates');
   {
-    const s = sandbox({ fns: ['planScheduleHtml', '_planScheduleStrip', 'jobSchedule', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jtScheduleHtml', '_jtSchedDeadlinesHtml', 'jobProgress', 'estWorkingDays', 'addWorkingDays', '_ymdLocal',
+    const s = sandbox({ fns: ['planScheduleHtml', '_planScheduleStrip', 'jobSchedule', '_workingDayOnOrAfter', '_nextWorkingDay', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jtScheduleHtml', '_jtSchedDeadlinesHtml', 'jobProgress', 'estWorkingDays', 'addWorkingDays', '_ymdLocal',
                               'workingDaysInclusive', 'approvedEstimateFor', 'roomStatusNormalize', 'coAcceptedHours', 'coHoursTotal', 'coHours', 'coWorkingDays', '_coPaceFix', 'estateTaxReturnDue', 'estateTaxReturn'],
                         vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'PRODUCTIVE_HRS_PER_DAY', 'PROJ_CREW_DAY', 'jobPlanStore', 'estimateStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY'],
-                        stubs: { docSentAt: () => null, jobLogEntries: () => [], _todayStr: () => '2026-09-24' } });
+                        // Days worked come off the hours log (2026-11-05): the 22nd, 23rd and 24th.
+                        stubs: { docSentAt: () => null, jobLogEntries: () => ['2026-09-22', '2026-09-23', '2026-09-24'].map((date) => ({ date, members: [{ role: 'PS', hours: 1 }] })), _todayStr: () => '2026-09-24' } });
     const est = EST({ days: 6 });
     s.estimateStore[7] = { estimate: est, approved: true };
     const planned = s.planScheduleHtml(7, JOB(), est);
@@ -346,8 +347,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(running, '2026-09-22', 'the recorded start');
     has(running, 'Today', 'today, in words');
     has(running, '2026-09-24', 'the date the working day was measured against');
-    has(running, 'Working day 3 of 6', 'where the job is');
-    has(running, '3 working days to go', '⚠ and how many are left — Anthony’s "three more days"');
+    has(running, 'Day 3 of 6 worked', 'where the job is');
+    has(running, '3 days of work to go', '⚠ and how many are left — Anthony’s "three more days"');
     // ⚠⚠ SINCE 2026-09-23 THE PLAN COUNTS FROM THE DAY THE JOB STARTED, and the old target leaves the
     // strip. Anthony, off exactly this header: "you need to do away with the old ones like the target
     // start date and target midpoint because it's very confusing." Started on the 22nd, six days:

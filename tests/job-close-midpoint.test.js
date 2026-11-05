@@ -36,7 +36,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     'jobActivationBlockers', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'depositPaidTotal',
     'depositTargetFor', 'docSentAt', 'docKeyFor', 'agreementSignature', 'isAgreementSigned',
     'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'isAgreementSent',
-    'jobSchedule', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', '_ymdLocal', 'jobProgress', 'estWorkingDays', 'addWorkingDays', 'workingDaysInclusive', 'coWorkingDays',
+    'jobSchedule', '_workingDayOnOrAfter', '_nextWorkingDay', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', '_ymdLocal', 'jobProgress', 'estWorkingDays', 'addWorkingDays', 'workingDaysInclusive', 'coWorkingDays',
     '_coPaceFix', 'roomStatusNormalize', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf', 'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'estimateOutForApproval', 'priceAboveSent', 'docDraftPending', 'priceAboveAcceptance', '_approvedPriceAbove', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs', 'fmt', 'estateAuthority', 'estateTaxReturnDue', 'estateTaxReturn', 'agreementHandOverDraftNote'];
   const RAIL_FNS = TL_FNS.concat(['jtBandHtml', 'jobTimelineActions', 'jobTimelineDoc', 'jobStageDoc', 'docReadiness', 'esignSignedCopyGaps',
     'docDraftOnly', 'docPreviewOnly', 'docReadOnlyWord', 'discountOfferBlocker', 'docTitle', 'docWord', '_jtDocSecondaries', '_jtDocViews', '_jtDraftLink', '_jtDriveLink',
@@ -90,7 +90,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   function rail(job, today, plan, estOver) {
     const rec = { estimate: EST(estOver), approved: true, savedAt: 1789067253747 };
     R.estimateStore = { 7: rec }; R.jobs = [job];
-    const prog = R.jobProgress(rec.estimate, plan || null, [], {});
+    // ⚠ The schedule counts days worked off the hours log (2026-11-05): the crew is taken to have worked every working day
+    // from the activation to today, an hour a day so no pace reading is reached.
+    const worked = [];
+    if (today && job.activatedOn) {
+      const d = new Date(job.activatedOn + 'T12:00:00'), end = new Date(today + 'T12:00:00');
+      for (; d <= end; d.setDate(d.getDate() + 1)) if (d.getDay() % 6) worked.push({ date: d.toISOString().slice(0, 10), members: [{ role: 'PS', hours: 1 }] });
+    }
+    const prog = R.jobProgress(rec.estimate, plan || null, worked, {});
     const sched = today === null ? null : R.jobSchedule(job, rec.estimate, today, prog);
     const rows = R.jobTimeline(job, rec, [], [], sched);
     const next = R.jobTimelineNext(rows);
@@ -541,7 +548,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'jobActivationBlockers', 'jobPayments', 'agrApprovalWithdrawn', 'jobTimeline', 'estimateNoteGaps', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'estimateIsFeeOnly', 'estDeclutterHrs', 'jobTimelineActions', 'esignSignedCopyGaps', 'docReadOnlyWord', 'discountOfferBlocker', 'jobTimelineNext', 'depositVoidFlag', 'agreementHandedOverInPerson',
       'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly',
       'agreementReady', 'jobTimelineDoc',
-      'jobSchedule', 'jobOnProbateTrack', 'estatePackageRoute', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jtScheduleHtml', '_jtSchedDeadlinesHtml', 'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'jobProgress',
+      'jobSchedule', '_workingDayOnOrAfter', '_nextWorkingDay', 'jobOnProbateTrack', 'estatePackageRoute', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jtScheduleHtml', '_jtSchedDeadlinesHtml', 'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'jobProgress',
       'workingDaysInclusive', 'approvedEstimateFor', 'roomStatusNormalize',
       'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'jobIsTest', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'walkawaySettlementHtml', 'walkawaySettlement', 'jobRefundedTotal', 'refundCounts', 'jobPaymentsListHtml', '_paymentKey', 'paymentStageLabel', 'paymentMethodLabel', 'fmt', 'sectionHdr', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord',
       'standingFlagLines', 'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'guideLinkHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle',

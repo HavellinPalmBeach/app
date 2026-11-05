@@ -183,24 +183,26 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('⚠⚠ jobSchedule — the overrun flag the change order was the advice for now clears');
   {
     const S = sandbox({
-      fns: ['jobSchedule', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'workingDaysInclusive', 'docSentAt', 'docKeyFor',
+      fns: ['jobSchedule', '_workingDayOnOrAfter', '_nextWorkingDay', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'workingDaysInclusive', 'docSentAt', 'docKeyFor',
             'coWorkingDays', '_coPaceFix', 'estateTaxReturnDue', 'estateTaxReturn'],
       vars: ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'PRODUCTIVE_HRS_PER_DAY'],
     });
     const EST = { svc: 'cleanout', days: 6, totTC: 42, totPS: 70, psCount: 2 };
     const JOBR = { id: 7, svc: 'cleanout', start: '2026-09-21', status: 'active', activatedOn: '2026-09-21' };
-    // Tuesday 29 September is working day 7 of a job that started Monday the 21st.
-    const noCO = S.jobSchedule(JOBR, EST, '2026-09-29', { has: false, coTC: 0, coPS: 0 });
+    // Tuesday 29 September is day 7 worked of a job that started Monday the 21st and was worked every working day
+    // (days worked are the days the hours log holds hours on since 2026-11-05).
+    const D7 = ['2026-09-21', '2026-09-22', '2026-09-23', '2026-09-24', '2026-09-25', '2026-09-28', '2026-09-29'];
+    const noCO = S.jobSchedule(JOBR, EST, '2026-09-29', { has: false, coTC: 0, coPS: 0, workedDates: D7 });
     eq(noCO.days, 6, 'six days on the estimate');
     eq(noCO.pace, 'overrun', 'working day 7 of 6 is an overrun …');
     has(noCO.paceFix, 'raise a change order if the scope grew', '… and the fix says to raise a change order');
     has(noCO.paceFix, 'Once the client accepts it, its hours lengthen the plan', 'and now says what accepting one does');
 
-    const withCO = S.jobSchedule(JOBR, EST, '2026-09-29', { has: false, coTC: 14, coPS: 28 });
+    const withCO = S.jobSchedule(JOBR, EST, '2026-09-29', { has: false, coTC: 14, coPS: 28, workedDates: D7 });
     eq(withCO.coDays, 2, 'the accepted change order adds two days');
     eq(withCO.days, 8, '⚠⚠ the plan is eight days now');
     ok(withCO.pace !== 'overrun', '⚠⚠ and working day 7 of 8 is NOT an overrun — the advice finally clears the flag');
-    eq(withCO.remaining, 1, 'one working day to go');
+    eq(withCO.remaining, 1, 'one day of work to go');
     eq(withCO.planEnd, '2026-09-30', 'the planned end moves to the eighth working day');
 
     const pending = S.jobSchedule(JOBR, EST, '2026-09-29', undefined);
@@ -210,7 +212,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // ⚠ The fix sentence on a fixed price. It said "a change order carries HOURS, not a dollar
     // amount" on every job — false on a fixed price since the change order carries its price.
-    const fx = S.jobSchedule(JOBR, Object.assign({}, EST, { fixedPrice: true }), '2026-09-29', { has: false });
+    const fx = S.jobSchedule(JOBR, Object.assign({}, EST, { fixedPrice: true }), '2026-09-29', { has: false, workedDates: D7 });
     has(fx.paceFix, 'on a fixed price it is priced at the job’s rates and added to the fee', '⚠ fixed: the change order is the price');
     lacks(fx.paceFix, 'carries HOURS, not a dollar amount', '⚠⚠ and never the T&M sentence that says it carries no price');
     has(fx.paceFix, 'Once the client accepts it, its hours lengthen the plan',
@@ -220,7 +222,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // ⚠ The BEHIND arm carries the same advice and reads the same helper — a job running long on
     // the work rather than the calendar. 30% of the work on working day 4 of 6 tracks to 14 days.
     const behindProg = { has: true, aboveFloor: true, workPct: 0.30, hoursPct: 0.5, actHrs: 60, authHrs: 180,
-                         coTC: 0, coPS: 0 };
+                         coTC: 0, coPS: 0, workedDates: D7.slice(0, 4) };
     const JOB4 = Object.assign({}, JOBR);
     const behindTM = S.jobSchedule(JOB4, EST, '2026-09-24', behindProg);
     eq(behindTM.pace, 'behind', 'a job 30% done on working day 4 of 6 is behind');
@@ -240,7 +242,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                       actualStart: '2026-09-21', actualStartKind: 'activated', today: '2026-09-29', elapsed: 7,
                       remaining: 1, overBy: 0, planEnd: '2026-09-30', halfway: '2026-09-24' };
     const h = V.jtScheduleHtml(running);
-    has(h, 'Working day 7 of 8', 'the count is the lengthened one');
+    has(h, 'Day 7 of 8 worked', 'the count is the lengthened one');
     has(h, 'incl. 2 days by change order', '⚠ and says two of them came from a change order');
     has(V.jtScheduleHtml(Object.assign({}, running, { coDays: 1 })), 'incl. 1 day by change order', 'singular for one');
     has(V.jtScheduleHtml(Object.assign({}, running, { coDays: -1 })), '1 day shorter by change order', 'a reduction says so');
@@ -260,7 +262,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'jobActivationBlockers', 'jobPayments', 'agrApprovalWithdrawn', 'jobTimeline', 'estimateNoteGaps', '_localDateOf', 'paymentStageWord', 'finalAwaitsHours', 'jobTimelineActions', 'esignSignedCopyGaps', 'docReadOnlyWord', 'discountOfferBlocker', 'jobTimelineNext', 'depositVoidFlag', 'agreementHandedOverInPerson',
       'jobStageDoc', 'docReadiness', 'docDraftOnly', 'docTitle', 'docWord', '_jtDocSecondaries', 'docPreviewOnly',
       'agreementReady', 'jobTimelineDoc',
-      'jobSchedule', 'jobOnProbateTrack', 'estatePackageRoute', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jtScheduleHtml', '_jtSchedDeadlinesHtml', 'estWorkingDays', '_todayStr', 'addWorkingDays', '_ymdLocal', 'jobProgress',
+      'jobSchedule', '_workingDayOnOrAfter', '_nextWorkingDay', 'jobOnProbateTrack', 'estatePackageRoute', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', 'jtScheduleHtml', '_jtSchedDeadlinesHtml', 'estWorkingDays', '_todayStr', 'addWorkingDays', '_ymdLocal', 'jobProgress',
       'workingDaysInclusive', 'approvedEstimateFor',
       'maybeStartJobsWatch', 'paymentSplit', 'renderClientDashboard', 'jobIsTest', 'jobProbateCourt', 'courtFromCaseNo', 'coFiduciaryRepClash', 'coFiduciaryRepRefusal', 'walkawaySettlementHtml', 'walkawaySettlement', 'jobRefundedTotal', 'refundCounts', 'jobPaymentsListHtml', '_paymentKey', 'paymentStageLabel', 'paymentMethodLabel', 'fmt', 'coCardActions', 'sectionHdr', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord',
       'standingFlagLines', 'standingFlagsBlock', '_sfHost', '_sfRowHtml', 'guideLinkHtml', 'mustFindItems', 'mustFoundOf', '_mustFindKey', '_mfHandle',

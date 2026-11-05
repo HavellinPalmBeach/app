@@ -301,7 +301,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
   group('M5 — the schedule strip carries the court deadline on every probate matter');
   {
-    const S = sandbox({ fns: ['jobSchedule', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob',
+    const S = sandbox({ fns: ['jobSchedule', '_workingDayOnOrAfter', '_nextWorkingDay', 'jobOnProbateTrack', 'matterDef', 'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob',
       'estWorkingDays', 'addWorkingDays', '_ymdLocal', 'workingDaysInclusive', 'docSentAt', 'docKeyFor', 'coWorkingDays', '_coPaceFix', 'estateTaxReturnDue', 'estateTaxReturn'],
       vars: ['MATTER_TYPES', 'DECEDENT_SERVICES', 'PRODUCTIVE_HRS_PER_DAY'] });
     const d = S.jobSchedule({ id: 7, svc: 'cleanout', matterType: 'probate', status: 'won', start: '2026-10-05', probateDeadline: '2026-10-31' },
@@ -561,7 +561,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       'estimateIsFeeOnly', 'estDeclutterHrs', 'jobTimelineNext', 'paymentSplit', 'unscoredRoomNames', 'jobActivationBlockers',
       'resolveExecutorAuth', 'isJobWon', 'isJobFunded', 'jobPayments', 'stagePaidTotal', 'paymentCounts', 'paymentLive', 'isRefundRecord', 'depositPaidTotal', 'jobPaidTotal',
       'closeoutRetainedTotal', 'jobRefundedTotal', 'refundCounts', 'depositTargetFor', 'docSentAt', 'docKeyFor', 'agreementSignature', 'isAgreementSigned',
-      'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'isAgreementSent', 'jobSchedule', 'jobOnProbateTrack', 'matterDef',
+      'esignProviderKey', 'esignAvailable', 'esignJobWatches', 'isAgreementSent', 'jobSchedule', '_workingDayOnOrAfter', '_nextWorkingDay', 'jobOnProbateTrack', 'matterDef',
       'matterTypeOf', 'invFiduciaryMode', 'isDecedentJob', '_ymdLocal', 'jobProgress', 'estWorkingDays', 'addWorkingDays',
       'workingDaysInclusive', 'coWorkingDays', '_coPaceFix', 'roomStatusNormalize', 'jtDraftLine', 'staleDraftNote', 'staleDraftsOf',
       'draftIsStale', 'draftOutstanding', 'staleDocName', '_draftDay', '_andJoin', 'finalCrewOnlyWarn', 'roundCents', 'fmtHrs', 'fmt', 'estateAuthority', 'agreementHandOverDraftNote'];
