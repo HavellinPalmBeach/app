@@ -165,7 +165,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ctx = sandbox({
       fns: ['resetEstimateJobState', 'neutralizeEstimateView', 'loadJobIntoEstimate', 'applyOpenedEstimate',
             'clearEstimateTab', 'startEstimateOver', 'resetEstimate', 'restoreEstimateToUI', '_privateNotePaint', 'loadEstimateForJob',
-            'estimateHasContent', 'loadEstimateScratch', 'clearEstimateScratch', 'clearAllRooms', 'setRoomState', 'roomState',
+            'estimateHasContent', 'loadEstimateScratch', 'clearEstimateScratch', 'clearAllRooms', 'setRoomState', 'roomState', '_walkPhotosClear', '_walkPhotosSet', '_walkPhotoPaint', 'walkPhotosOf', 
             'roomDefault', 'volPresetSeed', 'volPresetShift', 'paintVolPreset', 'seedDocScopeFromJob',
             'docScopeDef', 'docTierOf', 'docTierDef', 'docTierScope', 'svcHasDocStep', 'estDeclutterHrs',
             '_fxAmtSet',
@@ -173,7 +173,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
             // lifted, never stubbed, so this suite's refusal and the rule cannot come to disagree.
             'estimateEditBlocker', 'priceChangeBlocker', 'isAgreementSigned', 'agreementSignature', 'isAgreementSent',
             'docSentAt', 'docKeyFor', 'fixedFeeForCharge', 'discountOnFixedFee', 'discountOnLabor', 'volPresetSeedFor', 'estimateOpensFixed', 'isDecedentJob', 'pinVendorLineHours', 'vendorDirectoryReady', 'vendorLineTCHrs', 'coordHrsFor', 'coordTouches', 'vendorGroupOfLine', 'vendorGroupCategories', 'directoryCategories', 'vendorCats', 'followDocTier', 'activeDocScope', 'estimateDocScope', 'docTierWord', 'docScopeWord', 'estimateAppraiserLines', 'vendorLineHrs', 'roundCents', 'fmt'],
-      vars: ['ROOMS', 'ROOM_DEFAULTS', 'VOL_PRESETS', 'DOC_SCOPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS',
+      vars: ['ROOMS', '_walkShotsLive', 'ROOM_DEFAULTS', 'VOL_PRESETS', 'DOC_SCOPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'JOB_STEPS',
              'AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'DECEDENT_SERVICES', 'EST_TOLERANCE_PCT',
              'TC_ONSITE_ALPHA_DEFAULT', '_activeRecognitions', ...STATE, 'RUSH_PCT', 'VENDOR_GROUP_CARDS', 'COORD_TOUCHES', 'COORD_TOUCHES_BY_GROUP', 'COORD_TOUCHES_DEFAULT', 'TOUCH_HRS', 'vendorDirectory', 'GROUP_JOB_MENU', 'LOGISTICS_CATEGORIES'],
       stubs: {
@@ -213,6 +213,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       seed['spcl-' + r.id] = { checked: true };
       seed['note-' + r.id] = { value: 'A: a note on ' + r.name };
       seed['note-ta-' + r.id] = { value: 'A: a note on ' + r.name };
+      seed['wph-' + r.id] = { value: JSON.stringify([{ fileId: 'A_' + r.id, url: 'u' }]) };   // A's walkthrough photo (2026-11-04)
       seed['notes-btn-' + r.id] = { style: { color: 'var(--bronze)', fontWeight: '600' }, textContent: '📝 Walkthrough' };
       seed['name-' + r.id] = r.custom ? { tagName: 'INPUT', value: 'A: renamed ' + r.name } : { tagName: 'SPAN', textContent: r.name };
     });
@@ -242,10 +243,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     });
     // the dynamic controls
     const survivors = ROWS.filter((r) => ctx.roomState(r.id) !== 'off' || v('vol-' + r.id).value !== '' || v('cplx-' + r.id).value !== ''
-      || v('spcl-' + r.id).checked || v('note-' + r.id).value !== '' || v('note-ta-' + r.id).value !== ''
+      || v('spcl-' + r.id).checked || v('note-' + r.id).value !== '' || v('note-ta-' + r.id).value !== '' || v('wph-' + r.id).value !== ''
       || v('notes-btn-' + r.id).style.color !== 'var(--gray)' || v('notes-btn-' + r.id).style.fontWeight !== ''
       || v('notes-btn-' + r.id).textContent !== NOTE_GLYPH);
-    eq(survivors.map((r) => r.id), [], `${label}: every one of the ${ROWS.length} room rows is out of scope, unscored, unnoted, its note button grey and back to the bare glyph`);
+    eq(survivors.map((r) => r.id), [], `${label}: every one of the ${ROWS.length} room rows is out of scope, unscored, unnoted, unphotographed, its note button grey and back to the bare glyph`);
     eq(CUSTOM.filter((r) => v('name-' + r.id).value !== r.name).map((r) => v('name-' + r.id).value), [],
        `${label}: every renamed "Other" row reads its own name again — A's wine cellar is not a room on B's grid`);
     eq(v('e-private-note').value, '', `${label}: the private walkthrough note box is empty`);
@@ -283,7 +284,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ['e-discount', 'e-move-styling', 'tp-target'].forEach((id) => ok(!EXCEPTED.has(id), `#${id} is never excused`));
     // The dynamic ids the tree builds are all accounted for: the room grid (driven below), the vendor
     // group cards (re-rendered from the arrays the reset empties), or readouts that are never inputs.
-    const ROOM_GRID = ['vol-', 'cplx-', 'spcl-', 'name-', 'note-', 'chk-'];
+    const ROOM_GRID = ['vol-', 'cplx-', 'spcl-', 'name-', 'note-', 'chk-', 'wph-'];
     const CARD_ROWS = { 'vgrp-cat-': 'renderVendorGroupCards', 'vgrp-cost-': 'renderVendorGroupCards', 'vendor-smf-': 'renderVendors' };
     const READOUTS = ['el-', 'tc-', 'ps-'];
     TREE.prefixes.forEach((p) => ok(ROOM_GRID.includes(p) || p in CARD_ROWS || READOUTS.includes(p),

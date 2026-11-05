@@ -11,6 +11,8 @@
 //      records it once Drive answers.
 //   F. The Job Plan's room brief offers the room's photos; the inventory manifest holds none of them.
 //   G. Overflow at 1440 and 390, no page errors.
+//   H. 🔍 Walkthrough (pressed on the dashboard): the kitchen's photos under its row, three across, real size, thumbnails
+//      fetched and painted, each linked to its file, the folder linked; three across on a phone too.
 //
 //   NODE_PATH=/path/to/node_modules node tests/browser/step137.js [/abs/path/to/havellin.html]
 const { chromium } = require('playwright');
@@ -29,7 +31,7 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR
   const dialogs = []; p.on('dialog', async d => { dialogs.push(d.message()); await d.accept(); });
   // The stubbed Apps Script: uploads answer as Drive does (or refuse while `refuse` is set), thumbnails answer none,
   // and every other request fails, so the page runs as a device with the sheet out of reach.
-  let refuse = false, nUp = 0; const uploads = [];
+  let refuse = false, nUp = 0; const uploads = [], thumbAsks = [];
   await p.route('https://script.example/**', async (route) => {
     const req = route.request();
     let body = {}; try { body = JSON.parse(req.postData() || '{}'); } catch (e) {}
@@ -39,7 +41,11 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR
       nUp++;
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, fileId: 'F' + nUp, fileUrl: 'https://drive.google.com/file/d/F' + nUp + '/view' }) });
     }
-    if (body.action === 'getThumbnails') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, thumbs: {} }) });
+    if (body.action === 'getThumbnails') {
+      const thumbs = {}; (body.fileIds || []).forEach(id => { thumbs[id] = 'data:image/png;base64,' + PNG.toString('base64'); });
+      thumbAsks.push(body.fileIds || []);
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, thumbs }) });
+    }
     return route.abort();
   });
   await p.goto(APP); await p.waitForTimeout(1500);
@@ -158,6 +164,47 @@ const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR
   const brief = await p.evaluate((id) => { const k = (estimateStore[id].estimate.rooms || []).find(x => x.name === 'Kitchen'); return walkPhotoBriefHtml(id, k); }, id);
   has(brief, 'Walkthrough photos (2)', 'the room brief offers both');
   ok(await p.evaluate((id) => !(_photoRefs[id] || []).length, id), '⚠ the inventory manifest holds none of them');
+
+  // ── H. the Walkthrough page ────────────────────────────────────────────
+  console.log('## H. 🔍 Walkthrough: the kitchen\'s photos under it, three across, linked to Drive');
+  await p.evaluate(() => { window._walkThumbs = window._walkThumbs || {}; Object.keys(_walkThumbs).forEach(k => delete _walkThumbs[k]); Object.keys(_walkThumbAsked).forEach(k => delete _walkThumbAsked[k]); });
+  await p.evaluate((id) => goToClientDashboard(id), id); await p.waitForTimeout(800);
+  const wtBtn = p.locator('#client-dashboard-view button[onclick="dashWalkthrough(' + id + ')"]').first();
+  ok(await wtBtn.isVisible().catch(() => false), 'the dashboard offers 🔍 Walkthrough');
+  await wtBtn.click(); await p.waitForTimeout(1500);
+  const wt = await p.evaluate(() => {
+    const body = document.getElementById('doc-viewer-body');
+    const grid = body && body.querySelector('.wt-photos');
+    const tiles = grid ? Array.from(grid.querySelectorAll('a.wt-ph')) : [];
+    const prev = grid && grid.closest('tr').previousElementSibling;
+    const folder = body && body.querySelector('.wt-photo-folder a');
+    return { vis: !!(body && body.checkVisibility()), grids: body ? body.querySelectorAll('.wt-photos').length : 0,
+      cols: grid ? getComputedStyle(grid).gridTemplateColumns.split(' ').length : 0,
+      w: tiles.map(t => Math.round(t.getBoundingClientRect().width)), imgs: grid ? grid.querySelectorAll('img').length : 0,
+      hrefs: tiles.map(t => t.href), under: prev ? prev.textContent : '', folder: folder ? folder.href : '',
+      line: (body.querySelector('.wt-photo-folder') || {}).textContent || '' };
+  });
+  ok(wt.vis, 'the Walkthrough page opens');
+  ok(wt.grids === 1, 'one room carries photos, one grid (' + wt.grids + ')');
+  has(wt.under, 'Kitchen', '⚠ the grid sits right under the kitchen\'s own row');
+  ok(wt.cols === 3, '⚠ three across (' + wt.cols + ' columns)');
+  ok(wt.w.length === 2 && wt.w.every(x => x >= 200), '⚠ each a real photo, not a chip: ' + wt.w.join(', ') + ' px wide at 1440');
+  ok(wt.imgs === 2, '⚠ the thumbnails are fetched from Drive and painted in (' + wt.imgs + ' of 2)');
+  ok(thumbAsks.length >= 1, 'asked of the Apps Script (' + thumbAsks.length + ' request)');
+  ok(wt.hrefs.every(h => /^https:\/\/drive\.google\.com\/file\/d\/F\d\/view$/.test(h)), 'each opens its file in Drive (' + wt.hrefs.join(' ') + ')');
+  has(wt.line, '2 walkthrough photos', 'the page counts them');
+  ok(/drive/.test(wt.folder), 'and links the folder they are in (' + wt.folder + ')');
+  await p.setViewportSize({ width: 390, height: 900 }); await p.waitForTimeout(300);
+  const wt390 = await p.evaluate(() => {
+    const grid = document.querySelector('#doc-viewer-body .wt-photos');
+    const vb = document.querySelector('.doc-viewer-body') || document.getElementById('doc-viewer-body');
+    return { w: grid ? Array.from(grid.querySelectorAll('a.wt-ph')).map(t => Math.round(t.getBoundingClientRect().width)) : [],
+      ov: document.documentElement.scrollWidth - document.documentElement.clientWidth };
+  });
+  ok(wt390.w.length === 2 && wt390.w.every(x => x >= 80), 'on a phone still three across, ' + wt390.w.join(', ') + ' px each');
+  ok(wt390.ov <= 0, 'and the page does not run off the side (' + wt390.ov + ')');
+  await p.setViewportSize({ width: 1440, height: 1000 });
+  await p.evaluate(() => closeDocViewer());
 
   // ── G. overflow ────────────────────────────────────────────────────────
   console.log('## G. overflow and errors');

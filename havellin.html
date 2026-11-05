@@ -1019,6 +1019,14 @@ input[type=number]::-webkit-inner-spin-button{opacity:.4;}
 .wt-out td{color:var(--gray);font-style:italic;}
 .wt-tag{font-size:9.5px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--bronze);border:1px solid var(--bronze-lt);border-radius:3px;padding:1px 4px;margin-left:5px;white-space:nowrap;}
 .wt-note{font-size:12px;color:var(--gray);overflow-wrap:anywhere;}
+/* The walkthrough's photographs under each room, three across the page (2026-11-04; Anthony: "make it fit, you know, like 3 across
+   the width of the paper"). Drive's thumbnails are 240 px on the long edge, so three across a page shows them near full size. */
+.wt-photo-row td{padding:4px 14px 12px;border-top:none;}
+.wt-photos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;break-inside:avoid;}
+.wt-ph{display:block;min-width:0;text-decoration:none;color:var(--gray);font-size:10px;line-height:1.3;}
+.wt-ph-img{display:flex;align-items:center;justify-content:center;width:100%;aspect-ratio:4/3;border-radius:4px;border:1px solid var(--border);background:var(--cream);overflow:hidden;font-size:22px;color:var(--gray);}
+.wt-ph-img img{width:100%;height:100%;object-fit:cover;display:block;}
+.wt-photo-folder{font-size:11px;color:var(--gray);margin:2px 0 8px;}
 /* Build Estimate's private walkthrough note grows with what is said into it (2026-11-02, Anthony: "isn't very big …
    it filled up pretty quickly"): the box sits over a hidden copy of its text, as the desk's name does (.inv-name). */
 .pnote-grow{display:grid;min-width:0;}
@@ -1490,7 +1498,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.11.04 · 5:05pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.11.05 · 9:17am ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -22657,6 +22665,12 @@ function walkthroughHtml(job, est) {
 
   // ─── Rooms ───
   h += '<div class="ce-band" style="margin-top:1.25rem;">Rooms walked</div>';
+  var _wtShots = rooms.reduce(function (n, r) { return n + ((r.photos && r.photos.length) || 0); }, 0);
+  if (_wtShots && typeof walkPhotoFolderUrl === 'function') {
+    var _wtFolder = walkPhotoFolderUrl(job);
+    h += '<div class="wt-photo-folder">' + _wtShots + ' walkthrough photo' + (_wtShots === 1 ? '' : 's') + ', under the rooms they were taken in'
+      + (_wtFolder ? ' \u00b7 <a href="' + esc(_wtFolder) + '" target="_blank" rel="noopener">Open the folder in Drive \u2197</a>' : '') + '</div>';
+  }
   if (!rooms.length) {
     h += '<div class="ce-note" style="margin-bottom:0;">No rooms were scored on this estimate. A fee-only engagement (Home Prep for Sale) prices vendor lines rather than rooms — see below.</div>';
   } else {
@@ -22692,7 +22706,13 @@ function walkthroughHtml(job, est) {
     };
     secOrder.forEach(function (sec) {
       h += '<tr><td colspan="5" class="wt-sec">' + esc(sec) + '</td></tr>';
-      bySec[sec].forEach(function (r) { h += _row(r); });
+      bySec[sec].forEach(function (r) {
+        h += _row(r);
+        // The room's walkthrough photographs under it, three across, each opening its file in Drive (2026-11-04).
+        if (r.photos && r.photos.length && typeof walkPhotoTilesHtml === 'function') {
+          h += '<tr class="wt-photo-row"><td colspan="5">' + walkPhotoTilesHtml(r.photos) + '</td></tr>';
+        }
+      });
     });
     h += '</tbody></table>';
     var scored = rooms.filter(function (r) { return !r.excluded; }).length;
@@ -23454,6 +23474,14 @@ function dashWalkthrough(jobId) {
   if (!html) { dashNotice('warn', 'This walkthrough could not be built.'); _dashRedraw(jobId); return; }
   openPlainViewer('Walkthrough & Scope',
     (job.name || 'Client') + (job.addr ? ' · ' + job.addr : ''), html);
+  // The rooms' photographs: drawn from this session's copies at once, the rest fetched from Drive and painted in place.
+  var _wtBody = document.getElementById('doc-viewer-body');
+  if (_wtBody && typeof walkThumbsPaint === 'function') {
+    walkThumbsPaint(_wtBody);
+    var _wtIds = [];
+    (walkthroughSource(rec.estimate).rooms || []).forEach(function (r) { (r.photos || []).forEach(function (p) { if (p && p.fileId) _wtIds.push(p.fileId); }); });
+    _walkThumbsFetch(_wtIds, function () { walkThumbsPaint(_wtBody); });
+  }
 }
 
 // ⚠ THE ±15% FINAL-INVOICE PIN WAS REACHABLE FROM ONE BUTTON ON THE INVOICES TAB. The
@@ -60762,7 +60790,7 @@ function createDriveJobFolder(job) {
       svc: job.svc || '',
       // Signed Records since P19 (fileSignedCopy); a folder made before it has none, and filing falls back to the root.
       // Incident Reports since P26 (incidentUploadPhotos, fileIncidentRecord); older folders fall back to the root the same way.
-      subfolders: ['Estate Inventory','As-Found Record','Estimates','Agreement','Change Orders','Invoice', SIGNED_RECORDS_SUBFOLDER, INCIDENT_SUBFOLDER, WALK_PHOTO_SUBFOLDER]
+      subfolders: ['Estate Inventory','As-Found Record','Estimates','Agreement','Change Orders','Invoice', 'Walkthrough Photos', SIGNED_RECORDS_SUBFOLDER, INCIDENT_SUBFOLDER]
     })
   })
   .then(function(r){ return r.json(); })
@@ -63423,17 +63451,50 @@ function walkPhotoRetry(rowId, uid) {
 function walkPhotosOwed() {
   return Object.keys(_walkShotsLive).some(function (k) { return (_walkShotsLive[k] || []).length > 0; });
 }
+// In batches of WALK_THUMB_BATCH, one after another, each painted as it lands; an id the server did not reach is asked again
+// the next time the page is opened (only what came back is marked).
+var WALK_THUMB_BATCH = 24;
 function _walkThumbsFetch(ids, done) {
-  var want = ids.filter(function (id) { return !_walkThumbs[id] && !_walkThumbAsked[id]; });
+  var want = ids.filter(function (id, i) { return ids.indexOf(id) === i && !_walkThumbs[id] && !_walkThumbAsked[id]; });
   if (!want.length || !SHEETS_SYNC_URL) return;
   want.forEach(function (id) { _walkThumbAsked[id] = 1; });
-  fetch(_withDeviceKey(SHEETS_SYNC_URL), {
-    method: 'POST', mode: 'cors', redirect: 'follow', headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify({ action: 'getThumbnails', fileIds: want.slice(0, 24) })
-  }).then(_readAppsScriptJson).then(function (d) {
-    Object.keys((d && d.thumbs) || {}).forEach(function (id) { _walkThumbs[id] = d.thumbs[id]; });
-    if (done) done();
-  }).catch(function () {});
+  (function next(i) {
+    var batch = want.slice(i, i + WALK_THUMB_BATCH);
+    if (!batch.length) return;
+    fetch(_withDeviceKey(SHEETS_SYNC_URL), {
+      method: 'POST', mode: 'cors', redirect: 'follow', headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: 'getThumbnails', fileIds: batch })
+    }).then(_readAppsScriptJson).then(function (d) {
+      var got = (d && d.thumbs) || {};
+      batch.forEach(function (id) { if (got[id]) _walkThumbs[id] = got[id]; else delete _walkThumbAsked[id]; });
+      if (done) done();
+      next(i + WALK_THUMB_BATCH);
+    }).catch(function () { batch.forEach(function (id) { delete _walkThumbAsked[id]; }); });
+  })(0);
+}
+// The Walkthrough page's tiles: three across under the room (.wt-photos), each a link to its file in Drive, the picture painted
+// in by walkThumbsPaint once its thumbnail is here (a camera glyph until then).
+function walkPhotoTilesHtml(photos) {
+  return '<div class="wt-photos">' + (photos || []).filter(function (p) { return p && p.fileId; }).map(function (p) {
+    var url = p.url || ('https://drive.google.com/file/d/' + p.fileId + '/view');
+    var img = (typeof _walkThumbs === 'object' && _walkThumbs[p.fileId]) ? '<img src="' + esc(_walkThumbs[p.fileId]) + '" alt="Walkthrough photo">' : '&#128247;';
+    return '<a class="wt-ph" href="' + esc(url) + '" target="_blank" rel="noopener">'
+      + '<span class="wt-ph-img" data-wph="' + esc(p.fileId) + '">' + img + '</span>'
+      + esc(p.ts ? fmtDate2(p.ts) : '') + ' \u00b7 Open in Drive \u2197</a>';
+  }).join('') + '</div>';
+}
+function walkThumbsPaint(root) {
+  if (!root || !root.querySelectorAll) return;
+  Array.prototype.forEach.call(root.querySelectorAll('[data-wph]'), function (el) {
+    var id = el.getAttribute('data-wph');
+    if (_walkThumbs[id] && !el.querySelector('img')) el.innerHTML = '<img src="' + esc(_walkThumbs[id]) + '" alt="Walkthrough photo">';
+  });
+}
+// The folder the walkthrough's photographs are in: Walkthrough Photos, else Estimates on an older folder, else the client's folder.
+function walkPhotoFolderUrl(job) {
+  var sf = (job && job.driveSubfolders) || {};
+  var pick = ['Walkthrough Photos', 'Estimates', 'Estimate'].map(function (k) { return sf[k]; }).filter(Boolean)[0];
+  return (pick && typeof pick === 'object' && pick.url) || (job && job.driveFolder) || '';
 }
 function _walkTileHtml(p) {
   var img = _walkThumbs[p.fileId]

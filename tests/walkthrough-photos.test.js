@@ -204,7 +204,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(blk.length > 4000, 'the block sliced, comments stripped (' + blk.length + ')');
     ['_photoRefs', '_setPhotoRef', '_captureShot', 'savePhotoRefs', '_photoCaptureJob'].forEach((n) => lacks(blk, n, 'no ' + n));
     const cf = SRC.slice(SRC.indexOf('function createDriveJobFolder('), SRC.indexOf('function createDriveJobFolder(') + 3000);
-    has(cf, 'WALK_PHOTO_SUBFOLDER]', 'a new client\'s folder is made with its Walkthrough Photos folder');
+    has(cf, "'Walkthrough Photos', SIGNED_RECORDS_SUBFOLDER", 'a new client\'s folder is made with its Walkthrough Photos folder');
+    eq(sandbox({ vars: ['WALK_PHOTO_SUBFOLDER'] }).WALK_PHOTO_SUBFOLDER, 'Walkthrough Photos', '(the literal there is the constant the upload files into)');
   }
 
   group('D2 · the Job Plan\'s room brief offers them a press away, and the viewer opens each in Drive');
@@ -222,6 +223,84 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(v, 'never go on a client paper', 'and the viewer says what they are for');
     const ws = SRC.slice(SRC.indexOf('function _paintRoomWorkspace('), SRC.indexOf('function _paintRoomWorkspace(') + 4000);
     has(ws, 'walkPhotoBriefHtml(jobId, room)', 'the room workspace draws the brief');
+  }
+
+  // ═══ E · THE WALKTHROUGH PAGE (🔍 Walkthrough) ═══
+  // Anthony, 2026-11-04: "reasonably sized thumbnails from the walkthrough photos … below each room … like 3 across the width
+  // of the paper … and provide a link to the Google Drive to where they're stored."
+  const WT = { fns: ['walkthroughHtml', '_localDateOf', '_ymdLocal', 'walkthroughSource', '_wtRoomHrs', 'esc', 'fmtDate2',
+    'svcLabelOf', '_vehicleLineName', 'walkPhotoTilesHtml', 'walkPhotoFolderUrl', 'walkThumbsPaint'], vars: ['SVC_LABELS', '_walkThumbs'] };
+  const P3 = [1, 2, 3, 4].map((n) => ({ fileId: 'K' + n, url: 'https://drive.google.com/file/d/K' + n + '/view', ts: '2026-11-04T15:00:00Z' }));
+  const JOBW = { id: 7, name: 'Ruth Yardley', addr: '9 Yard Way', hvlId: 'HVL-1', svc: 'downsizing',
+    driveFolder: 'https://drive/root', driveSubfolders: { 'Walkthrough Photos': { id: 'W1', url: 'https://drive/walk' } } };
+  function wt(est, job) {
+    const c = sandbox({ fns: WT.fns, vars: WT.vars, stubs: { document: domStub({}) } });
+    return { c, h: attempt(() => c.walkthroughHtml(job || JOBW, est)) };
+  }
+  function rowsOf(h) { return String(h).split('<tr'); }
+
+  group('E · the Walkthrough page draws each room\'s photos under it, three across, each linked to its file, the folder linked once');
+  {
+    const est = { rooms: [
+      { idx: 3, name: 'Kitchen', section: 'Kitchen & Utility', vol: 3, cplx: 3, note: 'Pantry packed', photos: P3 },
+      { idx: 5, name: 'Back Yard', section: 'Exterior & Auxiliary', vol: 5, cplx: 3, photos: [P3[0]] },
+      { idx: 1, name: 'Living Room', section: 'Entry & Living', vol: 3, cplx: 3 },
+    ] };
+    const { h } = wt(est);
+    ok(typeof h === 'string' && h.length > 200, 'the page builds' + (h && h.__err ? ': ' + h.__err : ''));
+    const H = String(h);
+    eq((H.match(/class="wt-photos"/g) || []).length, 2, 'one photo grid per room that has photos (the kitchen and the back yard), none for the living room');
+    eq((H.match(/class="wt-ph"/g) || []).length, 5, 'every photo is a tile (four and one)');
+    P3.forEach((p) => has(H, 'href="' + p.url + '"', 'a tile links to its file in Drive (' + p.fileId + ')'));
+    eq((H.match(/target="_blank"/g) || []).length >= 6, true, 'each in a new tab, the folder link too');
+    // Under its own room: the kitchen's row, then its grid, before the next room's row.
+    const rows = rowsOf(H);
+    const ki = rows.findIndex((r) => r.indexOf('Kitchen</td>') >= 0 || r.indexOf('>Kitchen<') >= 0);
+    ok(ki > 0 && rows[ki + 1] && rows[ki + 1].indexOf('wt-photo-row') >= 0 && rows[ki + 1].indexOf('K4') >= 0, 'the kitchen\'s photos are the row right under the kitchen');
+    has(H, '5 walkthrough photos, under the rooms they were taken in', 'the count says where they are');
+    has(H, 'href="https://drive/walk"', 'and links the Walkthrough Photos folder in Drive');
+    const none = wt({ rooms: [{ idx: 1, name: 'Living Room', section: 'Entry & Living', vol: 3, cplx: 3 }] }).h;
+    lacks(String(none), 'wt-photos', 'a walkthrough with no photos draws no grid');
+    lacks(String(none), 'walkthrough photo', 'and no folder line');
+  }
+
+  group('E2 · the approved (locked) record carries them; an older folder links Estimates; the stylesheet sets three across');
+  {
+    const est = { rooms: [], lockedAt: '2026-11-04T16:00:00Z', lockedBy: 'Ashley', lockedRooms: [
+      { idx: 3, name: 'Kitchen', section: 'Kitchen & Utility', vol: 3, cplx: 3, photos: [P3[1]] }] };
+    const H = String(wt(est, Object.assign({}, JOBW, { driveSubfolders: { Estimates: { id: 'E1', url: 'https://drive/est' } } })).h);
+    has(H, 'href="' + P3[1].url + '"', 'the locked copy\'s photo is drawn');
+    has(H, 'href="https://drive/est"', 'on an older client folder the link opens Estimates, where they were filed');
+    const css = (SRC.match(/<style>([\s\S]*?)<\/style>/) || [])[1] || '';
+    has(css, '.wt-photos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))', 'the grid is three columns across the page');
+    has(css, 'aspect-ratio:4/3', 'each tile a photo\'s shape, not a chip');
+  }
+
+  group('E3 · thumbnails paint in place, and a walkthrough of more than 24 photos fetches every one in batches');
+  {
+    const sent = [];
+    const c = sandbox({ fns: ['_walkThumbsFetch', 'walkThumbsPaint', 'esc', '_withDeviceKey'],
+      vars: ['_walkThumbs', '_walkThumbAsked', 'WALK_THUMB_BATCH'],
+      stubs: { SHEETS_SYNC_URL: 'https://script', deviceKey: () => '', _readAppsScriptJson: (r) => r,
+        fetch: (u, o) => { const ids = JSON.parse(o.body).fileIds; sent.push(ids); const thumbs = {}; ids.forEach((i) => { thumbs[i] = 'data:image/jpeg;base64,' + i; });
+          return { then(f) { const v = f({ ok: true, thumbs }); return { then(g) { g(v); return { catch() {} }; }, catch() {} }; } }; } } });
+    const ids = Array.from({ length: 30 }, (_, i) => 'F' + i);
+    let painted = 0;
+    attempt(() => c._walkThumbsFetch(ids.concat(['F0']), () => { painted++; }));
+    eq(sent.map((b) => b.length), [24, 6], 'thirty photos go as a batch of 24 and one of 6, the repeat asked once');
+    eq(painted, 2, 'and the page is painted after each');
+    // The paint, on a minimal node: the glyph's box takes the picture.
+    const el = { attrs: { 'data-wph': 'F3' }, innerHTML: '&#128247;', getAttribute(k) { return this.attrs[k]; }, querySelector() { return this.innerHTML.indexOf('<img') >= 0 ? {} : null; } };
+    const root = { querySelectorAll: () => [el] };
+    attempt(() => c.walkThumbsPaint(root));
+    has(el.innerHTML, '<img src="data:image/jpeg;base64,F3"', 'a tile waiting on its picture gets it in place');
+  }
+
+  group('E4 · 🔍 Walkthrough fetches the room photos\' thumbnails once the page is open');
+  {
+    const body = SRC.slice(SRC.indexOf('function dashWalkthrough('), SRC.indexOf('function dashWalkthrough(') + 3200);
+    ok(body.length > 1000, 'dashWalkthrough sliced');
+    has(body, '_walkThumbsFetch(_wtIds, function () { walkThumbsPaint(_wtBody); });', 'it fetches every room photo and paints them in place');
   }
 
   group('D3 · the old room photos\' dead click handler is gone from the grid');

@@ -46,9 +46,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const fb = [];
     const ctx = sandbox({
       fns: ['roomDefault', 'volPresetShift', 'volPresetSeed', 'volPresetLabel',
-            'applyVolPreset', 'paintVolPreset', 'roomState', 'setRoomState', 'cycleRoom',
+            'applyVolPreset', 'paintVolPreset', 'roomState', 'setRoomState', 'cycleRoom', '_walkPhotosClear', '_walkPhotosSet', '_walkPhotoPaint', 'walkPhotosOf', 
             'onVolInput', 'volPresetSeedFor', 'clampRoomScoreInput', 'roomScoreOf'],
-      vars: ['ROOMS', 'ROOM_DEFAULTS', 'VOL_PRESETS', '_volHandSet', '_volPreset'],
+      vars: ['ROOMS', 'ROOM_DEFAULTS', 'VOL_PRESETS', '_volHandSet', '_volPreset', '_walkShotsLive'],
       stubs: {
         document,
         calcAll() {},
