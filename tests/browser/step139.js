@@ -85,7 +85,7 @@ const PLAN = {
     await btn.click(); await p.waitForTimeout(1500);
     ok(asked.length === 1, 'one call to the Apps Script');
     const a0 = asked[0] || { rooms: [], context: {} };
-    ok(a0.mode === 'both', 'the estimate check and the plan (' + a0.mode + ')');
+    ok(a0.mode === 'full', 'the estimate check and the plan (' + a0.mode + ')');
     const office = a0.rooms.find((r) => r.name === 'Office 1') || {};
     ok(JSON.stringify(office.photos) === '["F1"]', 'the office goes with its walkthrough photo (' + JSON.stringify(office.photos) + ')');
     has(a0.context.privateNote, 'Son home Tuesdays', 'the private note goes along');

@@ -130,7 +130,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const S = gs({ reply: (p) => p.tools[0].name === 'record_room_look'
       ? (JSON.stringify(p.messages).indexOf('Office 1') >= 0 ? LOOK({ volume_to: 5, why: 'Floor-to-ceiling boxes.' }) : LOOK())
       : PLAN() });
-    const out = S.agentWalkthroughReview({ mode: 'both', context: CTX, rooms: JSON.parse(JSON.stringify(ROOMS)) });
+    const out = S.agentWalkthroughReview({ mode: 'full', context: CTX, rooms: JSON.parse(JSON.stringify(ROOMS)) });
     ok(out.ok, 'it answers');
     const looks = [].concat.apply([], S.sent).filter((p) => p.tools[0].name === 'record_room_look');
     eq(looks.length, 2, '⚠ one look for each in-scope room with photographs: not the yard with none, not the room out of scope');
@@ -165,12 +165,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq([].concat.apply([], C.sent).filter((p) => p.tools[0].name === 'record_crew_plan').length, 0, '…and no plan request sent');
 
     const F = gs({ missing: ['f3'], reply: (p) => p.tools[0].name === 'record_room_look' ? LOOK() : PLAN() });
-    const fail = F.agentWalkthroughReview({ mode: 'both', context: CTX, rooms: JSON.parse(JSON.stringify(ROOMS)) });
+    const fail = F.agentWalkthroughReview({ mode: 'full', context: CTX, rooms: JSON.parse(JSON.stringify(ROOMS)) });
     has(fail.failed['Walk-in Closet'] || '', 'File not found', 'a photograph not in Drive fails its room by name');
     ok(!!fail.plan, '…and the plan is still written, that room from its notes');
 
     const R = gs({ reply: () => ({ code: 200, body: { stop_reason: 'end_turn', content: [{ type: 'text', text: 'Here is a plan…' }] } }) });
-    const prose = R.agentWalkthroughReview({ mode: 'both', context: CTX, rooms: [{ name: 'Office 1', vol: 3, cplx: 3, photos: [] }] });
+    const prose = R.agentWalkthroughReview({ mode: 'full', context: CTX, rooms: [{ name: 'Office 1', vol: 3, cplx: 3, photos: [] }] });
     has(prose.planError || '', 'prose', 'a plan answered in prose is a failure, said');
     eq(prose.plan, null, '…and no plan');
 
@@ -283,7 +283,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // Applying an answer.
     E.walkReviewApply(9, { ok: true, suggestions: [{ room: 'Office 1', field: 'vol', to: 5, why: 'boxes' }, { room: '', field: 'vol', to: 4 }],
-                           plan: plan, planModel: 'm', failed: { Garage: 'File not found' } }, 'both');
+                           plan: plan, planModel: 'm', failed: { Garage: 'File not found' } }, 'full');
     eq(E._walkSug[9].items.length, 1, 'the suggestions are held for the screen (one with no room dropped)');
     ok(!!E.crewPlanOf(9), 'the plan written');
     has(E._walkReviewMsg[9].text, '1 suggestion on the room rows', 'the line says what was found');
@@ -294,7 +294,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The re-run over a person's edit (Anthony: "Ask, then replace").
     E.walkReviewRun(7, 'estimate');
     has(E.confirms[0] || '', 'You’ve edited this crew plan', 'over an edited plan the press asks first');
-    eq(E.posts[0] && E.posts[0].mode, 'both', 'OK: the plan and the check');
+    eq(E.posts[0] && E.posts[0].mode, 'full', 'OK: the plan and the check');
     has(E.posts[0] && E.posts[0].plan, 'CONTEXT\nc', 'the plan as it stands is sent along');
     E.confirmAnswer = false; delete E._walkReviewOut[7];
     E.walkReviewRun(7, 'estimate');

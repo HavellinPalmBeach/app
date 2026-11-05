@@ -91,8 +91,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // ⚠ RESTATED 2026-09-20. The Job Plan header no longer reads the length itself: it renders the
     // dashboard's schedule strip (planScheduleHtml → jobSchedule), so the plan and the dashboard cannot
     // state two lengths for one job. Two readers of the one definition, and the header reads the schedule.
-    eq((src.match(/estWorkingDays\(/g) || []).length, 3,
-       'one definition and two readers — the client estimate and the schedule; the Job Plan header reads the schedule');
+    // ⚠ AND A THIRD READER SINCE 2026-11-05: the walkthrough agent is told the length the estimate states (walkReviewPayload),
+    // the same one definition, never a count of its own.
+    eq((src.match(/estWorkingDays\(/g) || []).length, 4,
+       'one definition and three readers — the client estimate, the schedule and the walkthrough agent; the Job Plan header reads the schedule');
+    has(fn('walkReviewPayload'), 'estWorkingDays(est)', '…the walkthrough agent reads the one definition');
     lacks(src, 'Math.ceil(est.totTC / 7)', 'the Job Plan header’s divergent copy is gone');
     lacks(noComments(fn('renderJobPlan')), 'estWorkingDays(', 'and it computes no length of its own any more');
   }

@@ -1498,7 +1498,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.11.05 · 1:40pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.11.05 · 1:48pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -63741,7 +63741,7 @@ function walkReviewPayload(job, est, opt) {
   var tc = est.tcCount || 1, ps = est.psCount || 0, days = (typeof estWorkingDays === 'function') ? estWorkingDays(est) : 0;
   var house = (typeof standingFlagLines === 'function' && job) ? standingFlagLines(job).map(function (l) { return l.label + ': ' + l.note; }) : [];
   return {
-    action: 'agentWalkthroughReview', jobId: job ? job.id : null, mode: opt.mode || 'both',
+    action: 'agentWalkthroughReview', jobId: job ? job.id : null, mode: opt.mode || 'full',
     context: {
       service: (typeof svcLabelOf === 'function') ? svcLabelOf(est.svc || (job && job.svc)) : (est.svc || ''),
       fiduciary: !!(job && typeof isDecedentJob === 'function' && isDecedentJob(job)),
@@ -63783,12 +63783,12 @@ function walkReviewRun(jobId, where, update) {
     approved = true;
   }
   if (!est || !(est.rooms || []).length) { alert('Not reviewed.\n\nThere are no rooms on the estimate to review yet.'); return false; }
-  var mode = (where === 'estimate' && !approved) ? 'both' : 'plan';
+  var mode = (where === 'estimate' && !approved) ? 'full' : 'plan';
   var prev = crewPlanOf(jobId);
   if (prev && prev.edited && mode !== 'check') {
     var ok = confirm('You’ve edited this crew plan.\n\nReplace it with a fresh one?\n\n'
-      + (mode === 'both' ? 'OK writes a new plan. Cancel keeps yours and only checks the estimate again.' : 'OK writes a new plan. Cancel keeps yours.'));
-    if (!ok) { if (mode === 'both') mode = 'check'; else return false; }
+      + (mode === 'full' ? 'OK writes a new plan. Cancel keeps yours and only checks the estimate again.' : 'OK writes a new plan. Cancel keeps yours.'));
+    if (!ok) { if (mode === 'full') mode = 'check'; else return false; }
   }
   var body = walkReviewPayload(job, est, { mode: mode, vendorChoices: mode === 'plan' ? [] : walkReviewVendorChoices(),
                                            plan: prev ? crewPlanText(prev) : '', update: update || '' });
@@ -63851,8 +63851,8 @@ function walkReviewBarHtml(jobId) {
   if (!jobId) return '';
   var plan = crewPlanOf(jobId), msg = _walkReviewMsg[jobId], busy = !!_walkReviewOut[jobId];
   return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
-    + '<button type="button" class="btn-s" id="walk-review-btn" ' + (busy ? 'disabled ' : '') + 'onclick="walkReviewRun(' + jobId + ',\'estimate\')">&#128269; Review walkthrough</button>'
-    + (plan ? '<button type="button" class="btn-s" onclick="openCrewPlan(' + jobId + ')">&#128203; Crew plan</button>' : '')
+    + '<button type="button" class="btn-s" id="walk-review-btn" ' + (busy ? 'disabled ' : '') + 'data-walk="review" data-job="' + jobId + '">&#128269; Review walkthrough</button>'
+    + (plan ? '<button type="button" class="btn-s" data-walk="plan" data-job="' + jobId + '">&#128203; Crew plan</button>' : '')
     + '<span style="font-size:11px;color:var(--gray);">reads the photos and notes: suggestions land on the rooms, and the crew plan is written</span>'
     + '</div>'
     + (msg ? '<div id="walk-review-line" style="font-size:11.5px;margin-top:6px;color:' + _walkToneColor(msg.tone) + ';">' + esc(msg.text) + '</div>' : '');
@@ -63898,10 +63898,23 @@ function walkSugLineHtml(jobId, x) {
   var use = it.field === 'vendor' ? 'Add ' + esc(it.vendor) : 'Use ' + it.to;
   return '<div class="wsug" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:11.5px;color:#8a5a00;background:#fff7e6;border:1px solid #f0d9a8;border-radius:4px;padding:5px 8px;">'
     + '<span>&#128247; Photos suggest ' + what + (it.why ? ': ' + esc(it.why) : '') + '</span>'
-    + '<button type="button" class="btn-s" style="font-size:11px;" onclick="walkSugUse(' + jobId + ',' + x.i + ')">' + use + '</button>'
-    + '<button type="button" class="btn-s" style="font-size:11px;" title="Keep the score as it is" onclick="walkSugDismiss(' + jobId + ',' + x.i + ')">&#10005;</button>'
+    + '<button type="button" class="btn-s" style="font-size:11px;" data-walk="use" data-job="' + jobId + '" data-i="' + x.i + '">' + use + '</button>'
+    + '<button type="button" class="btn-s" style="font-size:11px;" title="Keep the score as it is" data-walk="dismiss" data-job="' + jobId + '" data-i="' + x.i + '">&#10005;</button>'
     + '</div>';
 }
+// ⚠ THE BAR'S AND THE ROWS' BUTTONS ARE ANSWERED BY ONE LISTENER, NEVER AN onclick STRING (2026-11-05): calcAll draws them on every
+// recompute, and estimate-reset.test.js derives the controls Reset must clear from everything calcAll's code names; an onclick string
+// naming walkReviewRun or openCrewPlan put the whole plan viewer, and through it the change-order dialog, inside calcAll's reach.
+function _walkClick(ev) {
+  var t = ev && ev.target && ev.target.closest ? ev.target.closest('[data-walk]') : null;
+  if (!t || t.disabled) return;
+  var jobId = parseInt(t.getAttribute('data-job'), 10) || 0, i = parseInt(t.getAttribute('data-i'), 10) || 0, act = t.getAttribute('data-walk');
+  if (act === 'review') walkReviewRun(jobId, 'estimate');
+  else if (act === 'plan') openCrewPlan(jobId);
+  else if (act === 'use') walkSugUse(jobId, i);
+  else if (act === 'dismiss') walkSugDismiss(jobId, i);
+}
+if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('click', _walkClick);
 function walkSugPaint() {
   try {
     if (typeof document === 'undefined' || !document.querySelectorAll) return;

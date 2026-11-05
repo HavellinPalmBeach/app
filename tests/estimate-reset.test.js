@@ -287,8 +287,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const ROOM_GRID = ['vol-', 'cplx-', 'spcl-', 'name-', 'note-', 'chk-', 'wph-'];
     const CARD_ROWS = { 'vgrp-cat-': 'renderVendorGroupCards', 'vgrp-cost-': 'renderVendorGroupCards', 'vendor-smf-': 'renderVendors' };
     const READOUTS = ['el-', 'tc-', 'ps-'];
-    TREE.prefixes.forEach((p) => ok(ROOM_GRID.includes(p) || p in CARD_ROWS || READOUTS.includes(p),
+    // The room's own <tr> (2026-11-05): the walkthrough agent's suggestion is drawn under its row (walkSugPaint), never an input.
+    const ROW_SHELLS = ['row-'];
+    TREE.prefixes.forEach((p) => ok(ROOM_GRID.includes(p) || p in CARD_ROWS || READOUTS.includes(p) || ROW_SHELLS.includes(p),
       `the dynamic id "${p}…" calcAll's tree reads is classified — room grid, a vendor card row, or a readout`));
+    ROW_SHELLS.forEach((p) => ok(new RegExp(`<tr id="${p}'`).test(fn('buildRoomTable')), `"${p}…" is the room grid's own row, never an input`));
     Object.keys(CARD_ROWS).forEach((p) => has(fn(CARD_ROWS[p]), `id="${p}`, `"${p}…" is drawn by ${CARD_ROWS[p]}, which the reset re-runs over emptied lists`));
     const grid = fn('buildRoomTable');
     READOUTS.forEach((p) => ok(new RegExp(`<(span|td)[^>]*id="${p}'`).test(grid) && !new RegExp(`<(input|select|textarea)[^>]*id="${p}'`).test(grid),

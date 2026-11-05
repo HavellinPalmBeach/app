@@ -5245,7 +5245,7 @@ function _awPlanOf(input, names) {
            ifCant: _awList(input.if_cant, 8), length: _awClip(input.length, 300), rooms: rooms };
 }
 
-// data: {mode: 'both' | 'plan' | 'check', context: {service, fiduciary, crew, days, notes, house[], privateNote, vendorsOn[],
+// data: {mode: 'full' | 'plan' | 'check', context: {service, fiduciary, crew, days, notes, house[], privateNote, vendorsOn[],
 // vendorChoices[]}, rooms: [{name, vol, cplx, special, note, excluded, photos: [fileId]}], plan (text), update (text)}.
 // Answers {ok, suggestions: [...], looks: {room: seen}, plan | null, failed: {room: why}, model, planModel}.
 function agentWalkthroughReview(data) {
@@ -5257,7 +5257,7 @@ function agentWalkthroughReview(data) {
     }
     data = data || {};
     var ctx = data.context || {};
-    var mode = (data.mode === 'plan' || data.mode === 'check') ? data.mode : 'both';
+    var mode = (data.mode === 'plan' || data.mode === 'check') ? data.mode : 'full';
     var rooms = (data.rooms || []).filter(function (r) { return r && r.name; }).slice(0, AGENT_WALK_MAX_ROOMS);
     var key = _agProp('ANTHROPIC_API_KEY');
     var models = _agModels('walkthrough', key), sendState = {};
@@ -5336,7 +5336,7 @@ function testWalkthroughReview() {
   var rooms = Object.keys(byRoom).slice(0, 4).map(function (name) { return { name: name, vol: 3, cplx: 3, photos: byRoom[name].slice(0, AGENT_WALK_PHOTOS_PER_ROOM) }; });
   Logger.log('Reading ' + rooms.length + ' room(s) from ' + best.folder.getName() + ': ' + rooms.map(function (r) { return r.name + ' (' + r.photos.length + ')'; }).join(', '));
   var t0 = new Date().getTime();
-  var out = agentWalkthroughReview({ mode: 'both', context: { service: 'Home Editing', crew: '1 concierge and 2 specialists', days: '3 working days',
+  var out = agentWalkthroughReview({ mode: 'full', context: { service: 'Home Editing', crew: '1 concierge and 2 specialists', days: '3 working days',
     notes: 'probe', vendorsOn: [], vendorChoices: ['Junk Removal', 'Dumpster Rental', 'Donation Pickup'] }, rooms: rooms });
   var secs = Math.round((new Date().getTime() - t0) / 1000);
   if (!out.ok) { Logger.log('FAILED after ' + secs + 's: ' + out.error); return; }
