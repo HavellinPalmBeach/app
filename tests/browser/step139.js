@@ -120,6 +120,13 @@ const PLAN = {
     has(vs[1], 'volume 5', '…the score first');
     has(vs[3], 'a vendor line', '…the vendor line under it');
     has(vs[3], 'A bolted desk to take down', '…with its own reason');
+    // 2026-11-05 (Anthony: "it should tell you which rooms there are suggestions"): the rooms under the line, each a press to its row.
+    const look = await p.evaluate(() => Array.from(document.querySelectorAll('#walk-review-rooms button')).map((b) => b.textContent.trim()));
+    ok(look.length === 1 && /Office 1/.test(look[0]), '⚠ the line names the room with suggestions, once for its two lines (' + JSON.stringify(look) + ')');
+    await p.evaluate(() => window.scrollTo(0, 0)); await p.waitForTimeout(200);
+    await p.click('#walk-review-rooms button'); await p.waitForTimeout(900);
+    const inView = await p.evaluate((oId) => { const r = document.getElementById('row-' + oId).getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }, oId);
+    ok(inView, '…and pressing it brings the room\'s row into view');
     const before = await p.evaluate(() => currentEstimate.grandTotal);
     await p.click('tr.wsug-row button:has-text("Use 5")'); await p.waitForTimeout(500);
     ok(await p.evaluate((oId) => document.getElementById('vol-' + oId).value, oId) === '5', 'Use 5 sets the volume box');
@@ -130,6 +137,7 @@ const PLAN = {
     await p.click('tr.wsug-row button:has-text("Add")'); await p.waitForTimeout(500);
     ok(await p.evaluate((t) => vendors.concat(prepItems).some((v) => v.type === t), vType), 'Add puts the vendor line on the estimate (' + vType + ')');
     ok(await p.evaluate(() => document.querySelectorAll('tr.wsug-row').length) === 0, 'and its line goes');
+    ok(await p.evaluate(() => !document.getElementById('walk-review-rooms')), '⚠ with nothing left to look at, the room list goes too');
     has(await p.evaluate(() => document.getElementById('walk-review-msg').textContent), 'the crew plan is written', 'the line under the row says what came back');
 
     // ── C ──

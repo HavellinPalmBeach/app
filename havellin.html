@@ -1498,7 +1498,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.11.05 · 5:58pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.11.05 · 6:00pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -63878,7 +63878,34 @@ function walkReviewBarHtml(jobId) {
 // The answer of the last run, the line under the client row.
 function walkReviewMsgHtml(jobId) {
   var msg = jobId && _walkReviewMsg[jobId];
-  return msg ? '<div id="walk-review-line" style="font-size:11.5px;margin-top:6px;color:' + _walkToneColor(msg.tone) + ';">' + esc(msg.text) + '</div>' : '';
+  var out = msg ? '<div id="walk-review-line" style="font-size:11.5px;margin-top:6px;color:' + _walkToneColor(msg.tone) + ';">' + esc(msg.text) + '</div>' : '';
+  // The rooms with a suggestion still standing, each a press that takes you to its row (Anthony, 2026-11-05: "in a big house, if
+  // there's just one suggestion, you're looking across a lot of area … to find this one little comment"). Read live off the
+  // standing list, so it shrinks as Use and ✕ are pressed and goes when none is left.
+  var standing = (jobId && _walkSug[jobId] && typeof walkSugStanding === 'function') ? walkSugStanding(jobId, _walkSugReaders()) : [];
+  var rooms = [];
+  standing.forEach(function (x) { if (rooms.indexOf(x.it.room) < 0) rooms.push(x.it.room); });
+  if (rooms.length) {
+    out += '<div id="walk-review-rooms" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:5px;font-size:11.5px;color:#8a5a00;">'
+      + '<span>Look at:</span>' + rooms.map(function (r) {
+        return '<button type="button" class="btn-s" style="font-size:11px;padding:3px 9px;" data-walk="goto" data-job="' + jobId + '" data-room="' + esc(r) + '">&#128247; ' + esc(r) + '</button>';
+      }).join('') + '</div>';
+  }
+  return out;
+}
+// Take the screen to a room's row and its suggestion: its section opened if folded, the row scrolled to the middle, the line flashed.
+function walkSugGoto(room) {
+  var rid = _walkRowForRoom(room), row = rid && document.getElementById('row-' + rid);
+  if (!row) return false;
+  var body = row.closest ? row.closest('[id^="sec-body-"]') : null;
+  if (body && body.style.display === 'none' && typeof toggleRoomSection === 'function') toggleRoomSection(body.id.replace('sec-body-', ''));
+  if (row.scrollIntoView) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  var line = row.nextElementSibling;
+  if (line && line.className === 'wsug-row') {
+    var box = line.querySelector('.wsug');
+    if (box) { box.style.boxShadow = '0 0 0 3px #f0c46a'; setTimeout(function () { box.style.boxShadow = ''; }, 1800); }
+  }
+  return true;
 }
 function walkReviewBarPaint() {
   var el = document.getElementById('walk-review-bar'), m = document.getElementById('walk-review-msg'), jobId = _estJobId();
@@ -63937,6 +63964,7 @@ function _walkClick(ev) {
   else if (act === 'plan') openCrewPlan(jobId);
   else if (act === 'use') walkSugUse(jobId, i);
   else if (act === 'dismiss') walkSugDismiss(jobId, i);
+  else if (act === 'goto') walkSugGoto(t.getAttribute('data-room'));
 }
 if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('click', _walkClick);
 function walkSugPaint() {

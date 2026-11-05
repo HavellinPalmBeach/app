@@ -364,6 +364,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     B._walkReviewOut[7] = { at: 1 };
     const busyB = B.walkReviewBarHtml(7);
     ok(/disabled/.test(busyB) && /Reviewing…/.test(busyB), '⚠ a run out: the press reads Reviewing… and is disabled');
+    const M = sandbox({ fns: ['walkReviewMsgHtml', '_walkToneColor'], vars: ['_walkReviewMsg', '_walkSug'],
+      stubs: { _walkSugReaders: () => ({}), walkSugStanding: () => M.standing, esc: (x) => String(x) } });
+    M._walkReviewMsg[7] = { text: 'Reviewed: 3 suggestions on the room rows.', tone: 'ok' };
+    M._walkSug[7] = { items: [] };
+    M.standing = [{ it: { room: 'Shed' } }, { it: { room: 'Back Yard' } }, { it: { room: 'Back Yard' } }];
+    const mh = M.walkReviewMsgHtml(7);
+    eq((mh.match(/data-walk="goto"/g) || []).length, 2, '⚠ the rooms with suggestions are named under the line, each once');
+    ok(mh.indexOf('data-room="Shed"') > 0 && mh.indexOf('data-room="Back Yard"') > mh.indexOf('data-room="Shed"'), '…in the order the suggestions stand');
+    M.standing = [];
+    lacks(M.walkReviewMsgHtml(7), 'walk-review-rooms', 'none left standing, no list');
     const R = sandbox({ fns: ['crewPlanRoomHtml', 'crewPlanOf'], vars: ['CREW_PLAN_NOTE_KEY'],
       stubs: { jobPlanStore: { 7: { notes: { crewPlan: { v: 1, rooms: [{ room: 'Office 1', lines: ['Shred pile.'] }],
                order: [{ step: 'Donation run', after: 'Office 1' }] } } } }, esc: (x) => String(x) } });
