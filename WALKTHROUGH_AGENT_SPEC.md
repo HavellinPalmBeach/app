@@ -151,9 +151,13 @@ with), *Conditions*, *If you can't*, *Length*, and a few lines per key room. It 
 
 ---
 
-## 8 · NOT DECIDED
+## 8 · DECIDED LAST (Anthony, 2026-11-05)
 
-- Whether the plan's context may name a medical or personal fact at all where an instruction carries the same meaning (§5
-  says instructions; Anthony wants as much context as possible).
-- Whether a crew member's phone in field mode shows the full plan, or only the concierge's device.
-- What the plan says on a job with no walkthrough photos (the agent can still read the notes).
+20. **The context is written as instructions** (§5), never a label or a diagnosis: *"instructions are fine."*
+21. **The plan is the concierges'.** Only the Transition Concierges carry an iPad, so nothing is built for a crew member's
+    phone (*"TC's are the only people who will ever have an iPad, so nothing to do here"*).
+22. **No photos, still a plan.** On a walkthrough with no photos the agent writes the plan from the notes alone and makes no
+    estimate suggestions it cannot see; photos are the rule on every walkthrough (*"we are going to try and take photos on
+    all walkthroughs so we get more accurate estimates"*).
+
+Nothing is left open in the design. It is built on Anthony's go.
