@@ -81,7 +81,13 @@ const PLAN = {
     // ── A ──
     console.log('## A. Review walkthrough sends the rooms, the photos and the notes');
     const btn = p.locator('#walk-review-btn');
-    ok(await btn.isVisible(), 'Review walkthrough sits under the rooms');
+    ok(await btn.isVisible(), 'Review walkthrough is on the screen');
+    // 2026-11-05 (Anthony: lost under the rooms): it sits beside the client and Start over, above the room grid.
+    const pos = await p.evaluate(() => { const b = document.getElementById('walk-review-btn'), g = document.getElementById('room-table-wrap'),
+      so = Array.from(document.querySelectorAll('button')).find((x) => x.textContent.trim() === 'Start over' && x.checkVisibility());
+      const r = (e) => e ? e.getBoundingClientRect() : null; return { b: r(b), g: r(g), so: r(so) }; });
+    ok(pos.b && pos.g && pos.b.top < pos.g.top, '⚠ above the room grid (' + (pos.b && Math.round(pos.b.top)) + ' < ' + (pos.g && Math.round(pos.g.top)) + ')');
+    ok(pos.b && pos.so && Math.abs(pos.b.top - pos.so.top) < 12 && pos.b.right <= pos.so.left, '…beside Start over, in its row (' + JSON.stringify(pos.b && [Math.round(pos.b.top), Math.round(pos.b.right)]) + ' vs ' + JSON.stringify(pos.so && [Math.round(pos.so.top), Math.round(pos.so.left)]) + ')');
     await btn.click(); await p.waitForTimeout(1500);
     ok(asked.length === 1, 'one call to the Apps Script');
     const a0 = asked[0] || { rooms: [], context: {} };
@@ -114,7 +120,7 @@ const PLAN = {
     await p.click('tr.wsug-row button:has-text("Add")'); await p.waitForTimeout(500);
     ok(await p.evaluate((t) => vendors.concat(prepItems).some((v) => v.type === t), vType), 'Add puts the vendor line on the estimate (' + vType + ')');
     ok(await p.evaluate(() => document.querySelectorAll('tr.wsug-row').length) === 0, 'and its line goes');
-    has(await p.evaluate(() => document.getElementById('walk-review-bar').textContent), 'the crew plan is written', 'the bar says what came back');
+    has(await p.evaluate(() => document.getElementById('walk-review-msg').textContent), 'the crew plan is written', 'the line under the row says what came back');
 
     // ── C ──
     console.log('## C. the crew plan: open, edit, save');

@@ -78,7 +78,8 @@ Each line is an answer he gave; where he took the recommendation the answer is t
 
 ## 3 · HOW IT IS USED (the real day)
 
-- **After the walkthrough, at the desk or in the car:** press *Review walkthrough* on Build Estimate. About a minute. Read
+- **On site:** score the rooms, take the photos, save the estimate.
+- **That evening, at home or the office:** press *Review walkthrough* at the top of Build Estimate. About a minute. Read
   the amber lines, press **Use** on the ones that are right, ignore the rest, read the plan, change what is wrong. Save the
   estimate as now.
 - **Before Day 1:** open the full plan once and read it (five minutes). After that the concierge knows the job.
@@ -164,5 +165,9 @@ with), *Conditions*, *If you can't*, *Length*, and a few lines per key room. It 
     playset's hauler off the list: *Score + vendor*). Decision 2 stands: still only where the photos plainly disagree. And a
     playset, a hot tub or anything needing tools and a truck is a vendor's work in the plan too, never the crew's (Pricing's yard
     rule; the probe's plan had told the crew to bring a drill).
+
+24. **The press is at the top of Build Estimate, beside Start over** (*"it's really kind of lost down here … it should be at the top,
+    next to the start over button"*). The day as he sees it: walk the house, score it and take the photos, save on site; at home
+    or the office that night, review the estimate and press **Review walkthrough**.
 
 Nothing is left open in the design. It is built on Anthony's go.

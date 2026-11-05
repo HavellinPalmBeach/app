@@ -345,7 +345,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(live(fn('renderPrepJobPlan')), 'crewNextUpHtml(jobId, job, est)', 'Home Prep carries it too');
     has(live(fn('_paintRoomWorkspace')), 'crewPlanRoomHtml(jobId, room.name)', 'the room\'s lines inside the room');
     has(live(fn('calcAll')), "if (typeof walkSugPaint === 'function') walkSugPaint();", 'the suggestions follow every recompute');
-    has(src, '<div id="walk-review-bar"', 'the bar under Build Estimate\'s rooms');
+    // 2026-11-05 (Anthony: "really kind of lost down here … it should be at the top, next to the start over button").
+    const barAt = src.indexOf('<span id="walk-review-bar"'), soAt = src.indexOf('onclick="startEstimateOver()"'), svcAt = src.indexOf('<select id="e-svc"');
+    ok(barAt > 0 && src.indexOf('id="walk-review-bar"', barAt + 10) < 0, 'one bar on Build Estimate');
+    ok(soAt > 0 && barAt > 0 && barAt < soAt && soAt - barAt < 600 && barAt < svcAt, '⚠ the bar sits beside Start over, at the head of the screen, never under the rooms');
     const R = sandbox({ fns: ['crewPlanRoomHtml', 'crewPlanOf'], vars: ['CREW_PLAN_NOTE_KEY'],
       stubs: { jobPlanStore: { 7: { notes: { crewPlan: { v: 1, rooms: [{ room: 'Office 1', lines: ['Shred pile.'] }],
                order: [{ step: 'Donation run', after: 'Office 1' }] } } } }, esc: (x) => String(x) } });

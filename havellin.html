@@ -1498,7 +1498,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.11.05 · 3:58pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.11.05 · 5:26pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2041,11 +2041,16 @@ body.no-smf .smf-col{display:none;}
              opened FOR one, which would leave the back bar pointing at the wrong dashboard.
              "Clear" became "Start over": clearing unbound the job as well, and on a screen with no
              picker that left a form belonging to nobody. -->
-        <div style="display:flex;gap:6px;align-items:center;">
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
           <select id="e-job" onchange="loadJobIntoEstimate()" style="display:none;"><option value="">Select job</option></select>
-          <div id="e-job-name" style="flex:1;min-width:0;font-size:13px;font-weight:600;color:var(--gray-dk);overflow-wrap:anywhere;">&mdash;</div>
+          <div id="e-job-name" style="flex:1 1 200px;min-width:0;font-size:13px;font-weight:600;color:var(--gray-dk);overflow-wrap:anywhere;">&mdash;</div>
+          <!-- Review walkthrough beside Start over (Anthony, 2026-11-05: under the rooms it was "really kind of lost down here … it
+               should be at the top, next to the start over button"; the review is run at the desk that evening, on a saved estimate).
+               Its answer is the line under the row, #walk-review-msg. -->
+          <span id="walk-review-bar" style="display:inline-flex;gap:6px;flex-wrap:wrap;"></span>
           <button class="btn-s" onclick="startEstimateOver()" title="Discard what is on this screen: back to the saved estimate, or to the intake answers if nothing is saved">Start over</button>
         </div>
+        <div id="walk-review-msg"></div>
         <div id="e-job-ref" style="display:none;margin-top:8px;padding:7px 10px;background:var(--cream);border:1px solid var(--border-md);border-radius:4px;font-size:12px;color:var(--gray-dk);"></div>
         <label>Service type <span style="color:#A32D2D;font-weight:700;">*</span>
           <span class="lbl-hint">what the walkthrough found, not what the phone call said</span></label>
@@ -2241,7 +2246,6 @@ body.no-smf .smf-col{display:none;}
           <div id="vol-preset-row"></div>
         </div>
         <div id="room-table-wrap"></div>
-        <div id="walk-review-bar" style="padding:.6rem 1.1rem .4rem;"></div>
         <div id="coverage-badge"></div>
       </div>
 
@@ -63849,17 +63853,20 @@ function _walkToneColor(tone) { return tone === 'err' ? '#A32D2D' : tone === 'wa
 function _estJobId() { return parseInt((document.getElementById('e-job') || {}).value, 10) || 0; }
 function walkReviewBarHtml(jobId) {
   if (!jobId) return '';
-  var plan = crewPlanOf(jobId), msg = _walkReviewMsg[jobId], busy = !!_walkReviewOut[jobId];
-  return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
-    + '<button type="button" class="btn-s" id="walk-review-btn" ' + (busy ? 'disabled ' : '') + 'data-walk="review" data-job="' + jobId + '">&#128269; Review walkthrough</button>'
-    + (plan ? '<button type="button" class="btn-s" data-walk="plan" data-job="' + jobId + '">&#128203; Crew plan</button>' : '')
-    + '<span style="font-size:11px;color:var(--gray);">reads the photos and notes: suggestions land on the rooms, and the crew plan is written</span>'
-    + '</div>'
-    + (msg ? '<div id="walk-review-line" style="font-size:11.5px;margin-top:6px;color:' + _walkToneColor(msg.tone) + ';">' + esc(msg.text) + '</div>' : '');
+  var plan = crewPlanOf(jobId), busy = !!_walkReviewOut[jobId];
+  return '<button type="button" class="btn-s" id="walk-review-btn" ' + (busy ? 'disabled ' : '')
+      + 'title="Reads the walkthrough photos and notes: suggestions land on the rooms, and the crew plan is written" data-walk="review" data-job="' + jobId + '">&#128269; Review walkthrough</button>'
+    + (plan ? '<button type="button" class="btn-s" data-walk="plan" data-job="' + jobId + '">&#128203; Crew plan</button>' : '');
+}
+// The answer of the last run, the line under the client row.
+function walkReviewMsgHtml(jobId) {
+  var msg = jobId && _walkReviewMsg[jobId];
+  return msg ? '<div id="walk-review-line" style="font-size:11.5px;margin-top:6px;color:' + _walkToneColor(msg.tone) + ';">' + esc(msg.text) + '</div>' : '';
 }
 function walkReviewBarPaint() {
-  var el = document.getElementById('walk-review-bar');
-  if (el) el.innerHTML = walkReviewBarHtml(_estJobId());
+  var el = document.getElementById('walk-review-bar'), m = document.getElementById('walk-review-msg'), jobId = _estJobId();
+  if (el) el.innerHTML = walkReviewBarHtml(jobId);
+  if (m) m.innerHTML = walkReviewMsgHtml(jobId);
 }
 // The row each room name is on, read off the grid (a custom room's name is its box).
 function _walkRowForRoom(name) {
