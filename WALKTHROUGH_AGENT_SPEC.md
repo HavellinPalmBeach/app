@@ -1,8 +1,8 @@
 # THE WALKTHROUGH AGENT: CHECK THE ESTIMATE, WRITE THE CREW PLAN
 
-**Status: designed with Anthony on 2026-11-05; not built.** Nothing in the app reads this yet. When the build is
-approved, the rules go into `CLAUDE.md` and the story into `BUILD_HISTORY.md`, and a backend redeploy is owed (the agent
-runs in Apps Script, as Agent One and Agent Two do).
+**Status: designed with Anthony on 2026-11-05 and built the same day on his go.** The rules as built are in `CLAUDE.md`
+(Screens, *The walkthrough agent*, and Integrations) and the story in `BUILD_HISTORY.md`. It needs the Apps Script deployment
+of `2026-11-05` (the action `agentWalkthroughReview`); §7's recommendations were built as written.
 
 Anthony, after the first live walkthrough (a Home Editing client: heavy clutter, closets full, shelving to build, a jungle
 gym in the back yard): *"To what extent could we get an agent involved in reviewing the estimate and helping us with a job

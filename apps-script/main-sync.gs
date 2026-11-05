@@ -206,11 +206,14 @@
 // and the listing survey counts what it showed: asking prices, never sales, no more listings than the search showed, the eBay search
 // page as the survey's page. Off unless EBAY_CLIENT_ID and EBAY_CLIENT_SECRET are in Script Properties; testEbayListings() checks
 // them. No action or type changes; carries 2026-11-02c's. Until it is live, or with no keys, Agent Two values as it did.
-var BACKEND_VERSION = '2026-11-02e';
+// ⚠ 2026-11-05: the walkthrough agent, `agentWalkthroughReview` (WALKTHROUGH_AGENT_SPEC.md): each room's walkthrough photographs
+// looked at in parallel, then the crew plan written from what they show and the notes. A new action, so an older deployment is
+// named by the action the app finds missing. Carries 2026-11-02e. testWalkthroughReview() times one call from the editor.
+var BACKEND_VERSION = '2026-11-05';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive', 'esignSendRequest',
-  'stripeLink', 'stripeStatus', 'agentIdentify', 'agentValue', 'agentRoomCheck'
+  'stripeLink', 'stripeStatus', 'agentIdentify', 'agentValue', 'agentRoomCheck', 'agentWalkthroughReview'
 ];
 var BACKEND_TYPES = [
   'job', 'saveAllEstimates', 'saveAllJobs', 'saveAllJobPlans',
@@ -428,6 +431,7 @@ function doPost(e) {
     if (data.action === 'agentIdentify') { return jsonOut(agentIdentifyShots(data)); }
     if (data.action === 'agentValue')    { return jsonOut(agentValueLines(data)); }
     if (data.action === 'agentRoomCheck') { return jsonOut(agentCheckRooms(data)); }
+    if (data.action === 'agentWalkthroughReview') { return jsonOut(agentWalkthroughReview(data)); }
 
     var type = data.type;
     var payload = data.payload;
@@ -4015,7 +4019,7 @@ function _agSlow(task) {
   } catch (e) {}
 }
 
-// The two models one call uses: {first, fallback}. `task` is 'name', 'rooms' or 'value'.
+// The two models one call uses: {first, fallback}. `task` is 'name', 'rooms', 'value' or 'walkthrough'.
 function _agModels(task, key) {
   var list = _agModelList(key), pin = _agProp('AGENT_MODEL_PIN');
   // A pin is one model for every call, the fallback included (2026-10-26, on review): pinned away from a new Opus that misbehaves,
@@ -4979,6 +4983,368 @@ function testAgentRoomCheck() {
   for (var d = 0; d < r.doubles.length; d++) {
     Logger.log('   - [' + r.doubles[d].confidence + '] ' + r.doubles[d].ids.join(' + ') + ' — ' + r.doubles[d].why);
   }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════════
+// THE WALKTHROUGH AGENT — CHECK THE ESTIMATE, WRITE THE CREW PLAN (2026-11-05)
+// ═══════════════════════════════════════════════════════════════════════════════════
+// Spec: WALKTHROUGH_AGENT_SPEC.md (designed with Anthony, 2026-11-05). One press, Review walkthrough on Build Estimate (and,
+// once the estimate is approved, Re-plan on the Job Plan): the walkthrough's photographs, room notes, private note and intake
+// are read, and two things come back. Suggestions, at most one a room and only where the photographs materially disagree with
+// the room's scores or call for a vendor line the estimate lacks (scores and vendor lines only, never hours); and the crew
+// plan, about a page: the context, the order of the work, its conditions, what to do instead when a condition is not met, a
+// rough length, and a few lines for each key room. Never a day-by-day schedule (Anthony: "something comes up. It's a rainy
+// day"), never a tick box, never a client paper.
+// ⚠ TWO STAGES, BECAUSE URLFETCHAPP CUTS A REQUEST OFF AT ABOUT 60 SECONDS. A house is 30 to 60 photographs; read in one
+// request they would not answer in time. So each room with photographs is LOOKED AT on its own, in parallel (fetchAll, up to
+// AGENT_WALK_PHOTOS_PER_ROOM pictures, effort low), and the plan is then WRITTEN from what each look saw plus the notes, in one
+// text-only request (effort medium). A room whose look failed is planned from its notes and named in `failed`.
+var AGENT_WALK_EFFORT_LOOK     = 'low';
+var AGENT_WALK_EFFORT_PLAN     = 'medium';
+var AGENT_WALK_MAX_TOKENS      = 16000;   // the non-streaming ceiling the other agents use: it caps, it does not spend
+var AGENT_WALK_PHOTOS_PER_ROOM = 4;       // pictures one room's look reads, the first taken
+var AGENT_WALK_MAX_ROOMS       = 40;      // rooms one call reads; a house has fewer
+var AGENT_WALK_PARALLEL        = 8;       // fetchAll width for the looks
+var AGENT_WALK_LOOK_BUDGET     = 150000;  // the looks stop being sent after 2.5 min, leaving the plan its time
+var AGENT_WALK_TIME_BUDGET     = 270000;  // the plan's last try starts by 4.5 min of Apps Script's 6
+var AGENT_WALK_TEXT_MAX        = 400;     // characters of any one sentence the plan keeps
+var AGENT_WALK_LIST_MAX        = 12;      // entries of any one list the plan keeps
+
+// The scoring guide's own words (Build Estimate's Scoring Reference Guide), so a suggestion means what the estimator's score means.
+var AGENT_WALK_SCALE = ''
+  + 'VOLUME, how much is in the room: 1 sparse (nearly empty); 2 light (below average, orderly, closets manageable); '
+  + '3 standard (normal household accumulation, fully furnished, closets reasonably full: the default); 4 dense (above '
+  + 'average, storage overflowing, room movement constrained); 5 extreme (floor-to-ceiling, obstructed pathways).\n'
+  + 'COMPLEXITY, how difficult the handling is: 1 simple (common household things only); 2 moderate (some fragile things, '
+  + 'standard furniture needing care); 3 standard (a mix of fragile, sentimental and moderately valuable things: the '
+  + 'default); 4 high (significant art, antiques, jewellery, wine or collections needing an appraiser); 5 specialist '
+  + '(firearms, biohazard, several high-value categories needing licensed specialists).';
+
+function _awClip(s, max) {
+  var t = String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
+  var m = max || AGENT_WALK_TEXT_MAX;
+  if (t.length <= m) return t;
+  var cut = t.slice(0, m - 1), sp = cut.lastIndexOf(' ');
+  if (sp > m / 2) cut = cut.slice(0, sp);
+  return cut.replace(/[\s,;:.–—(-]+$/, '') + '…';
+}
+function _awList(a, max) {
+  return (Array.isArray(a) ? a : []).map(function (x) { return _awClip(x); }).filter(Boolean).slice(0, max || AGENT_WALK_LIST_MAX);
+}
+
+// ── Stage 1: one room's photographs ───────────────────────────────────────────────
+function _awLookTool() {
+  return {
+    name: 'record_room_look',
+    description: 'Record what the walkthrough photographs of this room show for the work, and any score or vendor line they '
+               + 'plainly call for. Call this exactly once.',
+    strict: true,
+    input_schema: {
+      type: 'object', additionalProperties: false,
+      required: ['seen', 'volume_to', 'complexity_to', 'vendor', 'why'],
+      properties: {
+        seen:          { type: 'string', description: 'Under 40 words: what the photographs show that matters for the work in this '
+                                                    + 'room (how full, what needs care, anything needing tools, a truck or a specialist).' },
+        volume_to:     { type: 'integer', description: 'The volume score the photographs plainly show, 1 to 5, ONLY where it clearly '
+                                                    + 'differs from the score given; 0 when the score given fits or you cannot tell.' },
+        complexity_to: { type: 'integer', description: 'The same for complexity; 0 when the score given fits or you cannot tell.' },
+        vendor:        { type: 'string', description: 'One vendor category from the list given that the photographs plainly call for '
+                                                    + 'and the estimate does not have (a playset or hot tub to take down: the removal or '
+                                                    + 'junk category); an empty string when none.' },
+        why:           { type: 'string', description: 'Under 25 words, for the estimator: what in the photographs supports the '
+                                                    + 'suggestion. Empty when you suggest nothing.' }
+      }
+    }
+  };
+}
+function _awLookSystem() {
+  return ''
+    + 'You are looking at the walkthrough photographs of one room of a house, taken by a Havellin concierge during the '
+    + 'estimate walkthrough for a downsizing, move, cleanout or estate job. The estimator has scored the room.\n\n'
+    + AGENT_WALK_SCALE + '\n\n'
+    + 'Say what the photographs show for the work, in under 40 words. Suggest a different score only where the photographs '
+    + 'plainly show one, usually two points away from the score given; a close call is the estimator\'s, so answer 0. '
+    + 'Suggest a vendor only where something in the photographs needs one the estimate does not have, and only from the '
+    + 'categories listed. Never suggest hours, a price or a value. Never describe a person. Call record_room_look exactly once.';
+}
+function _awLookContent(room, ctx) {
+  var content = [];
+  content.push({ type: 'text', text: 'Service: ' + (ctx.service || 'not recorded') + '. Room: ' + (room.name || 'not recorded')
+    + '. Scored volume ' + (room.vol || 'not scored') + ', complexity ' + (room.cplx || 'not scored')
+    + (room.special ? ', marked as holding special items' : '') + '.'
+    + (room.note ? ' The estimator\'s note on this room: "' + _awClip(room.note, 600) + '".' : '')
+    + ' Vendor lines already on the estimate: ' + ((ctx.vendorsOn || []).length ? ctx.vendorsOn.join('; ') : 'none') + '.'
+    + ' Vendor categories you may suggest: ' + ((ctx.vendorChoices || []).length ? ctx.vendorChoices.join('; ') : 'none') + '.' });
+  (room.photos || []).slice(0, AGENT_WALK_PHOTOS_PER_ROOM).forEach(function (fid, i) {
+    content.push({ type: 'text', text: 'Photograph ' + (i + 1) + ':' });
+    content.push(_agImageBlock(fid));
+  });
+  content.push({ type: 'text', text: 'Call record_room_look exactly once.' });
+  return content;
+}
+function _awRequest(system, tool, content, effort, key, model, noFallbacks) {
+  var body = {
+    model: model,
+    max_tokens: AGENT_WALK_MAX_TOKENS,
+    thinking: { type: 'adaptive' },
+    output_config: { effort: effort },
+    system: [{ type: 'text', text: system, cache_control: { type: 'ephemeral' } }],
+    tools: [tool],
+    tool_choice: { type: 'auto' },
+    messages: [{ role: 'user', content: content }]
+  };
+  var headers = { 'x-api-key': key, 'anthropic-version': AGENT_API_VERSION };
+  if (!noFallbacks) { body.fallbacks = 'default'; headers['anthropic-beta'] = AGENT_FALLBACK_BETA; }
+  return { url: AGENT_API, method: 'post', contentType: 'application/json', headers: headers,
+           payload: JSON.stringify(body), muteHttpExceptions: true };
+}
+// A tool call read back like the room check's: a refusal, a cut-off and prose are failures.
+function _awReadTool(res, name) {
+  var code = res.getResponseCode(), body = {};
+  try { body = JSON.parse(res.getContentText()); }
+  catch (e) { return { ok: false, error: 'unreadable answer (HTTP ' + code + ')', retryable: code >= 500 ? 'busy' : '' }; }
+  if (code >= 300) return _agHttpFailure(code, body);
+  if (body.stop_reason === 'refusal') return { ok: false, error: 'the model declined these photographs' };
+  if (body.stop_reason === 'max_tokens') return { ok: false, error: 'the answer was cut off before it finished', retryable: 'cutoff' };
+  var blocks = body.content || [];
+  for (var i = 0; i < blocks.length; i++) {
+    if (blocks[i].type === 'tool_use' && blocks[i].name === name) return { ok: true, input: blocks[i].input || {} };
+  }
+  return { ok: false, error: 'the model answered in prose instead of recording anything' };
+}
+// One room's look, held to the rule: a score only where it differs from the one given, a vendor only off the list and not
+// already on the estimate, one suggestion a room at most (the volume first, then the complexity, then the vendor).
+function _awLookOf(room, input, ctx) {
+  var out = { seen: _awClip(input.seen, 300), suggestion: null };
+  var why = _awClip(input.why, 200);
+  var to = function (v, cur) { var n = parseInt(v, 10); return (n >= 1 && n <= 5 && n !== (parseInt(cur, 10) || 0)) ? n : 0; };
+  var v = to(input.volume_to, room.vol), c = to(input.complexity_to, room.cplx);
+  var vendor = String(input.vendor || '').trim();
+  var choices = ctx.vendorChoices || [], on = ctx.vendorsOn || [];
+  var lc = function (s) { return String(s).toLowerCase(); };
+  var hit = vendor && choices.filter(function (x) { return lc(x) === lc(vendor); })[0];
+  if (hit && on.some(function (x) { return lc(x) === lc(hit); })) hit = '';
+  if (v) out.suggestion = { room: room.name, field: 'vol', to: v, why: why };
+  else if (c) out.suggestion = { room: room.name, field: 'cplx', to: c, why: why };
+  else if (hit) out.suggestion = { room: room.name, field: 'vendor', vendor: hit, why: why };
+  return out;
+}
+
+// ── Stage 2: the plan ─────────────────────────────────────────────────────────────
+function _awPlanTool(roomNames) {
+  var roomProp = { type: 'string', description: 'A room name exactly as listed, or an empty string.' };
+  return {
+    name: 'record_crew_plan',
+    description: 'Record the crew plan for this job. Call this exactly once.',
+    strict: true,
+    input_schema: {
+      type: 'object', additionalProperties: false,
+      required: ['context', 'order', 'conditions', 'if_cant', 'length', 'rooms'],
+      properties: {
+        context:    { type: 'array', items: { type: 'string' },
+                      description: 'Two to five facts the crew must know about the people and the house, each one sentence that '
+                                 + 'ends in what to do about it.' },
+        order:      { type: 'array', description: 'The order of the work, five to twelve steps.',
+                      items: { type: 'object', additionalProperties: false, required: ['step', 'room', 'after', 'vendor'],
+                               properties: {
+                                 step:   { type: 'string', description: 'What is done, one short sentence.' },
+                                 room:   roomProp,
+                                 after:  { type: 'string', description: 'For a step that is not a room (a haul, a donation run, a '
+                                                                    + 'vendor): the room it follows, exactly as listed; else empty.' },
+                                 vendor: { type: 'string', description: 'The vendor category this step needs, exactly as on the '
+                                                                     + 'estimate, or empty.' } } } },
+        conditions: { type: 'array', items: { type: 'string' },
+                      description: 'The rules the work runs under (when the client can sort, the weather a step needs, who must not '
+                                 + 'be in the house): each one sentence.' },
+        if_cant:    { type: 'array', items: { type: 'string' },
+                      description: 'What to do instead when a condition is not met: each one sentence.' },
+        length:     { type: 'string', description: 'One sentence: the rough length for the crew on the estimate, and with one '
+                                                    + 'fewer specialist. Never a date, never a day-by-day schedule.' },
+        rooms:      { type: 'array', description: 'The key rooms only, each with one to four short instructions.',
+                      items: { type: 'object', additionalProperties: false, required: ['room', 'lines'],
+                               properties: { room: roomProp, lines: { type: 'array', items: { type: 'string' } } } } }
+      }
+    }
+  };
+}
+function _awPlanSystem(ctx) {
+  var s = ''
+    + 'You write the crew plan for one Havellin job: white-glove downsizing, moves, cleanouts and estate work in Palm Beach '
+    + 'County. The Transition Concierge reads it once before the first day and glances at it each morning before going in; '
+    + 'the crew never reads the app in the house. It has to take thinking off the concierge.\n\n'
+    + 'You are given the service, the crew and the length on the estimate, the intake\'s notes and house questions, the '
+    + 'concierge\'s private walkthrough note, and every room with its scores, its note and what its photographs show.\n\n'
+    + 'WRITE\n'
+    + '- Context: the facts about the people and the house the crew must know, each ending in what to do. Write every one '
+    + 'as a fact and an instruction, practical and respectful, never a label or a diagnosis: "Her son is sometimes home; the '
+    + 'walkthrough stopped at 15 minutes when he was. Confirm each morning that he is out before the crew goes in." '
+    + 'A concierge reads this; nothing on it is for the client.\n'
+    + '- Order of work: the sequence, by room, with the steps that are not a room (hauls, donation runs, a vendor\'s visit) '
+    + 'attached to the room they follow. Easy rooms before sentimental ones unless the notes say otherwise.\n'
+    + '- Conditions: the rules the work runs under (when the client can make decisions, the weather a yard step needs, '
+    + 'who must not be in the house).\n'
+    + '- If you can\'t: for each condition that can stop the work, what to do instead (the desk work, the drop-offs, '
+    + 'another room).\n'
+    + '- Length: one sentence, rough, for the crew on the estimate and with one fewer specialist.\n'
+    + '- Rooms: the key rooms only, one to four short instructions each.\n\n'
+    + 'NEVER\n'
+    + '- A day-by-day schedule, a date or a day number: work moves when the weather or the family moves it.\n'
+    + '- A tick box, a checklist to sign, hours, a price, a value or anything for the client.\n'
+    + '- A room name you were not given.\n'
+    + '- A firearm moved or handled: where one is noted, the condition is that it is photographed where it lies and nobody '
+    + 'carries it out.\n'
+    + 'About a page in all. Call record_crew_plan exactly once.';
+  if (ctx && ctx.fiduciary) s += '\n\nThis is a decedent\'s estate: the client is the representative, not the owner.';
+  return s;
+}
+function _awPlanContent(data, looks) {
+  var ctx = data.context || {}, lines = [];
+  lines.push('Service: ' + (ctx.service || 'not recorded') + '.');
+  lines.push('Crew on the estimate: ' + (ctx.crew || 'not recorded') + '. Length on the estimate: ' + (ctx.days || 'not recorded') + '.');
+  if (ctx.notes) lines.push('Intake notes: "' + _awClip(ctx.notes, 1500) + '"');
+  (ctx.house || []).forEach(function (h) { lines.push('House question: ' + _awClip(h, 400)); });
+  if (ctx.privateNote) lines.push('The concierge\'s private walkthrough note: "' + _awClip(ctx.privateNote, 3000) + '"');
+  if ((ctx.vendorsOn || []).length) lines.push('Vendor lines on the estimate: ' + ctx.vendorsOn.join('; ') + '.');
+  lines.push('');
+  lines.push('ROOMS (use these names exactly):');
+  (data.rooms || []).forEach(function (r) {
+    var lk = looks[r.name];
+    lines.push('- ' + r.name + ': volume ' + (r.vol || 'not scored') + ', complexity ' + (r.cplx || 'not scored')
+      + (r.excluded ? ', OUT OF SCOPE (the client handles it)' : '')
+      + (r.note ? '. Note: "' + _awClip(r.note, 500) + '"' : '')
+      + (lk && lk.seen ? '. The photographs show: ' + lk.seen : (r.photos && r.photos.length ? '' : '. No photographs.')));
+  });
+  if (data.plan) {
+    lines.push('');
+    lines.push('THE PLAN AS IT STANDS (a person may have edited it; keep what still holds):');
+    lines.push(_awClip(data.plan, 6000));
+  }
+  if (data.update) {
+    lines.push('');
+    lines.push('WHAT HAS CHANGED SINCE (plan around it): "' + _awClip(data.update, 1500) + '"');
+  }
+  lines.push('');
+  lines.push('Call record_crew_plan exactly once.');
+  return [{ type: 'text', text: lines.join('\n') }];
+}
+// The plan held to the rule: room names only as given (an unknown one dropped to none), every string clipped, every list capped.
+function _awPlanOf(input, names) {
+  var known = {};
+  (names || []).forEach(function (n) { known[String(n).toLowerCase()] = n; });
+  var room = function (n) { return known[String(n || '').trim().toLowerCase()] || ''; };
+  var order = (Array.isArray(input.order) ? input.order : []).map(function (o) {
+    o = o || {};
+    var r = room(o.room), a = r ? '' : room(o.after);
+    return { step: _awClip(o.step, 200), room: r, after: a, vendor: _awClip(o.vendor, 80) };
+  }).filter(function (o) { return o.step; }).slice(0, 16);
+  var rooms = (Array.isArray(input.rooms) ? input.rooms : []).map(function (x) {
+    x = x || {};
+    return { room: room(x.room), lines: _awList(x.lines, 4).map(function (l) { return _awClip(l, 200); }) };
+  }).filter(function (x) { return x.room && x.lines.length; }).slice(0, 20);
+  return { context: _awList(input.context, 6), order: order, conditions: _awList(input.conditions, 8),
+           ifCant: _awList(input.if_cant, 8), length: _awClip(input.length, 300), rooms: rooms };
+}
+
+// data: {mode: 'both' | 'plan' | 'check', context: {service, fiduciary, crew, days, notes, house[], privateNote, vendorsOn[],
+// vendorChoices[]}, rooms: [{name, vol, cplx, special, note, excluded, photos: [fileId]}], plan (text), update (text)}.
+// Answers {ok, suggestions: [...], looks: {room: seen}, plan | null, failed: {room: why}, model, planModel}.
+function agentWalkthroughReview(data) {
+  try {
+    var miss = _agMissingProps();
+    if (miss.length) {
+      return { ok: false, error: 'The walkthrough agent is not configured — missing Script Property: '
+                                 + miss.join(', ') + '. Add it in Project Settings > Script Properties.' };
+    }
+    data = data || {};
+    var ctx = data.context || {};
+    var mode = (data.mode === 'plan' || data.mode === 'check') ? data.mode : 'both';
+    var rooms = (data.rooms || []).filter(function (r) { return r && r.name; }).slice(0, AGENT_WALK_MAX_ROOMS);
+    var key = _agProp('ANTHROPIC_API_KEY');
+    var models = _agModels('walkthrough', key), sendState = {};
+    var started = new Date().getTime(), deadline = started + AGENT_WALK_LOOK_BUDGET;
+    var looks = {}, suggestions = [], failed = {}, lookModel = '';
+
+    // Stage 1, the looks. The plan alone after approval needs them too: what a room's photographs show is how it is planned.
+    var toLook = rooms.filter(function (r) { return !r.excluded && (r.photos || []).length; });
+    for (var i = 0; i < toLook.length; i += AGENT_WALK_PARALLEL) {
+      if (new Date().getTime() > deadline) { toLook.slice(i).forEach(function (r) { failed[r.name] = 'not looked at: the time ran out'; }); break; }
+      var slice = toLook.slice(i, i + AGENT_WALK_PARALLEL), keep = [];
+      slice.forEach(function (r) {
+        try { r._content = _awLookContent(r, ctx); keep.push(r); }
+        catch (imgErr) { failed[r.name] = String(imgErr.message || imgErr); }
+      });
+      if (!keep.length) continue;
+      var sent = _agSendAll(keep, function (r, model, noFb) { return _awRequest(_awLookSystem(), _awLookTool(), r._content, AGENT_WALK_EFFORT_LOOK, key, model, noFb); },
+                            function (res) { return _awReadTool(res, 'record_room_look'); }, models, 'walkthrough', deadline, sendState);
+      sent.answers.forEach(function (ans, k) {
+        var r = keep[k];
+        if (ans && ans.ok) {
+          var lk = _awLookOf(r, ans.input, ctx);
+          looks[r.name] = lk.seen;
+          if (lk.suggestion && mode !== 'plan') suggestions.push(lk.suggestion);
+          lookModel = ans.model || lookModel;
+        } else failed[r.name] = (ans && ans.error) || 'no answer';
+      });
+    }
+
+    // Stage 2, the plan.
+    var plan = null, planModel = '', planError = '';
+    if (mode !== 'check') {
+      var names = rooms.map(function (r) { return r.name; });
+      var content = _awPlanContent(data, (function () { var o = {}; Object.keys(looks).forEach(function (k) { o[k] = { seen: looks[k] }; }); return o; })());
+      var sentPlan = _agSendAll([1], function (x, model, noFb) { return _awRequest(_awPlanSystem(ctx), _awPlanTool(names), content, AGENT_WALK_EFFORT_PLAN, key, model, noFb); },
+                                function (res) { return _awReadTool(res, 'record_crew_plan'); }, models, 'walkthrough',
+                                started + AGENT_WALK_TIME_BUDGET, sendState);
+      var pa = sentPlan.answers[0];
+      if (pa && pa.ok) { plan = _awPlanOf(pa.input, names); planModel = pa.model || ''; }
+      else planError = (pa && pa.error) || 'the plan did not come back';
+    }
+    var out = { ok: true, success: true, mode: mode, suggestions: suggestions, looks: looks, plan: plan, failed: failed,
+                model: lookModel || models.first, planModel: planModel };
+    if (planError) out.planError = planError;
+    return out;
+  } catch (error) {
+    Logger.log('agentWalkthroughReview error: ' + error);
+    return { ok: false, error: String(error) };
+  }
+}
+
+// ⚠ RUN THIS FROM THE EDITOR AFTER THE REDEPLOY, BEFORE A CLIENT SEES THE BUTTON, and note the time it prints. Argument-free:
+// it finds the newest Walkthrough Photos folder with photographs in Drive, reads up to four rooms' worth (four pictures each)
+// and writes a plan for them, printing the time of the whole call, the suggestions and the plan.
+function testWalkthroughReview() {
+  var miss = _agMissingProps();
+  if (miss.length) { Logger.log('MISSING Script Property: ' + miss.join(', ')); return; }
+  var stack = [DriveApp.getFolderById(ROOT_FOLDER_ID)], guard = 0, best = null;
+  while (stack.length && guard++ < 400) {
+    var f = stack.pop();
+    if (f.getName() === 'Walkthrough Photos') {
+      var files = f.getFilesByType('image/jpeg'), list = [];
+      while (files.hasNext()) list.push(files.next());
+      if (list.length && (!best || list.length > best.files.length)) best = { folder: f, files: list };
+    }
+    var subs = f.getFolders();
+    while (subs.hasNext()) stack.push(subs.next());
+  }
+  if (!best) { Logger.log('No Walkthrough Photos folder has a photograph yet: take one on Build Estimate first.'); return; }
+  // A walkthrough photo is named "<HVL id> Walkthrough <room> <n>.jpg" (the app's _walkPhotoName): group by the room in the name.
+  var byRoom = {};
+  best.files.forEach(function (file) {
+    var m = / Walkthrough (.+) \d+\.\w+$/.exec(file.getName()), room = m ? m[1] : 'Room';
+    (byRoom[room] = byRoom[room] || []).push(file.getId());
+  });
+  var rooms = Object.keys(byRoom).slice(0, 4).map(function (name) { return { name: name, vol: 3, cplx: 3, photos: byRoom[name].slice(0, AGENT_WALK_PHOTOS_PER_ROOM) }; });
+  Logger.log('Reading ' + rooms.length + ' room(s) from ' + best.folder.getName() + ': ' + rooms.map(function (r) { return r.name + ' (' + r.photos.length + ')'; }).join(', '));
+  var t0 = new Date().getTime();
+  var out = agentWalkthroughReview({ mode: 'both', context: { service: 'Home Editing', crew: '1 concierge and 2 specialists', days: '3 working days',
+    notes: 'probe', vendorsOn: [], vendorChoices: ['Junk Removal', 'Dumpster Rental', 'Donation Pickup'] }, rooms: rooms });
+  var secs = Math.round((new Date().getTime() - t0) / 1000);
+  if (!out.ok) { Logger.log('FAILED after ' + secs + 's: ' + out.error); return; }
+  Logger.log((out.plan ? 'ALL GOOD' : 'NO PLAN') + ' in ' + secs + 's — looks on ' + out.model + ', plan on ' + (out.planModel || '—')
+    + (out.planError ? ' (' + out.planError + ')' : '') + '. Apps Script stops a call at six minutes.');
+  Object.keys(out.failed).forEach(function (k) { Logger.log('  failed ' + k + ': ' + out.failed[k]); });
+  out.suggestions.forEach(function (s) { Logger.log('  suggests ' + s.room + ': ' + (s.field === 'vendor' ? 'vendor ' + s.vendor : s.field + ' ' + s.to) + ' — ' + s.why); });
+  if (out.plan) Logger.log(JSON.stringify(out.plan, null, 1));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════════

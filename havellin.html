@@ -1498,7 +1498,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.11.05 · 12:53pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.11.05 · 1:40pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2241,6 +2241,7 @@ body.no-smf .smf-col{display:none;}
           <div id="vol-preset-row"></div>
         </div>
         <div id="room-table-wrap"></div>
+        <div id="walk-review-bar" style="padding:.6rem 1.1rem .4rem;"></div>
         <div id="coverage-badge"></div>
       </div>
 
@@ -6468,7 +6469,7 @@ var CONTRACTOR_TC_NAME = 'Contractor — TC';
 // while the app also posted uploadHtml, getSubfolders, the two sharing actions, DocuSign, Stripe and
 // every store save, so a deployment missing any of those drew no banner. A test now derives what the
 // app posts from its own source and requires each one here, with its consequence below.
-var BACKEND_NEEDS = ['htmlToPdf', 'getThumbnails', 'createFolder', 'uploadFile', 'trashFile', 'agentIdentify', 'agentValue', 'agentRoomCheck',
+var BACKEND_NEEDS = ['htmlToPdf', 'getThumbnails', 'createFolder', 'uploadFile', 'trashFile', 'agentIdentify', 'agentValue', 'agentRoomCheck', 'agentWalkthroughReview',
   'uploadHtml', 'getSubfolders', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive', 'esignSendRequest',
   'stripeLink', 'stripeStatus'];                          // actions this build calls
 var BACKEND_NEEDS_TYPES = ['saveMedia', 'saveInventory', 'job', 'saveAllJobs', 'saveAllEstimates', 'saveAllJobPlans',
@@ -6610,6 +6611,7 @@ var BACKEND_FEATURE_COST = {
   agentIdentify: 'the desk cannot name the day\u2019s shots automatically \u2014 every line has to be typed by hand',
   agentValue:    'the desk cannot value lines automatically \u2014 every value has to be typed by hand',
   agentRoomCheck: 'the desk cannot check a room\u2019s photographs for one thing photographed twice \u2014 only two lines with the same name are flagged',
+  agentWalkthroughReview: 'Review walkthrough cannot read the walkthrough photographs or write the crew plan',
   getSubfolders: 'photographs and documents cannot find the client\u2019s Drive subfolders',
   shareFolder:   'sharing the inventory folders with counsel does nothing',
   unshareFolder: 'taking counsel\u2019s access to the inventory folders away does nothing',
@@ -9073,6 +9075,9 @@ function calcAll() {
   // work. The sheet always wins on open (see refreshEstimateFromCloud); scratch is
   // only a fallback for an unsaved active session on this same device.
   scheduleEstimateScratch();
+  // The walkthrough agent's suggestions sit under their rooms' rows, and the bar under the rooms says what the last review found
+  // (2026-11-05): a recompute is what every change to a room, a score or a vendor line runs, so the rows follow it.
+  if (typeof walkSugPaint === 'function') walkSugPaint();
 }
 
 // ⚠⚠ THE PRICING REFERENCE CHECK (2026-09-30, audit M11; Anthony on Q7): where this estimate sits against the
@@ -49044,6 +49049,7 @@ function _paintRoomWorkspace() {
     + _sfHost('sf-host-ws', job);
   if (room.note) h += '<div style="font-size:11.5px;color:var(--gray);font-style:italic;margin-bottom:6px;">&#128203; ' + esc(room.note) + '</div>';
   h += walkPhotoBriefHtml(jobId, room);
+  if (typeof crewPlanRoomHtml === 'function') h += crewPlanRoomHtml(jobId, room.name);   // the crew plan's lines for this room, behind a press
   h += '<div style="font-size:11.5px;color:var(--gray-dk);line-height:1.5;">'
     + '<strong>1. As found</strong> \u2014 wide shots from the corners, then every drawer, cabinet and closet open, contents undisturbed. '
     + (decedent ? '<strong>Mandatory on this job.</strong> ' : '')
@@ -59703,7 +59709,8 @@ function renderPrepJobPlan(jobId, job, est) {
   // then the checklist, then the two folds. The checklist is what gets worked; the folds are
   // reference.
   // Incidents on a Home Prep too (P26): a vendor's damage or a complaint is recorded where it happens.
-  return checklistCard + budgetCard + sourcingCard + (typeof incidentsCardHtml === 'function' ? incidentsCardHtml(jobId, job, est) : '') + renderCloseoutCard(jobId, job, 'plan');
+  // The crew plan's Next up card (2026-11-05), on Home Prep too: there it orders the trades and the declutter.
+  return (typeof crewNextUpHtml === 'function' ? crewNextUpHtml(jobId, job, est) : '') + checklistCard + budgetCard + sourcingCard + (typeof incidentsCardHtml === 'function' ? incidentsCardHtml(jobId, job, est) : '') + renderCloseoutCard(jobId, job, 'plan');
 }
 
 // Documentation rigor: 'standard' (reasonable estimates, dealer/auction assessments)
@@ -60076,13 +60083,17 @@ function renderJobPlan(jobId, job, est) {
   // ── In the house: the room cards, the four in-house boxes under the grid ────────────
   var nLocked = rooms.filter(function(r){ return !!TC_DONE_STATUSES[_planRoomStatus(jobId, r.idx)]; }).length;
   var nCleared = rooms.filter(function(r){ return !!PS_DONE_STATUSES[_planRoomStatus(jobId, r.idx)]; }).length;
-  var inHouse = planTasksHtml(jobId, 'p1', ctx) + planProcedureHtml('p1', ctx);   // how the sorting runs (P27), read under the boxes
+  // ⚠ THE JOB'S OWN PLAN TAKES THE GENERIC ONE'S PLACE (2026-11-05; WALKTHROUGH_AGENT_SPEC.md): where the walkthrough agent wrote a crew
+  // plan, its Next up card heads the stage and *How the sorting runs* goes (its page stays a tap away on the card), so the stage gets
+  // shorter, not longer. With no plan the generic block reads as before.
+  var _crewPlan = (typeof crewPlanOf === 'function') ? crewPlanOf(jobId) : null;
+  var inHouse = planTasksHtml(jobId, 'p1', ctx) + (_crewPlan ? '' : planProcedureHtml('p1', ctx));   // how the sorting runs (P27), read under the boxes
   // The in-house boxes carry their own section heading (the catalogue's `sec`), so nothing is added here —
   // a second heading over the first read as two headings stacked on the card (seen in the browser, 2026-09-20).
   // ⚠ FOUND ON SITE, UNDER THE BOXES, ON AN ESTATE (P19): an original will or cash found in the house, recorded the
   // day it is found, with its reminder (siteFindsCardHtml). The two boxes above point down at it.
   // ⚠ AND INCIDENTS, ON EVERY SERVICE (P26, 2026-10-16): anything that went wrong or needs attention, recorded the day it happens.
-  var roomsBody = roomsCard + inHouse + (ctx.fid ? siteFindsCardHtml(jobId, job, est) : '') + (typeof incidentsCardHtml === 'function' ? incidentsCardHtml(jobId, job, est) : '');
+  var roomsBody = (_crewPlan ? crewNextUpHtml(jobId, job, est) : '') + roomsCard + inHouse + (ctx.fid ? siteFindsCardHtml(jobId, job, est) : '') + (typeof incidentsCardHtml === 'function' ? incidentsCardHtml(jobId, job, est) : '');
   var roomsMeta = nLocked + ' of ' + rooms.length + ' locked &middot; ' + nCleared + ' cleared';
 
   // ── Job crew, hours & daily close: the loader moves #plan-log-section into this slot ──
@@ -63607,6 +63618,512 @@ function walkPhotoBriefHtml(jobId, room) {
   if (!n) return '';
   return '<div style="margin-bottom:6px;"><button type="button" class="btn-s" style="font-size:11px;" onclick="openPlanWalkPhotos(' + jobId + ',' + room.idx + ')">'
     + '&#128247; Walkthrough photos (' + n + ')</button></div>';
+}
+
+// ─── THE WALKTHROUGH AGENT: CHECK THE ESTIMATE, WRITE THE CREW PLAN (2026-11-05) ─────────────────────────────────────────────────
+// WALKTHROUGH_AGENT_SPEC.md, designed with Anthony over one long conversation: *"the agent saves time and requires the transition
+// concierge to do less, to think about less … I don't want it to create work or more tick boxes."* One press, **Review walkthrough**
+// on Build Estimate (and **Re-plan** in the full plan, any time after): the server looks at each room's walkthrough photographs and
+// writes the crew plan from what they show, the room notes, the private note and the intake (agentWalkthroughReview).
+// - **Suggestions** sit on the room's own row, amber, with a Use button, at most one a room and only where the photographs disagree:
+//   a score or a vendor line, never hours. Held in this page only (`_walkSug`, by client): they are for the estimator at the screen
+//   after the walkthrough, and a run again brings them back.
+// - **The crew plan** is the job plan's `notes.crewPlan` (CREW_PLAN_NOTE_KEY), so the sheet's per-key merge of the plan's notes carries
+//   it with no redeploy (stamped `notes:crewPlan`). It is an order of work with conditions and what to do instead, never a day-by-day
+//   schedule, never a tick box and never on a client paper; edited by hand it is a person's (`edited`), and a run over it asks first.
+// - **On the Job Plan** the **Next up** card takes the place of *How the sorting runs* at the head of In the house, moving as rooms are
+//   locked and cleared (crewNextUp); each room's lines sit inside its room behind a press; the full plan opens over the app.
+var CREW_PLAN_NOTE_KEY = 'crewPlan';        // the plan's key in jobPlanStore[jobId].notes: a stored key, never rename it
+var WALK_REVIEW_PHOTOS_PER_ROOM = 4;        // the server reads no more (AGENT_WALK_PHOTOS_PER_ROOM)
+var WALK_REVIEW_VENDOR_CHOICES_MAX = 150;
+var WALK_REVIEW_WATCHDOG_MS = 360000;       // Apps Script stops a call at six minutes: a press that never answers lets go
+var _walkSug = {};                          // jobId -> {at, items: [{room, field, to, vendor, why, used, dismissed}], failed}
+var _walkReviewOut = {};                    // jobId -> {at, where, timer} while a run is out; never saved
+
+function crewPlanOf(jobId) {
+  var p = (typeof jobPlanStore !== 'undefined' && jobPlanStore) ? jobPlanStore[jobId] : null;
+  var c = p && p.notes && p.notes[CREW_PLAN_NOTE_KEY];
+  return (c && typeof c === 'object' && c.v) ? c : null;
+}
+// One writer of the plan: the agent's answer (meta.edited false) or a person's edit (true).
+function _crewPlanWrite(jobId, plan, meta) {
+  var job = (typeof _invJob === 'function') ? _invJob(jobId) : null;
+  var who = (typeof _invStampBy === 'function') ? _invStampBy(job) : '';
+  var prev = crewPlanOf(jobId);
+  var rec = {
+    v: 1,
+    context: (plan.context || []).slice(), order: (plan.order || []).map(function (o) { return { step: o.step || '', room: o.room || '', after: o.after || '', vendor: o.vendor || '' }; }),
+    conditions: (plan.conditions || []).slice(), ifCant: (plan.ifCant || []).slice(), length: plan.length || '',
+    rooms: (plan.rooms || []).map(function (r) { return { room: r.room, lines: (r.lines || []).slice() }; }),
+    madeAt: meta.edited && prev ? prev.madeAt : Date.now(),
+    madeBy: meta.edited && prev ? prev.madeBy : who,
+    model: meta.edited && prev ? (prev.model || '') : (meta.model || ''),
+    edited: !!meta.edited
+  };
+  if (meta.edited) { rec.editedAt = Date.now(); rec.editedBy = who; }
+  var p = getJobPlan(jobId);
+  if (!p.notes) p.notes = {};
+  p.notes[CREW_PLAN_NOTE_KEY] = rec;
+  _planTouch(p, 'notes', CREW_PLAN_NOTE_KEY);
+  saveJobPlan(jobId);
+  return rec;
+}
+
+// ── The plan as text: what Re-plan sends, and what the editor shows ─────────────────────────────────────────────────────────────────
+// Order lines read "<Room>: step", "After <Room>: step" or a bare step, with "(vendor: <type>)" at the end where a step needs one;
+// key-room lines read "<Room>: instruction". The same shape is parsed back (crewPlanFromText), so an edit keeps the room links.
+var CREW_PLAN_SECTIONS = [
+  { key: 'context',    title: 'Context',             hint: 'what the crew must know, each ending in what to do' },
+  { key: 'order',      title: 'Order of work',       hint: 'one step a line: "Kitchen: …", "After Garage: …", or a bare step; "(vendor: …)" at the end' },
+  { key: 'conditions', title: 'Conditions',          hint: 'the rules the work runs under' },
+  { key: 'ifCant',     title: 'If you can’t',        hint: 'what to do instead' },
+  { key: 'length',     title: 'Length',              hint: 'one line, rough' },
+  { key: 'rooms',      title: 'Rooms',               hint: 'one instruction a line: "Office: …"' }
+];
+function crewPlanSectionText(plan, key) {
+  if (!plan) return '';
+  if (key === 'length') return plan.length || '';
+  if (key === 'order') return (plan.order || []).map(function (o) {
+    return (o.room ? o.room + ': ' : o.after ? 'After ' + o.after + ': ' : '') + o.step + (o.vendor ? ' (vendor: ' + o.vendor + ')' : '');
+  }).join('\n');
+  if (key === 'rooms') return (plan.rooms || []).map(function (r) { return (r.lines || []).map(function (l) { return r.room + ': ' + l; }).join('\n'); }).filter(Boolean).join('\n');
+  return (plan[key] || []).join('\n');
+}
+function crewPlanText(plan) {
+  if (!plan) return '';
+  return CREW_PLAN_SECTIONS.map(function (s) { var t = crewPlanSectionText(plan, s.key); return t ? s.title.toUpperCase() + '\n' + t : ''; }).filter(Boolean).join('\n\n');
+}
+// texts: {context, order, conditions, ifCant, length, rooms} as typed; names: the job's room names.
+function crewPlanFromText(texts, names) {
+  var known = {};
+  (names || []).forEach(function (n) { known[String(n).trim().toLowerCase()] = n; });
+  var roomOf = function (n) { return known[String(n || '').trim().toLowerCase()] || ''; };
+  var lines = function (t) { return String(t || '').split(/\r?\n/).map(function (l) { return l.replace(/\s+/g, ' ').trim(); }).filter(Boolean); };
+  var order = lines(texts.order).map(function (l) {
+    var o = { step: l, room: '', after: '', vendor: '' };
+    var v = /\s*\(vendor:\s*([^)]+)\)\s*$/i.exec(o.step);
+    if (v) { o.vendor = v[1].trim(); o.step = o.step.slice(0, v.index).trim(); }
+    var a = /^after\s+(.+?):\s*(.+)$/i.exec(o.step);
+    if (a && roomOf(a[1])) { o.after = roomOf(a[1]); o.step = a[2].trim(); return o; }
+    var r = /^(.+?):\s*(.+)$/.exec(o.step);
+    if (r && roomOf(r[1])) { o.room = roomOf(r[1]); o.step = r[2].trim(); }
+    return o;
+  }).filter(function (o) { return o.step; });
+  var byRoom = {}, roomOrder = [];
+  lines(texts.rooms).forEach(function (l) {
+    var r = /^(.+?):\s*(.+)$/.exec(l), name = r ? roomOf(r[1]) : '';
+    if (!name) return;
+    if (!byRoom[name]) { byRoom[name] = []; roomOrder.push(name); }
+    byRoom[name].push(r[2].trim());
+  });
+  return { context: lines(texts.context), order: order, conditions: lines(texts.conditions), ifCant: lines(texts.ifCant),
+           length: lines(texts.length).join(' '), rooms: roomOrder.map(function (n) { return { room: n, lines: byRoom[n] }; }) };
+}
+
+// ── What the agent is sent ──────────────────────────────────────────────────────────────────────────────────────────────────────
+function walkReviewVendorChoices() {
+  if (typeof VENDOR_GROUP_CARDS === 'undefined' || typeof vendorGroupCategories !== 'function') return [];
+  var seen = {}, out = [];
+  VENDOR_GROUP_CARDS.forEach(function (card) {
+    (vendorGroupCategories(card) || []).forEach(function (c) { if (c && !seen[c]) { seen[c] = 1; out.push(c); } });
+  });
+  return out.slice(0, WALK_REVIEW_VENDOR_CHOICES_MAX);
+}
+// DOM-free: the job and an estimate (Build Estimate's live one, or the approved one on the Job Plan) to the agent's payload.
+function walkReviewPayload(job, est, opt) {
+  opt = opt || {};
+  est = est || {};
+  var rooms = (est.rooms || []).filter(function (r) { return r && r.name; }).map(function (r) {
+    return { name: r.name, vol: r.vol || 0, cplx: r.cplx || 0, special: !!r.spcl, note: r.note || '', excluded: !!r.excluded,
+             photos: (r.photos || []).map(function (p) { return p && p.fileId; }).filter(Boolean).slice(0, WALK_REVIEW_PHOTOS_PER_ROOM) };
+  });
+  var types = function (list) { return (list || []).map(function (v) { return v && v.type; }).filter(Boolean); };
+  var tc = est.tcCount || 1, ps = est.psCount || 0, days = (typeof estWorkingDays === 'function') ? estWorkingDays(est) : 0;
+  var house = (typeof standingFlagLines === 'function' && job) ? standingFlagLines(job).map(function (l) { return l.label + ': ' + l.note; }) : [];
+  return {
+    action: 'agentWalkthroughReview', jobId: job ? job.id : null, mode: opt.mode || 'both',
+    context: {
+      service: (typeof svcLabelOf === 'function') ? svcLabelOf(est.svc || (job && job.svc)) : (est.svc || ''),
+      fiduciary: !!(job && typeof isDecedentJob === 'function' && isDecedentJob(job)),
+      crew: tc + ' concierge' + (tc === 1 ? '' : 's') + ' and ' + ps + ' specialist' + (ps === 1 ? '' : 's'),
+      days: days ? days + ' working day' + (days === 1 ? '' : 's') : '',
+      notes: (job && job.notes) || '', house: house, privateNote: est.privateNote || '',
+      vendorsOn: types(est.vendors).concat(types(est.prepItems)),
+      vendorChoices: opt.vendorChoices || []
+    },
+    rooms: rooms,
+    plan: opt.plan || '',
+    update: opt.update || ''
+  };
+}
+
+// ── The press ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+// `where` is 'estimate' (Build Estimate: suggestions and the plan; after approval, the plan only) or 'plan' (Re-plan on the Job
+// Plan: the plan only, the price being locked or not this screen's). A plan a person edited is replaced only on OK; on Build
+// Estimate, Cancel still refreshes the estimate check.
+function walkReviewRefusal(job, where) {
+  if (!job) return 'Pick a client first.';
+  if (!SHEETS_SYNC_URL) return 'This device has no Apps Script URL set, so it cannot reach the walkthrough agent. Settings > Sync.';
+  if (typeof _backendActions !== 'undefined' && _backendActions && !backendHas('agentWalkthroughReview'))
+    return 'The Apps Script is out of date: Review walkthrough needs the 2026-11-05 deployment (Deploy, Manage deployments, New version).';
+  if (_walkReviewOut[job.id]) return 'The walkthrough is being reviewed now. It answers in a minute or two.';
+  return '';
+}
+function walkReviewRun(jobId, where, update) {
+  var job = (typeof _invJob === 'function') ? _invJob(jobId) : jobs.find(function (j) { return j.id === jobId; });
+  var why = walkReviewRefusal(job, where);
+  if (why) { alert('Not reviewed.\n\n' + why); return false; }
+  var est, approved = false;
+  if (where === 'estimate') {
+    if (typeof flushCalcAll === 'function') flushCalcAll();
+    est = currentEstimate;
+    approved = !!(estimateApproved || estimateSubmitted);
+  } else {
+    est = (typeof approvedEstimateFor === 'function' && approvedEstimateFor(jobId)) || (estimateStore[jobId] && estimateStore[jobId].estimate);
+    approved = true;
+  }
+  if (!est || !(est.rooms || []).length) { alert('Not reviewed.\n\nThere are no rooms on the estimate to review yet.'); return false; }
+  var mode = (where === 'estimate' && !approved) ? 'both' : 'plan';
+  var prev = crewPlanOf(jobId);
+  if (prev && prev.edited && mode !== 'check') {
+    var ok = confirm('You’ve edited this crew plan.\n\nReplace it with a fresh one?\n\n'
+      + (mode === 'both' ? 'OK writes a new plan. Cancel keeps yours and only checks the estimate again.' : 'OK writes a new plan. Cancel keeps yours.'));
+    if (!ok) { if (mode === 'both') mode = 'check'; else return false; }
+  }
+  var body = walkReviewPayload(job, est, { mode: mode, vendorChoices: mode === 'plan' ? [] : walkReviewVendorChoices(),
+                                           plan: prev ? crewPlanText(prev) : '', update: update || '' });
+  var nPhotos = body.rooms.reduce(function (n, r) { return n + r.photos.length; }, 0);
+  var out = _walkReviewOut[jobId] = { at: Date.now(), where: where };
+  out.timer = setTimeout(function () {
+    if (_walkReviewOut[jobId] !== out) return;
+    delete _walkReviewOut[jobId];
+    _walkReviewLine(jobId, 'The walkthrough agent did not answer in six minutes. Nothing was changed; press it again.', 'err');
+  }, WALK_REVIEW_WATCHDOG_MS);
+  _walkReviewLine(jobId, 'Reviewing the walkthrough: ' + nPhotos + ' photo' + (nPhotos === 1 ? '' : 's') + ' across ' + body.rooms.length
+    + ' room' + (body.rooms.length === 1 ? '' : 's') + ', then the crew plan. About a minute or two…', 'busy');
+  fetch(_withDeviceKey(SHEETS_SYNC_URL), { method: 'POST', mode: 'cors', redirect: 'follow', headers: { 'Content-Type': 'text/plain' },
+                                           body: JSON.stringify(body) })
+    .then(_readAppsScriptJson)
+    .then(function (d) {
+      if (_walkReviewOut[jobId] !== out) return;   // the watchdog let go first: a late answer changes nothing
+      clearTimeout(out.timer); delete _walkReviewOut[jobId];
+      if (!d || !d.ok) { _walkReviewLine(jobId, 'Not reviewed: ' + ((d && d.error) || 'the walkthrough agent did not answer') + '.', 'err'); return; }
+      walkReviewApply(jobId, d, mode);
+    })
+    .catch(function (e) {
+      if (_walkReviewOut[jobId] !== out) return;
+      clearTimeout(out.timer); delete _walkReviewOut[jobId];
+      _walkReviewLine(jobId, 'Not reviewed: the Apps Script did not answer (' + String((e && e.message) || e).slice(0, 80) + '). Nothing was changed.', 'err');
+    });
+  return true;
+}
+// The answer, written: the suggestions into this page, the plan onto the job plan (unless only the estimate was checked).
+function walkReviewApply(jobId, d, mode) {
+  var failed = d.failed || {}, nFail = Object.keys(failed).length;
+  if (mode !== 'plan') {
+    _walkSug[jobId] = { at: Date.now(), items: (d.suggestions || []).map(function (s) {
+      return { room: String(s.room || ''), field: s.field, to: parseInt(s.to, 10) || 0, vendor: String(s.vendor || ''), why: String(s.why || '') };
+    }).filter(function (s) { return s.room && (s.field === 'vendor' ? s.vendor : s.to); }), failed: failed };
+  }
+  var wrote = false;
+  if (mode !== 'check' && d.plan) { _crewPlanWrite(jobId, d.plan, { edited: false, model: d.planModel || d.model || '' }); wrote = true; }
+  var nSug = (_walkSug[jobId] && mode !== 'plan') ? _walkSug[jobId].items.length : 0;
+  var bits = [];
+  if (mode !== 'plan') bits.push(nSug ? nSug + ' suggestion' + (nSug === 1 ? '' : 's') + ' on the room rows' : 'the photos agree with the scores');
+  if (mode !== 'check') bits.push(wrote ? 'the crew plan is written' : 'the plan did not come back (' + (d.planError || 'no answer') + ')');
+  if (nFail) bits.push(nFail + ' room' + (nFail === 1 ? '' : 's') + ' not looked at (' + Object.keys(failed).slice(0, 3).join(', ') + ')');
+  _walkReviewLine(jobId, 'Reviewed: ' + bits.join('; ') + '.', (mode !== 'check' && !wrote) || nFail ? 'warn' : 'ok');
+  if (typeof walkSugPaint === 'function') walkSugPaint();
+  if (typeof crewPlanRepaint === 'function') crewPlanRepaint(jobId);
+}
+var _walkReviewMsg = {};   // jobId -> {text, tone}, the last word of the last run, this page only
+function _walkReviewLine(jobId, text, tone) {
+  _walkReviewMsg[jobId] = { text: text, tone: tone };
+  if (typeof walkReviewBarPaint === 'function') walkReviewBarPaint();
+  var el = document.getElementById('cp-run-line');
+  if (el) { el.textContent = text; el.style.color = _walkToneColor(tone); }
+}
+function _walkToneColor(tone) { return tone === 'err' ? '#A32D2D' : tone === 'warn' ? '#8a5a00' : tone === 'ok' ? 'var(--green, #2e7d32)' : 'var(--gray)'; }
+
+// ── Build Estimate: the bar under the rooms, and the suggestions on their rows ─────────────────────────────────────────────────────
+function _estJobId() { return parseInt((document.getElementById('e-job') || {}).value, 10) || 0; }
+function walkReviewBarHtml(jobId) {
+  if (!jobId) return '';
+  var plan = crewPlanOf(jobId), msg = _walkReviewMsg[jobId], busy = !!_walkReviewOut[jobId];
+  return '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">'
+    + '<button type="button" class="btn-s" id="walk-review-btn" ' + (busy ? 'disabled ' : '') + 'onclick="walkReviewRun(' + jobId + ',\'estimate\')">&#128269; Review walkthrough</button>'
+    + (plan ? '<button type="button" class="btn-s" onclick="openCrewPlan(' + jobId + ')">&#128203; Crew plan</button>' : '')
+    + '<span style="font-size:11px;color:var(--gray);">reads the photos and notes: suggestions land on the rooms, and the crew plan is written</span>'
+    + '</div>'
+    + (msg ? '<div id="walk-review-line" style="font-size:11.5px;margin-top:6px;color:' + _walkToneColor(msg.tone) + ';">' + esc(msg.text) + '</div>' : '');
+}
+function walkReviewBarPaint() {
+  var el = document.getElementById('walk-review-bar');
+  if (el) el.innerHTML = walkReviewBarHtml(_estJobId());
+}
+// The row each room name is on, read off the grid (a custom room's name is its box).
+function _walkRowForRoom(name) {
+  var want = String(name || '').trim().toLowerCase(), hit = '';
+  if (!want || typeof ROOMS === 'undefined') return '';
+  var ri = 0;
+  ROOMS.forEach(function (sec) { sec.rooms.forEach(function () { var id = 'r' + ri++; if (!hit && String(_walkRoomName(id)).trim().toLowerCase() === want) hit = id; }); });
+  return hit;
+}
+// Which suggestions still stand: not used or put aside, the room still in scope, the score not already where it points, the vendor not
+// already on the estimate. DOM-free given its readers.
+function walkSugStanding(jobId, read) {
+  var s = _walkSug[jobId];
+  if (!s) return [];
+  return s.items.map(function (it, i) { return { it: it, i: i }; }).filter(function (x) {
+    var it = x.it;
+    if (it.used || it.dismissed) return false;
+    var row = read.row(it.room);
+    if (!row || read.state(row) !== 'in') return false;
+    if (it.field === 'vendor') return !read.hasVendor(it.vendor);
+    return read.score(row, it.field) !== it.to;
+  });
+}
+function _walkSugReaders() {
+  var lc = function (t) { return String(t || '').trim().toLowerCase(); };
+  return {
+    row: _walkRowForRoom,
+    state: function (row) { return roomState(row); },
+    score: function (row, field) { var el = document.getElementById((field === 'cplx' ? 'cplx-' : 'vol-') + row); return el ? (parseInt(el.value, 10) || 0) : 0; },
+    hasVendor: function (type) { return vendors.concat(prepItems).some(function (v) { return v && lc(v.type) === lc(type); }); }
+  };
+}
+function walkSugLineHtml(jobId, x) {
+  var it = x.it;
+  var what = it.field === 'vendor' ? 'a vendor line: ' + esc(it.vendor) : (it.field === 'cplx' ? 'complexity ' : 'volume ') + it.to;
+  var use = it.field === 'vendor' ? 'Add ' + esc(it.vendor) : 'Use ' + it.to;
+  return '<div class="wsug" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:11.5px;color:#8a5a00;background:#fff7e6;border:1px solid #f0d9a8;border-radius:4px;padding:5px 8px;">'
+    + '<span>&#128247; Photos suggest ' + what + (it.why ? ': ' + esc(it.why) : '') + '</span>'
+    + '<button type="button" class="btn-s" style="font-size:11px;" onclick="walkSugUse(' + jobId + ',' + x.i + ')">' + use + '</button>'
+    + '<button type="button" class="btn-s" style="font-size:11px;" title="Keep the score as it is" onclick="walkSugDismiss(' + jobId + ',' + x.i + ')">&#10005;</button>'
+    + '</div>';
+}
+function walkSugPaint() {
+  try {
+    if (typeof document === 'undefined' || !document.querySelectorAll) return;
+    var old = document.querySelectorAll('tr.wsug-row');
+    for (var k = 0; k < old.length; k++) if (old[k].parentNode) old[k].parentNode.removeChild(old[k]);
+    var jobId = _estJobId();
+    walkSugStanding(jobId, _walkSugReaders()).forEach(function (x) {
+      var row = document.getElementById('row-' + _walkRowForRoom(x.it.room));
+      if (!row || !row.parentNode) return;
+      var tr = document.createElement('tr');
+      tr.className = 'wsug-row';
+      tr.innerHTML = '<td colspan="8" style="padding:3px 6px 6px;">' + walkSugLineHtml(jobId, x) + '</td>';
+      row.parentNode.insertBefore(tr, row.nextSibling);
+    });
+    walkReviewBarPaint();
+  } catch (e) {}
+}
+function walkSugUse(jobId, i) {
+  var it = _walkSug[jobId] && _walkSug[jobId].items[i];
+  if (!it || jobId !== _estJobId()) return;
+  if (estimateApproved || estimateSubmitted) { alert('Not changed: the estimate is locked. Use Edit estimate to change a score.'); return; }
+  if (it.field === 'vendor') {
+    var prep = (typeof VENDOR_GROUP_CARDS !== 'undefined') && VENDOR_GROUP_CARDS.some(function (c) {
+      return c.target === 'prep' && (vendorGroupCategories(c) || []).indexOf(it.vendor) >= 0; });
+    if (prep) { prepItems.push({ type: it.vendor, cost: 0, lid: _srcLid() }); if (typeof renderPrepItems === 'function') renderPrepItems(); }
+    else { vendors.push({ type: it.vendor, cost: 0, lid: _srcLid(), tcHrs: vendorLineTCHrs(it.vendor) }); renderVendors(); }
+    it.used = true;
+    calcAll();
+  } else {
+    var row = _walkRowForRoom(it.room), el = row && document.getElementById((it.field === 'cplx' ? 'cplx-' : 'vol-') + row);
+    if (!el) return;
+    el.value = String(it.to);
+    it.used = true;
+    // What typing the box does (a script setting .value fires no input event: the Trap).
+    if (it.field === 'cplx') onCplxInput(row); else onVolInput(row);
+  }
+  walkSugPaint();
+}
+function walkSugDismiss(jobId, i) {
+  var it = _walkSug[jobId] && _walkSug[jobId].items[i];
+  if (!it) return;
+  it.dismissed = true;
+  walkSugPaint();
+}
+
+// ── The Job Plan: Next up, the room's lines, the full plan ─────────────────────────────────────────────────────────────────────────
+// Whether a step is done, off what a person already presses (Anthony: *"Room statuses"*): a room's step once the room is cleared, a
+// step riding with a room once that room is cleared; a step tied to no room once a later step's room is locked. DOM-free: `status`
+// answers a room's status by name ('' where the room is not on the plan).
+function crewStepDone(plan, i, status) {
+  var o = plan.order[i];
+  var room = o.room || o.after;
+  if (room) return !!PS_DONE_STATUSES[status(room)];
+  for (var j = i + 1; j < plan.order.length; j++) {
+    var r = plan.order[j].room || plan.order[j].after;
+    if (r && TC_DONE_STATUSES[status(r)]) return true;
+  }
+  return false;
+}
+// The next steps (two, and anything riding with the room they name), the conditions always.
+function crewNextUp(plan, status) {
+  if (!plan) return { steps: [], done: 0, total: 0 };
+  var open = [], done = 0;
+  (plan.order || []).forEach(function (o, i) { if (crewStepDone(plan, i, status)) done++; else open.push(o); });
+  var steps = open.slice(0, 2);
+  var rooms = steps.map(function (o) { return o.room; }).filter(Boolean);
+  open.slice(2).forEach(function (o) { if (o.after && rooms.indexOf(o.after) >= 0 && steps.length < 4) steps.push(o); });
+  return { steps: steps, done: done, total: (plan.order || []).length };
+}
+// Whether a step's vendor is booked on the Job Plan: true, false, or null where the estimate has no such line.
+function crewPlanVendorBooked(job, est, type) {
+  var lc = function (t) { return String(t || '').trim().toLowerCase(); }, want = lc(type);
+  if (!want || !job) return null;
+  var found = null;
+  ((est && est.vendors) || []).forEach(function (v, i) {
+    if (found === true || lc(v && v.type) !== want) return;
+    var rec = (job.vendorSourcing || {})[_srcLineKey(v, i)];
+    found = !!(rec && rec.status === 'Confirmed');
+  });
+  if (found === null && typeof jobPrepLines === 'function') jobPrepLines(job, est).forEach(function (p, i) {
+    if (found === true || lc(p && p.type) !== want) return;
+    var rec = (job.prepSourcing || {})[_srcLineKey(p, i)];
+    found = !!(rec && rec.status === 'Confirmed');
+  });
+  return found;
+}
+function _crewRoomStatusReader(jobId, est) {
+  var byName = {};
+  ((est && est.rooms) || []).forEach(function (r) { if (r && r.name) byName[String(r.name).toLowerCase()] = r.idx; });
+  return function (name) {
+    var idx = byName[String(name || '').toLowerCase()];
+    return idx === undefined ? '' : _planRoomStatus(jobId, idx);
+  };
+}
+function crewNextUpHtml(jobId, job, est) {
+  var plan = crewPlanOf(jobId);
+  if (!plan) return '';
+  var nu = crewNextUp(plan, _crewRoomStatusReader(jobId, est));
+  var stepLine = function (o) {
+    var b = o.vendor ? crewPlanVendorBooked(job, est, o.vendor) : null;
+    return '<li>' + (o.room ? '<strong>' + esc(o.room) + ':</strong> ' : o.after ? '<span style="color:var(--gray);">after ' + esc(o.after) + ':</span> ' : '')
+      + esc(o.step) + (o.vendor ? ' <span style="font-size:11px;color:' + (b ? 'var(--green, #2e7d32)' : '#8a5a00') + ';">(' + esc(o.vendor) + (b === true ? ', booked' : b === false ? ', not booked yet' : '') + ')</span>' : '') + '</li>';
+  };
+  return '<div class="cp-next" id="cp-next-' + jobId + '" style="border:1px solid var(--border-md);border-left:3px solid var(--bronze);border-radius:5px;background:var(--white);padding:10px 12px;margin-bottom:12px;">'
+    + '<div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px;">'
+    + '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--bronze);">Next up</div>'
+    + (nu.total ? '<div style="font-size:11px;color:var(--gray);">' + nu.done + ' of ' + nu.total + ' steps done</div>' : '')
+    + '</div>'
+    + (nu.steps.length ? '<ul class="plan-proc" style="margin:2px 0 6px;">' + nu.steps.map(stepLine).join('') + '</ul>'
+                       : '<div style="font-size:12px;color:var(--gray);margin:2px 0 6px;">Every step in the plan is done.</div>')
+    + ((plan.conditions || []).length ? '<ul class="plan-proc" style="margin:0 0 6px;color:var(--gray-dk);">' + plan.conditions.map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('') + '</ul>' : '')
+    + '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;font-size:11px;font-weight:600;">'
+    + '<button type="button" class="btn-s" style="font-size:11px;" onclick="openCrewPlan(' + jobId + ')">&#128203; Open the full plan</button>'
+    + (typeof guideLinkHtml === 'function' ? guideLinkHtml('sorting-guide.html', 'Read Sorting a House') : '')
+    + '</div></div>';
+}
+// The room's own lines, inside the room, behind a press (never drawn open in front of the family).
+function crewPlanRoomHtml(jobId, roomName) {
+  var plan = crewPlanOf(jobId);
+  if (!plan) return '';
+  var want = String(roomName || '').toLowerCase();
+  var lines = [];
+  (plan.rooms || []).forEach(function (r) { if (String(r.room).toLowerCase() === want) lines = lines.concat(r.lines || []); });
+  (plan.order || []).forEach(function (o) { if (String(o.room).toLowerCase() === want || String(o.after).toLowerCase() === want) lines.push((o.after ? 'After this room: ' : '') + o.step); });
+  if (!lines.length) return '';
+  return '<details class="cp-room" style="margin-bottom:6px;font-size:12px;"><summary style="cursor:pointer;font-weight:600;color:var(--bronze);">&#128203; Crew plan for this room</summary>'
+    + '<ul class="plan-proc" style="margin:4px 0 2px;">' + lines.map(function (l) { return '<li>' + esc(l) + '</li>'; }).join('') + '</ul></details>';
+}
+function crewPlanRepaint(jobId) {
+  var el = document.getElementById('cp-next-' + jobId);
+  if (el) {
+    var job = (typeof _invJob === 'function') ? _invJob(jobId) : null;
+    var est = (typeof approvedEstimateFor === 'function' && approvedEstimateFor(jobId)) || (estimateStore[jobId] && estimateStore[jobId].estimate);
+    var tmp = document.createElement('div');
+    tmp.innerHTML = crewNextUpHtml(jobId, job, est);
+    if (tmp.firstChild) el.parentNode.replaceChild(tmp.firstChild, el);
+  } else if (typeof _repaintPlan === 'function') {
+    _repaintPlan(jobId);   // it draws only where the Job Plan shows this client
+  }
+  if (_crewView && _crewView.jobId === jobId) _crewViewPaint();
+  walkReviewBarPaint();
+}
+
+// The full plan, over the app: read it, edit it, re-plan it.
+var _crewView = null;   // {jobId, editing}
+function openCrewPlan(jobId) { _crewView = { jobId: jobId, editing: false }; _crewViewPaint(); }
+function closeCrewPlan() { _crewView = null; var m = document.getElementById('cp-modal'); if (m) m.style.display = 'none'; }
+function crewPlanEdit(on) { if (_crewView) { _crewView.editing = !!on; _crewViewPaint(); } }
+function _crewPlanNames(jobId) {
+  var est = (typeof approvedEstimateFor === 'function' && approvedEstimateFor(jobId)) || (estimateStore[jobId] && estimateStore[jobId].estimate)
+         || (_estJobId() === jobId ? currentEstimate : null);
+  return ((est && est.rooms) || []).map(function (r) { return r.name; }).filter(Boolean);
+}
+function crewPlanViewHtml(jobId, plan, editing, job) {
+  var head = '<div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:4px;">'
+    + '<div style="font-size:15px;font-weight:600;color:var(--gray-dk);">Crew plan' + (job && job.name ? ' — ' + esc(job.name) : '') + '</div>'
+    + (plan ? '<div style="font-size:11px;color:var(--gray);">' + (plan.edited ? 'edited by ' + esc(plan.editedBy || 'a person') + ' ' + esc(fmtDate2(_localDateOf(plan.editedAt))) : 'written by the walkthrough agent ' + esc(fmtDate2(_localDateOf(plan.madeAt)))) + '</div>' : '')
+    + '</div>'
+    + '<div style="font-size:11px;color:var(--gray);margin-bottom:10px;">Internal: for the concierges, never for the client. An order of work, not a schedule: nothing here turns red.</div>';
+  var body = '';
+  if (!plan) body = '<div style="font-size:12px;color:var(--gray);margin-bottom:10px;">No crew plan yet. Press Review walkthrough on Build Estimate, or Re-plan below.</div>';
+  else if (editing) {
+    body = CREW_PLAN_SECTIONS.map(function (s) {
+      return '<div style="margin-bottom:8px;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);">' + s.title
+        + ' <span style="text-transform:none;font-weight:400;letter-spacing:0;">· ' + esc(s.hint) + '</span></div>'
+        + '<textarea id="cp-ed-' + s.key + '" rows="' + (s.key === 'length' ? 2 : 4) + '" style="width:100%;font-size:12px;padding:6px 8px;border:1px solid var(--border-md);border-radius:4px;box-sizing:border-box;font-family:Raleway,sans-serif;">'
+        + esc(crewPlanSectionText(plan, s.key)) + '</textarea></div>';
+    }).join('')
+      + '<div style="display:flex;gap:8px;justify-content:flex-end;margin-bottom:10px;"><button type="button" class="btn-s" onclick="crewPlanEdit(false)">Cancel</button>'
+      + '<button type="button" class="btn-p" onclick="crewPlanSaveEdit(' + jobId + ')">Save plan</button></div>';
+  } else {
+    body = CREW_PLAN_SECTIONS.map(function (s) {
+      var items;
+      if (s.key === 'length') items = plan.length ? [esc(plan.length)] : [];
+      else if (s.key === 'order') items = (plan.order || []).map(function (o) { return (o.room ? '<strong>' + esc(o.room) + ':</strong> ' : o.after ? '<span style="color:var(--gray);">after ' + esc(o.after) + ':</span> ' : '') + esc(o.step) + (o.vendor ? ' <span style="color:var(--gray);">(' + esc(o.vendor) + ')</span>' : ''); });
+      else if (s.key === 'rooms') items = (plan.rooms || []).map(function (r) { return '<strong>' + esc(r.room) + ':</strong> ' + (r.lines || []).map(esc).join(' · '); });
+      else items = (plan[s.key] || []).map(esc);
+      if (!items.length) return '';
+      return '<div style="margin-bottom:8px;"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);">' + s.title + '</div>'
+        + '<ul class="plan-proc" style="margin:2px 0 0;">' + items.map(function (t) { return '<li>' + t + '</li>'; }).join('') + '</ul></div>';
+    }).join('')
+      + '<div style="display:flex;justify-content:flex-end;margin-bottom:10px;"><button type="button" class="btn-s" onclick="crewPlanEdit(true)">&#9998; Edit plan</button></div>';
+  }
+  var msg = _walkReviewMsg[jobId];
+  var replan = '<div style="border-top:1px solid var(--border);padding-top:8px;">'
+    + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);margin-bottom:3px;">Something changed? <span style="text-transform:none;font-weight:400;letter-spacing:0;">· optional: type it, then Re-plan</span></div>'
+    + '<textarea id="cp-update" rows="2" style="width:100%;font-size:12px;padding:6px 8px;border:1px solid var(--border-md);border-radius:4px;box-sizing:border-box;font-family:Raleway,sans-serif;"></textarea>'
+    + '<div style="display:flex;gap:8px;align-items:center;justify-content:space-between;margin-top:6px;flex-wrap:wrap;">'
+    + '<span id="cp-run-line" style="font-size:11.5px;color:' + (msg ? _walkToneColor(msg.tone) : 'var(--gray)') + ';">' + (msg ? esc(msg.text) : '') + '</span>'
+    + '<span style="display:flex;gap:8px;"><button type="button" class="btn-s" ' + (_walkReviewOut[jobId] ? 'disabled ' : '') + 'onclick="crewPlanReplan(' + jobId + ')">&#8635; Re-plan</button>'
+    + '<button type="button" class="btn-p" onclick="closeCrewPlan()">Close</button></span></div></div>';
+  return head + '<div style="max-height:62vh;overflow-y:auto;">' + body + '</div>' + replan;
+}
+function _crewViewPaint() {
+  if (!_crewView) return;
+  var m = document.getElementById('cp-modal');
+  if (!m) {
+    m = document.createElement('div');
+    m.id = 'cp-modal';
+    m.setAttribute('style', 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;');
+    m.innerHTML = '<div id="cp-modal-box" style="background:var(--white);border-radius:10px;padding:1.25rem;max-width:760px;width:92%;box-sizing:border-box;box-shadow:0 8px 32px rgba(0,0,0,.2);"></div>';
+    document.body.appendChild(m);
+  }
+  var job = (typeof _invJob === 'function') ? _invJob(_crewView.jobId) : null;
+  document.getElementById('cp-modal-box').innerHTML = crewPlanViewHtml(_crewView.jobId, crewPlanOf(_crewView.jobId), _crewView.editing, job);
+  m.style.display = 'flex';
+}
+function crewPlanSaveEdit(jobId) {
+  var texts = {};
+  CREW_PLAN_SECTIONS.forEach(function (s) { var el = document.getElementById('cp-ed-' + s.key); texts[s.key] = el ? el.value : ''; });
+  var plan = crewPlanFromText(texts, _crewPlanNames(jobId));
+  if (!plan.order.length && !plan.context.length && !plan.conditions.length) { alert('Not saved: the plan would be empty.'); return; }
+  _crewPlanWrite(jobId, plan, { edited: true });
+  if (_crewView) _crewView.editing = false;
+  crewPlanRepaint(jobId);
+}
+function crewPlanReplan(jobId) {
+  var up = document.getElementById('cp-update');
+  // From Build Estimate before approval the press is the estimate's own (the plan and the check); otherwise the plan alone.
+  var where = (_estJobId() === jobId && document.getElementById('walk-review-bar') && !(estimateApproved || estimateSubmitted)
+               && (document.getElementById('panel-estimate') || {}).classList && document.getElementById('panel-estimate').classList.contains('active')) ? 'estimate' : 'plan';
+  walkReviewRun(jobId, where, up ? up.value : '');
 }
 
 // ─── PS SLOT HELPERS ─────────────────────────────────────────────────────────
