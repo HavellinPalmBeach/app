@@ -1498,7 +1498,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.11.05 · 5:54pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.11.05 · 5:58pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -2044,11 +2044,11 @@ body.no-smf .smf-col{display:none;}
         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
           <select id="e-job" onchange="loadJobIntoEstimate()" style="display:none;"><option value="">Select job</option></select>
           <div id="e-job-name" style="flex:1 1 200px;min-width:0;font-size:13px;font-weight:600;color:var(--gray-dk);overflow-wrap:anywhere;">&mdash;</div>
-          <!-- Review walkthrough beside Start over (Anthony, 2026-11-05: under the rooms it was "really kind of lost down here … it
-               should be at the top, next to the start over button"; the review is run at the desk that evening, on a saved estimate).
-               Its answer is the line under the row, #walk-review-msg. -->
+          <!-- Review walkthrough at the head of the screen (Anthony, 2026-11-05: under the rooms it was "really kind of lost down
+               here"; the review is run at the desk that evening, on a saved estimate). Its answer is the line under the row,
+               #walk-review-msg. Start over is at the foot beside Save and Reset since the same evening (Anthony: "That's too easy to
+               fat finger"): it discards the screen back to the saved estimate. -->
           <span id="walk-review-bar" style="display:inline-flex;gap:6px;flex-wrap:wrap;"></span>
-          <button class="btn-s" onclick="startEstimateOver()" title="Discard what is on this screen: back to the saved estimate, or to the intake answers if nothing is saved">Start over</button>
         </div>
         <div id="walk-review-msg"></div>
         <div id="e-job-ref" style="display:none;margin-top:8px;padding:7px 10px;background:var(--cream);border:1px solid var(--border-md);border-radius:4px;font-size:12px;color:var(--gray-dk);"></div>
@@ -2497,6 +2497,7 @@ body.no-smf .smf-col{display:none;}
        did on a desk (under the summary) and stays on the phone. The same handler and the same refusals. -->
   <div class="card" id="est-save-card" style="margin-top:1rem;">
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn-s" onclick="startEstimateOver()" title="Discard what is on this screen: back to the saved estimate, or to the intake answers if nothing is saved">Start over</button>
       <button class="btn-s" onclick="resetEstimate()" title="Clear this screen to a blank estimate for this client. A saved estimate is not changed unless you press Save">Reset</button>
       <!-- "Save Estimate", the name the manual and the playbook give it (2026-09-30, audit low). It read
            "Save & Preview Client Estimate →" for a preview tab retired on 2026-09-11; the save lands on
@@ -63809,7 +63810,7 @@ function walkReviewRun(jobId, where, update) {
     _walkReviewLine(jobId, 'The walkthrough agent did not answer in six minutes. Nothing was changed; press it again.', 'err');
     _crewViewRepaintFor(jobId);
   }, WALK_REVIEW_WATCHDOG_MS);
-  _walkReviewLine(jobId, 'Reviewing the walkthrough: ' + nPhotos + ' photo' + (nPhotos === 1 ? '' : 's') + ' across ' + body.rooms.length
+  _walkReviewLine(jobId, '\u23f3 Reviewing the walkthrough: ' + nPhotos + ' photo' + (nPhotos === 1 ? '' : 's') + ' across ' + body.rooms.length
     + ' room' + (body.rooms.length === 1 ? '' : 's') + ', then the crew plan. About a minute or two…', 'busy');
   // The open plan says it is working at once (Anthony, 2026-11-05: "I'm just sitting here … unsure if anything's going to happen").
   if (_crewView && _crewView.jobId === jobId) _crewViewPaint();
@@ -63860,15 +63861,18 @@ function _walkReviewLine(jobId, text, tone) {
   var el = document.getElementById('cp-run-line');
   if (el) { el.textContent = text; el.style.color = _walkToneColor(tone); }
 }
-function _walkToneColor(tone) { return tone === 'err' ? '#A32D2D' : tone === 'warn' ? '#8a5a00' : tone === 'ok' ? 'var(--green, #2e7d32)' : 'var(--gray)'; }
+function _walkToneColor(tone) { return tone === 'err' ? '#A32D2D' : (tone === 'warn' || tone === 'busy') ? '#8a5a00' : tone === 'ok' ? 'var(--green, #2e7d32)' : 'var(--gray)'; }
 
 // ── Build Estimate: the bar under the rooms, and the suggestions on their rows ─────────────────────────────────────────────────────
 function _estJobId() { return parseInt((document.getElementById('e-job') || {}).value, 10) || 0; }
 function walkReviewBarHtml(jobId) {
   if (!jobId) return '';
   var plan = crewPlanOf(jobId), busy = !!_walkReviewOut[jobId];
-  return '<button type="button" class="btn-s" id="walk-review-btn" ' + (busy ? 'disabled ' : '')
-      + 'title="Reads the walkthrough photos and notes: suggestions land on the rooms, and the crew plan is written" data-walk="review" data-job="' + jobId + '">&#128269; Review walkthrough</button>'
+  // While a run is out it says so and cannot be pressed (Anthony, 2026-11-05: "you can't tell that it's working, and you can just
+  // click review walkthrough again").
+  return '<button type="button" class="btn-s" id="walk-review-btn" ' + (busy ? 'disabled style="opacity:.6;cursor:wait;" ' : '')
+      + 'title="Reads the walkthrough photos and notes: suggestions land on the rooms, and the crew plan is written" data-walk="review" data-job="' + jobId + '">'
+      + (busy ? '&#9203; Reviewing…' : '&#128269; Review walkthrough') + '</button>'
     + (plan ? '<button type="button" class="btn-s" data-walk="plan" data-job="' + jobId + '">&#128203; Crew plan</button>' : '');
 }
 // The answer of the last run, the line under the client row.
@@ -64128,7 +64132,7 @@ function crewPlanViewHtml(jobId, plan, editing, job) {
     + (run ? '<div style="font-size:11.5px;color:#8a5a00;margin-top:4px;">&#9203; Re-planning' + (run.update ? ' with what you typed' : '') + ': about a minute or two. You can close this; the plan updates when it lands.</div>' : '')
     + '<div style="display:flex;gap:8px;align-items:center;justify-content:space-between;margin-top:6px;flex-wrap:wrap;">'
     + '<span id="cp-run-line" style="font-size:11.5px;color:' + (msg ? _walkToneColor(msg.tone) : 'var(--gray)') + ';">' + (msg ? esc(msg.text) : '') + '</span>'
-    + '<span style="display:flex;gap:8px;"><button type="button" class="btn-s" id="cp-replan-btn" ' + (run ? 'disabled ' : '') + 'onclick="crewPlanReplan(' + jobId + ')">' + (run ? '&#9203; Re-planning…' : '&#8635; Re-plan') + '</button>'
+    + '<span style="display:flex;gap:8px;"><button type="button" class="btn-s" id="cp-replan-btn" ' + (run ? 'disabled style="opacity:.6;cursor:wait;" ' : '') + 'onclick="crewPlanReplan(' + jobId + ')">' + (run ? '&#9203; Re-planning…' : '&#8635; Re-plan') + '</button>'
     + '<button type="button" class="btn-p" onclick="closeCrewPlan()">Close</button></span></div></div>';
   return head + '<div style="max-height:62vh;overflow-y:auto;">' + body + '</div>' + replan;
 }

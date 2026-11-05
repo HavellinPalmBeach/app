@@ -356,7 +356,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // 2026-11-05 (Anthony: "really kind of lost down here … it should be at the top, next to the start over button").
     const barAt = src.indexOf('<span id="walk-review-bar"'), soAt = src.indexOf('onclick="startEstimateOver()"'), svcAt = src.indexOf('<select id="e-svc"');
     ok(barAt > 0 && src.indexOf('id="walk-review-bar"', barAt + 10) < 0, 'one bar on Build Estimate');
-    ok(soAt > 0 && barAt > 0 && barAt < soAt && soAt - barAt < 600 && barAt < svcAt, '⚠ the bar sits beside Start over, at the head of the screen, never under the rooms');
+    const nameAt = src.indexOf('<div id="e-job-name"'), cardAt = src.indexOf('<div class="card" id="est-save-card"');
+    ok(nameAt > 0 && barAt > nameAt && barAt - nameAt < 1200 && barAt < svcAt, '⚠ the bar sits in the client\'s row, at the head of the screen, never under the rooms');
+    ok(cardAt > 0 && soAt > cardAt && soAt - cardAt < 600, '⚠ Start over sits at the foot in the save card, never at the top (Anthony: "too easy to fat finger")');
+    const B = sandbox({ fns: ['walkReviewBarHtml'], vars: ['_walkReviewOut'], stubs: { crewPlanOf: () => null } });
+    lacks(B.walkReviewBarHtml(7), 'disabled', 'idle, the press is live');
+    B._walkReviewOut[7] = { at: 1 };
+    const busyB = B.walkReviewBarHtml(7);
+    ok(/disabled/.test(busyB) && /Reviewing…/.test(busyB), '⚠ a run out: the press reads Reviewing… and is disabled');
     const R = sandbox({ fns: ['crewPlanRoomHtml', 'crewPlanOf'], vars: ['CREW_PLAN_NOTE_KEY'],
       stubs: { jobPlanStore: { 7: { notes: { crewPlan: { v: 1, rooms: [{ room: 'Office 1', lines: ['Shred pile.'] }],
                order: [{ step: 'Donation run', after: 'Office 1' }] } } } }, esc: (x) => String(x) } });

@@ -39,7 +39,7 @@ const PLAN = {
       let body = {}; try { body = JSON.parse(route.request().postData() || '{}'); } catch (e) {}
       if (body.action === 'agentWalkthroughReview') {
         asked.push(body);
-        if (body.update) await new Promise((r) => setTimeout(r, 2500));   // a Re-plan takes a while: the window must say so meanwhile
+        if (body.update || asked.length === 1) await new Promise((r) => setTimeout(r, 2500));   // a run takes a while: the screen must say so meanwhile   // a Re-plan takes a while: the window must say so meanwhile
         const sug = body.mode === 'plan' ? [] : [{ room: 'Office 1', field: 'vol', to: 5, why: 'Boxes to the ceiling on every wall.' },
                                                   { room: 'Office 1', field: 'vendor', vendor: body.context.vendorChoices[0] || 'Junk Removal', why: 'A bolted desk to take down.' }];
         return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, mode: body.mode, suggestions: sug,
@@ -85,11 +85,20 @@ const PLAN = {
     ok(await btn.isVisible(), 'Review walkthrough is on the screen');
     // 2026-11-05 (Anthony: lost under the rooms): it sits beside the client and Start over, above the room grid.
     const pos = await p.evaluate(() => { const b = document.getElementById('walk-review-btn'), g = document.getElementById('room-table-wrap'),
+      nm = document.getElementById('e-job-name'),
       so = Array.from(document.querySelectorAll('button')).find((x) => x.textContent.trim() === 'Start over' && x.checkVisibility());
-      const r = (e) => e ? e.getBoundingClientRect() : null; return { b: r(b), g: r(g), so: r(so) }; });
+      const r = (e) => e ? e.getBoundingClientRect() : null;
+      return { b: r(b), g: r(g), nm: r(nm), so: r(so), soCard: !!(so && so.closest('#est-save-card')) }; });
     ok(pos.b && pos.g && pos.b.top < pos.g.top, '⚠ above the room grid (' + (pos.b && Math.round(pos.b.top)) + ' < ' + (pos.g && Math.round(pos.g.top)) + ')');
-    ok(pos.b && pos.so && Math.abs(pos.b.top - pos.so.top) < 12 && pos.b.right <= pos.so.left, '…beside Start over, in its row (' + JSON.stringify(pos.b && [Math.round(pos.b.top), Math.round(pos.b.right)]) + ' vs ' + JSON.stringify(pos.so && [Math.round(pos.so.top), Math.round(pos.so.left)]) + ')');
-    await btn.click(); await p.waitForTimeout(1500);
+    ok(pos.b && pos.nm && Math.abs((pos.b.top + pos.b.bottom) / 2 - (pos.nm.top + pos.nm.bottom) / 2) < 14, '…in the client\'s row');
+    // Anthony, the same evening: "I don't think we should have that button at the top. That's too easy to fat finger".
+    ok(pos.soCard && pos.so.top > pos.g.top, '⚠ Start over is at the foot, beside Save and Reset, never at the top');
+    await btn.click(); await p.waitForTimeout(600);
+    const rb = await p.evaluate(() => { const b = document.getElementById('walk-review-btn'); return { t: b && b.textContent, d: b && b.disabled,
+      line: (document.getElementById('walk-review-msg') || {}).textContent || '' }; });
+    ok(rb.d === true && /Reviewing/.test(rb.t || ''), '⚠ while it runs the button reads Reviewing… and cannot be pressed again (' + rb.t + ')');
+    has(rb.line, 'Reviewing the walkthrough', '…and the line under the row says what it is doing');
+    await p.waitForTimeout(3000);
     ok(asked.length === 1, 'one call to the Apps Script');
     const a0 = asked[0] || { rooms: [], context: {} };
     ok(a0.mode === 'full', 'the estimate check and the plan (' + a0.mode + ')');
