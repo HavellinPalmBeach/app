@@ -40,7 +40,7 @@ const PLAN = {
       if (body.action === 'agentWalkthroughReview') {
         asked.push(body);
         const sug = body.mode === 'plan' ? [] : [{ room: 'Office 1', field: 'vol', to: 5, why: 'Boxes to the ceiling on every wall.' },
-                                                  { room: 'Walk-in Closet', field: 'vendor', vendor: body.context.vendorChoices[0] || 'Junk Removal', why: 'Bags of donations.' }];
+                                                  { room: 'Office 1', field: 'vendor', vendor: body.context.vendorChoices[0] || 'Junk Removal', why: 'A bolted desk to take down.' }];
         return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, mode: body.mode, suggestions: sug,
           looks: {}, plan: body.mode === 'check' ? null : PLAN, failed: {}, model: 'claude-fable-5-1', planModel: 'claude-fable-5-1' }) });
       }
@@ -97,6 +97,13 @@ const PLAN = {
     ok(sugRows.length === 2, 'two amber lines (' + sugRows.length + ')');
     const os = sugRows.find((r) => r.prev === 'row-' + oId) || {};
     has(os.txt, 'Photos suggest volume 5: Boxes to the ceiling', '⚠ the office\'s line sits right under the office\'s own row');
+    // 2026-11-05c (Anthony: "Score + vendor"): a room carries a score and a vendor line, the vendor under the score.
+    const vs = await p.evaluate((oId) => { const r = document.getElementById('row-' + oId); const a = r && r.nextElementSibling, b2 = a && a.nextElementSibling;
+      return [a && a.className, a && a.textContent, b2 && b2.className, b2 && b2.textContent]; }, oId);
+    ok(vs[0] === 'wsug-row' && vs[2] === 'wsug-row', '⚠ both of the office\'s lines sit under its row (' + vs[0] + ', ' + vs[2] + ')');
+    has(vs[1], 'volume 5', '…the score first');
+    has(vs[3], 'a vendor line', '…the vendor line under it');
+    has(vs[3], 'A bolted desk to take down', '…with its own reason');
     const before = await p.evaluate(() => currentEstimate.grandTotal);
     await p.click('tr.wsug-row button:has-text("Use 5")'); await p.waitForTimeout(500);
     ok(await p.evaluate((oId) => document.getElementById('vol-' + oId).value, oId) === '5', 'Use 5 sets the volume box');

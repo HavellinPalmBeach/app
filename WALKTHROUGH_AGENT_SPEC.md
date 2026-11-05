@@ -107,8 +107,8 @@ All of it is already recorded; the agent asks for nothing new.
 
 ## 5 · WHAT IT WRITES, AND HOW IT SAYS IT
 
-**The estimate check** writes suggestions, never scores: one per room at most, `{room, field: 'vol' | 'cplx', to, why}` or
-`{room, vendorType, why}`, drawn as the amber line; **Use** writes the score or adds the vendor line through the same
+**The estimate check** writes suggestions, never scores: at most one score and one vendor line per room (2026-11-05, decision 23),
+`{room, field: 'vol' | 'cplx', to, why}` and `{room, field: 'vendor', vendor, why}`, each with its own reason, drawn as the amber line; **Use** writes the score or adds the vendor line through the same
 controls a person uses, so calcAll prices it. A suggestion no longer true (the score already moved) is not drawn.
 
 **The crew plan** is plain text in sections: *Context*, *Order of work* (each step naming its room, or the room it rides
@@ -159,5 +159,10 @@ with), *Conditions*, *If you can't*, *Length*, and a few lines per key room. It 
 22. **No photos, still a plan.** On a walkthrough with no photos the agent writes the plan from the notes alone and makes no
     estimate suggestions it cannot see; photos are the rule on every walkthrough (*"we are going to try and take photos on
     all walkthroughs so we get more accurate estimates"*).
+
+23. **A score and a vendor line in one room** (after the first live probe, 2026-11-05, where the back yard's volume pushed its
+    playset's hauler off the list: *Score + vendor*). Decision 2 stands: still only where the photos plainly disagree. And a
+    playset, a hot tub or anything needing tools and a truck is a vendor's work in the plan too, never the crew's (Pricing's yard
+    rule; the probe's plan had told the crew to bring a drill).
 
 Nothing is left open in the design. It is built on Anthony's go.

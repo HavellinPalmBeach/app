@@ -2,10 +2,10 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // THE WALKTHROUGH AGENT (2026-11-05; WALKTHROUGH_AGENT_SPEC.md): one press, Review walkthrough on Build Estimate, and Re-plan
 // after. The server looks at each room's walkthrough photographs (agentWalkthroughReview, stage 1) and writes the crew plan
-// from what they show and the notes (stage 2). Suggestions sit on the room rows, at most one a room, scores and vendor lines
+// from what they show and the notes (stage 2). Suggestions sit on the room rows, at most a score and a vendor line a room, scores and vendor lines
 // only; the plan lives on the job plan's notes, is never a schedule and never a tick box, and the Job Plan's Next up card
 // replaces How the sorting runs.
-//   A  the server's rules: one suggestion a room, a score only where it differs, a vendor only off the list
+//   A  the server's rules: a score and a vendor line a room at most, a score only where it differs, a vendor only off the list
 //   B  the server's call: the looks in parallel, the plan text-only, the modes, a failed photograph
 //   C  the plan as text and back
 //   D  Next up off the room statuses
@@ -75,7 +75,7 @@ function gs(opts) {
   return ctx;
 }
 const TOOL = (name, input) => ({ code: 200, body: { stop_reason: 'tool_use', content: [{ type: 'tool_use', name: name, input: input }] } });
-const LOOK = (over) => TOOL('record_room_look', Object.assign({ seen: 'Boxes to the ceiling.', volume_to: 0, complexity_to: 0, vendor: '', why: '' }, over || {}));
+const LOOK = (over) => TOOL('record_room_look', Object.assign({ seen: 'Boxes to the ceiling.', volume_to: 0, complexity_to: 0, vendor: '', why: '', vendor_why: '' }, over || {}));
 const PLAN = (over) => TOOL('record_crew_plan', Object.assign({
   context: ['She tires after lunch: sort with her in the mornings only.'],
   order: [{ step: 'Sort the papers with her', room: 'Office 1', after: '', vendor: '' },
@@ -99,29 +99,33 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   const src = source();
 
   // ═══════════════════════════════════════════════════════════════════════════
-  group('A · the server holds each look to the rule: one suggestion a room, a score only where it differs, a vendor off the list');
+  group('A · the server holds each look to the rule: a score and a vendor line a room at most, a score only where it differs, a vendor off the list');
   {
     const S = gs();
     const room = { name: 'Office 1', vol: 3, cplx: 3 };
-    const one = S._awLookOf(room, { seen: 'x', volume_to: 5, complexity_to: 4, vendor: 'Dumpster Rental', why: 'boxes' }, CTX);
-    eq(one.suggestion && one.suggestion.field, 'vol', 'the volume first, when it differs');
-    eq(one.suggestion && one.suggestion.to, 5, '…to the score the photos show');
-    eq(Object.keys(one.suggestion).sort(), ['field', 'room', 'to', 'why'], '⚠ one suggestion a room, never three');
-    eq(S._awLookOf(room, { volume_to: 3, complexity_to: 4, vendor: '', why: 'w' }, CTX).suggestion.field, 'cplx',
-       'a volume equal to the score is no suggestion; the complexity is next');
-    eq(S._awLookOf(room, { volume_to: 9, complexity_to: 0, vendor: '', why: '' }, CTX).suggestion, null, 'a score off the 1 to 5 scale is none');
-    eq(S._awLookOf(room, { volume_to: 0, complexity_to: 0, vendor: 'Dumpster Rental', why: 'w' }, CTX).suggestion.vendor, 'Dumpster Rental',
-       'a vendor off the list, not on the estimate');
-    eq(S._awLookOf(room, { volume_to: 0, complexity_to: 0, vendor: 'junk removal', why: 'w' }, CTX).suggestion, null,
-       '⚠ a vendor already on the estimate is no suggestion (case aside)');
-    eq(S._awLookOf(room, { volume_to: 0, complexity_to: 0, vendor: 'Hot Tub Wizards', why: 'w' }, CTX).suggestion, null,
-       '⚠ a vendor not on the list is no suggestion');
+    const sug = (inp) => (S._awLookOf(room, Object.assign({ volume_to: 0, complexity_to: 0, vendor: '', why: '', vendor_why: '' }, inp), CTX).suggestions || []);
+    const kinds = (inp) => sug(inp).map((x) => x.field === 'vendor' ? 'vendor ' + x.vendor : x.field + ' ' + x.to).join(', ');
+    // 2026-11-05c (Anthony, off the first live probe, where the yard's volume pushed the playset's hauler out: "Score + vendor").
+    eq(kinds({ volume_to: 5, complexity_to: 4, vendor: 'Dumpster Rental', why: 'boxes', vendor_why: 'a playset' }), 'vol 5, vendor Dumpster Rental',
+       '⚠ the volume and the vendor line together, the complexity left out: one score a room');
+    const both = sug({ volume_to: 5, vendor: 'Dumpster Rental', why: 'boxes', vendor_why: 'the swing set to haul' });
+    eq(both.map((x) => x.why), ['boxes', 'the swing set to haul'], '…each with its own reason');
+    eq(sug({ vendor: 'Dumpster Rental', why: 'the swing set' })[0].why, 'the swing set', '…a vendor with no reason of its own takes the one given');
+    eq(Object.keys(both[0]).sort(), ['field', 'room', 'to', 'why'], 'a score suggestion carries its room, field, score and reason');
+    eq(kinds({ volume_to: 3, complexity_to: 4, why: 'w' }), 'cplx 4', 'a volume equal to the score is no suggestion; the complexity is next');
+    eq(kinds({ volume_to: 9 }), '', 'a score off the 1 to 5 scale is none');
+    eq(kinds({ vendor: 'Dumpster Rental', why: 'w' }), 'vendor Dumpster Rental', 'a vendor off the list, not on the estimate');
+    eq(kinds({ vendor: 'junk removal', why: 'w' }), '', '⚠ a vendor already on the estimate is no suggestion (case aside)');
+    eq(kinds({ vendor: 'Hot Tub Wizards', why: 'w' }), '', '⚠ a vendor not on the list is no suggestion');
     const tool = S._awLookTool();
     ok(tool.strict === true && tool.input_schema.additionalProperties === false, 'the look is a strict tool');
-    eq(tool.input_schema.required.slice().sort(), ['complexity_to', 'seen', 'vendor', 'volume_to', 'why'], 'with every field required');
+    eq(tool.input_schema.required.slice().sort(), ['complexity_to', 'seen', 'vendor', 'vendor_why', 'volume_to', 'why'], 'with every field required');
     lacks(JSON.stringify(tool), 'hours"', 'and no field for hours');
     has(S._awLookSystem(), 'Never suggest hours', '⚠ the prompt says never hours');
     has(S._awLookSystem(), 'usually two points away', 'and a close call is the estimator\'s');
+    has(S._awLookSystem(), 'a playset, swing set, trampoline, hot tub, shed or anything else that needs tools and a truck to take down or haul is a vendor', '⚠ the look sends a playset to a vendor (Pricing: never yard hours)');
+    has(S._awLookSystem(), 'suggest either, both or neither', '…a score and a vendor are separate');
+    has(S._awPlanSystem({}), 'The crew taking down or hauling a playset', '⚠ the plan never has the crew take a playset down (the first probe: "bring a drill")');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -136,6 +140,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(looks.length, 2, '⚠ one look for each in-scope room with photographs: not the yard with none, not the room out of scope');
     eq(Object.keys(out.looks).sort(), ['Office 1', 'Walk-in Closet'], 'what each look saw, by room');
     eq(out.suggestions.length, 1, 'one suggestion came back');
+    const S2 = gs({ reply: (p) => p.tools[0].name === 'record_room_look'
+      ? (JSON.stringify(p.messages).indexOf('Office 1') >= 0 ? LOOK({ volume_to: 5, why: 'Boxes.', vendor: 'Dumpster Rental', vendor_why: 'A playset.' }) : LOOK())
+      : PLAN() });
+    const out2 = S2.agentWalkthroughReview({ mode: 'full', context: CTX, rooms: JSON.parse(JSON.stringify(ROOMS)) });
+    eq((out2.suggestions || []).map((x) => x.room + ' ' + x.field).join(', '), 'Office 1 vol, Office 1 vendor', '⚠ a room\'s score and vendor line both come back');
+    const plan2 = [].concat.apply([], S2.sent).filter((p) => p.tools[0].name === 'record_crew_plan')[0];
+    has(JSON.stringify(plan2 && plan2.messages), 'It needs a vendor not yet on the estimate: Dumpster Rental', '⚠ the plan is told the room needs the vendor');
     eq(out.suggestions[0].room + ' ' + out.suggestions[0].field + ' ' + out.suggestions[0].to, 'Office 1 vol 5', '…the office volume to 5');
     const planReq = [].concat.apply([], S.sent).filter((p) => p.tools[0].name === 'record_crew_plan');
     eq(planReq.length, 1, 'one plan request');
@@ -178,7 +189,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(N.agentWalkthroughReview({ rooms: ROOMS }).error || '', 'ANTHROPIC_API_KEY', 'no key is named');
     has(GS, "if (data.action === 'agentWalkthroughReview') { return jsonOut(agentWalkthroughReview(data)); }", 'the router reaches it');
     ok(/var BACKEND_ACTIONS = \[[\s\S]*?'agentWalkthroughReview'[\s\S]*?\];/.test(GS), 'the deployment says it has the action');
-    has(GS, "var BACKEND_VERSION = '2026-11-05b';", 'the backend version moved');
+    has(GS, "var BACKEND_VERSION = '2026-11-05c';", 'the backend version moved');
     has(GS, 'function testWalkthroughReview()', 'an editor probe times one call');
     // 2026-11-05b, Anthony's first run: the probe found no photo. It reads Estimates too (an older client's walkthrough photos file
     // there) and reads the room off the name the app writes, "<id> Walkthrough <room> <n>-<k>.jpg".

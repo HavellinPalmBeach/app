@@ -1498,7 +1498,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.11.05 · 2:10pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.11.05 · 3:58pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -63625,8 +63625,8 @@ function walkPhotoBriefHtml(jobId, room) {
 // concierge to do less, to think about less … I don't want it to create work or more tick boxes."* One press, **Review walkthrough**
 // on Build Estimate (and **Re-plan** in the full plan, any time after): the server looks at each room's walkthrough photographs and
 // writes the crew plan from what they show, the room notes, the private note and the intake (agentWalkthroughReview).
-// - **Suggestions** sit on the room's own row, amber, with a Use button, at most one a room and only where the photographs disagree:
-//   a score or a vendor line, never hours. Held in this page only (`_walkSug`, by client): they are for the estimator at the screen
+// - **Suggestions** sit on the room's own row, amber, with a Use button, only where the photographs disagree: at most
+//   one score a room and one vendor line beside it (2026-11-05c, Anthony: "Score + vendor"), never hours. Held in this page only (`_walkSug`, by client): they are for the estimator at the screen
 //   after the walkthrough, and a run again brings them back.
 // - **The crew plan** is the job plan's `notes.crewPlan` (CREW_PLAN_NOTE_KEY), so the sheet's per-key merge of the plan's notes carries
 //   it with no redeploy (stamped `notes:crewPlan`). It is an order of work with conditions and what to do instead, never a day-by-day
@@ -63920,14 +63920,17 @@ function walkSugPaint() {
     if (typeof document === 'undefined' || !document.querySelectorAll) return;
     var old = document.querySelectorAll('tr.wsug-row');
     for (var k = 0; k < old.length; k++) if (old[k].parentNode) old[k].parentNode.removeChild(old[k]);
-    var jobId = _estJobId();
+    var jobId = _estJobId(), last = {};
+    // A room may carry a score and a vendor line (2026-11-05c): each goes under the one before it, so they read in the order sent.
     walkSugStanding(jobId, _walkSugReaders()).forEach(function (x) {
-      var row = document.getElementById('row-' + _walkRowForRoom(x.it.room));
+      var rid = _walkRowForRoom(x.it.room), row = document.getElementById('row-' + rid);
       if (!row || !row.parentNode) return;
       var tr = document.createElement('tr');
       tr.className = 'wsug-row';
       tr.innerHTML = '<td colspan="8" style="padding:3px 6px 6px;">' + walkSugLineHtml(jobId, x) + '</td>';
-      row.parentNode.insertBefore(tr, row.nextSibling);
+      var after = last[rid] || row;
+      row.parentNode.insertBefore(tr, after.nextSibling);
+      last[rid] = tr;
     });
     walkReviewBarPaint();
   } catch (e) {}
