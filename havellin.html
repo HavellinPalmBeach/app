@@ -1498,7 +1498,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.11.05 · 5:45pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.11.05 · 5:54pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -63800,32 +63800,38 @@ function walkReviewRun(jobId, where, update) {
   var body = walkReviewPayload(job, est, { mode: mode, vendorChoices: mode === 'plan' ? [] : walkReviewVendorChoices(),
                                            plan: prev ? crewPlanText(prev) : '', planEdited: !!(prev && prev.edited), update: update || '' });
   var nPhotos = body.rooms.reduce(function (n, r) { return n + r.photos.length; }, 0);
-  var out = _walkReviewOut[jobId] = { at: Date.now(), where: where };
+  var out = _walkReviewOut[jobId] = { at: Date.now(), where: where, update: String(update || '').trim() };
+  // What was typed under Something changed? is kept until the plan it asked for lands (a failure leaves it to press again).
+  if (out.update) _crewReplanDraft[jobId] = out.update;
   out.timer = setTimeout(function () {
     if (_walkReviewOut[jobId] !== out) return;
     delete _walkReviewOut[jobId];
     _walkReviewLine(jobId, 'The walkthrough agent did not answer in six minutes. Nothing was changed; press it again.', 'err');
+    _crewViewRepaintFor(jobId);
   }, WALK_REVIEW_WATCHDOG_MS);
   _walkReviewLine(jobId, 'Reviewing the walkthrough: ' + nPhotos + ' photo' + (nPhotos === 1 ? '' : 's') + ' across ' + body.rooms.length
     + ' room' + (body.rooms.length === 1 ? '' : 's') + ', then the crew plan. About a minute or two…', 'busy');
+  // The open plan says it is working at once (Anthony, 2026-11-05: "I'm just sitting here … unsure if anything's going to happen").
+  if (_crewView && _crewView.jobId === jobId) _crewViewPaint();
   fetch(_withDeviceKey(SHEETS_SYNC_URL), { method: 'POST', mode: 'cors', redirect: 'follow', headers: { 'Content-Type': 'text/plain' },
                                            body: JSON.stringify(body) })
     .then(_readAppsScriptJson)
     .then(function (d) {
       if (_walkReviewOut[jobId] !== out) return;   // the watchdog let go first: a late answer changes nothing
       clearTimeout(out.timer); delete _walkReviewOut[jobId];
-      if (!d || !d.ok) { _walkReviewLine(jobId, 'Not reviewed: ' + ((d && d.error) || 'the walkthrough agent did not answer') + '.', 'err'); return; }
-      walkReviewApply(jobId, d, mode);
+      if (!d || !d.ok) { _walkReviewLine(jobId, 'Not reviewed: ' + ((d && d.error) || 'the walkthrough agent did not answer') + '.', 'err'); _crewViewRepaintFor(jobId); return; }
+      walkReviewApply(jobId, d, mode, out.update);
     })
     .catch(function (e) {
       if (_walkReviewOut[jobId] !== out) return;
       clearTimeout(out.timer); delete _walkReviewOut[jobId];
       _walkReviewLine(jobId, 'Not reviewed: the Apps Script did not answer (' + String((e && e.message) || e).slice(0, 80) + '). Nothing was changed.', 'err');
+      _crewViewRepaintFor(jobId);
     });
   return true;
 }
 // The answer, written: the suggestions into this page, the plan onto the job plan (unless only the estimate was checked).
-function walkReviewApply(jobId, d, mode) {
+function walkReviewApply(jobId, d, mode, update) {
   var failed = d.failed || {}, nFail = Object.keys(failed).length;
   if (mode !== 'plan') {
     _walkSug[jobId] = { at: Date.now(), items: (d.suggestions || []).map(function (s) {
@@ -63837,13 +63843,17 @@ function walkReviewApply(jobId, d, mode) {
   var nSug = (_walkSug[jobId] && mode !== 'plan') ? _walkSug[jobId].items.length : 0;
   var bits = [];
   if (mode !== 'plan') bits.push(nSug ? nSug + ' suggestion' + (nSug === 1 ? '' : 's') + ' on the room rows' : 'the photos agree with the scores');
-  if (mode !== 'check') bits.push(wrote ? 'the crew plan is written' : 'the plan did not come back (' + (d.planError || 'no answer') + ')');
+  if (mode !== 'check') bits.push(wrote ? (update ? 're-planned with: “' + String(update).slice(0, 160) + (String(update).length > 160 ? '…' : '') + '”' : 'the crew plan is written')
+                                       : 'the plan did not come back (' + (d.planError || 'no answer') + ')');
+  if (wrote && update && _crewReplanDraft[jobId] === update) delete _crewReplanDraft[jobId];   // taken in: the box empties
   if (nFail) bits.push(nFail + ' room' + (nFail === 1 ? '' : 's') + ' not looked at (' + Object.keys(failed).slice(0, 3).join(', ') + ')');
   _walkReviewLine(jobId, 'Reviewed: ' + bits.join('; ') + '.', (mode !== 'check' && !wrote) || nFail ? 'warn' : 'ok');
   if (typeof walkSugPaint === 'function') walkSugPaint();
   if (typeof crewPlanRepaint === 'function') crewPlanRepaint(jobId);
 }
 var _walkReviewMsg = {};   // jobId -> {text, tone}, the last word of the last run, this page only
+var _crewReplanDraft = {}; // jobId -> what was typed under Something changed?, until the plan it asked for lands (page only)
+function _crewViewRepaintFor(jobId) { if (_crewView && _crewView.jobId === jobId) _crewViewPaint(); }
 function _walkReviewLine(jobId, text, tone) {
   _walkReviewMsg[jobId] = { text: text, tone: tone };
   if (typeof walkReviewBarPaint === 'function') walkReviewBarPaint();
@@ -64111,13 +64121,14 @@ function crewPlanViewHtml(jobId, plan, editing, job) {
     }).join('')
       + '<div style="display:flex;justify-content:flex-end;margin-bottom:10px;"><button type="button" class="btn-s" onclick="crewPlanEdit(true)">&#9998; Edit plan</button></div>';
   }
-  var msg = _walkReviewMsg[jobId];
+  var msg = _walkReviewMsg[jobId], run = _walkReviewOut[jobId], draft = run ? (run.update || '') : (_crewReplanDraft[jobId] || '');
   var replan = '<div style="border-top:1px solid var(--border);padding-top:8px;">'
     + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);margin-bottom:3px;">Something changed? <span style="text-transform:none;font-weight:400;letter-spacing:0;">· optional: type it, then Re-plan</span></div>'
-    + '<textarea id="cp-update" rows="2" style="width:100%;font-size:12px;padding:6px 8px;border:1px solid var(--border-md);border-radius:4px;box-sizing:border-box;font-family:Raleway,sans-serif;"></textarea>'
+    + '<textarea id="cp-update" rows="2" ' + (run ? 'readonly ' : '') + 'style="width:100%;font-size:12px;padding:6px 8px;border:1px solid var(--border-md);border-radius:4px;box-sizing:border-box;font-family:Raleway,sans-serif;' + (run ? 'background:var(--cream);color:var(--gray);' : '') + '">' + esc(draft) + '</textarea>'
+    + (run ? '<div style="font-size:11.5px;color:#8a5a00;margin-top:4px;">&#9203; Re-planning' + (run.update ? ' with what you typed' : '') + ': about a minute or two. You can close this; the plan updates when it lands.</div>' : '')
     + '<div style="display:flex;gap:8px;align-items:center;justify-content:space-between;margin-top:6px;flex-wrap:wrap;">'
     + '<span id="cp-run-line" style="font-size:11.5px;color:' + (msg ? _walkToneColor(msg.tone) : 'var(--gray)') + ';">' + (msg ? esc(msg.text) : '') + '</span>'
-    + '<span style="display:flex;gap:8px;"><button type="button" class="btn-s" ' + (_walkReviewOut[jobId] ? 'disabled ' : '') + 'onclick="crewPlanReplan(' + jobId + ')">&#8635; Re-plan</button>'
+    + '<span style="display:flex;gap:8px;"><button type="button" class="btn-s" id="cp-replan-btn" ' + (run ? 'disabled ' : '') + 'onclick="crewPlanReplan(' + jobId + ')">' + (run ? '&#9203; Re-planning…' : '&#8635; Re-plan') + '</button>'
     + '<button type="button" class="btn-p" onclick="closeCrewPlan()">Close</button></span></div></div>';
   return head + '<div style="max-height:62vh;overflow-y:auto;">' + body + '</div>' + replan;
 }

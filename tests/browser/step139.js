@@ -39,6 +39,7 @@ const PLAN = {
       let body = {}; try { body = JSON.parse(route.request().postData() || '{}'); } catch (e) {}
       if (body.action === 'agentWalkthroughReview') {
         asked.push(body);
+        if (body.update) await new Promise((r) => setTimeout(r, 2500));   // a Re-plan takes a while: the window must say so meanwhile
         const sug = body.mode === 'plan' ? [] : [{ room: 'Office 1', field: 'vol', to: 5, why: 'Boxes to the ceiling on every wall.' },
                                                   { room: 'Office 1', field: 'vendor', vendor: body.context.vendorChoices[0] || 'Junk Removal', why: 'A bolted desk to take down.' }];
         return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, mode: body.mode, suggestions: sug,
@@ -185,12 +186,24 @@ const PLAN = {
     await p.click('#cp-next-' + id + ' button:has-text("Open the full plan")'); await p.waitForTimeout(400);
     await p.fill('#cp-update', 'Anthony Jr has class from 12 to 5:30 this semester.');
     dialogs.length = 0;
-    await p.click('#cp-modal button:has-text("Re-plan")'); await p.waitForTimeout(1500);
+    await p.click('#cp-modal button:has-text("Re-plan")'); await p.waitForTimeout(700);
     ok(dialogs.some((d) => /You’ve edited this crew plan/.test(d)), 'Re-plan over the person\'s plan asks first');
+    // 2026-11-05 (Anthony: "I'm just sitting here now with the screen waiting for something to happen and kind of unsure").
+    const busy = await p.evaluate(() => { const b = document.getElementById('cp-replan-btn'), t = document.getElementById('cp-update');
+      return { b: b && b.textContent, dis: b && b.disabled, ro: t && t.readOnly, v: t && t.value, box: (document.getElementById('cp-modal-box') || {}).textContent || '' }; });
+    ok(busy.dis === true && /Re-planning/.test(busy.b || ''), '⚠ while it runs the button reads Re-planning… and cannot be pressed again (' + busy.b + ')');
+    ok(busy.ro === true && /class from 12/.test(busy.v || ''), '…what was typed stays in the box, locked');
+    has(busy.box, 'You can close this; the plan updates when it lands', '…and the window says it is working and can be closed');
+    await p.waitForTimeout(3200);
     const a3 = asked[asked.length - 1] || {};
     ok(a3.mode === 'plan', '⚠ from the Job Plan the plan alone, the price locked (' + a3.mode + ')');
     has(a3.update, 'class from 12 to 5:30', 'with what changed');
     ok(await p.evaluate((id) => crewPlanOf(id).edited === false, id), 'OK: the fresh plan replaces it');
+    const done = await p.evaluate(() => { const b = document.getElementById('cp-replan-btn'), t = document.getElementById('cp-update');
+      return { b: b && b.textContent, dis: b && b.disabled, v: t && t.value, line: (document.getElementById('cp-run-line') || {}).textContent || '' }; });
+    ok(done.dis === false && /Re-plan/.test(done.b || '') && !/Re-planning/.test(done.b || ''), 'when it lands the button is back');
+    ok(done.v === '', '⚠ …the box is empty: what was typed went in');
+    has(done.line, 're-planned with: “Anthony Jr has class from 12 to 5:30', '…and the line says so, in its words');
     await p.click('#cp-modal button:has-text("Close")'); await p.waitForTimeout(200);
 
     // ── F ──

@@ -258,8 +258,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const store = {};
     const E = sandbox({
       fns: ['crewPlanOf', '_crewPlanWrite', 'walkReviewApply', '_walkReviewLine', '_walkToneColor', 'crewPlanText', 'crewPlanSectionText',
-            'walkReviewRun', 'walkReviewRefusal', 'walkReviewPayload', 'backendHas'],
-      vars: ['CREW_PLAN_NOTE_KEY', 'CREW_PLAN_SECTIONS', 'WALK_REVIEW_PHOTOS_PER_ROOM', 'WALK_REVIEW_WATCHDOG_MS', '_walkSug', '_walkReviewOut', '_walkReviewMsg'],
+            'walkReviewRun', 'walkReviewRefusal', 'walkReviewPayload', 'backendHas', '_crewViewRepaintFor'],
+      vars: ['CREW_PLAN_NOTE_KEY', 'CREW_PLAN_SECTIONS', 'WALK_REVIEW_PHOTOS_PER_ROOM', 'WALK_REVIEW_WATCHDOG_MS', '_walkSug', '_walkReviewOut', '_walkReviewMsg', '_crewReplanDraft', '_crewView'],
       stubs: {
         jobPlanStore: store,
         getJobPlan: (id) => (store[id] = store[id] || { rooms: {} }),
@@ -326,6 +326,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     E.walkReviewRun(7, 'plan', 'Anthony Jr cannot make it.');
     eq(E.posts[2] && E.posts[2].mode, 'plan', 'Re-plan from the Job Plan: the plan only');
     eq(E.posts[2] && E.posts[2].update, 'Anthony Jr cannot make it.', '…with what changed');
+    eq(E._crewReplanDraft[7], 'Anthony Jr cannot make it.', 'what was typed is held while the run is out');
+    eq(E._walkReviewOut[7] && E._walkReviewOut[7].update, 'Anthony Jr cannot make it.', '…on the run itself, for the window to show');
+    E.walkReviewApply(7, { ok: true, suggestions: [], plan: plan, failed: {} }, 'plan', 'Anthony Jr cannot make it.');
+    ok(!E._crewReplanDraft[7], '⚠ once the plan it asked for lands, the box empties');
+    has(E._walkReviewMsg[7].text, 're-planned with: “Anthony Jr cannot make it.”', '…and the line says what went in');
     ok(E.posts[2] && E.posts[2].planEdited === true, '⚠ a plan a person edited goes marked so (only then may the agent cite it)');
     E._crewPlanWrite(7, plan, { edited: false }); delete E._walkReviewOut[7];
     E.walkReviewRun(7, 'plan', 'x');
