@@ -209,7 +209,9 @@
 // ⚠ 2026-11-05: the walkthrough agent, `agentWalkthroughReview` (WALKTHROUGH_AGENT_SPEC.md): each room's walkthrough photographs
 // looked at in parallel, then the crew plan written from what they show and the notes. A new action, so an older deployment is
 // named by the action the app finds missing. Carries 2026-11-02e. testWalkthroughReview() times one call from the editor.
-var BACKEND_VERSION = '2026-11-05';
+// ⚠ 2026-11-05b: testWalkthroughReview() alone (an editor probe): it reads the Estimates folder too, walks every client folder and
+// reads the room off the name the app writes. Nothing the app calls changed; carries 2026-11-05.
+var BACKEND_VERSION = '2026-11-05b';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive', 'esignSendRequest',
@@ -5315,22 +5317,31 @@ function agentWalkthroughReview(data) {
 function testWalkthroughReview() {
   var miss = _agMissingProps();
   if (miss.length) { Logger.log('MISSING Script Property: ' + miss.join(', ')); return; }
-  var stack = [DriveApp.getFolderById(ROOT_FOLDER_ID)], guard = 0, best = null;
-  while (stack.length && guard++ < 400) {
-    var f = stack.pop();
-    if (f.getName() === 'Walkthrough Photos') {
-      var files = f.getFilesByType('image/jpeg'), list = [];
-      while (files.hasNext()) list.push(files.next());
+  // 2026-11-05b (Anthony's first run: "No Walkthrough Photos folder has a photograph yet"): a client folder made before 2026-11-04
+  // files its walkthrough photos in Estimates (the app's resolveSubfolderId alias), so both are read, by the photo's own name; the
+  // walk reaches every client (it stopped at 400 folders); and the room is read off "<HVL id> Walkthrough <room> <n>-<k>.jpg", the
+  // name the app writes (the first probe's pattern wanted "<n>.jpg" and read every photo as one room called Room).
+  var stack = [DriveApp.getFolderById(ROOT_FOLDER_ID)], guard = 0, best = null, seen = 0;
+  while (stack.length && guard++ < 5000) {
+    var f = stack.pop(), nm = f.getName();
+    if (nm === 'Walkthrough Photos' || nm === 'Estimates') {
+      var files = f.getFiles(), list = [];
+      while (files.hasNext()) {
+        var file = files.next();
+        if (/ Walkthrough .+\.\w+$/.test(file.getName()) && /^image\//.test(file.getMimeType())) list.push(file);
+      }
+      seen += list.length;
       if (list.length && (!best || list.length > best.files.length)) best = { folder: f, files: list };
     }
     var subs = f.getFolders();
     while (subs.hasNext()) stack.push(subs.next());
   }
-  if (!best) { Logger.log('No Walkthrough Photos folder has a photograph yet: take one on Build Estimate first.'); return; }
-  // A walkthrough photo is named "<HVL id> Walkthrough <room> <n>.jpg" (the app's _walkPhotoName): group by the room in the name.
+  if (!best) { Logger.log('No walkthrough photo found in ' + guard + ' folders: take a few on a test client on Build Estimate (📷 on a room\'s row), then run this again.'); return; }
+  var parents = best.folder.getParents(), client = parents.hasNext() ? parents.next().getName() : '';
+  Logger.log(seen + ' walkthrough photo(s) found; using the ' + best.files.length + ' in ' + (client ? client + ' / ' : '') + best.folder.getName() + '.');
   var byRoom = {};
   best.files.forEach(function (file) {
-    var m = / Walkthrough (.+) \d+\.\w+$/.exec(file.getName()), room = m ? m[1] : 'Room';
+    var m = / Walkthrough (.+?) \d+(?:-\d+)?\.\w+$/.exec(file.getName()), room = m ? m[1] : 'Room';
     (byRoom[room] = byRoom[room] || []).push(file.getId());
   });
   var rooms = Object.keys(byRoom).slice(0, 4).map(function (name) { return { name: name, vol: 3, cplx: 3, photos: byRoom[name].slice(0, AGENT_WALK_PHOTOS_PER_ROOM) }; });

@@ -494,7 +494,7 @@ Once the plan is the person's, a review asks first: *You've edited this crew pla
 
 On the Job Plan the plan's **Next up** card heads *In the house* in place of *How the sorting runs* (its page, *Sorting a House*, a tap away on the card): the next one or two steps and the conditions, moving as rooms are cleared (a room's step passes once the room is cleared, a step riding with it alongside; a step tied to no room once a later room is locked), never by the calendar. A step's vendor reads *booked* once it is Confirmed under Vendors & partners. Each room's lines sit inside the room, under **📋 Crew plan for this room**, shut until pressed. Home Prep carries the card at the top of its plan.
 
-> **It needs the Apps Script deployment of 2026-11-05** (the action `agentWalkthroughReview`); until then the banner names it and the press says so. After the redeploy, run `testWalkthroughReview()` from the editor once: it reads up to four rooms of a real Walkthrough Photos folder and prints the time and the plan. The plan is stored on the job plan (its notes), so it reaches every device as the plan does.
+> **It needs the Apps Script deployment of 2026-11-05** (the action `agentWalkthroughReview`); until then the banner names it and the press says so. After the redeploy, run `testWalkthroughReview()` from the editor once: it reads up to four rooms of the client folder holding the most walkthrough photos (Walkthrough Photos, or Estimates on a folder made before 2026-11-04) and prints the time and the plan; with none taken yet it says so. Take a few on a test client first. The plan is stored on the job plan (its notes), so it reaches every device as the plan does.
 
 ### 5b. Room Scoring
 

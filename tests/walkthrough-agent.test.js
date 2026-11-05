@@ -178,8 +178,18 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(N.agentWalkthroughReview({ rooms: ROOMS }).error || '', 'ANTHROPIC_API_KEY', 'no key is named');
     has(GS, "if (data.action === 'agentWalkthroughReview') { return jsonOut(agentWalkthroughReview(data)); }", 'the router reaches it');
     ok(/var BACKEND_ACTIONS = \[[\s\S]*?'agentWalkthroughReview'[\s\S]*?\];/.test(GS), 'the deployment says it has the action');
-    has(GS, "var BACKEND_VERSION = '2026-11-05';", 'the backend version moved');
+    has(GS, "var BACKEND_VERSION = '2026-11-05b';", 'the backend version moved');
     has(GS, 'function testWalkthroughReview()', 'an editor probe times one call');
+    // 2026-11-05b, Anthony's first run: the probe found no photo. It reads Estimates too (an older client's walkthrough photos file
+    // there) and reads the room off the name the app writes, "<id> Walkthrough <room> <n>-<k>.jpg".
+    const probe = (() => { const i = GS.indexOf('function testWalkthroughReview()'); return i < 0 ? '' : GS.slice(i, GS.indexOf('\n}\n', i)); })();
+    has(probe, "nm === 'Estimates'", '⚠ the probe reads an older client folder\'s Estimates too');
+    const reSrc = (/var m = (\/ Walkthrough [^;]*?\/)\.exec\(file\.getName\(\)\)/.exec(probe) || [])[1] || '';
+    let roomOf = () => '';
+    try { const re = eval(reSrc); roomOf = (n) => (re.exec(n) || [])[1] || ''; } catch (e) { /* the check below fails */ }
+    const H = sandbox({ fns: ['_walkPhotoName'] });
+    eq(roomOf(H._walkPhotoName({ hvlId: 'HVL-1' }, 'Living Room', '3-1')), 'Living Room', '⚠ the room is read off the name the app writes');
+    eq(roomOf('HVL-1 Walkthrough Bedroom 2 1-4.jpg'), 'Bedroom 2', '…a room whose name ends in a number keeps it');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
