@@ -466,7 +466,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // 28 since P13 (2026-10-28): the papers' own photographs (_invPrintBatch's getThumbnails), through the same road.
     // RESTATED 2026-11-02: and the release request's read of the client before an estate's send (approvalRecordFromSheet's loadJobs).
     // 29 on merging the two, and 30 on merging P15 (the appraiser's packet asks for the photographs it carries, _apprPacketThumbs).
-    eq(toJobs.length, 30, 'and there are 30 of them (every GET reader, P1\'s loadSnapshots and the release request\'s read of the client among them, every POST, postSyncTo, _appsScriptPost, the worklist\'s photographs and the papers\' photographs)');
+    // 31 since 2026-11-04: the walkthrough photos' thumbnails on Build Estimate and the Walkthrough page (_walkThumbsFetch).
+    eq(toJobs.length, 31, 'and there are 31 of them (every GET reader, P1\'s loadSnapshots and the release request\'s read of the client among them, every POST, postSyncTo, _appsScriptPost, the worklist\'s photographs, the papers\' photographs and the walkthrough photos\' thumbnails)');
+    ok(/fetch\(_withDeviceKey\(SHEETS_SYNC_URL\)/.test(noComments(fn('_walkThumbsFetch'))), 'the walkthrough photos\' thumbnails go through the one road');
     ok(/fetch\(_withDeviceKey\(SHEETS_SYNC_URL \+ '\?action=loadJobs'\)\)/.test(noComments(fn('approvalRecordFromSheet'))), '⚠ the release request\'s read of the client goes through the one road');
     const others = calls.filter((a) => toJobs.indexOf(a) < 0);
     ok(others.every((a) => /googleapis\.com|VENDOR_SYNC_URL|REFERRAL_SYNC_URL|^url$/.test(a) || a === ''), 'every other fetch goes to Gmail, Google sign-in or a directory backend (' + others.length + ')');
