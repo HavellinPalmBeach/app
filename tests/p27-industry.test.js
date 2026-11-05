@@ -260,14 +260,15 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       // Every page the app links goes through the one opener: the firearms protocol too.
       const live = SRC.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
       eq((live.match(/esc\((?:l|row)\.doc\) \+ '" target="_blank"/g) || []).length, 0, 'no protocol link opens a new tab');
-      eq((live.match(/guideLinkHtml\(/g) || []).length, 8, 'the one opener has its definition and seven readers (the procedure, the brief, the banner, the room line, the transport panel, the Incidents card since 2026-10-19, and Photographing a House on the plan and in the room, photoGuideLinkHtml, since 2026-10-19)');
+      eq((live.match(/guideLinkHtml\(/g) || []).length, 9, 'the one opener has its definition and eight readers (the procedure, the brief, the banner, the room line, the transport panel, the Incidents card since 2026-10-19, Photographing a House on the plan and in the room, photoGuideLinkHtml, since 2026-10-19, and the crew plan\'s Next up card since 2026-11-05)');
     }
     eq(count(html, 'type="checkbox"'), 0, '⚠⚠ no box in a procedure block');
     eq(c.planProcedureHtml('p1', ctxOf('prep')), '', 'a prep plan draws no sorting block');
 
     const plan = codeOnly(fn('renderJobPlan'));
     has(plan, "planTasksHtml(jobId, 'p0', ctx, null, ['Pre-job call']) +\n    planProcedureHtml('p0', ctx)", 'Before Day 1 draws its block after the boxes');
-    has(plan, "var inHouse = planTasksHtml(jobId, 'p1', ctx) + planProcedureHtml('p1', ctx);", 'In the house draws the sorting block under the boxes');
+    // RESTATED 2026-11-05: where the walkthrough agent wrote a crew plan its Next up card takes the block's place.
+    has(plan, "var inHouse = planTasksHtml(jobId, 'p1', ctx) + (_crewPlan ? '' : planProcedureHtml('p1', ctx));", 'In the house draws the sorting block under the boxes, where the job has no crew plan of its own');
     has(plan, "planTasksHtml(jobId, 'p2', ctx) + planProcedureHtml('p2', ctx);", 'Midpoint & pickups draws packing');
   }
 
