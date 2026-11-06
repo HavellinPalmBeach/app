@@ -1737,3 +1737,40 @@ out): the first draft said every file removed from Drive is logged (only a photo
 editor's sweeps are not), and that no client name is sent to Anthropic (no field of the record is; free-text notes and the
 must-find list go as written). Whether the corrected wording is enough for a vendor review, or the notes should be screened
 before they are sent.
+
+### G4. *Estate and Trust Settlement*, the reference for estate counsel and trustees ⚠ NEW 2026-11-06 · PRIORITY 2
+
+**What it is** (`legal/Havellin_Estate_Trust_Settlement_v2.0.md`, with DOCX and PDF; five pages): the document Havellin hands an
+estate attorney, a trustee or a trust officer before an engagement. Version 2.0 rewrites Anthony's September 2026 draft against the
+app and both estate agreement forms as they print today. It is marketing paper, not a contract, but it states Florida and federal
+law and makes promises a fiduciary may rely on: §733.604 (60 days from Letters, amendment, a beneficiary's written request for how a
+value was determined), §§736.0813 and 736.08135, §736.1017, §732.402 and its cap, §732.901's ten days, Treas. Reg.
+§20.2031-6(a) and (b), §2032; that Havellin never files with the court; that values are estimates and never appraisals unless an
+appraiser's report is noted; that AI software assists identification and value research and decides nothing; the $3,000 appraisal
+flag ($500 on a disputed estate); written approval from every fiduciary before anything leaves, with the re-approval rule ($500,
+the appraisal threshold, a 25% rise, a new destination or recipient); firearms only through a licensed dealer and NFA items never
+transported; the will and cash protocol; proceeds paid by the vendor directly to the estate or trust; the referral-fee disclosure in
+§5.4's words; the Douglas Elliman disclosure; the seven coverages of §6.1 with no figure; the §7.2 marketing opt-out and the operating
+rule that nothing is published before the house closes or is cleared, or ever from a contested matter.
+
+**What changed from the September draft, and why** (each claim of the old one that the app or the agreement did not bear out):
+it said the estate is billed hourly in one section and at a fixed fee in two others (estates are quoted at a fixed fee, hourly on
+request; the 15% notice is the hourly arm's only); it promised papers nothing produces (a scope memo, a deadline map, a property
+condition report, disposal manifests from licensed vendors, donation receipts from *verified* charities, an itemized hours log on a
+fixed fee); it listed real property, digital assets and financial instruments among the things documented (the estate form's §6.2
+excludes the last two, and real property is brokerage); its insurance list omitted E&O, umbrella and cyber and called the crime
+policy a fidelity bond; it promised certificates *automatically* (§6.1 says on request); it said no photograph is shared without
+written consent (§7.2 authorizes anonymized marketing use unless the client opts out); it said pricing follows NASMM professional
+standards (NASMM sets none); it said nothing is filed with a court on a trust (a Notice of Trust is, under §736.05055; the new text
+says no inventory is); it called counsel the primary stakeholder (the fiduciary is the client and gives every instruction); and it
+said *home preparation for sale* (the service has been *Home Preparation* since 2026-11-05).
+
+**The question.** (1) Is each statement of law accurate as written, and is the summary of §733.604 complete enough for a reader
+who will rely on it? (2) Does publishing the $3,000 appraisal flag, the 25% re-approval rule and the marketing operating rule turn
+internal practice into a representation Havellin can be held to, and should the document carry a reliance disclaimer? (3) The AI
+sentence, read with G3's question 4: enough, or should it name the provider as the data-handling statement does? (4) The SRES
+and NASMM statements are Anthony's to confirm. (5) Found writing it, in the estate form itself: §7.1 defines the Project
+Records to include the Documentation Media and says *No part of the Project Records is used for marketing or promotional purposes,
+and Section 7.2 does not apply to them*, while §7.2 opens *Havellin may use Documentation Media … for marketing*. Which governs? The
+reference sidesteps it (the inventory and the disposition record are never used; anonymized photographs only as §7.2 allows); the form
+needs one reading.
