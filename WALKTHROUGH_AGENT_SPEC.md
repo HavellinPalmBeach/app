@@ -183,4 +183,9 @@ with), *Conditions*, *If you can't*, *Length*, and a few lines per key room. It 
 27. **What the concierge writes beats the agent's rules** (*"I was actually thinking of taking apart the swing set myself"*): a
     playset is the hauler's unless the notes or what changed say Havellin takes it down.
 
+28. **The newest, first-hand note wins** (the second live plan followed an intake note's whole-house pack-out: *"that was in intake
+    notes, and it's changed"*): what changed, then a plan a person edited, then the walkthrough and room notes, then the intake.
+29. **No diagnosis repeated** (*"instructions are fine"*): the plan printed a house question's diagnosis word for word; it now says
+    only what the crew does.
+
 Nothing is left open in the design. It is built on Anthony's go.

@@ -461,9 +461,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // 2026-11-05 (Anthony, off "not touching the kitchen unless she asks" written back as rules about cooking and cabinets: "we never
     // said any of that … this is like some weird directive that's a bit extreme").
     has(sys, 'Say what the source says, and no more', '⚠ a line says what its source says, never rules or details of its own');
+    // 2026-11-05f (Anthony: the intake note said pack out the whole house, and "it's changed").
+    has(sys, 'Where they disagree, the newer and first-hand wins: what has changed first, then a plan a person edited, then the walkthrough note and the room notes', '⚠ where the notes disagree, the newer and first-hand wins, the intake last');
+    has(sys, 'Plan the job as the newest of them describes it, and drop what it replaces', '…and what it replaces goes');
+    has(sys, 'Never repeat a diagnosis, a condition or a label about a person, even where the notes record one', '⚠ no diagnosis repeated, even one the notes record');
     const pc = JSON.stringify(S._awPlanContent({ context: {}, rooms: [], plan: 'CONTEXT\nold' }, {}));
     has(pc, 'written by you earlier, never a source', 'the agent\'s earlier plan is sent as not a source');
     has(JSON.stringify(S._awPlanContent({ context: {}, rooms: [], plan: 'CONTEXT\nold', planEdited: true }, {})), 'a person edited it', '…a person\'s as one');
-    has(GS, "var BACKEND_VERSION = '2026-11-05e';", 'the backend version moved');
+    has(GS, "var BACKEND_VERSION = '2026-11-05f';", 'the backend version moved');
   }
 };

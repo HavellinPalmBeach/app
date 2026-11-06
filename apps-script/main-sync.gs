@@ -219,7 +219,10 @@
 // ⚠ 2026-11-05e: the service the app names Home Preparation (Home Prep for Sale until the same day; Anthony: "call it home
 // preparation so that we can service clients who aren't selling their homes") keys the crew plan's scope, which no longer
 // assumes a listing. Until it is live a Home Preparation job's plan is told no service scope. No action changes; carries 2026-11-05d.
-var BACKEND_VERSION = '2026-11-05e';
+// ⚠ 2026-11-05f: where the notes disagree the newer and first-hand wins (what changed, an edited plan, the walkthrough and room
+// notes, then the intake), and no diagnosis is repeated though the notes record one (Anthony, off a plan that followed an intake
+// note whose scope had since changed, and printed a house question's diagnosis word for word). No action changes.
+var BACKEND_VERSION = '2026-11-05f';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive', 'esignSendRequest',
@@ -5270,7 +5273,11 @@ function _awPlanSystem(ctx) {
     + 'add rules, reasons or details of your own. "Not touching the kitchen unless asked" is: leave the kitchen unless '
     + 'asked, and nothing about what happens in it.\n'
     + '- What the notes, what has changed or a plan a person edited say wins over anything else here, the rules below '
-    + 'included.\n\n'
+    + 'included. Where they disagree, the newer and first-hand wins: what has changed first, then a plan a person edited, '
+    + 'then the walkthrough note and the room notes (what was seen in the house), then the intake notes and house questions '
+    + '(what was said on the first call). Plan the job as the newest of them describes it, and drop what it replaces.\n'
+    + '- Never repeat a diagnosis, a condition or a label about a person, even where the notes record one: say only what the '
+    + 'crew does about it.\n\n'
     + 'NEVER\n'
     + '- A day-by-day schedule, a date or a day number: work moves when the weather or the family moves it.\n'
     + '- A tick box, a checklist to sign, hours, a price, a value or anything for the client.\n'
