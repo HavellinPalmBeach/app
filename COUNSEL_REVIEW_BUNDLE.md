@@ -1768,7 +1768,8 @@ said *home preparation for sale* (the service has been *Home Preparation* since 
 **The question.** (1) Is each statement of law accurate as written, and is the summary of §733.604 complete enough for a reader
 who will rely on it? (2) Does publishing the $3,000 appraisal flag, the 25% re-approval rule and the marketing operating rule turn
 internal practice into a representation Havellin can be held to, and should the document carry a reliance disclaimer? (3) The AI
-sentence, read with G3's question 4: enough, or should it name the provider as the data-handling statement does? (4) The SRES
+sentence, read with G3's question 4: enough? It names the provider (Claude, by Anthropic), as the data-handling statement does
+(Anthony, 2026-11-06: *"Keep, name Anthropic"*). (4) The SRES
 and NASMM statements are Anthony's to confirm. (5) Found writing it, in the estate form itself: §7.1 defines the Project
 Records to include the Documentation Media and says *No part of the Project Records is used for marketing or promotional purposes,
 and Section 7.2 does not apply to them*, while §7.2 opens *Havellin may use Documentation Media … for marketing*. Which governs? The

@@ -55,7 +55,7 @@ A personal representative and a trustee carry the same exposure: each must be ab
 
 **Values.** Our values are estimates, never appraisals. Each states its basis on the line: a named sale, a count of current listings, the going rate for that kind of thing, or the reason our staff gave for a figure they set. A figure is called an appraisal only where an appraiser's report is noted against it. Fair market value at the date of death is the standard unless counsel directs otherwise, and the §2032 alternate valuation date is applied where it has been elected.
 
-**AI-assisted research.** We use AI software to identify items from their photographs and to research their value against public sale records and current listings. It decides nothing. Every figure shows the evidence it rests on, anything uncertain is flagged for a person, and Havellin reads the whole list before any paper is marked reviewed.
+**AI-assisted research.** We use AI software (Claude, by Anthropic) to identify items from their photographs and to research their value against public sale records and current listings. It decides nothing. Every figure shows the evidence it rests on, anything uncertain is flagged for a person, and Havellin reads the whole list before any paper is marked reviewed.
 
 **Appraisals.** We flag for appraisal any item we estimate at $3,000 or more, in any category ($500 on a disputed estate), and anything of a specialist kind we cannot value with confidence. The Appraisal Worklist groups them by specialist and shows the appraiser engaged for each and where each stands. We do not perform appraisals. Whether we or counsel engage the appraisers depends on the scope above; either way we give the appraiser access and are present for the visit.
 
