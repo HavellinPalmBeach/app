@@ -315,7 +315,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const at = src.indexOf('<select id="e-job"');
     ok(at > 0, 'the job select is still in the page — fifteen reads bind the form through it');
     ok(/<select id="e-job"[^>]*style="display:none;"/.test(src), 'and it is hidden, so the screen cannot swap clients under its own back bar');
-    has(src, 'onclick="startEstimateOver()"', 'Start over is on the Job card');
+    has(src, 'onclick="startEstimateOver()"', 'Start over is on Build Estimate (at its foot since 2026-11-05)');
     lacks(src, 'onclick="clearEstimateTab()"', 'and the Clear that unbound the client is gone');
 
     const run = (jid, answer) => {

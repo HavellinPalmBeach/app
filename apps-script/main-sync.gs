@@ -209,11 +209,17 @@
 // ⚠ 2026-11-05: the walkthrough agent, `agentWalkthroughReview` (WALKTHROUGH_AGENT_SPEC.md): each room's walkthrough photographs
 // looked at in parallel, then the crew plan written from what they show and the notes. A new action, so an older deployment is
 // named by the action the app finds missing. Carries 2026-11-02e. testWalkthroughReview() times one call from the editor.
+// ⚠ 2026-11-05d: the crew plan from the record only (Anthony: "where are we just making up these rules"): every context line and
+// condition names its source and one the job does not have is dropped; nothing about the people unless the notes say it; no room
+// assumed emptied; the concierge's notes and what changed win over the agent's rules (the playset Havellin takes down itself).
 // ⚠ 2026-11-05c: the walkthrough agent's look may suggest a score and a vendor line in one room (Anthony: "Score + vendor"), and a
 // playset, hot tub or anything needing tools and a truck is the vendor's in the look and the plan, never the crew's. No action changes.
 // ⚠ 2026-11-05b: testWalkthroughReview() alone (an editor probe): it reads the Estimates folder too, walks every client folder and
 // reads the room off the name the app writes. Nothing the app calls changed; carries 2026-11-05.
-var BACKEND_VERSION = '2026-11-05c';
+// ⚠ 2026-11-05e: the service the app names Home Preparation (Home Prep for Sale until the same day; Anthony: "call it home
+// preparation so that we can service clients who aren't selling their homes") keys the crew plan's scope, which no longer
+// assumes a listing. Until it is live a Home Preparation job's plan is told no service scope. No action changes; carries 2026-11-05d.
+var BACKEND_VERSION = '2026-11-05e';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive', 'esignSendRequest',
@@ -5140,6 +5146,35 @@ function _awLookOf(room, input, ctx) {
 }
 
 // ── Stage 2: the plan ─────────────────────────────────────────────────────────────
+// Where a line of the plan may come from (2026-11-05f; Anthony, off the first live plan, which made up that the client sorts every
+// room herself and rules about a son: "where are we just making up these rules"). He chose "Check it, don't show it": every
+// context line and condition names its source, the server drops one whose source the job does not have, and the plan shows none.
+var AGENT_WALK_SOURCES = ['intake notes', 'house questions', 'walkthrough note', 'room note', 'photos', 'what changed', 'edited plan'];
+var AGENT_WALK_WORK_SOURCE = 'the work itself';   // a condition the work makes (the weather, a vendor's empty room); never context
+function _awSourced(work) {
+  return { type: 'object', additionalProperties: false, required: ['text', 'from'],
+           properties: { text: { type: 'string', description: 'One sentence.' },
+                         from: { type: 'string', enum: AGENT_WALK_SOURCES.concat(work ? [AGENT_WALK_WORK_SOURCE] : []),
+                                 description: 'Where this comes from: one of the sources you were given.' } } };
+}
+// The sources this job has: a line citing one it does not have was made up.
+function _awSourcesOf(data, looks) {
+  var ctx = (data && data.context) || {}, has = {}, t = function (x) { return String(x || '').trim(); };
+  if (t(ctx.notes)) has['intake notes'] = true;
+  if ((ctx.house || []).some(function (h) { return t(h); })) has['house questions'] = true;
+  if (t(ctx.privateNote)) has['walkthrough note'] = true;
+  if ((data.rooms || []).some(function (r) { return r && t(r.note); })) has['room note'] = true;
+  if (Object.keys(looks || {}).some(function (k) { return t(looks[k]); })) has['photos'] = true;
+  if (t(data.update)) has['what changed'] = true;
+  if (t(data.plan) && data.planEdited) has['edited plan'] = true;
+  return has;
+}
+function _awSourcedList(list, has, work, max) {
+  return (Array.isArray(list) ? list : []).filter(function (x) {
+    var from = x && typeof x === 'object' ? String(x.from || '') : '';
+    return x && typeof x === 'object' && (has[from] || (work && from === AGENT_WALK_WORK_SOURCE));
+  }).map(function (x) { return _awClip(x.text, AGENT_WALK_TEXT_MAX); }).filter(function (x) { return x; }).slice(0, max);
+}
 function _awPlanTool(roomNames) {
   var roomProp = { type: 'string', description: 'A room name exactly as listed, or an empty string.' };
   return {
@@ -5150,9 +5185,9 @@ function _awPlanTool(roomNames) {
       type: 'object', additionalProperties: false,
       required: ['context', 'order', 'conditions', 'if_cant', 'length', 'rooms'],
       properties: {
-        context:    { type: 'array', items: { type: 'string' },
-                      description: 'Two to five facts the crew must know about the people and the house, each one sentence that '
-                                 + 'ends in what to do about it.' },
+        context:    { type: 'array', items: _awSourced(false),
+                      description: 'Two to five facts the crew must know about the house and the work, each one sentence that '
+                                 + 'ends in what to do about it, each from a source you were given.' },
         order:      { type: 'array', description: 'The order of the work, five to twelve steps.',
                       items: { type: 'object', additionalProperties: false, required: ['step', 'room', 'after', 'vendor'],
                                properties: {
@@ -5162,9 +5197,9 @@ function _awPlanTool(roomNames) {
                                                                     + 'vendor): the room it follows, exactly as listed; else empty.' },
                                  vendor: { type: 'string', description: 'The vendor category this step needs, exactly as on the '
                                                                      + 'estimate, or empty.' } } } },
-        conditions: { type: 'array', items: { type: 'string' },
-                      description: 'The rules the work runs under (when the client can sort, the weather a step needs, who must not '
-                                 + 'be in the house): each one sentence.' },
+        conditions: { type: 'array', items: _awSourced(true),
+                      description: 'What the work needs to go ahead (a dry day for a yard step, an empty room for a vendor) and any '
+                                 + 'rule the notes give: each one sentence, each from a source.' },
         if_cant:    { type: 'array', items: { type: 'string' },
                       description: 'What to do instead when a condition is not met: each one sentence.' },
         length:     { type: 'string', description: 'One sentence: the rough length for the crew on the estimate, and with one '
@@ -5176,6 +5211,33 @@ function _awPlanTool(roomNames) {
     }
   };
 }
+// What each service is, so the plan keeps to the job that was sold (2026-11-05f; Anthony: "if we're just editing down the house …
+// don't invent stuff and assume that we're moving everyone out"; "if it's a home edit and transition, obviously there's a move").
+// Keyed on the service's label as the app sends it (SVC_LABELS).
+var AGENT_WALK_SERVICE_SCOPE = {
+  'Home Editing': 'Home Editing: the client stays in the home. The work is editing down what is there and organizing what stays. '
+    + 'Nothing is packed out, moved or sent to storage beyond what the client lets go, and there is no move.',
+  'Home Transition': 'Home Transition: the client is moving to a new home. The work is sorting what goes, packing it, the move, '
+    + 'setting up the new home, and what does not go (donation, sale, haul).',
+  'Home Cleanout': 'Home Cleanout: the house is cleared of what the client does not keep; what they keep stays where it is '
+    + 'unless the notes say it goes elsewhere.',
+  'Home Preparation': 'Home Preparation: the preparation trades booked on the estimate do their work, with decluttering where it '
+    + 'was quoted; the client may be selling the home or staying in it. The client\'s things stay unless the notes say otherwise.',
+  'Estate Settlement': 'An estate: the owner has died and the house is cleared for the representative, each thing to the '
+    + 'destination recorded for it.',
+  'Probate Estate Settlement': 'An estate in probate: the owner has died and the house is cleared for the personal '
+    + 'representative, each thing to the destination recorded for it.',
+  'Contested Probate Estate Settlement': 'A contested estate: the owner has died and the heirs disagree; the house is cleared '
+    + 'for the personal representative, each thing to the destination recorded for it, nothing released without their written word.'
+};
+function _awServiceScope(ctx) {
+  var t = AGENT_WALK_SERVICE_SCOPE[String((ctx && ctx.service) || '').trim()];
+  if (!t) return '';
+  return 'THE JOB\n' + t + ' Plan this job and nothing bigger: a move, a full pack-out, a pod, storage or anyone moving out only '
+    + 'where the service, the notes or what has changed say so, and then plan it fully. Several kinds of work in one job (an edit '
+    + 'with some home prep) only where the notes or the vendor lines on the estimate show it.'
+    + (ctx.newHome ? ' A new home is recorded for this client.' : ' No new home is recorded for this client.') + '\n\n';
+}
 function _awPlanSystem(ctx) {
   var s = ''
     + 'You write the crew plan for one Havellin job: white-glove downsizing, moves, cleanouts and estate work in Palm Beach '
@@ -5183,25 +5245,38 @@ function _awPlanSystem(ctx) {
     + 'the crew never reads the app in the house. It has to take thinking off the concierge.\n\n'
     + 'You are given the service, the crew and the length on the estimate, the intake\'s notes and house questions, the '
     + 'concierge\'s private walkthrough note, and every room with its scores, its note and what its photographs show.\n\n'
+    + _awServiceScope(ctx)
     + 'WRITE\n'
-    + '- Context: the facts about the people and the house the crew must know, each ending in what to do. Write every one '
-    + 'as a fact and an instruction, practical and respectful, never a label or a diagnosis: "Her son is sometimes home; the '
-    + 'walkthrough stopped at 15 minutes when he was. Confirm each morning that he is out before the crew goes in." '
-    + 'A concierge reads this; nothing on it is for the client.\n'
+    + '- Context: the facts the crew must know about the house, the people and the work, each ending in what to do. Write '
+    + 'every one as a fact and an instruction, practical and respectful, never a label or a diagnosis. A concierge reads '
+    + 'this; nothing on it is for the client.\n'
     + '- Order of work: the sequence, by room, with the steps that are not a room (hauls, donation runs, a vendor\'s visit) '
     + 'attached to the room they follow. Easy rooms before sentimental ones unless the notes say otherwise.\n'
-    + '- Conditions: the rules the work runs under (when the client can make decisions, the weather a yard step needs, '
-    + 'who must not be in the house).\n'
+    + '- Conditions: what the work needs to go ahead (a dry day for a yard step, an empty room for a vendor), and any rule '
+    + 'the notes give.\n'
     + '- If you can\'t: for each condition that can stop the work, what to do instead (the desk work, the drop-offs, '
     + 'another room).\n'
     + '- Length: one sentence, rough, for the crew on the estimate and with one fewer specialist.\n'
     + '- Rooms: the key rooms only, one to four short instructions each.\n\n'
+    + 'EVIDENCE\n'
+    + '- Every context line and condition comes from something you were given, and names it: the intake notes, the house '
+    + 'questions, the walkthrough note, a room note, what the photos show, what has changed, or a plan a person edited; a '
+    + 'condition may also come from the work itself (the weather, a vendor\'s visit). Anything else is made up: leave it out.\n'
+    + '- Nothing about the client, the family or anyone in the house (who lives there, who decides, what they can or cannot '
+    + 'do, how they like to work) unless the notes say it. From the photos, only the things in them, never who uses them.\n'
+    + '- Never assume what happens in a room: that it is emptied, packed out or sent to storage, or that a cupboard is gone '
+    + 'through. Where the notes do not say, the step is to confirm the room\'s scope with the client.\n'
+    + '- Say what the source says, and no more: a line may turn a fact into the one instruction it plainly means, never '
+    + 'add rules, reasons or details of your own. "Not touching the kitchen unless asked" is: leave the kitchen unless '
+    + 'asked, and nothing about what happens in it.\n'
+    + '- What the notes, what has changed or a plan a person edited say wins over anything else here, the rules below '
+    + 'included.\n\n'
     + 'NEVER\n'
     + '- A day-by-day schedule, a date or a day number: work moves when the weather or the family moves it.\n'
     + '- A tick box, a checklist to sign, hours, a price, a value or anything for the client.\n'
     + '- A room name you were not given.\n'
     + '- The crew taking down or hauling a playset, swing set, trampoline, hot tub, shed or anything else that needs tools and '
-    + 'a truck: that is a vendor\'s work. The step names the vendor (the one on the estimate, or the one a room says it needs, '
+    + 'a truck, unless the notes or what has changed say Havellin takes it down itself: otherwise it is a vendor\'s work. The step names the vendor (the one on the estimate, or the one a room says it needs, '
     + 'else "the hauler"), the crew clears around it and settles with the client what goes before the vendor comes.\n'
     + '- A firearm moved or handled: where one is noted, the condition is that it is photographed where it lies and nobody '
     + 'carries it out.\n'
@@ -5229,19 +5304,20 @@ function _awPlanContent(data, looks) {
   });
   if (data.plan) {
     lines.push('');
-    lines.push('THE PLAN AS IT STANDS (a person may have edited it; keep what still holds):');
+    lines.push(data.planEdited ? 'THE PLAN AS IT STANDS (a person edited it: keep what still holds; cite it as "edited plan"):'
+                               : 'THE PLAN AS IT STANDS (written by you earlier, never a source: keep only what the sources above support):');
     lines.push(_awClip(data.plan, 6000));
   }
   if (data.update) {
     lines.push('');
-    lines.push('WHAT HAS CHANGED SINCE (plan around it): "' + _awClip(data.update, 1500) + '"');
+    lines.push('WHAT HAS CHANGED SINCE (from the concierge: plan around it, cite it as "what changed"): "' + _awClip(data.update, 1500) + '"');
   }
   lines.push('');
   lines.push('Call record_crew_plan exactly once.');
   return [{ type: 'text', text: lines.join('\n') }];
 }
 // The plan held to the rule: room names only as given (an unknown one dropped to none), every string clipped, every list capped.
-function _awPlanOf(input, names) {
+function _awPlanOf(input, names, has) {
   var known = {};
   (names || []).forEach(function (n) { known[String(n).toLowerCase()] = n; });
   var room = function (n) { return known[String(n || '').trim().toLowerCase()] || ''; };
@@ -5254,7 +5330,8 @@ function _awPlanOf(input, names) {
     x = x || {};
     return { room: room(x.room), lines: _awList(x.lines, 4).map(function (l) { return _awClip(l, 200); }) };
   }).filter(function (x) { return x.room && x.lines.length; }).slice(0, 20);
-  return { context: _awList(input.context, 6), order: order, conditions: _awList(input.conditions, 8),
+  has = has || {};
+  return { context: _awSourcedList(input.context, has, false, 6), order: order, conditions: _awSourcedList(input.conditions, has, true, 8),
            ifCant: _awList(input.if_cant, 8), length: _awClip(input.length, 300), rooms: rooms };
 }
 
@@ -5310,7 +5387,7 @@ function agentWalkthroughReview(data) {
                                 function (res) { return _awReadTool(res, 'record_crew_plan'); }, models, 'walkthrough',
                                 started + AGENT_WALK_TIME_BUDGET, sendState);
       var pa = sentPlan.answers[0];
-      if (pa && pa.ok) { plan = _awPlanOf(pa.input, names); planModel = pa.model || ''; }
+      if (pa && pa.ok) { plan = _awPlanOf(pa.input, names, _awSourcesOf(data, looks)); planModel = pa.model || ''; }
       else planError = (pa && pa.error) || 'the plan did not come back';
     }
     var out = { ok: true, success: true, mode: mode, suggestions: suggestions, looks: looks, plan: plan, failed: failed,

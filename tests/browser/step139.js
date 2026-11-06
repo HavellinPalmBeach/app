@@ -39,6 +39,7 @@ const PLAN = {
       let body = {}; try { body = JSON.parse(route.request().postData() || '{}'); } catch (e) {}
       if (body.action === 'agentWalkthroughReview') {
         asked.push(body);
+        if (body.update || asked.length === 1) await new Promise((r) => setTimeout(r, 2500));   // a run takes a while: the screen must say so meanwhile   // a Re-plan takes a while: the window must say so meanwhile
         const sug = body.mode === 'plan' ? [] : [{ room: 'Office 1', field: 'vol', to: 5, why: 'Boxes to the ceiling on every wall.' },
                                                   { room: 'Office 1', field: 'vendor', vendor: body.context.vendorChoices[0] || 'Junk Removal', why: 'A bolted desk to take down.' }];
         return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, mode: body.mode, suggestions: sug,
@@ -84,11 +85,20 @@ const PLAN = {
     ok(await btn.isVisible(), 'Review walkthrough is on the screen');
     // 2026-11-05 (Anthony: lost under the rooms): it sits beside the client and Start over, above the room grid.
     const pos = await p.evaluate(() => { const b = document.getElementById('walk-review-btn'), g = document.getElementById('room-table-wrap'),
+      nm = document.getElementById('e-job-name'),
       so = Array.from(document.querySelectorAll('button')).find((x) => x.textContent.trim() === 'Start over' && x.checkVisibility());
-      const r = (e) => e ? e.getBoundingClientRect() : null; return { b: r(b), g: r(g), so: r(so) }; });
+      const r = (e) => e ? e.getBoundingClientRect() : null;
+      return { b: r(b), g: r(g), nm: r(nm), so: r(so), soCard: !!(so && so.closest('#est-save-card')) }; });
     ok(pos.b && pos.g && pos.b.top < pos.g.top, '⚠ above the room grid (' + (pos.b && Math.round(pos.b.top)) + ' < ' + (pos.g && Math.round(pos.g.top)) + ')');
-    ok(pos.b && pos.so && Math.abs(pos.b.top - pos.so.top) < 12 && pos.b.right <= pos.so.left, '…beside Start over, in its row (' + JSON.stringify(pos.b && [Math.round(pos.b.top), Math.round(pos.b.right)]) + ' vs ' + JSON.stringify(pos.so && [Math.round(pos.so.top), Math.round(pos.so.left)]) + ')');
-    await btn.click(); await p.waitForTimeout(1500);
+    ok(pos.b && pos.nm && Math.abs((pos.b.top + pos.b.bottom) / 2 - (pos.nm.top + pos.nm.bottom) / 2) < 14, '…in the client\'s row');
+    // Anthony, the same evening: "I don't think we should have that button at the top. That's too easy to fat finger".
+    ok(pos.soCard && pos.so.top > pos.g.top, '⚠ Start over is at the foot, beside Save and Reset, never at the top');
+    await btn.click(); await p.waitForTimeout(600);
+    const rb = await p.evaluate(() => { const b = document.getElementById('walk-review-btn'); return { t: b && b.textContent, d: b && b.disabled,
+      line: (document.getElementById('walk-review-msg') || {}).textContent || '' }; });
+    ok(rb.d === true && /Reviewing/.test(rb.t || ''), '⚠ while it runs the button reads Reviewing… and cannot be pressed again (' + rb.t + ')');
+    has(rb.line, 'Reviewing the walkthrough', '…and the line under the row says what it is doing');
+    await p.waitForTimeout(3000);
     ok(asked.length === 1, 'one call to the Apps Script');
     const a0 = asked[0] || { rooms: [], context: {} };
     ok(a0.mode === 'full', 'the estimate check and the plan (' + a0.mode + ')');
@@ -110,6 +120,13 @@ const PLAN = {
     has(vs[1], 'volume 5', '…the score first');
     has(vs[3], 'a vendor line', '…the vendor line under it');
     has(vs[3], 'A bolted desk to take down', '…with its own reason');
+    // 2026-11-05 (Anthony: "it should tell you which rooms there are suggestions"): the rooms under the line, each a press to its row.
+    const look = await p.evaluate(() => Array.from(document.querySelectorAll('#walk-review-rooms button')).map((b) => b.textContent.trim()));
+    ok(look.length === 1 && /Office 1/.test(look[0]), '⚠ the line names the room with suggestions, once for its two lines (' + JSON.stringify(look) + ')');
+    await p.evaluate(() => window.scrollTo(0, 0)); await p.waitForTimeout(200);
+    await p.click('#walk-review-rooms button'); await p.waitForTimeout(900);
+    const inView = await p.evaluate((oId) => { const r = document.getElementById('row-' + oId).getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }, oId);
+    ok(inView, '…and pressing it brings the room\'s row into view');
     const before = await p.evaluate(() => currentEstimate.grandTotal);
     await p.click('tr.wsug-row button:has-text("Use 5")'); await p.waitForTimeout(500);
     ok(await p.evaluate((oId) => document.getElementById('vol-' + oId).value, oId) === '5', 'Use 5 sets the volume box');
@@ -120,6 +137,7 @@ const PLAN = {
     await p.click('tr.wsug-row button:has-text("Add")'); await p.waitForTimeout(500);
     ok(await p.evaluate((t) => vendors.concat(prepItems).some((v) => v.type === t), vType), 'Add puts the vendor line on the estimate (' + vType + ')');
     ok(await p.evaluate(() => document.querySelectorAll('tr.wsug-row').length) === 0, 'and its line goes');
+    ok(await p.evaluate(() => !document.getElementById('walk-review-rooms')), '⚠ with nothing left to look at, the room list goes too');
     has(await p.evaluate(() => document.getElementById('walk-review-msg').textContent), 'the crew plan is written', 'the line under the row says what came back');
 
     // ── C ──
@@ -185,12 +203,24 @@ const PLAN = {
     await p.click('#cp-next-' + id + ' button:has-text("Open the full plan")'); await p.waitForTimeout(400);
     await p.fill('#cp-update', 'Anthony Jr has class from 12 to 5:30 this semester.');
     dialogs.length = 0;
-    await p.click('#cp-modal button:has-text("Re-plan")'); await p.waitForTimeout(1500);
+    await p.click('#cp-modal button:has-text("Re-plan")'); await p.waitForTimeout(700);
     ok(dialogs.some((d) => /You’ve edited this crew plan/.test(d)), 'Re-plan over the person\'s plan asks first');
+    // 2026-11-05 (Anthony: "I'm just sitting here now with the screen waiting for something to happen and kind of unsure").
+    const busy = await p.evaluate(() => { const b = document.getElementById('cp-replan-btn'), t = document.getElementById('cp-update');
+      return { b: b && b.textContent, dis: b && b.disabled, ro: t && t.readOnly, v: t && t.value, box: (document.getElementById('cp-modal-box') || {}).textContent || '' }; });
+    ok(busy.dis === true && /Re-planning/.test(busy.b || ''), '⚠ while it runs the button reads Re-planning… and cannot be pressed again (' + busy.b + ')');
+    ok(busy.ro === true && /class from 12/.test(busy.v || ''), '…what was typed stays in the box, locked');
+    has(busy.box, 'You can close this; the plan updates when it lands', '…and the window says it is working and can be closed');
+    await p.waitForTimeout(3200);
     const a3 = asked[asked.length - 1] || {};
     ok(a3.mode === 'plan', '⚠ from the Job Plan the plan alone, the price locked (' + a3.mode + ')');
     has(a3.update, 'class from 12 to 5:30', 'with what changed');
     ok(await p.evaluate((id) => crewPlanOf(id).edited === false, id), 'OK: the fresh plan replaces it');
+    const done = await p.evaluate(() => { const b = document.getElementById('cp-replan-btn'), t = document.getElementById('cp-update');
+      return { b: b && b.textContent, dis: b && b.disabled, v: t && t.value, line: (document.getElementById('cp-run-line') || {}).textContent || '' }; });
+    ok(done.dis === false && /Re-plan/.test(done.b || '') && !/Re-planning/.test(done.b || ''), 'when it lands the button is back');
+    ok(done.v === '', '⚠ …the box is empty: what was typed went in');
+    has(done.line, 're-planned with: “Anthony Jr has class from 12 to 5:30', '…and the line says so, in its words');
     await p.click('#cp-modal button:has-text("Close")'); await p.waitForTimeout(200);
 
     // ── F ──

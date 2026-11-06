@@ -2044,11 +2044,11 @@ body.no-smf .smf-col{display:none;}
         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
           <select id="e-job" onchange="loadJobIntoEstimate()" style="display:none;"><option value="">Select job</option></select>
           <div id="e-job-name" style="flex:1 1 200px;min-width:0;font-size:13px;font-weight:600;color:var(--gray-dk);overflow-wrap:anywhere;">&mdash;</div>
-          <!-- Review walkthrough beside Start over (Anthony, 2026-11-05: under the rooms it was "really kind of lost down here … it
-               should be at the top, next to the start over button"; the review is run at the desk that evening, on a saved estimate).
-               Its answer is the line under the row, #walk-review-msg. -->
+          <!-- Review walkthrough at the head of the screen (Anthony, 2026-11-05: under the rooms it was "really kind of lost down
+               here"; the review is run at the desk that evening, on a saved estimate). Its answer is the line under the row,
+               #walk-review-msg. Start over is at the foot beside Save and Reset since the same evening (Anthony: "That's too easy to
+               fat finger"): it discards the screen back to the saved estimate. -->
           <span id="walk-review-bar" style="display:inline-flex;gap:6px;flex-wrap:wrap;"></span>
-          <button class="btn-s" onclick="startEstimateOver()" title="Discard what is on this screen: back to the saved estimate, or to the intake answers if nothing is saved">Start over</button>
         </div>
         <div id="walk-review-msg"></div>
         <div id="e-job-ref" style="display:none;margin-top:8px;padding:7px 10px;background:var(--cream);border:1px solid var(--border-md);border-radius:4px;font-size:12px;color:var(--gray-dk);"></div>
@@ -2497,6 +2497,7 @@ body.no-smf .smf-col{display:none;}
        did on a desk (under the summary) and stays on the phone. The same handler and the same refusals. -->
   <div class="card" id="est-save-card" style="margin-top:1rem;">
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn-s" onclick="startEstimateOver()" title="Discard what is on this screen: back to the saved estimate, or to the intake answers if nothing is saved">Start over</button>
       <button class="btn-s" onclick="resetEstimate()" title="Clear this screen to a blank estimate for this client. A saved estimate is not changed unless you press Save">Reset</button>
       <!-- "Save Estimate", the name the manual and the playbook give it (2026-09-30, audit low). It read
            "Save & Preview Client Estimate →" for a preview tab retired on 2026-09-11; the save lands on
@@ -63752,11 +63753,14 @@ function walkReviewPayload(job, est, opt) {
       crew: tc + ' concierge' + (tc === 1 ? '' : 's') + ' and ' + ps + ' specialist' + (ps === 1 ? '' : 's'),
       days: days ? days + ' working day' + (days === 1 ? '' : 's') : '',
       notes: (job && job.notes) || '', house: house, privateNote: est.privateNote || '',
+      // Whether a new home is recorded (the move's destination), so the plan plans a move only where there is one (2026-11-05f).
+      newHome: !!(job && (String(job.destAddr || '').trim() || String(job.destCity || '').trim())),
       vendorsOn: types(est.vendors).concat(types(est.prepItems)),
       vendorChoices: opt.vendorChoices || []
     },
     rooms: rooms,
     plan: opt.plan || '',
+    planEdited: !!opt.planEdited,     // only a plan a person edited is a source the agent may cite (2026-11-05f)
     update: opt.update || ''
   };
 }
@@ -63795,34 +63799,40 @@ function walkReviewRun(jobId, where, update) {
     if (!ok) { if (mode === 'full') mode = 'check'; else return false; }
   }
   var body = walkReviewPayload(job, est, { mode: mode, vendorChoices: mode === 'plan' ? [] : walkReviewVendorChoices(),
-                                           plan: prev ? crewPlanText(prev) : '', update: update || '' });
+                                           plan: prev ? crewPlanText(prev) : '', planEdited: !!(prev && prev.edited), update: update || '' });
   var nPhotos = body.rooms.reduce(function (n, r) { return n + r.photos.length; }, 0);
-  var out = _walkReviewOut[jobId] = { at: Date.now(), where: where };
+  var out = _walkReviewOut[jobId] = { at: Date.now(), where: where, update: String(update || '').trim() };
+  // What was typed under Something changed? is kept until the plan it asked for lands (a failure leaves it to press again).
+  if (out.update) _crewReplanDraft[jobId] = out.update;
   out.timer = setTimeout(function () {
     if (_walkReviewOut[jobId] !== out) return;
     delete _walkReviewOut[jobId];
     _walkReviewLine(jobId, 'The walkthrough agent did not answer in six minutes. Nothing was changed; press it again.', 'err');
+    _crewViewRepaintFor(jobId);
   }, WALK_REVIEW_WATCHDOG_MS);
-  _walkReviewLine(jobId, 'Reviewing the walkthrough: ' + nPhotos + ' photo' + (nPhotos === 1 ? '' : 's') + ' across ' + body.rooms.length
+  _walkReviewLine(jobId, '\u23f3 Reviewing the walkthrough: ' + nPhotos + ' photo' + (nPhotos === 1 ? '' : 's') + ' across ' + body.rooms.length
     + ' room' + (body.rooms.length === 1 ? '' : 's') + ', then the crew plan. About a minute or two…', 'busy');
+  // The open plan says it is working at once (Anthony, 2026-11-05: "I'm just sitting here … unsure if anything's going to happen").
+  if (_crewView && _crewView.jobId === jobId) _crewViewPaint();
   fetch(_withDeviceKey(SHEETS_SYNC_URL), { method: 'POST', mode: 'cors', redirect: 'follow', headers: { 'Content-Type': 'text/plain' },
                                            body: JSON.stringify(body) })
     .then(_readAppsScriptJson)
     .then(function (d) {
       if (_walkReviewOut[jobId] !== out) return;   // the watchdog let go first: a late answer changes nothing
       clearTimeout(out.timer); delete _walkReviewOut[jobId];
-      if (!d || !d.ok) { _walkReviewLine(jobId, 'Not reviewed: ' + ((d && d.error) || 'the walkthrough agent did not answer') + '.', 'err'); return; }
-      walkReviewApply(jobId, d, mode);
+      if (!d || !d.ok) { _walkReviewLine(jobId, 'Not reviewed: ' + ((d && d.error) || 'the walkthrough agent did not answer') + '.', 'err'); _crewViewRepaintFor(jobId); return; }
+      walkReviewApply(jobId, d, mode, out.update);
     })
     .catch(function (e) {
       if (_walkReviewOut[jobId] !== out) return;
       clearTimeout(out.timer); delete _walkReviewOut[jobId];
       _walkReviewLine(jobId, 'Not reviewed: the Apps Script did not answer (' + String((e && e.message) || e).slice(0, 80) + '). Nothing was changed.', 'err');
+      _crewViewRepaintFor(jobId);
     });
   return true;
 }
 // The answer, written: the suggestions into this page, the plan onto the job plan (unless only the estimate was checked).
-function walkReviewApply(jobId, d, mode) {
+function walkReviewApply(jobId, d, mode, update) {
   var failed = d.failed || {}, nFail = Object.keys(failed).length;
   if (mode !== 'plan') {
     _walkSug[jobId] = { at: Date.now(), items: (d.suggestions || []).map(function (s) {
@@ -63834,34 +63844,68 @@ function walkReviewApply(jobId, d, mode) {
   var nSug = (_walkSug[jobId] && mode !== 'plan') ? _walkSug[jobId].items.length : 0;
   var bits = [];
   if (mode !== 'plan') bits.push(nSug ? nSug + ' suggestion' + (nSug === 1 ? '' : 's') + ' on the room rows' : 'the photos agree with the scores');
-  if (mode !== 'check') bits.push(wrote ? 'the crew plan is written' : 'the plan did not come back (' + (d.planError || 'no answer') + ')');
+  if (mode !== 'check') bits.push(wrote ? (update ? 're-planned with: “' + String(update).slice(0, 160) + (String(update).length > 160 ? '…' : '') + '”' : 'the crew plan is written')
+                                       : 'the plan did not come back (' + (d.planError || 'no answer') + ')');
+  if (wrote && update && _crewReplanDraft[jobId] === update) delete _crewReplanDraft[jobId];   // taken in: the box empties
   if (nFail) bits.push(nFail + ' room' + (nFail === 1 ? '' : 's') + ' not looked at (' + Object.keys(failed).slice(0, 3).join(', ') + ')');
   _walkReviewLine(jobId, 'Reviewed: ' + bits.join('; ') + '.', (mode !== 'check' && !wrote) || nFail ? 'warn' : 'ok');
   if (typeof walkSugPaint === 'function') walkSugPaint();
   if (typeof crewPlanRepaint === 'function') crewPlanRepaint(jobId);
 }
 var _walkReviewMsg = {};   // jobId -> {text, tone}, the last word of the last run, this page only
+var _crewReplanDraft = {}; // jobId -> what was typed under Something changed?, until the plan it asked for lands (page only)
+function _crewViewRepaintFor(jobId) { if (_crewView && _crewView.jobId === jobId) _crewViewPaint(); }
 function _walkReviewLine(jobId, text, tone) {
   _walkReviewMsg[jobId] = { text: text, tone: tone };
   if (typeof walkReviewBarPaint === 'function') walkReviewBarPaint();
   var el = document.getElementById('cp-run-line');
   if (el) { el.textContent = text; el.style.color = _walkToneColor(tone); }
 }
-function _walkToneColor(tone) { return tone === 'err' ? '#A32D2D' : tone === 'warn' ? '#8a5a00' : tone === 'ok' ? 'var(--green, #2e7d32)' : 'var(--gray)'; }
+function _walkToneColor(tone) { return tone === 'err' ? '#A32D2D' : (tone === 'warn' || tone === 'busy') ? '#8a5a00' : tone === 'ok' ? 'var(--green, #2e7d32)' : 'var(--gray)'; }
 
 // ── Build Estimate: the bar under the rooms, and the suggestions on their rows ─────────────────────────────────────────────────────
 function _estJobId() { return parseInt((document.getElementById('e-job') || {}).value, 10) || 0; }
 function walkReviewBarHtml(jobId) {
   if (!jobId) return '';
   var plan = crewPlanOf(jobId), busy = !!_walkReviewOut[jobId];
-  return '<button type="button" class="btn-s" id="walk-review-btn" ' + (busy ? 'disabled ' : '')
-      + 'title="Reads the walkthrough photos and notes: suggestions land on the rooms, and the crew plan is written" data-walk="review" data-job="' + jobId + '">&#128269; Review walkthrough</button>'
+  // While a run is out it says so and cannot be pressed (Anthony, 2026-11-05: "you can't tell that it's working, and you can just
+  // click review walkthrough again").
+  return '<button type="button" class="btn-s" id="walk-review-btn" ' + (busy ? 'disabled style="opacity:.6;cursor:wait;" ' : '')
+      + 'title="Reads the walkthrough photos and notes: suggestions land on the rooms, and the crew plan is written" data-walk="review" data-job="' + jobId + '">'
+      + (busy ? '&#9203; Reviewing…' : '&#128269; Review walkthrough') + '</button>'
     + (plan ? '<button type="button" class="btn-s" data-walk="plan" data-job="' + jobId + '">&#128203; Crew plan</button>' : '');
 }
 // The answer of the last run, the line under the client row.
 function walkReviewMsgHtml(jobId) {
   var msg = jobId && _walkReviewMsg[jobId];
-  return msg ? '<div id="walk-review-line" style="font-size:11.5px;margin-top:6px;color:' + _walkToneColor(msg.tone) + ';">' + esc(msg.text) + '</div>' : '';
+  var out = msg ? '<div id="walk-review-line" style="font-size:11.5px;margin-top:6px;color:' + _walkToneColor(msg.tone) + ';">' + esc(msg.text) + '</div>' : '';
+  // The rooms with a suggestion still standing, each a press that takes you to its row (Anthony, 2026-11-05: "in a big house, if
+  // there's just one suggestion, you're looking across a lot of area … to find this one little comment"). Read live off the
+  // standing list, so it shrinks as Use and ✕ are pressed and goes when none is left.
+  var standing = (jobId && _walkSug[jobId] && typeof walkSugStanding === 'function') ? walkSugStanding(jobId, _walkSugReaders()) : [];
+  var rooms = [];
+  standing.forEach(function (x) { if (rooms.indexOf(x.it.room) < 0) rooms.push(x.it.room); });
+  if (rooms.length) {
+    out += '<div id="walk-review-rooms" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:5px;font-size:11.5px;color:#8a5a00;">'
+      + '<span>Look at:</span>' + rooms.map(function (r) {
+        return '<button type="button" class="btn-s" style="font-size:11px;padding:3px 9px;" data-walk="goto" data-job="' + jobId + '" data-room="' + esc(r) + '">&#128247; ' + esc(r) + '</button>';
+      }).join('') + '</div>';
+  }
+  return out;
+}
+// Take the screen to a room's row and its suggestion: its section opened if folded, the row scrolled to the middle, the line flashed.
+function walkSugGoto(room) {
+  var rid = _walkRowForRoom(room), row = rid && document.getElementById('row-' + rid);
+  if (!row) return false;
+  var body = row.closest ? row.closest('[id^="sec-body-"]') : null;
+  if (body && body.style.display === 'none' && typeof toggleRoomSection === 'function') toggleRoomSection(body.id.replace('sec-body-', ''));
+  if (row.scrollIntoView) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  var line = row.nextElementSibling;
+  if (line && line.className === 'wsug-row') {
+    var box = line.querySelector('.wsug');
+    if (box) { box.style.boxShadow = '0 0 0 3px #f0c46a'; setTimeout(function () { box.style.boxShadow = ''; }, 1800); }
+  }
+  return true;
 }
 function walkReviewBarPaint() {
   var el = document.getElementById('walk-review-bar'), m = document.getElementById('walk-review-msg'), jobId = _estJobId();
@@ -63920,6 +63964,7 @@ function _walkClick(ev) {
   else if (act === 'plan') openCrewPlan(jobId);
   else if (act === 'use') walkSugUse(jobId, i);
   else if (act === 'dismiss') walkSugDismiss(jobId, i);
+  else if (act === 'goto') walkSugGoto(t.getAttribute('data-room'));
 }
 if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('click', _walkClick);
 function walkSugPaint() {
@@ -64108,13 +64153,14 @@ function crewPlanViewHtml(jobId, plan, editing, job) {
     }).join('')
       + '<div style="display:flex;justify-content:flex-end;margin-bottom:10px;"><button type="button" class="btn-s" onclick="crewPlanEdit(true)">&#9998; Edit plan</button></div>';
   }
-  var msg = _walkReviewMsg[jobId];
+  var msg = _walkReviewMsg[jobId], run = _walkReviewOut[jobId], draft = run ? (run.update || '') : (_crewReplanDraft[jobId] || '');
   var replan = '<div style="border-top:1px solid var(--border);padding-top:8px;">'
     + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--gray);margin-bottom:3px;">Something changed? <span style="text-transform:none;font-weight:400;letter-spacing:0;">· optional: type it, then Re-plan</span></div>'
-    + '<textarea id="cp-update" rows="2" style="width:100%;font-size:12px;padding:6px 8px;border:1px solid var(--border-md);border-radius:4px;box-sizing:border-box;font-family:Raleway,sans-serif;"></textarea>'
+    + '<textarea id="cp-update" rows="2" ' + (run ? 'readonly ' : '') + 'style="width:100%;font-size:12px;padding:6px 8px;border:1px solid var(--border-md);border-radius:4px;box-sizing:border-box;font-family:Raleway,sans-serif;' + (run ? 'background:var(--cream);color:var(--gray);' : '') + '">' + esc(draft) + '</textarea>'
+    + (run ? '<div style="font-size:11.5px;color:#8a5a00;margin-top:4px;">&#9203; Re-planning' + (run.update ? ' with what you typed' : '') + ': about a minute or two. You can close this; the plan updates when it lands.</div>' : '')
     + '<div style="display:flex;gap:8px;align-items:center;justify-content:space-between;margin-top:6px;flex-wrap:wrap;">'
     + '<span id="cp-run-line" style="font-size:11.5px;color:' + (msg ? _walkToneColor(msg.tone) : 'var(--gray)') + ';">' + (msg ? esc(msg.text) : '') + '</span>'
-    + '<span style="display:flex;gap:8px;"><button type="button" class="btn-s" ' + (_walkReviewOut[jobId] ? 'disabled ' : '') + 'onclick="crewPlanReplan(' + jobId + ')">&#8635; Re-plan</button>'
+    + '<span style="display:flex;gap:8px;"><button type="button" class="btn-s" id="cp-replan-btn" ' + (run ? 'disabled style="opacity:.6;cursor:wait;" ' : '') + 'onclick="crewPlanReplan(' + jobId + ')">' + (run ? '&#9203; Re-planning…' : '&#8635; Re-plan') + '</button>'
     + '<button type="button" class="btn-p" onclick="closeCrewPlan()">Close</button></span></div></div>';
   return head + '<div style="max-height:62vh;overflow-y:auto;">' + body + '</div>' + replan;
 }
