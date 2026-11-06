@@ -720,7 +720,7 @@ The rooms are a block of **cards, three across on a desk** (two on the iPad, one
 
 > **⚠** **Found the ring? Press *Found it* on its line, in the room.** Every must-find is its own line on the brief — on the Job Plan header, in every room's workspace and above Job Admin on the Job Admin & Inv tab — with a **Found it** button. The line goes green, drops under the ones still missing and reads *Found Sep 19, 2026 · Ashley Jerome*: the date, and the concierge assigned to the job. **Undo** if it was a false alarm. It saves to the job like everything else, so the desk sees it too. Do not leave it for the evening — a must-find nobody ticked reads as still missing to the next person in, and they go looking for it.
 
-> **⚠** **Found an original will, or cash? Record it on the *Found on site* card, today (new 2026-10-03).** It is under the in-house boxes on every estate job. An original will goes to the estate attorney the same day against a signed receipt, unopened and uncopied; cash is counted by two of you, sealed in a numbered bag, and the fiduciary signs for the bag the same day. Step 10g has the procedure.
+> **⚠** **Found an original will, cash, or the estate's papers? Record it on the *Found on site* card, today (new 2026-10-03; papers since 2026-11-06).** It is under the in-house boxes on every estate job. An original will goes to the estate attorney the same day against a signed receipt, unopened and uncopied; cash is counted by two of you, sealed in a numbered bag, and the fiduciary signs for the bag the same day; papers (deeds, titles, statements, policies, bonds, password sheets, hardware wallets, USB drives) are listed and go to counsel or the fiduciary the same day against a signed receipt. Step 10g has the procedure.
 
 > **⚠ You never type a name in the house, and now you never type one at the desk either unless you are correcting it.** Shoot the shelf once rather than each bottle on it — the agent splits the frame and names what is in it that evening (Step 10e). What is still worth your five seconds in the room: *Close-up* on a maker's mark, a signature or a hallmark, because those close-ups are read and they turn a guess into a reading.
 
@@ -1120,7 +1120,7 @@ Why the desk cares: not every licensed dealer is licensed for NFA items, so an u
 
 > Havellin is not a firearms expert and this is not legal advice to a client. If anything about a firearm on a job is unclear, it stops and goes to the representative and counsel. That is always the correct answer and nobody will ever be criticised for it.
 
-### g. Found on site — an original will, or cash (new 2026-10-03)
+### g. Found on site — an original will, cash, or papers (new 2026-10-03; papers since 2026-11-06)
 
 Two things turn up in an estate's house that Havellin must never hold, and each has a procedure Anthony set. The **Found on site** card records it: it is on the Job Plan's *In the house* stage, under the in-house boxes, on every estate job. Record it the day you find it, on the phone in the house if you can.
 
@@ -1139,7 +1139,13 @@ Two things turn up in an estate's house that Havellin must never hold, and each 
 2. It reads red (*Cash held by Havellin*) until the hand-over is recorded. *Handed to* is filled in with the representative. Anybody else is recorded and flagged *not a fiduciary recorded on this job*, and so is a hand-over on another day.
 3. Press **Print Cash Count and Receipt**: both counters sign, and the fiduciary signs for the bag with its seal intact. Then **File signed receipt** with the PDF or a photo, and the line goes green.
 
-> A record made in error is never edited or deleted: press **Void** on it, give the reason, and record it again. It stays on the card, struck through, with the reason. A record made on the other device shows after a reload. Both receipts are drafted for counsel and not yet reviewed.
+> **⚠** **Papers: deeds, titles, trust papers, statements, insurance policies, stock certificates, savings bonds, military papers, password sheets, hardware wallets and USB drives are set aside, listed, and handed to counsel or the fiduciary today, against a signed receipt (new 2026-11-06).** Never copy them, and never use a password, key or device among them. Until then Exhibit A promised this and the app had nowhere to record it.
+
+1. Press **Record papers found**: who found them, where, and what was found, one per line as you would describe it to counsel (*"Deed to 100 Ocean Blvd"*, *"Chase statements, 2025"*, *"Ledger hardware wallet"*). The app refuses it without the day, the finder or the list. *Handed to* is filled in with the estate attorney (else the representative).
+2. Until the hand-over is recorded the card reads red (*Papers held by Havellin: hand them to … today*), and the same line is in the desk's **Urgent strip**. A hand-over on another day is recorded and flagged.
+3. Press **Print Receipt for Papers Found**: each paper numbered, the statement that we have not copied them or used anything among them, and a line for the person receiving them. Then **File signed receipt**, and the line goes green.
+
+> A record made in error is never edited or deleted: press **Void** on it, give the reason, and record it again. It stays on the card, struck through, with the reason. A record made on the other device shows after a reload. The three receipts are drafted for counsel and not yet reviewed.
 
 ### h. Keys & access — every key, fob, remote and code (new 2026-10-16)
 

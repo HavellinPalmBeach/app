@@ -37,7 +37,7 @@ const DERIVED_FNS = ['invPrimaryDoc', 'invDocContractBlock', 'probatePackageDocs
   'coHours', 'jobAppraisalDuty', 'approvedEstimateFor', 'appraisalDuty', 'estimateDocScope', 'estimateAppraiserLines', 'docScopeDef',
   'jobPrepLines', 'coPrepVendorLines', 'coVendorAdds', 'roundCents', 'fmtHrs', 'fmt', '_hrsTxt',
   'estateAuthority', 'estateTaxReturn', '_ymdLocal', 'fmtDate2', 'esc', 'escLines', 'jobListEntries', 'jobFiduciaries', 'signedRecordsOf',
-  'siteFindLines', 'siteFindsOf', 'siteFindDefaultHolder', 'willDepositDue',
+  'siteFindLines', 'siteFindsOf', 'siteFindPaperItems', 'siteFindToCounsel', 'siteFindDefaultHolder', 'willDepositDue',
   'donationReceiptLine', 'ledgerDerivedLines', 'ledgerSignedCopies', 'ledgerSignState', 'signedCopySignState', 'signedByNames', 'ledgerSigners', 'fiduciaryCapacity', 'ledgerSignerRole', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine'];
 const DERIVED_VARS = ['FIDUCIARY_PR_ROLE_RE', 'FIDUCIARY_TRUSTEE_ROLE_RE', 'PROBATE_PKG_TITLES', 'INV_CONTRACT_DOCS', 'ESTATE_PKG_ROUTES', 'PLAN_COI_PTYPES', 'PLAN_COI_ACCESS_RE', 'PLAN_VALUABLES_VENDOR_TYPES', 'DECEDENT_SERVICES', 'jobPlanStore', 'TC_DONE_STATUSES', 'PS_DONE_STATUSES', 'ROOM_STATUS_META', 'ROOM_STATUS_LEGACY',
   'INV_RELEASE_DISPOSITIONS', 'FIREARMS_PROTOCOL_DOC', 'HOUSE_FLAGS', 'changeOrders', 'MATTER_TYPES', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE',
@@ -48,13 +48,13 @@ const DERIVED_STUBS = () => ({ isFormalDoc: () => false, docSentAt: () => null, 
 // The Found on site card and its dialog, the foundation's list writers and the signed-copy path, on top.
 const FIND_FNS = ['_invDocPartyHead', 'siteFindsCardHtml', '_siteFindRowHtml', '_repaintSiteFinds', 'openSiteFind', 'closeSiteFind', 'saveSiteFind', 'voidSiteFind',
   'siteFindRefusal', 'siteFindHandFlag', 'siteFindHolderFlag', 'siteFindDay', '_siteFindTeamNames', '_siteFindHolderNames',
-  'willReceiptHtml', 'cashReceiptHtml', 'printSiteFindReceipt', '_siteFindFormRow', '_siteFindSigLine', '_invDocHead', '_invDocName',
+  'willReceiptHtml', 'cashReceiptHtml', 'papersReceiptHtml', 'printSiteFindReceipt', '_siteFindFormRow', '_siteFindSigLine', '_invDocHead', '_invDocName',
   'jobListPut', 'jobListGet', 'jobListVoid', 'newJobListId', '_saveJobEdit', '_jobTouch', '_actor', '_invStampBy', 'deviceUser', 'samePerson', 'canonPersonName',
   'isCrewPlaceholder', '_andJoin', 'showFB', 'fileSignedCopy', '_armFiling', '_signedCopyName', '_jobRootFolderId', 'signedCopyControlHtml',
   'fileSignedCopyFromInput', 'signedRecordLinksHtml', 'estateValueDateLabel'];
 const FIND_VARS = ['JOB_RECORD_LISTS', 'SIGNED_RECORD_KINDS', 'SIGNED_COPY_MAX_BYTES', '_signedFiling', 'FILING_WATCHDOG_MS', 'SIGNED_RECORDS_SUBFOLDER',
   '_signedCopySpecs', '_signedCopyKeys', 'PERSON_NAME_ALIASES', 'CONTRACTOR_TC_NAME', 'LOG_PLACEHOLDER_NAMES', '_SITE_FIND_BLANK',
-  'WILL_RECEIPT_STATEMENT', 'CASH_RECEIPT_STATEMENT'];
+  'WILL_RECEIPT_STATEMENT', 'CASH_RECEIPT_STATEMENT', 'PAPERS_RECEIPT_STATEMENT'];
 
 module.exports = function ({ group, ok, eq, has, lacks }) {
   // ── 1 ─────────────────────────────────────────────────────────────────────
@@ -166,7 +166,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       has(task(k).label, 'representative', k + ' says "the representative"');
     });
     ['docs_sequestered', 'cash_logged'].forEach((k) => has(task(k).label, 'Found on site, below', k + ' points at the Found on site card\'s procedure'));
-    has(task('docs_sequestered').label, 'an original will is recorded under Found on site', 'the papers box hands the will to the card');
+    has(task('docs_sequestered').label, 'the papers, and an original will, are recorded under Found on site', 'the papers box hands the will to the card');
     has(task('cash_logged').label, 'cash is counted and handed over under Found on site', 'and the valuables box hands the cash to it');
     has(task('cash_logged').label, 'written authority', 'nothing removed without the representative\'s written authority');
     ok(!c.PLAN_TASKS.concat(c.JOB_ADMIN_TASKS).some((t) => /\bPR\b/.test(t.label)), '⚠ no box on either list abbreviates the representative as PR');
@@ -250,7 +250,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const PLAN_FNS = ['derivedLinesHtml', 'planTaskApplies', 'renderJobPlan', 'planProcedureHtml', 'guideLinkHtml', 'planBolHtml', 'bolSignedCopies', 'signedRecordLinksHtml', 'signedCopyControlHtml', 'custodyLogKept', 'planTaskCtx', 'jobOnProbateTrack', 'invFiduciaryMode', 'isDecedentJob', 'planTasksFor', 'planTasksHtml',
       'planTaskSectionsHtml', 'planSubsec', 'chkGrid', 'planChk', '_planTaskDone', 'planPhaseWrap', 'secCaret', 'planDerivedHtml', 'planDerivedLines', 'prepVendorsConfirmed',
       'donationReceiptLine', 'ledgerDerivedLines', 'ledgerSignedCopies', 'ledgerSignState', 'signedCopySignState', 'signedByNames', 'ledgerSigners', 'jobFiduciaries', 'fiduciaryCapacity', 'ledgerSignerRole', 'signedRecordsOf', '_agrApprover', 'jobTakesProceedsStatements', 'proceedsLine',
-      'estateAuthority', 'estateTaxReturn', 'jobListEntries', 'siteFindsCardHtml', 'siteFindsOf', '_planRooms', '_planRoomStatus', '_planRoomListHtml',
+      'estateAuthority', 'estateTaxReturn', 'jobListEntries', 'siteFindsCardHtml', 'siteFindsOf', 'siteFindPaperItems', 'siteFindToCounsel', '_planRooms', '_planRoomStatus', '_planRoomListHtml',
       '_shotCount', '_slotRefs', 'roomStatusNormalize', 'firearmsBannerHtml', 'firearmsWorkspaceLine', 'firearmsFlaggedAtIntake', '_firearmsRow',
       'houseFlagsOf', '_jobInvRefs', '_srcLineKey', 'planGateChipsHtml', 'vendorSourcingProgress', 'logisticsLinesFor', 'logisticsLineOn',
       'logisticsCatsFor', 'jobTeamGateLine', 'crewDuplicates', 'isCrewPlaceholder', 'samePerson', 'canonPersonName', 'planVendorsMeta', 'vendorsWithoutCoi', 'vendorCoiState', '_vendorYmd', 'jobListEntries', 'fmtDate2',

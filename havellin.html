@@ -1498,7 +1498,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.11.05 · 7:18pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.11.06 · 5:59pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3127,6 +3127,12 @@ body.no-smf .smf-col{display:none;}
         </div>
         <label>Sealed bag number</label>
         <input type="text" id="fos-bag">
+      </div>
+      <div id="fos-sec-papers">
+        <label>Found by</label>
+        <input type="text" id="fos-p-found-by" list="fos-team" autocomplete="off">
+        <label>What was found, one per line</label>
+        <textarea id="fos-papers" rows="5"></textarea>
       </div>
     </div>
     <div id="fos-sec-hand">
@@ -26622,6 +26628,7 @@ var SIGNED_RECORD_KINDS = {
   ledger:    { label: 'Signed Disposition Ledger' },
   will:      { label: 'Signed receipt for the original will' },
   cash:      { label: 'Signed cash receipt' },
+  papers:    { label: 'Signed receipt for papers found' },
   donation:  { label: 'Charity receipt' },
   statement: { label: 'Proceeds statement' },
   // The agreement's signature page as the co-representatives signed it by hand (2026-10-05, P20; Q22): on the paper
@@ -53393,7 +53400,7 @@ var PLAN_TASKS = [
   // a second, vaguer instruction for the same act; and "the representative" replaces "PR", which a trust or a family
   // distribution does not have. The keys are unchanged, so a tick made under the old words stays.
   { key:'docs_sequestered',   phase:'p1', sec:'Before anything leaves the house', when:function(c){ return c.isDocJob; },
-    label:'Deeds, titles, trust papers, financial and military records sequestered and handed to the representative or the attorney against a signed receipt — an original will is recorded under Found on site, below' },
+    label:'Deeds, titles, trust papers, financial and military records sequestered and handed to the representative or the attorney against a signed receipt — the papers, and an original will, are recorded under Found on site, below' },
   { key:'cash_logged',        phase:'p1', sec:'Before anything leaves the house', when:function(c){ return c.isDocJob; },
     label:'Jewelry and other valuables found logged and set aside, never removed without the representative’s written authority — cash is counted and handed over under Found on site, below' },
   // Phase 2 — pickups and disposal
@@ -54649,11 +54656,24 @@ function fileAccessRecord(jobId, opt) {
 var WILL_DEPOSIT_DAYS = 10;
 var SITE_FIND_KINDS = {
   will: { noun: 'Original will', doc: 'Receipt for Original Will', record: 'Record an original will', made: 'found' },
-  cash: { noun: 'Cash',          doc: 'Cash Count and Receipt',    record: 'Record cash found',       made: 'counted' }
+  cash: { noun: 'Cash',          doc: 'Cash Count and Receipt',    record: 'Record cash found',       made: 'counted' },
+  // ⚠ PAPERS (2026-11-06; Anthony, off the estate reference and a Florida probate inventory report: Exhibit A already
+  // promised that deeds, titles and financial records go to the representative and counsel against a signed receipt, and
+  // nothing recorded it). Everything of the estate's that is not a will or cash and is not on the inventory: deeds, titles,
+  // statements, insurance policies, stock certificates, savings bonds, a DD-214, password sheets, hardware wallets, USB
+  // drives. Listed one per line (`items`), handed to counsel (else the representative) against a signed receipt.
+  papers: { noun: 'Papers', doc: 'Receipt for Papers Found', record: 'Record papers found', made: 'found' }
 };
+// The kinds whose hand-over goes to counsel first (siteFindDefaultHolder, _siteFindHolderNames); cash goes to a fiduciary.
+function siteFindToCounsel(kind) { return kind === 'will' || kind === 'papers'; }
 // ⚠ DRAFTED FOR COUNSEL (P19), printed on the two forms. One definition each; the counsel bundle quotes them.
 var WILL_RECEIPT_STATEMENT = 'Havellin Palm Beach, LLC found the document described above at the property during its engagement and delivers it as it was found. Havellin has not opened it, read its contents or copied it, and keeps no copy of it in any form; the description above is taken from its outside only. Havellin does not hold original wills. Under Florida law the custodian of a will must deposit it with the clerk of the court having venue of the estate within ten days after receiving information that the testator is dead (Fla. Stat. &sect;732.901).';
+var PAPERS_RECEIPT_STATEMENT = 'Havellin Palm Beach, LLC found the papers and items listed above at the property during its engagement and delivers them as they were found. Havellin has not copied them, has not used any password, key or device among them, and keeps none of them in any form. Havellin does not hold an estate&rsquo;s papers: they are delivered to counsel or the fiduciary on the day they are found.';
 var CASH_RECEIPT_STATEMENT = 'The two people named above counted this cash together at the property on the day shown and sealed it, in each other&rsquo;s presence, in the numbered bag shown. Havellin Palm Beach, LLC does not hold estate cash: it is delivered sealed to the fiduciary the day it is counted. The fiduciary signs for the bag with its seal intact and its number as shown; the amount is the count of the two people named, each of whom signs for it below.';
+// The papers found, one per line as typed, blank lines dropped.
+function siteFindPaperItems(f) {
+  return String((f && f.items) || '').split(/\r?\n/).map(function(x) { return x.trim(); }).filter(Boolean);
+}
 function siteFindsOf(job, kind, withVoided) {
   return jobListEntries(job, 'siteFinds', withVoided).filter(function(f) { return !!SITE_FIND_KINDS[f.kind] && (!kind || f.kind === kind); });
 }
@@ -54682,7 +54702,7 @@ function siteFindHolderFlag(job, f) {
 // firm), else the representative; cash to the representative, the first of jobFiduciaries.
 function siteFindDefaultHolder(job, kind) {
   if (!job) return '';
-  if (kind === 'will') {
+  if (siteFindToCounsel(kind)) {
     var atty = String(job.probateAttyName || '').trim() || String(job.probateAttyFirm || '').trim();
     if (atty) return atty;
   }
@@ -54701,6 +54721,10 @@ function siteFindRefusal(f, mode) {
     if (!ymd(f.foundOn)) miss.push('the day it was found');
     if (!has(f.foundBy)) miss.push('who found it');
     if (!has(f.description)) miss.push('what it looks like from the outside');
+  } else if (f.kind === 'papers') {
+    if (!ymd(f.foundOn)) miss.push('the day they were found');
+    if (!has(f.foundBy)) miss.push('who found them');
+    if (!siteFindPaperItems(f).length) miss.push('what was found, one per line');
   } else {
     if (!ymd(f.countedOn)) miss.push('the day it was counted');
     if (!(Number(f.amount) > 0)) miss.push('the amount counted');
@@ -54756,6 +54780,19 @@ function siteFindLines(job, today) {
                  + (late ? 'Confirm with ' + esc(f.handedTo) + ' that it went to the clerk, and record the date'
                          : 'Confirm the deposit with ' + esc(f.handedTo) + ' and record it') + ' under Found on site on the Job Plan' });
   });
+  siteFindsOf(job, 'papers').forEach(function(f) {
+    var n = siteFindPaperItems(f).length, what = n + (n === 1 ? ' paper or item' : ' papers and items') + ' found ' + fmtDate2(f.foundOn) + (f.where ? ' in ' + esc(f.where) : '');
+    if (!f.handedOn) {
+      var to = siteFindDefaultHolder(job, 'papers');
+      out.push({ key: 'papers_held_' + f.id, ok: false, red: true, label: 'Papers held by Havellin',
+                 detail: what + ' &mdash; hand them to ' + (to ? esc(to) : 'counsel or the fiduciary') + ' today, against a signed receipt' });
+      return;
+    }
+    var prc = signedRecordsOf(job, 'papers', f.id).length > 0;
+    out.push({ key: 'papers_receipt_' + f.id, ok: prc, label: 'Papers handed over against a signed receipt',
+               detail: what + ', to ' + esc(f.handedTo) + ' on ' + fmtDate2(f.handedOn)
+                 + (prc ? '' : ' &mdash; file the receipt they signed, under Found on site on the Job Plan') });
+  });
   siteFindsOf(job, 'cash').forEach(function(f) {
     var what = fmt(Number(f.amount) || 0) + ' in sealed bag No. ' + esc(f.bagNo);
     if (!f.handedOn) {
@@ -54787,7 +54824,7 @@ function _siteFindTeamNames(job) {
 function _siteFindHolderNames(job, kind) {
   var out = [];
   var add = function(n) { n = String(n || '').trim(); if (n && !out.some(function(x) { return samePerson(x, n); })) out.push(n); };
-  if (kind === 'will') { add(job && job.probateAttyName); add(job && job.probateAttyFirm); }
+  if (siteFindToCounsel(kind)) { add(job && job.probateAttyName); add(job && job.probateAttyFirm); }
   jobFiduciaries(job).forEach(function(p) { add(p.name); });
   return out;
 }
@@ -54796,7 +54833,10 @@ function _siteFindHolderNames(job, kind) {
 function _siteFindRowHtml(jobId, job, f) {
   var K = SITE_FIND_KINDS[f.kind];
   var idq = '\'' + esc(String(f.id)) + '\'';
-  var facts = f.kind === 'will'
+  var facts = f.kind === 'papers'
+    ? '<span class="fos-kind">Papers</span> &mdash; found ' + fmtDate2(f.foundOn) + (f.where ? ' in ' + esc(f.where) : '')
+      + ' by ' + esc(f.foundBy) + '<br>' + siteFindPaperItems(f).map(esc).join('<br>')
+    : f.kind === 'will'
     ? '<span class="fos-kind">Original will</span> &mdash; found ' + fmtDate2(f.foundOn) + (f.where ? ' in ' + esc(f.where) : '')
       + ' by ' + esc(f.foundBy) + '<br><span style="color:var(--gray);">From the outside:</span> ' + escLines(f.description)
     : '<span class="fos-kind">Cash</span> &mdash; ' + fmt(Number(f.amount) || 0) + ' counted ' + fmtDate2(f.countedOn)
@@ -54832,12 +54872,13 @@ function siteFindsCardHtml(jobId, job, est) {
   var live = all.filter(function(f) { return !f.voidedAt; });
   var voided = all.filter(function(f) { return !!f.voidedAt; });
   return '<div class="fos-card" id="plan-finds-' + jobId + '">'
-    + '<div class="fos-hd">Found on site <small>an original will, or cash: record it the day it is found</small></div>'
+    + '<div class="fos-hd">Found on site <small>an original will, cash, or the estate&rsquo;s papers: record them the day they are found</small></div>'
     + planDerivedHtml(jobId, job, est, 'finds')
     + live.map(function(f) { return _siteFindRowHtml(jobId, job, f); }).join('')
     + '<div class="fos-acts">'
       + '<button type="button" class="btn-s" onclick="openSiteFind(' + jobId + ',\'will\')">' + SITE_FIND_KINDS.will.record + '</button>'
       + '<button type="button" class="btn-s" onclick="openSiteFind(' + jobId + ',\'cash\')">' + SITE_FIND_KINDS.cash.record + '</button>'
+      + '<button type="button" class="btn-s" onclick="openSiteFind(' + jobId + ',\'papers\')">' + SITE_FIND_KINDS.papers.record + '</button>'
     + '</div>'
     + voided.map(function(f) {
         return '<div class="fos-void"><s>' + SITE_FIND_KINDS[f.kind].noun + ' ' + SITE_FIND_KINDS[f.kind].made + ' ' + fmtDate2(siteFindDay(f)) + '</s>'
@@ -54845,7 +54886,8 @@ function siteFindsCardHtml(jobId, job, est) {
       }).join('')
     + '<div class="fos-note"><strong>An original will:</strong> describe it from the outside only &mdash; never open, read, copy or interpret it &mdash; '
       + 'and hand it to the estate attorney the same day against a signed receipt. Havellin never keeps it. '
-      + '<strong>Cash:</strong> two people count it, it goes in a sealed numbered bag, and the fiduciary signs for the bag the same day.</div>'
+      + '<strong>Cash:</strong> two people count it, it goes in a sealed numbered bag, and the fiduciary signs for the bag the same day. '
+      + '<strong>Papers:</strong> deeds, titles, statements, insurance policies, stock certificates, savings bonds, military papers, password sheets, hardware wallets and USB drives are set aside, listed, and handed to counsel or the fiduciary the same day against a signed receipt; never copied or used.</div>'
     + '</div>';
 }
 // The desk's way to the card (P22): the Job Plan on this client, In the house open, the card in view.
@@ -54883,7 +54925,7 @@ function openSiteFind(jobId, kind, mode, id) {
   var show = function(i, on) { var e = el(i); if (e) e.style.display = on ? '' : 'none'; };
   var opts = function(names) { return names.map(function(n) { return '<option value="' + esc(n) + '">'; }).join(''); };
   set('fos-job', String(jobId)); set('fos-kind', kind); set('fos-mode', mode); set('fos-id', f ? String(f.id) : '');
-  ['fos-where', 'fos-found-by', 'fos-desc', 'fos-amount', 'fos-counter1', 'fos-counter2', 'fos-bag', 'fos-handed-on', 'fos-dep-on'].forEach(function(i) { set(i, ''); });
+  ['fos-where', 'fos-found-by', 'fos-desc', 'fos-p-found-by', 'fos-papers', 'fos-amount', 'fos-counter1', 'fos-counter2', 'fos-bag', 'fos-handed-on', 'fos-dep-on'].forEach(function(i) { set(i, ''); });
   set('fos-date', today);
   set('fos-handed-to', mode === 'new' || mode === 'handover' ? siteFindDefaultHolder(job, kind) : '');
   if (mode === 'handover') set('fos-handed-on', today);
@@ -54891,20 +54933,22 @@ function openSiteFind(jobId, kind, mode, id) {
   show('fos-sec-find', mode === 'new');
   show('fos-sec-will', mode === 'new' && kind === 'will');
   show('fos-sec-cash', mode === 'new' && kind === 'cash');
+  show('fos-sec-papers', mode === 'new' && kind === 'papers');
   show('fos-sec-hand', mode !== 'deposit');
   show('fos-sec-dep', mode === 'deposit');
   var t = el('fos-title'); if (t) t.textContent = mode === 'new' ? K.record : mode === 'handover' ? 'Record the hand-over' : 'Confirm the deposit with the clerk';
-  var dl = el('fos-date-lbl'); if (dl) dl.textContent = kind === 'will' ? 'Found on' : 'Counted on';
+  var dl = el('fos-date-lbl'); if (dl) dl.textContent = kind === 'cash' ? 'Counted on' : 'Found on';
   var s = el('fos-summary');
   if (s) s.innerHTML = mode === 'new'
     ? (kind === 'will' ? 'Describe it from the outside only: never open, read, copy or photograph its contents. It goes to the estate attorney today, against a signed receipt.'
+       : kind === 'papers' ? 'List each paper or item as you would describe it to counsel. Never copy them or use a password, key or device among them. They go to counsel or the fiduciary today, against a signed receipt.'
                        : 'Two people count it together and seal it in a numbered bag. The fiduciary signs for the bag today.')
     : esc(K.noun + ' ' + K.made + ' ' + fmtDate2(siteFindDay(f)) + (f.where ? ' in ' + f.where : '')
         + (kind === 'cash' ? ': ' + fmt(Number(f.amount) || 0) + ', sealed bag No. ' + f.bagNo : '')
         + (f.handedOn ? '. Handed to ' + f.handedTo + ' on ' + fmtDate2(f.handedOn) + '.' : '.'));
   var hh = el('fos-hand-hint');
   if (hh) hh.textContent = mode === 'new' ? 'Leave the date blank while Havellin still holds it, and record the hand-over when it happens.'
-    : (kind === 'will' ? 'The same day it was found. Any other day is recorded and flagged.' : 'The same day it was counted. Any other day, or anybody but a fiduciary, is recorded and flagged.');
+    : (kind !== 'cash' ? 'The same day it was found. Any other day is recorded and flagged.' : 'The same day it was counted. Any other day, or anybody but a fiduciary, is recorded and flagged.');
   var tl = el('fos-team'); if (tl) tl.innerHTML = opts(_siteFindTeamNames(job));
   var hl = el('fos-holders'); if (hl) hl.innerHTML = opts(_siteFindHolderNames(job, kind));
   var b = el('fos-save-btn'); if (b) b.textContent = mode === 'new' ? 'Record' : mode === 'handover' ? 'Record the hand-over' : 'Record the deposit';
@@ -54928,6 +54972,10 @@ function saveSiteFind() {
     rec = { kind: kind, recordedBy: who, recordedAt: Date.now() };
     if (kind === 'will') {
       rec.foundOn = v('fos-date'); rec.where = v('fos-where'); rec.foundBy = v('fos-found-by'); rec.description = v('fos-desc');
+    } else if (kind === 'papers') {
+      var pe = document.getElementById('fos-papers');
+      rec.foundOn = v('fos-date'); rec.where = v('fos-where'); rec.foundBy = v('fos-p-found-by');
+      rec.items = siteFindPaperItems({ items: pe ? String(pe.value || '') : '' }).join('\n');
     } else {
       rec.countedOn = v('fos-date'); rec.where = v('fos-where');
       rec.amount = roundCents(parseFloat(v('fos-amount')) || 0);   // to the cent, as typed (P17)
@@ -54997,6 +55045,21 @@ function willReceiptHtml(job, f) {
     + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">The signed receipt is filed with the estate record and retained for seven years.</div>'
     + '</div>';
 }
+function papersReceiptHtml(job, f) {
+  return '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
+    + _invDocHead(job, SITE_FIND_KINDS.papers.doc, 'Papers and items found at the property, delivered as they were found')
+    + '<table style="border-collapse:collapse;font-size:12px;margin:8px 0 12px;">'
+      + _siteFindFormRow('Found', fmtDate2(f.foundOn) + (f.where ? ', ' + esc(f.where) : '') + ', by ' + esc(f.foundBy) + ' of Havellin Palm Beach, LLC')
+      + _siteFindFormRow('What was found', siteFindPaperItems(f).map(function(x, i) { return (i + 1) + '. ' + esc(x); }).join('<br>'))
+      + _siteFindFormRow('Delivered to', f.handedTo ? esc(f.handedTo) : _SITE_FIND_BLANK)
+      + _siteFindFormRow('On', f.handedOn ? fmtDate2(f.handedOn) : _SITE_FIND_BLANK)
+    + '</table>'
+    + '<div style="font-size:11.5px;line-height:1.6;margin-bottom:6px;">' + PAPERS_RECEIPT_STATEMENT + '</div>'
+    + _siteFindSigLine('Received by', (f.handedTo ? esc(f.handedTo) : 'Print name: __________________________') + ' &mdash; I have received the papers and items listed above, as stated.')
+    + _siteFindSigLine('Delivered by', 'for Havellin Palm Beach, LLC')
+    + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">The signed receipt is filed with the estate record and retained for seven years.</div>'
+    + '</div>';
+}
 function cashReceiptHtml(job, f) {
   var by = f.countedBy || [];
   var fid = f.handedTo ? jobFiduciaries(job).filter(function(p) { return samePerson(p.name, f.handedTo); })[0] : null;
@@ -55022,7 +55085,7 @@ function printSiteFindReceipt(jobId, id) {
   var f = job ? jobListGet(job, 'siteFinds', id) : null;
   if (!job || !f || !SITE_FIND_KINDS[f.kind] || !invFiduciaryMode(job)) { showSyncBadge('That record is no longer on this job.', true); return false; }
   if (f.voidedAt) { showSyncBadge('That record is void, so there is nothing to print.', true); return false; }
-  var html = f.kind === 'will' ? willReceiptHtml(job, f) : cashReceiptHtml(job, f);
+  var html = f.kind === 'will' ? willReceiptHtml(job, f) : f.kind === 'papers' ? papersReceiptHtml(job, f) : cashReceiptHtml(job, f);
   return _printDocument(html, _invDocName(job, SITE_FIND_KINDS[f.kind].doc), { view: true, job: job, label: SITE_FIND_KINDS[f.kind].doc });   // on screen first (2026-11-02)
 }
 
@@ -55741,7 +55804,7 @@ function toggleJobAdmin(jobId) {
 // was a line behind a fold, under the band. Anthony, 2026-10-22: *"Build all of it now."*
 // The keys it reads are set where each line is built: Found on site's (siteFindLines: will_, cash_), a lost access item's
 // (accessLines: access_lost_), the incidents' (incidentLines: inc_). A line done (`ok`) is never urgent: Job Admin, green.
-var DESK_NOW_KEY_RE = /^(will_|cash_|access_lost_|inc_)/;
+var DESK_NOW_KEY_RE = /^(will_|cash_|papers_|access_lost_|inc_)/;
 function deskNowLine(line, job) {
   if (!line || line.ok) return 'admin';
   var key = String(line.key || '');

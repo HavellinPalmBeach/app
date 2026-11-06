@@ -191,7 +191,7 @@ const pretty = (ymd) => { const [y, m, d] = ymd.split('-').map(Number);
       has(await txt('#stage-p0'), 'Certification of Trust (§736.1017) read — any limits on the trustee’s powers noted', 'Before Day 1 carries the Trust gate box');
       ok(await p.locator('#stage-p0 input[onchange*="\'trustee_authority\'"]').count() === 1, 'as a real box');
       const rooms = await txt('#stage-rooms');
-      has(rooms, 'an original will is recorded under Found on site, below', 'the papers box points at Found on site');
+      has(rooms, 'the papers, and an original will, are recorded under Found on site, below', 'the papers box points at Found on site');
       has(rooms, 'cash is counted and handed over under Found on site, below', 'and the valuables box');
       lacks(rooms, 'PR sign-off', 'no "PR" in the boxes');
       ok(await vis('#plan-finds-5701'), 'the Found on site card is on the In the house stage');

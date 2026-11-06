@@ -1342,6 +1342,21 @@ amount is the count of the two people named, each of whom signs for it below."*
 
 **The question.** Is a fiduciary's signature for a sealed bag (rather than a recount) enough?
 
+### D10a. Papers found on site ⚠ NEW 2026-11-06
+
+**What it says.** Exhibit A promises that deeds, titles and financial records go to the representative and counsel against a
+signed receipt; since 2026-11-06 the Found on site card records them (Anthony approved, off the estate reference): deeds,
+titles, trust papers, statements, insurance policies, stock certificates, savings bonds, military papers, password sheets,
+hardware wallets and USB drives, listed one per line and handed to counsel (else the representative) the same day. The
+*Receipt for Papers Found*: *"Havellin Palm Beach, LLC found the papers and items listed above at the property during its
+engagement and delivers them as they were found. Havellin has not copied them, has not used any password, key or device among
+them, and keeps none of them in any form. Havellin does not hold an estate's papers: they are delivered to counsel or the
+fiduciary on the day they are found."*
+
+**The question.** Should a hardware wallet, a password sheet or a device go to the fiduciary rather than counsel, and should the
+receipt say anything about digital assets (Chapter 740, the fiduciary's access)? Is listing them by description enough, with no
+photograph of a password sheet's contents (the app takes none)?
+
 ### D11. The Donation Record ⚠ NEW 2026-10-03
 
 **What it says.** One per charity: what went to it (item, quantity, condition, date and, where recorded, Havellin's estimate

@@ -3,6 +3,8 @@ brand: HAVELLIN PALM BEACH
 title: Estate and Trust Settlement
 subtitle: A reference for estate counsel, trustees and fiduciaries
 version: Version 2.0 | November 2026
+cover_title: Estate & Trust Settlement Services
+cover_subtitle: A Reference for Estate Counsel, Trustees, and Fiduciaries
 header: Havellin Palm Beach, LLC | Estate and Trust Settlement
 ---
 
@@ -65,7 +67,7 @@ A personal representative and a trustee carry the same exposure: each must be ab
 
 **No paper claims more than it is.** A schedule with an item not yet valued, or a possible duplicate not yet resolved, prints as DRAFT, states its total as recorded so far and names the gaps. Each paper also says whether Havellin has read the whole list through, and once it has, names the reader and the date.
 
-**Found in the house.** An original will or codicil is handed unopened to the estate attorney the same day, against a signed receipt, for deposit with the clerk within the ten days §732.901 allows. Cash is counted by two people, sealed in a numbered bag and signed for by the fiduciary the same day. Deeds, titles and financial records go to you and counsel against a signed receipt.
+**Found in the house.** An original will or codicil is handed unopened to the estate attorney the same day, against a signed receipt, for deposit with the clerk within the ten days §732.901 allows. Cash is counted by two people, sealed in a numbered bag and signed for by the fiduciary the same day. Deeds, titles, statements, policies, bonds, password sheets, hardware wallets and the like are listed, never copied or used, and handed to counsel or you the same day against a signed receipt.
 
 **Firearms.** Photographed where found and not moved without written authority. A firearm leaves only through a licensed dealer, whether it is sold or going to a named person, and nobody else carries one out, family included. Items regulated under the National Firearms Act are never transported by us. Havellin never buys a firearm and takes nothing from its sale.
 
@@ -144,4 +146,4 @@ Filed in the estate's folder beside it: every signed approval, receipt and picku
 
 **Marketing.** The agreement allows anonymized photographs (no address, no names, no identifiable person, no documents) to be used in our marketing unless you opt out, on the agreement or by written notice at any time. In practice we publish nothing until the property has closed or been cleared, and nothing from a contested matter. The inventory and the record of where things went are never used.
 
-> Havellin Palm Beach, LLC · 515 N Flagler Drive, Suite 350, West Palm Beach, FL 33401 · (561) 652-5522 · info@havellinpalmbeach.com
+> Havellin Palm Beach, LLC · FL Reg. No. L26000216712 · 515 N Flagler Drive, Suite 350, West Palm Beach, FL 33401 · (561) 652-5522 · info@havellinpalmbeach.com · havellinpalmbeach.com
