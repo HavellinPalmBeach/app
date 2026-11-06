@@ -307,12 +307,12 @@ module.exports = function ({ group, ok, eq, has }) {
     // A fixed price saved from 2026-09-30 carries its premium and its discount as payment-summary lines too
     // (lower-case "delivery" / "client", which the services table above them does not use).
     const billed = e.fixedPrice
-      ? ((C(rowAmt(fh, /^Fixed Project Fee/) || 0) + C(rowAmt(fh, /^Home Sale Preparation Fee — on /) || 0) + C(rowAmt(fh, /^Approved Change Orders/) || 0)
+      ? ((C(rowAmt(fh, /^Fixed Project Fee/) || 0) + C(rowAmt(fh, /^Home Preparation Fee — on /) || 0) + C(rowAmt(fh, /^Approved Change Orders/) || 0)
         + C(rowAmt(fh, /^Expedited delivery \(/) || 0) + C(rowAmt(fh, /^Preferred client discount/) || 0)) / 100)
       // A Home Prep final heads the same row "Services total (Home Sale Preparation Fee on actual vendor spend …)"
       // (audit P14, Anthony's wording; RESTATED 2026-10-01, P17, answer 5: it read "site management fee", and the
       // fixed final's prep row read "Home prep site management fee"); the figure on it is the same one.
-      : rowAmt(fh, /^(Actual Havellin services total|Services total \(Home Sale Preparation Fee)/);
+      : rowAmt(fh, /^(Actual Havellin services total|Services total \(Home Preparation Fee)/);
     seen('final balance');
     if (settled) {
       const work = rowAmt(fh, /^Work done \(the services above\)/), dep = rowAmt(fh, /^Deposit — earned on signature/);

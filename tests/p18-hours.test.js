@@ -445,7 +445,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       d.ctx.prepItems.push({ type: 'Painting', cost: 20000, note: '', lid: 'p1' }); d.ctx.calcAll(); return d.ctx.currentEstimate; });
     const s0 = sec(agr(p0.ok ? p0.val : {}, prepJ), '3.3 Basis of Fee.', '3.4 Third-Party Vendors.');
     has(s0, 'No Transition Concierge or Property Specialist hours are billed on this engagement', 'fixture: the fee-only Home Prep §3.3');
-    has(s0, 'those hours are then billed as worked at Contractor\'s Transition Concierge rate of $150/hour, in addition to the Home Sale Preparation Fee, and that time is recorded and billed in half-hour increments.',
+    has(s0, 'those hours are then billed as worked at Contractor\'s Transition Concierge rate of $150/hour, in addition to the Home Preparation Fee, and that time is recorded and billed in half-hour increments.',
         '⚠ and its change-order hours carry the increment, in that clause\'s own words');
     // Estate form: the IMPORTANT paragraph on the hourly arm; never on the fixed one.
     const ES = tryE(() => run('cleanout'));

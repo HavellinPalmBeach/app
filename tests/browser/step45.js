@@ -159,7 +159,7 @@ const DIR = [
       has(pk, 'The deposit is earned on signature and is not refundable, including where it exceeds that amount',
           '⚠⚠ the hourly §12.4 keeps the deposit');
       lacks(pk, 'refund the unused balance', 'and refunds no "unused balance"');
-      has(pk, 'Home sale preparation vendors identified in the Estimate or added by Change Order are the exception', '§3.5 charges the fee on a vendor a change order adds');
+      has(pk, 'Home preparation vendors identified in the Estimate or added by Change Order are the exception', '§3.5 charges the fee on a vendor a change order adds');
     });
 
     // ── B. the estate packet on a neither matter ─────────────────────────────
@@ -192,9 +192,9 @@ const DIR = [
       const pk = await printed('#client-dashboard-view button[onclick="docAction(4509,\'agreement\',\'print\')"]', 'the band\'s Print on the estate packet');
       ok(pk.length > 2000, 'fixture: the packet printed');
       // ⚠ RESTATED (P25, Q52; Anthony, 2026-10-09: "quotes, then trued"): the prep fee's basis reads what the app bills, the quotes recorded, updated if an invoice differs.
-      has(pk, 'Added Preparation Vendor (the vendor and its estimated cost. It bills the Client directly, at cost, and the Home Sale Preparation Fee in Section 3.1 is charged on its quote as recorded, updated if its invoice differs.)',
+      has(pk, 'Added Preparation Vendor (the vendor and its estimated cost. It bills the Client directly, at cost, and the Home Preparation Fee in Section 3.1 is charged on its quote as recorded, updated if its invoice differs.)',
           '⚠⚠ §4.2 has a row for a vendor a change order adds');
-      has(pk, 'A preparation vendor this Change Order adds bills the Client directly, at cost, and the Home Sale Preparation Fee is charged on its quote as recorded, updated if its invoice differs; this Change Order creates no other charge.',
+      has(pk, 'A preparation vendor this Change Order adds bills the Client directly, at cost, and the Home Preparation Fee is charged on its quote as recorded, updated if its invoice differs; this Change Order creates no other charge.',
           '⚠⚠ and its Billing row names the fee rather than "no charge"');
       lacks(pk, 'This Change Order does not itself create a charge', 'never the old sentence beside a vendor row');
       has(pk, 'identified in Exhibit A or added by Change Order', 'the fee row the form points to');
@@ -218,7 +218,7 @@ const DIR = [
       ok(!(await coOf(4503)), 'and nothing is recorded');
       await p.fill('#co-vendor-cost', '9000'); await p.waitForTimeout(250);
       // RESTATED 2026-10-01 (P17, Anthony's answer 5): the fee is the Home Sale Preparation Fee; this read "site management fee".
-      has(await txt('#co-hrs-note'), 'the 30% Home Sale Preparation Fee applies to its quote as recorded, updated if its invoice differs — about $2,700 at the estimated $9,000', 'the readout names the fee');
+      has(await txt('#co-hrs-note'), 'the 30% Home Preparation Fee applies to its quote as recorded, updated if its invoice differs — about $2,700 at the estimated $9,000', 'the readout names the fee');
       await press('#change-order-modal button:has-text("Create Change Order")', 'Create');
       const co = await coOf(4503);
       eq(co && co.vendorAdds && co.vendorAdds.map((v) => [v.type, v.cost]), [['Landscaper', 9000]], '⚠⚠ the change order records the landscaper');
@@ -250,7 +250,7 @@ const DIR = [
       });
       await toDash(4503);
       const fin = await viewed('#client-dashboard-view button[onclick="docAction(4503,\'invoice\',\'view\',{stage:\'final\'})"]', 'the band\'s View final invoice');
-      has(fin, 'Adds Landscaper (est. $9,000) — it bills you directly, and the Home Sale Preparation Fee on it is in the fee above', 'the final names the added vendor');
+      has(fin, 'Adds Landscaper (est. $9,000) — it bills you directly, and the Home Preparation Fee on it is in the fee above', 'the final names the added vendor');
       has(fin, '$5,700', '⚠⚠ and bills the fee on both prep vendors: 30% of $19,000');
       dialogs.length = 0;
       await press('#client-dashboard-view button[onclick="dashApproveInvoice(4503,\'final\')"]', 'Manager approval on the final');

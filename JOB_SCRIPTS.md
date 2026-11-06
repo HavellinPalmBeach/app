@@ -49,13 +49,13 @@ Robert and Diane Halloran, living, hourly, moving from a house to a condo. Tests
 
 ---
 
-## Job 2 · Home Prep for Sale: the Nwosu listing
+## Job 2 · Home Preparation: the Nwosu listing
 
 Patricia Nwosu, living, fee only: four trades at a 30% fee on the quotes recorded, no rooms, no hours. Tests the prep product end to end, a vendor added by change order and a quote that moves.
 
 | Enter exactly | |
 |---|---|
-| Service | Home Prep for Sale |
+| Service | Home Preparation |
 | Client | Patricia Nwosu, 561-555-0177, pnwosu@example.com |
 | Property | 2210 NW 52nd St, Boca Raton 33496; Single Family Home; 3,400 sq ft; 5 bed, 4 full, 1 half; 12 years; value 2,100,000 |
 | Dates | walkthrough 2026-10-21; start 2026-11-03 |
@@ -68,7 +68,7 @@ Patricia Nwosu, living, fee only: four trades at a 30% fee on the quotes recorde
 
 **Checkpoints.**
 - Client estimate: the four trades at cost with scope notes; the fee row last at 30%; one total; no hours, rooms or dates; the agent nowhere as a party.
-- Packet: §3.3 says no concierge or specialist hours are billed; §3.5 the fee on the quotes recorded, updated if a vendor's invoice differs; the email's schedule says *once the vendor schedule is booked* and *at show-ready handover*.
+- Packet: §3.3 says no concierge or specialist hours are billed; §3.5 the fee on the quotes recorded, updated if a vendor's invoice differs; the email's schedule says *once the vendor schedule is booked* and *at handover of the finished work*.
 - Invoices: no hours table and no *labor $0* anywhere; the second invoice brings her to 75% of the fee at that day; the final at the quotes as they stand and the earlier rows at what those invoices asked.
 - Dashboard: the Hours Log card says no hours are billed and offers no Log Hours.
 - Known, not fixed: the second invoice sent early says nothing about being early. On the second run send it early once and note what the page says.

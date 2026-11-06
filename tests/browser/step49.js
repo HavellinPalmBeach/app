@@ -214,10 +214,10 @@ const HOUSE = ['Living Room', 'Kitchen', 'Dining Room', 'Family Room / Great Roo
       eq([e.totTC, e.tcFee, e.prepFee, e.havellinTotal], [6, 900, 6000, 6900], '⚠⚠ 5.5 hours are priced as 6: 6 × $150 = $900, and the services total is $6,900 (P17: 5.5, $825, $6,825)');
       has(await txt('#e-declutter-hint'), '6.0 hrs × $150 = $900', 'the hint prices them');
       has(await txt('#e-declutter-hint'), 'Estimates round up to whole hours: 5.5 is priced as 6.', 'and flags the rounding');
-      has(await txt('#e-declutter-hint'), 'Home Sale Preparation Fee', 'beside the fee, by its name');
+      has(await txt('#e-declutter-hint'), 'Home Preparation Fee', 'beside the fee, by its name');
       lacks(await txt('#e-declutter-hint'), 'site management', 'never the old name');
       eq(await txt('#s-prep-fee'), '$6,000', 'the summary\'s fee row');
-      has(await txt('#s-prep-fee-row'), 'Home Sale Preparation Fee', 'named the Home Sale Preparation Fee');
+      has(await txt('#s-prep-fee-row'), 'Home Preparation Fee', 'named the Home Preparation Fee');
       eq(await txt('#s-tc-fee'), '$900', 'the hours row');
       eq(await txt('#s-havellin'), '$6,900', 'and the subtotal that counts both');
       await type('#e-declutter-hrs', '5.3', 'a figure that is not a whole hour');

@@ -30,7 +30,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(agr, 'billed as Transition Concierge time under Section 3.3', 'and says where the coordination time IS billed — hourly or inside the fixed fee, §3.3 is both');
     // ⚠ RESTATED 2026-10-01 (P17): the fee is named "Home Sale Preparation Fee" on every form (Anthony's answer 5); the
     // clause was headed "3.5 Management Fee.".
-    has(agr, "3.5 Home Sale Preparation Fee.", 'standalone Home Prep keeps its own clause');
+    has(agr, "3.5 Home Preparation Fee.", 'standalone Home Prep keeps its own clause');
     // The rate is spelled by _pctWords(prepFeeRate()) since 2026-09-10 rather than typed into
     // the clause, so the requirement is what this asserts: the fee stated in the contract comes
     // from the same constant the estimate and the invoice charge on. Asserting the rendered
@@ -110,7 +110,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(prep, 'No Transition Concierge or Property Specialist hours are billed on this engagement',
       '…and says so in as many words');
     // RESTATED 2026-10-01 (P17): "the management fee stated in…" is "the Home Sale Preparation Fee stated in…".
-    has(prep, 'Home Sale Preparation Fee stated in Section 1.2 and Section 3.5',
+    has(prep, 'Home Preparation Fee stated in Section 1.2 and Section 3.5',
       '…pointing at the clause that does state the fee');
 
     // ⚠ A CHANGE ORDER CARRIES HOURS AND NOTHING ELSE since the 2026-09-11 rebuild, so the
@@ -152,7 +152,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       '⚠⚠ the agreement bills the second 25% on the event the estimate names');
     lacks(prep, 'approximately 50% of scope is complete',
       '…and not on a project midpoint prep does not have');
-    has(prep, 'Due at show-ready handover of the property', 'and the final on the handover');
+    has(prep, 'Due at handover of the finished work on the property', 'and the final on the handover');
     // The estimate's own wording, so the two cannot drift apart unnoticed.
     const src = source();
     has(src, 'Due once the vendor schedule is booked', 'the agreement states it');
@@ -179,5 +179,24 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       '…and names the third-party route for remediation work');
     // Prep's §3.3 says no hours are billed, so the pointer resolves correctly there too.
     has(agrDoc('prep'), 'billed as set out in Section 3.3', 'including on prep');
+  }
+
+  // ⚠⚠ HOME PREPARATION, NEVER "FOR SALE" (2026-11-05; Anthony: a client preparing a home they are staying in).
+  // The prep form's §1.1 sold "home sale preparation" services "to prepare the Property for sale", the fee was the
+  // Home Sale Preparation Fee and the final fell due "at show-ready handover"; the standard form's §1.2 (Home
+  // Editing, Home Transition, with prep vendors on them) offered staging "in anticipation of sale". All neutral now.
+  group('⚠⚠ The agreements read right for a client who is not selling');
+  {
+    const prep = agrDoc('prep');
+    has(prep, 'home preparation project-management services', '§1.1 names the service without a sale');
+    has(prep, 'engaged to carry out the preparation work on the Property described in the Estimate', '…and its work as the Estimate describes it');
+    has(prep, '3.5 Home Preparation Fee.', 'the fee keeps one name: the Home Preparation Fee');
+    has(prep, 'Due at handover of the finished work on the property', 'the final falls due at handover of the finished work');
+    ['Home Sale', 'home sale', 'Prep for Sale', 'for sale', 'show-ready', 'in anticipation of sale', 'property for market'].forEach(function (w) {
+      lacks(prep, w, 'no "' + w + '" on the prep agreement');
+    });
+    const std = agrDoc('downsizing');
+    has(std, 'basic home preparation and staging (excluding real estate brokerage', 'the standard form keeps preparation and the brokerage exclusion');
+    lacks(std, 'in anticipation of sale', '…and no longer assumes a sale');
   }
 };

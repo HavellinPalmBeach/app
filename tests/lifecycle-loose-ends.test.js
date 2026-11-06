@@ -492,7 +492,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(w.due, 'once the vendor schedule is booked', '…falling due when its estimate says it does');
     eq(W.paymentStageWord(estate, 'midpoint').title, 'Midpoint', 'every other service keeps its midpoint');
     eq(W.paymentStageWord(estate, 'midpoint').due, 'at project midpoint', '…and its due line');
-    eq(W.paymentStageWord(prep, 'final').due, 'at show-ready handover', "Home Prep's final falls due at handover");
+    eq(W.paymentStageWord(prep, 'final').due, 'at handover of the finished work', "Home Prep's final falls due at handover");
     eq(W.paymentStageWord(estate, 'final').due, 'on completion', 'everybody else\'s on completion');
     eq(W.paymentStageWord(prep, 'deposit').title, 'Deposit', 'the deposit is the deposit everywhere');
     eq(W.paymentStageWord(null, 'midpoint').title, 'Midpoint', 'with no job, the default name');

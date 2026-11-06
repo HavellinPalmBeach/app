@@ -318,7 +318,7 @@ display string.
 | `contested_probate` | Contested Probate Estate Settlement | 4200 |
 | `downsizing` | Downsizing | 4300 |
 | `downsizing_move` | Downsizing & Move Management | 4300 |
-| `prep` | Home Prep for Sale | 4400 |
+| `prep` | Home Preparation | 4400 |
 
 **`cleanout` is Estate Settlement. `home_cleanout` is Home Cleanout.** The naming is inverted
 from intuition and this is the single most dangerous line in the mapping. Anyone rebuilding it
@@ -539,7 +539,7 @@ is also its first test.
 The 4400 paragraph currently reads as though the account captures both fee types, which
 contradicts the rest of the chart. Replace it with:
 
-> Account 4400 records fee revenue from **standalone** Home Prep for Sale engagements only,
+> Account 4400 records fee revenue from **standalone** Home Preparation engagements only,
 > where Havellin acts as general contractor on a project booked in its own right. A standalone
 > engagement assumes approximately $40,000 of vendor spend against a 30% general contractor fee.
 > Only the fee is revenue. The vendor spend is never recorded — the client pays the vendor

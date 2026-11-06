@@ -451,7 +451,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // is true changed. prep-co-hours.test.js carries the full set.
     has(prep.note, '+8.0 concierge hrs at $150 an hour', 'it states the hours and the rate they bill at');
     // RESTATED 2026-10-01 (P17): the fee's one name is the Home Sale Preparation Fee (Anthony's answer 5); it read "site management fee".
-    has(prep.note, 'on top of the 30% Home Sale Preparation Fee', 'on top of the fee, with the rate read from prepFeeRate');
+    has(prep.note, 'on top of the 30% Home Preparation Fee', 'on top of the fee, with the rate read from prepFeeRate');
     // ⚠ RESTATED AGAIN THE SAME DAY: "so the rate is printed on the change order" was the reason while the
     // prep agreement stated no rate. Its §3.3 states the concierge rate now (Anthony: "mention the hourly rates
     // in the home prep agreement"), so the readout says where the rate comes from and that the page restates it.

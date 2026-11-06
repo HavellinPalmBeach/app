@@ -113,13 +113,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     A.jobs = [PJ]; A.estimateStore = { 7: { estimate: PREP, approved: true } };
     eq(A.PREP_FEE_BASIS_TXT, B, 'one wording, one definition');
     const ce = textOf(attempt(() => A.clientEstimateHtml(PREP, PJ)).val);
-    has(ce, '30% Home Sale Preparation Fee on ' + B, '⚠⚠ the estimate\'s terms');
+    has(ce, '30% Home Preparation Fee on ' + B, '⚠⚠ the estimate\'s terms');
     lacks(ce, 'actual vendor spend', 'never "actual vendor spend"');
     lacks(ce, 'actually invoice', 'never "what the vendors actually invoice"');
     const ag = textOf(attempt(() => A.agreementHtml(PJ, PREP)).val);
     has(ag, 'of the total third-party vendor costs managed under this Agreement, measured on ' + B, '⚠⚠ the standard form\'s §3.5 says how the cost is measured');
     const fin = attempt(() => A.invoiceHtml(PJ, 'final'));
-    has(textOf(fin.val && fin.val.html), 'Services total (Home Sale Preparation Fee on the vendor quotes recorded)', 'the final\'s heading');
+    has(textOf(fin.val && fin.val.html), 'Services total (Home Preparation Fee on the vendor quotes recorded)', 'the final\'s heading');
     const live = SRC.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n');
     eq((live.match(/(on|of) what [^\n]{0,60}actually (invoice|bill|charge)|actual vendor spend|actual invoices|trued to their actual/g) || []).length, 0,
       '⚠ no live sentence ties the fee to what a vendor "actually" invoices, bills or charges');

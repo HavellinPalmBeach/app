@@ -127,9 +127,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // A test that names a behaviour should pin the line that IMPLEMENTS it. The rate is a
     // constant with ONE definition; a document restating the digits is a second copy.
     // RESTATED 2026-10-01 (P17): the fee is named the Home Sale Preparation Fee everywhere a client reads it.
-    has(ce, "Home Sale Preparation Fee on ' + PREP_FEE_BASIS_TXT + '</strong>", // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
+    has(ce, "Home Preparation Fee on ' + PREP_FEE_BASIS_TXT + '</strong>", // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
        'prep states the fee it actually charges');
-    has(ce, "Math.round(prepFeeRate()*100) + '% Home Sale Preparation Fee on ' + PREP_FEE_BASIS_TXT", // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
+    has(ce, "Math.round(prepFeeRate()*100) + '% Home Preparation Fee on ' + PREP_FEE_BASIS_TXT", // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
        '⚠ …and reads the rate rather than printing a 30 the day the rate moves');
     has(ce, 'It is not billed hourly.', 'and says plainly that it is not hourly');
     has(ce, 'it is re-quoted and agreed with you in writing', 'scope changes are a re-quote, not an hours change order');
@@ -161,9 +161,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const ce = fn('clientEstimateHtml');
     has(ce, 'Due once the vendor schedule is booked', 'prep bills against the booking, not a project midpoint');
-    has(ce, 'Due at show-ready handover', 'and against handover');
+    has(ce, 'Due at handover of the finished work', 'and against handover');
     // RESTATED 2026-10-01 (P17): "Management fee only" is "Home Sale Preparation Fee only".
-    has(ce, 'Home Sale Preparation Fee only', 'labelled as the fee rather than "Havellin services"');
+    has(ce, 'Home Preparation Fee only', 'labelled as the fee rather than "Havellin services"');
     // The hourly schedule survives untouched for everything else.
     has(ce, 'Due at project midpoint', 'an hourly job still bills at the midpoint');
   }
@@ -367,7 +367,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const prep = { svc: 'prep', havellinTotal: 9000, prepEnabled: true, prepCost: 30000, grandTotal: 39000, totTC: 0, totPS: 0, rooms: [] };
     const phtml = ctx.buildEstimateEmailHtml(prep, { ...job, svc: 'prep' });
     // RESTATED 2026-10-01 (P17): the email's line was "Havellin Management Fee".
-    has(phtml, 'Home Sale Preparation Fee', 'a prep email names the fee');
+    has(phtml, 'Home Preparation Fee', 'a prep email names the fee');
     has(phtml, '30% of the vendor quotes recorded, updated if a vendor’s invoice differs', 'and states the basis'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
     lacks(phtml, 'hours actually worked', 'and never mentions hours');
 

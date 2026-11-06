@@ -155,7 +155,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // RESTATED 2026-10-01 (P17, Anthony's answers 5 and 6): the fee row reads "Home Sale Preparation Fee (30%, on quoted actuals)" (it read
     // "Havellin 30% fee (on quoted actuals)"), and money prints its cents when it has any, so both readers take them.
     const QUOTED = /Quoted to date \(\d+ of \d+ vendors\)<\/td><td class="num"[^>]*>\$([\d,]+(?:\.\d\d)?)/;
-    const FEE = /Home Sale Preparation Fee \(\d+%, on quoted actuals\)<\/td><td class="num">\$([\d,]+(?:\.\d\d)?)/;
+    const FEE = /Home Preparation Fee \(\d+%, on quoted actuals\)<\/td><td class="num">\$([\d,]+(?:\.\d\d)?)/;
 
     const h1 = plan(est, job);
     eq(money(h1, QUOTED), '31,000', 'three quotes sum to $31,000');

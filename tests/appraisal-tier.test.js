@@ -138,7 +138,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        + 'documentation and inventory; sorting, staging, and photographing all property contents; appraisal '
        + 'coordination for all asset categories; sale, auction, and liquidation coordination; charitable donation '
        + 'logistics with tax documentation; disposal and waste management; family distribution and documented handoff '
-       + 'to beneficiaries; and vendor coordination throughout. Where applicable, property preparation for sale is '
+       + 'to beneficiaries; and vendor coordination throughout. Where applicable, property preparation is '
        + 'included as reflected in Exhibit A.',
        '§2 at the appraisals tier is byte-for-byte the pre-fix full-scope clause');
     eq(ctx._agrProbateCompliance('full', top)[1],

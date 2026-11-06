@@ -65,7 +65,7 @@ function prepEst(dcHrs, over) {
   }, over || {});
 }
 const PREP_JOB = { id: 1, hvlId: 'HVL-0011', name: 'Marston', svc: 'prep',
-  svcLabel: 'Home Prep for Sale', addr: '12 Seabreeze Ln', city: 'Palm Beach',
+  svcLabel: 'Home Preparation', addr: '12 Seabreeze Ln', city: 'Palm Beach',
   zip: '33480', email: 'm@example.com', phone: '561-555-0100',
   tc: 'Ashley Jerome', status: 'active', start: '2026-10-05', sqft: 3500, premium: false };
 // A labour job beside it, so every prep behaviour is shown not to leak onto T&M.
@@ -240,7 +240,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const empty = line(PREP_JOB, prepEst(0), [accepted(8)], 0);
     ok(!!empty && empty.ok === false, '⚠⚠ an accepted change order brings the hours line in, open');
     // RESTATED 2026-10-01 (P17, Anthony's answer 5): the fee is named the Home Sale Preparation Fee here; it read "the management fee".
-    eq(empty ? empty.detail : '', 'none yet — a change order added hours; log them before the final goes out, or it bills the Home Sale Preparation Fee alone',
+    eq(empty ? empty.detail : '', 'none yet — a change order added hours; log them before the final goes out, or it bills the Home Preparation Fee alone',
        '⚠ and it says what an empty log does HERE — not the refusal a quoted-hours job gets');
     const logged = line(PREP_JOB, prepEst(0), [accepted(8)], 8);
     ok(!!logged && logged.ok === true, 'logged, it goes green');
@@ -291,7 +291,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(note, 'concierge hours for hands-on work', 'the note says what a prep change order is');
     has(note, 'at $150 an hour', 'names the rate');
     // RESTATED 2026-10-01 (P17, answer 5): it read "site management fee".
-    has(note, 'on top of the 30% Home Sale Preparation Fee', 'on top of the fee, read from prepFeeRate');
+    has(note, 'on top of the 30% Home Preparation Fee', 'on top of the fee, read from prepFeeRate');
     has(note, 'that rate is printed on the change order the client signs', 'and that the client sees it in writing');
     has(note, 'Coordinating the vendors is covered by the fee and is never billed as hours', '⚠ the old double-charge rule survives');
     lacks(note, 'carries no price and bills nothing', 'not the T&M sentence');
@@ -311,7 +311,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(r, '+8.0 concierge hrs at $150 an hour', 'the readout states the hours and the rate');
     has(r, 'about $1,200 at the estimated hours, billed as they are worked on the final invoice', 'what that comes to, and how it bills');
     // RESTATED 2026-10-01 (P17, answer 5): it read "site management fee".
-    has(r, 'on top of the 30% Home Sale Preparation Fee on the vendor quotes recorded', 'on top of the fee'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
+    has(r, 'on top of the 30% Home Preparation Fee on the vendor quotes recorded', 'on top of the fee'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
     has(r, 'This engagement priced no concierge hours; the rate is the one its agreement states in Section 3.3, and the change order prints it again',
         '⚠ a vendors-only job is told where the rate comes from — the agreement, restated on the change order');
     lacks(r, 'so the rate is printed on the change order', '⚠ never the old reason, which was true only while §3.3 stated no rate');
@@ -372,7 +372,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(s, 'Rate $150 an hour, billed as worked', '⚠⚠ the panel the client types their name under states the rate');
     has(s, 'At the estimated hours about $1,200', 'and what the hours come to');
     // RESTATED 2026-10-01 (P17, answer 5): it read "site management fee".
-    has(s, 'on top of the 30% Home Sale Preparation Fee', 'on top of the fee');
+    has(s, 'on top of the 30% Home Preparation Fee', 'on top of the fee');
     lacks(s, 'No charge is created', '⚠ not the T&M sentence — here the hours ARE a new charge');
     has(p.__dom.getElementById('coa-summary').innerHTML, 'Clear the &lt;garage&gt; for the painters', 'the description is escaped');
     const terms = p.__dom.getElementById('coa-terms').innerHTML;
@@ -403,7 +403,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(d, 'This change order adds concierge hours, billed at $150 an hour.', 'the sentence that makes the page honest');
     has(d, 'at the estimated hours, about $1,200', 'what they come to');
     // RESTATED 2026-10-01 (P17, answer 5): the page the client signs read "site management fee".
-    has(d, 'in addition to the 30% Home Sale Preparation Fee on the vendor quotes recorded, which this change does not alter', // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
+    has(d, 'in addition to the 30% Home Preparation Fee on the vendor quotes recorded, which this change does not alter', // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
         'on top of the fee, which does not move');
     has(d, 'Coordinating the vendors remains covered by that fee.', 'vendor coordination is never billed as hours');
     lacks(d, 'does not itself create a charge', '⚠⚠ never the T&M sentence, which would tell this client the opposite');
@@ -458,7 +458,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     const unlogged = walk(prepEst(0), [accepted(8)], 0);
     ok(!unlogged.blocked, '⚠⚠ an unlogged change order does NOT block the final — no change order can be withdrawn, so a refusal could never lift');
-    eq(unlogged._collected, 13500, 'it bills the Home Sale Preparation Fee alone, which the band and the desk card both say beforehand');
+    eq(unlogged._collected, 13500, 'it bills the Home Preparation Fee alone, which the band and the desk card both say beforehand');
     const big = walk(prepEst(0), [accepted(20)], 0);
     ok(!big.blocked && big.requiresApproval, '⚠ but a big enough gap still trips the ±15% manager PIN — a manager looks before it goes');
     ok(walk(prepEst(5), [accepted(3)], 0).blocked, 'a prep job that QUOTED hours is still refused with an empty log — the desk card says so');
@@ -485,7 +485,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const w = sub(prepEst(0), [accepted(8)], 0);
     has(w, 'A change order added 8.0 concierge hours and none are logged', '⚠⚠ the step names the hours nobody logged');
     // RESTATED 2026-10-01 (P17, answer 5): it read "the management fee".
-    has(w, 'or this final bills the Home Sale Preparation Fee alone', 'and what sending it now would do');
+    has(w, 'or this final bills the Home Preparation Fee alone', 'and what sending it now would do');
     eq(sub(prepEst(0), [accepted(8)], 8), '', 'once any are logged the step says nothing');
     eq(sub(prepEst(0), [co(8)], 0), '', 'a draft change order raises nothing');
     eq(sub(prepEst(0), [], 0), '', 'nor does a vendors-only job with no change order');
@@ -526,7 +526,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(fee, "billed as worked at Contractor's Transition Concierge rate of $150/hour",
         '⚠⚠ at a rate the contract itself states, before anyone signs');
     // RESTATED 2026-10-01 (P17, answer 5): the fee-only §3.3 read "the management fee"; §3.3 and §3.5 now name it.
-    has(fee, '/hour , in addition to the Home Sale Preparation Fee', '…and on top of the fee, not inside it');
+    has(fee, '/hour , in addition to the Home Preparation Fee', '…and on top of the fee, not inside it');
     lacks(fee, 'that states the Transition Concierge hours and the hourly rate',
           'the retired wording, which left the rate for the change order to set, is gone');
     has(fee, 'Hands-on work Contractor is asked to do after signing is documented in a written Change Order signed by both Parties',

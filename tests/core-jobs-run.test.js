@@ -225,7 +225,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const j = PJ(); C.jobs = [j];
     const h = textOf(attempt(() => C.buildAgreementEmailHtml(j)).val);
     has(h, '25% once the vendor schedule is booked $1,155', '⚠⚠ the email names the second payment as the agreement and Exhibit A do');
-    has(h, '25% at show-ready handover $1,155', '…and the final');
+    has(h, '25% at handover of the finished work $1,155', '…and the final');
     lacks(h, 'at the midpoint', 'never "at the midpoint" on a Home Prep');
     has(attempt(() => C.buildAgreementEmailText(j)).val, '25% once the vendor schedule is booked: $1,155', 'the text body too');
     C.estimateStore = { 7: { approved: true, estimate: EST_HR } };

@@ -69,7 +69,7 @@ function prepEst(dcHrs, over) {
   }, over || {});
 }
 const PREP_JOB = { id: 1, hvlId: 'HVL-0011', name: 'Marston', svc: 'prep',
-  svcLabel: 'Home Prep for Sale', addr: '12 Seabreeze Ln', city: 'Palm Beach',
+  svcLabel: 'Home Preparation', addr: '12 Seabreeze Ln', city: 'Palm Beach',
   zip: '33480', email: 'm@example.com', phone: '561-555-0100',
   tc: 'Ashley Jerome', status: 'active', start: '2026-10-05', sqft: 3500 };
 
@@ -187,7 +187,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(tW, 'Havellin is paid on two bases', 'and the Terms name both bases');
     has(tW, 'concierge hours at $150/hour', 'the hourly one at the rate the estimate priced');
     // RESTATED 2026-10-01 (P17, Anthony's answer 5): the Terms name the Home Sale Preparation Fee; they read "management fee".
-    has(tW, '30% Home Sale Preparation Fee on the vendor quotes recorded, updated if a vendor’s invoice differs', 'and the fee one'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
+    has(tW, '30% Home Preparation Fee on the vendor quotes recorded, updated if a vendor’s invoice differs', 'and the fee one'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
     has(tW, 'exceed the estimate by more than 15%', 'the notice threshold reaches prep for the first time');
     // ⚠ THE PLAIN T&M ARM IS WRONG ON PREP AND MUST NOT BE WHAT IT FALLS THROUGH TO. It promises
     // that vendor coordination bills hourly — on the one engagement where the 30% fee covers
@@ -213,11 +213,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(tN, 'Due once the vendor schedule is booked', 'no hours: the vendor-schedule milestone');
     has(tW, 'Due once the vendor schedule is booked', 'WITH hours: the same milestone');
     lacks(tW, 'Due at project midpoint', 'and never "project midpoint", which does not exist on prep');
-    has(tW, 'Due at show-ready handover', 'the final milestone is the handover either way');
+    has(tW, 'Due at handover of the finished work', 'the final milestone is the handover either way');
     // the caption has to name what the percentage is charged on
     // RESTATED 2026-10-01 (P17, answer 5): the captions read "Management fee only" and "Management fee + concierge hours".
-    has(tN, 'Home Sale Preparation Fee only', 'no hours: the caption says the fee only');
-    has(tW, 'Home Sale Preparation Fee + concierge hours', 'with hours it names both');
+    has(tN, 'Home Preparation Fee only', 'no hours: the caption says the fee only');
+    has(tW, 'Home Preparation Fee + concierge hours', 'with hours it names both');
   }
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -526,7 +526,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // confirms what was just saved. It names the fee and the hours separately now.
     // RESTATED 2026-10-01 (P17, answers 5 and 6): the summary names the Home Sale Preparation Fee and prints money through fmt (cents when
     // present); it read "'% fee $' + (currentEstimate.prepFee || 0).toLocaleString()" and "' declutter hrs · total $'".
-    has(save, "'% Home Sale Preparation Fee ' + fmt(currentEstimate.prepFee || 0)",
+    has(save, "'% Home Preparation Fee ' + fmt(currentEstimate.prepFee || 0)",
         'the save summary prices the FEE off prepFee, not off the total the hours moved');
     has(save, "' declutter hrs \u00b7 total ' + fmt(currentEstimate.havellinTotal)", 'and names the hours and the combined total separately');
   }
@@ -547,5 +547,27 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const src = source();
     ok(ca.indexOf('var declutterTCHrs') >= 0 && ca.indexOf('var declutterTCHrs') < ca.indexOf('declutterTCHrs: declutterTCHrs'),
        'declutterTCHrs is declared before it is read');
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // ⚠⚠ HOME PREPARATION, NEVER "FOR SALE" (2026-11-05; Anthony, with a client preparing a home they are staying in:
+  // "call it home preparation so that we can service clients who aren't selling their homes"). He took the neutral
+  // reading for everything: the service is Home Preparation, the fee the Home Preparation Fee, and no line of the
+  // client's estimate assumes the home is going on the market. Rendered, with hours and without.
+  group('⚠⚠ The Home Preparation estimate reads right for a client who is not selling');
+  {
+    const c = docCtx();
+    [['with hours', text(c.clientEstimateHtml(prepEst(5), PREP_JOB))],
+     ['no hours', text(c.clientEstimateHtml(prepEst(0), PREP_JOB))]].forEach(function (pair) {
+      const lbl = pair[0], t = pair[1];
+      has(t, 'Home Preparation', lbl + ': the service is Home Preparation');
+      has(t, 'Home Preparation Fee', lbl + ': the fee is the Home Preparation Fee');
+      has(t, 'Due at handover of the finished work', lbl + ': the final falls due at handover of the finished work');
+      has(t, 'We prepare the home by managing every vendor the work needs', lbl + ': the narrative prepares the home, not the sale');
+      ['Home Sale', 'Prep for Sale', 'for sale', 'show-ready', 'Show-Ready', 'property for market', 'photograph and list',
+       'sale price', 'buyer'].forEach(function (w) {
+        lacks(t, w, lbl + ': no "' + w + '" on the client estimate');
+      });
+    });
   }
 };

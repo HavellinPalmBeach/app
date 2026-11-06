@@ -308,7 +308,7 @@ const PARTNERS = [{ uid: 'p-dana', partner_name: 'Dana Broker', partner_type: 'R
       await p.fill('#co-vendor-cost', '4500'); await p.waitForTimeout(200);
       // RESTATED 2026-10-01 (P17, Anthony's answer 5): the fee is the Home Sale Preparation Fee; this read "site management fee".
       // ⚠ RESTATED (P25, Q52; Anthony, 2026-10-09: "quotes, then trued"): the prep fee's basis reads what the app bills, the quotes recorded, updated if an invoice differs.
-      has(await txt('#co-hrs-note'), 'the 30% Home Sale Preparation Fee applies to its quote as recorded, updated if its invoice differs — about $1,350 at the estimated $4,500',
+      has(await txt('#co-hrs-note'), 'the 30% Home Preparation Fee applies to its quote as recorded, updated if its invoice differs — about $1,350 at the estimated $4,500',
           'the readout names the fee at the estimated cost');
       await press('#change-order-modal button:has-text("Create Change Order")', 'Create');
       const co = await coOf(4404);

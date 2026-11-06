@@ -219,7 +219,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════════════════════════
-  group('⚠⚠ 5 · the Home Sale Preparation Fee, by name, on every document a client reads');
+  group('⚠⚠ 5 · the Home Preparation Fee, by name, on every document a client reads');
   {
     const OLD = /site management|GC fee|GC \/|Havellin Management Fee|(?<!Service )management fee/i;
     // Standalone Home Prep: a $20,000 painter and 5.5 declutter hours, priced by the real engine.
@@ -232,28 +232,28 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const w = walk(PREP, PJOB, [{ date: '2026-09-02', activity: 'declutter', members: [{ name: 'Ashley Jerome', role: 'TC', hours: 5.5 }] }]);
     const pages = { estimate: html(w.estimate), agreement: html(w.agreement), deposit: w.inv.deposit.html, midpoint: w.inv.midpoint.html, final: w.inv.final.html };
     Object.keys(pages).forEach((k) => {
-      has(text(pages[k]), 'Home Sale Preparation Fee', '⚠⚠ Home Prep ' + k + ': names the Home Sale Preparation Fee');
+      has(text(pages[k]), 'Home Preparation Fee', '⚠⚠ Home Prep ' + k + ': names the Home Preparation Fee');
       const hit = OLD.exec(text(pages[k]));
       eq(hit ? hit[0] : null, null, '⚠⚠ Home Prep ' + k + ': and no older name for it');
     });
-    has(text(pages.final), 'Services total (Home Sale Preparation Fee on the vendor quotes recorded + logged concierge hours)', // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
+    has(text(pages.final), 'Services total (Home Preparation Fee on the vendor quotes recorded + logged concierge hours)', // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
         '⚠ the Home Prep final heads its total in the fee\'s name (Anthony\'s wording, P14, renamed)');
     // A fee-only Home Prep job (no declutter hours): its final, and the fee-only arm of the agreement.
     const fb = attempt(() => { const d = driveCalcAll({ svc: 'prep', sqft: 3500, rooms: [] });
       d.ctx.prepItems.push({ type: 'Staging', cost: 10000, note: '', lid: 'p2' }); d.ctx.calcAll(); return d.ctx.currentEstimate; });
     const w0 = walk(fb.ok ? fb.val : {}, Object.assign({}, PJOB), []);
-    has(text(w0.inv.final.html), 'Services total (Home Sale Preparation Fee on the vendor quotes recorded)', 'and drops the hours when none are logged'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
+    has(text(w0.inv.final.html), 'Services total (Home Preparation Fee on the vendor quotes recorded)', 'and drops the hours when none are logged'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
     const OLD0 = OLD.exec(text(w0.inv.final.html) + ' ' + text(html(w0.agreement)) + ' ' + text(html(w0.estimate)));
     eq(OLD0 ? OLD0[0] : null, null, 'the fee-only job\'s estimate, agreement and final carry no older name either');
     // The agreement's clauses that name it (legal text: counsel bundle).
     const agr = text(pages.agreement);
-    has(agr, '3.5 Home Sale Preparation Fee.', '§3.5 is headed with the fee\'s name (it read "Management Fee")');
-    has(agr, 'Contractor\'s fee for the Services is a Home Sale Preparation Fee equal to thirty percent (30%)', '§1.2 names it');
-    has(agr, '3.3 Basis of Fee. Contractor is paid on two bases for this engagement. First, the Home Sale Preparation Fee stated in Section 1.2 and Section 3.5',
+    has(agr, '3.5 Home Preparation Fee.', '§3.5 is headed with the fee\'s name (it read "Management Fee")');
+    has(agr, 'Contractor\'s fee for the Services is a Home Preparation Fee equal to thirty percent (30%)', '§1.2 names it');
+    has(agr, '3.3 Basis of Fee. Contractor is paid on two bases for this engagement. First, the Home Preparation Fee stated in Section 1.2 and Section 3.5',
         '§3.3\'s two bases name it first');
     // RESTATED 2026-10-02 (P18, Anthony's answer B): a typed 5.5 is priced and saved as 6, so §3.3 provides for 6.0 hours ($900).
     has(agr, 'the Estimate provides for 6.0 hours ( $900 ) on that basis', 'and quote the declutter hours, 5.5 typed and saved as 6, at $900');
-    has(text(html(w0.agreement)), 'billed as worked at Contractor\'s Transition Concierge rate of $150/hour , in addition to the Home Sale Preparation Fee',
+    has(text(html(w0.agreement)), 'billed as worked at Contractor\'s Transition Concierge rate of $150/hour , in addition to the Home Preparation Fee',
         'the fee-only §3.3 bills later hours on top of it, by name');
 
     // A labour job whose estimate bundles prep: an $8,001 painter, whose fee carries cents.
@@ -267,11 +267,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const lw = walk(LAB, LJOB, [{ date: '2026-09-02', activity: 'work', members: [{ name: 'Anthony Graziano', role: 'TC', hours: LAB.totTC },
       { name: 'Specialist 1', role: 'PS', hours: LAB.totPS }] }]);
     [['estimate', html(lw.estimate)], ['agreement', html(lw.agreement)], ['final invoice', lw.inv.final.html]].forEach(([k, h]) => {
-      has(text(h), 'Home Sale Preparation Fee', '⚠ bundled prep ' + k + ': names the fee');
+      has(text(h), 'Home Preparation Fee', '⚠ bundled prep ' + k + ': names the fee');
       const hit = OLD.exec(text(h));
       eq(hit ? hit[0] : null, null, '⚠ bundled prep ' + k + ': and no older name');
     });
-    has(text(html(lw.agreement)), 'Contractor charges a Home Sale Preparation Fee of thirty percent (30%) of those vendor costs',
+    has(text(html(lw.agreement)), 'Contractor charges a Home Preparation Fee of thirty percent (30%) of those vendor costs',
         '§3.5\'s bundled arm names it (it read "General Contractor / Site Management Fee")');
     has(text(html(lw.estimate)), '$2,400.30', 'and the estimate prints the fee to the cent');
     // The estate form's fee table, on an estate whose estimate bundles prep.
@@ -281,17 +281,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                    won: true, executor: 'Tripp Butler', executorRole: 'Personal Representative', executorEmail: 't@example.com', payments: [] };
     const ew = walk(eb.ok ? eb.val : {}, EJOB, []);
     const ea = text(html(ew.agreement));
-    has(ea, 'Home Sale Preparation Fee', 'the estate form names the fee');
-    has(ea, 'Charged on the home sale preparation vendors identified in Exhibit A', 'its fee row says what it is charged on');
+    has(ea, 'Home Preparation Fee', 'the estate form names the fee');
+    has(ea, 'Charged on the home preparation vendors identified in Exhibit A', 'its fee row says what it is charged on');
     const eh = OLD.exec(ea);
     eq(eh ? eh[0] : null, null, '⚠ and no older name anywhere on it');
     // The emails' cost lines: the fee by its name, and every figure to the cent.
     const c = docs(PREP, PJOB);
-    eq(c.estimateHavellinLines(PREP, true)[0][0], 'Home Sale Preparation Fee', 'the fee-only email line (it read "Havellin Management Fee")');
+    eq(c.estimateHavellinLines(PREP, true)[0][0], 'Home Preparation Fee', 'the fee-only email line (it read "Havellin Management Fee")');
     const FXL = { fixedPrice: true, fixedAmount: 20000.25, prepFeeOnTop: true, fixedLines: true, prepEnabled: true, prepFee: 2400.3,
                   rush: true, rushPct: 0.2, rushAmt: 4000.05, discountPct: 5, discountAmt: 1200.02, pkgCost: 0 };
     eq(JSON.stringify(c.estimateHavellinLines(FXL, false)),
-       JSON.stringify([['Fixed Project Fee', 20000.25], ['Home Sale Preparation Fee (30%)', 2400.3], ['Expedited Delivery (20%)', 4000.05],
+       JSON.stringify([['Fixed Project Fee', 20000.25], ['Home Preparation Fee (30%)', 2400.3], ['Expedited Delivery (20%)', 4000.05],
                        ['Preferred Client Discount (5%)', -1200.02]]),
        '⚠ the email\'s lines carry their cents (the prep fee and the premium were rounded to the dollar there)');
     // The live source: the older names survive only in the dormant Service Management Fee clause (SMF_PCT is 0).
@@ -300,7 +300,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const at = LIVE.search(/site management/i);
     has(LIVE.slice(Math.max(0, at - 400), at), '(SMF_PCT > 0', '⚠ which prints only while a Service Management Fee is charged — it is 0');
     eq((LIVE.match(/GC fee|Havellin Management Fee|GC \/ Site/g) || []).length, 0, 'no "GC fee", "GC / Site Management" or "Havellin Management Fee" anywhere live');
-    has(SRC, '<td class="muted">Home Sale Preparation Fee</td><td class="num" id="s-prep-fee">', 'Build Estimate\'s summary row names it');
+    has(SRC, '<td class="muted">Home Preparation Fee</td><td class="num" id="s-prep-fee">', 'Build Estimate\'s summary row names it');
   }
 
   // ═══════════════════════════════════════════════════════════════════════════════════════════════

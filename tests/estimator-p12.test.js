@@ -353,7 +353,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                         vars: ['PREP_FEE_RATE', 'RUSH_PCT'] });
     const lines = M.estimateHavellinLines(REC, false);
     // RESTATED 2026-10-01 (P17): the prep fee's line is the Home Sale Preparation Fee (it read "Home Prep Site Management Fee").
-    eq(lines.map((l) => l[0]), ['Fixed Project Fee', 'Home Sale Preparation Fee (30%)', 'Expedited Delivery (20%)', 'Preferred Client Discount (10%)'],
+    eq(lines.map((l) => l[0]), ['Fixed Project Fee', 'Home Preparation Fee (30%)', 'Expedited Delivery (20%)', 'Preferred Client Discount (10%)'],
        'the estimate emails list the fee, the prep fee, the premium and the discount');
     eq(lines.reduce((a, l) => a + l[1], 0), REC.havellinTotal, 'and those lines add up to the total the email states');
     eq([M._emMoney(-2070), M._emMoney(4000)], ['\u2212$2,070', '$4,000'], 'a credit line prints as −$2,070, never $-2,070');

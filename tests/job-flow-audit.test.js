@@ -109,18 +109,18 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     const fin = page(EST(0), [], 'final');
     ok(fin.ok, 'fixture: the fee-only final renders (' + (fin.err || 'ok') + ')');
-    has(fin.text, 'Havellin Services — Home Sale Preparation Fee', '⚠⚠ the final heads its services with the fee, not "Actual Hours"');
+    has(fin.text, 'Havellin Services — Home Preparation Fee', '⚠⚠ the final heads its services with the fee, not "Actual Hours"');
     lacks(fin.text, 'Actual Hours', 'never "Actual Hours" on a job that bills none');
     lacks(fin.html, '<th>Team Member</th>', '⚠ and no empty hours table');
     has(fin.text, 'No Transition Concierge or Property Specialist hours are billed on this engagement.', '⚠⚠ it says what §3.3 says');
     lacks(fin.text, 'Final charges based on actual hours worked', 'never that charges follow the hours');
-    has(fin.text, 'Services total (Home Sale Preparation Fee on the vendor quotes recorded)', 'the heading on the total names what the fee is charged on'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
+    has(fin.text, 'Services total (Home Preparation Fee on the vendor quotes recorded)', 'the heading on the total names what the fee is charged on'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
     has(fin.text, '$3,000', 'over the fee it bills');
 
     const dep = page(EST(0), [], 'deposit');
     ok(dep.ok, 'fixture: the fee-only deposit renders (' + (dep.err || 'ok') + ')');
     lacks(dep.text, 'Havellin labor', '⚠⚠ the deposit prints no "Havellin labor (estimate) $0" row');
-    has(dep.text, 'The Home Sale Preparation Fee is trued to actuals at the second and final invoices.',
+    has(dep.text, 'The Home Preparation Fee is trued to actuals at the second and final invoices.',
       '⚠ and names the second invoice by its Home Prep name, never "midpoint"');
     lacks(dep.text, 'midpoint', 'no "midpoint" anywhere on a Home Prep deposit');
     eq(dep.due, 1500, 'the money is untouched: half the $3,000 fee');
@@ -129,7 +129,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(mid.ok, 'fixture: the fee-only second invoice renders (' + (mid.err || 'ok') + ')');
     lacks(mid.text, 'Havellin labor', '⚠ the second prints no labour row either');
     lacks(mid.text, 'hours are still being logged', '⚠⚠ and never that hours are being logged');
-    has(mid.text, 'The Home Sale Preparation Fee is calculated on the actual quotes recorded in the Job Plan.', 'it says how the fee is reached');
+    has(mid.text, 'The Home Preparation Fee is calculated on the actual quotes recorded in the Job Plan.', 'it says how the fee is reached');
 
     // A change order that added concierge hours: the job bills hours now, so the final shows them.
     const CO = [{ id: 1700000000123, jobId: 7, clientApproved: true, addTC: 4, addPS: 0, tcHrs: 4, psHrs: 0, description: 'Declutter the garage' }];

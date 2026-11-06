@@ -223,7 +223,7 @@ const WALK = 7801, PREP = 7802, EST = 7803;
       await p.evaluate((id) => openEstimateScreen(id), PREP); await p.waitForTimeout(1500);
       const disp = (id) => p.evaluate((id) => { const el = document.getElementById(id); return el ? getComputedStyle(el).display : 'missing'; }, id);
       eq([await disp('s-tc-fee-row'), await disp('s-ps-fee-row'), await disp('s-pkg-row')], ['none', 'none', 'none'], '⚠⚠ the concierge fee, specialist fee and materials rows are hidden');
-      eq(await disp('s-prep-fee-row'), 'table-row', 'the Home Sale Preparation Fee row shows');
+      eq(await disp('s-prep-fee-row'), 'table-row', 'the Home Preparation Fee row shows');
       has(await txt('#s-prep-fee'), '$4,620', 'at 30% of the quotes');
       has(await txt('#s-havellin'), '$4,620', 'and the services subtotal is the fee');
     });

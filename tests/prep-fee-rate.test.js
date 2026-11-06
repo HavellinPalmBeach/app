@@ -116,8 +116,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const n30 = at(0.30, (c) => c.proposedPlanRow(EST).narrative);
     const n35 = at(0.35, (c) => c.proposedPlanRow(EST).narrative);
     // RESTATED 2026-10-01 (P17, Anthony's answer 5): the narrative names the Home Sale Preparation Fee; it read "a 30% management fee".
-    has(n30, 'a 30% Home Sale Preparation Fee on that vendor spend', 'the narrative states the fee');
-    has(n35, 'a 35% Home Sale Preparation Fee on that vendor spend', '⚠ …and states the real one');
+    has(n30, 'a 30% Home Preparation Fee on that vendor spend', 'the narrative states the fee');
+    has(n35, 'a 35% Home Preparation Fee on that vendor spend', '⚠ …and states the real one');
   }
 
   // ───────────────────────────────────────────────────────────────────────────

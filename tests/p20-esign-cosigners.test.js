@@ -289,10 +289,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       ["<div style=\"font-size:11.5px;font-weight:700;color:var(--gray-dk);margin:.7rem 0 .3rem;\">6.4 Third-Party Vendors</div><p style=\"font-size:11px;line-height:1.65;margin-bottom:.5rem;\">Havellin may recommend, coordinate and schedule third-party vendors for this engagement: movers, haulers, estate sale companies, auction houses, appraisers, cleaners and trades. Each is an independent business and not an employee, partner or agent of Havellin. Havellin requires every vendor it books to carry its own commercial general liability insurance, automobile liability where it drives, coverage for the Client’s property while in its custody where it takes property away, and professional liability where it appraises, and to provide a certificate of insurance before its first day on site; Havellin provides those certificates to the Client on request.</p><p style=\"font-size:11px;line-height:1.65;margin-bottom:.5rem;\">Havellin does not warrant or guarantee a vendor’s work, its results, or any valuation, price or sale outcome, and is not responsible for a vendor’s acts or omissions, including loss of or damage to property while in a vendor’s custody; a claim arising from a vendor’s conduct is made against that vendor and its insurer. To the fullest extent permitted by Florida law, the Client releases Havellin from, and will indemnify and hold Havellin harmless against, claims arising from the acts or omissions of a vendor identified in Exhibit A or otherwise selected or approved by the Client, except to the extent caused by Havellin’s gross negligence or willful misconduct.</p>", ""],
     ];
     const insBack = (h, pairs) => pairs.reduce((t, x) => { if (t.split(x[0]).length !== 2) throw new Error('INS_BACK needle not found once: ' + x[0].slice(0, 60)); return t.split(x[0]).join(x[1]); }, h);
+    // RESTATED 2026-11-05 (Home Preparation, never "for sale"; Anthony, with a client preparing a home they are staying in):
+    // the standard form's §1.2 offers home preparation and staging with no "in anticipation of sale", and the estate form's
+    // services paragraph says "property preparation" with no "for sale". Put the old words back and each page is still
+    // 456d0cb's byte for byte, so those are the only changes. Each needle must be found once (insBack's rule).
+    const HP_BACK_STD = [['basic home preparation and staging (excluding', 'basic home preparation and staging in anticipation of sale (excluding']];
+    const HP_BACK_PRO = [['property preparation is included as reflected in Exhibit A.', 'property preparation for sale is included as reflected in Exhibit A.']];
     const _std = A.agreementHtml(GOLD_LIVING, GOLD_EST);
     ok(_std.indexOf(P25_BACK[0][0]) >= 0 && _std.indexOf(P25_BACK[1][0]) >= 0, 'the standard form carries the new deposit and final timing');
     ok(_std.indexOf(Q62_BACK[0][0]) >= 0 && _std.indexOf(Q62_BACK[1][0]) >= 0, 'the standard form carries Q62\'s §8 sentence and paragraph');
-    eq(sha(insBack(q62Back(p25Back(_std)), INS_BACK_STD)), GOLD.standard, '⚠⚠ the standard form, byte for byte as before P20 but for that timing, Q62 and the 2026-10-20 insurance clauses');
+    eq(sha(insBack(insBack(q62Back(p25Back(_std)), INS_BACK_STD), HP_BACK_STD)), GOLD.standard, '⚠⚠ the standard form, byte for byte as before P20 but for that timing, Q62, the 2026-10-20 insurance clauses and Home Preparation');
     // RESTATED 2026-10-05 (P21; Anthony's answer to Q30): the signature page's sentence names who signs before the work
     // begins ("until the Client and Havellin have signed") where it counted "both signatures". Put the old words back and
     // the page is still 456d0cb's byte for byte, so that sentence is the only change and nothing else moved.
@@ -305,7 +311,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // slot per signer (agrFillSlot), nothing on paper; strip the two the client's block prints and the page is still the same.
     eq(count(_q30, 'class="agr-fill"'), 2, 'the estate form with no co-representative prints the client\'s two fill slots');
     const slotsBack = (h) => h.replace(/<span class="agr-fill" data-fill="[^"]*"><\/span>/g, '');
-    eq(sha(insBack(slotsBack(q62Back(p25Back(_q30))), INS_BACK_PRO).replace(_q30New, 'No work will begin until both signatures are obtained and the deposit has been received.')), GOLD.probate,
+    eq(sha(insBack(insBack(slotsBack(q62Back(p25Back(_q30))), INS_BACK_PRO), HP_BACK_PRO).replace(_q30New, 'No work will begin until both signatures are obtained and the deposit has been received.')), GOLD.probate,
        '⚠⚠ the estate form with no co-representative, byte for byte as before P20 but for that sentence and the slots');
   });
 

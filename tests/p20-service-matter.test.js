@@ -91,7 +91,7 @@ const NOW = Date.parse('2026-10-05T15:00:00Z');
 const FixedDate = (t) => class extends Date { constructor(...a) { if (a.length) super(...a); else super(t); } static now() { return t; } };
 // The label intake stores on the job, as it stored it (SVC_LABELS at intake): the namer must beat it.
 const STORED = { probate: 'Probate Estate Settlement', contested_probate: 'Contested Probate Estate Settlement', cleanout: 'Estate Settlement',
-  home_cleanout: 'Home Cleanout', downsizing: 'Home Editing', downsizing_move: 'Home Transition', prep: 'Home Prep for Sale' };
+  home_cleanout: 'Home Cleanout', downsizing: 'Home Editing', downsizing_move: 'Home Transition', prep: 'Home Preparation' };
 const DECEDENT = ['probate', 'contested_probate', 'cleanout'];
 const JOB = (svc, matter, o) => Object.assign({
   id: 7, hvlId: 'HVL-0007', name: 'Margaret Doe', fname: 'Margaret', lname: 'Doe', svc, svcLabel: STORED[svc], status: 'won',
@@ -201,7 +201,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const title = (svc, mt) => N.docServiceTitle(JOB(svc, mt));
     // The catalogue's names, typed here so a wrong catalogue cannot agree with itself.
     const ON = { probate: 'Probate Estate Settlement', contested_probate: 'Contested Probate Estate Settlement', cleanout: 'Estate Settlement',
-      downsizing: 'Home Editing', downsizing_move: 'Home Transition', home_cleanout: 'Home Cleanout', prep: 'Home Prep for Sale' };
+      downsizing: 'Home Editing', downsizing_move: 'Home Transition', home_cleanout: 'Home Cleanout', prep: 'Home Preparation' };
     const OFF = { probate: 'Estate Settlement', contested_probate: 'Contested Estate Settlement' };
     const got = {}, exp = {};
     SERVICES.forEach((svc) => MATTERS.forEach((mt) => {
@@ -295,7 +295,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       eq([agrTitle(d.agr), serviceRow(d.est), onsite(d.est), serviceRow(d.deposit)], [name, name, 'Onsite ' + name + ' Services', name], svc + ': the catalogue\'s name on every document');
     });
     eq(agrTitle(render('home_cleanout', '', { svcLabel: undefined }).agr), 'Home Cleanout', '⚠ Home Cleanout with no stored label: the catalogue (its old map had no entry, and printed "[SERVICE TYPE]")');
-    eq(agrTitle(render('prep', '').agr), 'Home Prep for Sale', 'Home Prep for Sale');
+    eq(agrTitle(render('prep', '').agr), 'Home Preparation', 'Home Preparation');
     const blank = inEastern(() => attempt(() => docs({ id: 9 }, null).agreementHtml({ id: 9 }, null)));
     eq(agrTitle(blank), '[SERVICE TYPE]', 'a blank template names no service and keeps its blank');
   });

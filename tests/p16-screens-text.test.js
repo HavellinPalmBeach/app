@@ -891,7 +891,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       .renderVendorSourcing(1, PREP_JOB, { svc: 'prep', prepEnabled: true, prepItems: [{ type: 'Staging', cost: 3000, lid: 'st' }], vendors: [] }));
     ok(s.ok, 'the prep sourcing card renders' + (s.ok ? '' : ' — ' + s.err));
     // RESTATED 2026-10-01 (P17, Anthony's answer 5): the cards name the Home Sale Preparation Fee; they said "site management fee".
-    has(text(s.ok ? s.val : ''), 'Havellin\'s 30% Home Sale Preparation Fee is calculated on these actuals', '⚠ the sourcing card names the Home Sale Preparation Fee');
+    has(text(s.ok ? s.val : ''), 'Havellin\'s 30% Home Preparation Fee is calculated on these actuals', '⚠ the sourcing card names the Home Preparation Fee');
     lacks(s.ok ? s.val : '', 'GC / Site', 'not a GC fee');
 
     const planFns = ['jobListEntries', 'prepVendorsConfirmed', 'derivedLinesHtml', 'renderPrepJobPlan', 'planPhaseWrap', 'secCaret', 'estDeclutterHrs', 'prepFeeRate', 'esc', 'fmtDate2', 'chkGrid', 'planChk',
@@ -907,7 +907,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                estimateStore: { 1: { estimate: EST } }, _photoRefs: {}, standingFlagsBlock: () => '', _sfHost: () => '',
                renderVendorSourcing: () => '', document: domStub({}) } }).renderPrepJobPlan(1, PREP_JOB, EST));
     ok(p.ok, 'the prep plan renders' + (p.ok ? '' : ' — ' + p.err));
-    has(text(p.ok ? p.val : ''), 'Havellin’s 30% Home Sale Preparation Fee is billed on the quotes recorded here', '⚠ the budget card names the Home Sale Preparation Fee'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
+    has(text(p.ok ? p.val : ''), 'Havellin’s 30% Home Preparation Fee is billed on the quotes recorded here', '⚠ the budget card names the Home Preparation Fee'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
     lacks(p.ok ? p.val : '', 'GC / Site', 'not a GC fee');
 
     // The vendor card's subtitle on a Home Prep estimate: declutter hours ARE billed.

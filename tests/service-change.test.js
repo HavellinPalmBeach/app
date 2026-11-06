@@ -46,7 +46,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(ctx.svcFamily('downsizing'), 'living', 'Home Editing is living-client work');
     eq(ctx.svcFamily('downsizing_move'), 'living', 'so is Home Transition');
     eq(ctx.svcFamily('home_cleanout'), 'living', 'and Home Cleanout — the owner is alive');
-    eq(ctx.svcFamily('prep'), 'living', 'and Home Prep for Sale');
+    eq(ctx.svcFamily('prep'), 'living', 'and Home Preparation');
     eq(ctx.svcFamily('cleanout'), 'decedent', 'Estate Settlement is decedent work');
     eq(ctx.svcFamily('probate'), 'decedent', 'so is Probate');
     eq(ctx.svcFamily('contested_probate'), 'decedent', 'and Contested Probate');
@@ -208,7 +208,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     }
 
     // Anthony's case: a Home Prep job that turns out to need editing.
-    let job = { id: 1, svc: 'prep', svcLabel: 'Home Prep for Sale', tc: 'Ashley Jerome' };
+    let job = { id: 1, svc: 'prep', svcLabel: 'Home Preparation', tc: 'Ashley Jerome' };
     let r = harness(job, { prev: 'prep', next: 'downsizing' });
     eq(job.svc, 'downsizing', 'prep → Home Editing goes through');
     eq(job.svcLabel, 'Home Editing', 'and relabels the job');
@@ -217,7 +217,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(r.fb[0].kind, 'ok', 'reported as a success');
 
     // Declining the confirm changes nothing and puts the control back.
-    job = { id: 1, svc: 'prep', svcLabel: 'Home Prep for Sale' };
+    job = { id: 1, svc: 'prep', svcLabel: 'Home Preparation' };
     r = harness(job, { prev: 'prep', next: 'downsizing', confirm: false });
     eq(job.svc, 'prep', 'cancelling leaves the job alone');
     eq(r.sel.value, 'prep', 'and snaps the picker back to what it was showing');
@@ -325,7 +325,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // and every line books its own hours (P16 passed `_prem`, and an appraiser line booked none on a Premium estate).
     // And the card names the Home Sale Preparation Fee (answer 5; it read "% GC fee").
     has(cards, 'cardHrs  += isPrep ? 0 : vendorLineHrs(v);', 'a prep line adds no hours to its card');
-    has(cards, "bits.push(Math.round(prepFeeRate()*100) + '% Home Sale Preparation Fee ", 'the card states the fee instead');
+    has(cards, "bits.push(Math.round(prepFeeRate()*100) + '% Home Preparation Fee ", 'the card states the fee instead');
     lacks(cards, 'isPrep && isPrepSvc', 'and no longer gates that on the service being prep');
   }
 
@@ -390,10 +390,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(ce, "Math.round(prepFeeRate()*100) + '% of vendor cost", 'the fee row reads the constant');
     // RESTATED 2026-10-01 (P17, answer 5): the row names the Home Sale Preparation Fee (it read "General contracting &amp; site
     // management of the home prep vendors").
-    const row = ce.indexOf('Home Sale Preparation Fee on the home prep vendors listed below');
+    const row = ce.indexOf('Home Preparation Fee on the home prep vendors listed below');
     const tbody = ce.indexOf("_prepFeeRowHtml +");
     ok(row > 0 && tbody > 0, 'the fee row exists and is placed into the services table');
-    lacks(ce, 'Home Prep for Sale — GC / Site Management Fee (30%)',
+    lacks(ce, 'Home Preparation — GC / Site Management Fee (30%)',
           'the old hardcoded row under the Moving Materials heading is gone');
     has(ce, 'var hasMaterialsSection = e.pkgCost > 0 || vendorSMF > 0;',
         'and the materials band no longer opens just because a prep fee exists');
@@ -419,7 +419,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     const agr = fn('agreementHtml');
     has(agr, '_agrHasPrepVendors(est)', '§3.5 branches on the ESTIMATE, not the service key');
-    has(agr, '3.5 Vendor Coordination and Home Sale Preparation Fee.',
+    has(agr, '3.5 Vendor Coordination and Home Preparation Fee.',
         'and there is a third arm for a job that carries both');
     has(agr, "_pctWords(prepFeeRate())", 'stating the rate from the one function');
     // The plain no-fee clause must survive for a job with no prep vendors — most jobs.
@@ -427,7 +427,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     const pro = fn('probateAgreementHtml');
     has(pro, '_agrHasPrepVendors(est)', 'the probate fee table asks the same question');
-    has(pro, 'Home Sale Preparation Fee', 'and adds the row only when Exhibit A carries one');
+    has(pro, 'Home Preparation Fee', 'and adds the row only when Exhibit A carries one');
     has(pro, "'At cost — no fee'", 'while the general third-party row is untouched');
   }
 
@@ -448,7 +448,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(n, 'no markup to their invoices', 'prep alone: the vendor invoice is still not marked up');
     has(n, 'separate 30%', 'AND the 30% is named — this is the claim that would otherwise be false');
     // RESTATED 2026-10-01 (P17, answer 5): it read "general contracting and site management fee".
-    has(n, 'Home Sale Preparation Fee shown above', 'in the words the fee line uses');
+    has(n, 'Home Preparation Fee shown above', 'in the words the fee line uses');
 
     n = ctx.vendorFeeNote(both);
     has(n, 'adds no markup to their work', 'both: the general vendors keep their line');
@@ -489,7 +489,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   group('the invoice says which line IS the fee, and it exists');
   {
     // RESTATED 2026-10-01 (P17, answer 5): the line is the 30% Home Sale Preparation Fee (it read "30% general contracting").
-    eq(ctx._invVendorFeeSentence(0, 13500).indexOf('30% Home Sale Preparation Fee') > 0, true,
+    eq(ctx._invVendorFeeSentence(0, 13500).indexOf('30% Home Preparation Fee') > 0, true,
        'with a prep fee, it points at the 30% line');
     has(ctx._invVendorFeeSentence(0, 13500), 'no fee is charged on any other vendor',
         'and says what is NOT charged, rather than leaving it open');
@@ -508,7 +508,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(inv, "Havellin\\'s coordination fee is the Service Management Fee shown above.</div>",
           'the old unconditional sentence is gone');
     // RESTATED 2026-10-01 (P17, answer 5): the row read "GC / Site Management Fee (30%)".
-    has(inv, "Home Sale Preparation Fee (' + Math.round(prepFeeRate()*100) + '%)",
+    has(inv, "Home Preparation Fee (' + Math.round(prepFeeRate()*100) + '%)",
         'and the fee row reads the rate rather than a literal 30');
   }
 
@@ -525,7 +525,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     });
     has(fn('probateAgreementHtml'), "Math.round(prepFeeRate()*100)+'% of prep vendor cost'",
         'the probate fee table reads the constant');
-    has(fn('probateAgreementHtml'), 'except for the home sale preparation vendors in the row below',
+    has(fn('probateAgreementHtml'), 'except for the home preparation vendors in the row below',
         'and its no-markup row is scoped once a prep row sits under it');
   }
 

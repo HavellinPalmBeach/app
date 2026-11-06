@@ -1012,6 +1012,27 @@ rows and the Contents Record (the paper a living client signs) carry the same di
 Trade Practices Act want the arrangement named at the point of recommendation (the estimate names the vendor's type, not the
 firm, because the firm is chosen on the Job Plan after signing)?
 
+### B20. Home Preparation, not "for sale" — both forms ⚠ NEW 2026-11-05
+
+**What changed (Anthony, 2026-11-05, with a client preparing a home they are staying in: *"call it home preparation so
+that we can service clients who aren't selling their homes, and the contracts and estimates and everything read
+appropriately"*; he took one neutral wording for every client, with no intake question).** The service *Home Prep for
+Sale* is *Home Preparation*, and the 30% fee's one name (B11) is the *Home Preparation Fee*, on every form, estimate,
+invoice and change order: every quotation of *Home Sale Preparation Fee* or *home sale preparation vendors* in this
+bundle now reads *Home Preparation Fee* and *home preparation vendors*, the words otherwise unchanged. Standard form,
+prep arm: §1.1 *"Contractor will provide home sale preparation project-management services … engaged to prepare the
+Property for sale."* → *"Contractor will provide home preparation project-management services … engaged to carry out
+the preparation work on the Property described in the Estimate."*; §3.2's final row *"Due at show-ready handover of the
+property"* → *"Due at handover of the finished work on the property"* (Exhibit A and the agreement email say the same).
+Standard form, every other living service: §1.2 *"basic home preparation and staging in anticipation of sale (excluding
+real estate brokerage services …)"* → *"basic home preparation and staging (excluding real estate brokerage services …)"*.
+Estate form (and the estate Exhibit A): *"Where applicable, property preparation for sale is included as reflected in
+Exhibit A."* → *"Where applicable, property preparation is included as reflected in Exhibit A."* §1.3's exclusion of
+real estate brokerage, listing and transactional representation is unchanged on both forms.
+
+**The question.** Does dropping *for sale* from §1.1 and *in anticipation of sale* from §1.2 change what the fee is
+charged for, or how the brokerage exclusion reads, where the client is in fact selling (the realtor referrals)?
+
 ---
 
 ## C. Estate Firearms Protocol
@@ -1607,12 +1628,12 @@ So counsel does not spend time on settled ground:
 
 - **Whether Havellin should state values at all.** Decided — it is the product. Anthony:
   *"why wouldn't we want a valuation figure?"* The question is attribution (D4), not whether.
-- **Pricing, fee structure, the 30% Home Sale Preparation Fee, the 20–35% fixed-price
+- **Pricing, fee structure, the 30% Home Preparation Fee, the 20–35% fixed-price
   contingency.** Business decisions, not legal ones.
 - **Anything about how the software works.** Where a rule is enforced in the app that is noted
   only so counsel knows the document and the system agree.
 - **The service catalogue.** Home Editing / Home Transition / Home Cleanout / Estate
-  Settlement / Probate / Contested Probate / Home Prep for Sale are fixed.
+  Settlement / Probate / Contested Probate / Home Preparation are fixed.
 
 ---
 

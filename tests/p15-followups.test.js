@@ -486,7 +486,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const d = text(p.__printed);
     has(d, 'This change order adds Painting to the preparation vendors.', '⚠ the printed page says what it adds');
     // RESTATED 2026-10-01 (P17): the fee's one name is the Home Sale Preparation Fee (it read "site management fee"), here and below.
-    has(d, 'The vendor bills you directly, at cost, and the 30% Home Sale Preparation Fee in your agreement is billed on its quote as recorded, updated if its invoice differs — about $1,350 at the estimated $4,500.', // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
+    has(d, 'The vendor bills you directly, at cost, and the 30% Home Preparation Fee in your agreement is billed on its quote as recorded, updated if its invoice differs — about $1,350 at the estimated $4,500.', // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
         'and on what terms');
     lacks(d, 'Third-party vendor costs are unaffected', '⚠ and not the line that would now be false');
     has(d, 'Added preparation vendor: Painting', 'the table names the vendor');
@@ -529,11 +529,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const quoted = Object.assign({}, PREP_JOB, { prepSourcing: { 'Lco-paint': { quote: 5000 } } });
     const a2 = finalDoc(est, quoted, cos);
     eq(a2._collected - a0._collected, 1500, '…and on its actual quote once one is recorded: 30% of $5,000');
-    has(text(a1.html), 'Adds Painting (est. $4,500) — it bills you directly, and the Home Sale Preparation Fee on it is in the fee above', 'the change-order row names it, and where its fee is');
+    has(text(a1.html), 'Adds Painting (est. $4,500) — it bills you directly, and the Home Preparation Fee on it is in the fee above', 'the change-order row names it, and where its fee is');
     lacks(text(a1.html), 'preparation vendors above', '⚠ and never points at a vendor list this invoice does not print');
-    has(text(a1.html), 'A vendor a change order added bills you directly, and the Home Sale Preparation Fee on it (on its quote as recorded, updated if its invoice differs) is in the fee above.', // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
+    has(text(a1.html), 'A vendor a change order added bills you directly, and the Home Preparation Fee on it (on its quote as recorded, updated if its invoice differs) is in the fee above.', // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
         'the section\'s note says where its fee is, too');
-    has(text(a1.html), 'adds Painting, in the Home Sale Preparation Fee above', '⚠ the payment summary names the vendor — it read "no hours change, billed in the hours above"');
+    has(text(a1.html), 'adds Painting, in the Home Preparation Fee above', '⚠ the payment summary names the vendor — it read "no hours change, billed in the hours above"');
     lacks(text(a1.html), 'no hours change, billed in the hours above', 'not that');
     // The ±15% baseline moves with the accepted vendor, at its estimated cost: an accepted $4,500 painter is authorised scope.
     eq(a1.requiresApproval, a0.requiresApproval, 'an accepted vendor alone does not send the final to a manager');

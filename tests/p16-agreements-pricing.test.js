@@ -321,7 +321,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(note, 'A change order carries no price and bills nothing on its own', 'the hourly note keeps its rule');
     // RESTATED 2026-10-01 (P17, Anthony's answer 5): the fee's one name is the Home Sale Preparation Fee, in this group and the
     // A3 groups below (they read "site management fee"; the estate fee row read "General contractor / site management fee").
-    has(note, 'A change order can also add a preparation vendor found mid-job, with or without hours: it bills the client directly at cost, and the 30% Home Sale Preparation Fee applies to its quote as recorded, updated if its invoice differs. It books no concierge hours.', // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
+    has(note, 'A change order can also add a preparation vendor found mid-job, with or without hours: it bills the client directly at cost, and the 30% Home Preparation Fee applies to its quote as recorded, updated if its invoice differs. It books no concierge hours.', // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
         'and says a vendor can be added, and on what terms');
     const f = coCtx(EST_BPF, BP_JOB, [], { 'co-jobid': '1' });
     f.openChangeOrder(1);
@@ -371,7 +371,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const only = coCtx(EST_BP, BP_JOB, [], { 'co-jobid': '1', 'co-vendor-type': 'Landscaper', 'co-vendor-cost': '$9,000' });
     only.updateCOHours();
     const t1 = text(only.__dom.getElementById('co-hrs-note').innerHTML);
-    has(t1, 'Adds Landscaper to the preparation vendors. It bills the client directly at cost, and the 30% Home Sale Preparation Fee applies to its quote as recorded, updated if its invoice differs — about $2,700 at the estimated $9,000.', // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
+    has(t1, 'Adds Landscaper to the preparation vendors. It bills the client directly at cost, and the 30% Home Preparation Fee applies to its quote as recorded, updated if its invoice differs — about $2,700 at the estimated $9,000.', // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
         'a vendor alone reads out, with its fee at the estimate');
     lacks(t1, 'hrs on the estimate', 'and no hours readout');
     const both = coCtx(EST_BP, BP_JOB, [], { 'co-jobid': '1', 'co-tc-hrs': '4', 'co-ps-hrs': '8', 'co-vendor-type': 'Painting', 'co-vendor-cost': '4500' });
@@ -396,10 +396,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     a.openCOAcceptModal(100);
     const s = text(a.__dom.getElementById('coa-summary').innerHTML);
     has(s, 'Added vendor Landscaper, est. $9,000, billed to you directly', 'the panel names the vendor');
-    has(s, '30% Home Sale Preparation Fee on it about $2,700, on its quote as recorded, updated if its invoice differs', 'and the fee on it'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
+    has(s, '30% Home Preparation Fee on it about $2,700, on its quote as recorded, updated if its invoice differs', 'and the fee on it'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
     lacks(s, 'No charge is created by this change order', '⚠ never "no charge", which a vendor\'s fee would make false');
     has(text(a.__dom.getElementById('coa-terms').innerHTML),
-        'By typing their name and pressing Accept, the client confirms they have reviewed and agreed to this change in scope, and the addition of Landscaper to the preparation vendors, billed to them directly at cost, with the 30% Home Sale Preparation Fee on its quote as recorded, updated if its invoice differs.', // RESTATED (P25, Q52)
+        'By typing their name and pressing Accept, the client confirms they have reviewed and agreed to this change in scope, and the addition of Landscaper to the preparation vendors, billed to them directly at cost, with the 30% Home Preparation Fee on its quote as recorded, updated if its invoice differs.', // RESTATED (P25, Q52)
         'and the client agrees to it in words');
     const h = coCtx(EST_BP, BP_JOB, [co({ tcHrs: 4, psHrs: 8, vendorAdds: [LANDSCAPER] })], { 'coa-co-id': '100' });
     h.openCOAcceptModal(100);
@@ -447,8 +447,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const v = P(EST_BP, co({ vendorAdds: [LANDSCAPER] }));
     has(v, 'This change order adds Landscaper to the preparation vendors.', '⚠⚠ the page says what it adds');
     has(v, 'Added preparation vendor: Landscaper billed to you directly by the vendor, at cost $9,000 estimated', 'the table names the vendor and its estimate');
-    has(v, 'Home Sale Preparation Fee (30%) on its quote as recorded, updated if its invoice differs about $2,700', 'and the fee on it'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
-    has(v, 'The vendor bills you directly, at cost, and the 30% Home Sale Preparation Fee in your agreement is billed on its quote as recorded, updated if its invoice differs — about $2,700 at the estimated $9,000.', // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
+    has(v, 'Home Preparation Fee (30%) on its quote as recorded, updated if its invoice differs about $2,700', 'and the fee on it'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
+    has(v, 'The vendor bills you directly, at cost, and the 30% Home Preparation Fee in your agreement is billed on its quote as recorded, updated if its invoice differs — about $2,700 at the estimated $9,000.', // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
         'the terms, in the Home Prep page\'s words');
     has(v, 'That fee covers coordinating and supervising the preparation work, which is not billed as hours.', 'as §3.5 says it');
     lacks(v, 'Third-party vendor costs are unaffected', '⚠ not the line this change makes false');
@@ -487,10 +487,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(a1._collected - a0._collected, 2700, '⚠⚠ the hourly final collects the fee on the added vendor: 30% of $9,000');
     eq(a1.overUnder, 0, '⚠⚠ and the baseline moved by exactly that fee: no variance');
     ok(a1.requiresApproval === false, 'so the accepted vendor never sends the final to a manager');
-    has(text(a1.html), 'Adds Landscaper (est. $9,000) — it bills you directly, and the Home Sale Preparation Fee on it is in the fee above', 'the change-order row names it');
-    has(text(a1.html), 'A vendor a change order added bills you directly, and the Home Sale Preparation Fee on it (on its quote as recorded, updated if its invoice differs) is in the fee above.', 'the section note says where its fee is'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
+    has(text(a1.html), 'Adds Landscaper (est. $9,000) — it bills you directly, and the Home Preparation Fee on it is in the fee above', 'the change-order row names it');
+    has(text(a1.html), 'A vendor a change order added bills you directly, and the Home Preparation Fee on it (on its quote as recorded, updated if its invoice differs) is in the fee above.', 'the section note says where its fee is'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
     lacks(text(a1.html), 'These hours are not billed separately', 'and says nothing of hours it did not add');
-    has(text(a1.html), 'adds Landscaper, in the Home Sale Preparation Fee above', 'the payment summary names it');
+    has(text(a1.html), 'adds Landscaper, in the Home Preparation Fee above', 'the payment summary names it');
     const quoted = finalDoc(EST_BP, Object.assign({}, BP_JOB, { prepSourcing: { 'Lco-land': { quote: 12000 } } }), COS, { tc: 80, ps: 60 });
     eq(quoted._collected - a0._collected, 3600, 'on its actual quote once one is recorded: 30% of $12,000');
     // The fixed price with the fee on top.
@@ -498,12 +498,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const f1 = finalDoc(EST_BPF, BP_JOB, COS, { tc: 80, ps: 60 });
     eq(f1._collected - f0._collected, 2700, 'the fixed-price final collects the fee on it too, on top of the flat fee');
     eq(f1.overUnder, 0, 'with no variance');
-    has(text(f1.html), 'adds Landscaper, in the Home Sale Preparation Fee above', 'and names it in the payment summary');
+    has(text(f1.html), 'adds Landscaper, in the Home Preparation Fee above', 'and names it in the payment summary');
     const fh = finalDoc(EST_BPF, BP_JOB, [accepted({ tcHrs: 4, vendorAdds: [LANDSCAPER] })], { tc: 80, ps: 60 });
-    has(text(fh.html), '+ $600; adds Landscaper, in the Home Sale Preparation Fee above', 'with hours: the signed price, then the vendor');
+    has(text(fh.html), '+ $600; adds Landscaper, in the Home Preparation Fee above', 'with hours: the signed price, then the vendor');
     // The change-order section's note on the fixed final: where the vendor's fee is, and a price sentence only for a
     // change order that carries a price (a vendor-only one carries none).
-    has(text(f1.html), 'A vendor a change order added bills you directly, and the Home Sale Preparation Fee on it (on its quote as recorded, updated if its invoice differs) is in the fee above.', // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
+    has(text(f1.html), 'A vendor a change order added bills you directly, and the Home Preparation Fee on it (on its quote as recorded, updated if its invoice differs) is in the fee above.', // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
         '⚠ the fixed final\'s change-order note says where the added vendor\'s fee is');
     lacks(text(f1.html), 'Each is charged at the price on the change order you accepted', 'and claims no price for a change order that carries none');
     has(text(fh.html), 'because a fixed fee does not otherwise move with the hours worked. A vendor a change order added bills you directly',
@@ -532,17 +532,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const c = agrCtx();
     const st = (e) => text(c.agreementHtml(LIVING_JOB(), e));
-    has(st(EST_BP), 'Home sale preparation vendors identified in the Estimate or added by Change Order are the exception', 'standard §3.5, hourly');
-    has(st(EST_BPF), 'Home sale preparation vendors identified in the Estimate or added by Change Order are the exception', 'standard §3.5, fixed with the fee on top');
-    has(st(EST_BPI), 'Home sale preparation vendors identified in the Estimate are the exception', 'an older inside-fee form keeps its words');
+    has(st(EST_BP), 'Home preparation vendors identified in the Estimate or added by Change Order are the exception', 'standard §3.5, hourly');
+    has(st(EST_BPF), 'Home preparation vendors identified in the Estimate or added by Change Order are the exception', 'standard §3.5, fixed with the fee on top');
+    has(st(EST_BPI), 'Home preparation vendors identified in the Estimate are the exception', 'an older inside-fee form keeps its words');
     lacks(st(EST_BPI), 'added by Change Order', 'where no change order can add one');
     const es = (e) => text(c.probateAgreementHtml(ESTATE_JOB({ svc: 'cleanout' }), Object.assign({}, EST_ESTATE, { svc: 'cleanout' }, e)));
     const prepE = { prepEnabled: true, prepItems: [{ type: 'Painting', cost: 10000, lid: 'bp1' }], prepCost: 10000, prepFee: 3000 };
-    has(es(prepE), 'Charged on the home sale preparation vendors identified in Exhibit A or added by Change Order. Those vendors bill at cost',
+    has(es(prepE), 'Charged on the home preparation vendors identified in Exhibit A or added by Change Order. Those vendors bill at cost',
         '⚠⚠ the estate fee row, hourly arm');
     const fx = es(Object.assign({}, prepE, { fixedPrice: true, fixedAmount: 40000, prepFeeOnTop: true, havellinTotal: 43000 }));
-    has(fx, 'on the home sale preparation vendors identified in Exhibit A or added by Change Order. Those vendors bill at cost', 'the fee row, fixed arm');
-    has(fx, 'of the quotes recorded for the home sale preparation vendors identified in Exhibit A or added by Change Order, updated if a vendor’s invoice differs', 'and the Fixed Project Fee paragraph'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
+    has(fx, 'on the home preparation vendors identified in Exhibit A or added by Change Order. Those vendors bill at cost', 'the fee row, fixed arm');
+    has(fx, 'of the quotes recorded for the home preparation vendors identified in Exhibit A or added by Change Order, updated if a vendor’s invoice differs', 'and the Fixed Project Fee paragraph'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
     lacks(es(Object.assign({}, prepE, { fixedPrice: true, fixedAmount: 43000, havellinTotal: 43000 })), 'added by Change Order', 'an older inside-fee estate form keeps its words');
   }
 
@@ -557,9 +557,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const hourly = es(prepE);
     const f42 = (t) => { const i = t.indexOf('4.2 Change Order Documentation'); return i < 0 ? '' : t.slice(i, t.indexOf('Havellin Authorization', i)); };
     ok(f42(hourly).length > 100, 'fixture: the hourly estate form prints §4.2');
-    has(f42(hourly), 'Added Preparation Vendor (the vendor and its estimated cost. It bills the Client directly, at cost, and the Home Sale Preparation Fee in Section 3.1 is charged on its quote as recorded, updated if its invoice differs.)', // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
+    has(f42(hourly), 'Added Preparation Vendor (the vendor and its estimated cost. It bills the Client directly, at cost, and the Home Preparation Fee in Section 3.1 is charged on its quote as recorded, updated if its invoice differs.)', // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
         '⚠⚠ the form has a row for the vendor, saying who pays it and where its fee is');
-    has(f42(hourly), 'The additional hours are billed as worked, at the hourly rates in Section 3.1. A preparation vendor this Change Order adds bills the Client directly, at cost, and the Home Sale Preparation Fee is charged on its quote as recorded, updated if its invoice differs; this Change Order creates no other charge.', // RESTATED (P25, Q52)
+    has(f42(hourly), 'The additional hours are billed as worked, at the hourly rates in Section 3.1. A preparation vendor this Change Order adds bills the Client directly, at cost, and the Home Preparation Fee is charged on its quote as recorded, updated if its invoice differs; this Change Order creates no other charge.', // RESTATED (P25, Q52)
         '⚠⚠ the hourly Billing row names the vendor\'s fee');
     lacks(f42(hourly), 'does not itself create a charge', 'and no longer says the change order creates no charge');
     const fx = f42(es(Object.assign({}, prepE, { fixedPrice: true, fixedAmount: 40000, prepFeeOnTop: true, havellinTotal: 43000 })));

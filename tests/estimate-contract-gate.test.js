@@ -99,7 +99,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
        'and is therefore asked neither question');
     eq(c.estimateContractMissing({ svc: 'downsizing_move' }), [], 'nor is a Home Transition');
     eq(c.estimateContractMissing({ svc: 'home_cleanout' }), [], 'nor a Home Cleanout');
-    eq(c.estimateContractMissing({ svc: 'prep' }), [], 'nor a Home Prep for Sale');
+    eq(c.estimateContractMissing({ svc: 'prep' }), [], 'nor a Home Preparation');
   }
 
   // ───────────────────────────────────────────────────────────────────────────

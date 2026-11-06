@@ -146,14 +146,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(tm.sum, tm.total, '⚠⚠ T&M: the rows add up to their own total — they came to $14,100 over a $14,325 total');
     // RESTATED 2026-10-01 (P17, Anthony's answer 5): the fee row is the Home Sale Preparation Fee; it read "General contracting & site
     // management of the home prep vendors", and the band above it "Home Prep for Sale — Site Management".
-    ok(tm.rows.some((r) => /Home Sale Preparation Fee on the home prep vendors/.test(r.label) && r.v === 225),
+    ok(tm.rows.some((r) => /Home Preparation Fee on the home prep vendors/.test(r.label) && r.v === 225),
        'the $225 is a row in the table that counts it');
     const t = text(ceDoc(BASE));
     // (The band's old name read -1 once it was renamed, which is "above" anything: the restated check asks that the band is there.)
-    ok(t.indexOf('Home Prep for Sale — Home Sale Preparation Fee') >= 0 && t.indexOf('Home Prep for Sale — Home Sale Preparation Fee') < t.indexOf('Havellin Services Total'),
+    ok(t.indexOf('Home Preparation Fee on the home prep vendors listed below') >= 0 && t.indexOf('Home Preparation Fee on the home prep vendors listed below') < t.indexOf('Havellin Services Total'),
        'and it sits above the total, not under the prep vendors below it');
     lacks(t, 'Havellin GC / Site Management Fee', 'the old fee subtotal under the prep vendors is gone');
-    has(t, "fee on this work is the Home Sale Preparation Fee line in Havellin Services above",
+    has(t, "fee on this work is the Home Preparation Fee line in Havellin Services above",
         'the prep section says where the fee is, so nobody hunts for it under the vendors');
 
     const fx = servicesTable(ceDoc(FIXED));
@@ -162,13 +162,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     ok(fx.rows.some((r) => /^Fixed Project Fee/.test(r.label) && r.v === 20000),
        '⚠ the fixed row states the flat fee alone — never the sum the prep fee rides on');
     // RESTATED 2026-10-01 (P17, answer 5): the row's label is the Home Sale Preparation Fee.
-    ok(fx.rows.some((r) => /Home Sale Preparation Fee on the home prep vendors/.test(r.label) && r.v === 225), 'the prep fee is its own row under it');
+    ok(fx.rows.some((r) => /Home Preparation Fee on the home prep vendors/.test(r.label) && r.v === 225), 'the prep fee is its own row under it');
 
     const lg = servicesTable(ceDoc(LEGACY));
     eq(lg.total, 20000, 'a record saved before today: the flat fee is the whole Havellin total');
     eq(lg.sum, lg.total, 'and its one row adds up to it');
     // RESTATED 2026-10-01 (P17, answer 5): asked by the row's new name (the old one is absent everywhere, so it could no longer fail).
-    ok(!lg.rows.some((r) => /Home Sale Preparation Fee/.test(r.label)), '⚠ no second fee row — the fee is inside the flat fee there');
+    ok(!lg.rows.some((r) => /Home Preparation Fee/.test(r.label)), '⚠ no second fee row — the fee is inside the flat fee there');
   }
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -179,7 +179,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(t, 'which is not part of the fixed fee and is charged on the vendor quotes recorded, updated if a vendor’s invoice differs', // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
         'and carve the prep fee out of it');
     // RESTATED 2026-10-01 (P17, answer 5): it read "whose site management fee is the next line".
-    has(t, 'apart from the home prep vendors, whose Home Sale Preparation Fee is the next line', 'the fixed row\'s blurb carves them out too');
+    has(t, 'apart from the home prep vendors, whose Home Preparation Fee is the next line', 'the fixed row\'s blurb carves them out too');
     has(t, 'charged on the vendor quotes recorded, updated if a vendor’s invoice differs', 'the prep section says the fee trues up'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
     const l = text(ceDoc(LEGACY));
     lacks(l, 'which is not part of the fixed fee', 'a record saved before today claims no carve-out — its flat fee carries the fee');
@@ -187,7 +187,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // claims moving materials; job-flow-audit.test.js holds the package arm.
     has(l, 'All vendor coordination is included.', 'and its blurb still says all coordination is included');
     lacks(l, 'Moving materials and all vendor coordination', '…and claims no moving materials it does not price');
-    lacks(l, 'Home Sale Preparation Fee line in Havellin Services above', 'nor points at a line it does not print');
+    lacks(l, 'Home Preparation Fee line in Havellin Services above', 'nor points at a line it does not print');
   }
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -314,7 +314,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(dep.amtDue, 10112.5, 'deposit = 50% of the $20,000 flat fee + the $225 fee on the quotes');
     has(dep.t, 'Fixed project fee — full scope of work per agreement $20,000', 'the deposit states the flat fee');
     // RESTATED 2026-10-01 (P17, answer 5): the row read "Home Prep for Sale — GC / Site Management Fee (30%)".
-    has(dep.t, 'Home Sale Preparation Fee (30%) $225', 'and itemises the prep fee on the quotes');
+    has(dep.t, 'Home Preparation Fee (30%) $225', 'and itemises the prep fee on the quotes');
     has(dep.t, 'Havellin Services Total $20,225', 'with a total that adds up');
     has(dep.t, "shown here on the prep vendors' quotes, and updated at the midpoint and final if a vendor’s invoice differs", 'and says it trues up'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
 
@@ -322,7 +322,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const mid = invoice(FIXED, 'midpoint', received, actuals());
     eq(mid.amtDue, Math.round((0.75 * (20000 + 345) - 10112.5) * 100) / 100,
        '⚠ midpoint = 75% of the flat fee + the fee on the ACTUAL $900 painter bill ($345), less the deposit');
-    ok(/Home Sale Preparation Fee \(30%\) est\. \$345/.test(mid.t),
+    ok(/Home Preparation Fee \(30%\) est\. \$345/.test(mid.t),
        'the midpoint bills $345, tagged est. while two prep lines are still on their quotes');
 
     const fin = invoice(FIXED, 'final', received.concat([pay('midpoint', mid.amtDue)]), actuals());
@@ -332,13 +332,13 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // ⚠ The total alone cannot see the row going missing — the table would print a $20,000 flat fee over a
     //   $20,345 total, which is the exact screen Anthony reported. Read the table and make it add up.
     // RESTATED 2026-10-01 (P17, answer 5): the row, the payment summary and the vendor note name the Home Sale Preparation Fee.
-    ok(/Home Sale Preparation Fee \(30%\)( est\.)? \$345/.test(fin.t),
+    ok(/Home Preparation Fee \(30%\)( est\.)? \$345/.test(fin.t),
        '⚠⚠ the final itemises the fee on the actual invoices inside the services table');
-    const iFee = fin.t.indexOf('Home Sale Preparation Fee (30%)');
+    const iFee = fin.t.indexOf('Home Preparation Fee (30%)');
     ok(iFee >= 0 && iFee < fin.t.indexOf('Havellin Services Total $20,345'),
        'above the services total it is part of (a missing row reads -1, which is not "above")');
-    has(fin.t, "Home Sale Preparation Fee — on the vendor quotes recorded $345", 'the payment summary names the fee'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
-    has(fin.t, "Havellin's fee on the home preparation vendors is the 30% Home Sale Preparation Fee shown above",
+    has(fin.t, "Home Preparation Fee — on the vendor quotes recorded $345", 'the payment summary names the fee'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
+    has(fin.t, "Havellin's fee on the home preparation vendors is the 30% Home Preparation Fee shown above",
         'the vendor note points at a line that is on the page');
     lacks(fin.t, 'billed in the hours above', 'no hours claim on a fixed-price invoice');
     ok(!fin.blocked, 'a fixed final is never blocked for hours — the timesheet is empty here');
@@ -347,7 +347,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const ldep = invoice(LEGACY, 'deposit');
     eq(ldep.amtDue, 10000, '⚠⚠ a record saved before today: 50% of the flat fee alone — the fee is never billed twice');
     // RESTATED 2026-10-01 (P17, answer 5): asked by the line's new name.
-    lacks(ldep.t, 'Home Sale Preparation Fee (30%)', 'and no separate fee line');
+    lacks(ldep.t, 'Home Preparation Fee (30%)', 'and no separate fee line');
     const lfin = invoice(LEGACY, 'final', [pay('deposit', 10000), pay('midpoint', 5000)], actuals());
     eq(lfin.amtDue, 5000, 'its final closes out the flat fee and nothing more');
     has(lfin.t, 'fee on the home preparation vendors is included in the fixed project fee', 'and says the fee is inside it');
@@ -364,8 +364,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const c = sandbox({ fns: ['_invVendorFeeSentence', 'prepFeeRate'], vars: ['PREP_FEE_RATE'] });
     // RESTATED 2026-10-01 (P17, answer 5): the sentence names the Home Sale Preparation Fee (it read "general contracting and site
     // management fee shown above").
-    has(c._invVendorFeeSentence(0, 225, ''), 'Home Sale Preparation Fee shown above', 'hourly: the fee line is on the page');
-    has(c._invVendorFeeSentence(0, 225, 'fixed'), 'Home Sale Preparation Fee shown above', 'fixed, fee on top: so is it');
+    has(c._invVendorFeeSentence(0, 225, ''), 'Home Preparation Fee shown above', 'hourly: the fee line is on the page');
+    has(c._invVendorFeeSentence(0, 225, 'fixed'), 'Home Preparation Fee shown above', 'fixed, fee on top: so is it');
     has(c._invVendorFeeSentence(0, 225, 'fixed-inside'), 'is included in the fixed project fee',
         'fixed, fee inside: there is no line to point at');
     has(c._invVendorFeeSentence(0, 0, ''), 'billed in the hours above', 'hourly with no prep: the hours carry the coordination');
@@ -379,7 +379,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const a = agr(LIVING, FIXED);
     has(a, 'fixed price of $20,000', '§3.1 states the flat fee — not the $20,225 total');
     lacks(a, 'fixed price of $20,225', 'and never the sum');
-    has(a, 'The Home Sale Preparation Fee in Section 3.5 is charged in addition to the fixed price', '§3.1 says it is additional');
+    has(a, 'The Home Preparation Fee in Section 3.5 is charged in addition to the fixed price', '§3.1 says it is additional');
     has(a, 'fixed project fee of $20,000', '§3.3 states the flat fee');
     has(a, 'is not part of the fixed project fee and is charged in addition to it', '§3.3 carves the prep fee out');
     has(a, 'is included in the fixed project fee under Section 3.3', '⚠ §3.5: coordination is inside the flat fee, not billed as time');
@@ -389,7 +389,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(a, 'Deposit (50%) $10,112.50', 'the schedule splits flat + estimated fee — the same figure the deposit invoice asks for');
     has(a, 'is earned as the preparation work is performed', '§12.2 earns the prep fee on the vendor work');
     has(a, 'at thirty percent (30%) of those vendors\' invoices', 'at the rate, spelled from the one constant');
-    has(a, 'and the Home Sale Preparation Fee owed under that Section', '§12.4 invoices it on termination');
+    has(a, 'and the Home Preparation Fee owed under that Section', '§12.4 invoices it on termination');
     has(a, 'deposit is earned on signature and is not refundable', 'the deposit stays non-refundable');
     lacks(a, 'billed as Transition Concierge time under Section 3.3', '⚠ no clause bills coordination as hours on a fixed fee');
 
@@ -409,7 +409,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                                 prepEnabled: false, prepItems: [], prepCost: 0, prepFee: 0 }));
     has(np, 'The Transition Concierge time spent sourcing, scheduling, and supervising vendors is included in the fixed project fee under Section 3.3',
         '⚠ fixed, no prep: coordination is inside the flat fee');
-    lacks(np, 'Home Sale Preparation Fee', 'and no prep fee is mentioned where none is charged');
+    lacks(np, 'Home Preparation Fee', 'and no prep fee is mentioned where none is charged');
   }
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -422,19 +422,19 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(a, 'the concierge time spent coordinating them is included in the fixed project fee above',
         '⚠ the vendor row no longer bills coordination at the TC rate on a fixed fee');
     has(a, 'which is not part of the fixed project fee above: it is charged in addition to it', 'the prep row is outside the flat fee');
-    has(a, 'It is charged in addition to it, at thirty percent (30%) of the quotes recorded for the home sale preparation vendors', // RESTATED (P25, Q52)
+    has(a, 'It is charged in addition to it, at thirty percent (30%) of the quotes recorded for the home preparation vendors', // RESTATED (P25, Q52)
         'the Fixed Project Fee paragraph carries the prep fee');
     has(a, '(estimated in Exhibit A at $225)', 'with its estimated amount');
-    has(a, 'together with the Home Sale Preparation Fee on the vendor quotes recorded, updated if a vendor’s invoice differs', '§3.2 IMPORTANT names it'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
+    has(a, 'together with the Home Preparation Fee on the vendor quotes recorded, updated if a vendor’s invoice differs', '§3.2 IMPORTANT names it'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
     has(a, '(50% of fixed price + est. prep fee)', 'the payment rows name both parts');
     // RESTATED 2026-10-01 (P17, answer 6): half of $30,225 to the cent (it read $15,113).
     has(a, '$15,112.50 (50% of fixed price + est. prep fee)', 'and split the same figure the deposit invoice asks for');
-    has(a, 'completing the fixed price and the Home Sale Preparation Fee on the vendor quotes recorded, updated if a vendor’s invoice differs', 'the final payment says the fee trues up'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
-    has(a, 'The payment amounts above include the Home Sale Preparation Fee at its estimated amount of $225',
+    has(a, 'completing the fixed price and the Home Preparation Fee on the vendor quotes recorded, updated if a vendor’s invoice differs', 'the final payment says the fee trues up'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
+    has(a, 'The payment amounts above include the Home Preparation Fee at its estimated amount of $225',
         'the estate schedule says its amounts carry the estimated fee');
     has(a, 'so the midpoint and final payments are adjusted to it', 'and that the later payments follow the actual bills'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
-    has(a, 'The Home Sale Preparation Fee is earned as the preparation work is performed', '§8.1 earns it on the work');
-    has(a, 'and the Home Sale Preparation Fee owed will be issued', '§8.1 invoices it on termination');
+    has(a, 'The Home Preparation Fee is earned as the preparation work is performed', '§8.1 earns it on the work');
+    has(a, 'and the Home Preparation Fee owed will be issued', '§8.1 invoices it on termination');
     has(a, 'The deposit is earned in full on signature of this Agreement and is not refundable', 'the deposit stays protected');
 
     const l = agr(ESTATE, Object.assign({}, LEGACY, { svc: 'cleanout' }));
@@ -442,7 +442,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(l, 'est. prep fee', 'and the schedule claims no separate fee');
 
     const tm = agr(ESTATE, Object.assign({}, BASE, { svc: 'cleanout' }));
-    has(tm, 'the concierge time spent coordinating them is billed at the TC rate above, except for the home sale preparation vendors',
+    has(tm, 'the concierge time spent coordinating them is billed at the TC rate above, except for the home preparation vendors',
         'the hourly estate row is untouched');
     has(tm, 'which is not additionally billed at the TC rate above', 'and so is its prep row');
   }
@@ -453,14 +453,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const c = sandbox({ fns: ['estimateHavellinLines', 'estFixedFee', 'estPrepFeeOnTop', 'prepFeeRate', 'estFixedLines', 'roundCents'], vars: ['PREP_FEE_RATE', 'RUSH_PCT'] });
     eq(JSON.stringify(c.estimateHavellinLines(FIXED, false)),
        // RESTATED 2026-10-01 (P17, answer 5): the email's line read "Home Prep Site Management Fee (30%)".
-       JSON.stringify([['Fixed Project Fee', 20000], ['Home Sale Preparation Fee (30%)', 225]]),
+       JSON.stringify([['Fixed Project Fee', 20000], ['Home Preparation Fee (30%)', 225]]),
        '⚠ fixed: two lines — a single "Fixed Project Fee" over their sum would state a flat fee no document agrees with');
     eq(JSON.stringify(c.estimateHavellinLines(LEGACY, false)), JSON.stringify([['Fixed Project Fee', 20000]]),
        'a record saved before today: one line, the whole flat fee');
     eq(JSON.stringify(c.estimateHavellinLines(BASE, false)), JSON.stringify([['Havellin Services', 14325]]),
        'hourly: the services total, as before');
     // RESTATED 2026-10-01 (P17, answer 5): the fee-only label read "Havellin Management Fee".
-    eq(c.estimateHavellinLines(BASE, true)[0][0], 'Home Sale Preparation Fee', 'a fee-only engagement keeps its own label');
+    eq(c.estimateHavellinLines(BASE, true)[0][0], 'Home Preparation Fee', 'a fee-only engagement keeps its own label');
     const m = fn('buildEstimateMailto'), t = fn('buildEstimateEmailText'), h = fn('buildEstimateEmailHtml');
     [m, t, h].forEach((b, i) => has(b, 'estimateHavellinLines(', ['mailto', 'text', 'html'][i] + ' email reads the shared lines'));
     has(h, 'The fixed project fee above is firm', 'the HTML email calls only the flat fee firm');

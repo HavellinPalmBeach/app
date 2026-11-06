@@ -17,7 +17,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
   {
     const sel = src.slice(src.indexOf('<select id="i-svc"'), src.indexOf('</select>', src.indexOf('<select id="i-svc"')));
     const vals = (sel.match(/value="([^"]*)"/g) || []).map((m) => m.slice(7, -1)).filter(Boolean);
-    eq(vals[0], 'prep', 'Home Prep for Sale is the first real option on intake');
+    eq(vals[0], 'prep', 'Home Preparation is the first real option on intake');
     const c = sandbox({ vars: ['SVC_ORDER'] });
     eq(c.SVC_ORDER[0], 'prep', 'and first in SVC_ORDER, so the estimate picker agrees');
   }
