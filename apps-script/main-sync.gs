@@ -222,7 +222,10 @@
 // ⚠ 2026-11-05f: where the notes disagree the newer and first-hand wins (what changed, an edited plan, the walkthrough and room
 // notes, then the intake), and no diagnosis is repeated though the notes record one (Anthony, off a plan that followed an intake
 // note whose scope had since changed, and printed a house question's diagnosis word for word). No action changes.
-var BACKEND_VERSION = '2026-11-05f';
+// ⚠ 2026-11-06: the crew plan says each thing once (a condition never repeats the context), never says who must be present
+// unless the notes do, and keeps a step up to AGENT_WALK_TEXT_MAX (Anthony, off a plan that said three times that the kitchen
+// is left, made the client present for every sort, and cut the back yard's step off at 200 characters). No action changes.
+var BACKEND_VERSION = '2026-11-06';
 var BACKEND_ACTIONS = [
   'createFolder', 'uploadFile', 'uploadHtml', 'htmlToPdf', 'getSubfolders',
   'getThumbnails', 'trashFile', 'shareFolder', 'unshareFolder', 'esignSend', 'esignStatus', 'esignArchive', 'esignSendRequest',
@@ -5194,7 +5197,7 @@ function _awPlanTool(roomNames) {
         order:      { type: 'array', description: 'The order of the work, five to twelve steps.',
                       items: { type: 'object', additionalProperties: false, required: ['step', 'room', 'after', 'vendor'],
                                properties: {
-                                 step:   { type: 'string', description: 'What is done, one short sentence.' },
+                                 step:   { type: 'string', description: 'What is done, one short sentence of under 35 words.' },
                                  room:   roomProp,
                                  after:  { type: 'string', description: 'For a step that is not a room (a haul, a donation run, a '
                                                                     + 'vendor): the room it follows, exactly as listed; else empty.' },
@@ -5202,7 +5205,7 @@ function _awPlanTool(roomNames) {
                                                                      + 'estimate, or empty.' } } } },
         conditions: { type: 'array', items: _awSourced(true),
                       description: 'What the work needs to go ahead (a dry day for a yard step, an empty room for a vendor) and any '
-                                 + 'rule the notes give: each one sentence, each from a source.' },
+                                 + 'rule the notes give: each one sentence, each from a source, never a repeat of a context line.' },
         if_cant:    { type: 'array', items: { type: 'string' },
                       description: 'What to do instead when a condition is not met: each one sentence.' },
         length:     { type: 'string', description: 'One sentence: the rough length for the crew on the estimate, and with one '
@@ -5256,17 +5259,22 @@ function _awPlanSystem(ctx) {
     + '- Order of work: the sequence, by room, with the steps that are not a room (hauls, donation runs, a vendor\'s visit) '
     + 'attached to the room they follow. Easy rooms before sentimental ones unless the notes say otherwise.\n'
     + '- Conditions: what the work needs to go ahead (a dry day for a yard step, an empty room for a vendor), and any rule '
-    + 'the notes give.\n'
+    + 'the notes give. Never a repeat of a context line.\n'
     + '- If you can\'t: for each condition that can stop the work, what to do instead (the desk work, the drop-offs, '
     + 'another room).\n'
     + '- Length: one sentence, rough, for the crew on the estimate and with one fewer specialist.\n'
-    + '- Rooms: the key rooms only, one to four short instructions each.\n\n'
+    + '- Rooms: the key rooms only, one to four short instructions each.\n'
+    + '- Say each thing once across Context, Order of work and Conditions: a fact in the context is not said again as a '
+    + 'condition, and a condition is not restated in a step. The Rooms section is read inside each room, so it may repeat what '
+    + 'concerns that room.\n\n'
     + 'EVIDENCE\n'
     + '- Every context line and condition comes from something you were given, and names it: the intake notes, the house '
     + 'questions, the walkthrough note, a room note, what the photos show, what has changed, or a plan a person edited; a '
     + 'condition may also come from the work itself (the weather, a vendor\'s visit). Anything else is made up: leave it out.\n'
     + '- Nothing about the client, the family or anyone in the house (who lives there, who decides, what they can or cannot '
     + 'do, how they like to work) unless the notes say it. From the photos, only the things in them, never who uses them.\n'
+    + '- Never say who must be present for the work, when, or that any work waits for someone, unless the notes say so; and '
+    + 'never build what to do instead on a presence rule the notes do not give.\n'
     + '- Never assume what happens in a room: that it is emptied, packed out or sent to storage, or that a cupboard is gone '
     + 'through. Where the notes do not say, the step is to confirm the room\'s scope with the client.\n'
     + '- Say what the source says, and no more: a line may turn a fact into the one instruction it plainly means, never '
@@ -5331,11 +5339,11 @@ function _awPlanOf(input, names, has) {
   var order = (Array.isArray(input.order) ? input.order : []).map(function (o) {
     o = o || {};
     var r = room(o.room), a = r ? '' : room(o.after);
-    return { step: _awClip(o.step, 200), room: r, after: a, vendor: _awClip(o.vendor, 80) };
+    return { step: _awClip(o.step, AGENT_WALK_TEXT_MAX), room: r, after: a, vendor: _awClip(o.vendor, 80) };
   }).filter(function (o) { return o.step; }).slice(0, 16);
   var rooms = (Array.isArray(input.rooms) ? input.rooms : []).map(function (x) {
     x = x || {};
-    return { room: room(x.room), lines: _awList(x.lines, 4).map(function (l) { return _awClip(l, 200); }) };
+    return { room: room(x.room), lines: _awList(x.lines, 4).map(function (l) { return _awClip(l, 300); }) };
   }).filter(function (x) { return x.room && x.lines.length; }).slice(0, 20);
   has = has || {};
   return { context: _awSourcedList(input.context, has, false, 6), order: order, conditions: _awSourcedList(input.conditions, has, true, 8),

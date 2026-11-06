@@ -187,5 +187,8 @@ with), *Conditions*, *If you can't*, *Length*, and a few lines per key room. It 
     notes, and it's changed"*): what changed, then a plan a person edited, then the walkthrough and room notes, then the intake.
 29. **No diagnosis repeated** (*"instructions are fine"*): the plan printed a house question's diagnosis word for word; it now says
     only what the crew does.
+30. **Each thing once, and no presence rule** (2026-11-06, the third live plan: the kitchen said three times, and *"she is in the
+    room for every sort"*, with two fallbacks built on it; Anthony: *"Not always"*): a condition never repeats the context, and
+    nobody is said to be needed unless the notes say so. A step is kept to 400 characters (it was cut off at 200).
 
 Nothing is left open in the design. It is built on Anthony's go.

@@ -468,6 +468,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const pc = JSON.stringify(S._awPlanContent({ context: {}, rooms: [], plan: 'CONTEXT\nold' }, {}));
     has(pc, 'written by you earlier, never a source', 'the agent\'s earlier plan is sent as not a source');
     has(JSON.stringify(S._awPlanContent({ context: {}, rooms: [], plan: 'CONTEXT\nold', planEdited: true }, {})), 'a person edited it', '…a person\'s as one');
-    has(GS, "var BACKEND_VERSION = '2026-11-05f';", 'the backend version moved');
+    // 2026-11-06 (Anthony, off the second live plan: the kitchen three times, the client present for every sort, "Not always",
+    // and the back yard's step cut off at "before the hauler…").
+    has(sys, 'Say each thing once across Context, Order of work and Conditions', '⚠ each thing said once: no condition repeats the context');
+    has(props.conditions.description, 'never a repeat of a context line', '…and the tool says it too');
+    has(sys, 'Never say who must be present for the work, when, or that any work waits for someone, unless the notes say so', '⚠ no presence rule the notes do not give');
+    has(sys, 'never build what to do instead on a presence rule', '…and no fallback built on one');
+    const longStep = 'The concierge takes down the swing set and climbing dome; the crew sorts the loose yard items with the client and clears around the trampoline and playhouse, settling what goes before the hauler comes.';
+    ok(longStep.length > 200, 'the step under test is over the old 200-character cap');
+    const po = S._awPlanOf({ context: [], conditions: [], order: [{ step: longStep, room: 'Back Yard', after: '', vendor: '' }], if_cant: [], length: '', rooms: [] }, ['Back Yard'], {});
+    eq(po.order[0] && po.order[0].step, longStep, '⚠ a step of one long sentence is kept whole, never cut off at 200 characters');
+    has(GS, "var BACKEND_VERSION = '2026-11-06';", 'the backend version moved');
   }
 };

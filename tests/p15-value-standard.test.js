@@ -214,7 +214,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // RESTATED on merging main (2026-11-02): main took 2026-11-02, 2026-11-02b and 2026-11-02c first, so P15 is 2026-11-02d and carries them.
     // RESTATED again on merging main (2026-11-03): main's eBay listings took 2026-11-02d, so P15 is 2026-11-02e and carries it.
     // RESTATED 2026-11-05: 2026-11-05 (the walkthrough agent) carries 2026-11-02e.
-    eq(g.BACKEND_VERSION, '2026-11-05f', 'the backend is 2026-11-05f, carrying 2026-11-05e, 2026-11-05d, 2026-11-05c, 2026-11-05b, 2026-11-05, 2026-11-02e (and 2026-11-02d, 2026-11-02c, 2026-11-02b, 2026-11-02 and 2026-10-28)');
+    eq(g.BACKEND_VERSION, '2026-11-06', 'the backend is 2026-11-06, carrying 2026-11-05f, 2026-11-05e, 2026-11-05d, 2026-11-05c, 2026-11-05b, 2026-11-05, 2026-11-02e (and 2026-11-02d, 2026-11-02c, 2026-11-02b, 2026-11-02 and 2026-10-28)');
     const app = sandbox({ fns: [], vars: ['BACKEND_MIN_VERSION', 'AGENT_VALUE_PREMIUMS'] });
     eq(app.BACKEND_MIN_VERSION, '2026-11-02e', 'the app asks for it');
     eq(JSON.stringify(app.AGENT_VALUE_PREMIUMS), JSON.stringify(g.AGENT_VALUE_PREMIUMS), 'one list of premium answers on both sides');
