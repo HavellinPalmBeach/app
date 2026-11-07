@@ -2001,7 +2001,8 @@ function groupJ({ group, ok, eq, has, lacks }) {
     has(S._renderValueSettings(Object.assign({}, est, { avd: true, gate706: 'yes' }), TODAY), S._invValueAsOfHtml(Object.assign({}, est, { avd: true, gate706: 'yes' })), 'the bar\'s card prints the summary\'s sentence');
     eq(callersOf('_invValueAsOfHtml'), ['_renderInventorySummary', '_renderValueSettings'], 'one sentence for the value date, two readers');
     // RESTATED (P15): the Values bar's stale line and the standard's own test read it too.
-    eq(callersOf('invStatesEstateValues'), ['_renderInventorySummary', '_renderValueSettings', 'deskFoldState', 'invValueStandardMoved'], '⚠ one predicate for where the settings apply: the two readers, the Values bar\'s line and a value made at another standard');
+    // RESTATED (2026-11-07): the package's cover sheet asks it too, to say what the values are.
+    eq(callersOf('invStatesEstateValues'), ['_renderInventorySummary', '_renderValueSettings', 'deskFoldState', 'invValueStandardMoved', 'probatePackageCoverHtml'], '⚠ one predicate for where the settings apply: the two readers, the Values bar\'s line, a value made at another standard and the package\'s cover sheet');
     [['a living job', LIVING()], ['the Contents list tier', PROBATE({ docTier: 'contents' })], ['None', PROBATE({ docTier: 'none' })]].forEach(([w, j]) => {
       eq(S._renderValueSettings(j), '', 'no settings card on ' + w);
       lacks(sum(j), 'Valuation Basis', 'and no basis row in its summary');

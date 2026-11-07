@@ -47,7 +47,7 @@ const DERIVED_STUBS = () => ({ isFormalDoc: () => false, docSentAt: () => null, 
   estimateStore: { 7: { estimate: { rooms: [{ idx: 0, name: 'Kitchen' }] } } } });
 // The Found on site card and its dialog, the foundation's list writers and the signed-copy path, on top.
 const FIND_FNS = ['_invDocPartyHead', 'siteFindsCardHtml', '_siteFindRowHtml', '_repaintSiteFinds', 'openSiteFind', 'closeSiteFind', 'saveSiteFind', 'voidSiteFind',
-  'siteFindRefusal', 'siteFindHandFlag', 'siteFindHolderFlag', 'siteFindDay', '_siteFindTeamNames', '_siteFindHolderNames',
+  'siteFindRefusal', 'siteFindHandFlag', 'siteFindHolderFlag', 'siteFindPresentFlag', 'siteFindPresentNames', 'siteFindDay', '_siteFindTeamNames', '_siteFindHolderNames',
   'willReceiptHtml', 'cashReceiptHtml', 'papersReceiptHtml', 'printSiteFindReceipt', '_siteFindFormRow', '_siteFindSigLine', '_invDocHead', '_invDocName',
   'jobListPut', 'jobListGet', 'jobListVoid', 'newJobListId', '_saveJobEdit', '_jobTouch', '_actor', '_invStampBy', 'deviceUser', 'samePerson', 'canonPersonName',
   'isCrewPlaceholder', '_andJoin', 'showFB', 'fileSignedCopy', '_armFiling', '_signedCopyName', '_jobRootFolderId', 'signedCopyControlHtml',

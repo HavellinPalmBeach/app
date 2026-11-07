@@ -669,11 +669,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const day = new Date(NOW).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).replace(/,/g, '');
     // RESTATED 2026-10-03 (P19): the package carries the Disposition Ledger too, on both routes and at every tier, before the
     // Appraisal Worklist (probatePackageDocs; p19-ledger.test.js). Everything else here is as it was.
-    eq(p.pdfs.map((x) => x.name), ['Havellin Court Inventory - 69 Beach Blvd - ' + day + '.pdf', 'Havellin Estate Inventory - 69 Beach Blvd - ' + day + '.pdf',
+    // RESTATED (2026-11-07): the package opens with the Certification and Cover Sheet (probatePackageCoverHtml), attached and filed first.
+    eq(p.pdfs.map((x) => x.name), ['Havellin Certification and Cover Sheet - 69 Beach Blvd - ' + day + '.pdf', 'Havellin Court Inventory - 69 Beach Blvd - ' + day + '.pdf', 'Havellin Estate Inventory - 69 Beach Blvd - ' + day + '.pdf',
       'Havellin Disposition Ledger - 69 Beach Blvd - ' + day + '.pdf',
-      'Havellin Appraisal Worklist - 69 Beach Blvd - ' + day + '.pdf'], '⚠⚠ four PDFs: the Court Inventory, the Estate Inventory Report, the Disposition Ledger and the Appraisal Worklist, named as the desk names them');
+      'Havellin Appraisal Worklist - 69 Beach Blvd - ' + day + '.pdf'], '⚠⚠ five PDFs: the cover sheet, the Court Inventory, the Estate Inventory Report, the Disposition Ledger and the Appraisal Worklist, named as the desk names them');
     ok(p.pdfs.every((x) => x.lines.every((l) => l.length <= 76)), 'each attachment\'s base64 wrapped at 76');
-    eq(p.pdfs.map((x) => /^%PDF/.test(Buffer.from(x.lines.join(''), 'base64').toString())), [true, true, true, true], 'each one the PDF the server built');
+    eq(p.pdfs.map((x) => /^%PDF/.test(Buffer.from(x.lines.join(''), 'base64').toString())), [true, true, true, true, true], 'each one the PDF the server built');
     // The body: the documents, and the links.
     has(p.text, 'Dear Ann,', 'the attorney greeted');
     has(p.text, 'Attached are Havellin’s inventory documents for the Estate of Walter Ellsworth, 69 Beach Blvd, Palm Beach', 'naming the estate');
@@ -693,14 +694,14 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
                         { folderId: 'INV7', email: 'ann@lowe.law' }, { folderId: 'INV7', email: 'rex@hale.example' }],
        '⚠⚠ both photograph folders shared with the attorney through the existing sharing action, and with the copied representative');
     eq(r.N.log.uploads.map((u) => [u.folderId, u.filename]), [
-      ['INV7', 'HVL-0007 - Havellin Release Approvals and Chain of Custody.html'], ['INV7', 'HVL-0007 - Havellin Court Inventory.html'],
+      ['INV7', 'HVL-0007 - Havellin Release Approvals and Chain of Custody.html'], ['INV7', 'HVL-0007 - Havellin Certification and Cover Sheet.html'], ['INV7', 'HVL-0007 - Havellin Court Inventory.html'],
       ['INV7', 'HVL-0007 - Havellin Estate Inventory Report.html'], ['INV7', 'HVL-0007 - Havellin Disposition Ledger.html'],
       ['INV7', 'HVL-0007 - Havellin Appraisal Worklist.html']],
        '⚠ every PDF filed to the Estate Inventory folder too, under undated names, so the next package replaces them');
-    eq(r.N.log.pdfs.length, 4, 'four conversions, through the one PDF builder');
+    eq(r.N.log.pdfs.length, 5, 'five conversions, through the one PDF builder');
     // Sequential, never parallel, and in order.
     // RESTATED (P13 of the desk audit, 2026-10-28; DOC-03): the pages' photographs are gathered first, before any page is built.
-    eq(r.N.log.posts, ['getThumbnails', 'shareFolder', 'shareFolder', 'shareFolder', 'shareFolder', 'uploadHtml', 'uploadHtml', 'uploadHtml', 'uploadHtml', 'uploadHtml', 'htmlToPdf', 'htmlToPdf', 'htmlToPdf', 'htmlToPdf'],
+    eq(r.N.log.posts, ['getThumbnails', 'shareFolder', 'shareFolder', 'shareFolder', 'shareFolder', 'uploadHtml', 'uploadHtml', 'uploadHtml', 'uploadHtml', 'uploadHtml', 'uploadHtml', 'htmlToPdf', 'htmlToPdf', 'htmlToPdf', 'htmlToPdf', 'htmlToPdf'],
        'one Apps Script call after another, the photographs first');
     ok(r.N.log.gets.some((u) => /action=loadMedia&jobId=7/.test(u)), '⚠ the inventory is read from the sheet first, never assumed empty');
   });
@@ -759,11 +760,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(st.draftedBy, 'Ashley Jerome', 'who drafted it: the job\'s concierge, with no device user set');
     // RESTATED 2026-10-03 (P19): the package carries the Disposition Ledger too, on both routes and at every tier, before the
     // Appraisal Worklist (probatePackageDocs; p19-ledger.test.js). Everything else here is as it was.
-    eq(JSON.parse(JSON.stringify(st.pkg)), { owed: ['court', 'schedule', 'ledger', 'worklist'], docs: ['court', 'schedule', 'ledger', 'worklist'], to: 'ann@lowe.law',
+    eq(JSON.parse(JSON.stringify(st.pkg)), { owed: ['court', 'schedule', 'ledger', 'worklist'], docs: ['cover', 'court', 'schedule', 'ledger', 'worklist'], to: 'ann@lowe.law',
        cc: ['rex@hale.example', 'agreements@havellinpalmbeach.com'] }, 'what it carried and to whom');
     ok((r.job().at || {})['docState:probatePackage'] > 0, '⚠ stamped on its key: a person\'s edit, which the sheet merges by key');
     ok(r.saves.indexOf('sync') >= 0, 'and synced');
-    has((r.notices[r.notices.length - 1] || {}).m, 'Draft created in ' + BOX + ' for ann@lowe.law, copied to rex@hale.example and agreements@havellinpalmbeach.com, with the Court Inventory, Estate Inventory Report, Disposition Ledger and Appraisal Worklist attached',
+    has((r.notices[r.notices.length - 1] || {}).m, 'Draft created in ' + BOX + ' for ann@lowe.law, copied to rex@hale.example and agreements@havellinpalmbeach.com, with the Certification and Cover Sheet, Court Inventory, Estate Inventory Report, Disposition Ledger and Appraisal Worklist attached',
         'the notice says where the draft is and what it carries');
     eq((r.notices[r.notices.length - 1] || {}).t, 'ok', 'all of it went: ok');
     eq(r.opened, ['https://mail.google.com/mail/u/0/#drafts?compose=m-1'], 'the draft opens');
@@ -845,7 +846,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(href, 'mailto:ann@lowe.law?cc=rex@hale.example,agreements@havellinpalmbeach.com', 'to the attorney, copied as before');
     has(href, 'are in the estate’s Google Drive folder:', '⚠ it can carry no PDF, so the documents are linked from Drive');
     // Restated 2026-10-28 (P14 of the desk audit, DOC-17): each page linked says what it is for, beside its title.
-    has(href, 'Court Inventory (the estate’s tangible personal property, scheduled for the §733.604 inventory filing): https://drive.google.com/file/d/up2/view', 'the filed Court Inventory');
+    has(href, 'Court Inventory (the estate’s tangible personal property, scheduled for the §733.604 inventory filing): https://drive.google.com/file/d/up3/view', 'the filed Court Inventory (the cover sheet is up2)');
     const fst = fallback.job().docState.probatePackage || {};
     ok(fst.provider === 'mailto' && !!fst.draftedAt && !fst.sentAt, 'recorded as an email opened, never as sent');
     has(text(fallback.c.probatePackageCardHtml(fallback.job())), 'Opened as a plain email — send it from your mail app, then confirm', 'the card says what the app did');
@@ -868,12 +869,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const pf = mimeParts(pdfFail.N.log.drafts[0] || '');
     // RESTATED 2026-10-03 (P19): the package carries the Disposition Ledger too, on both routes and at every tier, before the
     // Appraisal Worklist (probatePackageDocs; p19-ledger.test.js). Everything else here is as it was.
-    eq(pf.pdfs.map((x) => x.name.replace(/ - 69 Beach.*$/, '')), ['Havellin Court Inventory', 'Havellin Estate Inventory', 'Havellin Disposition Ledger'], 'fixture: the worklist\'s PDF failed, the other three attached');
+    eq(pf.pdfs.map((x) => x.name.replace(/ - 69 Beach.*$/, '')), ['Havellin Certification and Cover Sheet', 'Havellin Court Inventory', 'Havellin Estate Inventory', 'Havellin Disposition Ledger'], 'fixture: the worklist\'s PDF failed, the other three attached');
     // Restated 2026-10-28 (P14, DOC-17): the link carries what the page is for.
-    has(pf.text, 'Appraisal Worklist (the items flagged for a specialist’s appraisal, grouped by specialist): https://drive.google.com/file/d/up5/view', '⚠ the page that could not be attached is linked to its filed copy');
+    has(pf.text, 'Appraisal Worklist (the items flagged for a specialist’s appraisal, grouped by specialist): https://drive.google.com/file/d/up6/view', '⚠ the page that could not be attached is linked to its filed copy');
     lacks(pf.text, 'inventory filing): https://', 'an attached page is not linked as well');
     has((pdfFail.notices[pdfFail.notices.length - 1] || {}).m, 'The Appraisal Worklist could not be made into a PDF, so it is linked from Drive instead of attached', 'and the notice says so');
-    eq(JSON.parse(JSON.stringify(pdfFail.job().docState.probatePackage.pkg.docs)), ['court', 'schedule', 'ledger'], 'the record names what was attached');
+    eq(JSON.parse(JSON.stringify(pdfFail.job().docState.probatePackage.pkg.docs)), ['cover', 'court', 'schedule', 'ledger'], 'the record names what was attached');
 
     // An empty inventory no longer goes at all (2026-10-19; Anthony, the first Ellison run: a trust package went out by accident
     // with every schedule blank): refused by name once the sheet has been read, nothing drafted. Until then the report and
@@ -896,20 +897,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const un = unfiled.notices[unfiled.notices.length - 1] || {};
     eq(un.t, 'warn', 'a page that was not filed: the notice warns');
     has(un.m, 'Not filed to Drive: the Court Inventory.', '⚠ naming what is missing from the folder');
-    eq(mimeParts(unfiled.N.log.drafts[0] || '').pdfs.length, 4, 'and the draft still attaches it (P19: four documents with the ledger)');
+    eq(mimeParts(unfiled.N.log.drafts[0] || '').pdfs.length, 5, 'and the draft still attaches it (P19: four documents with the ledger, and the cover sheet since 2026-11-07)');
 
     // A pour-over will: both instruments go.
     const both = pkgRig({ job: Object.assign(ESTATE(), { matterType: 'both' }) });
     both.c.sendProbatePackage(7);
     const bp = mimeParts(both.N.log.drafts[0] || '');
-    eq(bp.pdfs.map((x) => x.name.replace(/ - 69 Beach.*$/, '')), ['Havellin Court Inventory', 'Havellin Trust Schedule', 'Havellin Estate Inventory', 'Havellin Disposition Ledger', 'Havellin Appraisal Worklist'],
+    eq(bp.pdfs.map((x) => x.name.replace(/ - 69 Beach.*$/, '')), ['Havellin Certification and Cover Sheet', 'Havellin Court Inventory', 'Havellin Trust Schedule', 'Havellin Estate Inventory', 'Havellin Disposition Ledger', 'Havellin Appraisal Worklist'],
        '⚠ a pour-over will carries the Court Inventory and the Trust Schedule, each the desk\'s own page');
     lacks((both.notices[both.notices.length - 1] || {}).m, 'Not in the package', 'and leaves nothing out');
 
     const contents = pkgRig({ job: Object.assign(ESTATE(), { docTier: 'contents' }) });
     contents.c.sendProbatePackage(7);
     const cp = mimeParts(contents.N.log.drafts[0] || '');
-    eq(cp.pdfs.map((x) => x.name.replace(/ - 69 Beach.*$/, '')), ['Havellin Contents List', 'Havellin Disposition Ledger', 'Havellin Appraisal Worklist'], 'a contents engagement sends the Contents List');
+    eq(cp.pdfs.map((x) => x.name.replace(/ - 69 Beach.*$/, '')), ['Havellin Certification and Cover Sheet', 'Havellin Contents List', 'Havellin Disposition Ledger', 'Havellin Appraisal Worklist'], 'a contents engagement sends the Contents List');
     has(cp.text, 'Valuing the property is not part of Havellin’s engagement on this estate, so the Contents List is attached in place of a valued schedule.',
         '⚠ and says once, to counsel, that the values are theirs');
   });
@@ -943,7 +944,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // No Estate Inventory subfolder at all (Drive lists none): the documents are filed in the client's own folder.
     const flat = pkgRig({ job: Object.assign(ESTATE(), { driveSubfolders: { 'Agreement': 'AGR7' } }), net: { subfolders: { Agreement: 'AGR7' } } });
     flat.c.sendProbatePackage(7);
-    ok(flat.N.log.uploads.length === 5 && flat.N.log.uploads.every((u) => u.folderId === 'ROOT7'),
+    ok(flat.N.log.uploads.length === 6 && flat.N.log.uploads.every((u) => u.folderId === 'ROOT7'),
        '⚠ with no Estate Inventory folder the record and every page are filed in the client\'s folder, never dropped');
     eq(flat.N.log.drafts.length, 1, 'and the draft is still made');
 
@@ -951,7 +952,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const none = pkgRig({ job: Object.assign(ESTATE(), { docTier: 'none' }) });
     none.c.sendProbatePackage(7);
     const np = mimeParts(none.N.log.drafts[0] || '');
-    eq(np.pdfs.map((x) => x.name.replace(/ - 69 Beach.*$/, '')), ['Havellin Disposition Ledger', 'Havellin Appraisal Worklist'], 'tier none: the Disposition Ledger and the Appraisal Worklist (P19)');
+    eq(np.pdfs.map((x) => x.name.replace(/ - 69 Beach.*$/, '')), ['Havellin Certification and Cover Sheet', 'Havellin Disposition Ledger', 'Havellin Appraisal Worklist'], 'tier none: the Disposition Ledger and the Appraisal Worklist (P19)');
     has(np.text, 'On this estate the inventory and the filing are your office’s; Havellin’s records of the property are below.', '⚠ and the one absence that shifts the work to counsel is stated');
 
     // A report removed from the Job Plan is not linked.

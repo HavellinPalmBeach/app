@@ -169,7 +169,7 @@ const pretty = (ymd) => { const [y, m, d] = ymd.split('-').map(Number);
       await seed(TRUST(14101, { gate706: 'no' }), EST(14101));
       await openPlan(14101);
       ok(await vis('#plan-finds-14101'), 'the Found on site card is on the In the house stage');
-      has(await txt('#plan-finds-14101 .fos-hd'), 'an original will, cash, or the estate’s papers', 'its heading names papers');
+      has(await txt('#plan-finds-14101 .fos-hd'), 'the estate’s papers', 'its heading names papers');  // RESTATED 2026-11-07: and a safe
       await press('#plan-finds-14101 button:has-text("Record papers found")', 'Record papers found');
       eq(await txt('#fos-title'), 'Record papers found', 'titled for the act');
       ok(await vis('#fos-papers'), 'the list box is on screen');

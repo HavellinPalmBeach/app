@@ -1498,7 +1498,7 @@ body.no-smf .smf-col{display:none;}
 <div class="hdr">
   <div>
     <div class="hdr-brand">Havellin Palm Beach</div>
-    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.11.06 · 8:27pm ET</span></div>
+    <div class="hdr-sub">Clients &amp; Estimator — Internal <span class="hdr-ver" style="opacity:0.5;margin-left:8px;font-size:10px;">2026.11.06 · 9:58pm ET</span></div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;">
     <span id="sync-status" style="display:none;font-size:11px;padding:4px 10px;border-radius:4px;font-weight:600;"></span>
@@ -3134,6 +3134,28 @@ body.no-smf .smf-col{display:none;}
         <label>What was found, one per line</label>
         <textarea id="fos-papers" rows="5"></textarea>
       </div>
+      <div id="fos-sec-safe">
+        <label>Found by</label>
+        <input type="text" id="fos-s-found-by" list="fos-team" autocomplete="off">
+        <label>What it is, and how it is locked</label>
+        <textarea id="fos-s-desc" rows="2"></textarea>
+      </div>
+    </div>
+    <div id="fos-sec-open">
+      <div class="grid2" style="gap:10px;">
+        <div>
+          <label style="margin-top:0;">Opened on</label>
+          <input type="date" id="fos-open-on">
+        </div>
+        <div>
+          <label style="margin-top:0;">Opened by</label>
+          <input type="text" id="fos-open-by" list="fos-team" autocomplete="off">
+        </div>
+      </div>
+      <label>Present when it was opened <span style="text-transform:none;letter-spacing:0;font-weight:400;">(names, with ; between them)</span></label>
+      <input type="text" id="fos-present" list="fos-holders" autocomplete="off">
+      <label>What was inside, one per line</label>
+      <textarea id="fos-contents" rows="4"></textarea>
     </div>
     <div id="fos-sec-hand">
       <div class="grid2" style="gap:10px;">
@@ -3175,7 +3197,7 @@ body.no-smf .smf-col{display:none;}
     <input type="hidden" id="acc-job"><input type="hidden" id="acc-mode"><input type="hidden" id="acc-item">
     <div class="grid2" style="gap:10px;">
       <div id="acc-from-wrap">
-        <label style="margin-top:0;">Handed over by</label>
+        <label style="margin-top:0;" id="acc-from-lbl">Handed over by</label>
         <input type="text" id="acc-from" list="acc-parties" autocomplete="off">
       </div>
       <div>
@@ -17961,8 +17983,51 @@ function probatePackageDocPurpose(job, key) {
     case 'ledger': return 'where each item went and what it brought';
     case 'incidents': return 'every incident reported on the job, with its photographs';
     case 'worklist': return 'the items flagged for a specialist’s appraisal, grouped by specialist';
+    case 'cover': return 'what this package holds, what it is for, and who certifies it';
   }
   return '';
+}
+// ⚠⚠ THE PACKAGE'S COVER: WHAT IT HOLDS, WHAT IT IS FOR, WHO CERTIFIES IT (2026-11-07; Anthony approved, off the estate reference
+// and a Florida probate inventory report he attached, whose first page certified its intended use: *"that sounds fine"*). One page
+// at the front of the package, attached first and filed with the rest: the papers it carries, each with what it is for; the use it
+// is delivered for (the representative's §733.604 inventory, which the representative verifies and counsel serves and files; or the
+// trustee's records and accountings, which it is not); what the values are (Havellin's estimates with their basis, an appraisal only
+// where an appraiser's report is noted); and the concierge's certification of good faith, the name typed (the email carries it; nobody
+// signs a second paper). Pure: the send hands it the pages it built. Drafted, not reviewed (counsel bundle G5).
+var PROBATE_PKG_COVER_TITLE = 'Certification and Cover Sheet';
+function probatePackageCoverHtml(job, pages, opt) {
+  if (!job) return '';
+  var R = estatePackageRoute(job), trustOnly = !!(R && R.trust);
+  var est = (opt && opt.est) || (typeof approvedEstimateFor === 'function' ? approvedEstimateFor(job.id) : null);
+  var who = docConciergeName(job, est) || '______________________________';
+  var on = (opt && opt.today) || _todayStr();
+  var values = typeof invStatesEstateValues === 'function' && invStatesEstateValues(job);
+  var asOf = values && typeof invValueAsOfWords === 'function' ? invValueAsOfWords(job) : '';
+  var p = function (t) { return '<p style="font-size:12px;line-height:1.6;margin:0 0 10px;">' + t + '</p>'; };
+  var h = function (t) { return '<div style="font-family:\'Cormorant Garamond\',serif;font-size:15px;color:#3c3228;border-bottom:1px solid #bbb;margin:14px 0 6px;">' + t + '</div>'; };
+  var list = (pages || []).filter(function (pg) { return pg && pg.key !== 'cover'; });
+  var place = esc([job.addr, job.city ? job.city + ', FL' : ''].filter(Boolean).join(', ')) || 'the property';
+  return '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
+    + _invDocHead(job, PROBATE_PKG_COVER_TITLE, 'The inventory package prepared by Havellin Palm Beach, LLC')
+    + h('What this package holds')
+    + '<ol style="font-size:12px;line-height:1.7;margin:0 0 6px 1.2rem;padding:0;">'
+      + list.map(function (pg) { return '<li><strong>' + esc(pg.title) + '</strong>' + (probatePackageDocPurpose(job, pg.key) ? ': ' + esc(probatePackageDocPurpose(job, pg.key)) : '') + '</li>'; }).join('')
+    + '</ol>'
+    + p('The photographs of the property and its contents, and the record of release approvals and chain of custody, are in the estate&rsquo;s Drive folders linked in the email that carries this package.')
+    + h('What it is for')
+    + p(trustOnly
+        ? 'These papers are delivered to support the trustee&rsquo;s records of the trust&rsquo;s tangible personal property and the trustee&rsquo;s accountings under Fla. Stat. &sect;&sect;736.0813 and 736.08135. They are not an accounting.'
+        : 'These papers are delivered to counsel to support the Personal Representative&rsquo;s inventory under Fla. Stat. &sect;733.604, which the Personal Representative verifies and counsel serves and files. Havellin files nothing with the court.')
+    + h('What the values are')
+    + p(values
+        ? 'Each value is Havellin&rsquo;s estimate' + (asOf ? ' as of ' + asOf : '') + ', with the basis for it stated against the item. A value is an appraisal only where an appraiser&rsquo;s report is noted against the item. An item not yet valued, decided or approved is marked as such on the page that carries it.'
+        : 'This engagement carries no values: valuation and any appraisal are arranged by counsel. An item not yet decided or approved is marked as such on the page that carries it.')
+    + h('Certification')
+    + p('I certify that, to the best of my knowledge, these papers are a true record of the property Havellin documented at ' + place
+        + ' and of what was done with it, prepared in good faith from Havellin&rsquo;s records as of ' + fmtDate2(on) + '.')
+    + '<div style="font-size:12px;line-height:1.8;margin-top:8px;"><strong>' + esc(who) + '</strong>, Transition Concierge, Havellin Palm Beach, LLC'
+      + '<br><span style="color:#666;">' + fmtDate2(on) + '</span></div>'
+    + '</div>';
 }
 // Up to thirteen Apps Script calls run one after another (two folder shares, the record, and a filing and a PDF for each
 // of up to five documents, the Disposition Ledger's two since P19) before Gmail is asked, so the watchdog is longer than
@@ -18532,6 +18597,8 @@ function sendProbatePackage(jobId) {
         if (r.html) pages.push({ key: k, title: probatePackageTitle(job, k), html: r.html, name: r.title + '.pdf' });
         else left.push({ title: probatePackageTitle(job, k), why: r.why || '' });
       });
+      // The cover leads the package (2026-11-07): attached first, filed with the rest, naming the pages built here.
+      if (pages.length) pages.unshift({ key: 'cover', title: PROBATE_PKG_COVER_TITLE, html: probatePackageCoverHtml(job, pages), name: _invDocName(job, PROBATE_PKG_COVER_TITLE) + '.pdf' });
       var record = { key: 'record', title: PROBATE_PKG_RECORD_TITLE, html: probatePackageRecordHtml(jobId) };
       var shareTo = pkgShareEmails(rcpt);
       step('Sharing the photograph folders with ' + _andJoin(shareTo) + '…');
@@ -26632,6 +26699,11 @@ var SIGNED_RECORD_KINDS = {
   will:      { label: 'Signed receipt for the original will' },
   cash:      { label: 'Signed cash receipt' },
   papers:    { label: 'Signed receipt for papers found' },
+  // The locksmith's receipt for a Locks changed entry on Keys & access (2026-11-07), ref the entry.
+  locksmith: { label: 'Locksmith’s receipt' },
+  // A safe or locked container found on site (2026-11-07): its photograph closed, and its photograph open (ref the find).
+  safe_closed: { label: 'Photograph of the safe, closed' },
+  safe_open:   { label: 'Photograph of the safe, open' },
   donation:  { label: 'Charity receipt' },
   disposal:  { label: 'Signed disposal record' },
   statement: { label: 'Proceeds statement' },
@@ -39720,6 +39792,24 @@ function donationGroups(job, items) {
   return out;
 }
 // The Job Plan's line (Midpoint & pickups) and the desk's (it replaces the fin_donation_receipts box): N of M receipted.
+// ⚠ DONATIONS OVER $5,000 (2026-11-07; Anthony approved, off the estate reference: *"donation over 5,000, that's fine too. If we have to get
+// it appraised … let's just put them in there"*). A deduction claimed for noncash gifts over $5,000 (one item, or similar items together)
+// needs a qualified appraisal and Form 8283 (IRC §170(f)(11)). One line, a flag and never a block: amber while the donated lines'
+// recorded values come to more than $5,000 and a valued one is not appraised, naming the tax adviser; read beside donationReceiptLine on
+// the Job Plan and the desk, and the Donation Record says the same under its total. Whether a deduction is claimed is the donor's call.
+var DONATION_APPRAISAL_MIN = 5000;
+function donationAppraisalLine(job, items) {
+  var don = (items || []).filter(function (r) { return r && !r.deletedAt && r.disposition === 'Donate'; });
+  if (!don.length) return null;
+  var total = roundCents(don.reduce(function (a, r) { return a + (Number(r.fmv) || 0); }, 0));
+  if (!(total > DONATION_APPRAISAL_MIN)) return null;
+  var open = don.filter(function (r) { return Number(r.fmv) > 0 && !invAppraised(r); });
+  var who = isDecedentJob(job) ? 'the estate’s' : 'the client’s';
+  return { key: 'donation_appraisal', ok: !open.length, label: 'Donations recorded at more than $5,000',
+           detail: fmt(total) + ' of donated property in all'
+             + (open.length ? ' &mdash; if a tax deduction will be claimed, a gift over $5,000 (one item, or similar items together) needs a qualified appraisal and IRS Form 8283 (IRC &sect;170(f)(11)): ask '
+                 + who + ' tax adviser before the items go' : '; every valued line appraised') };
+}
 function donationReceiptLine(job, items) {
   if (!(items || []).some(function (r) { return r && r.disposition === 'Donate'; })) return null;
   var groups = donationGroups(job, items);
@@ -39794,7 +39884,8 @@ function printDonationRecord(jobId, stableId, opt) {
       + g.lines.length + ' line' + (g.lines.length === 1 ? '' : 's') + ' &middot; ' + qty + ' item' + (qty === 1 ? '' : 's') + (showVal ? ' &middot; estimated value ' + fmt(total) : '') + '</div>'
     + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">'
       + (showVal ? 'Values are Havellin&rsquo;s estimates of what each item would sell for, given for the donor&rsquo;s records. They are not appraisals. ' : '')
-      + 'Whether a charitable deduction is available, and in what amount, is for the donor&rsquo;s tax adviser to determine.</div>'
+      + 'Whether a charitable deduction is available, and in what amount, is for the donor&rsquo;s tax adviser to determine.'
+      + (showVal && total > 5000 ? ' A deduction claimed for donated property over $5,000 (one item, or similar items together) needs a qualified appraisal and IRS Form 8283 (IRC &sect;170(f)(11)).' : '') + '</div>'
     + '</div>';
   if (opt && opt.asHtml) return { html: html, title: _invDocName(job, title) };
   _printDocument(html, _invDocName(job, title), { view: true, job: job, label: title });   // on screen first (2026-11-02)
@@ -40116,6 +40207,8 @@ function ledgerDerivedLines(jobId, job, phase) {
     var items = _jobInvRefs(jobId);
     var don = donationReceiptLine(job, items);
     if (don) out.push(don);
+    var dap = typeof donationAppraisalLine === 'function' ? donationAppraisalLine(job, items) : null;   // guarded: sandboxes lift this reader alone
+    if (dap) out.push(dap);
     if (jobTakesProceedsStatements(job)) {
       var pl = proceedsLine(job, items); if (pl) out.push(pl);
       var pr = proceedsReceivedLine(job, items); if (pr) out.push(pr);
@@ -53932,6 +54025,8 @@ function planDerivedLines(jobId, job, est, phase, today) {
     // answer, donationReceiptLine, read here and on the desk.
     var _don = donationReceiptLine(job, _jobInvRefs(jobId));
     if (_don) out.push(_don);
+    var _dap = typeof donationAppraisalLine === 'function' ? donationAppraisalLine(job, _jobInvRefs(jobId)) : null;
+    if (_dap) out.push(_dap);
   }
   // ⚠ `admin` IS THE DESK CARD AND `p4` IS THE JOB PLAN'S CLOSE-OUT STAGE, and they share the
   // close-out facts deliberately — a concierge closing a room and a concierge at the desk want
@@ -54099,6 +54194,32 @@ var ACCESS_EVENT_KINDS = {
   code_set:     { label: 'Code recorded', words: 'code recorded by {to}' },
   code_cleared: { label: 'Code cleared', words: 'code cleared at close' }
 };
+// ⚠ LOCKS CHANGED (2026-11-07; Anthony approved, off the estate reference: *"a locks changed entry"*). Not an item: the property's
+// locks re-keyed or replaced, recorded on the card as an entry of the access log with no item (`itemId` ACCESS_LOCKS_ITEM, kind
+// ACCESS_LOCKS_KIND), so it merges by id on every deployment like any other entry (no redeploy) and no item's holder reads it (an
+// unknown kind changes nobody's hands). The day, who changed them and which locks, the locksmith's receipt filed through the one
+// filer (kind `locksmith`, ref the entry); voided with a reason like any entry. The new keys are recorded as items received.
+var ACCESS_LOCKS_KIND = 'locks_changed';
+var ACCESS_LOCKS_ITEM = 'locks';
+function accessLocksChanges(job, withVoided) {
+  return jobListEntries(job, 'accessEvents', withVoided).filter(function (e) { return e.kind === ACCESS_LOCKS_KIND; })
+    .sort(function (a, b) { return String(a.on || '').localeCompare(String(b.on || '')) || (Number(a.recordedAt) || 0) - (Number(b.recordedAt) || 0); });
+}
+function accessLocksRefusal(ev, today) {
+  var miss = [];
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(ev && ev.on || ''))) miss.push('the day');
+  else if (today && String(ev.on) > String(today)) return 'The day cannot be after today: the log records what has happened.';
+  if (!String(ev && ev.from || '').trim()) miss.push('who changed them');
+  if (!String(ev && ev.note || '').trim()) miss.push('which locks or doors');
+  return miss.length ? 'Enter ' + _andJoin(miss) + '.' : '';
+}
+function accessLocksLines(job) {
+  return accessLocksChanges(job).map(function (e) {
+    var rc = signedRecordsOf(job, 'locksmith', String(e.id)).length > 0;
+    return { key: 'access_locks_' + e.id, ok: rc, label: 'Locks changed',
+             detail: fmtDate2(e.on) + ' by ' + esc(e.from) + ': ' + esc(e.note) + (rc ? '' : ' &mdash; file the locksmith&rsquo;s receipt on the Keys &amp; access card') };
+  });
+}
 var ACCESS_DOC_KEY = 'accessRecord';            // docState key for the filed record: a stored key, never rename it
 var ACCESS_RECORD_TITLE = 'Key and Access Custody Record';
 var _accessFiling = {};                          // never saved: one filing per client at a time
@@ -54222,7 +54343,7 @@ function accessEventFlags(job, item) {
 // lines are drawn as markup.
 function accessLines(job, today) {
   var items = accessItemsOf(job);
-  if (!items.length) return [];
+  if (!items.length) return accessLocksLines(job);
   var held = [], lost = [], ret = 0;
   items.forEach(function (it) {
     var st = accessItemState(job, it);
@@ -54240,7 +54361,7 @@ function accessLines(job, today) {
                + (held.length ? ' &middot; ' + held.length + ' held by ' + esc(holders.join(', ')) : '')
                + (lost.length ? ' &middot; ' + lost.length + ' lost' : '')
                + (held.length ? ' &mdash; every item goes back to the client before the job closes' : '') });
-  return out;
+  return out.concat(accessLocksLines(job));
 }
 // ⚠⚠ CLOSE JOB REFUSES WHILE AN ITEM IS HELD (the one must-have Anthony made a refusal). Asked by jobCloseBlockers, which
 // applyJobTransition asks in the handler, so the button and the handler agree. A lost item with its explanation does not block.
@@ -54329,11 +54450,13 @@ function accessCardHtml(jobId, job, est) {
   var voided = all.filter(function (it) { return !!it.voidedAt; });
   var anyHeld = live.some(function (it) { return accessItemState(job, it).state === 'held'; });
   var acts = ['<button type="button" class="btn-s" onclick="openAccessDialog(' + jobId + ',\'receive\')">Record what we received</button>'];
+  var locks = accessLocksChanges(job, true);
   if (anyHeld) {
     acts.push('<button type="button" class="btn-s" onclick="openAccessDialog(' + jobId + ',\'handoff\')">Hand off</button>');
     acts.push('<button type="button" class="btn-s" onclick="openAccessDialog(' + jobId + ',\'return\')">Return to client</button>');
   }
-  if (live.length) {
+  acts.push('<button type="button" class="btn-s" onclick="openAccessDialog(' + jobId + ',\'locks\')">Locks changed</button>');
+  if (live.length || locks.length) {
     acts.push('<button type="button" class="btn-s" onclick="printAccessRecord(' + jobId + ')">Print the custody record</button>');
     var fst = (job.docState && job.docState[ACCESS_DOC_KEY]) || {};
     acts.push('<button type="button" class="btn-s" onclick="fileAccessRecord(' + jobId + ')">' + (fst.filedAt ? 'Re-file to Drive' : 'File to Drive') + '</button>');
@@ -54343,14 +54466,27 @@ function accessCardHtml(jobId, job, est) {
     + '<div class="fos-hd">Keys &amp; access <small>every key, fob, remote and code: who holds it, from the day we receive it until it goes back</small></div>'
     + derivedLinesHtml(accessLines(job, _todayStr()), 'plan-derived-access-' + jobId)
     + live.map(function (it) { return _accessItemRowHtml(jobId, job, it); }).join('')
+    + locks.map(function (e) { return _accessLocksRowHtml(jobId, job, e); }).join('')
     + '<div class="fos-acts">' + acts.join('') + '</div>'
     + voided.map(function (it) {
         return '<div class="fos-void"><s>' + esc(accessItemLabel(it)) + ', received ' + fmtDate2(it.receivedOn) + '</s> &middot; void: ' + esc(it.voidReason || '') + (it.voidedBy ? ' (' + esc(it.voidedBy) + ')' : '') + '</div>';
       }).join('')
     + '<div class="fos-note"><strong>Every item has one named holder</strong>, and the job does not close until each is returned to the client or marked lost with what happened. '
       + 'A wrong entry is voided with the reason and recorded again; nothing is edited or deleted. '
+      + '<strong>Locks changed:</strong> record the day, the locksmith and which locks, file the locksmith&rsquo;s receipt, and record the new keys as received. '
       + '<strong>Codes</strong> go on the item here and nowhere else (never a note, a text or a photo): both concierges can read them, and the app clears the digits when the job closes. Ask the client for a job code and to change it at handover.</div>'
     + '</div>';
+}
+function _accessLocksRowHtml(jobId, job, e) {
+  var idq = '\'' + esc(String(e.id)) + '\'';
+  if (e.voidedAt) return '<div class="fos-void"><s>Locks changed ' + fmtDate2(e.on) + ' by ' + esc(e.from) + '</s> &middot; void: ' + esc(e.voidReason || '') + (e.voidedBy ? ' (' + esc(e.voidedBy) + ')' : '') + '</div>';
+  var recs = signedRecordsOf(job, 'locksmith', String(e.id));
+  var acts = [];
+  if (!recs.length) acts.push(signedCopyControlHtml(jobId, 'locksmith', { ref: String(e.id), label: SIGNED_RECORD_KINDS.locksmith.label, signedOn: e.on, signedBy: e.from },
+    'File the locksmith&rsquo;s receipt', function () { _repaintAccessCard(jobId); }));
+  acts.push('<button type="button" class="btn-s" onclick="voidAccessEvent(' + jobId + ',' + idq + ')">Void</button>');
+  return '<div class="fos-find" data-locks="' + esc(String(e.id)) + '"><span class="fos-kind">Locks changed</span> &mdash; ' + fmtDate2(e.on) + ' by ' + esc(e.from)
+    + '<br>' + escLines(e.note) + signedRecordLinksHtml(jobId, recs) + '<div class="fos-acts">' + acts.join('') + '</div></div>';
 }
 function _repaintAccessCard(jobId) {
   var el = document.getElementById('plan-access-' + jobId);
@@ -54394,7 +54530,7 @@ function moveCheckinDashHtml(job, today) {
 }
 
 function accessDashHtml(job) {
-  if (!job || !accessItemsOf(job).length) return '';
+  if (!job || !(accessItemsOf(job).length || accessLocksChanges(job).length)) return '';
   return '<div class="card acc-dash" id="dash-access-' + job.id + '" style="margin-bottom:12px;">'
     + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">' + sectionHdr('Keys &amp; access')
     + '<button class="btn-s" style="font-size:11px;padding:4px 12px;" onclick="goToAccessCard(' + job.id + ')">Open Keys &amp; access</button></div>'
@@ -54423,7 +54559,7 @@ function accessAddRow() {
 function openAccessDialog(jobId, mode, itemId) {
   mode = mode || 'receive';
   var job = jobs.find(function (j) { return j.id === jobId; });
-  var modes = { receive: 1, handoff: 1, 'return': 1, lost: 1, recovered: 1, code: 1 };
+  var modes = { receive: 1, handoff: 1, 'return': 1, lost: 1, recovered: 1, code: 1, locks: 1 };
   if (!job || !modes[mode]) { showSyncBadge('This client could not be found.', true); return false; }
   var el = function (i) { return document.getElementById(i); };
   var set = function (i, v) { var e = el(i); if (e) e.value = v; };
@@ -54441,15 +54577,24 @@ function openAccessDialog(jobId, mode, itemId) {
   var pl = el('acc-parties'); if (pl) pl.innerHTML = opts(accessClientParties(job));
   var rows = el('acc-rows'); if (rows) { rows.innerHTML = ''; rows.setAttribute('data-rows', '0'); }
   var ticks = el('acc-ticks'); if (ticks) ticks.innerHTML = '';
-  show('acc-from-wrap', mode === 'receive'); show('acc-to-wrap', mode !== 'lost' && mode !== 'code');
+  show('acc-from-wrap', mode === 'receive' || mode === 'locks'); show('acc-to-wrap', mode !== 'lost' && mode !== 'code' && mode !== 'locks');
+  txt('acc-from-lbl', mode === 'locks' ? 'Changed by (the locksmith)' : 'Handed over by');
   show('acc-rows-wrap', mode === 'receive' && !item); show('acc-ticks-wrap', mode === 'handoff' || mode === 'return');
   show('acc-code-wrap', mode === 'code'); show('acc-note-wrap', mode !== 'code');
   var fromIn = el('acc-from'); if (fromIn) fromIn.setAttribute('list', 'acc-parties');
   var toIn = el('acc-to'); if (toIn) toIn.setAttribute('list', mode === 'return' ? 'acc-parties' : 'acc-team');
-  var titles = { receive: 'Record what we received', handoff: 'Hand off', 'return': 'Return to the client', lost: 'Mark lost', recovered: 'Recovered', code: item && item.code ? 'Change the code' : 'Record a code' };
+  var titles = { receive: 'Record what we received', handoff: 'Hand off', 'return': 'Return to the client', lost: 'Mark lost', recovered: 'Recovered', code: item && item.code ? 'Change the code' : 'Record a code', locks: 'Locks changed' };
   txt('acc-title', titles[mode]);
   txt('acc-to-lbl', mode === 'return' ? 'Received for the client by' : mode === 'handoff' ? 'Now held by' : 'Taken for Havellin by');
-  txt('acc-note-lbl', mode === 'lost' ? 'What happened' : 'Note (optional)');
+  txt('acc-note-lbl', mode === 'lost' ? 'What happened' : mode === 'locks' ? 'Which locks or doors' : 'Note (optional)');
+  if (mode === 'locks') {
+    var fi = el('acc-from'); if (fi) fi.removeAttribute('list');
+    var sb2 = el('acc-save-btn'); if (sb2) sb2.textContent = 'Record';
+    var s2 = el('acc-summary'); if (s2) s2.textContent = 'The day, who changed them and which locks. File the locksmith’s receipt on the card after, and record the new keys as received.';
+    var fb2 = el('acc-fb'); if (fb2) fb2.innerHTML = '';
+    var m2 = el('acc-modal'); if (m2) m2.style.display = 'flex';
+    return true;
+  }
   var sb = el('acc-save-btn'); if (sb) sb.textContent = mode === 'receive' ? 'Record' : mode === 'handoff' ? 'Record the handoff' : mode === 'return' ? 'Record the return' : mode === 'lost' ? 'Record it as lost' : mode === 'recovered' ? 'Record the recovery' : 'Save the code';
   var sum = el('acc-summary');
   var itemWords = item ? accessItemLabel(item) + ' (' + accessStateText(accessItemState(job, item)) + ')' : '';
@@ -54494,6 +54639,15 @@ function saveAccessDialog() {
   var writes = [];   // [{item, event}] in order; nothing is written until every event passes
   var item = itemId ? jobListGet(job, 'accessItems', itemId) : null;
   if (itemId && (!item || item.voidedAt)) { showFB('acc-fb', 'warn', 'That item is no longer on this job: it may have been voided on another device.'); return false; }
+  if (mode === 'locks') {
+    var lev = { itemId: ACCESS_LOCKS_ITEM, kind: ACCESS_LOCKS_KIND, on: on, from: v('acc-from'), to: '', note: v('acc-note'), recordedBy: who, recordedAt: now };
+    var lwhy = accessLocksRefusal(lev, today);
+    if (lwhy) { showFB('acc-fb', 'warn', lwhy); return false; }
+    jobListPut(job, 'accessEvents', lev);
+    closeAccessDialog(); _repaintAccessCard(jobId); _dashRedraw(jobId);
+    showSyncBadge('Locks changed recorded. File the locksmith’s receipt on the Keys & access card, and record the new keys as received.');
+    return true;
+  }
   if (mode === 'receive') {
     var from = v('acc-from'), to = v('acc-to');
     if (item) {
@@ -54584,7 +54738,8 @@ function voidAccessItem(jobId, itemId) {
 // to a client, counsel, an insurer or a bond carrier, so a code prints as *held* or *cleared at close*.
 function accessCustodyRecordHtml(job, opt) {
   var items = accessItemsOf(job, true);
-  if (!job || !items.length) return '';
+  var locks = job ? accessLocksChanges(job, true) : [];
+  if (!job || !(items.length || locks.length)) return '';
   var td = 'padding:3px 6px;border-bottom:1px solid #eee;vertical-align:top;', th = 'padding:2px 6px;';
   var head = function (t) {
     return '<div style="font-family:\'Cormorant Garamond\',serif;font-size:15px;color:#3c3228;border-bottom:1px solid #bbb;margin:16px 0 4px;">' + t + '</div>';
@@ -54621,6 +54776,15 @@ function accessCustodyRecordHtml(job, opt) {
     + '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="color:#888;text-align:left;">'
     + '<th style="' + th + '">Date</th><th style="' + th + '">Item</th><th style="' + th + '">Event</th><th style="' + th + '">From</th><th style="' + th + '">To</th><th style="' + th + '">Note</th><th style="' + th + '">Recorded by</th></tr></thead><tbody>'
     + evRows.map(function (r) { return r.html; }).join('') + '</tbody></table>'
+    + (locks.length ? head('Locks changed') + '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="color:#888;text-align:left;">'
+        + '<th style="' + th + '">Date</th><th style="' + th + '">Changed by</th><th style="' + th + '">Which locks</th><th style="' + th + '">Locksmith&rsquo;s receipt</th><th style="' + th + '">Recorded by</th></tr></thead><tbody>'
+        + locks.map(function (e) {
+            var s2 = e.voidedAt ? 'text-decoration:line-through;color:#888;' : '';
+            var rc = signedRecordsOf(job, 'locksmith', String(e.id)).length > 0;
+            return '<tr><td style="' + td + s2 + '">' + (e.on ? esc(fmtDate2(e.on)) : '—') + '</td><td style="' + td + s2 + '">' + esc(e.from || '—') + '</td>'
+              + '<td style="' + td + s2 + '">' + esc(e.note || '') + (e.voidedAt ? '<div style="color:#888;font-size:10px;">void: ' + esc(e.voidReason || '') + '</div>' : '') + '</td>'
+              + '<td style="' + td + s2 + '">' + (rc ? 'filed' : 'not filed') + '</td><td style="' + td + s2 + '">' + esc(e.recordedBy || '—') + '</td></tr>';
+          }).join('') + '</tbody></table>' : '')
     + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:6px;line-height:1.5;">An entry is never edited or deleted: one recorded in error is struck through with the reason, and the correction follows it.</div>'
     + '</div>';
 }
@@ -54629,7 +54793,7 @@ function printAccessRecord(jobId, opt) {
   var job = _invJob(jobId);
   if (!job) return asHtml ? { why: 'this client could not be found on this device' } : undefined;
   var items = accessItemsOf(job);
-  if (!items.length) { if (asHtml) return { why: 'no key or access item is recorded on this job' }; showSyncBadge('No key or access item is recorded on this job yet.', true); return undefined; }
+  if (!items.length && !accessLocksChanges(job).length) { if (asHtml) return { why: 'no key or access item is recorded on this job' }; showSyncBadge('No key or access item is recorded on this job yet.', true); return undefined; }
   var open = items.filter(function (it) { return accessItemOpen(accessItemState(job, it)); }).length;
   var stamp = open
     ? '<div style="display:inline-block;font-size:11px;font-weight:700;color:#fff;background:#8a6d3b;border-radius:3px;padding:1px 8px;margin-bottom:12px;">IN PROGRESS &mdash; ' + open + ' of ' + items.length + ' still held</div>'
@@ -54649,7 +54813,7 @@ function fileAccessRecord(jobId, opt) {
   var job = _invJob(jobId);
   var say = function (type, msg) { if (auto) { showSyncBadge(msg, type !== 'ok'); return; } _docNotice(type, msg, jobId); };
   if (!job) { say('warn', 'This client could not be found.'); return false; }
-  if (!accessItemsOf(job).length) { if (!auto) say('warn', 'No key or access item is recorded on this job, so there is no record to file.'); return false; }
+  if (!accessItemsOf(job).length && !accessLocksChanges(job).length) { if (!auto) say('warn', 'No key or access item is recorded on this job, so there is no record to file.'); return false; }
   if (_accessFiling[jobId]) { say('warn', 'The ' + ACCESS_RECORD_TITLE + ' is being filed now — give it a moment.'); return false; }
   if (!SHEETS_SYNC_URL) { say('warn', 'The ' + ACCESS_RECORD_TITLE + ' was not filed to Drive: this device has no Apps Script URL in Settings.'); return false; }
   var target = _jobRootFolderId(job);
@@ -54709,7 +54873,13 @@ var SITE_FIND_KINDS = {
   // nothing recorded it). Everything of the estate's that is not a will or cash and is not on the inventory: deeds, titles,
   // statements, insurance policies, stock certificates, savings bonds, a DD-214, password sheets, hardware wallets, USB
   // drives. Listed one per line (`items`), handed to counsel (else the representative) against a signed receipt.
-  papers: { noun: 'Papers', doc: 'Receipt for Papers Found', record: 'Record papers found', made: 'found' }
+  papers: { noun: 'Papers', doc: 'Receipt for Papers Found', record: 'Record papers found', made: 'found' },
+  // ⚠ A SAFE OR LOCKED CONTAINER (2026-11-07; Anthony approved, off the estate reference: *"the safes and lock containers, photo record of
+  // them closed"*). Recorded the day it is found and photographed closed; opened only with the representative or counsel present and
+  // photographed open, what was inside listed (a will, cash or papers inside are then recorded as their own finds); or handed over
+  // unopened. The photographs are filed through the one filer (kinds safe_closed and safe_open, ref the find). Flagged, never refused:
+  // an opening with neither the representative nor counsel present is recorded and flagged (siteFindPresentFlag).
+  safe: { noun: 'Safe or locked container', doc: 'Safe Opening Record', record: 'Record a safe or locked container', made: 'found' }
 };
 // The kinds whose hand-over goes to counsel first (siteFindDefaultHolder, _siteFindHolderNames); cash goes to a fiduciary.
 function siteFindToCounsel(kind) { return kind === 'will' || kind === 'papers'; }
@@ -54736,7 +54906,7 @@ function willDepositDue(f) {
 // ⚠ FLAGGED, NEVER REFUSED: a hand-over recorded on another day than the find, where the procedure is the same day.
 function siteFindHandFlag(f) {
   var d = siteFindDay(f);
-  if (!f || !SITE_FIND_KINDS[f.kind] || !f.handedOn || !d || f.handedOn === d) return '';
+  if (!f || !SITE_FIND_KINDS[f.kind] || f.kind === 'safe' || !f.handedOn || !d || f.handedOn === d) return '';
   return 'handed over ' + fmtDate2(f.handedOn) + ', not the day it was ' + SITE_FIND_KINDS[f.kind].made + ' (' + fmtDate2(d) + ')';
 }
 // ⚠ AND CASH HANDED TO SOMEBODY WHO IS NOT A FIDUCIARY RECORDED ON THE JOB, flagged the same way: the cash is the
@@ -54747,6 +54917,15 @@ function siteFindHolderFlag(job, f) {
 }
 // Whom a find goes to unless somebody types another name: a will to the estate attorney recorded (by name, else the
 // firm), else the representative; cash to the representative, the first of jobFiduciaries.
+function siteFindPresentNames(f) {
+  return String((f && f.present) || '').split(/[;\n]/).map(function(x) { return x.trim(); }).filter(Boolean);
+}
+// A safe opened with neither a fiduciary nor counsel among those present: recorded and flagged, never refused.
+function siteFindPresentFlag(job, f) {
+  if (!f || f.kind !== 'safe' || !f.openedOn) return '';
+  var who = jobFiduciaries(job).map(function(p) { return p.name; }).concat([job && job.probateAttyName]).filter(function(n) { return String(n || '').trim(); });
+  return siteFindPresentNames(f).some(function(n) { return who.some(function(w) { return samePerson(w, n); }); }) ? '' : 'opened without the representative or counsel recorded as present';
+}
 function siteFindDefaultHolder(job, kind) {
   if (!job) return '';
   if (siteFindToCounsel(kind)) {
@@ -54772,6 +54951,10 @@ function siteFindRefusal(f, mode) {
     if (!ymd(f.foundOn)) miss.push('the day they were found');
     if (!has(f.foundBy)) miss.push('who found them');
     if (!siteFindPaperItems(f).length) miss.push('what was found, one per line');
+  } else if (f.kind === 'safe') {
+    if (!ymd(f.foundOn)) miss.push('the day it was found');
+    if (!has(f.foundBy)) miss.push('who found it');
+    if (!has(f.description)) miss.push('what it is and how it is locked');
   } else {
     if (!ymd(f.countedOn)) miss.push('the day it was counted');
     if (!(Number(f.amount) > 0)) miss.push('the amount counted');
@@ -54780,8 +54963,16 @@ function siteFindRefusal(f, mode) {
     if (!has(f.bagNo)) miss.push('the sealed bag’s number');
   }
   if (mode === 'handover' || has(f.handedOn)) {
+    if (f.kind === 'safe' && has(f.openedOn)) return 'It has been opened: what was inside is recorded on its own (a will, cash or papers on Found on site), and the safe stays where it is.';
     if (!ymd(f.handedOn)) miss.push('the day it was handed over');
     if (!has(f.handedTo)) miss.push('who it was handed to');
+  }
+  if (mode === 'opened') {
+    if (f.kind !== 'safe') return 'Only a safe or locked container is opened.';
+    if (!ymd(f.openedOn)) miss.push('the day it was opened');
+    if (!has(f.openedBy)) miss.push('who opened it');
+    if (!siteFindPresentNames(f).length) miss.push('who was present');
+    if (!siteFindPaperItems({ items: f.contents }).length) miss.push('what was inside, one per line (write empty if it was)');
   }
   if (mode === 'deposit') {
     if (f.kind !== 'will') return 'Only an original will is deposited with the clerk.';
@@ -54840,6 +55031,25 @@ function siteFindLines(job, today) {
                detail: what + ', to ' + esc(f.handedTo) + ' on ' + fmtDate2(f.handedOn)
                  + (prc ? '' : ' &mdash; file the receipt they signed, under Found on site on the Job Plan') });
   });
+  siteFindsOf(job, 'safe').forEach(function(f) {
+    var what = esc(f.description) + (f.where ? ' in ' + esc(f.where) : '') + ', found ' + fmtDate2(f.foundOn);
+    var closed = signedRecordsOf(job, 'safe_closed', f.id).length > 0, opened = signedRecordsOf(job, 'safe_open', f.id).length > 0;
+    var owe = [];
+    if (!closed) owe.push('photograph it closed');
+    if (f.openedOn && !opened) owe.push('photograph it open');
+    var flag = siteFindPresentFlag(job, f);
+    if (f.openedOn) {
+      out.push({ key: 'safe_opened_' + f.id, ok: !owe.length && !flag, label: 'Safe or locked container opened',
+                 detail: what + '; opened ' + fmtDate2(f.openedOn) + ' by ' + esc(f.openedBy) + ' with ' + esc(siteFindPresentNames(f).join(', ')) + ' present'
+                   + (flag ? ' &mdash; ' + flag : '') + (owe.length ? ' &mdash; ' + _andJoin(owe) + ', and file the photograph' + (owe.length > 1 ? 's' : '') + ' under Found on site on the Job Plan' : '') });
+    } else if (f.handedOn) {
+      out.push({ key: 'safe_handed_' + f.id, ok: closed, label: 'Safe or locked container handed over unopened',
+                 detail: what + '; to ' + esc(f.handedTo) + ' on ' + fmtDate2(f.handedOn) + (closed ? '' : ' &mdash; file the photograph of it closed under Found on site on the Job Plan') });
+    } else {
+      out.push({ key: 'safe_' + f.id, ok: false, label: 'Safe or locked container not yet opened',
+                 detail: what + ' &mdash; ' + (closed ? '' : 'photograph it closed; ') + 'open it only with the representative or counsel present, photograph it open and list what was inside, or record that it was handed over unopened' });
+    }
+  });
   siteFindsOf(job, 'cash').forEach(function(f) {
     var what = fmt(Number(f.amount) || 0) + ' in sealed bag No. ' + esc(f.bagNo);
     if (!f.handedOn) {
@@ -54880,7 +55090,12 @@ function _siteFindHolderNames(job, kind) {
 function _siteFindRowHtml(jobId, job, f) {
   var K = SITE_FIND_KINDS[f.kind];
   var idq = '\'' + esc(String(f.id)) + '\'';
-  var facts = f.kind === 'papers'
+  var facts = f.kind === 'safe'
+    ? '<span class="fos-kind">Safe or locked container</span> &mdash; found ' + fmtDate2(f.foundOn) + (f.where ? ' in ' + esc(f.where) : '')
+      + ' by ' + esc(f.foundBy) + '<br>' + escLines(f.description)
+      + (f.openedOn ? '<br>Opened ' + fmtDate2(f.openedOn) + ' by ' + esc(f.openedBy) + ', with ' + esc(siteFindPresentNames(f).join(', ')) + ' present'
+          + '<br><span style="color:var(--gray);">Inside:</span> ' + siteFindPaperItems({ items: f.contents }).map(esc).join('; ') : '')
+    : f.kind === 'papers'
     ? '<span class="fos-kind">Papers</span> &mdash; found ' + fmtDate2(f.foundOn) + (f.where ? ' in ' + esc(f.where) : '')
       + ' by ' + esc(f.foundBy) + '<br>' + siteFindPaperItems(f).map(esc).join('<br>')
     : f.kind === 'will'
@@ -54891,10 +55106,18 @@ function _siteFindRowHtml(jobId, job, f) {
       + ', sealed bag No. ' + esc(f.bagNo);
   if (f.handedOn) facts += '<br>Handed to ' + esc(f.handedTo) + ' on ' + fmtDate2(f.handedOn);
   if (f.kind === 'will' && f.depositedOn) facts += '<br>Deposited with the clerk ' + fmtDate2(f.depositedOn) + ', confirmed by ' + esc(f.depositConfirmedBy);
-  var flags = [siteFindHandFlag(f), siteFindHolderFlag(job, f)].filter(Boolean);
-  var recs = signedRecordsOf(job, f.kind, f.id);
+  var flags = [siteFindHandFlag(f), siteFindHolderFlag(job, f), siteFindPresentFlag(job, f)].filter(Boolean);
+  var recs = f.kind === 'safe' ? signedRecordsOf(job, 'safe_closed', f.id).concat(signedRecordsOf(job, 'safe_open', f.id)) : signedRecordsOf(job, f.kind, f.id);
   var acts = ['<button type="button" class="btn-s" onclick="printSiteFindReceipt(' + jobId + ',' + idq + ')">Print ' + K.doc + '</button>'];
-  if (!f.handedOn) {
+  if (f.kind === 'safe') {
+    var rep = function() { _repaintSiteFinds(jobId); };
+    if (!signedRecordsOf(job, 'safe_closed', f.id).length) acts.push(signedCopyControlHtml(jobId, 'safe_closed', { ref: String(f.id), label: SIGNED_RECORD_KINDS.safe_closed.label, signedOn: f.foundOn, signedBy: f.foundBy }, 'File photo: closed', rep));
+    if (f.openedOn && !signedRecordsOf(job, 'safe_open', f.id).length) acts.push(signedCopyControlHtml(jobId, 'safe_open', { ref: String(f.id), label: SIGNED_RECORD_KINDS.safe_open.label, signedOn: f.openedOn, signedBy: f.openedBy }, 'File photo: open', rep));
+    if (!f.openedOn && !f.handedOn) {
+      acts.push('<button type="button" class="btn-s" onclick="openSiteFind(' + jobId + ',\'safe\',\'opened\',' + idq + ')">Record the opening</button>');
+      acts.push('<button type="button" class="btn-s" onclick="openSiteFind(' + jobId + ',\'safe\',\'handover\',' + idq + ')">Handed over unopened</button>');
+    }
+  } else if (!f.handedOn) {
     acts.push('<button type="button" class="btn-s" onclick="openSiteFind(' + jobId + ',\'' + f.kind + '\',\'handover\',' + idq + ')">Record the hand-over</button>');
   } else if (!recs.length) {
     acts.push(signedCopyControlHtml(jobId, f.kind, {
@@ -54919,13 +55142,14 @@ function siteFindsCardHtml(jobId, job, est) {
   var live = all.filter(function(f) { return !f.voidedAt; });
   var voided = all.filter(function(f) { return !!f.voidedAt; });
   return '<div class="fos-card" id="plan-finds-' + jobId + '">'
-    + '<div class="fos-hd">Found on site <small>an original will, cash, or the estate&rsquo;s papers: record them the day they are found</small></div>'
+    + '<div class="fos-hd">Found on site <small>an original will, cash, the estate&rsquo;s papers, or a safe: record them the day they are found</small></div>'
     + planDerivedHtml(jobId, job, est, 'finds')
     + live.map(function(f) { return _siteFindRowHtml(jobId, job, f); }).join('')
     + '<div class="fos-acts">'
       + '<button type="button" class="btn-s" onclick="openSiteFind(' + jobId + ',\'will\')">' + SITE_FIND_KINDS.will.record + '</button>'
       + '<button type="button" class="btn-s" onclick="openSiteFind(' + jobId + ',\'cash\')">' + SITE_FIND_KINDS.cash.record + '</button>'
       + '<button type="button" class="btn-s" onclick="openSiteFind(' + jobId + ',\'papers\')">' + SITE_FIND_KINDS.papers.record + '</button>'
+      + '<button type="button" class="btn-s" onclick="openSiteFind(' + jobId + ',\'safe\')">' + SITE_FIND_KINDS.safe.record + '</button>'
     + '</div>'
     + voided.map(function(f) {
         return '<div class="fos-void"><s>' + SITE_FIND_KINDS[f.kind].noun + ' ' + SITE_FIND_KINDS[f.kind].made + ' ' + fmtDate2(siteFindDay(f)) + '</s>'
@@ -54934,7 +55158,8 @@ function siteFindsCardHtml(jobId, job, est) {
     + '<div class="fos-note"><strong>An original will:</strong> describe it from the outside only &mdash; never open, read, copy or interpret it &mdash; '
       + 'and hand it to the estate attorney the same day against a signed receipt. Havellin never keeps it. '
       + '<strong>Cash:</strong> two people count it, it goes in a sealed numbered bag, and the fiduciary signs for the bag the same day. '
-      + '<strong>Papers:</strong> deeds, titles, statements, insurance policies, stock certificates, savings bonds, military papers, password sheets, hardware wallets and USB drives are set aside, listed, and handed to counsel or the fiduciary the same day against a signed receipt; never copied or used.</div>'
+      + '<strong>Papers:</strong> deeds, titles, statements, insurance policies, stock certificates, savings bonds, military papers, password sheets, hardware wallets and USB drives are set aside, listed, and handed to counsel or the fiduciary the same day against a signed receipt; never copied or used. '
+      + '<strong>A safe or locked container:</strong> photograph it closed the day it is found, and open it only with the representative or counsel present; photograph it open and list what was inside, or record that it was handed over unopened.</div>'
     + '</div>';
 }
 // The desk's way to the card (P22): the Job Plan on this client, In the house open, the card in view.
@@ -54972,7 +55197,8 @@ function openSiteFind(jobId, kind, mode, id) {
   var show = function(i, on) { var e = el(i); if (e) e.style.display = on ? '' : 'none'; };
   var opts = function(names) { return names.map(function(n) { return '<option value="' + esc(n) + '">'; }).join(''); };
   set('fos-job', String(jobId)); set('fos-kind', kind); set('fos-mode', mode); set('fos-id', f ? String(f.id) : '');
-  ['fos-where', 'fos-found-by', 'fos-desc', 'fos-p-found-by', 'fos-papers', 'fos-amount', 'fos-counter1', 'fos-counter2', 'fos-bag', 'fos-handed-on', 'fos-dep-on'].forEach(function(i) { set(i, ''); });
+  ['fos-where', 'fos-found-by', 'fos-desc', 'fos-p-found-by', 'fos-papers', 'fos-s-found-by', 'fos-s-desc', 'fos-open-by', 'fos-present', 'fos-contents', 'fos-amount', 'fos-counter1', 'fos-counter2', 'fos-bag', 'fos-handed-on', 'fos-dep-on'].forEach(function(i) { set(i, ''); });
+  set('fos-open-on', mode === 'opened' ? today : '');
   set('fos-date', today);
   set('fos-handed-to', mode === 'new' || mode === 'handover' ? siteFindDefaultHolder(job, kind) : '');
   if (mode === 'handover') set('fos-handed-on', today);
@@ -54981,24 +55207,27 @@ function openSiteFind(jobId, kind, mode, id) {
   show('fos-sec-will', mode === 'new' && kind === 'will');
   show('fos-sec-cash', mode === 'new' && kind === 'cash');
   show('fos-sec-papers', mode === 'new' && kind === 'papers');
-  show('fos-sec-hand', mode !== 'deposit');
+  show('fos-sec-safe', mode === 'new' && kind === 'safe');
+  show('fos-sec-open', mode === 'opened');
+  show('fos-sec-hand', mode !== 'deposit' && mode !== 'opened' && !(mode === 'new' && kind === 'safe'));
   show('fos-sec-dep', mode === 'deposit');
-  var t = el('fos-title'); if (t) t.textContent = mode === 'new' ? K.record : mode === 'handover' ? 'Record the hand-over' : 'Confirm the deposit with the clerk';
+  var t = el('fos-title'); if (t) t.textContent = mode === 'new' ? K.record : mode === 'opened' ? 'Record the opening' : mode === 'handover' ? (kind === 'safe' ? 'Handed over unopened' : 'Record the hand-over') : 'Confirm the deposit with the clerk';
   var dl = el('fos-date-lbl'); if (dl) dl.textContent = kind === 'cash' ? 'Counted on' : 'Found on';
   var s = el('fos-summary');
   if (s) s.innerHTML = mode === 'new'
-    ? (kind === 'will' ? 'Describe it from the outside only: never open, read, copy or photograph its contents. It goes to the estate attorney today, against a signed receipt.'
+    ? (kind === 'safe' ? 'Record it today and photograph it closed. Open it only with the representative or counsel present.'
+       : kind === 'will' ? 'Describe it from the outside only: never open, read, copy or photograph its contents. It goes to the estate attorney today, against a signed receipt.'
        : kind === 'papers' ? 'List each paper or item as you would describe it to counsel. Never copy them or use a password, key or device among them. They go to counsel or the fiduciary today, against a signed receipt.'
                        : 'Two people count it together and seal it in a numbered bag. The fiduciary signs for the bag today.')
     : esc(K.noun + ' ' + K.made + ' ' + fmtDate2(siteFindDay(f)) + (f.where ? ' in ' + f.where : '')
         + (kind === 'cash' ? ': ' + fmt(Number(f.amount) || 0) + ', sealed bag No. ' + f.bagNo : '')
         + (f.handedOn ? '. Handed to ' + f.handedTo + ' on ' + fmtDate2(f.handedOn) + '.' : '.'));
   var hh = el('fos-hand-hint');
-  if (hh) hh.textContent = mode === 'new' ? 'Leave the date blank while Havellin still holds it, and record the hand-over when it happens.'
+  if (hh) hh.textContent = kind === 'safe' ? 'Who took it unopened, and the day.' : mode === 'new' ? 'Leave the date blank while Havellin still holds it, and record the hand-over when it happens.'
     : (kind !== 'cash' ? 'The same day it was found. Any other day is recorded and flagged.' : 'The same day it was counted. Any other day, or anybody but a fiduciary, is recorded and flagged.');
   var tl = el('fos-team'); if (tl) tl.innerHTML = opts(_siteFindTeamNames(job));
-  var hl = el('fos-holders'); if (hl) hl.innerHTML = opts(_siteFindHolderNames(job, kind));
-  var b = el('fos-save-btn'); if (b) b.textContent = mode === 'new' ? 'Record' : mode === 'handover' ? 'Record the hand-over' : 'Record the deposit';
+  var hl = el('fos-holders'); if (hl) hl.innerHTML = opts(_siteFindHolderNames(job, kind === 'safe' ? 'will' : kind));
+  var b = el('fos-save-btn'); if (b) b.textContent = mode === 'new' ? 'Record' : mode === 'opened' ? 'Record the opening' : mode === 'handover' ? 'Record the hand-over' : 'Record the deposit';
   var fb = el('fos-fb'); if (fb) fb.innerHTML = '';
   var m = el('fos-modal'); if (m) m.style.display = 'flex';
   return true;
@@ -55019,6 +55248,8 @@ function saveSiteFind() {
     rec = { kind: kind, recordedBy: who, recordedAt: Date.now() };
     if (kind === 'will') {
       rec.foundOn = v('fos-date'); rec.where = v('fos-where'); rec.foundBy = v('fos-found-by'); rec.description = v('fos-desc');
+    } else if (kind === 'safe') {
+      rec.foundOn = v('fos-date'); rec.where = v('fos-where'); rec.foundBy = v('fos-s-found-by'); rec.description = v('fos-s-desc');
     } else if (kind === 'papers') {
       var pe = document.getElementById('fos-papers');
       rec.foundOn = v('fos-date'); rec.where = v('fos-where'); rec.foundBy = v('fos-p-found-by');
@@ -55028,7 +55259,7 @@ function saveSiteFind() {
       rec.amount = roundCents(parseFloat(v('fos-amount')) || 0);   // to the cent, as typed (P17)
       rec.countedBy = [v('fos-counter1'), v('fos-counter2')]; rec.bagNo = v('fos-bag');
     }
-    if (v('fos-handed-on')) { rec.handedTo = v('fos-handed-to'); rec.handedOn = v('fos-handed-on'); rec.handRecordedBy = who; }
+    if (kind !== 'safe' && v('fos-handed-on')) { rec.handedTo = v('fos-handed-to'); rec.handedOn = v('fos-handed-on'); rec.handRecordedBy = who; }
   } else {
     var cur = jobListGet(job, 'siteFinds', id);
     if (!cur || cur.voidedAt || cur.kind !== kind) { showFB('fos-fb', 'warn', 'That record is no longer on this job: it may have been voided on another device.'); return false; }
@@ -55036,6 +55267,12 @@ function saveSiteFind() {
     if (mode === 'handover') {
       if (cur.handedOn) { showFB('fos-fb', 'warn', 'The hand-over is already recorded: to ' + esc(cur.handedTo) + ' on ' + fmtDate2(cur.handedOn) + '.'); return false; }
       rec.handedTo = v('fos-handed-to'); rec.handedOn = v('fos-handed-on'); rec.handRecordedBy = who;
+    } else if (mode === 'opened') {
+      if (cur.openedOn) { showFB('fos-fb', 'warn', 'The opening is already recorded: ' + fmtDate2(cur.openedOn) + '.'); return false; }
+      if (cur.handedOn) { showFB('fos-fb', 'warn', 'It was handed over unopened: to ' + esc(cur.handedTo) + ' on ' + fmtDate2(cur.handedOn) + '.'); return false; }
+      var ce = document.getElementById('fos-contents');
+      rec.openedOn = v('fos-open-on'); rec.openedBy = v('fos-open-by'); rec.present = siteFindPresentNames({ present: v('fos-present') }).join('; ');
+      rec.contents = siteFindPaperItems({ items: ce ? String(ce.value || '') : '' }).join('\n'); rec.openRecordedBy = who;
     } else if (mode === 'deposit') {
       if (cur.depositedOn) { showFB('fos-fb', 'warn', 'The deposit is already recorded: ' + fmtDate2(cur.depositedOn) + '.'); return false; }
       rec.depositedOn = v('fos-dep-on'); rec.depositConfirmedBy = v('fos-dep-by'); rec.depositRecordedBy = who;
@@ -55046,8 +55283,8 @@ function saveSiteFind() {
   jobListPut(job, 'siteFinds', rec);
   closeSiteFind();
   var K = SITE_FIND_KINDS[kind];
-  var flag = [siteFindHandFlag(rec), siteFindHolderFlag(job, rec)].filter(Boolean).join('; ');
-  showSyncBadge((mode === 'new' ? K.noun + ' recorded' : mode === 'handover' ? 'Hand-over recorded' : 'Deposit with the clerk recorded')
+  var flag = [siteFindHandFlag(rec), siteFindHolderFlag(job, rec), siteFindPresentFlag(job, rec)].filter(Boolean).join('; ');
+  showSyncBadge((mode === 'new' ? K.noun + ' recorded' : mode === 'opened' ? 'Opening recorded: record a will, cash or papers found inside as their own finds' : mode === 'handover' ? 'Hand-over recorded' : 'Deposit with the clerk recorded')
     + (flag ? ' (flagged: ' + flag + ')' : '') + '.', !!flag);
   _repaintSiteFinds(jobId);
   return true;
@@ -55092,6 +55329,24 @@ function willReceiptHtml(job, f) {
     + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">The signed receipt is filed with the estate record and retained for seven years.</div>'
     + '</div>';
 }
+var SAFE_RECORD_STATEMENT = 'Havellin Palm Beach, LLC found the safe or locked container described above at the property during its engagement and photographed it closed. It was opened only in the presence of the people named above, and photographed open; what was inside is listed as it was found. A will, cash or papers found inside are recorded and handed over on their own receipts. Havellin keeps nothing that was inside.';
+function safeRecordHtml(job, f) {
+  var inside = siteFindPaperItems({ items: f.contents });
+  return '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
+    + _invDocHead(job, SITE_FIND_KINDS.safe.doc, 'A safe or locked container found at the property, and its opening')
+    + '<table style="border-collapse:collapse;font-size:12px;margin:8px 0 12px;">'
+      + _siteFindFormRow('Found', fmtDate2(f.foundOn) + (f.where ? ', ' + esc(f.where) : '') + ', by ' + esc(f.foundBy) + ' of Havellin Palm Beach, LLC')
+      + _siteFindFormRow('What it is', escLines(f.description))
+      + _siteFindFormRow('Opened', f.openedOn ? fmtDate2(f.openedOn) + ', by ' + esc(f.openedBy) : _SITE_FIND_BLANK)
+      + _siteFindFormRow('Present', f.openedOn ? esc(siteFindPresentNames(f).join(', ')) : _SITE_FIND_BLANK)
+      + _siteFindFormRow('Inside', inside.length ? inside.map(function(x, i) { return (i + 1) + '. ' + esc(x); }).join('<br>') : _SITE_FIND_BLANK)
+    + '</table>'
+    + '<div style="font-size:11.5px;line-height:1.6;margin-bottom:6px;">' + SAFE_RECORD_STATEMENT + '</div>'
+    + _siteFindSigLine('Witnessed by', 'the representative or counsel present at the opening')
+    + _siteFindSigLine('Opened by', 'for Havellin Palm Beach, LLC')
+    + '<div style="font-size:10px;color:#666;font-style:italic;margin-top:14px;line-height:1.5;">The photographs of it closed and open are filed with the estate record and retained for seven years.</div>'
+    + '</div>';
+}
 function papersReceiptHtml(job, f) {
   return '<div style="padding:20px;font-family:Raleway,sans-serif;color:#3c3228;">'
     + _invDocHead(job, SITE_FIND_KINDS.papers.doc, 'Papers and items found at the property, delivered as they were found')
@@ -55132,7 +55387,7 @@ function printSiteFindReceipt(jobId, id) {
   var f = job ? jobListGet(job, 'siteFinds', id) : null;
   if (!job || !f || !SITE_FIND_KINDS[f.kind] || !invFiduciaryMode(job)) { showSyncBadge('That record is no longer on this job.', true); return false; }
   if (f.voidedAt) { showSyncBadge('That record is void, so there is nothing to print.', true); return false; }
-  var html = f.kind === 'will' ? willReceiptHtml(job, f) : f.kind === 'papers' ? papersReceiptHtml(job, f) : cashReceiptHtml(job, f);
+  var html = f.kind === 'will' ? willReceiptHtml(job, f) : f.kind === 'papers' ? papersReceiptHtml(job, f) : f.kind === 'safe' ? safeRecordHtml(job, f) : cashReceiptHtml(job, f);
   return _printDocument(html, _invDocName(job, SITE_FIND_KINDS[f.kind].doc), { view: true, job: job, label: SITE_FIND_KINDS[f.kind].doc });   // on screen first (2026-11-02)
 }
 

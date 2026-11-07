@@ -1443,6 +1443,22 @@ recorded as gone; at the close a disposed line with none (or no ticket on the li
 **The question.** Is the hauler's acknowledgement of *lawfully* enough to support the estate's expense of administration
 (§733.612), or should the ticket itself be required?
 
+### D10c. A safe or locked container, locks changed, and donations over $5,000 ⚠ NEW 2026-11-07
+
+**What it says now.** *Found on site* records a safe or locked container the day it is found, photographed closed; it is opened only with
+the representative or counsel present (an opening without either is recorded and flagged), photographed open, and what was inside is
+listed (a will, cash or papers inside are recorded and receipted on their own). Its *Safe Opening Record* states: *"Havellin Palm Beach,
+LLC found the safe or locked container described above at the property during its engagement and photographed it closed. It was opened
+only in the presence of the people named above, and photographed open; what was inside is listed as it was found. A will, cash or papers
+found inside are recorded and handed over on their own receipts. Havellin keeps nothing that was inside."*, with lines for the witness and
+whoever opened it. *Keys & access* records locks changed (the day, the locksmith, which locks, the locksmith's receipt) in the Key and Access
+Custody Record. Where donated property is recorded at more than $5,000 the desk flags it, and the Donation Record says: *"A deduction claimed
+for donated property over $5,000 (one item, or similar items together) needs a qualified appraisal and IRS Form 8283 (IRC §170(f)(11))."*
+
+**The question.** Is the safe statement right as written (in particular *"opened only in the presence of the people named above"* where
+Havellin's own people are among them), and is the §170(f)(11) sentence an accurate, sufficient pointer for a donor, an estate claiming a
+§642(c) deduction included?
+
 ### D10a. Papers found on site ⚠ NEW 2026-11-06
 
 **What it says.** Exhibit A promises that deeds, titles and financial records go to the representative and counsel against a
@@ -1891,3 +1907,19 @@ Records to include the Documentation Media and says *No part of the Project Reco
 and Section 7.2 does not apply to them*, while §7.2 opens *Havellin may use Documentation Media … for marketing*. Which governs? The
 reference sidesteps it (the inventory and the disposition record are never used; anonymized photographs only as §7.2 allows); the form
 needs one reading.
+
+
+### G5. The estate package's Certification and Cover Sheet ⚠ NEW 2026-11-07 · PRIORITY 2
+
+**What it says now.** The first page of the package that goes to counsel (or the trustee) lists each paper with what it is for, then:
+*What it is for* (probate: *"These papers are delivered to counsel to support the Personal Representative's inventory under Fla. Stat.
+§733.604, which the Personal Representative verifies and counsel serves and files. Havellin files nothing with the court."*; trust: *"…to
+support the trustee's records of the trust's tangible personal property and the trustee's accountings under Fla. Stat. §§736.0813 and
+736.08135. They are not an accounting."*); *What the values are* (*"Each value is Havellin's estimate as of the date of death (…), with the
+basis for it stated against the item. A value is an appraisal only where an appraiser's report is noted against the item. An item not yet
+valued, decided or approved is marked as such on the page that carries it."*); and *Certification*: *"I certify that, to the best of my
+knowledge, these papers are a true record of the property Havellin documented at <address> and of what was done with it, prepared in good
+faith from Havellin's records as of <date>."*, with the concierge's name typed and the date.
+
+**The question.** Is a certification by the concierge, typed rather than signed, the right instrument here, and does *"a true record … to the
+best of my knowledge"* say more or less than counsel wants a non-lawyer vendor to certify?

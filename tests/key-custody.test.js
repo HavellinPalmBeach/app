@@ -40,11 +40,11 @@ const ACCESS_FNS = ['accessItemsOf', 'accessEventsOf', 'accessItemLabel', 'acces
   'accessClientParties', 'accessDefaultHolder', 'accessDefaultReturnee', 'accessRefusal', 'accessEventFlags', 'accessLines', 'accessHeldItems', 'accessCloseBlocker',
   'accessTerminalFlag', 'accessClearCodes', '_accessEventLineHtml', '_accessItemRowHtml', 'accessCardHtml', '_repaintAccessCard', 'goToAccessCard',
   'accessDashHtml', '_accessRowHtml', 'accessAddRow', 'openAccessDialog', 'closeAccessDialog', 'saveAccessDialog', 'voidAccessEvent', 'voidAccessItem',
-  'accessCustodyRecordHtml', 'printAccessRecord', 'fileAccessRecord'];
+  'accessCustodyRecordHtml', 'printAccessRecord', 'fileAccessRecord', 'accessLocksChanges', 'accessLocksRefusal', 'accessLocksLines', '_accessLocksRowHtml'];
 const BASE_FNS = ['jobListEntries', 'jobListGet', 'jobListPut', 'jobListRemove', 'jobListVoid', 'newJobListId', '_saveJobEdit', '_jobTouch',
   'samePerson', 'canonPersonName', 'isCrewPlaceholder', '_andJoin', 'deviceUser', '_actor', '_invStampBy', 'isDecedentJob', 'fmtDate2', '_todayStr',
   '_ymdLocal', 'derivedLinesHtml', 'esc', '_invJob', 'docState'];
-const VARS = ['JOB_RECORD_LISTS', 'ACCESS_ITEM_KINDS', 'ACCESS_EVENT_KINDS', 'ACCESS_DOC_KEY', 'ACCESS_RECORD_TITLE', '_accessFiling',
+const VARS = ['JOB_RECORD_LISTS', 'ACCESS_ITEM_KINDS', 'ACCESS_EVENT_KINDS', 'ACCESS_LOCKS_KIND', 'ACCESS_LOCKS_ITEM', 'ACCESS_DOC_KEY', 'ACCESS_RECORD_TITLE', '_accessFiling',
   'DECEDENT_SERVICES', 'PERSON_NAME_ALIASES', 'CONTRACTOR_TC_NAME', 'LOG_PLACEHOLDER_NAMES'];
 const TODAY = '2026-10-20';
 

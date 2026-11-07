@@ -36,7 +36,7 @@ const DERIVED_STUBS = () => ({ isFormalDoc: () => false, docSentAt: () => null, 
   estimateStore: { 7: { estimate: { rooms: [{ idx: 0, name: 'Kitchen' }] } } } });
 // The Found on site card and its dialog, the foundation's list writers and the signed-copy path, on top.
 const FIND_FNS = ['_invDocPartyHead', 'siteFindsCardHtml', '_siteFindRowHtml', '_repaintSiteFinds', 'openSiteFind', 'closeSiteFind', 'saveSiteFind', 'voidSiteFind',
-  'siteFindRefusal', 'siteFindHandFlag', 'siteFindHolderFlag', 'siteFindDay', '_siteFindTeamNames', '_siteFindHolderNames',
+  'siteFindRefusal', 'siteFindHandFlag', 'siteFindHolderFlag', 'siteFindPresentFlag', 'siteFindPresentNames', 'siteFindDay', '_siteFindTeamNames', '_siteFindHolderNames',
   'willReceiptHtml', 'cashReceiptHtml', 'papersReceiptHtml', 'printSiteFindReceipt', '_siteFindFormRow', '_siteFindSigLine', '_invDocHead', '_invDocName',
   'jobListPut', 'jobListGet', 'jobListVoid', 'newJobListId', '_saveJobEdit', '_jobTouch', '_actor', '_invStampBy', 'deviceUser', 'samePerson', 'canonPersonName',
   'isCrewPlaceholder', '_andJoin', 'showFB', 'fileSignedCopy', '_armFiling', '_signedCopyName', '_jobRootFolderId', 'signedCopyControlHtml',
@@ -86,7 +86,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const r = rig();
     const c = r.card();
     has(c, "openSiteFind(41,'papers')\">Record papers found", 'the card offers Record papers found');
-    has(c, 'an original will, cash, or the estate&rsquo;s papers', 'its heading names papers');
+    // RESTATED (2026-11-07): a safe is the fourth kind on the card.
+    has(c, 'an original will, cash, the estate&rsquo;s papers, or a safe', 'its heading names papers');
     has(c, '<strong>Papers:</strong>', 'and its note says what papers are and what happens to them');
     eq(r.S.openSiteFind(41, 'papers'), true, 'Record papers found opens the dialog');
     eq([r.dom.getElementById('fos-sec-papers').style.display, r.dom.getElementById('fos-sec-will').style.display, r.dom.getElementById('fos-sec-cash').style.display],
