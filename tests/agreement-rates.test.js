@@ -26,7 +26,7 @@ const AGR_FNS = ['docServiceTitle', 'probateSvcOffTrack', 'svcLabelOf', '_agrCom
                  'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection', '_agrHasPrepVendors',
                  'estimateDocScope', 'svcHasDocStep', 'docScopeDef', '_agrScopeServices',
                  '_agrMidpointTrigger', '_agrProbateCompliance', 'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop',
-                 'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', '_agrOtherAppraisalsBy', 'coPrepVendorsOn', 'roundCents', 'fmtHrs', '_agrTrustIsParty', 'trustInstrumentTitle', '_agrCounsel', 'docEstateAuthority', 'estateAuthority', 'jobOnProbateTrack', 'invProbateRows', '_agrEstateNoun', '_agrAuthorityTitle', '_agrCoRepRepresentation', '_agrCoSigners', 'jobFiduciaries', 'jobListEntries', '_agrClientCapacity', '_agrCoSignerCaption'];
+                 'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', '_agrOtherAppraisalsBy', 'coPrepVendorsOn', 'roundCents', 'fmtHrs', '_agrTrustIsParty', 'trustInstrumentTitle', '_agrCounsel', 'docEstateAuthority', 'estateAuthority', 'jobOnProbateTrack', 'invProbateRows', '_agrEstateNoun', '_agrAuthorityTitle', '_agrCoRepRepresentation', '_agrCoSigners', 'jobFiduciaries', 'jobListEntries', '_agrClientCapacity', '_agrSignsAsTxt', '_agrCoSignerCaption'];
 const AGR_VARS = ['AGR_DEPOSIT_DUE_TXT', 'AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'TIME_INCREMENT_TXT', 'SMF_PCT', 'DECEDENT_SERVICES', 'HAVELLIN_OFFICE_PHONE',
                   'JOB_STEPS', 'DOC_SCOPES', 'ESIGN_ANCHORS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'RUSH_PCT', 'ESTATE_AUTHORITIES', 'AGR_NO_PURCHASE'];
 
@@ -76,7 +76,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(probate, 'If acting as successor trustee', 'a probate matter does not');
     lacks(neither, 'If acting as successor trustee', 'nor a family distribution');
     lacks(blank, 'If acting as successor trustee', 'nor an unanswered one');
-    has(trust, 'duly appointed by the probate court',
+    has(trust, 'If acting as personal representative (executor): where already appointed',  // RESTATED 2026-11-07: the conditional rep reworded
         '⚠ and the existing representation is ADDED TO rather than replaced, so no wording moves');
 
     // §5.3's authorisation table named a PR on forms that issue on matters with no PR.
@@ -100,7 +100,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     //    before the field existed.
     eq(blank, probate, 'an unanswered matter renders the whole agreement identically to an explicit probate one');
     // And the heading a trust matter actually signs under.
-    has(trust, '5.2 Florida Trust Administration Support', 'the trust matter signs a trust compliance section');
+    has(trust, '5.2 Working with the Trustee', 'the trust matter signs a trust compliance section');
     lacks(trust, 'Letters of Administration issuance', '⚠⚠ with no 60-day Letters deadline on a trust administration');
     // ⚠⚠ THIS ASSERTION FOUND TWO MORE, OUTSIDE §5.2, AND ONE OF THEM WAS AN AFFIRMATIVE
     // MISSTATEMENT. §7.1 said the photographs are taken "for condition documentation, asset
@@ -381,7 +381,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
           '…starting with the one a tidy itemised list most invites');
       // ⚠ NEITHER FORM MAY LET THE MARKETING CLAUSE REACH IT. A client who does not tick the
       // opt-out is not thereby authorising publication of a list naming their daughter.
-      has(doc, mkt + ' does not apply to them',
+      has(doc, mkt + (mkt === 'Section 7.2' ? ' does not apply to the written record' : ' does not apply to them'),  // the estate form RESTATED 2026-11-07 (§7.1 names the written record)
           '⚠⚠ ' + label + ' holds the record outside the marketing opt-out');
       has(doc, us + '&rsquo;s work product', 'and the obligated party is substituted, as everywhere else');
     });
@@ -406,10 +406,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(pr, 'to counsel of record',
         '⚠ only the estate form has an affirmative production duty');
     lacks(a, 'counsel of record', '…a living client\'s record is theirs and nobody else\'s');
-    has(pr, 'not Client documents for the purposes of the return-or-destroy provision',
-        '⚠⚠ and only the estate form carves itself out of §7\'s return-or-destroy bullet');
+    has(pr, 'not Client documents for the purposes of the return provision',
+        '⚠⚠ and only the estate form carves itself out of §7\'s return bullet (return, never destroy, since 2026-11-06)');
     // Q63 (2026-10-16): the bullet itself draws the line, where the reader meets it.
-    has(pr, 'Return or destroy the Client\u2019s own documents (the will, deeds, financial and legal papers Havellin encounters) on completion of the engagement or on written request; Havellin\u2019s Project Records are retained for seven years under Section 7.1',
+    // RESTATED 2026-11-06 (Anthony: "glaring mistakes"): the bullet let Havellin destroy the will; it returns, never destroys.
+    has(pr, 'Return the Client\u2019s own documents (deeds, financial and legal papers Havellin encounters) to the Client or counsel, against a signed receipt, and never destroy them; an original will found at the property is handed, unopened, to counsel (or the Client where no counsel is recorded) the same day. Havellin\u2019s Project Records are retained for seven years under Section 7.1',
         '\u26a0\u26a0 the bullet says which documents go back and which are kept, and for how long');
     lacks(pr, 'Destroy or return all Client documents', 'the bullet that read as a contradiction is gone');
     lacks(a, 'Project Records are retained for seven years under Section 7.1', 'the living form keeps its own §7');

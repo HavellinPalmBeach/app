@@ -264,9 +264,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     });
     // The narrative: the probate one, without the probate or the court.
     const pt = text(render('probate', 'trust').est);
-    has(pt, 'We settle the estate room by room under full documentation standards — a complete inventory, photographs, and chain-of-custody tracking for items of value, with the remainder routed to sale, donation, or disposal. Your Transition Concierge maintains the records counsel may request and keeps all parties informed.',
+    has(pt, 'We work through the contents room by room, keeping the record a fiduciary and counsel need: an inventory, photographs, and a chain-of-custody log for items of value, with the remainder routed to sale, donation or disposal as you direct in writing. Your Transition Concierge keeps that record ready for counsel and keeps you informed.',
         '⚠⚠ the narrative: the same work, without "probate requires" or "the court"');
-    has(text(render('contested_probate', 'trust').est), 'We settle the estate room by room under heightened documentation standards', 'Contested\'s narrative, which named neither, is its own');
+    has(text(render('contested_probate', 'trust').est), 'We work through the contents room by room with a heightened record', 'Contested\'s narrative, which named neither, is its own');
   });
 
   G('S3 · on the probate track, and on every other service, the documents read as before', () => {
@@ -275,8 +275,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       eq(agrTitle(d.agr), 'Probate Estate Settlement', at + 'the agreement keeps its title');
       has(d.agr, 'This Agreement governs Probate Estate Settlement services provided', at + 'and its header sentence');
       eq([serviceRow(d.est), onsite(d.est)], ['Probate Estate Settlement', 'Onsite Probate Estate Settlement Services'], at + 'the estimate\'s row and heading');
-      has(text(d.est), 'We settle the estate room by room under the documentation standards probate requires', at + 'and the probate narrative');
-      has(text(d.est), 'Your Transition Concierge maintains the records the court and counsel may request and keeps all parties informed.', at + 'with its court');
+      has(text(d.est), 'keeping the record a personal representative and counsel need', at + 'and the probate narrative');
+      has(text(d.est), 'Your Transition Concierge keeps that record ready for counsel and keeps you informed.', at + 'with its court');
       eq(serviceRow(d.final), 'Probate Estate Settlement', at + 'the invoices');
       eq(emailService(d.invEmail), 'Probate Estate Settlement', at + 'the emails');
     });
@@ -512,7 +512,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // RESTATED 2026-10-08 (the job-flow audit): the estimate's and the invoices' identity line is docPartyIdent,
     // and the beneficiary's receipt names the trust through it (invReceiptFrom).
     // RESTATED (2026-10-10): the Trust Schedule asks it a third time, to print its own trust line only where the head does not already carry it.
-    eq(readers('trustInstrumentTitle'), { _agrTrusteeRepresentation: 1, docPartyIdent: 1, invReceiptFrom: 1, printTrustSchedule: 3, probateAgreementHtml: 2 }, 'the documents the title reaches (P22: §5.1\'s dated acceptance too)');
+    eq(readers('trustInstrumentTitle'), { _agrTrusteeRepresentation: 1, docPartyIdent: 1, invReceiptFrom: 1, printTrustSchedule: 3, probateAgreementHtml: 4 }, 'the documents the title reaches (2026-11-07: and the capacity the Client signs in, twice) (P22: §5.1\'s dated acceptance too)');
     // On each of them, rendered.
     const d = render('probate', 'trust');
     has(text(d.agr), 'Trust The Adler Family Trust, dated March 3, 2015', '⚠⚠ the agreement\'s §1.2');

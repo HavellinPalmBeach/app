@@ -883,7 +883,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(SRC, '>Photograph a signed sheet instead', 'and Photograph a signed sheet instead');
     has(t, 'Sign out N to … opens the sheet; they sign with a finger and Sign and file puts it in Drive. Back from an appraiser: Check N back in from …. On an estate, Print receipt prints a paper receipt for a person instead.', 'as the page says');
     // Who has a row (guide review, 2026-10-24: the page said every person and vendor): a vendor selling the item, a named charity,
-    // an appraiser; a person only on an estate; never a hauler taking the junk. On the real signoutLineKind.
+    // an appraiser; a person only on an estate; and since 2026-11-06 a hauler taking the junk (the Disposal Record). On the real signoutLineKind.
     {
       const SK = lift(['signoutLineKind'], {});
       const kind = (j, o) => { const r = attempt(() => SK.signoutLineKind(LINE('a', o), j)); return r.ok ? r.val : r.err; };
@@ -891,10 +891,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       eq([kind(ESTATE(), { disposition: 'Donate', channel: 'Goodwill' }), kind(LIVING(), { disposition: 'Donate', channel: 'Goodwill' })], ['donation', 'donation'], 'a named charity has a row, on either');
       eq([kind(ESTATE(), { disposition: 'Distribute', channel: 'Susan Hale' }), kind(LIVING(), { disposition: 'Distribute', channel: 'Susan Hale' })], ['receipt', ''],
         '⚠⚠ a person: a row on an estate, none on living work');
-      eq(kind(ESTATE(), { disposition: 'Junk', channel: 'Haul-It' }), '', 'a hauler taking the junk: none');
+      eq([kind(ESTATE(), { disposition: 'Junk', channel: 'Haul-It' }), kind(LIVING(), { disposition: 'Junk', channel: 'Haul-It' }), kind(ESTATE(), { disposition: 'Junk' })], ['disposal', 'disposal', ''], 'a named hauler taking the junk has a row, on either; a Junk line with nobody named none');
       has(code(fn('signoutGroups')), "put(invOutForAppraisal(r, job) ? 'appraisal_back' : 'appraisal_out', String(a.name).trim(), r, 'ready')", 'an appraiser: a row for the hand-off and the return');
     }
-    has(t, 'One row for each selling vendor, charity or appraiser taking things away, and on an estate each person, with the item numbers.', 'as the page says');
+    has(t, 'One row for each selling vendor, charity, hauler or appraiser taking things away, and on an estate each person, with the item numbers.', 'as the page says');
     has(t, 'No receipts from a person, no bequests.', 'living work: no receipt from a person (a charity’s receipt is still filed)');
     lacks(t, 'No receipts, no bequests.', '⚠ never that living work has no receipts at all');
     has(code(fn('signoutLineKind')), 'if (!ref || ref.deletedAt || invIsFirearm(ref)) return \'\';', 'a firearm never goes on a sheet');

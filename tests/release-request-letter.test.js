@@ -223,7 +223,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // is the question this file is about and a Cancel rig still has a draft to cancel (p10-request-stamp.test.js drives that one).
     const sendAsked = [];
     const r = rig(Object.assign({ roots: ROOTS, net: { media }, stubs: { confirm: (m) => {
-      if (String(m).indexOf('The request prints IN PROGRESS and marks the flagged lines either way.') >= 0) { sendAsked.push(String(m)); return true; }
+      // Counsel first (2026-11-06) asks in the same question; answered OK here too (p10-request-stamp.test.js L drives it).
+      if (String(m).indexOf('The request prints IN PROGRESS and marks the flagged lines either way.') >= 0
+        || String(m).indexOf('Counsel has not been sent the inventory yet') >= 0) { sendAsked.push(String(m)); return true; }
       asked.push(String(m)); return answer !== false; } } }, over || {}));
     r.asked = asked; r.sendAsked = sendAsked;
     r.c._invCloudSeen = { 7: true };

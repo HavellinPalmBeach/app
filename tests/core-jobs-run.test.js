@@ -365,7 +365,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // the client estimate: an appraiser with no fee typed
     const ce = textOf(attempt(() => liv.clientEstimateHtml(Object.assign({}, EST_HR, { vendors: [{ type: 'Appraiser(s)', cost: 0 }, { type: 'Auction House', cost: 0 }] }), LIVING())).val);
     has(ce, 'Appraiser(s) Quote to follow', '⚠ an appraiser with no fee typed is a quote to follow');
-    has(ce, 'Auction House Havellin may receive a referral fee from this vendor, paid out of the vendor’s own commission and never from your proceeds. No direct cost', 'an auction house is paid from the proceeds: no direct cost, as before, under the referral-fee note (Q62)');
+    has(ce, 'Auction House Havellin may receive a referral fee from this vendor, paid from the vendor’s own revenue; it does not increase the vendor’s commission or charges to you. No direct cost', 'an auction house is paid from the proceeds: no direct cost, as before, under the referral-fee note (Q62)');
     // the worklist drops appraised and waived lines
     const pr = mk(PROBATE(), [IT('p', { objectName: 'Oil on canvas', category: 'Art & Décor', fmv: '7200', valSource: 'Appraisal' }),
       IT('q', { objectName: 'Pearls', category: 'Jewelry & Watches', fmv: '', apprWaived: true, apprWaiveReason: 'under $3,000 at comps' }),

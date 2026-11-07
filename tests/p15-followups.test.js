@@ -164,7 +164,7 @@ const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', 
                  '_agrApprovedStamp', 'agrBillingRates', 'materialsBasisNote', 'materialsPackageQuoted',
                  'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection', '_agrHasPrepVendors', 'estimateDocScope',
                  'docScopeDef', '_agrScopeServices', '_agrMidpointTrigger', '_agrProbateCompliance', 'esignAnchor',
-                 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', '_agrOtherAppraisalsBy', 'coPrepVendorsOn', 'roundCents', 'fmtHrs', '_agrTrustIsParty', '_agrCounsel', 'docEstateAuthority', 'estateAuthority', 'jobOnProbateTrack', 'invProbateRows', '_agrEstateNoun', '_agrAuthorityTitle', '_agrCoRepRepresentation', '_agrCoSigners', 'jobFiduciaries', 'jobListEntries', '_agrClientCapacity', '_agrCoSignerCaption', 'trustInstrumentTitle'].concat(TIER_FNS);
+                 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', '_agrOtherAppraisalsBy', 'coPrepVendorsOn', 'roundCents', 'fmtHrs', '_agrTrustIsParty', '_agrCounsel', 'docEstateAuthority', 'estateAuthority', 'jobOnProbateTrack', 'invProbateRows', '_agrEstateNoun', '_agrAuthorityTitle', '_agrCoRepRepresentation', '_agrCoSigners', 'jobFiduciaries', 'jobListEntries', '_agrClientCapacity', '_agrSignsAsTxt', '_agrCoSignerCaption', 'trustInstrumentTitle'].concat(TIER_FNS);
 const AGR_VARS = ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'AGR_NOT_AN_ACCOUNTING', '_PCT_WORDS', 'MATTER_TYPES', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'TIME_INCREMENT_TXT', 'SMF_PCT', 'DECEDENT_SERVICES',
                   'HAVELLIN_OFFICE_PHONE', 'DOC_SCOPES', 'ESIGN_ANCHORS', 'RUSH_PCT', 'ESTATE_AUTHORITIES', 'AGR_NO_PURCHASE'].concat(TIER_VARS);
 const agrCtx = () => sandbox({ fns: AGR_FNS, vars: AGR_VARS, stubs: { estimateStore: {}, currentEstimate: null } });
@@ -386,7 +386,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // §5.2 on each matter branch.
     const comp = (m, e) => c._agrProbateCompliance('full', ESTATE_JOB({ docTier: 'values', matterType: m }), e).join(' | ');
-    has(comp('probate', withArt), 'Havellin will coordinate the professional appraisals listed in Exhibit A (Art Appraiser) within the 60-day inventory deadline from Letters of Administration issuance. Any other appraisal is arranged by the estate attorney;',
+    has(comp('probate', withArt), 'Havellin will coordinate the professional appraisals listed in Exhibit A (Art Appraiser), planned to be completed ahead of the 60-day inventory deadline from the issuance of Letters of Administration. Any other appraisal is arranged by the estate attorney;',
         '§5.2, probate: the listed appraisals within the deadline, the rest counsel\'s');
     has(comp('trust', withArt), 'Any other appraisal is arranged by the trustee or their counsel;', 'trust: the trustee\'s counsel for the rest');
     has(comp('neither', withArt), 'Any other appraisal is arranged by the Client;', 'neither: the Client');

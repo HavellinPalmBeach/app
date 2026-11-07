@@ -159,7 +159,7 @@ const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', 
                  'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection', '_agrHasPrepVendors', 'estimateDocScope',
                  'docScopeDef', '_agrScopeServices', '_agrMidpointTrigger', '_agrProbateCompliance', 'esignAnchor',
                  'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', '_agrOtherAppraisalsBy',
-                 'prepFeeRate', 'estimateIsFeeOnly', 'estDeclutterHrs', 'coPrepVendorsOn', 'roundCents', 'fmtHrs', '_agrTrustIsParty', '_agrCounsel', 'docEstateAuthority', 'estateAuthority', 'jobOnProbateTrack', 'invProbateRows', '_agrEstateNoun', '_agrAuthorityTitle', '_agrCoRepRepresentation', '_agrCoSigners', 'jobFiduciaries', 'jobListEntries', '_agrClientCapacity', '_agrCoSignerCaption', 'trustInstrumentTitle'].concat(TIER_FNS);
+                 'prepFeeRate', 'estimateIsFeeOnly', 'estDeclutterHrs', 'coPrepVendorsOn', 'roundCents', 'fmtHrs', '_agrTrustIsParty', '_agrCounsel', 'docEstateAuthority', 'estateAuthority', 'jobOnProbateTrack', 'invProbateRows', '_agrEstateNoun', '_agrAuthorityTitle', '_agrCoRepRepresentation', '_agrCoSigners', 'jobFiduciaries', 'jobListEntries', '_agrClientCapacity', '_agrSignsAsTxt', '_agrCoSignerCaption', 'trustInstrumentTitle'].concat(TIER_FNS);
 const AGR_VARS = ['AGR_DEPOSIT_DUE_TXT', 'PREP_FEE_BASIS_TXT', 'PREP_FEE_BASIS_SHORT', 'PREP_FEE_ONE_TXT', 'AGR_NOT_AN_ACCOUNTING', '_PCT_WORDS', 'MATTER_TYPES', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'TIME_INCREMENT_TXT', 'SMF_PCT', 'DECEDENT_SERVICES',
                   'HAVELLIN_OFFICE_PHONE', 'DOC_SCOPES', 'ESIGN_ANCHORS', 'RUSH_PCT', 'PREP_FEE_RATE', 'ESTATE_AUTHORITIES', 'AGR_NO_PURCHASE'].concat(TIER_VARS);
 const agrCtx = () => sandbox({ fns: AGR_FNS, vars: AGR_VARS, stubs: { estimateStore: {}, currentEstimate: null } });
@@ -187,7 +187,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       prep: text(c.agreementHtml(LIVING_JOB({ svc: 'prep' }), EST_PREP)),
     };
     Object.keys(docs).forEach((k) => {
-      has(docs[k], '3.9 Payment Method. Payment may be made by ACH bank transfer through Contractor\'s secure payment link, by wire transfer, or by check payable to Havellin Palm Beach LLC.',
+      has(docs[k], '3.9 Payment Method. Payment may be made by ACH bank transfer through Contractor\'s secure payment link, by wire transfer, or by check payable to Havellin Palm Beach, LLC.',
           k + ': §3.9 names the three routes Anthony approved');
       lacks(docs[k], 'credit/debit', k + ': ⚠ and no longer offers a credit or debit card');
       ok(!/\bcards?\b/i.test(docs[k]), k + ': the word "card" appears nowhere on the living-client agreement');
@@ -247,12 +247,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const tm = text(c.probateAgreementHtml(ESTATE_JOB(), EST_ESTATE));
     const fx = text(c.probateAgreementHtml(ESTATE_JOB(), Object.assign({}, EST_ESTATE, { fixedPrice: true, fixedAmount: 40000, havellinTotal: 40000 })));
     lacks(tm, 'after project start', '⚠⚠ the undefined "after project start" is gone');
-    has(tm, 'The deposit is earned in full on signature of this Agreement and is not refundable. It is applied against the hours worked and materials used, and no part of it is returned where it exceeds them',
+    has(tm, 'The deposit is earned in full on signature of this Agreement and is not refundable. It is applied against the hours worked and any materials package delivered, and no part of it is returned where it exceeds them',
         'the deposit is earned at signature and applied against the hours, never returned above them');
-    has(tm, 'Where Havellin is in material breach of this Agreement and has not cured that breach within seven (7) days of the Client\'s written notice describing it, Havellin will refund any amount it holds above the hours worked and materials used through the date of that notice',
+    has(tm, 'Where Havellin is in material breach of this Agreement and has not cured that breach within seven (7) days of the Client\'s written notice describing it, Havellin will refund any amount it holds above the hours worked and any materials package delivered through the date of that notice',
         'the one exit, stated inline as the fixed arm states it');
-    has(tm, 'The Client is responsible for all hours worked and materials used through the termination date', 'the hours measure stays');
-    has(tm, 'A final invoice reflecting actual hours and materials will be issued within 10 business days of termination', 'and the final invoice bullet');
+    has(tm, 'The Client is responsible for all hours worked through the termination date, and for any materials package delivered to the property', 'the hours measure stays');
+    has(tm, 'A final invoice reflecting actual hours and any materials package delivered will be issued within 10 business days of termination', 'and the final invoice bullet');
     // The fixed arm, as it was.
     has(fx, 'The deposit is earned in full on signature of this Agreement and is not refundable. Seventy-five percent (75%) of the fixed fee',
         'the fixed arm is unchanged');
@@ -543,7 +543,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const fx = es(Object.assign({}, prepE, { fixedPrice: true, fixedAmount: 40000, prepFeeOnTop: true, havellinTotal: 43000 }));
     has(fx, 'on the home preparation vendors identified in Exhibit A or added by Change Order. Those vendors bill at cost', 'the fee row, fixed arm');
     has(fx, 'of the quotes recorded for the home preparation vendors identified in Exhibit A or added by Change Order, updated if a vendor’s invoice differs', 'and the Fixed Project Fee paragraph'); // RESTATED (P25, Q52): the fee is on the vendor quotes recorded
-    lacks(es(Object.assign({}, prepE, { fixedPrice: true, fixedAmount: 43000, havellinTotal: 43000 })), 'added by Change Order', 'an older inside-fee estate form keeps its words');
+    lacks(es(Object.assign({}, prepE, { fixedPrice: true, fixedAmount: 43000, havellinTotal: 43000 })), 'identified in Exhibit A or added by Change Order', 'an older inside-fee estate form keeps its words'); // RESTATED (2026-11-06): §2.1 now says the exclusions "cannot be added by Change Order", so the needle names the fee's own clause
   }
 
   group('⚠⚠ A3 — the estate form\'s §4.2 change-order form has a row for an added vendor, and stops saying "no charge" (lead)');

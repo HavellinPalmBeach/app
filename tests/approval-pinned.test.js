@@ -120,7 +120,8 @@ const ESTATE = (o) => Object.assign({
   probateAttyName: 'Ann Lowe', probateAttyFirm: 'Lowe & Co', probateAttyEmail: 'ann@lowe.law',
   driveFolder: 'https://drive.google.com/drive/folders/ROOT7',
   driveSubfolders: { 'Estate Inventory': 'INV7', 'As-Found Record': 'AF7', 'Signed Records': 'SR7' },
-  docState: {}, at: {}, updatedAt: T0, payments: [],
+  // Counsel has the inventory (2026-11-06, counsel first): the package confirmed sent, so a send here asks only what this file tests.
+  docState: { probatePackage: { sentAt: '2026-10-20T15:00:00.000Z' } }, at: {}, updatedAt: T0, payments: [],
 }, o || {});
 const EST = () => ({ approved: true, estimate: { jobId: 7, svc: 'probate', havellinTotal: 24000, rooms: [{ idx: 1, name: 'Study', st: 'in', vol: 3, cplx: 3 }], vendors: [] } });
 const ROW = (id, over) => Object.assign({

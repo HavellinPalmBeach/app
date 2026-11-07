@@ -429,7 +429,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const HC = tryE(() => run('home_cleanout'));
     const sH = sec(agr(HC, living), '3.3 Hourly and Project Rates.', '3.4 Third-Party Vendors.');
     ok(sH.length > 50, 'fixture: the hourly §3.3 is printed');
-    has(sH, 'All rates are inclusive of on-site project oversight, client liaison, and vendor coordination. ' + LINE, '⚠⚠ the standard form\'s hourly §3.3 says it, after the rates');
+    has(sH, 'These rates apply to on-site project oversight, client liaison, and vendor coordination. ' + LINE, '⚠⚠ the standard form\'s hourly §3.3 says it, after the rates');
     // Standard form, fixed fee: not a word of it.
     const HCF = tryE(() => run('home_cleanout', { seed: { 'e-fixed': { checked: true } } }));
     const aF = agr(HCF, living);
@@ -450,7 +450,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // Estate form: the IMPORTANT paragraph on the hourly arm; never on the fixed one.
     const ES = tryE(() => run('cleanout'));
     const eH = agr(ES, estate);
-    has(eH, 'IMPORTANT: Final billing reflects actual hours worked and materials used. ' + LINE + ' If actual hours are projected to exceed the estimate',
+    has(eH, 'IMPORTANT: Final billing reflects actual hours worked; any materials package is billed at its fixed price. ' + LINE + ' If actual hours are projected to exceed the estimate',
         '⚠⚠ the estate form\'s §3.2 says it on its hourly arm');
     const ESF = tryE(() => run('cleanout', { seed: { 'e-fixed': { checked: true } } }));
     const eF = agr(ESF, estate);

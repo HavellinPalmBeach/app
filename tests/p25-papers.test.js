@@ -94,7 +94,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(fx, 'Invoiced after the final property walk-through, completing the fixed price; due within 7 calendar days', 'a fixed price completes the fee after the walk-through');
     const pro = textOf(attempt(() => A.probateAgreementHtml(PROBATE(), Object.assign({}, EST_HR, { svc: 'probate' }))).val);
     has(pro, 'Due upon acceptance, on signing this Agreement — before any work begins', 'the estate form: the deposit upon acceptance');
-    has(pro, 'Invoiced after the final property walk-through, from the actual logged hours and the materials used', 'its final after the walk-through');
+    has(pro, 'Invoiced after the final property walk-through, from the actual logged hours and any materials package', 'its final after the walk-through');
     const ce = textOf(attempt(() => A.clientEstimateHtml(EST_HR, LIVING)).val);
     has(ce, '50% Deposit — Due upon acceptance', 'Exhibit A: the deposit upon acceptance');
     has(ce, '25% Final — Due after the final walk-through', '⚠ Exhibit A\'s final row says the same as the agreement');
@@ -134,7 +134,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const close = (ph) => ph.find((p) => /^Close-Out/.test(p.title)) || {};
     const before = (ph) => ph.find((p) => /Before/.test(p.title)) || {};
     const one = phases(PROBATE({ gate706: 'yes' }));
-    has(close(one).body, 'delivered to the estate attorney in time for the §733.604 filing; counsel serves and files it.', '⚠⚠ counsel serves and files');
+    has(close(one).body, 'The Personal Representative adopts it, and counsel serves and files it under §733.604; it is planned for delivery to counsel ahead of the 60-day filing.', '⚠⚠ counsel serves and files');
     lacks(close(one).body, 'served on interested parties and filed', 'never that Havellin serves and files');
     eq(close(one).title, 'Close-Out &amp; Court Inventory', 'the stage is the court inventory, not a court filing');
     has(before(one).body, 'we take direction from you alone and nothing is released to anyone without your written authority', 'one representative: you alone');

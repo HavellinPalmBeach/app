@@ -112,6 +112,7 @@ const EST = 8701;
         L('d1', Object.assign({ itemNo: 4, objectName: 'Grandfather clock', fmv: '2500', disposition: 'Distribute', channel: 'Daniel Butler' }, OK)),
         L('g1', Object.assign({ itemNo: 5, objectName: 'Shotgun', category: 'Firearms', serial: 'SN-1', fmv: '1200', disposition: 'Sell', channel: 'Kodner Galleries' }, OK)),
         L('f1', { itemNo: 6, objectName: 'Oil on canvas, signed', category: 'Art', fmv: '', disposition: 'Keep', apprId: 'ap1', apprDoc: 'Mary Whalen · Appraisals by the Sea' }),
+        L('j1', Object.assign({ itemNo: 7, objectName: 'Broken recliner', fmv: '', disposition: 'Junk', channel: 'Palm Beach Haulers' }, OK)),   // 2026-11-06: the hauler signs
       ];
       jobPlanStore[EST] = { rooms: { 1: { foundDone: { at: '2026-09-22', by: 'Ashley Jerome' } } }, tasks: {} };
       savePhotoRefs(EST);
@@ -224,6 +225,25 @@ const EST = 8701;
     });
 
     // ── E ───────────────────────────────────────────────────────────────────────
+    await section('F. the hauler (2026-11-06): the Disposal Record signed on the glass, with the ticket line; custody', async () => {
+      await toDesk();
+      has(await txt('#inv-releases'), 'Palm Beach Haulers · disposal · 1 line (#7)', '⚠ the hauler has a row');
+      const before = pdfs.length;
+      await signOut('disposal', 'Palm Beach Haulers');
+      ok(await modalOpen(), 'the dialog opens');
+      has(await txt('#ip-title'), 'Disposal Record — Palm Beach Haulers', 'named for the paper and the hauler');
+      await p.fill('#ip-signer', 'Rick Hauler');
+      await draw();
+      await press('#ip-sign-btn', 'Sign and file');
+      ok(await until(() => p.evaluate(() => document.getElementById('inv-pickup-modal').style.display === 'none')), 'filed: the dialog closes');
+      eq(pdfs.length, before + 1, 'one PDF made');
+      has(pdfs[pdfs.length - 1], 'Taken away for disposal or recycling by <strong>Palm Beach Haulers</strong>', 'the sheet names the hauler');
+      has(pdfs[pdfs.length - 1], 'The landfill, transfer station or recycling ticket for this load:', 'with the ticket line');
+      ok((await records()).some((r) => r[0] === 'disposal' && r[1] === 'Palm Beach Haulers' && r[2].join() === 'j1' && r[3] === 'Rick Hauler' && r[4] === true), '⚠⚠ recorded as a disposal record, signed on the glass');
+      const ev = ((await line('j1')).custodyLog || []).filter((e) => !e.deletedAt).map((e) => [e.action, e.party, e.method]);
+      eq(ev, [['Released', 'Palm Beach Haulers', 'Disposal']], 'a Released · Disposal custody event');
+    });
+
     await section('E. the dialog at 390; zero page errors', async () => {
       await toDesk();
       await p.setViewportSize({ width: 390, height: 844 }); await p.waitForTimeout(500);

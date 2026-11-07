@@ -49,8 +49,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const c = ctx(ESTATE);
     const t = c.agrReferralFeeTxt('Havellin');
     has(t, 'Havellin may receive a referral fee from a vendor it recommends.', 'the sentence that would otherwise be a lie');
-    has(t, 'paid by the vendor out of the vendor’s own commission or charges', 'who pays it');
-    has(t, 'never deducted from the Client’s proceeds, never added to the vendor’s invoice and never taken on a firearm', 'what it never is');
+    has(t, 'paid by the vendor from its own revenue', 'who pays it');
+    has(t, 'it does not increase the commission or charges the Client pays, it is never added to the vendor’s invoice, and none is received on the sale of a firearm', 'what it never is');
     has(t, 'The Client may engage any vendor of the Client’s choosing.', 'the client is free to choose');
     has(t, 'the Estimate says so on that vendor’s line and the close-out record of sales names the vendor', 'where the selling vendors are named');
     eq(c.agrReferralFeeTxt('Contractor').indexOf('Contractor may receive'), 0, 'the standard form’s party');
@@ -80,7 +80,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const h = inEastern(() => ctx(ESTATE).clientEstimateHtml(e, ESTATE));
     const t = text(h);
     eq((h.match(/Havellin may receive a referral fee from this vendor/g) || []).length, 3, 'three selling rows, three notes');
-    has(t, 'Auction House Havellin may receive a referral fee from this vendor, paid out of the vendor’s own commission and never from your proceeds.', 'under the auction house');
+    has(t, 'Auction House Havellin may receive a referral fee from this vendor, paid from the vendor’s own revenue; it does not increase the vendor’s commission or charges to you.', 'under the auction house');
     has(t, 'Online Auction House Havellin may receive a referral fee', 'the online auction house');
     has(t, 'Estate Sale Company Havellin may receive a referral fee', 'the estate sale company');
     lacks(t, 'Junk Removal / Hauling Havellin may receive', '⚠ never on the hauler (the $20 a garbage hauler pays is the general sentence’s)');
@@ -123,6 +123,6 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq((LIVE.match(/take no share of the proceeds of its sale/g) || []).length, 0, '⚠⚠ nothing a client reads says "no share of the proceeds of its sale" any more');
     has(fn('collectionsDispositionNote'), "less any fees the partner charges.' + CE_REFERRAL_SHORT", 'the estimate’s disposal sentence carries the short form');
     has(SRC, "less whatever fee that partner charges.' + CE_REFERRAL_SHORT", 'and the email’s');
-    eq(ctx().CE_REFERRAL_SHORT, ' Where that partner pays Havellin a referral fee, it comes out of the partner’s fee, not your proceeds.', 'the short form');
+    eq(ctx().CE_REFERRAL_SHORT, ' Where that partner pays Havellin a referral fee, it is paid from the partner’s own revenue and does not increase its fee to you.', 'the short form');
   }
 };

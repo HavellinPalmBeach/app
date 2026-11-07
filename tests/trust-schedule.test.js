@@ -445,7 +445,7 @@ module.exports = ({ group, ok, eq, has, lacks }) => {
          sc + ': an explicit probate answer reads exactly as no answer at all');
     });
     eq(c._agrComplianceHeading(mj('probate')), c._agrComplianceHeading(undefined), 'and so does the heading');
-    has(c._agrComplianceHeading(undefined), 'Florida Probate Compliance', 'which is the wording it has always had');
+    has(c._agrComplianceHeading(undefined), 'Working with the Estate Attorney', 'an unanswered matter reads as probate (RESTATED 2026-11-07: never a compliance service)');
 
     // ── The defect. A trust matter signed a contract promising a §733.604 inventory and
     //    appraisals "within the 60-day inventory deadline from Letters of Administration
@@ -456,7 +456,7 @@ module.exports = ({ group, ok, eq, has, lacks }) => {
     lacks(comp('full', 'trust'), 'Personal Representative', 'and no personal representative anywhere in it');
     has(comp('full', 'trust'), 'held by the trust', 'it is promised a schedule of trust property');
     has(comp('full', 'trust'), 'carrying value', 'stated at the carrying value the accounting opens with');
-    has(c._agrComplianceHeading(mj('trust')), 'Trust Administration', 'under a heading that names the instrument');
+    has(c._agrComplianceHeading(mj('trust')), 'Working with the Trustee', 'under a heading that names the trustee (RESTATED 2026-11-07)');
     has(c._agrComplianceLead(mj('trust')), 'successor trustee', 'and a lead that names who we support');
 
     // ⚠⚠ THE BOUNDARY IS IN THE CONTRACT, NOT ONLY ON THE DOCUMENT. The engagement is what a
@@ -471,7 +471,7 @@ module.exports = ({ group, ok, eq, has, lacks }) => {
     has(comp('full', 'both'), '733.604', 'a pour-over matter keeps the probate inventory clause');
     has(comp('full', 'both'), 'does not prepare trust accountings', 'and gains the trust boundary beside it');
     has(comp('full', 'both'), 'scheduled separately for the successor trustee', 'naming where the trust half goes');
-    has(c._agrComplianceHeading(mj('both')), 'Probate', 'with a heading naming both');
+    has(c._agrComplianceHeading(mj('both')), 'the Estate Attorney and the Trustee', 'with a heading naming both (RESTATED 2026-11-07)');
     has(c._agrComplianceHeading(mj('both')), 'Trust', 'sides of it');
 
     // ── `neither`: no court, no trust, and the section KEEPS ITS NUMBER. Removing a numbered
@@ -491,7 +491,7 @@ module.exports = ({ group, ok, eq, has, lacks }) => {
     eq(c._agrApprover(mj('both')), 'Personal Representative or successor trustee', 'both: either may');
     eq(c._agrApprover(mj('neither')), 'Client', 'neither: the client does');
     eq(c._agrApprover(undefined), 'Personal Representative', 'and an unanswered matter is unchanged');
-    has(c._agrScopeServices('full', mj('trust')), 'authorized by the successor trustee',
+    has(c._agrScopeServices('full', mj('trust')), 'as directed by the successor trustee',  // RESTATED 2026-11-06 (A21)
         'the scope paragraph names the trustee too');
     eq(c._agrScopeServices('full', mj('probate')), c._agrScopeServices('full', undefined),
        'and is byte-identical on probate and an unanswered matter');

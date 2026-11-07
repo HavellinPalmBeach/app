@@ -283,12 +283,12 @@ const HOUSE = ['Living Room', 'Kitchen', 'Dining Room', 'Family Room / Great Roo
       };
       const hourly = await priced(5306, 'home_cleanout', false);
       has(hourly, '3.3 Hourly and Project Rates.', 'fixture: the standard form\'s hourly §3.3');
-      has(hourly, 'All rates are inclusive of on-site project oversight, client liaison, and vendor coordination. ' + LINE, '⚠⚠ which says time is billed in half-hour increments, as worked');
+      has(hourly, 'These rates apply to on-site project oversight, client liaison, and vendor coordination. ' + LINE, '⚠⚠ which says time is billed in half-hour increments, as worked');
       const fixedA = await priced(5307, 'home_cleanout', true);
       has(fixedA, '3.3 Fixed Project Fee.', 'fixture: the standard form\'s fixed-fee §3.3');
       lacks(fixedA, 'half-hour increments', '⚠⚠ and a fixed fee, which bills no time, never says it');
       const estate = await priced(5308, 'cleanout', false);
-      has(estate, 'IMPORTANT: Final billing reflects actual hours worked and materials used. ' + LINE, '⚠⚠ the estate form\'s §3.2 says it on an hourly engagement');
+      has(estate, 'IMPORTANT: Final billing reflects actual hours worked; any materials package is billed at its fixed price. ' + LINE, '⚠⚠ the estate form\'s §3.2 says it on an hourly engagement');
     });
 
     // ── F. overflow, and errors ───────────────────────────────────────────────────────────────────────

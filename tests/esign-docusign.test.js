@@ -102,7 +102,7 @@ const AGR_FNS = ['docServiceTitle', 'probateSvcOffTrack', 'jobOnProbateTrack', '
                  '_agrHasPrepVendors', 'estimateDocScope', 'svcHasDocStep', 'docScopeDef',
                  '_agrScopeServices', '_agrMidpointTrigger', '_agrProbateCompliance',
                  'estTolerancePctTxt', 'esignAnchorsPresent', 'estFixedFee', 'estPrepFeeOnTop',
-                 'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', '_agrOtherAppraisalsBy', 'coPrepVendorsOn', 'roundCents', 'fmtHrs', '_agrTrustIsParty', '_agrCounsel', 'docEstateAuthority', 'invProbateRows', '_agrEstateNoun', '_agrAuthorityTitle', '_agrCoRepRepresentation', '_agrCoSigners', 'jobFiduciaries', 'jobListEntries', '_agrClientCapacity', '_agrCoSignerCaption', 'esignCoSignerAnchors', 'esignCoSignerTop'];
+                 'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', '_agrOtherAppraisalsBy', 'coPrepVendorsOn', 'roundCents', 'fmtHrs', '_agrTrustIsParty', '_agrCounsel', 'docEstateAuthority', 'invProbateRows', '_agrEstateNoun', '_agrAuthorityTitle', '_agrCoRepRepresentation', '_agrCoSigners', 'jobFiduciaries', 'jobListEntries', '_agrClientCapacity', '_agrSignsAsTxt', '_agrCoSignerCaption', 'esignCoSignerAnchors', 'esignCoSignerTop'];
 const AGR_VARS = ['PREP_FEE_BASIS_SHORT', 'AGR_DEPOSIT_DUE_TXT', 'AGR_NOT_AN_ACCOUNTING', 'MATTER_TYPES', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'TIME_INCREMENT_TXT', 'SMF_PCT', 'DECEDENT_SERVICES', 'HAVELLIN_OFFICE_PHONE', 'JOB_STEPS', 'DOC_SCOPES', 'ESIGN_ANCHORS',
                   'ESIGN_REQUIRED_ANCHORS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'RUSH_PCT', 'ESTATE_AUTHORITIES', 'AGR_NO_PURCHASE', 'ESIGN_COSIGNER_ANCHOR'];
 const appCtx = () => sandbox({ fns: AGR_FNS, vars: AGR_VARS, stubs: { estimateStore: {}, currentEstimate: null } });
@@ -1276,10 +1276,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // are worth nothing if a vendor on the matter is not bound, and the temptation to publish
     // arrives after the engagement rather than during it. It is on BOTH forms now; the living-client
     // form never had it at all.
-    ['bind Havellin&rsquo;s personnel and any vendor engaged on this matter'].forEach(function (n) {
+    ['bind Havellin&rsquo;s personnel, Havellin will require the vendors it engages on this matter to observe them'].forEach(function (n) {
       has(pro, n, '⚠ the estate form binds its vendors');
     });
-    has(std, 'bind Contractor&rsquo;s personnel and any vendor engaged on this matter',
+    has(std, 'bind Contractor&rsquo;s personnel, Contractor will require the vendors it engages on this matter to observe them',
         '⚠⚠ and so does the living-client form, which never carried this before');
     [std, pro].forEach(function (doc, i) {
       has(doc, 'survive completion or termination of this Agreement',

@@ -145,12 +145,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // The estimate is attached to this agreement as Exhibit A and the estate form says the
     // agreement is not valid without it. On a prep job the two named DIFFERENT triggers for
     // the same 25%: the estimate "once the vendor schedule is booked", the agreement
-    // "approximately 50% of scope is complete" — an event the estimate's own comment says
+    // "the earliest of the halfway point of the working days planned in Exhibit A, half of the work in scope complete, or every room in scope sorted and documented" — an event the estimate's own comment says
     // does not exist on that engagement.
     const prep = agrDoc('prep');
     has(prep, 'Due once the vendor schedule is booked',
       '⚠⚠ the agreement bills the second 25% on the event the estimate names');
-    lacks(prep, 'approximately 50% of scope is complete',
+    lacks(prep, 'the earliest of the halfway point of the working days planned in Exhibit A, half of the work in scope complete, or every room in scope sorted and documented',
       '…and not on a project midpoint prep does not have');
     has(prep, 'Due at handover of the finished work on the property', 'and the final on the handover');
     // The estimate's own wording, so the two cannot drift apart unnoticed.
@@ -163,7 +163,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // An ordinary job keeps the midpoint it really has.
     const tm = agrDoc('downsizing');
     has(tm, 'Midpoint Payment (25%)', 'an ordinary job still has a midpoint row');
-    has(tm, 'approximately 50% of scope is complete', '…billed on the scope midpoint');
+    has(tm, 'the earliest of the halfway point of the working days planned in Exhibit A, half of the work in scope complete, or every room in scope sorted and documented', '…billed on the scope midpoint');
   }
 
   group('⚠ A CHANGE ORDER CANNOT CARRY A COST, SO NO CLAUSE SAYS IT DOES');

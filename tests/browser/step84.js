@@ -136,14 +136,19 @@ const EST = 8401;
       ok(await vis('#inv-releases button[onclick="sendApprovalRequest(' + EST + ')"]'), '⚠ and it is on screen: the Releases bar opened by itself while the request is owed');
       ok(await vis('#inv-workbar button[onclick="printApprovalRequest(' + EST + ')"]'), 'Approval Request (the print) still on the work bar');
       eq(await p.locator('#inv-releases button[onclick^="invMarkRequestSent("]').count(), 0, 'no confirming tap with nothing drafted');
+      // Counsel first (2026-11-06): the attorney has neither the probate package nor the folders, so the card says so, in amber.
+      has(card, 'Counsel has not been sent the inventory yet: the agreement says nothing leaves until the representative and Ann Lowe have read it.', '⚠ counsel first, on the card');
+      has(card, 'Send the probate package from the Probate card', 'with the way round');
     });
 
     // ── B ───────────────────────────────────────────────────────────────────
     await section('B. Send request, pressed: filed dated, the PDF, the draft, the record, the card waiting on its tap', async () => {
       const before = posts.length;
       await openBar('releases', EST);
+      const dlg0 = dialogs.length;
       await press('#inv-releases button[onclick="sendApprovalRequest(' + EST + ')"]', 'Send request (the card\'s)');
       await p.waitForTimeout(1500);
+      ok(dialogs.slice(dlg0).some((d) => /^confirm: [\s\S]*Counsel has not been sent the inventory yet/.test(d)), '⚠⚠ counsel first: the send asks once (OK pressed here, so it goes)');
       const mine = posts.slice(before);
       const up = mine.find((x) => x.action === 'uploadHtml');
       ok(!!up, 'the request was filed to Drive');

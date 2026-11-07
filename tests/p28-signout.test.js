@@ -108,7 +108,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     eq(k({ disposition: 'Sell', channel: 'Jane Buyer' }), 'pickup', 'a buyer too');
     eq(k({ disposition: 'Donate', channel: 'Goodwill' }), 'donation', 'a named donation: the charity\'s receipt');
     eq(k({ disposition: 'Distribute', channel: 'Daniel Adler (son)' }), 'receipt', 'to a person on an estate: the beneficiary\'s receipt');
-    eq(k({ disposition: 'Junk', channel: 'Haul Co' }), '', 'a removal: nobody signs for junk');
+    // RESTATED 2026-11-06 (Anthony approved the disposal record, off the estate reference): the hauler signs, as a charity does.
+    eq(k({ disposition: 'Junk', channel: 'Haul Co' }), 'disposal', 'a removal with a hauler named: the hauler signs the disposal record');
+    eq(k({ disposition: 'Junk', channel: '' }), '', 'and with nobody named, nothing to sign yet');
     eq(k({ disposition: 'Keep' }), '', 'a kept line leaves with nobody');
     eq(k({ disposition: 'Auction', channel: '' }), '', 'no taker named: nothing to sign');
     eq(k({ disposition: 'Auction', channel: 'Kodner', category: 'Firearms', serial: 'S1' }), '', '⚠⚠ a firearm never: the protocol');
@@ -307,7 +309,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(noComments(decl('SIGNED_RECORD_KINDS')), "appraisal_out:  { label: 'Appraisal hand-off list' }", 'the hand-off kind');
     has(noComments(decl('SIGNED_RECORD_KINDS')), "appraisal_back: { label: 'Appraisal items returned' }", 'the return kind');
     has(noComments(fn('fileSignedCopy')), 'glass: !!meta.glass', 'the filer records a signature on the glass');
-    has(noComments(fn('voidSignedRecord')), "rec.kind === 'pickup' || rec.kind === 'appraisal_out' || rec.kind === 'appraisal_back'", 'a void of any of the three takes its custody events');
+    // RESTATED 2026-11-06: the hauler's disposal record writes custody events too, so its void takes them off.
+    has(noComments(fn('voidSignedRecord')), "rec.kind === 'pickup' || rec.kind === 'disposal' || rec.kind === 'appraisal_out' || rec.kind === 'appraisal_back'", 'a void of any of the four takes its custody events');
     eq(readers('_signoutRecordCustody'), ['_signoutAfterFile', 'pickupRecordCustody'], 'the one custody writer: the dialog and P22\'s vendor call');
     // RESTATED 2026-10-28 (P12): the close asks through the one list of what it leaves open (closeReadiness).
     eq(readers('invOutForAppraisal'), ['_renderInvRow', 'closeReadiness', 'deskFoldState', 'printAppraisalWorklist', 'signoutCovered', 'signoutGroups'],
@@ -326,4 +329,37 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     });
     has(fs.readFileSync(path.join(root, 'COUNSEL_REVIEW_BUNDLE.md'), 'utf8'), 'D17.', 'the sheet\'s words are in the counsel bundle');
   });
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // THE HAULER SIGNS (2026-11-06; Anthony approved, off the estate reference and a Florida probate inventory report: disposal
+  // manifests are a floor item, and the September reference promised them). A Junk line with a hauler named signs out like a
+  // charity's, the sheet leaving a space for the landfill or recycling ticket; filed, the line is gone; the close names what has none.
+  G('9 · the disposal record: the hauler\'s group, the sheet with the ticket line, gone once filed, and the close', () => {
+    const lines = [LINE('j1', 1, Object.assign({ disposition: 'Junk', channel: 'Palm Beach Haulers' }, OK)),
+      LINE('j2', 2, { disposition: 'Junk', channel: 'palm beach haulers' }),
+      LINE('j3', 3, Object.assign({ disposition: 'Junk', channel: '' }, OK))];
+    const job = TRUSTJ();
+    const c = rig(job, lines);
+    const gs = c.signoutGroups(job, lines);
+    eq(gs.map((g) => [g.kind, g.taker, g.ready.map((r) => r.stableId), g.waiting.map((r) => r.stableId)]), [['disposal', 'Palm Beach Haulers', ['j1'], ['j2']]],
+      '⚠⚠ one group for the hauler; the line not yet approved in writing waits, as any estate line leaving does; nobody named, no group');
+    const paper = text(inEastern(() => c.signoutSheetHtml(job, gs[0], [lines[0]], null)));
+    has(paper, 'Disposal Record', 'titled');
+    has(paper, 'Taken away for disposal or recycling by Palm Beach Haulers', 'naming the hauler');
+    has(paper, 'to dispose of or recycle them lawfully', 'with its acknowledgement');
+    has(paper, 'The landfill, transfer station or recycling ticket for this load:', 'and the line for the ticket');
+    eq(c.SIGNED_RECORD_KINDS.disposal.label, 'Signed disposal record', 'filed under its own kind');
+    eq(c.invRecordedGone(lines[0], job), false, 'not gone before it is signed for');
+    job.signedRecords.push({ id: 'd1', kind: 'disposal', ref: 'Palm Beach Haulers', stableIds: ['j1'], fileUrl: 'https://drive/d', filedAt: NOW });
+    eq(c.invRecordedGone(lines[0], job), true, '⚠ gone once the hauler\'s record is filed');
+    eq(c.signoutGroups(job, lines)[0].done.map((r) => r.stableId), ['j1'], 'and done on its group');
+    const R = c.closeReadiness(job.id, job, lines, { today: '2026-10-18', evenUnread: true });
+    const it = (R.items || []).filter((x) => x.key === 'disposal')[0];
+    ok(!!it, '⚠⚠ the close names the disposed lines with no record');
+    eq(it && it.n, 2, 'the two not yet covered (#2, waiting on its approval, and #3, nobody named)');
+    has(it && it.long, 'the hauler signs out on the iPad, or file a photograph of the ticket', 'and says how to answer it');
+    lines[2].receiptDoc = 'Ticket 44812, Solid Waste Authority';
+    eq(((c.closeReadiness(job.id, job, lines, { today: '2026-10-18', evenUnread: true }).items || []).filter((x) => x.key === 'disposal')[0] || {}).n, 1, 'a ticket typed on the line answers it too');
+  });
+
 };

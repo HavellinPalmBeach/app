@@ -306,9 +306,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       noDraftToConfirm: 'the confirming tap\'s refusal',
       estatePackageOrphanDraftNote: 'a package draft named where the card was, once there is none (P22)',
       estateDeliveryLine: 'the desk\'s line that the instrument and the ledger reached counsel or the trustee (P25, Q43)',
+      counselInventoryGap: 'counsel first: the release request asks while counsel has not been sent the inventory (2026-11-06)',
     };
     eq(readers('estatePackageRoute'), Object.keys(ROUTE_READERS).sort(), '⚠⚠ estatePackageRoute is read by exactly these');
-    eq(readers('probatePackageAddressee'), ['_pkgGreeting', 'probatePackageBlocker', 'probatePackageCardHtml', 'probatePackageRecipients'],
+    // RESTATED 2026-11-06: counsel first asks whom the package goes to, so it asks only where that is the attorney.
+    eq(readers('probatePackageAddressee'), ['_pkgGreeting', 'counselInventoryGap', 'probatePackageBlocker', 'probatePackageCardHtml', 'probatePackageRecipients'],
        '⚠ and whom it goes to by exactly these, so the To: line, the greeting, the refusal and the card name one person');
     // No second copy of the rule: every route comes out of the predicate. The catalogue itself is read by the predicate,
     // and by the off-route refusal alone, which names both cards because there is no route to name.

@@ -20,7 +20,7 @@
 // Driven through the real functions; the store and the network are stubbed by name.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const { sandbox, source, fn, domStub } = require('./harness');
+const { sandbox, source, fn, decl, domStub } = require('./harness');
 const DOCREC = require('./document-reconciliation.test.js');
 
 const SRC = source();
@@ -130,11 +130,12 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       ['2026-CP-001234', 'carrying the recorded case'],
       ['>Court</td>', 'the court row'],
       ['Estate Attorney</td>', 'the attorney is the estate attorney'],
-      ['the following are excluded from all Havellin engagements: legal representation or probate court filings (handled by estate attorney);', '§2.1'],
+      // RESTATED 2026-11-06: these exclusions can never be added by Change Order.
+      ['The following are outside every Havellin engagement and cannot be added by Change Order: legal advice, legal representation or probate court filings (the estate attorney\'s);', '§2.1'],
       ['remains the responsibility of the Client and the estate attorney, who receive Havellin\'s list of the items it believes warrant one.', '§2 at the values tier'],
       ['Vendors bill the estate directly at cost.', '§3.1\'s vendors row'],
       ['Section 5 &middot; Authority, Probate &amp; Legal Compliance', 'Section 5\'s title'],
-      ['take the following actions on behalf of the estate, subject to the written approval thresholds below', '§5.3\'s lead'],
+      ['carry out the following at the direction of the Personal Representative, subject to the approvals below', '§5.3\'s lead (RESTATED 2026-11-07: at the direction of, never on behalf of)'],
       ['Notify Client / Personal Representative within 24 hours of discovery', '§6.3'],
       ['it is how the estate is accounted for.', '§7.1, the photographs'],
       ['to anyone the Personal Representative authorizes in writing — counsel, the appraiser, the court. It is retained', '§7.1, who may see them'],
@@ -143,7 +144,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       ['Responsibility for the estate&rsquo;s inventory, accounting and distributions rests with the Personal Representative and counsel.', '§7.1, whose the inventory is'],
       ['not employees of the Client or the estate.', '§10'],
       ['margin-bottom:10px;">Client / Personal Representative</div>', 'the signature page\'s heading'],
-      ['(if applicable — second beneficiary or co-PR)', 'and the co-signer\'s caption'],
+      ['(if applicable — co-personal representative)', 'and the co-signer\'s caption (RESTATED 2026-11-06: never a beneficiary)'],
     ].forEach(([words, where]) => has(blank, words, '⚠ unanswered, ' + where + ': ' + words.slice(0, 70)));
     eq(count(blank, 'Client / Personal Representative'), 2, 'the capacity is printed twice, §6.3 and the signature page, as before');
     // What P19 adds to every estate form, the unanswered one included (Anthony's call 6, and the ledger W5 makes signable).
@@ -180,10 +181,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(h, 'Estate Attorney', 'not the estate attorney');
     lacks(t.toLowerCase(), 'estate attorney', 'and no clause anywhere names an estate attorney (§2 and §2.1 included)');
     has(t, 'remains the responsibility of the Client and their counsel, who receive Havellin\'s list of the items it believes warrant one.', '§2 names the trustee\'s counsel');
-    has(t, 'legal representation or court filings (handled by the trustee\'s counsel)', '§2.1 likewise');
+    has(t, 'legal advice, legal representation or court filings (the trustee\'s counsel\'s)', '§2.1 likewise');
     has(t, 'Vendors bill the trust directly at cost.', '§3.1: the trust pays the vendors');
     has(h, 'Section 5 &middot; Authority, Trust &amp; Legal Compliance', 'Section 5\'s title names the trust, not probate');
-    has(t, 'take the following actions on behalf of the trust, subject to', '§5.3 acts for the trust');
+    has(t, 'carry out the following at the direction of the successor trustee, subject to', '§5.3 acts at the trustee\'s direction (RESTATED 2026-11-07)');
     has(t, 'Notify Client / successor trustee within 24 hours of discovery', '⚠⚠ §6.3 notifies the successor trustee');
     has(t, 'it is how the trust is accounted for.', '§7.1: the photographs account for the trust');
     has(t, 'to anyone the successor trustee authorizes in writing — counsel, the appraiser. It is retained', '⚠⚠ §7.1: the trustee authorizes, and no court is named');
@@ -192,11 +193,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(t, 'Responsibility for the trust’s inventory, accounting and distributions rests with the successor trustee and counsel.', 'the trust\'s inventory and accounting are the trustee\'s');
     has(t, 'not employees of the Client or the trust.', '§10');
     has(h, 'margin-bottom:10px;">Client / successor trustee</div>', '⚠⚠ the signature page is headed Client / successor trustee');
-    has(h, '(if applicable — second beneficiary or co-trustee)', '⚠⚠ the blank co-signer is a co-trustee');
+    has(h, '(if applicable — co-trustee)', '⚠⚠ the blank co-signer is a co-trustee');
     lacks(h, 'co-PR', 'never a co-PR');
     // The one "Personal Representative" left is §5.1's conditional rep ("If acting as …"), never false on a trust.
-    eq(count(t, 'Personal Representative'), 1, '⚠ "Personal Representative" survives once, in a conditional representation');
-    has(t, 'If acting as Personal Representative or Executor, the Client has been duly appointed by the probate court', 'and it is that one');
+    eq(count(t, 'Personal Representative'), 0, '⚠ "Personal Representative" is not on a trust\'s form (RESTATED 2026-11-07: the conditional representation reads in lower case)');
+    has(t, 'If acting as personal representative (executor): where already appointed, the Client holds Letters of Administration', 'and the one conditional representation');
     lacks(t, 'Client / Personal Representative', 'never as the Client\'s capacity');
     // Missing halves of the trust are lines to complete; a name beginning "The" is not given a second; text is escaped.
     has(agr(JOB('trust')), '<strong>_______________________________________________, dated ____________________</strong>', 'nothing recorded: two lines to complete');
@@ -230,7 +231,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(b, 'Section 5 &middot; Authority, Probate, Trust &amp; Legal Compliance', 'Section 5 names both');
     has(bt, 'Notify Client / Personal Representative or successor trustee within 24 hours', '§6.3 names either');
     has(b, 'margin-bottom:10px;">Client / Personal Representative or successor trustee</div>', 'and the signature page');
-    has(b, '(if applicable — second beneficiary, co-PR or co-trustee)', 'the blank co-signer may be either');
+    has(b, '(if applicable — co-personal representative or co-trustee)', 'the blank co-signer may be either');
     has(bt, 'Vendors bill the estate directly at cost.', 'and the estate pays the vendors, as before');
     has(bt, 'counsel, the appraiser, the court. It is retained', 'with a court to authorize');
 
@@ -244,7 +245,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(n, '>Attorney</td>', '⚠ the attorney row is plain "Attorney"');
     lacks(n, 'Estate Attorney', 'not the estate attorney');
     has(nt, 'remains the responsibility of the Client and their advisers', '§2 names the Client\'s advisers, as §5.2 does');
-    has(nt, 'legal representation or court filings (handled by the Client\'s own counsel)', '§2.1');
+    has(nt, 'legal advice, legal representation or court filings (the Client\'s own counsel\'s)', '§2.1');
     // §2 on every tier and with an appraiser on the estimate: who else carries the inventory and the other appraisals.
     const scope = (m, sc, vendors) => text(agr(JOB(m), EST({ docScope: sc, docTier: sc === 'capture' ? 'contents' : sc === 'none' ? 'none' : 'values', vendors: vendors || [] })));
     const ART = [{ type: 'Art Appraiser', cost: 1500 }];
@@ -263,7 +264,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(n, 'margin-bottom:10px;">Client</div>', '⚠⚠ the signature page is headed "Client"');
     lacks(n, 'Client / Client', '⚠⚠ never "Client / Client"');
     has(nt, 'anyone the Client authorizes in writing — counsel, the appraiser. It is retained', '§7.1: the Client authorizes, no court');
-    has(n, '(if applicable — second beneficiary)', 'the blank co-signer is a second beneficiary');
+    has(n, '(if applicable — co-representative)', 'the blank co-signer is a co-representative, never a beneficiary');
     lacks(nt, 'Client / Personal Representative', 'and no personal representative is the Client\'s capacity');
   }
 
@@ -352,8 +353,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const s = (m) => phaseText(P[m]);
     ok(P.trust.length >= 4 && P.trust[0].title === 'Before We Start', 'fixture: the real stages rendered (' + P.trust.length + ')');
     // The paper.
-    const LETTERS_NEED = 'a certified copy of the Letters of Administration or Testamentary, with any limits on that authority noted in writing. If particular items are designated to particular people, we need that list from you or from counsel before anything is handled — we do not need the will itself.';
-    const LETTERS_BODY = 'We also confirm authority: a certified copy of the Letters of Administration or Testamentary on file, the scope and any limits of that authority noted in writing, and a direct channel opened with your estate attorney.';
+    const LETTERS_NEED = 'a certified copy of the Letters of Administration, with any limits on that authority noted in writing. If particular items are designated to particular people, we need that list from you or from counsel before anything is handled — we do not need the will itself.';
+    const LETTERS_BODY = 'We also confirm authority: a certified copy of the Letters of Administration on file, the scope and any limits of that authority noted in writing, and a direct channel opened with your estate attorney.';
     ['', 'probate', 'both'].forEach((m) => {
       has(P[m][0].need, LETTERS_NEED, (m || 'unanswered') + ': the Letters, as before');
       has(P[m][0].body, LETTERS_BODY, (m || 'unanswered') + ': confirmed as before');
@@ -374,7 +375,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     MATTERS.forEach((m) => has(done3(m), 'a signed receipt is held for every item released to a beneficiary', (m || 'unanswered') + ': the signed-receipt promise stays (W3 makes it true)'));
     // Exempt property is a probate claim.
     ['', 'probate', 'both'].forEach((m) => {
-      has(s(m), 'property that may be claimed as exempt is flagged for your attention', (m || 'unanswered') + ': exempt property flagged, as before');
+      has(s(m), 'items you or counsel identify as exempt property are recorded separately', (m || 'unanswered') + ': exempt property recorded as identified (RESTATED 2026-11-07)');
       has(s(m), 'property claimed as exempt is set aside', (m || 'unanswered') + ': and set aside');
     });
     ['trust', 'neither'].forEach((m) => lacks(s(m), 'exempt', '⚠ ' + m + ': no exempt-property claim off the probate track'));
@@ -390,7 +391,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // An estimate drawn before any client is bound (no job) still writes to an estate, in the probate words.
     const jobless = inEastern(() => attempt(() => JSON.stringify(docCtx()._cePhases(EST({ svc: 'probate' }), undefined))));
     has(jobless, 'and any proceeds are routed to the estate account.', '⚠ no job: the estate account, never the client\'s');
-    has(jobless, 'a certified copy of the Letters of Administration or Testamentary', 'and the Letters');
+    has(jobless, 'a certified copy of the Letters of Administration', 'and the Letters');
     // ⚠ The safe direction, stage by stage: an unanswered matter reads exactly as probate.
     eq(s(''), s('probate'), '⚠⚠ an unanswered matter\'s stages equal the probate ones, word for word');
   }
@@ -407,7 +408,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // serves and files it. It promised "the whole package served on interested parties and filed within the statutory
     // deadline" and called the stage "Court Filing", while the agreement's §2.1 excludes court filings.
     eq(close(pro).title, 'Close-Out &amp; Court Inventory', 'fixture: an unanswered Probate service closes with the court inventory');
-    has(close(pro).body, 'delivered to the estate attorney in time for the §733.604 filing; counsel serves and files it.', 'and delivers it to counsel for the filing');
+    has(close(pro).body, 'The Personal Representative adopts it, and counsel serves and files it under §733.604; it is planned for delivery to counsel ahead of the 60-day filing.', 'and delivers it to counsel for the filing (RESTATED 2026-11-07)');
     lacks(close(pro).body, 'served on interested parties', '⚠⚠ never that Havellin serves or files');
     has(JSON.stringify(close(pro).receive), 'A verified inventory to the standard the court requires', 'to the court\'s standard');
     has(close(pro).done, 'the inventory is delivered to the estate attorney for filing', 'and calls it done once delivered for filing');
@@ -437,7 +438,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(tr, 'the successor trustee’s Certification of Trust, with any limits on the trustee’s powers noted in writing', '⚠⚠ the trustee\'s estimate asks for the Certification');
     has(tr, 'routed to the trust account', 'and routes proceeds to the trust');
     lacks(tr, 'Letters of Administration', 'and never asks for Letters');
-    has(un, 'a certified copy of the Letters of Administration or Testamentary, with any limits on that authority noted in writing', 'an unanswered matter\'s estimate is unchanged');
+    has(un, 'a certified copy of the Letters of Administration, with any limits on that authority noted in writing', 'an unanswered matter\'s estimate is unchanged');
     has(tr, 'Sign-off on the Disposition Ledger, the final record of where every item went.', 'both name the Disposition Ledger');
   }
 
@@ -564,15 +565,16 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // read too (they billed the decedent), so the namer's reader there is docPartyIdent; the beneficiary's receipt
     // names the trust through it too (invReceiptFrom).
     // RESTATED (2026-10-10): the Trust Schedule asks the title a third time, to print its own trust line only where the head does not already carry it.
-    eq(readers('trustInstrumentTitle'), { _agrTrusteeRepresentation: 1, docPartyIdent: 1, invReceiptFrom: 1, printTrustSchedule: 3, probateAgreementHtml: 2 },  // P22 E: §5.1's dated acceptance
+    eq(readers('trustInstrumentTitle'), { _agrTrusteeRepresentation: 1, docPartyIdent: 1, invReceiptFrom: 1, printTrustSchedule: 3, probateAgreementHtml: 4 },  // P22 E: §5.1's dated acceptance
        'the trust\'s namer: the agreement\'s two rows, the schedule\'s header and the client estimate\'s identity line');
     // P12 (2026-10-28): the signed schedules' card asks who signs, to name who has signed the copies filed.
     eq(readers('scheduleSigners'), { printCourtInventory: 2, printTrustSchedule: 2, signedScheduleRows: 1 }, 'who signs a schedule: the two schedules, and the signed schedules\' card');
     eq(readers('scheduleSignLines'), { printCourtInventory: 1, printTrustSchedule: 1 }, 'and their lines');
     eq(readers('_agrCounsel'), { _agrScopeServices: 1, probateAgreementHtml: 2 }, 'counsel\'s names: §1.2, §2 and §2.1');
     eq(readers('_agrClientCapacity'), { agreementIpadSigners: 1, probateAgreementHtml: 2 }, 'the Client\'s capacity: §6.3 and the signature page, and the iPad dialog\'s client row (P29)');
-    eq(readers('_agrEstateNoun'), { probateAgreementHtml: 5 }, 'the estate noun: §3.1, §5.3, §7.1 twice (once as a possessive) and §10');
-    eq(readers('_agrTrustIsParty'), { _agrEstateNoun: 1, docPartyIdent: 1, probateAgreementHtml: 1 },  // restated 2026-10-08, as above
+    eq(readers('_agrSignsAsTxt'), { probateAgreementHtml: 2 }, 'the capacity the Client signs in (2026-11-07): §1.2 and under the signature');
+    eq(readers('_agrEstateNoun'), { probateAgreementHtml: 6 }, 'the estate noun: §3.1, §5.1(1), §5.4\'s proceeds, §7.1 twice (once as a possessive) and §10 (§5.3\'s lead names the approver since 2026-11-07)');
+    eq(readers('_agrTrustIsParty'), { _agrEstateNoun: 1, docPartyIdent: 1, probateAgreementHtml: 3 },  // +2 (2026-11-07): the party the Client signs for, §1.2 and the signature  // restated 2026-10-08, as above
       'whether the trust is the party: §1.2, the noun and the client estimate\'s identity line');
     // RESTATED 2026-10-05 (P20): two more readers, the envelope's co-signers (esignCoSigners) and the one answer to whether
     // their signatures are on record (agreementCoSignState).
@@ -587,9 +589,17 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       .forEach((w) => lacks(body, w, '⚠ the form spells none of the matter\'s nouns itself: ' + w));
     has(body, "if (invProbateRows(job)) {\n    content += dRow('Probate Case Number', probateCase);", 'the case number row sits under the one court predicate');
     lacks(noComments(fn('_agrScopeServices')).toLowerCase(), 'estate attorney', '§2 asks _agrCounsel instead of naming the estate attorney');
-    ['_agrClientCapacity', '_agrCounsel', '_agrEstateNoun', '_agrTrustIsParty', '_agrAuthorityTitle', '_agrCoSignerCaption', 'docEstateAuthority', 'scheduleSigners']
+    ['_agrClientCapacity', '_agrSignsAsTxt', '_agrCounsel', '_agrEstateNoun', '_agrTrustIsParty', '_agrAuthorityTitle', '_agrCoSignerCaption', 'docEstateAuthority', 'scheduleSigners']
       .forEach((n) => ok(!/'(trust|both|neither)'/.test(noComments(fn(n))), n + ' asks the matter catalogue\'s flags, never a matter name'));
     ['estateAuthority', 'jobFiduciaries', 'estateProceedsHolder', 'trustInstrumentTitle', 'scheduleSigners', 'docEstateAuthority']
       .forEach((n) => eq((SRC.match(new RegExp('\\nfunction ' + n + '\\(', 'g')) || []).length, 1, n + ' is defined once'));
   }
+
+  group('§5.3 every item in writing (2026-11-06): the form’s own-initial figure is the release request’s');
+  {
+    const m = /var _AGR_EVERY_ITEM = 'Every item; one of \$(\d+) or more initialled on its own';/.exec(fn('probateAgreementHtml'));
+    ok(!!m, 'the form states the figure');
+    eq(m && Number(m[1]), Number(decl('INV_LINE_INITIAL_MIN').replace(/[^0-9]/g, '')), '⚠ held equal to INV_LINE_INITIAL_MIN, which the request initials one by one');
+  }
+
 };

@@ -1342,6 +1342,107 @@ amount is the count of the two people named, each of whom signs for it below."*
 
 **The question.** Is a fiduciary's signature for a sealed bag (rather than a recount) enough?
 
+### A21. Fourteen corrections to the estate form, two to the standard form ⚠ NEW 2026-11-06
+
+Anthony read the estate form as an appendix to the reference and found errors; all fourteen of the line-by-line review were fixed
+as proposed (his answer: *"Fix all 14"*). §1.1 *License / Registration* → *Florida LLC Document No.*; §3.1 the concierge's
+*legal documentation* → *the record of the work*; §2 *all services necessary to complete the estate settlement* → *the services
+described in this Agreement and in Exhibit A for the property and its contents*; §2.1 legal advice and representation, court
+filings, tax, financial accounts, real property sales and licensed-contractor work *cannot be added by Change Order* (they could,
+as written), licensed trades for preparation contracting with the Client directly; §4.1 *cryptocurrency* and *ancillary probate
+coordination* removed; §5.1(2) Letters held *or provided before work begins*; §5.1(5) nothing leaves until authorized in writing
+under §5.3 (it warranted that everything was already authorized); §5.2 the §733.613 real-property sentence removed (real
+property is outside the engagement); §5.3 written approval for *every item* leaving, one of $500 or more initialled on its own
+(it read *any item over $500*); §7 *return or destroy … the will* → return, never destroy, an original will to counsel unopened
+the same day; §7.1 *video-records* → *photographs*; §7.1's last sentence now leaves the Documentation Media to §7.2 (the two
+contradicted each other); the co-signer caption offers a co-personal representative or co-trustee, never a *second beneficiary*;
+the office box's *Pricing Memo Attached* off the client's copy. Standard form: §1.3's legal, tax, brokerage and licensed work can
+never be added; §10.1 *photograph*, not video.
+
+**The question.** Read the corrected clauses together; in particular whether §5.3's every-item written approval, and §5.1(2)'s
+Letters provided before work, are what counsel wants the representative to warrant.
+
+### A22. A full legal review of both forms and Exhibit A ⚠ NEW 2026-11-07 · PRIORITY 1
+
+Anthony asked for *"a full legal review of all of this"* before the estate form goes to counsel as Exhibit A to *Estate and
+Trust Settlement* (G4). An independent read of both forms and both Exhibit A samples found about thirty points; Anthony took
+*"Fix all as proposed"*. Drafted, not reviewed.
+
+**Estate form.** §1.2 defines the Client as the Authorized Representative *acting as Personal Representative (or successor
+trustee) of the Estate (or the Trust) and not individually* (§733.619), and the signature block repeats the capacity; the
+meaningless *Date* row is gone. §2 names the documentation scope chosen at intake; *family distribution and documented handoff
+to beneficiaries* → *delivery of items to the persons the Personal Representative names in writing, against signed receipts*;
+*with tax documentation* → *with each charity's receipt*; *photographing all property contents* → *the contents of consequence*;
+written authorization *from each* representative. §2.1 discloses that Havellin's principals are Douglas Elliman sales
+associates who would earn a commission, that brokerage is a separate agreement and that the engagement is not conditioned on it.
+§3.2, §3.3 and §8.1: *materials used* → *any materials package* (it is a fixed price, earned once delivered). §3.3 and §8.1:
+the midpoint is defined, *the earliest of the halfway point of the working days planned in Exhibit A, half of the work in scope
+complete, or every room in scope sorted and documented* (it named an *Asset Inventory stage* that does not exist, and the 75%
+earn-out turns on it); late payment suspends *this* engagement, never *any*. §4.1: *specialized assets requiring additional
+appraisal* → *needing specialist handling, or a vendor not on the Estimate*; *legal holds requiring work stoppage* left to §8.2;
+the duplicate *Client request to add services* off the fixed arm. §5.1(1) warrants authority over the contents to be handled and
+asks the Client to identify property owned by others, held outside the estate, or claimed exempt; §5.1(2) covers a nominated
+representative not yet appointed; §5.1(5) *each* representative. §5.2 is *Working with the Estate Attorney* (it read *Florida
+Probate Compliance*), and Havellin prepares *the Court Inventory of the tangible personal property … for the Personal
+Representative to adopt and counsel to serve and file under §733.604*, its values estimates unless an appraisal is noted;
+appraisals are *planned to be completed ahead of* the 60-day deadline, never promised within it. §5.3: Havellin carries out the
+actions *at the direction of* the representative (never *on behalf of the estate*), each representative's approval where there
+are several, and a row for a firearm (a licensed dealer only; an NFA item never carried). §5.4 adds that Havellin never receives
+or holds sale proceeds, and the referral fee is *paid by the vendor from its own revenue; it does not increase the commission or
+charges the Client pays*. §6.2: a value the Client declared in writing ranks before the Project Records'; the Client removes or
+secures jewelry, cash, negotiable instruments and original papers before work begins, and Havellin's responsibility for one
+found later is its hand-over. §6.4: the release and indemnity cover only a vendor *the Client selected or engaged directly,
+other than on Havellin's recommendation*, and never Havellin's own negligence (Charles Poe Masonry); Havellin *asks* every vendor
+for its certificate and tells the Client of any that has not provided one (the app flags, never blocks). §7: disclosure is
+allowed to counsel and those the representative authorizes, to vendors as the work needs, and to Havellin's technology
+providers (cloud storage, and AI used to identify and research items from their photographs) under their confidentiality terms;
+§7.1 says the same of the photographs, defines *Documentation Media*, says the Project Records are not an appraisal and any
+value in them is Havellin's estimate with its basis, and that §7.2 does not apply to the written record. §7.2 binds Havellin's
+personnel, and Havellin *will require* its vendors to observe it. §8.2: on termination by Havellin, §8.1 applies as of the
+notice; if the Client's authority ends, work stops and the Agreement continues with the successor fiduciary who assumes it in
+writing. §10: Havellin's own team members and contractors, vendors left to §6.4; *Notices*; *Counterparts; Electronic
+Signatures* (§668.50).
+
+**Exhibit A (the estimate).** No estate narrative says Havellin *settles the estate* or works *under the documentation
+standards probate requires*; papers are returned against a receipt and *nothing is shredded except at your written direction*;
+the concierge *is present for the pickup of items of value* (never *a valuable item does not leave this property unattended*,
+nor *we are on site when they are*); exempt property *you or counsel identify* is recorded separately; the close-out step
+prepares *the Court Inventory … The Personal Representative adopts it, and counsel serves and files it*, planned ahead of the
+60-day filing; the hourly 15% note asks *written approval* on an estate (the agreement's §3.2) and tells a living client in
+writing (the standard form's §3.8); the hour-by-hour record goes to the court *through counsel*; *Donation receipts, for your
+tax records* → *Each charity's donation receipt*; the midpoint row defined; *Letters of Administration or Testamentary* →
+*Letters of Administration*; a living narrative says *the contents of consequence*, never *every item*.
+
+**Standard form.** *Contractor* and *Havellin* defined in the parties block; §12.1 defines the *Effective Date* (the last
+signature); §4.2 one person whose instructions Contractor may rely on, never *binding instructions on behalf of all heirs*; §5.1
+*will maintain, from before work begins* (it represented coverage not yet bound); §8 *a qualified appraiser (for example, one
+accredited by the ASA, AAA or ISA)*, never *licensed* (Florida licenses no personal-property appraiser); §3.1's *coordination
+fees* and §3.3's *inclusive of vendor coordination* gone; §3.7 suspends while past due and terminates under §12.3(c); §9 and
+§10.1a name the technology providers; §11.5(b) and §11.6(c) as §6.4; *Havellin Palm Beach, LLC* throughout.
+
+**Left for Anthony and counsel.** The service's name *Probate Estate Settlement* (the review suggested *Estate Contents
+Services (Probate)*; a service label is Anthony's), and the standard form's *Insurance and Bonding* heading (a fidelity policy is
+not a surety bond). **The questions:** (1) a nominee may sign before Letters issue and the deposit is earned on signature: if
+Letters never issue or someone else is appointed, who owes the fee, and should the nominee sign individually or guarantee it
+(§733.601)? (2) does the 50% non-refundable deposit hold where Havellin breaches before starting, and on the standard form
+against a consumer? (3) may a personal representative, without will language or residuary consent, donate estate tangible
+property, grant §7.2's marketing licence over estate photographs, indemnify Havellin out of estate assets, and give access to
+protected homestead? (4) must the referral fee's amount or rate be disclosed, or is *may receive a referral fee* enough? (5) is
+Havellin bonded (a surety bond), does the crime policy reach 1099 contractors, and will workers' compensation be carried? (6)
+arbitration on the estate form and litigation on the standard form: intended? (7) should the forms adopt the reference's names
+(Court Inventory, Trust Schedule, Disposition Ledger) throughout? (8) §7.1 against §7.2 (G4, question 5) as now restated; (9) is
+1.5% a month (18%, the §687.03 cap) acceptable to charge an estate, and from the invoice date or seven days after?
+
+### D10b. The hauler's Disposal Record ⚠ NEW 2026-11-06
+
+**What it says.** A *Junk* line with a hauler named signs out on the iPad like a charity's: *"I received the items listed above
+from Havellin Palm Beach, LLC, acting for <the estate | the trust | the client>, to dispose of or recycle them lawfully. This
+list records the handover only. The landfill, transfer station or recycling ticket for this load: ____"*. Filed, the line is
+recorded as gone; at the close a disposed line with none (or no ticket on the line) is named, never refused.
+
+**The question.** Is the hauler's acknowledgement of *lawfully* enough to support the estate's expense of administration
+(§733.612), or should the ticket itself be required?
+
 ### D10a. Papers found on site ⚠ NEW 2026-11-06
 
 **What it says.** Exhibit A promises that deeds, titles and financial records go to the representative and counsel against a

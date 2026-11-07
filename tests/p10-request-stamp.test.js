@@ -414,6 +414,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       stubs: Object.assign({ fetch: N.fetch, deskShowLine: (j, id) => { shows.push(id); return true; }, deskFoldOpen() {}, backendHas: () => true,
         setTimeout: (f, ms) => { timers.push(ms); return timers.length; } }, o.stubs || {}) });
     PP = P;
+    // Counsel has the inventory (the estate package confirmed sent) unless a test says otherwise: counsel first (2026-11-06) is its
+    // own question, tested in L, and a fixture must satisfy every step before the one it measures.
+    if (!o.counselUnsent) { const j = P.job(); j.docState = Object.assign(j.docState || {}, { probatePackage: { sentAt: '2026-10-20T15:00:00.000Z' } }); }
     P.timers = timers;
     P.c._invCloudSeen = { 7: true };
     P.N = N; P.shows = shows; P.setSheet = (rows) => { sheet = JSON.parse(JSON.stringify(rows)); };
@@ -649,4 +652,41 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const cue = T.c._invWhyHtml(7, T.ref('b'), T.job());
     ok(/<button class="inv-why-open" tabindex="-1"/.test(cue), '⚠ and so is the row\'s "basis not stated ▾" press');
   });
+  // ═══════════════════════════════════════════════════════════════════════
+  // COUNSEL FIRST (2026-11-06; Anthony approved, off the estate reference): Exhibit A promises nothing leaves until the representative
+  // and counsel have read the inventory. The release request asks once while counsel has neither the estate package nor the folders.
+  G('L · counsel first: the request asks while counsel has not been sent the inventory; the package or a share answers it', () => {
+    const P = sendRig({ answer: false, counselUnsent: true });
+    tick(P, 'a'); tick(P, 'c'); readNow(P); P.setSheet(P.c._photoRefs[7]); readNow(P);
+    eq(P.c.counselInventoryGap(P.job()).indexOf('Counsel has not been sent the inventory yet'), 0, 'the rule names it');
+    P.c.sendApprovalRequest(7);
+    eq(P.seen.asked.length, 1, '⚠⚠ with nothing else open, the send asks once');
+    const q = P.seen.asked[0] || '';
+    has(q, 'Counsel has not been sent the inventory yet: the agreement says nothing leaves until the representative and Ann Lowe have read it.', 'naming counsel');
+    has(q, 'Send the probate package from the Probate card', 'and the way round');
+    has(q, 'OK sends it now. Cancel sends nothing.', 'a flag: OK sends, Cancel stops');
+    lacks(q, 'IN PROGRESS', 'and says nothing of flagged lines it has none of');
+    eq(P.N.log.drafts.length, 0, 'Cancel: nothing drafted');
+    has((P.seen.notices[P.seen.notices.length - 1] || {}).m, 'Not sent. Counsel has not been sent the inventory yet', 'the notice says why');
+    has((P.seen.notices[P.seen.notices.length - 1] || {}).m, 'then press Send request again.', 'and what to press after');
+    eq(P.shows, [], 'nothing on the desk to open');
+    const Y = sendRig({ answer: true, counselUnsent: true });
+    tick(Y, 'a'); tick(Y, 'c'); readNow(Y); Y.setSheet(Y.c._photoRefs[7]); readNow(Y);
+    Y.c.sendApprovalRequest(7);
+    eq(Y.N.log.drafts.length, 1, 'OK: it goes (a flag, never a refusal)');
+    // A share of the folders with counsel's address answers it, as the package does; another address does not.
+    const S = sendRig({ counselUnsent: true }), j = S.job();
+    j.docState = Object.assign(j.docState || {}, { photoShares: { shares: { 'someone@x.com': { email: 'someone@x.com', sharedAt: '2026-10-20T15:00:00.000Z' } } } });
+    ok(!!S.c.counselInventoryGap(j), 'shared with somebody else: still owed');
+    j.docState.photoShares.shares['ann@lowe.law'] = { email: 'Ann@Lowe.law', sharedAt: '2026-10-21T15:00:00.000Z' };
+    eq(S.c.counselInventoryGap(j), '', 'shared with counsel\'s address: answered');
+    j.docState.photoShares.shares['ann@lowe.law'].revokedAt = '2026-10-22T15:00:00.000Z';
+    ok(!!S.c.counselInventoryGap(j), 'and a revoke owes it again');
+    // Never asked where there is no counsel to send to, nor on living work.
+    const T = sendRig({ counselUnsent: true, job: ESTATE({ probateAttyEmail: '', probateAttyName: '' }) });
+    eq(T.c.counselInventoryGap(T.job()), '', 'no attorney recorded: nothing asked');
+    const L = sendRig({ counselUnsent: true, job: LIVING() });
+    eq(L.c.counselInventoryGap(L.job()), '', 'living work: nothing asked');
+  });
+
 };

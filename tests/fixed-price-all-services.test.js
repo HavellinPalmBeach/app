@@ -28,7 +28,7 @@ const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', 
                  'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection', '_agrHasPrepVendors',
                  'estimateDocScope', 'svcHasDocStep', 'docScopeDef', '_agrScopeServices',
                  '_agrMidpointTrigger', '_agrProbateCompliance', 'esignAnchor', 'estFixedFee', 'estPrepFeeOnTop',
-                 'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', '_agrOtherAppraisalsBy', 'coPrepVendorsOn', 'roundCents', 'fmtHrs', '_agrTrustIsParty', '_agrCounsel', 'docEstateAuthority', 'invProbateRows', '_agrEstateNoun', '_agrAuthorityTitle', '_agrCoRepRepresentation', '_agrCoSigners', 'jobFiduciaries', 'jobListEntries', '_agrClientCapacity', '_agrCoSignerCaption'];
+                 'weArrangeAppraisals', 'docTierProduces', 'docTierOf', 'docTierDef', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', '_agrOtherAppraisalsBy', 'coPrepVendorsOn', 'roundCents', 'fmtHrs', '_agrTrustIsParty', '_agrCounsel', 'docEstateAuthority', 'invProbateRows', '_agrEstateNoun', '_agrAuthorityTitle', '_agrCoRepRepresentation', '_agrCoSigners', 'jobFiduciaries', 'jobListEntries', '_agrClientCapacity', '_agrSignsAsTxt', '_agrCoSignerCaption'];
 const AGR_VARS = ['AGR_DEPOSIT_DUE_TXT', 'AGR_NOT_AN_ACCOUNTING', 'CE_FOUND_PAPERS_TXT', 'MATTER_TYPES', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'TIME_INCREMENT_TXT', 'SMF_PCT', 'DECEDENT_SERVICES', 'HAVELLIN_OFFICE_PHONE', 'JOB_STEPS', 'DOC_SCOPES', 'ESIGN_ANCHORS', 'DOC_TIERS', 'DOC_TIER_FROM_SCOPE', 'RUSH_PCT', 'ESTATE_AUTHORITIES', 'AGR_NO_PURCHASE'];
 
 const EST = {
@@ -166,7 +166,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
           'and the undefined "after project start" qualifier is gone');
     has(fixed, 'earned in full on signature of this Agreement and is not refundable',
         'the deposit is earned at signature, which is what protects it');
-    has(fixed, 'Seventy-five percent (75%) of the fixed fee is earned once the midpoint milestone',
+    has(fixed, 'Seventy-five percent (75%) of the fixed fee is earned once the project midpoint',
         '75% is earned at the midpoint milestone');
     has(fixed, 'full fixed fee is earned on completion', 'and the whole fee on completion');
     has(fixed, 'payment schedule in Section 3.3',
@@ -191,7 +191,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(tm, 'responsible for all hours worked', 'T&M §8.1 keeps its hours measure');
     lacks(tm, 'non-refundable if termination occurs after project start', '⚠ the undefined "after project start" is gone from the hourly arm too');
     has(tm, 'The deposit is earned in full on signature of this Agreement and is not refundable', 'the hourly deposit is earned at signature, as the fixed one is');
-    has(tm, 'Havellin will refund any amount it holds above the hours worked and materials used', 'and returned only on an uncured material breach');
+    has(tm, 'Havellin will refund any amount it holds above the hours worked and any materials package delivered', 'and returned only on an uncured material breach');
     lacks(tm, 'Seventy-five percent (75%) of the fixed fee', 'and carries no earn-out');
   }
 

@@ -182,14 +182,14 @@ const nice = (s) => new Date(s + 'T12:00:00').toLocaleDateString('en-US', { mont
     has(agrE, 'in no case exceeds $[per-item limit] for any one item or $[per-occurrence limit] for any one occurrence, the limits of the coverage stated in Section 6.1.', '§6.2 follows the policy');
     lacks(agrE, '$10,000 per item', 'the $10,000 cap is gone');
     has(agrE, '6.4 Third-Party Vendors', '§6.4 is on the estate form');
-    has(agrE, 'Havellin requires every vendor it books to carry its own commercial general liability insurance', 'with the certificate sentence');
+    has(agrE, 'Havellin asks every vendor it books to carry its own commercial general liability insurance', 'with the certificate sentence');
     has(agrE, 'a claim arising from a vendor’s conduct is made against that vendor and its insurer', 'and the claim path');
     has(agrE, '7.2 Marketing & Promotional Use', '§7.2 keeps its number');
     const agrL = T(await print(id, 'agreement', 'home_cleanout'));
     ok(agrL.length > 3000, 'the standard agreement printed (' + agrL.length + ')');
     has(agrL, '(f) Commercial Crime (fidelity) and Cyber, employee dishonesty and theft on client premises, covering every team member and contractor Contractor places on site; data breach; and (g) Workers’ Compensation, per Florida statutory requirements.', '§5.1 lists the seven, lettered');
     lacks(agrL, '$[', 'with no figures');
-    has(agrL, 'Contractor requires every vendor it books to carry its own commercial general liability insurance', '§6 carries the certificate sentence');
+    has(agrL, 'Contractor asks every vendor it books to carry its own commercial general liability insurance', '§6 carries the certificate sentence');
     await p.waitForTimeout(600);
 
     ok(errs.length === 0, 'zero page errors' + (errs.length ? ' — ' + errs.slice(0, 2).join(' | ') : ''));

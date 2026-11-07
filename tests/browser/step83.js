@@ -97,9 +97,9 @@ const T = (h) => String(h).replace(/<[^>]+>/g, ' ').replace(/&rsquo;|&#8217;/g, 
     };
     const est = T(await print(idE, 'estimate', 'probate'));
     ok(est.length > 3000, 'the client estimate printed through the real path (' + est.length + ')');
-    has(est, 'Auction House Havellin may receive a referral fee from this vendor, paid out of the vendor’s own commission and never from your proceeds.', 'the auction-house row carries the note');
+    has(est, 'Auction House Havellin may receive a referral fee from this vendor, paid from the vendor’s own revenue; it does not increase the vendor’s commission or charges to you.', 'the auction-house row carries the note');
     lacks(est, 'Junk Removal / Hauling Havellin may receive', 'the hauler’s row does not');
-    has(est, 'Where that partner pays Havellin a referral fee, it comes out of the partner’s fee, not your proceeds.', 'the disposition sentence carries the short form');
+    has(est, 'Where that partner pays Havellin a referral fee, it is paid from the partner’s own revenue and does not increase its fee to you.', 'the disposition sentence carries the short form');
     const agrE = T(await print(idE, 'agreement', 'probate'));
     has(agrE, '5.4 No Purchase by Havellin; Referral Fees', 'the estate form’s §5.4 heading');
     has(agrE, 'will take no part of the proceeds of any sale of that property.', 'no part of the proceeds');

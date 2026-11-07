@@ -153,7 +153,7 @@ const DIR = [
       await toDash(4501);
       const pk = await printed('#client-dashboard-view button[onclick="docAction(4501,\'agreement\',\'print\')"]', 'the band\'s Print on the signing packet');
       ok(pk.length > 2000, 'fixture: the packet printed (' + pk.length + ' characters)');
-      has(pk, '3.9 Payment Method. Payment may be made by ACH bank transfer through Contractor\'s secure payment link, by wire transfer, or by check payable to Havellin Palm Beach LLC.',
+      has(pk, '3.9 Payment Method. Payment may be made by ACH bank transfer through Contractor\'s secure payment link, by wire transfer, or by check payable to Havellin Palm Beach, LLC.',
           '⚠⚠ §3.9 names ACH through the payment link, wire and check');
       ok(!/credit\/debit|\bcards?\b/i.test(pk), '⚠ and no card anywhere in the packet, Exhibit A included');
       has(pk, 'The deposit is earned on signature and is not refundable, including where it exceeds that amount',
@@ -170,7 +170,7 @@ const DIR = [
       await toDash(4502);
       const pk = await printed('#client-dashboard-view button[onclick="docAction(4502,\'agreement\',\'print\')"]', 'the band\'s Print on the estate packet');
       ok(pk.length > 2000, 'fixture: the packet printed');
-      has(pk, 'The deposit is earned in full on signature of this Agreement and is not refundable. It is applied against the hours worked and materials used, and no part of it is returned where it exceeds them',
+      has(pk, 'The deposit is earned in full on signature of this Agreement and is not refundable. It is applied against the hours worked and any materials package delivered, and no part of it is returned where it exceeds them',
           '⚠⚠ the hourly §8.1 earns the deposit on signature');
       lacks(pk, 'after project start', 'never "after project start"');
       has(pk, 'Professional appraisals are arranged by the Client.', '§5.2 names the Client …');

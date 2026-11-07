@@ -154,7 +154,7 @@ const APP = process.env.APP || 'file:///home/user/app/havellin.html';
     j.matterType = 'trust';
     return out;
   }, jobId);
-  ok(/Florida Trust Administration Support/.test(agr.trust), '⚠⚠ a trust matter signs a trust compliance section');
+  ok(/Working with the Trustee/.test(agr.trust), '⚠⚠ a trust matter signs a section on working with the trustee (RESTATED 2026-11-07)');
   ok(!/Letters of Administration issuance/.test(agr.trust), '⚠⚠ with no 60-day Letters deadline on it');
   ok(!/Florida Probate Compliance/.test(agr.trust), 'and no probate compliance heading');
   ok(/does not prepare trust accountings/.test(agr.trust), 'carrying the boundary that keeps us out of fiduciary work');
@@ -162,7 +162,7 @@ const APP = process.env.APP || 'file:///home/user/app/havellin.html';
   ok(/Written trustee approval/.test(agr.trust), 'and the authorisation table names the trustee');
   ok(/successor trustee, the Client has accepted the trusteeship/.test(agr.trust),
      'with the trustee’s own authority warranty in §5.1');
-  ok(/Florida Probate Compliance/.test(agr.probate), 'a probate matter is unchanged');
+  ok(/Working with the Estate Attorney/.test(agr.probate), 'a probate matter works with the estate attorney (RESTATED 2026-11-07)');
   eq(agr.probate, agr.blank, '⚠⚠ and an UNANSWERED matter signs the probate wording byte for byte');
   ok(/733\.604/.test(agr.both) && /does not prepare trust accountings/.test(agr.both),
      'a pour-over matter signs both halves');

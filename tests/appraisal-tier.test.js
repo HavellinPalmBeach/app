@@ -31,7 +31,7 @@ const AGR_FNS = ['_agrComplianceHeading', '_agrComplianceLead', '_agrApprover', 
                  'estTolerancePctTxt', 'agreementHtml', 'agrPriceAdjustments', '_pctWords', 'probateAgreementHtml', 'agrFillSlot', 'agrReferralFeeTxt', 'agrCoverageLines', 'insFigure', 'insCoverage', 'insUnbound', 'insPlaceholderNote', 'agrVendorCoiTxt', 'agrFinalDueTxt', 'jobProbateCourt', 'courtFromCaseNo', '_agrTrusteeRepresentation', 'docServiceTitle', 'probateSvcOffTrack', 'svcLabelOf', '_agrApprovedStamp', 'agrBillingRates', 'materialsBasisNote', 'materialsPackageQuoted',
                  'fmt', 'esc', 'paymentSplit', 'isDecedentJob', 'agrSection', '_agrHasPrepVendors', 'estimateDocScope',
                  'docScopeDef', '_agrScopeServices', '_agrMidpointTrigger', '_agrProbateCompliance', 'esignAnchor',
-                 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', 'docTierProduces', '_agrOtherAppraisalsBy', 'coPrepVendorsOn', 'roundCents', 'fmtHrs', '_agrTrustIsParty', '_agrCounsel', 'docEstateAuthority', 'estateAuthority', 'jobOnProbateTrack', 'invProbateRows', '_agrEstateNoun', '_agrAuthorityTitle', '_agrCoRepRepresentation', '_agrCoSigners', 'jobFiduciaries', 'jobListEntries', '_agrClientCapacity', '_agrCoSignerCaption', 'trustInstrumentTitle'].concat(TIER_FNS);
+                 'estFixedFee', 'estPrepFeeOnTop', 'estFixedLines', 'fixedDiscountBasisWords', 'coRushPctFor', 'appraisalDuty', 'estimateAppraiserLines', 'estimateAppraiserNames', 'docTierProduces', '_agrOtherAppraisalsBy', 'coPrepVendorsOn', 'roundCents', 'fmtHrs', '_agrTrustIsParty', '_agrCounsel', 'docEstateAuthority', 'estateAuthority', 'jobOnProbateTrack', 'invProbateRows', '_agrEstateNoun', '_agrAuthorityTitle', '_agrCoRepRepresentation', '_agrCoSigners', 'jobFiduciaries', 'jobListEntries', '_agrClientCapacity', '_agrSignsAsTxt', '_agrCoSignerCaption', 'trustInstrumentTitle'].concat(TIER_FNS);
 const AGR_VARS = ['AGR_DEPOSIT_DUE_TXT', 'AGR_NOT_AN_ACCOUNTING', 'CE_FOUND_PAPERS_TXT', 'MATTER_TYPES', 'SVC_LABELS', 'EST_TOLERANCE_PCT', 'TIME_INCREMENT_TXT', 'SMF_PCT', 'DECEDENT_SERVICES',
                   'HAVELLIN_OFFICE_PHONE', 'DOC_SCOPES', 'ESIGN_ANCHORS', 'RUSH_PCT', 'ESTATE_AUTHORITIES', 'AGR_NO_PURCHASE'].concat(TIER_VARS);
 
@@ -118,10 +118,10 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
       has(doc, 'As scheduled by ' + PARTY_BY_MATTER[matter], matter + ' / values: and as that party schedules it');
       lacks(doc, 'engaged by counsel', matter + ' / values: never a party §5.2 does not name');
       // The values tier is still a VALUED inventory — the fix must not take the inventory half with it.
-      has(doc, 'room-by-room asset documentation and inventory', matter + ' / values: §2 still sells the inventory');
+      has(doc, 'room-by-room documentation and inventory of the contents', matter + ' / values: §2 still sells the inventory');
     }
     const probate = agr('probate', 'probate', 'values');
-    has(probate, 'Havellin will prepare a documented asset inventory suitable for use in the court-required filing',
+    has(probate, 'Havellin will prepare the Court Inventory of the tangible personal property',
         'probate / values: §5.2 still promises the §733.604 inventory — only the appraisal half moved');
     lacks(probate, '60-day inventory deadline from Letters', 'and no longer promises appraisals inside the 60-day window');
     eq((probate.match(/not within this engagement/g) || []).length, 1, 'the carve-out is stated exactly once in §2');
@@ -133,17 +133,20 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     const ctx = agrCtx();
     const top = JOB({ docTier: 'appraisals' });
     eq(ctx._agrScopeServices('full', top),
-       'Havellin Palm Beach will provide all services necessary to complete the estate settlement as directed by the '
-       + 'Client and authorized by the Personal Representative. Services include, as applicable: room-by-room asset '
-       + 'documentation and inventory; sorting, staging, and photographing all property contents; appraisal '
+       // RESTATED 2026-11-06: the form promised "all services necessary to complete the estate settlement", which is counsel's work.
+       // RESTATED 2026-11-07 (the agreement review): the contents, the contents of consequence, each charity's receipt, and delivery
+       // to the persons the representative names, never a distribution by Havellin.
+       'Havellin Palm Beach will provide the services described in this Agreement and in Exhibit A for the property and its contents, as directed by the '
+       + 'Personal Representative. Services include, as applicable: room-by-room documentation and inventory of the contents; '
+       + 'sorting, staging, and photographing the contents of consequence; appraisal '
        + 'coordination for all asset categories; sale, auction, and liquidation coordination; charitable donation '
-       + 'logistics with tax documentation; disposal and waste management; family distribution and documented handoff '
-       + 'to beneficiaries; and vendor coordination throughout. Where applicable, property preparation is '
+       + "logistics with each charity's receipt; disposal and waste management; delivery of items to the persons the Personal "
+       + 'Representative names in writing, against signed receipts; and vendor coordination throughout. Where applicable, property preparation is '
        + 'included as reflected in Exhibit A.',
        '§2 at the appraisals tier is byte-for-byte the pre-fix full-scope clause');
     eq(ctx._agrProbateCompliance('full', top)[1],
-       'Havellin will coordinate professional appraisals for all required asset categories within the 60-day inventory '
-       + 'deadline from Letters of Administration issuance.',
+       'Havellin will coordinate professional appraisals for the asset categories that require them, planned to be completed ahead of the 60-day inventory '
+       + 'deadline from the issuance of Letters of Administration.',
        '§5.2 at the appraisals tier is byte-for-byte the pre-fix clause');
     eq(ctx._agrProbateCompliance('full', top).length, ctx._agrProbateCompliance('full', JOB({ docTier: 'values' })).length,
        'and §5.2 has the same number of clauses on both valued tiers — one sentence changes, none are added');
@@ -212,9 +215,9 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     lacks(recv(valued), 'Independent appraisals', 'values tier: the records list does not');
     has(recv(valued), 'fair market value for every asset', 'values tier: the court-grade valued inventory is still promised');
     has(recv(valued), 'chain-of-custody', 'and the custody log');
-    has(close(top), 'appraisals attached as supporting documentation', 'appraisals tier: the close-out names them');
+    has(close(top), 'the appraisals attached', 'appraisals tier: the close-out names them');
     lacks(close(valued), 'appraisals attached', 'values tier: the close-out does not');
-    has(close(valued), 'date-of-death fair market value for every asset, non-probate assets excluded, and the whole package',
+    has(close(valued), 'as of the date of death and the basis for it, and each on the track you or counsel direct',
         'values tier: the close-out sentence still joins cleanly — no stray comma where the clause came out');
 
     // Estate Settlement prices no legal step, so there is no court close-out either way — the

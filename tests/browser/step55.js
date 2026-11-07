@@ -301,7 +301,7 @@ const HOUSE = ['Living Room', 'Kitchen', 'Dining Room', 'Primary Suite', 'Bedroo
       ok(U.text.length > 20000, 'fixture: both packets opened');
       eq(norm(U.text) === norm(Pb.text), true, '⚠⚠ the unanswered packet reads word for word as the probate one (ids and addresses aside)');
       ['Letters of Administration Pending', 'Probate Case Number', 'Estate Attorney', 'Notify Client / Personal Representative within 24 hours of discovery',
-       'anyone the Personal Representative authorizes in writing — counsel, the appraiser, the court.', '(if applicable — second beneficiary or co-PR)']
+       'anyone the Personal Representative authorizes in writing — counsel, the appraiser, the court.', '(if applicable — co-personal representative)']
         .forEach((w) => has(U.text, w, 'unanswered keeps: ' + w.slice(0, 60)));
     });
 

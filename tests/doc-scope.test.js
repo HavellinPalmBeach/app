@@ -210,8 +210,8 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
 
     // Close-out on a probate job.
     const closeOut = (P) => P.find((p) => p.title.indexOf('Close-Out') === 0);
-    has(closeOut(full).body, 'date-of-death fair market value', 'full prepares the verified inventory for filing');
-    has(closeOut(cap).body, 'delivered to counsel in time for the §733.604 filing, in a form their office can value; counsel serves and files it', 'capture hands counsel the list to file (RESTATED P25, Q33)');
+    has(closeOut(full).body, 'each item with its recorded value as of the date of death and the basis for it', 'full prepares the Court Inventory for the representative to adopt (RESTATED 2026-11-07, the agreement review)');
+    has(closeOut(cap).body, 'planned for delivery to counsel ahead of the §733.604 filing, in a form their office can value; counsel serves and files the inventory', 'capture hands counsel the list to file (RESTATED P25, Q33; 2026-11-07: planned, never promised)');
     lacks(closeOut(none).body, 'inventory', 'none says nothing about an inventory at close-out');
 
     // The estate rules that must NOT move with the scope.
@@ -240,7 +240,7 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     // coordinates the appraisals. They are restated against the tier; tests/appraisal-tier.test.js
     // carries the full matrix.
     const TOP = { svc: 'probate', docTier: 'appraisals' }, VALUED = { svc: 'probate', docTier: 'values' };
-    has(ctx._agrScopeServices('full'), 'room-by-room asset documentation and inventory', 'full scope sells the inventory');
+    has(ctx._agrScopeServices('full'), 'room-by-room documentation and inventory of the contents', 'full scope sells the inventory');
     has(ctx._agrScopeServices('full', TOP), 'appraisal coordination', 'and, at the appraisals tier, the appraisal coordination');
     lacks(ctx._agrScopeServices('full', TOP), 'not within this engagement', 'and carves nothing out');
     lacks(ctx._agrScopeServices('full', VALUED), 'appraisal coordination for all asset categories', 'the values tier prices full and does not sell appraisal coordination');
@@ -251,11 +251,11 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(ctx._agrScopeServices('none'), 'inventory and valuation of estate assets are not within this engagement', 'none carves the inventory out');
     lacks(ctx._agrScopeServices('none'), 'room-by-room asset documentation', 'and does not sell it');
     for (const sc of ['full', 'capture', 'none']) {
-      has(ctx._agrScopeServices(sc), 'family distribution and documented handoff to beneficiaries', sc + ': the disposition services are unchanged');
+      has(ctx._agrScopeServices(sc), 'names in writing, against signed receipts', sc + ': the disposition services are unchanged (RESTATED 2026-11-07: delivery to the persons the representative names, never a distribution by Havellin)');
     }
 
     const comp = (sc, job) => ctx._agrProbateCompliance(sc, job).join(' | ');
-    has(comp('full'), 'Havellin will prepare a documented asset inventory', 'full: we prepare the §733.604 inventory');
+    has(comp('full'), 'Havellin will prepare the Court Inventory of the tangible personal property', 'full: we prepare the schedule for the §733.604 inventory (RESTATED 2026-11-07)');
     has(comp('full', TOP), 'Havellin will coordinate professional appraisals', 'full at the appraisals tier: we coordinate appraisals');
     lacks(comp('full', VALUED), 'Havellin will coordinate professional appraisals', 'full at the values tier: we do not');
     has(comp('full', VALUED), 'Professional appraisals are arranged by the estate attorney', 'full at the values tier: counsel arranges them');
@@ -264,14 +264,18 @@ module.exports = function ({ group, ok, eq, has, lacks }) {
     has(comp('none'), 'Havellin does not prepare, value or file it', 'none: the inventory is not ours');
     lacks(comp('none'), 'Havellin will coordinate professional appraisals', 'none: no appraisal coordination promised');
     for (const sc of ['full', 'capture', 'none']) {
-      has(comp(sc), '§733.613', sc + ': the sale-approval clause survives');
+      // RESTATED 2026-11-06: real property is outside the engagement (§2.1), so the clause no longer cites §733.613.
+      lacks(comp(sc), '§733.613', sc + ': no real-property sale clause');
+      has(comp(sc), 'All asset sales will require written', sc + ': the sale-approval clause survives');
       has(comp(sc), 'retained for a minimum of 7 years', sc + ': retention survives');
       eq(ctx._agrProbateCompliance(sc).length, 5, sc + ': five clauses either way');
     }
 
-    has(ctx._agrMidpointTrigger('full'), 'Asset Inventory', 'full: midpoint on the inventory');
-    has(ctx._agrMidpointTrigger('capture'), 'Photography &amp; Listing', 'capture: midpoint on the listing');
-    has(ctx._agrMidpointTrigger('none'), 'Sorting &amp; Set-Aside', 'none: midpoint on the sorting — there is no inventory phase to complete');
+    // RESTATED 2026-11-07 (the agreement review): the midpoint is one definition on every scope; it named an "Asset Inventory"
+    // stage that does not exist, and §8.1's 75% earn-out turns on it.
+    ['full', 'capture', 'none'].forEach(function (sc) {
+      has(ctx._agrMidpointTrigger(sc), 'the earliest of the halfway point of the working days planned in Exhibit A, half of the work in scope complete, or every room in scope sorted and documented', sc + ': the midpoint, defined');
+    });
 
     const src = source();
     lacks(src, 'Phase 5 (Asset Inventory)', 'no literal inventory trigger survives in the agreement');
